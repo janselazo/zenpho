@@ -21,3 +21,4 @@ export default function AboutIntro() {
       </motion.div>
     </section>
   );
+}
