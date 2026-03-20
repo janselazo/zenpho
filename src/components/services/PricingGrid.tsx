@@ -7,58 +7,52 @@ import Button from "@/components/ui/Button";
 
 export default function PricingGrid() {
   return (
-    <section className="mx-auto max-w-7xl px-6 py-32 lg:px-8">
+    <section className="mx-auto max-w-7xl px-6 py-24 lg:px-8">
       <SectionHeading
         label="Pricing"
-        title="Engagement Models"
-        description="Advisory options from a single call to full product + growth partnership."
+        title="Engagement models"
+        description="From a single deep-dive call to ongoing partnership—structured so you can scale involvement up or down."
       />
 
-      <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {pricingTiers.map((tier, i) => (
           <motion.div
             key={tier.name}
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.2 }}
-            transition={{ duration: 0.5, delay: i * 0.1 }}
-            className={`scifi-card relative flex flex-col rounded-lg border p-8 backdrop-blur-sm ${
+            transition={{ duration: 0.45, delay: i * 0.08 }}
+            className={`relative flex flex-col rounded-3xl border p-8 shadow-soft ${
               tier.highlighted
-                ? "border-accent/40 bg-surface/80 glow-blue"
-                : "border-border bg-surface/60"
+                ? "border-accent/35 bg-gradient-to-b from-accent/5 to-white shadow-soft-lg ring-2 ring-accent/20"
+                : "border-border bg-white"
             }`}
           >
             {tier.highlighted && (
-              <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded border border-accent/50 bg-accent/10 px-4 py-1 font-mono text-[10px] uppercase tracking-widest text-accent">
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-accent px-4 py-1 text-[10px] font-semibold uppercase tracking-wider text-white">
                 Recommended
               </span>
             )}
 
             <div className="mb-6">
-              <h3 className="font-mono text-lg font-bold uppercase tracking-wider text-text-primary">
+              <h3 className="heading-display text-lg font-bold text-text-primary">
                 {tier.name}
               </h3>
-              <p className="mt-2 text-sm text-text-secondary">
-                {tier.description}
-              </p>
+              <p className="mt-2 text-sm text-text-secondary">{tier.description}</p>
             </div>
 
             <div className="mb-8">
-              <span className="font-mono text-4xl font-bold text-accent glow-text-blue">
-                {tier.price}
-              </span>
-              <span className="ml-2 font-mono text-xs text-text-secondary">
-                {tier.priceNote}
-              </span>
+              <span className="text-4xl font-semibold text-accent">{tier.price}</span>
+              <span className="ml-2 text-sm text-text-secondary">{tier.priceNote}</span>
             </div>
 
-            <ul className="mb-8 flex-1 space-y-4">
+            <ul className="mb-8 flex-1 space-y-3">
               {tier.features.map((feature) => (
                 <li
                   key={feature}
                   className="flex items-start gap-3 text-sm text-text-secondary"
                 >
-                  <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent" />
+                  <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent-violet" />
                   {feature}
                 </li>
               ))}
@@ -68,9 +62,9 @@ export default function PricingGrid() {
               href="/contact"
               variant={tier.highlighted ? "primary" : "secondary"}
               size="lg"
-              className="w-full"
+              className="w-full justify-center"
             >
-              [ {tier.cta} ]
+              {tier.cta}
             </Button>
           </motion.div>
         ))}

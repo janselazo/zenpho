@@ -6,63 +6,68 @@ import { experienceStats } from "@/lib/data";
 export default function MethodologyHero() {
   return (
     <section className="relative flex min-h-[80vh] items-center justify-center overflow-hidden pt-24">
-
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-1/3 top-1/4 h-96 w-96 rounded-full bg-accent/5 blur-[100px]" />
-        <div className="absolute bottom-1/4 right-1/3 h-80 w-80 rounded-full bg-accent-violet/5 blur-[100px]" />
+        <div className="absolute left-1/3 top-1/4 h-80 w-80 rounded-full bg-accent/10 blur-[90px]" />
+        <div className="absolute bottom-1/4 right-1/3 h-72 w-72 rounded-full bg-accent-warm/10 blur-[90px]" />
       </div>
 
       <div className="relative z-10 mx-auto max-w-4xl px-6 text-center">
         <motion.span
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mb-6 inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.3em] text-accent"
+          transition={{ duration: 0.45 }}
+          className="mb-5 inline-block text-xs font-semibold uppercase tracking-widest text-accent"
         >
-          <span className="h-px w-6 bg-accent/50" />
           Methodology
-          <span className="h-px w-6 bg-accent/50" />
         </motion.span>
 
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="text-4xl font-bold leading-tight tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
+          transition={{ duration: 0.5, delay: 0.06 }}
+          className="text-4xl font-semibold leading-tight tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
         >
-          Growth mindset,
+          Build for learning,
           <br />
-          <span className="glow-text-blue bg-gradient-to-r from-accent via-blue-400 to-accent-violet bg-clip-text text-transparent">
-            embedded from day one
+          <span className="bg-gradient-to-r from-accent via-accent-violet to-accent-warm bg-clip-text text-transparent">
+            architect for scale
           </span>
         </motion.h1>
 
         <motion.p
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="mx-auto mt-6 max-w-2xl font-mono text-sm leading-relaxed text-text-secondary"
+          transition={{ duration: 0.45, delay: 0.14 }}
+          className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-text-secondary"
         >
-          {"> "}With over 8 years building software solutions across industries,
-          I&apos;ve developed a methodology that treats growth not as an afterthought,
-          but as a core architectural principle.
+          Eight years shipping software taught me that growth and reliability
+          are design choices—especially when models, data, and UX all have to
+          move together.
         </motion.p>
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          className="mx-auto mt-16 grid max-w-2xl grid-cols-2 gap-4 sm:grid-cols-4"
+          transition={{ duration: 0.45, delay: 0.22 }}
+          className="mx-auto mt-16 grid max-w-2xl grid-cols-2 gap-3 sm:grid-cols-4"
         >
-          {experienceStats.map((stat) => (
+          {experienceStats.map((stat, i) => (
             <div
               key={stat.label}
-              className="rounded border border-border bg-surface/50 px-3 py-3 text-center backdrop-blur-sm"
+              className="rounded-2xl border border-border bg-white px-3 py-3 text-center shadow-sm"
             >
-              <div className="font-mono text-xl font-bold text-accent glow-text-blue sm:text-2xl">
+              <div
+                className={`text-xl font-semibold sm:text-2xl ${
+                  i % 3 === 0
+                    ? "text-accent"
+                    : i % 3 === 1
+                      ? "text-accent-violet"
+                      : "text-accent-warm"
+                }`}
+              >
                 {stat.value}
               </div>
-              <div className="mt-1 font-mono text-[10px] uppercase tracking-widest text-text-secondary">
+              <div className="mt-0.5 text-[10px] font-medium uppercase tracking-wide text-text-secondary">
                 {stat.label}
               </div>
             </div>

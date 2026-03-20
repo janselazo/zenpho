@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-type ButtonVariant = "primary" | "secondary" | "ghost";
+type ButtonVariant = "primary" | "secondary" | "ghost" | "dark";
 type ButtonSize = "sm" | "md" | "lg";
 
 interface ButtonProps {
@@ -12,22 +12,35 @@ interface ButtonProps {
   type?: "button" | "submit";
   disabled?: boolean;
   onClick?: () => void;
+  /** Green “live” dot (Relink-style secondary CTA) */
+  showLiveDot?: boolean;
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    "bg-accent/10 text-accent border border-accent/50 hover:bg-accent/20 hover:shadow-[0_0_20px_rgba(0,212,255,0.3)] glow-blue",
+    "bg-accent text-white border border-transparent hover:bg-accent-hover shadow-sm hover:shadow-md",
   secondary:
-    "bg-accent-violet/10 text-accent-violet border border-accent-violet/30 hover:bg-accent-violet/20 hover:shadow-[0_0_20px_rgba(0,255,136,0.2)]",
+    "bg-white text-text-primary border border-border hover:border-accent/30 hover:bg-surface",
   ghost:
-    "bg-transparent text-text-secondary border border-transparent hover:text-accent hover:border-border",
+    "bg-transparent text-text-secondary border border-transparent hover:text-accent hover:bg-surface",
+  dark:
+    "bg-text-primary text-white border border-text-primary hover:bg-[#1a1a1a] shadow-sm",
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
-  sm: "px-4 py-2 text-xs",
-  md: "px-6 py-3 text-sm",
-  lg: "px-8 py-4 text-sm",
+  sm: "px-5 py-2.5 text-xs gap-2",
+  md: "px-6 py-3 text-sm gap-2",
+  lg: "px-8 py-3.5 text-sm gap-2.5",
 };
+
+function LiveDot() {
+  return (
+    <span
+      className="h-2 w-2 shrink-0 rounded-full bg-live shadow-[0_0_0_3px_rgba(34,197,94,0.25)] animate-pulse-glow"
+      aria-hidden
+    />
+  );
+}
 
 export default function Button({
   children,
@@ -38,15 +51,23 @@ export default function Button({
   type = "button",
   disabled = false,
   onClick,
+  showLiveDot = false,
 }: ButtonProps) {
   const baseStyles =
-    "inline-flex items-center justify-center rounded font-mono font-medium uppercase tracking-wider transition-all duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
+    "inline-flex items-center justify-center rounded-full font-semibold tracking-tight transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
   const styles = `${baseStyles} ${variantStyles[variant]} ${sizeStyles[size]} ${className}`;
+
+  const inner = (
+    <>
+      {showLiveDot && <LiveDot />}
+      {children}
+    </>
+  );
 
   if (href) {
     return (
       <Link href={href} className={styles}>
-        {children}
+        {inner}
       </Link>
     );
   }
@@ -58,7 +79,7 @@ export default function Button({
       disabled={disabled}
       className={styles}
     >
-      {children}
+      {inner}
     </button>
   );
 }

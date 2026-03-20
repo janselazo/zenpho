@@ -12,8 +12,8 @@ export default function CaseStudies() {
     <section className="mx-auto max-w-7xl px-6 py-32 lg:px-8">
       <SectionHeading
         label="Results"
-        title="Proven Impact"
-        description="Real outcomes from real engagements. I measure success by the value delivered to my clients."
+        title="Client outcomes"
+        description="Examples of AI and software work where the goal was measurable impact—not a slide deck milestone."
       />
 
       <div className="grid gap-8 lg:grid-cols-2">
@@ -27,8 +27,8 @@ export default function CaseStudies() {
           >
             <Card className="flex h-full flex-col">
               <div className="mb-4 flex items-center justify-between">
-                <span className="font-mono text-xs uppercase tracking-widest text-accent">
-                  Case Study
+                <span className="text-xs font-semibold uppercase tracking-widest text-accent">
+                  Case study
                 </span>
                 {project.result && (
                   <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-medium text-accent">
@@ -36,7 +36,7 @@ export default function CaseStudies() {
                   </span>
                 )}
               </div>
-              <h3 className="text-xl font-bold text-text-primary">
+              <h3 className="text-xl font-semibold text-text-primary">
                 {project.title}
               </h3>
               <p className="mt-3 flex-1 text-sm leading-relaxed text-text-secondary">

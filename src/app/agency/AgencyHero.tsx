@@ -6,77 +6,76 @@ import { experienceStats } from "@/lib/data";
 
 export default function AgencyHero() {
   return (
-    <section className="relative flex min-h-[80vh] items-center justify-center overflow-hidden pt-24">
-
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-accent/5 blur-[100px]" />
-        <div className="absolute bottom-1/3 right-1/4 h-72 w-72 rounded-full bg-accent-violet/5 blur-[100px]" />
-      </div>
-
+    <section className="hero-sky relative flex min-h-[80vh] items-center justify-center overflow-hidden pt-28">
       <div className="relative z-10 mx-auto max-w-4xl px-6 text-center">
         <motion.span
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mb-6 inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.3em] text-accent"
+          transition={{ duration: 0.45 }}
+          className="mb-5 inline-block rounded-full bg-white/90 px-5 py-2 text-xs font-bold uppercase tracking-widest text-accent-green shadow-soft ring-1 ring-accent-green/25"
         >
-          <span className="h-px w-6 bg-accent/50" />
           Agency
-          <span className="h-px w-6 bg-accent/50" />
         </motion.span>
 
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="text-4xl font-bold leading-tight tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
+          transition={{ duration: 0.5, delay: 0.06 }}
+          className="heading-display text-4xl font-bold leading-tight text-text-primary sm:text-5xl lg:text-6xl"
         >
-          Your technical partner for
+          Custom AI software
           <br />
-          <span className="glow-text-blue bg-gradient-to-r from-accent to-blue-400 bg-clip-text text-transparent">
-            AI-powered growth
-          </span>
+          <span className="text-accent">for serious teams</span>
         </motion.h1>
 
         <motion.p
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="mx-auto mt-6 max-w-2xl font-mono text-sm leading-relaxed text-text-secondary"
+          transition={{ duration: 0.45, delay: 0.14 }}
+          className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-text-secondary sm:text-lg"
         >
-          {"> "}I partner with B2B and B2C SaaS startups to design, build, and ship
-          software that leverages AI to solve real problems and drive growth.
+          I partner with product and operations leaders to ship agents,
+          assistants, automations, and the apps around them—scoped for security,
+          cost, and how your org actually adopts new tools.
         </motion.p>
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row"
+          transition={{ duration: 0.45, delay: 0.22 }}
+          className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4"
         >
-          <Button href="/services" variant="primary" size="lg">
-            [ View Services ]
+          <Button href="/contact" variant="primary" size="lg">
+            Discuss a project
           </Button>
-          <Button href="/contact" variant="secondary" size="lg">
-            [ Start a Conversation ]
+          <Button href="/services" variant="dark" size="lg" showLiveDot>
+            Services & pricing
           </Button>
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-          className="mx-auto mt-16 grid max-w-2xl grid-cols-2 gap-4 sm:grid-cols-4"
+          transition={{ duration: 0.45, delay: 0.3 }}
+          className="mx-auto mt-16 grid max-w-2xl grid-cols-2 gap-3 sm:grid-cols-4"
         >
-          {experienceStats.map((stat) => (
+          {experienceStats.map((stat, i) => (
             <div
               key={stat.label}
-              className="rounded border border-border bg-surface/50 px-3 py-3 text-center backdrop-blur-sm"
+              className="rounded-3xl border border-border bg-white/95 px-3 py-4 text-center shadow-soft backdrop-blur-sm"
             >
-              <div className="font-mono text-xl font-bold text-accent glow-text-blue sm:text-2xl">
+              <div
+                className={`heading-display text-xl font-bold sm:text-2xl ${
+                  i % 3 === 0
+                    ? "text-accent"
+                    : i % 3 === 1
+                      ? "text-accent-violet"
+                      : "text-accent-warm"
+                }`}
+              >
                 {stat.value}
               </div>
-              <div className="mt-1 font-mono text-[10px] uppercase tracking-widest text-text-secondary">
+              <div className="mt-0.5 text-[10px] font-medium uppercase tracking-wide text-text-secondary">
                 {stat.label}
               </div>
             </div>

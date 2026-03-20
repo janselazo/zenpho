@@ -8,7 +8,7 @@ import CTASection from "@/components/home/CTASection";
 export const metadata: Metadata = {
   title: "Agency",
   description:
-    "Janse Lazo — AI-powered software development and growth for B2B & B2C SaaS startups. From MVPs to production-scale platforms.",
+    "Custom AI software development: agents, conversational AI, integrations, automation, and full-stack apps—for teams that need calm, shippable systems.",
 };
 
 export default function AgencyPage() {

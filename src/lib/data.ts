@@ -79,74 +79,86 @@ export interface ServicePackage {
 
 export const services: Service[] = [
   {
-    title: "AI Product Development",
+    title: "Custom AI Agents & Copilots",
     description:
-      "End-to-end development of AI-powered products, from concept validation to production deployment.",
+      "Autonomous and semi-autonomous assistants tailored to your tools, data, and approval workflows—not generic demos.",
     details: [
-      "LLM-powered applications and chatbots",
-      "Computer vision and NLP solutions",
-      "AI model fine-tuning and optimization",
-      "Production-grade ML pipelines",
+      "Tool use, retrieval, and guardrails for production",
+      "Human-in-the-loop and audit-friendly outputs",
+      "Evaluation, monitoring, and cost controls",
+      "Integration with CRMs, docs, and internal APIs",
     ],
     icon: "brain",
   },
   {
-    title: "Custom Software Engineering",
+    title: "Conversational AI & Chatbots",
     description:
-      "Tailored software solutions built with modern architectures, designed to scale from day one.",
+      "Customer-facing and internal assistants across web, mobile, and messaging channels with your brand voice.",
     details: [
-      "Full-stack web and mobile applications",
-      "Microservices and API architecture",
-      "Cloud-native infrastructure",
-      "Real-time data systems",
+      "Design, flows, and escalation paths",
+      "LLM-backed support and sales assistants",
+      "Omnichannel patterns (chat, SMS, voice-ready)",
+      "Analytics on deflection, CSAT, and handoffs",
+    ],
+    icon: "chat",
+  },
+  {
+    title: "Generative AI Integration",
+    description:
+      "Bring GPT-class models into your product safely: RAG, structured outputs, and enterprise patterns.",
+    details: [
+      "RAG over your documents and databases",
+      "Fine-tuning and prompt programs where it matters",
+      "Security, privacy, and compliance-oriented design",
+      "Vendor-agnostic architecture (OpenAI, Anthropic, open models)",
     ],
     icon: "code",
   },
   {
-    title: "MVP & Rapid Prototyping",
+    title: "Custom Software & Mobile",
     description:
-      "Validate your ideas fast. I go from concept to working product in weeks, not months.",
+      "Full-stack products your customers and teams actually use—clean UX, solid APIs, and cloud-native ops.",
     details: [
-      "Market validation and technical feasibility",
-      "Interactive prototypes and user testing",
-      "Lean architecture for fast iteration",
-      "Investor-ready product demos",
+      "Web apps (Next.js, React) and APIs",
+      "iOS / Android and cross-platform where it fits",
+      "Microservices or pragmatic monoliths",
+      "CI/CD, observability, and on-call readiness",
     ],
     icon: "rocket",
   },
   {
-    title: "AI Integration & Automation",
+    title: "Workflow Automation & Internal Tools",
     description:
-      "Embed intelligence into your existing systems to automate workflows and unlock new capabilities.",
+      "Reduce manual work by connecting systems with reliable automations and operator-friendly admin UIs.",
     details: [
-      "Workflow automation with AI agents",
-      "Legacy system modernization",
-      "API integrations and data pipelines",
-      "Cost reduction through intelligent automation",
+      "Back-office and operations dashboards",
+      "Scheduled jobs, queues, and integrations",
+      "Document and email pipelines",
+      "AI-assisted triage and routing",
     ],
     icon: "zap",
   },
   {
-    title: "Technical Consulting & Strategy",
+    title: "AI Consulting, PoC & MVP Sprints",
     description:
-      "Strategic advisory on architecture, AI adoption roadmaps, and engineering team scaling.",
+      "When you need clarity before a big build: roadmaps, spikes, and time-boxed proofs of value.",
     details: [
-      "Technology stack evaluation",
-      "AI readiness assessments",
-      "Engineering team augmentation",
-      "Technical due diligence for investors",
+      "Use-case discovery and feasibility studies",
+      "2–4 week PoCs with clear success metrics",
+      "MVP scopes for funded teams and founders",
+      "Vendor and model selection support",
     ],
     icon: "compass",
   },
   {
-    title: "Data Engineering & Analytics",
+    title: "Data, ML & Analytics Foundations",
     description:
-      "Transform raw data into actionable intelligence with modern data platforms and AI-driven analytics.",
+      "Pipelines and models that support AI features and reporting—without a science project in production.",
     details: [
-      "Data warehouse and lake architecture",
-      "ETL/ELT pipeline development",
-      "Business intelligence dashboards",
-      "Predictive analytics models",
+      "Warehousing, ETL/ELT, and feature stores",
+      "Classical ML and forecasting where LLMs aren’t the answer",
+      "Dashboards and operational metrics",
+      "MLOps basics: versioning, deployment, monitoring",
     ],
     icon: "chart",
   },
@@ -157,25 +169,25 @@ export const processSteps: ProcessStep[] = [
     number: "01",
     title: "Discovery",
     description:
-      "I immerse myself in your domain — understanding the problem space, user needs, and business goals. This phase sets the foundation for every decision ahead.",
+      "We align on users, constraints, and success metrics—especially around data, compliance, and how AI should behave in the real world.",
   },
   {
     number: "02",
-    title: "Design & Architect",
+    title: "Design & architecture",
     description:
-      "System architecture, data models, and UX flows designed for scalability. I think in terms of growth from the very first wireframe.",
+      "Solution design covers UX, APIs, model boundaries, evaluation, and how the system fails safely when models or integrations misbehave.",
   },
   {
     number: "03",
-    title: "Build & Iterate",
+    title: "Build & iterate",
     description:
-      "Agile sprints with continuous delivery. You see working software every week, with built-in feedback loops to course-correct fast.",
+      "Short cycles with visible progress: working software, traced prompts and tools, and feedback from your team—not slide decks.",
   },
   {
     number: "04",
-    title: "Launch & Scale",
+    title: "Launch & handoff",
     description:
-      "Production deployment with monitoring, performance optimization, and a handoff plan that ensures your team can own and grow the product.",
+      "Production rollout with monitoring, cost and quality dashboards, documentation, and a clear path for your team to operate and extend.",
   },
 ];
 
@@ -378,16 +390,16 @@ export const methodologyPillars: MethodologyPillar[] = [
 
 export const experienceStats = [
   { value: "50+", label: "Projects delivered" },
-  { value: "8+", label: "Years of experience" },
-  { value: "30+", label: "Clients worldwide" },
+  { value: "8+", label: "Years building software" },
+  { value: "30+", label: "Client teams" },
   { value: "4", label: "Studio ventures" },
 ];
 
 export const pricingTiers: PricingTier[] = [
   {
-    name: "Advisory Call",
+    name: "Advisory call",
     description:
-      "One-time session to validate your idea, review your architecture, or get unstuck on a specific technical or growth challenge.",
+      "A focused session on AI product direction, architecture, vendor choices, or a stuck implementation—technical and GTM angles welcome.",
     price: "$500",
     priceNote: "one-time",
     features: [
@@ -400,9 +412,9 @@ export const pricingTiers: PricingTier[] = [
     cta: "Book a Call",
   },
   {
-    name: "Product Development Advisory",
+    name: "Product & AI development advisory",
     description:
-      "Ongoing technical advisory for founders building AI products. Architecture, stack decisions, and engineering velocity.",
+      "Ongoing guidance for teams shipping AI features: system design, reviews, roadmap tradeoffs, and how to keep quality up as you scale.",
     price: "$3K",
     priceNote: "per month",
     features: [
@@ -415,9 +427,9 @@ export const pricingTiers: PricingTier[] = [
     cta: "Get Started",
   },
   {
-    name: "Product Growth Advisory",
+    name: "Product growth advisory",
     description:
-      "Ongoing growth and GTM advisory. Positioning, launch strategy, metrics, and scaling what works.",
+      "Positioning, launches, funnel metrics, and experiments—aligned with what your AI product can credibly promise in market.",
     price: "$3K",
     priceNote: "per month",
     features: [
@@ -430,9 +442,9 @@ export const pricingTiers: PricingTier[] = [
     cta: "Get Started",
   },
   {
-    name: "Full Partnership",
+    name: "Full partnership",
     description:
-      "Combined product development and growth advisory. Best for founders who want end-to-end guidance.",
+      "Combined technical and growth advisory for leaders who want one partner covering build decisions and go-to-market rhythm.",
     price: "$5K",
     priceNote: "per month",
     features: [
@@ -448,9 +460,9 @@ export const pricingTiers: PricingTier[] = [
 
 export const servicePackages: ServicePackage[] = [
   {
-    title: "Product Development Advisory",
+    title: "Product & AI development advisory",
     description:
-      "Ongoing 1-on-1 advisory on building AI-powered products. Architecture, stack decisions, code reviews, and technical direction.",
+      "Ongoing 1-on-1 support for custom AI and software delivery: architecture, stack choices, reviews, and pragmatic prioritization.",
     icon: "brain",
     deliverables: [
       "Weekly 1:1 advisory sessions",
@@ -461,9 +473,9 @@ export const servicePackages: ServicePackage[] = [
     timeline: "Ongoing, monthly",
   },
   {
-    title: "Product Growth Advisory",
+    title: "Product growth advisory",
     description:
-      "Ongoing 1-on-1 advisory on scaling AI products. Growth strategy, user acquisition, retention, and experiment design.",
+      "Ongoing guidance on positioning, launches, and metrics—so your AI roadmap and your market story stay in sync.",
     icon: "rocket",
     deliverables: [
       "Weekly 1:1 advisory sessions",
@@ -474,9 +486,9 @@ export const servicePackages: ServicePackage[] = [
     timeline: "Ongoing, monthly",
   },
   {
-    title: "Full Partnership",
+    title: "Full partnership",
     description:
-      "Combined development and growth advisory. Fractional CTO/CGO-style engagement for end-to-end guidance.",
+      "Combined development and growth advisory—a single engagement for technical direction and commercial momentum.",
     icon: "zap",
     deliverables: [
       "Weekly 1:1 sessions (dev + growth)",

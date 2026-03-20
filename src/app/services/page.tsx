@@ -8,7 +8,7 @@ import CTASection from "@/components/home/CTASection";
 export const metadata: Metadata = {
   title: "Services & Pricing",
   description:
-    "Advisory-first pricing: one-time calls, product development advisory, growth advisory, and full partnerships for B2B & B2C SaaS startups.",
+    "Advisory retainers and engagement models for AI product teams—plus how scoped builds fit when you need hands-on delivery.",
 };
 
 export default function ServicesPage() {
