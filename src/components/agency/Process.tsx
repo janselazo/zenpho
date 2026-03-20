@@ -11,6 +11,7 @@ export default function Process() {
         label="Process"
         title="How we work"
         titleAccent="together"
+        titleAccentInline
         description="Clear phases so you always know what’s next—especially important when models, data, and UX evolve in parallel."
       />
 

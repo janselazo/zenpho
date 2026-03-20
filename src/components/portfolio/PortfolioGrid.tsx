@@ -47,6 +47,7 @@ export default function PortfolioGrid() {
         label="Case studies"
         title="Selected"
         titleAccent="work"
+        titleAccentInline
         description="Real outcomes for current clients—SaaS platforms, ecommerce, and web products—plus SoldTools, my live studio product for automotive sales teams."
       />
 

@@ -44,6 +44,7 @@ export default function HomeFAQ() {
         label="FAQ"
         title="Common"
         titleAccent="questions"
+        titleAccentInline
         description="Straight answers about how I work with teams shipping AI into real products."
       />
 

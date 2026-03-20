@@ -18,6 +18,7 @@ export default function TechStrip() {
         label="Stack"
         title="Tools"
         titleAccent="& platforms"
+        titleAccentInline
         description="Typical building blocks—always chosen for your constraints, not my preferences alone."
       />
 

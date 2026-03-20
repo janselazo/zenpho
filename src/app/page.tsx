@@ -1,6 +1,7 @@
 import Hero from "@/components/home/Hero";
 import AboutIntro from "@/components/home/AboutIntro";
 import SplitIntro from "@/components/home/SplitIntro";
+import Process from "@/components/agency/Process";
 import FeaturedWork from "@/components/home/FeaturedWork";
 import ResourcesSection from "@/components/home/ResourcesSection";
 import TechStrip from "@/components/home/TechStrip";
@@ -14,6 +15,7 @@ export default function HomePage() {
       <Hero />
       <AboutIntro />
       <SplitIntro />
+      <Process />
       <FeaturedWork />
       <ResourcesSection />
       <TechStrip />
