@@ -388,7 +388,7 @@ export const pricingTiers: PricingTier[] = [
     name: "Flexible consultancy",
     description:
       "Senior guidance on software strategy, architecture, and what to build first — before you commit to a full engagement.",
-    price: "From $3K",
+    price: "From $2K",
     priceNote: "flexible hours",
     features: [
       "10+ hours you can use across strategy and review",
@@ -404,7 +404,7 @@ export const pricingTiers: PricingTier[] = [
     name: "Proof of concept",
     description:
       "Validate the riskiest assumptions with a working slice — real data, real integrations, not a slide deck.",
-    price: "$20K – $30K",
+    price: "$5K – $10K",
     priceNote: "typical range",
     features: [
       "Roughly 6–8 week timeline",
@@ -420,7 +420,7 @@ export const pricingTiers: PricingTier[] = [
     name: "Production ready",
     description:
       "Full custom software: implementation, integration, deployment, and handoff so your team can run it in production.",
-    price: "$50K – $150K",
+    price: "$10K – $50K",
     priceNote: "typical range",
     features: [
       "Roughly 3–4 month timeline (scope-dependent)",
@@ -438,7 +438,7 @@ export const pricingTiers: PricingTier[] = [
     name: "Enterprise scale",
     description:
       "Larger programs: multiple systems, phased releases, and ongoing optimization across workstreams.",
-    price: "$150K – $300K+",
+    price: "$50K – $100K",
     priceNote: "program-based",
     features: [
       "6+ month timelines for complex portfolios",

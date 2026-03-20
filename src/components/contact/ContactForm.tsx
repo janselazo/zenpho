@@ -8,7 +8,7 @@ const inputClass =
   "w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-text-primary placeholder:text-text-secondary/40 outline-none shadow-sm transition-all focus:border-accent focus:ring-2 focus:ring-accent/15";
 
 export default function ContactForm() {
-  const [projectType, setProjectType] = useState("agency");
+  const [projectType, setProjectType] = useState("web-app");
 
   return (
     <motion.form
@@ -59,18 +59,24 @@ export default function ContactForm() {
           Project type
         </label>
         <div className="flex flex-wrap gap-2">
-          {["agency", "studio", "other"].map((type) => (
+          {[
+            { value: "web-app", label: "Web App" },
+            { value: "mobile-app", label: "Mobile App" },
+            { value: "ecommerce", label: "Ecommerce Store" },
+            { value: "website", label: "Website" },
+            { value: "other", label: "Other" },
+          ].map((type) => (
             <button
-              key={type}
+              key={type.value}
               type="button"
-              onClick={() => setProjectType(type)}
-              className={`rounded-full border px-4 py-2 text-xs font-medium capitalize transition-all ${
-                projectType === type
+              onClick={() => setProjectType(type.value)}
+              className={`rounded-full border px-4 py-2 text-xs font-medium transition-all ${
+                projectType === type.value
                   ? "border-accent bg-accent/10 text-accent"
                   : "border-border bg-white text-text-secondary hover:border-accent/30"
               }`}
             >
-              {type}
+              {type.label}
             </button>
           ))}
         </div>

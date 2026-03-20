@@ -23,7 +23,7 @@ export default function Hero() {
           transition={{ duration: 0.55 }}
         >
           <span className={`mb-5 ${SECTION_EYEBROW_CLASSNAME}`}>
-            Custom software development
+            Custom AI Solutions
           </span>
         </motion.div>
 
@@ -34,8 +34,8 @@ export default function Hero() {
           className="heading-display text-4xl font-bold leading-[1.15] text-text-primary sm:text-5xl sm:leading-[1.12] lg:text-6xl lg:leading-[1.1]"
         >
           <span className="block">
-            I build the software{" "}
-            <span className="text-accent">your product needs</span>
+            Custom AI Software Development{" "}
+            <span className="text-accent">&amp; AI Agents</span>
           </span>
         </motion.h1>
 
@@ -47,16 +47,6 @@ export default function Hero() {
         >
           Web apps, SaaS platforms, ecommerce stores, and the AI features that
           are starting to matter.
-        </motion.p>
-
-        <motion.p
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-text-secondary sm:text-lg"
-        >
-          Nine years of shipping custom software for startups and growing teams.
-          You get working code, clean handoffs, and a product your team can run.
         </motion.p>
 
         <motion.div
