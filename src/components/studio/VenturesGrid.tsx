@@ -5,14 +5,16 @@ import { ventures } from "@/lib/data";
 import SectionHeading from "@/components/ui/SectionHeading";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
+import Button from "@/components/ui/Button";
 
 export default function VenturesGrid() {
   return (
-    <section id="ventures" className="mx-auto max-w-7xl px-6 py-32 lg:px-8">
+    <section id="studio-projects" className="mx-auto max-w-7xl px-6 py-24 lg:px-8 lg:py-32">
       <SectionHeading
-        label="Ventures"
-        title="What I'm Building"
-        description="Products born from my conviction that AI will reshape every industry. Each venture operates with startup-level autonomy."
+        label="Studio"
+        title="Personal projects"
+        titleAccent="& products"
+        description="SoldTools is my live studio product—built for car sales teams, owned end to end, and separate from client work with the same bar for craft."
       />
 
       <div className="grid gap-6 sm:grid-cols-2">
@@ -22,10 +24,10 @@ export default function VenturesGrid() {
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.2 }}
-            transition={{ duration: 0.5, delay: i * 0.1 }}
+            transition={{ duration: 0.5, delay: i * 0.08 }}
           >
             <Card className="flex h-full flex-col">
-              <div className="mb-3 flex items-center justify-between">
+              <div className="mb-3 flex items-center justify-between gap-2">
                 <span className="font-mono text-xs uppercase tracking-widest text-text-secondary">
                   {venture.category}
                 </span>
@@ -47,6 +49,21 @@ export default function VenturesGrid() {
                   </span>
                 </div>
               )}
+              {venture.ctaHref && venture.ctaLabel ? (
+                <div className="mt-5">
+                  <Button
+                    href={venture.ctaHref}
+                    variant="primary"
+                    size="md"
+                    target={venture.ctaExternal ? "_blank" : undefined}
+                    rel={
+                      venture.ctaExternal ? "noopener noreferrer" : undefined
+                    }
+                  >
+                    {venture.ctaLabel}
+                  </Button>
+                </div>
+              ) : null}
             </Card>
           </motion.div>
         ))}

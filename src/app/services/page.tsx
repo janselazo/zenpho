@@ -1,23 +1,21 @@
 import type { Metadata } from "next";
 import ServicesHero from "./ServicesHero";
-import PricingGrid from "@/components/services/PricingGrid";
-import ServicePackages from "@/components/services/ServicePackages";
-import FAQ from "@/components/services/FAQ";
+import ServicesGrid from "@/components/agency/ServicesGrid";
+import Process from "@/components/agency/Process";
 import CTASection from "@/components/home/CTASection";
 
 export const metadata: Metadata = {
-  title: "Services & Pricing",
+  title: "Services",
   description:
-    "Advisory-first pricing: one-time calls, product development advisory, growth advisory, and full partnerships for B2B & B2C SaaS startups.",
+    "Custom AI software development: AI web apps, iOS and Android, websites, ecommerce stores, and AI agents tailored to your workflows.",
 };
 
 export default function ServicesPage() {
   return (
     <>
       <ServicesHero />
-      <PricingGrid />
-      <ServicePackages />
-      <FAQ />
+      <ServicesGrid />
+      <Process />
       <CTASection />
     </>
   );

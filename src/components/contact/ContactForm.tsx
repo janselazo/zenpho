@@ -4,15 +4,18 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import Button from "@/components/ui/Button";
 
+const inputClass =
+  "w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-text-primary placeholder:text-text-secondary/40 outline-none shadow-sm transition-all focus:border-accent focus:ring-2 focus:ring-accent/15";
+
 export default function ContactForm() {
   const [projectType, setProjectType] = useState("agency");
 
   return (
     <motion.form
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.2 }}
-      className="mx-auto max-w-xl space-y-6"
+      transition={{ duration: 0.45, delay: 0.12 }}
+      className="mx-auto max-w-xl space-y-5"
       onSubmit={(e) => {
         e.preventDefault();
       }}
@@ -20,7 +23,7 @@ export default function ContactForm() {
       <div>
         <label
           htmlFor="name"
-          className="mb-2 block font-mono text-xs uppercase tracking-widest text-text-secondary"
+          className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
         >
           Name
         </label>
@@ -29,15 +32,15 @@ export default function ContactForm() {
           name="name"
           type="text"
           required
-          className="w-full rounded border border-border bg-surface/60 px-4 py-3 font-mono text-sm text-text-primary placeholder-text-secondary/30 outline-none backdrop-blur-sm transition-all focus:border-accent focus:shadow-[0_0_15px_rgba(0,212,255,0.1)]"
-          placeholder="> your name"
+          className={inputClass}
+          placeholder="Your name"
         />
       </div>
 
       <div>
         <label
           htmlFor="email"
-          className="mb-2 block font-mono text-xs uppercase tracking-widest text-text-secondary"
+          className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
         >
           Email
         </label>
@@ -46,25 +49,25 @@ export default function ContactForm() {
           name="email"
           type="email"
           required
-          className="w-full rounded border border-border bg-surface/60 px-4 py-3 font-mono text-sm text-text-primary placeholder-text-secondary/30 outline-none backdrop-blur-sm transition-all focus:border-accent focus:shadow-[0_0_15px_rgba(0,212,255,0.1)]"
-          placeholder="> you@company.com"
+          className={inputClass}
+          placeholder="you@company.com"
         />
       </div>
 
       <div>
-        <label className="mb-2 block font-mono text-xs uppercase tracking-widest text-text-secondary">
+        <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary">
           Project type
         </label>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-2">
           {["agency", "studio", "other"].map((type) => (
             <button
               key={type}
               type="button"
               onClick={() => setProjectType(type)}
-              className={`rounded border px-4 py-2 font-mono text-xs uppercase tracking-wider transition-all ${
+              className={`rounded-full border px-4 py-2 text-xs font-medium capitalize transition-all ${
                 projectType === type
-                  ? "border-accent bg-accent/10 text-accent shadow-[0_0_10px_rgba(0,212,255,0.15)]"
-                  : "border-border bg-surface/60 text-text-secondary hover:border-accent/30 hover:text-text-primary"
+                  ? "border-accent bg-accent/10 text-accent"
+                  : "border-border bg-white text-text-secondary hover:border-accent/30"
               }`}
             >
               {type}
@@ -76,7 +79,7 @@ export default function ContactForm() {
       <div>
         <label
           htmlFor="message"
-          className="mb-2 block font-mono text-xs uppercase tracking-widest text-text-secondary"
+          className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
         >
           Message
         </label>
@@ -85,13 +88,13 @@ export default function ContactForm() {
           name="message"
           rows={5}
           required
-          className="w-full resize-none rounded border border-border bg-surface/60 px-4 py-3 font-mono text-sm text-text-primary placeholder-text-secondary/30 outline-none backdrop-blur-sm transition-all focus:border-accent focus:shadow-[0_0_15px_rgba(0,212,255,0.1)]"
-          placeholder="> tell me about your project..."
+          className={`${inputClass} resize-none`}
+          placeholder="What you’re building, who it’s for, and any timeline or constraints…"
         />
       </div>
 
       <Button type="submit" variant="primary" size="lg" className="w-full">
-        [ Send Message ]
+        Send message
       </Button>
     </motion.form>
   );

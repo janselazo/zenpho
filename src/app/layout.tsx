@@ -18,15 +18,15 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Janse Lazo — AI Growth & Development",
+    default: "Janse Lazo — Custom AI Software Development and AI Agents",
     template: "%s | Janse Lazo",
   },
   description:
-    "I help B2B and B2C SaaS startups build and scale with AI. AI Software Development and AI Software Growth — building ventures and advising clients.",
+    "Custom AI software development and AI agents—shipped for your product, with code and systems your team owns.",
   openGraph: {
-    title: "Janse Lazo — AI Growth & Development",
+    title: "Janse Lazo — Custom AI Software Development and AI Agents",
     description:
-      "I help B2B and B2C SaaS startups build and scale with AI. AI Software Development and AI Software Growth.",
+      "Custom AI software development and AI agents for web and mobile: built for production, wired to your data, handed off so you keep control.",
     type: "website",
     locale: "en_US",
   },
@@ -38,7 +38,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <body
         className={`${inter.variable} ${jetbrainsMono.variable} min-h-screen bg-background font-sans text-foreground antialiased`}
       >

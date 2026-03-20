@@ -4,19 +4,22 @@ import { motion } from "framer-motion";
 
 export default function AboutIntro() {
   return (
-    <section className="relative mx-auto max-w-4xl px-6 py-20 lg:px-8">
+    <section className="relative mx-auto max-w-3xl px-6 py-16 lg:px-8">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 16 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.3 }}
-        transition={{ duration: 0.6 }}
+        transition={{ duration: 0.5 }}
         className="text-center"
       >
         <p className="text-lg leading-relaxed text-text-secondary sm:text-xl">
-          I&apos;ve spent 8+ years building and scaling startups. Now I help B2B
-          and B2C SaaS founders do the same — advising clients through my agency
-          and building my own ventures through my studio. My focus: AI Software
-          Development and AI Software Growth.
+          For nine years I&apos;ve shipped custom software for startups and
+          larger teams. Today that work centers on{" "}
+          <span className="font-medium text-text-primary">
+            practical AI in production
+          </span>
+          —not slideware—so your product stays reliable, measurable, and easy to
+          improve.
         </p>
       </motion.div>
     </section>

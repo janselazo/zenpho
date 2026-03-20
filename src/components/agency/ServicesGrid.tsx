@@ -36,15 +36,45 @@ const iconMap: Record<string, React.ReactNode> = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
     </svg>
   ),
+  chat: (
+    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M2.25 12.76c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 0 1 .778-.332 48.294 48.294 0 0 0 5.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.988.22-7.11.966C3.512 4.198 2.25 5.585 2.25 6.741v6.018Z"
+      />
+    </svg>
+  ),
+  store: (
+    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-16.5 0V7.5a.75.75 0 0 1 .75-.75h15a.75.75 0 0 1 .75.75v11.25m-17.25 0h3m-3 0h.008v.008H6V21Zm9.75 0h.008v.008h-.008V21Zm-9.75-3.75h3m-3 0h.008v.008H6v-.008Zm9.75 0h.008v.008h-.008v-.008Zm-9.75-3.75h3m-3 0h.008v.008H6v-.008Zm9.75 0h.008v.008h-.008v-.008Z"
+      />
+    </svg>
+  ),
 };
+
+/* Relink-style: white glyph on saturated circular badge */
+const iconAccent = (i: number) =>
+  i % 3 === 0
+    ? "bg-accent text-white shadow-sm"
+    : i % 3 === 1
+      ? "bg-accent-violet text-white shadow-sm"
+      : "bg-accent-warm text-white shadow-sm";
+
+const bulletAccent = (i: number) =>
+  i % 3 === 0 ? "bg-accent" : i % 3 === 1 ? "bg-accent-violet" : "bg-accent-warm";
 
 export default function ServicesGrid() {
   return (
     <section className="mx-auto max-w-7xl px-6 py-32 lg:px-8">
       <SectionHeading
         label="Services"
-        title="What I Build"
-        description="Full-spectrum development services powered by AI and modern engineering practices. Every engagement is tailored to your stage and goals."
+        title="Custom AI software"
+        titleAccent="development"
+        description="Web apps, mobile, websites, ecommerce, and AI agents—prioritized for production quality, your stack, and how your team ships."
       />
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -57,7 +87,9 @@ export default function ServicesGrid() {
             transition={{ duration: 0.5, delay: i * 0.1 }}
           >
             <Card className="flex h-full flex-col">
-              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10 text-accent">
+              <div
+                className={`mb-4 flex h-11 w-11 items-center justify-center rounded-full ${iconAccent(i)}`}
+              >
                 {iconMap[service.icon]}
               </div>
               <h3 className="text-lg font-semibold text-text-primary">
@@ -72,7 +104,9 @@ export default function ServicesGrid() {
                     key={detail}
                     className="flex items-start gap-2 text-xs text-text-secondary"
                   >
-                    <span className="mt-1 h-1 w-1 flex-shrink-0 rounded-full bg-accent" />
+                    <span
+                      className={`mt-1 h-1 w-1 flex-shrink-0 rounded-full ${bulletAccent(i)}`}
+                    />
                     {detail}
                   </li>
                 ))}

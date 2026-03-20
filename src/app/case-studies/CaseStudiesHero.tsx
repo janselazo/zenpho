@@ -4,14 +4,9 @@ import { motion } from "framer-motion";
 import Button from "@/components/ui/Button";
 import { SECTION_EYEBROW_CLASSNAME } from "@/components/ui/SectionHeading";
 
-export default function StudioHero() {
+export default function CaseStudiesHero() {
   return (
-    <section className="relative flex min-h-[72vh] items-center justify-center overflow-hidden pt-24">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute right-1/4 top-1/4 h-80 w-80 rounded-full bg-accent-violet/10 blur-[90px]" />
-        <div className="absolute bottom-1/3 left-1/4 h-72 w-72 rounded-full bg-accent/10 blur-[90px]" />
-      </div>
-
+    <section className="hero-sky relative flex min-h-[75vh] items-center justify-center overflow-hidden pt-28">
       <div className="relative z-10 mx-auto max-w-4xl px-6 text-center">
         <motion.span
           initial={{ opacity: 0, y: 16 }}
@@ -19,17 +14,18 @@ export default function StudioHero() {
           transition={{ duration: 0.45 }}
           className={`mb-5 ${SECTION_EYEBROW_CLASSNAME}`}
         >
-          Studio
+          Case studies
         </motion.span>
 
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.06 }}
-          className="heading-display text-4xl font-bold leading-tight tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
+          className="heading-display text-4xl font-bold leading-tight text-text-primary sm:text-5xl lg:text-6xl"
         >
-          <span className="block">Personal projects,</span>
-          <span className="mt-1 block text-accent">products & experiments</span>
+          AI software in
+          <br />
+          <span className="text-accent">real deployments</span>
         </motion.h1>
 
         <motion.p
@@ -38,9 +34,9 @@ export default function StudioHero() {
           transition={{ duration: 0.45, delay: 0.14 }}
           className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-text-secondary sm:text-lg"
         >
-          This is where I ship my own products—right now that&apos;s SoldTools
-          for car sales teams. For custom builds for your company, start from
-          Services or get in touch.
+          Current client work—inspection SaaS, ecommerce, rally branding, and
+          AI-assisted products—plus studio experiments. Each card highlights
+          what shipped and the outcome we optimized for.
         </motion.p>
 
         <motion.div
@@ -49,11 +45,11 @@ export default function StudioHero() {
           transition={{ duration: 0.45, delay: 0.22 }}
           className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4"
         >
-          <Button href="#studio-projects" variant="primary" size="lg">
-            Browse projects
+          <Button href="#projects" variant="primary" size="lg">
+            Browse case studies
           </Button>
           <Button href="/contact" variant="dark" size="lg" showLiveDot>
-            Custom AI for your team
+            Start a project
           </Button>
         </motion.div>
       </div>

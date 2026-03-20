@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { blogPosts } from "@/lib/data";
 import Card from "@/components/ui/Card";
+import { SECTION_EYEBROW_COMPACT_CLASSNAME } from "@/components/ui/SectionHeading";
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -28,7 +29,7 @@ export default function PostGrid() {
             <Link href={`/blog/${post.slug}`} className="group block h-full">
               <Card className="flex h-full flex-col transition-all duration-300 group-hover:border-accent/30">
                 <div className="mb-4 flex items-center justify-between">
-                  <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-medium text-accent">
+                  <span className={SECTION_EYEBROW_COMPACT_CLASSNAME}>
                     {post.category}
                   </span>
                   <span className="text-xs text-text-secondary">

@@ -23,14 +23,25 @@ const iconMap: Record<string, React.ReactNode> = {
   ),
 };
 
+const iconAccent = (i: number) =>
+  i % 3 === 0
+    ? "bg-accent text-white shadow-sm"
+    : i % 3 === 1
+      ? "bg-accent-violet text-white shadow-sm"
+      : "bg-accent-warm text-white shadow-sm";
+
+const checkAccent = (i: number) =>
+  i % 3 === 0 ? "text-accent" : i % 3 === 1 ? "text-accent-violet" : "text-accent-warm";
+
 export default function ServicePackages() {
   return (
     <section className="border-t border-border bg-surface">
       <div className="mx-auto max-w-7xl px-6 py-32 lg:px-8">
         <SectionHeading
-          label="Packages"
-          title="Scoped Engagements"
-          description="Fixed-scope packages for common project types. Each includes discovery, development, deployment, and handoff."
+          label="How it runs"
+          title="From idea"
+          titleAccent="to production"
+          description="Typical phases inside AI builds—whether you start with consultancy, a PoC, or a full production engagement."
         />
 
         <div className="grid gap-8 lg:grid-cols-3">
@@ -43,10 +54,12 @@ export default function ServicePackages() {
               transition={{ duration: 0.5, delay: i * 0.1 }}
             >
               <Card className="flex h-full flex-col">
-                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-accent-violet/10 text-accent-violet">
+                <div
+                  className={`mb-4 flex h-11 w-11 items-center justify-center rounded-full ${iconAccent(i)}`}
+                >
                   {iconMap[pkg.icon]}
                 </div>
-                <h3 className="text-lg font-bold text-text-primary">
+                <h3 className="text-lg font-semibold text-text-primary">
                   {pkg.title}
                 </h3>
                 <p className="mt-2 text-sm text-text-secondary">
@@ -66,7 +79,7 @@ export default function ServicePackages() {
                       className="flex items-start gap-3 text-sm text-text-secondary"
                     >
                       <svg
-                        className="mt-0.5 h-4 w-4 flex-shrink-0 text-accent-violet"
+                        className={`mt-0.5 h-4 w-4 flex-shrink-0 ${checkAccent(i)}`}
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"

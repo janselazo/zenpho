@@ -18,6 +18,10 @@ export interface Venture {
   status: "live" | "beta" | "building" | "research";
   category: string;
   metrics?: string;
+  /** Optional primary link (e.g. live product URL) */
+  ctaLabel?: string;
+  ctaHref?: string;
+  ctaExternal?: boolean;
 }
 
 export interface TechItem {
@@ -26,6 +30,8 @@ export interface TechItem {
 }
 
 export interface FeaturedProject {
+  /** Company or brand name (shown above the project title). */
+  client?: string;
   title: string;
   description: string;
   tags: string[];
@@ -50,6 +56,8 @@ export interface PortfolioProject {
   status?: "live" | "beta" | "building" | "research";
   result?: string;
   metrics?: string;
+  /** Client / brand name for agency (client) builds */
+  client?: string;
 }
 
 export interface MethodologyPillar {
@@ -67,6 +75,8 @@ export interface PricingTier {
   features: string[];
   highlighted: boolean;
   cta: string;
+  /** Ribbon label, e.g. "Most Popular" */
+  badge?: string;
 }
 
 export interface ServicePackage {
@@ -79,76 +89,64 @@ export interface ServicePackage {
 
 export const services: Service[] = [
   {
-    title: "AI Product Development",
+    title: "AI development for web apps",
     description:
-      "End-to-end development of AI-powered products, from concept validation to production deployment.",
+      "Custom web applications with AI at the core: agents, RAG, copilots, and dashboards your team uses daily—not bolt-on demos.",
     details: [
-      "LLM-powered applications and chatbots",
-      "Computer vision and NLP solutions",
-      "AI model fine-tuning and optimization",
-      "Production-grade ML pipelines",
-    ],
-    icon: "brain",
-  },
-  {
-    title: "Custom Software Engineering",
-    description:
-      "Tailored software solutions built with modern architectures, designed to scale from day one.",
-    details: [
-      "Full-stack web and mobile applications",
-      "Microservices and API architecture",
-      "Cloud-native infrastructure",
-      "Real-time data systems",
+      "LLM features, tool use, retrieval, and structured outputs in the browser",
+      "Admin consoles, internal ops tools, and customer-facing SaaS surfaces",
+      "APIs, auth, and observability suited to production model calls",
+      "Guardrails, evaluation hooks, and cost-aware architecture",
     ],
     icon: "code",
   },
   {
-    title: "MVP & Rapid Prototyping",
+    title: "iOS & Android apps",
     description:
-      "Validate your ideas fast. I go from concept to working product in weeks, not months.",
+      "Native and cross-platform mobile products with AI where it helps: on-device patterns, secure sync, and polished App Store delivery.",
     details: [
-      "Market validation and technical feasibility",
-      "Interactive prototypes and user testing",
-      "Lean architecture for fast iteration",
-      "Investor-ready product demos",
+      "Swift/Kotlin and React Native paths depending on your constraints",
+      "AI-assisted flows: capture, summarization, recommendations, voice-ready UX",
+      "Push, offline-first patterns, and enterprise MDM considerations",
+      "Store submission, analytics, and iteration after launch",
     ],
     icon: "rocket",
   },
   {
-    title: "AI Integration & Automation",
+    title: "Website development",
     description:
-      "Embed intelligence into your existing systems to automate workflows and unlock new capabilities.",
+      "Fast, credible marketing and content sites—performance, SEO-friendly structure, and integrations to your stack.",
     details: [
-      "Workflow automation with AI agents",
-      "Legacy system modernization",
-      "API integrations and data pipelines",
-      "Cost reduction through intelligent automation",
-    ],
-    icon: "zap",
-  },
-  {
-    title: "Technical Consulting & Strategy",
-    description:
-      "Strategic advisory on architecture, AI adoption roadmaps, and engineering team scaling.",
-    details: [
-      "Technology stack evaluation",
-      "AI readiness assessments",
-      "Engineering team augmentation",
-      "Technical due diligence for investors",
+      "Next.js / modern static and dynamic patterns",
+      "CMS, forms, CRM, and analytics wired the way your GTM team needs",
+      "Optional AI search, chat, or content workflows where they add real value",
+      "Accessibility and Core Web Vitals as defaults, not afterthoughts",
     ],
     icon: "compass",
   },
   {
-    title: "Data Engineering & Analytics",
+    title: "Store development",
     description:
-      "Transform raw data into actionable intelligence with modern data platforms and AI-driven analytics.",
+      "Ecommerce and online store builds: Shopify, headless commerce, or custom checkout flows with catalog, payments, and ops integrations.",
     details: [
-      "Data warehouse and lake architecture",
-      "ETL/ELT pipeline development",
-      "Business intelligence dashboards",
-      "Predictive analytics models",
+      "Shopify themes, custom storefronts, or fully custom carts",
+      "Inventory, tax, shipping, and marketplace connector patterns",
+      "AI merchandising, support assistants, and personalized journeys",
+      "Conversion-focused UX and analytics from day one",
     ],
-    icon: "chart",
+    icon: "store",
+  },
+  {
+    title: "AI solutions",
+    description:
+      "End-to-end AI solutions—especially autonomous and semi-autonomous agents that connect to your data, tools, and approval paths.",
+    details: [
+      "Multi-step agents with tools, memory, and human-in-the-loop checkpoints",
+      "Workflow automation across CRM, docs, ticketing, and internal APIs",
+      "RAG, fine-tuning, and model routing when quality demands it",
+      "Security reviews, logging, and runbooks your team can operate",
+    ],
+    icon: "brain",
   },
 ];
 
@@ -157,62 +155,40 @@ export const processSteps: ProcessStep[] = [
     number: "01",
     title: "Discovery",
     description:
-      "I immerse myself in your domain — understanding the problem space, user needs, and business goals. This phase sets the foundation for every decision ahead.",
+      "We align on users, constraints, and success metrics—especially around data, compliance, and how AI should behave in the real world.",
   },
   {
     number: "02",
-    title: "Design & Architect",
+    title: "Design & architecture",
     description:
-      "System architecture, data models, and UX flows designed for scalability. I think in terms of growth from the very first wireframe.",
+      "Solution design covers UX, APIs, model boundaries, evaluation, and how the system fails safely when models or integrations misbehave.",
   },
   {
     number: "03",
-    title: "Build & Iterate",
+    title: "Build & iterate",
     description:
-      "Agile sprints with continuous delivery. You see working software every week, with built-in feedback loops to course-correct fast.",
+      "Short cycles with visible progress: working software, traced prompts and tools, and feedback from your team—not slide decks.",
   },
   {
     number: "04",
-    title: "Launch & Scale",
+    title: "Launch & handoff",
     description:
-      "Production deployment with monitoring, performance optimization, and a handoff plan that ensures your team can own and grow the product.",
+      "Production rollout with monitoring, cost and quality dashboards, documentation, and a clear path for your team to operate and extend.",
   },
 ];
 
 export const ventures: Venture[] = [
   {
-    name: "Cortex",
-    tagline: "Your team's second brain.",
+    name: "SoldTools",
+    tagline: "The toolkit car sales teams run on.",
     description:
-      "An AI-powered knowledge management platform that learns from your team's collective intelligence. Cortex indexes conversations, documents, and code to surface answers instantly — reducing onboarding time by 60% and eliminating knowledge silos.",
-    status: "beta",
-    category: "Productivity",
-    metrics: "2,400+ beta users across 35 teams",
-  },
-  {
-    name: "Synth",
-    tagline: "Content at the speed of thought.",
-    description:
-      "Automated content generation pipeline for brands, powered by multimodal AI models. Synth produces blog posts, social media, video scripts, and visual assets — maintaining brand voice across channels while reducing content production cost by 70%.",
+      "A live studio product: lead capture from 10+ sources, appointment scheduling, deal intelligence, and a referral engine—built for the showroom, not generic CRM slides.",
     status: "live",
-    category: "AI / Content",
-    metrics: "150+ brands, 1M+ pieces of content generated",
-  },
-  {
-    name: "Nuro",
-    tagline: "Workflows that think for themselves.",
-    description:
-      "Intelligent workflow automation that adapts to your business processes in real time. Nuro observes how your team works, identifies bottlenecks, and autonomously optimizes operations — no complex rule-building required.",
-    status: "building",
-    category: "Automation",
-  },
-  {
-    name: "Axiom",
-    tagline: "Ask your data anything.",
-    description:
-      "Next-generation data analytics platform with natural language querying and AI-driven insights. Axiom lets non-technical teams explore complex datasets through conversation, democratizing data access across the organization.",
-    status: "research",
-    category: "Data & Analytics",
+    category: "Automotive / SaaS",
+    metrics: "Production app — car sales professionals",
+    ctaLabel: "Open SoldTools",
+    ctaHref: "https://app.soldtools.com/login",
+    ctaExternal: true,
   },
 ];
 
@@ -238,90 +214,114 @@ export const techStack: TechItem[] = [
 ];
 
 export const portfolioProjects: PortfolioProject[] = [
-  // Studio ventures (building)
+  // Client case studies (current engagements)
   {
-    title: "Cortex",
+    client: "Apex Inspection Pro",
+    title: "SaaS home inspection platform",
     description:
-      "An AI-powered knowledge management platform that learns from your team's collective intelligence. Cortex indexes conversations, documents, and code to surface answers instantly — reducing onboarding time by 60% and eliminating knowledge silos.",
-    tags: ["Productivity", "AI"],
-    type: "studio",
-    category: "web-app",
-    status: "beta",
-    metrics: "2,400+ beta users across 35 teams",
+      "Shipped a production SaaS web application so inspectors capture residential and commercial property details, bind the right report template, and complete structured sections—roof, attic, electrical, plumbing, interior, and more—in one guided flow. Outcome: a single source of truth per job, fewer incomplete reports, and a product the team can extend without re-platforming.",
+    tags: ["SaaS", "Inspections", "Web app"],
+    type: "agency",
+    category: "saas-platform",
+    result: "Production launch",
   },
   {
-    title: "Synth",
+    client: "TQMuch",
+    title: "SaaS product & customer dashboard",
     description:
-      "Automated content generation pipeline for brands, powered by multimodal AI models. Synth produces blog posts, social media, video scripts, and visual assets — maintaining brand voice across channels while reducing content production cost by 70%.",
-    tags: ["AI", "Content", "SaaS"],
+      "Built the core web app and dashboard around their SaaS offer: authenticated experiences, account lifecycle, and integrations aligned with how end customers actually adopt the product. Outcome: faster onboarding for new accounts, clearer ownership of product vs. admin surfaces, and a codebase structured for the next feature wave.",
+    tags: ["SaaS", "Dashboard", "APIs"],
+    type: "agency",
+    category: "saas-platform",
+    result: "Shipped to active users",
+  },
+  {
+    client: "Craveclean",
+    title: "Ecommerce store & catalog operations",
+    description:
+      "End-to-end online store with merchandising-friendly catalog, PDPs tuned for clarity, checkout and payments, and back-office patterns so marketing and fulfillment could update the catalog without waiting on deploys. Outcome: live commerce with a storefront the brand runs day to day.",
+    tags: ["Ecommerce", "Store", "Checkout"],
+    type: "agency",
+    category: "web-app",
+    result: "Live commerce",
+  },
+  {
+    client: "USRallyStripes",
+    title: "Automotive ecommerce storefront",
+    description:
+      "Rally- and automotive-themed ecommerce build focused on speed, mobile checkout, and catalog organization for kits, accessories, and seasonal drops. Outcome: a store that stays fast under traffic spikes and gives the team levers to merchandise without engineering every change.",
+    tags: ["Ecommerce", "Automotive", "Performance"],
+    type: "agency",
+    category: "web-app",
+    result: "Store live",
+  },
+  {
+    client: "BeZazzy",
+    title: "Customer-facing SaaS web application",
+    description:
+      "Delivered a multi-tenant style SaaS experience with sign-in, role-aware UI, and API-backed workflows so the client could onboard users, iterate features, and scale usage without a ground-up rewrite. Outcome: production environment ready for growth and handoff documentation their team can own.",
+    tags: ["SaaS", "Product", "TypeScript"],
+    type: "agency",
+    category: "saas-platform",
+    result: "Production launch",
+  },
+  {
+    title: "SoldTools",
+    description:
+      "Live studio product for car sales teams: lead capture from multiple sources, appointment scheduling, deal intelligence, and a referral engine—shipping in production at app.soldtools.com.",
+    tags: ["SaaS", "Automotive", "Web app"],
     type: "studio",
     category: "saas-platform",
     status: "live",
-    metrics: "150+ brands, 1M+ pieces of content generated",
-  },
-  {
-    title: "Nuro",
-    description:
-      "Intelligent workflow automation that adapts to your business processes in real time. Nuro observes how your team works, identifies bottlenecks, and autonomously optimizes operations — no complex rule-building required.",
-    tags: ["Automation", "AI"],
-    type: "studio",
-    category: "automation",
-    status: "building",
-  },
-  {
-    title: "Axiom",
-    description:
-      "Next-generation data analytics platform with natural language querying and AI-driven insights. Axiom lets non-technical teams explore complex datasets through conversation, democratizing data access across the organization.",
-    tags: ["Data", "Analytics", "AI"],
-    type: "studio",
-    category: "data-platform",
-    status: "research",
-  },
-  // Agency projects (advising)
-  {
-    title: "AI-Powered Legal Assistant",
-    description:
-      "Built a document analysis platform that reduced contract review time by 80% for a top-tier law firm. The system processes thousands of legal documents using fine-tuned LLMs and surfaces key clauses, risks, and obligations in seconds.",
-    tags: ["NLP", "LLM", "React", "Python"],
-    type: "agency",
-    category: "ai-agent",
-    result: "80% reduction in review time",
-  },
-  {
-    title: "Predictive Analytics Dashboard",
-    description:
-      "Real-time analytics platform with ML-driven forecasting for a Series B fintech startup. Enabled the team to anticipate market shifts 3 weeks ahead of traditional models.",
-    tags: ["ML", "Data", "Next.js", "AWS"],
-    type: "agency",
-    category: "web-app",
-    result: "3-week forecasting advantage",
+    result: "Production app",
   },
 ];
 
 export const featuredProjects: FeaturedProject[] = [
   {
-    title: "AI-Powered Legal Assistant",
+    client: "Apex Inspection Pro",
+    title: "SaaS web application",
     description:
-      "Built a document analysis platform that reduced contract review time by 80% for a top-tier law firm. The system processes thousands of legal documents using fine-tuned LLMs and surfaces key clauses, risks, and obligations in seconds.",
-    tags: ["NLP", "LLM", "React", "Python"],
+      "An intuitive, easy-to-use SaaS web app for inspection teams: enter residential or commercial property details, select the inspection report tied to that property, and work through the categories in that report—roof, attic, electrical, plumbing, interior, and more—so every run follows the same clear structure.",
+    tags: ["SaaS", "Web app", "Inspections"],
     type: "agency",
-    result: "80% reduction in review time",
+    result: "Production launch",
   },
   {
-    title: "Synth — Content Engine",
+    client: "TQMuch",
+    title: "SaaS platform & dashboard",
     description:
-      "My studio product automating multi-channel content creation for brands at scale. From blog posts to social media to video scripts — all maintaining consistent brand voice.",
-    tags: ["AI", "Automation", "SaaS"],
-    type: "studio",
-    result: "150+ brands onboarded",
+      "Web application and dashboard for a SaaS offer: core product UX, account management patterns, and integrations that match how their customers work day to day.",
+    tags: ["SaaS", "Dashboard", "Web"],
+    type: "agency",
+    result: "Shipped to users",
   },
   {
-    title: "Predictive Analytics Dashboard",
+    client: "Craveclean",
+    title: "Ecommerce store",
     description:
-      "Real-time analytics platform with ML-driven forecasting for a Series B fintech startup. Enabled the team to anticipate market shifts 3 weeks ahead of traditional models.",
-    tags: ["ML", "Data", "Next.js", "AWS"],
+      "Full online store: catalog and PDPs, checkout and payments, and day-to-day tooling so the brand could run merchandising and fulfillment without blocking on engineering.",
+    tags: ["Ecommerce", "Store", "Checkout"],
     type: "agency",
-    result: "3-week forecasting advantage",
+    result: "Live commerce",
+  },
+  {
+    client: "USRallyStripes",
+    title: "Ecommerce storefront",
+    description:
+      "Automotive rally–focused ecommerce: fast storefront, mobile-first buying flows, and catalog structure for kits, accessories, and drops the team can merchandise easily.",
+    tags: ["Ecommerce", "Automotive", "Performance"],
+    type: "agency",
+    result: "Store live",
+  },
+  {
+    client: "BeZazzy",
+    title: "SaaS web application",
+    description:
+      "Customer-facing SaaS web app with sign-in, role-aware screens, and API-backed workflows—so the team could onboard users, ship features, and grow without a rewrite.",
+    tags: ["SaaS", "Web app", "Product"],
+    type: "agency",
+    result: "Production launch",
   },
 ];
 
@@ -378,113 +378,120 @@ export const methodologyPillars: MethodologyPillar[] = [
 
 export const experienceStats = [
   { value: "50+", label: "Projects delivered" },
-  { value: "8+", label: "Years of experience" },
-  { value: "30+", label: "Clients worldwide" },
-  { value: "4", label: "Studio ventures" },
+  { value: "9+", label: "Years building software" },
+  { value: "30+", label: "Client teams" },
+  { value: "1", label: "Live studio product" },
 ];
 
 export const pricingTiers: PricingTier[] = [
   {
-    name: "Advisory Call",
+    name: "Flexible consultancy",
     description:
-      "One-time session to validate your idea, review your architecture, or get unstuck on a specific technical or growth challenge.",
-    price: "$500",
-    priceNote: "one-time",
+      "Senior guidance on AI software strategy, architecture, and what to build first—before you lock in a full engagement.",
+    price: "From $3K",
+    priceNote: "flexible hours",
     features: [
-      "90-minute deep-dive session",
-      "Technical or GTM focus — your choice",
-      "Written summary and action items",
-      "Follow-up via email",
+      "10+ hours you can use across strategy and review",
+      "Direct access to a senior engineer (me)",
+      "Architecture & feasibility review",
+      "Model, vendor, and tooling evaluation",
+      "Clear “what next?” roadmap",
     ],
     highlighted: false,
-    cta: "Book a Call",
+    cta: "Get started",
   },
   {
-    name: "Product Development Advisory",
+    name: "Proof of concept",
     description:
-      "Ongoing technical advisory for founders building AI products. Architecture, stack decisions, and engineering velocity.",
-    price: "$3K",
-    priceNote: "per month",
+      "Validate the riskiest technical assumptions with a working slice—real data path, real integrations, not a slide deck.",
+    price: "$20K – $30K",
+    priceNote: "typical range",
     features: [
-      "Weekly 1:1 advisory sessions",
-      "Architecture and code review",
-      "Technical roadmap guidance",
-      "Unlimited async support",
+      "Roughly 6–8 week timeline",
+      "Working prototype you can test internally",
+      "Technical feasibility & integration notes",
+      "Risk and constraint assessment",
+      "Short post-delivery support window",
     ],
     highlighted: false,
-    cta: "Get Started",
+    cta: "Plan a PoC",
   },
   {
-    name: "Product Growth Advisory",
+    name: "Production ready",
     description:
-      "Ongoing growth and GTM advisory. Positioning, launch strategy, metrics, and scaling what works.",
-    price: "$3K",
-    priceNote: "per month",
+      "Full custom AI software: implementation, integration, deployment, and handoff so your team can run it in production.",
+    price: "$50K – $150K",
+    priceNote: "typical range",
     features: [
-      "Weekly 1:1 advisory sessions",
-      "GTM and positioning strategy",
-      "Metrics and funnel optimization",
-      "Unlimited async support",
-    ],
-    highlighted: false,
-    cta: "Get Started",
-  },
-  {
-    name: "Full Partnership",
-    description:
-      "Combined product development and growth advisory. Best for founders who want end-to-end guidance.",
-    price: "$5K",
-    priceNote: "per month",
-    features: [
-      "Weekly 1:1 sessions (dev + growth)",
-      "Technical and GTM strategy",
-      "Architecture, code, and metrics review",
-      "Priority support and flexible scope",
+      "Roughly 3–4 month timeline (scope-dependent)",
+      "End-to-end build: app, APIs, agents, workflows",
+      "Integration with your stack and data boundaries",
+      "Training, documentation, and operator handoff",
+      "Performance, reliability, and cost-aware tuning",
+      "Post-launch stabilization period",
     ],
     highlighted: true,
-    cta: "Start a Partnership",
+    badge: "Most popular",
+    cta: "Build with me",
+  },
+  {
+    name: "Enterprise scale",
+    description:
+      "Larger programs: multiple systems, stricter governance, and ongoing optimization across workstreams.",
+    price: "$150K – $300K+",
+    priceNote: "program-based",
+    features: [
+      "6+ month timelines for complex portfolios",
+      "Multiple workstreams or phased releases",
+      "Advanced integrations and operational guardrails",
+      "Dedicated cadence: demos, milestones, reporting",
+      "Ongoing optimization after initial launch",
+      "Priority response for production issues",
+    ],
+    highlighted: false,
+    cta: "Discuss scope",
   },
 ];
 
 export const servicePackages: ServicePackage[] = [
   {
-    title: "Product Development Advisory",
+    title: "AI discovery & architecture",
     description:
-      "Ongoing 1-on-1 advisory on building AI-powered products. Architecture, stack decisions, code reviews, and technical direction.",
+      "Align on use cases, data reality, model choices, and risks before you fund a larger build—so scope matches what’s feasible.",
     icon: "brain",
     deliverables: [
-      "Weekly 1:1 advisory sessions",
-      "Architecture and code review",
-      "Technical roadmap guidance",
-      "Unlimited async support",
+      "Stakeholder workshops and success criteria",
+      "Target architecture & integration map",
+      "Model / vendor shortlist with tradeoffs",
+      "Written feasibility, risks, and “go / no-go” notes",
     ],
-    timeline: "Ongoing, monthly",
+    timeline: "Typically 2–3 weeks",
   },
   {
-    title: "Product Growth Advisory",
+    title: "Build, integrate & deploy",
     description:
-      "Ongoing 1-on-1 advisory on scaling AI products. Growth strategy, user acquisition, retention, and experiment design.",
+      "Implementation of agents, APIs, apps, and automations with production deployment, observability, and guardrails.",
     icon: "rocket",
     deliverables: [
-      "Weekly 1:1 advisory sessions",
-      "GTM and positioning strategy",
-      "Metrics and funnel optimization",
-      "Unlimited async support",
+      "Incremental releases toward staging / production",
+      "Integration with auth, data stores, and internal APIs",
+      "Evaluation hooks, logging, and basic monitoring",
+      "Security-conscious defaults on AI and tool paths",
     ],
-    timeline: "Ongoing, monthly",
+    timeline: "Scoped to PoC or production tier",
   },
   {
-    title: "Full Partnership",
+    title: "Enablement & iteration",
     description:
-      "Combined development and growth advisory. Fractional CTO/CGO-style engagement for end-to-end guidance.",
+      "Documentation, training, and a clear runway for your team to operate and extend the system after go-live.",
     icon: "zap",
     deliverables: [
-      "Weekly 1:1 sessions (dev + growth)",
-      "Technical and GTM strategy",
-      "Architecture, code, and metrics review",
-      "Priority support and flexible scope",
+      "Runbooks and operator-focused documentation",
+      "Knowledge transfer sessions",
+      "Prioritized improvement backlog",
+      "Optional ongoing advisory or sprint blocks",
     ],
-    timeline: "Ongoing, monthly",
+    timeline: "Overlaps launch; extends as needed",
   },
 ];
 
@@ -507,7 +514,7 @@ export const blogPosts: BlogPost[] = [
     date: "2026-03-01",
     readTime: "6 min read",
     category: "Methodology",
-    content: `The tech industry obsesses over stack choices. React vs. Vue. PostgreSQL vs. MongoDB. AWS vs. GCP. But after 8+ years of building software that scales, I've learned that the most important decision isn't which tools you pick — it's whether your architecture can evolve when your assumptions change.
+    content: `The tech industry obsesses over stack choices. React vs. Vue. PostgreSQL vs. MongoDB. AWS vs. GCP. But after 9+ years of building software that scales, I've learned that the most important decision isn't which tools you pick — it's whether your architecture can evolve when your assumptions change.
 
 ## The Growth Mindset in Engineering
 
@@ -659,12 +666,9 @@ Once an idea passes the filter, I follow a structured process:
 
 ## The Portfolio Today
 
-- **Synth** (Live) — born from seeing every marketing team struggle with content volume
-- **Cortex** (Beta) — born from watching engineering teams lose knowledge when people leave
-- **Nuro** (Building) — born from the repetitive workflow problems I saw across logistics clients
-- **Axiom** (Research) — born from the gap between data teams and business teams in every organization
+- **SoldTools** (Live) — a production toolkit for car sales teams: lead capture, scheduling, deal intelligence, and referrals—shipping at app.soldtools.com.
 
-The studio isn't a side project — it's core to my work. Every venture I launch adds to my thesis that AI will reshape every industry, one workflow at a time.`,
+The studio isn't a side project — it's core to my work. Each product I ship adds to my thesis that focused software, with AI where it earns its place, can reshape how teams work day to day.`,
   },
   {
     slug: "technical-debt-startup-guide",
@@ -706,12 +710,80 @@ Technical debt is a tool, not a failure. The founders and teams who manage it in
   },
 ];
 
-export const navLinks = [
-  { label: "Agency", href: "/agency" },
-  { label: "Studio", href: "/studio" },
-  { label: "Portfolio", href: "/portfolio" },
-  { label: "Methodology", href: "/methodology" },
+export interface ResourceItem {
+  title: string;
+  description: string;
+  href: string;
+  tag: string;
+  external?: boolean;
+}
+
+/** Curated links for /resources and the home Resources section */
+export const resourceItems: ResourceItem[] = [
+  {
+    title: "Blog",
+    description:
+      "Articles on AI agents, production engineering, and shipping software that holds up after launch.",
+    href: "/blog",
+    tag: "Writing",
+  },
+  {
+    title: "Case studies",
+    description:
+      "Selected client builds in production—agents, apps, and platforms.",
+    href: "/case-studies",
+    tag: "Work",
+  },
+  {
+    title: "Pricing & FAQs",
+    description:
+      "Packages, typical timelines, and answers to how engagements are structured.",
+    href: "/pricing",
+    tag: "Engagement",
+  },
+  {
+    title: "Studio",
+    description:
+      "SoldTools—live product for car sales teams—built alongside client work, separate from agency delivery.",
+    href: "/studio",
+    tag: "Product",
+  },
+  {
+    title: "Newsletter",
+    description:
+      "Short updates on agents, product craft, and what works in production—no fluff.",
+    href: "/#newsletter",
+    tag: "Subscribe",
+  },
+  {
+    title: "LinkedIn",
+    description:
+      "Follow for Zenpho, custom AI work, and growth topics—Miami / Fort Lauderdale.",
+    href: "https://www.linkedin.com/in/janselazo",
+    tag: "Profile",
+    external: true,
+  },
+];
+
+export interface NavLinkItem {
+  label: string;
+  href: string;
+  /** Nested items shown under this link (e.g. Resources mega-menu). */
+  children?: NavLinkItem[];
+}
+
+export const navLinks: NavLinkItem[] = [
   { label: "Services", href: "/services" },
-  { label: "Blog", href: "/blog" },
+  { label: "Case Studies", href: "/case-studies" },
+  { label: "Studio", href: "/studio" },
+  {
+    label: "Resources",
+    href: "/resources",
+    children: [
+      { label: "Pricing", href: "/pricing" },
+      { label: "About Me", href: "/about" },
+      { label: "Blog", href: "/blog" },
+    ],
+  },
   { label: "Contact", href: "/contact" },
 ];

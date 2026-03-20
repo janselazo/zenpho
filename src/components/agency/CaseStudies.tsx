@@ -12,14 +12,15 @@ export default function CaseStudies() {
     <section className="mx-auto max-w-7xl px-6 py-32 lg:px-8">
       <SectionHeading
         label="Results"
-        title="Proven Impact"
-        description="Real outcomes from real engagements. I measure success by the value delivered to my clients."
+        title="Client"
+        titleAccent="outcomes"
+        description="SaaS web apps, ecommerce, and websites where the goal was something real customers could use—not a slide deck milestone."
       />
 
       <div className="grid gap-8 lg:grid-cols-2">
         {agencyProjects.map((project, i) => (
           <motion.div
-            key={project.title}
+            key={`${project.client ?? "project"}-${project.title}`}
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.2 }}
@@ -27,8 +28,8 @@ export default function CaseStudies() {
           >
             <Card className="flex h-full flex-col">
               <div className="mb-4 flex items-center justify-between">
-                <span className="font-mono text-xs uppercase tracking-widest text-accent">
-                  Case Study
+                <span className="text-xs font-semibold uppercase tracking-widest text-accent">
+                  Case study
                 </span>
                 {project.result && (
                   <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-medium text-accent">
@@ -36,7 +37,12 @@ export default function CaseStudies() {
                   </span>
                 )}
               </div>
-              <h3 className="text-xl font-bold text-text-primary">
+              {project.client ? (
+                <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-text-secondary">
+                  {project.client}
+                </p>
+              ) : null}
+              <h3 className="text-xl font-semibold text-text-primary">
                 {project.title}
               </h3>
               <p className="mt-3 flex-1 text-sm leading-relaxed text-text-secondary">

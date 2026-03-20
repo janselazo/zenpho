@@ -1,15 +1,28 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-background: #050a12;
-  --color-surface: #060C18;
-  --color-surface-light: #0A1628;
-  --color-border: #0E2A4A;
-  --color-text-primary: #E0F0FF;
-  --color-text-secondary: #5A8AB5;
-  --color-accent: #00D4FF;
-  --color-accent-violet: #00FF88;
-  --color-foreground: #E0F0FF;
+  /* Relink-style: white UI, vibrant blue, charcoal body */
+  --color-background: #ffffff;
+  --color-surface: #f4f7fa;
+  --color-surface-light: #eef2f6;
+  --color-border: #e8ecf1;
+  --color-text-primary: #000000;
+  --color-text-secondary: #5c6370;
+  --color-foreground: #000000;
+
+  /* Primary CTA & chart emphasis */
+  --color-accent: #2563eb;
+  --color-accent-hover: #1d4ed8;
+  --color-accent-soft: #dbeafe;
+  /* Secondary highlight (sky — charts, secondary bars) */
+  --color-accent-violet: #0ea5e9;
+  /* Tertiary / status warmth */
+  --color-accent-warm: #f59e0b;
+  /* Positive / “live” indicator */
+  --color-live: #22c55e;
+  /* Pill labels & green brand accent (vibrant on white) */
+  --color-accent-green: #059669;
+  --color-accent-green-soft: #d1fae5;
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -26,132 +39,116 @@ body {
 }
 
 ::selection {
-  background-color: rgba(0, 212, 255, 0.25);
-  color: #E0F0FF;
+  background-color: rgba(37, 99, 235, 0.2);
+  color: #000000;
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #0E2A4A transparent;
+  scrollbar-color: #d1d5db transparent;
 }
 
-/* ── Subtle grid background ── */
+/* Hero: soft sky / cloud light (Relink) */
+.hero-sky {
+  background:
+    radial-gradient(
+      ellipse 120% 85% at 50% -30%,
+      rgba(37, 99, 235, 0.12),
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 50% 40% at 92% 8%,
+      rgba(147, 197, 253, 0.4),
+      transparent 48%
+    ),
+    radial-gradient(
+      ellipse 45% 38% at 8% 12%,
+      rgba(191, 219, 254, 0.5),
+      transparent 52%
+    ),
+    linear-gradient(180deg, #eef5ff 0%, #f8faff 42%, #ffffff 100%);
+}
+
+/* Soft elevated surfaces (cards, nav pill) */
+.shadow-soft {
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 10px 40px rgba(0, 0, 0, 0.06);
+}
+
+.shadow-soft-lg {
+  box-shadow:
+    0 4px 6px rgba(0, 0, 0, 0.03),
+    0 20px 50px rgba(0, 0, 0, 0.08);
+}
+
+/* Subtle grid for CTA bands */
 .scifi-grid {
   background-image:
-    linear-gradient(rgba(0, 212, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 212, 255, 0.02) 1px, transparent 1px);
-  background-size: 60px 60px;
+    linear-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
+  background-size: 48px 48px;
 }
 
 .scifi-grid-dense {
   background-image:
-    linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
-  background-size: 30px 30px;
+    linear-gradient(rgba(0, 0, 0, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.025) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
-/* ── Scanline overlay (subtle, optional) ── */
-.scanlines::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 4px,
-    rgba(0, 212, 255, 0.005) 4px,
-    rgba(0, 212, 255, 0.005) 8px
-  );
-  z-index: 1;
-}
-
-/* ── Glow effects ── */
 .glow-blue {
   box-shadow:
-    0 0 15px rgba(0, 212, 255, 0.15),
-    0 0 60px rgba(0, 212, 255, 0.05),
-    inset 0 0 15px rgba(0, 212, 255, 0.03);
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 12px 40px rgba(37, 99, 235, 0.12);
 }
 
 .glow-green {
   box-shadow:
-    0 0 15px rgba(0, 255, 136, 0.15),
-    0 0 60px rgba(0, 255, 136, 0.05),
-    inset 0 0 15px rgba(0, 255, 136, 0.03);
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 12px 40px rgba(34, 197, 94, 0.1);
 }
 
-.glow-text-blue {
-  text-shadow: 0 0 20px rgba(0, 212, 255, 0.3), 0 0 40px rgba(0, 212, 255, 0.1);
-}
-
+.glow-text-blue,
 .glow-text-green {
-  text-shadow: 0 0 20px rgba(0, 255, 136, 0.3), 0 0 40px rgba(0, 255, 136, 0.1);
+  text-shadow: none;
 }
 
-/* ── Keyframe animations ── */
-@keyframes pulse-glow {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 1; }
-}
-
-@keyframes scan-line {
-  0% { transform: translateY(-100%); }
-  100% { transform: translateY(100vh); }
-}
-
-@keyframes data-stream {
-  0% { transform: translateY(-100%); opacity: 0; }
-  10% { opacity: 1; }
-  90% { opacity: 1; }
-  100% { transform: translateY(100vh); opacity: 0; }
-}
-
-@keyframes flicker {
-  0%, 100% { opacity: 1; }
-  92% { opacity: 1; }
-  93% { opacity: 0.8; }
-  94% { opacity: 1; }
-  96% { opacity: 0.6; }
-  97% { opacity: 1; }
-}
-
-@keyframes border-scan {
-  0% { background-position: 0% 0%; }
-  100% { background-position: 200% 0%; }
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 0.9;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 .animate-pulse-glow {
-  animation: pulse-glow 3s ease-in-out infinite;
+  animation: pulse-soft 2s ease-in-out infinite;
 }
 
-.animate-flicker {
-  animation: flicker 4s linear infinite;
+@keyframes border-scan {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 200% 0%;
+  }
 }
 
 .animate-border-scan {
-  background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.6), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(37, 99, 235, 0.3),
+    transparent
+  );
   background-size: 200% 100%;
   animation: border-scan 3s linear infinite;
 }
 
-/* ── Sci-fi card hover effect ── */
-.scifi-card {
-  position: relative;
-  overflow: hidden;
-}
-
-.scifi-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.4), transparent);
-  transition: left 0.6s ease;
-}
-
-.scifi-card:hover::before {
-  left: 100%;
+/* Display headings — Relink-style tight tracking */
+.heading-display {
+  letter-spacing: -0.02em;
 }

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { blogPosts } from "@/lib/data";
 import ArticleContent from "./ArticleContent";
 import Link from "next/link";
+import { SECTION_EYEBROW_COMPACT_CLASSNAME } from "@/components/ui/SectionHeading";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -61,7 +62,7 @@ export default async function BlogPostPage({ params }: Props) {
         </Link>
 
         <div className="mb-8 flex flex-wrap items-center gap-4">
-          <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-medium text-accent">
+          <span className={SECTION_EYEBROW_COMPACT_CLASSNAME}>
             {post.category}
           </span>
           <span className="text-sm text-text-secondary">
@@ -70,7 +71,7 @@ export default async function BlogPostPage({ params }: Props) {
           <span className="text-sm text-text-secondary">{post.readTime}</span>
         </div>
 
-        <h1 className="text-3xl font-bold leading-tight tracking-tight text-text-primary sm:text-4xl lg:text-5xl">
+        <h1 className="heading-display text-3xl font-bold leading-tight tracking-tight text-text-primary sm:text-4xl lg:text-5xl">
           {post.title}
         </h1>
 

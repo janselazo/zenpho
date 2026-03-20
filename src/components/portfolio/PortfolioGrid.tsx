@@ -10,7 +10,7 @@ import Badge from "@/components/ui/Badge";
 const typeFilters = [
   { id: "all", label: "All" },
   { id: "studio", label: "Studio" },
-  { id: "agency", label: "Agency" },
+  { id: "agency", label: "Client" },
 ] as const;
 
 const categoryFilters: { id: ProjectCategory | "all"; label: string }[] = [
@@ -44,9 +44,11 @@ export default function PortfolioGrid() {
   return (
     <section id="projects" className="mx-auto max-w-7xl px-6 py-32 lg:px-8">
       <SectionHeading
-        label="Work"
-        title="Projects"
-        description="Building for my studio. Advising for the agency."
+        label="Case studies"
+        title="Selected"
+        titleAccent="work"
+        titleAccentInline
+        description="Real outcomes for current clients—SaaS platforms, ecommerce, and web products—plus SoldTools, my live studio product for automotive sales teams."
       />
 
       <div className="mb-8 flex flex-wrap justify-center gap-2">
@@ -54,10 +56,10 @@ export default function PortfolioGrid() {
           <button
             key={filter.id}
             onClick={() => setTypeFilter(filter.id)}
-            className={`rounded border px-4 py-2 font-mono text-xs uppercase tracking-widest transition-all ${
+            className={`rounded-full border px-4 py-2 text-xs font-medium transition-all ${
               typeFilter === filter.id
                 ? "border-accent bg-accent/10 text-accent"
-                : "border-border text-text-secondary hover:border-accent/50 hover:text-accent"
+                : "border-border bg-white text-text-secondary hover:border-accent/40"
             }`}
           >
             {filter.label}
@@ -69,10 +71,10 @@ export default function PortfolioGrid() {
           <button
             key={filter.id}
             onClick={() => setCategoryFilter(filter.id)}
-            className={`rounded border px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-all ${
+            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
               categoryFilter === filter.id
-                ? "border-accent-violet/50 bg-accent-violet/10 text-accent-violet"
-                : "border-border text-text-secondary hover:border-accent-violet/30 hover:text-accent-violet"
+                ? "border-accent-violet/40 bg-accent-violet/10 text-accent-violet"
+                : "border-border bg-white text-text-secondary hover:border-accent-violet/30"
             }`}
           >
             {filter.label}
@@ -83,7 +85,7 @@ export default function PortfolioGrid() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {filteredProjects.map((project, i) => (
           <motion.div
-            key={`${project.title}-${project.type}`}
+            key={`${project.client ?? project.title}-${project.type}-${project.category}`}
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.2 }}
@@ -93,7 +95,7 @@ export default function PortfolioGrid() {
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <span
-                    className={`inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.2em] ${
+                    className={`inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide ${
                       project.type === "agency"
                         ? "text-accent"
                         : "text-accent-violet"
@@ -106,9 +108,9 @@ export default function PortfolioGrid() {
                           : "bg-accent-violet"
                       }`}
                     />
-                    {project.type}
+                    {project.type === "agency" ? "Client" : "Studio"}
                   </span>
-                  <span className="rounded border border-border bg-surface/50 px-2 py-0.5 font-mono text-[10px] text-text-secondary">
+                  <span className="rounded-full border border-border bg-surface px-2 py-0.5 text-[10px] font-medium text-text-secondary">
                     {categoryFilters.find((f) => f.id === project.category)
                       ?.label ?? project.category}
                   </span>
@@ -117,6 +119,11 @@ export default function PortfolioGrid() {
                   <Badge status={project.status} />
                 )}
               </div>
+              {project.client ? (
+                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-text-secondary/90">
+                  {project.client}
+                </p>
+              ) : null}
               <h3 className="text-lg font-semibold text-text-primary">
                 {project.title}
               </h3>
@@ -125,7 +132,7 @@ export default function PortfolioGrid() {
               </p>
               {(project.result || project.metrics) && (
                 <div className="mt-3">
-                  <span className="rounded border border-accent/20 bg-accent/5 px-2 py-0.5 font-mono text-[10px] text-accent">
+                  <span className="rounded-full bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent">
                     {project.result ?? project.metrics}
                   </span>
                 </div>
@@ -134,7 +141,7 @@ export default function PortfolioGrid() {
                 {project.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="rounded border border-border bg-surface-light/50 px-2 py-1 font-mono text-[10px] text-text-secondary"
+                    className="rounded-full border border-border bg-surface px-2 py-1 text-[10px] font-medium text-text-secondary"
                   >
                     {tag}
                   </span>

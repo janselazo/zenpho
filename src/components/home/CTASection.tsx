@@ -2,42 +2,45 @@
 
 import { motion } from "framer-motion";
 import Button from "@/components/ui/Button";
+import { SECTION_EYEBROW_CLASSNAME } from "@/components/ui/SectionHeading";
 
 export default function CTASection() {
   return (
-    <section className="mx-auto max-w-7xl px-6 py-32 lg:px-8">
+    <section className="mx-auto max-w-7xl px-6 py-24 lg:px-8">
       <motion.div
-        initial={{ opacity: 0, y: 30 }}
+        initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.3 }}
-        transition={{ duration: 0.6 }}
-        className="relative overflow-hidden rounded-lg border border-accent/20 bg-surface/60 p-12 text-center backdrop-blur-sm lg:p-20"
+        transition={{ duration: 0.5 }}
+        className="relative overflow-hidden rounded-3xl border border-border bg-white p-12 text-center shadow-soft-lg lg:p-16"
       >
-        <div className="absolute inset-0 scifi-grid" />
-
+        <div className="pointer-events-none absolute inset-0 opacity-50">
+          <div className="absolute inset-0 scifi-grid" />
+        </div>
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -right-20 -top-20 h-60 w-60 rounded-full bg-accent/10 blur-[80px]" />
-          <div className="absolute -bottom-20 -left-20 h-60 w-60 rounded-full bg-accent-violet/10 blur-[80px]" />
+          <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-accent/12 blur-3xl" />
+          <div className="absolute -bottom-20 -left-16 h-56 w-56 rounded-full bg-accent-violet/10 blur-3xl" />
         </div>
 
         <div className="relative z-10">
-          <span className="mb-4 inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.3em] text-accent">
-            <span className="h-px w-6 bg-accent/50" />
-            Initiate Contact
-            <span className="h-px w-6 bg-accent/50" />
-          </span>
-          <h2 className="text-3xl font-bold text-text-primary sm:text-4xl lg:text-5xl">
-            Ready to build something
-            <br />
-            <span className="glow-text-blue text-accent">extraordinary?</span>
+          <div className="mb-5 flex justify-center">
+            <span className={SECTION_EYEBROW_CLASSNAME}>Next step</span>
+          </div>
+          <h2 className="heading-display text-3xl font-bold tracking-tight text-text-primary sm:text-4xl lg:text-5xl lg:leading-tight">
+            <span className="block">Tell me what you&apos;re</span>
+            <span className="mt-1 block text-accent">building</span>
           </h2>
-          <p className="mx-auto mt-4 max-w-xl text-sm text-text-secondary">
-            Whether you need a development partner or want to explore a
-            collaboration, I&apos;d love to hear from you.
+          <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-text-secondary sm:text-base">
+            Share a short brief—problem, users, timeline—and I&apos;ll respond
+            with how I&apos;d approach discovery, a sensible first milestone, and
+            what “done” should mean.
           </p>
-          <div className="mt-8">
+          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
             <Button href="/contact" variant="primary" size="lg">
-              [ Get in Touch ]
+              Get started
+            </Button>
+            <Button href="/services" variant="dark" size="lg" showLiveDot>
+              Services & pricing
             </Button>
           </div>
         </div>

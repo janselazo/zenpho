@@ -10,7 +10,8 @@ export default function Pillars() {
       <div className="mx-auto max-w-7xl px-6 py-32 lg:px-8">
         <SectionHeading
           label="Pillars"
-          title="The Four Pillars of My Methodology"
+          title="The Four Pillars"
+          titleAccent="of My Methodology"
           description="Principles that guide every decision, from initial architecture to production operations."
         />
 

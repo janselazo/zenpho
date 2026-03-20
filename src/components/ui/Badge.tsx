@@ -5,10 +5,10 @@ interface BadgeProps {
 }
 
 const statusStyles: Record<BadgeStatus, string> = {
-  live: "bg-accent-violet/10 text-accent-violet border-accent-violet/30",
-  beta: "bg-accent/10 text-accent border-accent/30",
-  building: "bg-amber-500/10 text-amber-400 border-amber-500/30",
-  research: "bg-blue-400/10 text-blue-400 border-blue-400/30",
+  live: "bg-accent-violet/12 text-accent-violet border-accent-violet/25",
+  beta: "bg-accent/12 text-accent border-accent/25",
+  building: "bg-accent-warm/15 text-accent-warm border-accent-warm/30",
+  research: "bg-surface text-text-secondary border-border",
 };
 
 const statusLabels: Record<BadgeStatus, string> = {
@@ -21,7 +21,7 @@ const statusLabels: Record<BadgeStatus, string> = {
 export default function Badge({ status }: BadgeProps) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded border px-2.5 py-1 font-mono text-[10px] uppercase tracking-widest ${statusStyles[status]}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${statusStyles[status]}`}
     >
       <span
         className={`h-1.5 w-1.5 rounded-full animate-pulse-glow ${
@@ -30,8 +30,8 @@ export default function Badge({ status }: BadgeProps) {
             : status === "beta"
               ? "bg-accent"
               : status === "building"
-                ? "bg-amber-400"
-                : "bg-blue-400"
+                ? "bg-accent-warm"
+                : "bg-text-secondary"
         }`}
       />
       {statusLabels[status]}

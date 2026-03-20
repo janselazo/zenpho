@@ -7,27 +7,27 @@ import SectionHeading from "@/components/ui/SectionHeading";
 const faqs = [
   {
     q: "How quickly can we get started?",
-    a: "Advisory calls can be booked within a few days. For ongoing advisory, most engagements kick off within 1-2 weeks of signing.",
+    a: "Flexible consultancy blocks can usually begin within days. PoC and production work typically kick off within one to two weeks once scope, timeline, and paperwork are aligned.",
   },
   {
-    q: "Do you only advise, or do you build too?",
-    a: "I focus on advisory — strategy, architecture, and growth guidance. For hands-on development, I can connect you with trusted partners or recommend build approaches.",
+    q: "Do you only advise, or do you build and deploy?",
+    a: "Both. The consultancy tier is for strategy and architecture. PoC and production tiers are hands-on build, integration, and deployment—with documentation and handoff so your team can run it.",
   },
   {
-    q: "Can I scale the commitment up or down?",
-    a: "Absolutely. Monthly advisory tiers are flexible. Need more depth for a launch? I can add sessions. Post-launch? I can dial back. No long-term lock-in.",
+    q: "Can we change the level of engagement over time?",
+    a: "Yes. Common path: short discovery, then a PoC, then a production program—sometimes with hourly or advisory blocks alongside for steering.",
   },
   {
-    q: "What technologies do you work with?",
-    a: "I'm technology-agnostic but opinionated. My core stack includes TypeScript, React/Next.js, Python, Node.js, PostgreSQL, and major cloud platforms (AWS, GCP, Vercel). For AI, I work with OpenAI, LangChain, TensorFlow, and custom ML pipelines.",
+    q: "What does $100–150/h cover?",
+    a: "Time-and-materials execution: implementation, integration, reviews, and iteration when a fixed package isn’t the right fit. Fixed ranges on this page are anchors; every quote is tailored after we clarify scope.",
   },
   {
-    q: "Do you work with non-technical founders?",
-    a: "Yes — many of my clients are non-technical founders with a strong vision. I act as your technical and growth advisor, translating business goals into actionable strategy.",
+    q: "What technologies do you use?",
+    a: "TypeScript, React/Next.js, Node/Python, PostgreSQL, and major clouds (AWS, GCP, Vercel). On the AI side: OpenAI, Anthropic, LangChain/LlamaIndex-style patterns, and open-weight models when they’re the right tradeoff.",
   },
   {
-    q: "What does an advisory call look like?",
-    a: "A 90-minute deep-dive on your specific challenge — technical architecture, product roadmap, GTM strategy, or growth metrics. You get a written summary and action items. No pitch, no upsell.",
+    q: "Do you work with non-technical stakeholders?",
+    a: "Often. I translate goals into milestones, risks, and options so product and ops leaders can make decisions without drowning in stack details.",
   },
 ];
 
@@ -35,30 +35,29 @@ export default function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
-    <section className="mx-auto max-w-7xl px-6 py-32 lg:px-8">
+    <section className="mx-auto max-w-7xl px-6 py-24 lg:px-8">
       <SectionHeading
         label="FAQ"
-        title="Common Questions"
-        description="Answers to the questions I hear most often."
+        title="Common"
+        titleAccent="questions"
+        description="How consultancy, PoC, production builds, and hourly work usually fit together."
       />
 
-      <div className="mx-auto max-w-3xl space-y-4">
+      <div className="mx-auto max-w-3xl space-y-3">
         {faqs.map((faq, i) => (
           <motion.div
             key={i}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.2 }}
-            transition={{ duration: 0.4, delay: i * 0.05 }}
-            className="rounded-xl border border-border bg-surface"
+            transition={{ duration: 0.35, delay: i * 0.04 }}
+            className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm"
           >
             <button
               onClick={() => setOpenIndex(openIndex === i ? null : i)}
-              className="flex w-full items-center justify-between px-6 py-5 text-left"
+              className="flex w-full items-center justify-between px-5 py-4 text-left"
             >
-              <span className="text-sm font-medium text-text-primary">
-                {faq.q}
-              </span>
+              <span className="text-sm font-medium text-text-primary">{faq.q}</span>
               <svg
                 className={`h-5 w-5 flex-shrink-0 text-text-secondary transition-transform duration-200 ${
                   openIndex === i ? "rotate-180" : ""
@@ -84,7 +83,7 @@ export default function FAQ() {
                   transition={{ duration: 0.2 }}
                   className="overflow-hidden"
                 >
-                  <p className="px-6 pb-5 text-sm leading-relaxed text-text-secondary">
+                  <p className="px-5 pb-4 text-sm leading-relaxed text-text-secondary">
                     {faq.a}
                   </p>
                 </motion.div>
