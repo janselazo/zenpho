@@ -7,7 +7,7 @@ import CTASection from "@/components/home/CTASection";
 export const metadata: Metadata = {
   title: "Services",
   description:
-    "Custom AI software development: AI web apps, iOS and Android, websites, ecommerce stores, and AI agents tailored to your workflows.",
+    "What we build: AI apps, web, mobile, automation & workflows, content generation, and APIs — AI product studio with transparent pricing.",
 };
 
 export default function ServicesPage() {

@@ -18,15 +18,15 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Janse Lazo — Custom Software Development",
+    default: "Janse Lazo — AI Product Studio & Labs",
     template: "%s | Janse Lazo",
   },
   description:
-    "Custom software development — SaaS web apps, ecommerce stores, mobile apps, and the tools your team needs to ship.",
+    "AI product studio: AI apps, web, mobile, automation, and integrations — MVP from $1,999 or Scale from $3,999/mo. Labs for in-house products.",
   openGraph: {
-    title: "Janse Lazo — Custom Software Development",
+    title: "Janse Lazo — AI Product Studio & Labs",
     description:
-      "Nine years shipping custom software for startups and growing teams. Web apps, SaaS, ecommerce, and clean handoffs.",
+      "Design, build, and launch products that scale. Transparent pricing, weekly output, Labs for studio builds.",
     type: "website",
     locale: "en_US",
   },

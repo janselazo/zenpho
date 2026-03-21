@@ -23,7 +23,7 @@ export default function Hero() {
           transition={{ duration: 0.55 }}
         >
           <span className={`mb-5 ${SECTION_EYEBROW_CLASSNAME}`}>
-            Custom AI Solutions
+            AI Product Studio
           </span>
         </motion.div>
 
@@ -33,10 +33,8 @@ export default function Hero() {
           transition={{ duration: 0.55, delay: 0.06 }}
           className="heading-display text-4xl font-bold leading-[1.15] text-text-primary sm:text-5xl sm:leading-[1.12] lg:text-6xl lg:leading-[1.1]"
         >
-          <span className="block">
-            Custom AI Software Development{" "}
-            <span className="text-accent">&amp; AI Agents</span>
-          </span>
+          <span className="block">Design, build, and launch</span>
+          <span className="mt-1 block text-accent">products that scale</span>
         </motion.h1>
 
         <motion.p
@@ -45,8 +43,9 @@ export default function Hero() {
           transition={{ duration: 0.5, delay: 0.12 }}
           className="mx-auto mt-4 max-w-2xl text-lg font-medium leading-snug text-text-secondary sm:text-xl"
         >
-          Web apps, SaaS platforms, ecommerce stores, and the AI features that
-          are starting to matter.
+          An AI product studio for your roadmap — transparent pricing, tight
+          async communication, and weekly output. Labs is where we ship our own
+          products (like SoldTools) alongside client work.
         </motion.p>
 
         <motion.div
@@ -56,10 +55,10 @@ export default function Hero() {
           className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4"
         >
           <Button href="/contact" variant="primary" size="lg">
-            Start a project
+            Book a call
           </Button>
-          <Button href="/case-studies" variant="dark" size="lg" showLiveDot>
-            View Case Studies
+          <Button href="/pricing" variant="dark" size="lg" showLiveDot>
+            View pricing
           </Button>
         </motion.div>
 

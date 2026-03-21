@@ -9,7 +9,7 @@ import CTASection from "@/components/home/CTASection";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "custom software development and AI solutions deployment: flexible consultancy, PoC, production, and enterprise programs—from $100–150/h T&M to fixed-phase packages.",
+    "Transparent pricing: $50 strategy hour, $1,999 Product MVP, $3,999/mo Scale (10 hrs/week, pause anytime). Plus $100–150/h outside packages.",
 };
 
 export default function PricingPage() {

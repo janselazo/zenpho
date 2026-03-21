@@ -9,7 +9,7 @@ import Badge from "@/components/ui/Badge";
 
 const typeFilters = [
   { id: "all", label: "All" },
-  { id: "studio", label: "Studio" },
+  { id: "studio", label: "Labs" },
   { id: "agency", label: "Client" },
 ] as const;
 
@@ -108,7 +108,7 @@ export default function PortfolioGrid() {
                           : "bg-accent-violet"
                       }`}
                     />
-                    {project.type === "agency" ? "Client" : "Studio"}
+                    {project.type === "agency" ? "Client" : "Labs"}
                   </span>
                   <span className="rounded-full border border-border bg-surface px-2 py-0.5 text-[10px] font-medium text-text-secondary">
                     {categoryFilters.find((f) => f.id === project.category)

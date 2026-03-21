@@ -11,10 +11,10 @@ export default function VenturesGrid() {
   return (
     <section id="studio-projects" className="mx-auto max-w-7xl px-6 py-24 lg:px-8 lg:py-32">
       <SectionHeading
-        label="Studio"
-        title="Personal projects"
-        titleAccent="& products"
-        description="SoldTools is my live studio product—built for car sales teams, owned end to end, and separate from client work with the same bar for craft."
+        label="Labs"
+        title="In-house"
+        titleAccent="ventures"
+        description="Shipped on our own roadmap — same engineering bar as client work. SoldTools is live for car sales teams; more experiments land here over time."
       />
 
       <div className="grid gap-6 sm:grid-cols-2">

@@ -7,11 +7,11 @@ import SectionHeading from "@/components/ui/SectionHeading";
 const faqs = [
   {
     q: "What do you actually build?",
-    a: "Custom software: SaaS web apps, ecommerce stores, dashboards, mobile apps, and internal tools. I\u2019m increasingly building AI features into these \u2014 LLM integrations, automation, retrieval \u2014 but the foundation is always solid, shippable software.",
+    a: "AI applications (copilots, chat/search, predictive analytics), modern web apps, offline-first mobile, automation and agents, content generation pipelines, and APIs/integrations (auth, payments, analytics, third parties).",
   },
   {
-    q: "Agency vs. studio — what’s the difference?",
-    a: "Agency work is for your roadmap: we scope, build, and hand off systems you own. Studio is where I build my own products — right now that’s SoldTools for car sales teams.",
+    q: "Client work vs. Labs — what’s the difference?",
+    a: "Client work is your roadmap: we scope, build, and hand off what you own. Labs is where I ship in-house products (e.g. SoldTools) on our own timeline, separate from your engagement.",
   },
   {
     q: "Do you only work with startups?",
@@ -27,7 +27,7 @@ const faqs = [
   },
   {
     q: "Where can I see pricing?",
-    a: "The pricing page has consultancy, project, and retainer options. Exact quotes depend on scope — send a short brief and I’ll suggest a next step.",
+    a: "$50 strategy hour, $1,999 Product MVP (one-time), and $3,999/mo Scale (10 hrs/week, pause or cancel anytime). See the Pricing page for what’s included. Hourly $100–150 outside packages.",
   },
   {
     q: "Where are you based?",

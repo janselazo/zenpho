@@ -15,32 +15,33 @@ export default function PricingAIPocCallout() {
           className="rounded-3xl border border-border bg-white p-8 shadow-soft sm:p-10"
         >
           <p className="text-xs font-semibold uppercase tracking-wider text-accent">
-            Complex projects
+            Validate first
           </p>
           <h2 className="mt-3 heading-display text-2xl font-bold text-text-primary sm:text-3xl">
-            Start with a proof of concept
+            Start small, then scale
           </h2>
           <p className="mt-4 text-sm leading-relaxed text-text-secondary sm:text-base">
-            Some projects carry more uncertainty than others — new integrations,
-            unfamiliar data, or complex workflows where edge cases show up late.
-            A focused PoC—often on the order of roughly{" "}
-            <span className="font-medium text-text-primary">10% of a full
-            program budget</span>
-            —lets you validate feasibility, test with real users, and make a
-            confident go/no-go before the larger build.
+            The{" "}
+            <span className="font-medium text-text-primary">$1,999 Product MVP</span>{" "}
+            is scoped to prove traction with 4–5 core features — not a year-long
+            bet. Not sure where to cut scope? Book a{" "}
+            <span className="font-medium text-text-primary">$50 strategy hour</span>{" "}
+            first and we&apos;ll map the smallest release that still tells you
+            something real.
           </p>
           <ul className="mt-6 space-y-3 text-sm text-text-secondary">
             <li className="flex gap-3">
               <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent-violet" />
-              Stress-test the hardest technical assumptions first
+              Align on users, metrics, and what &quot;done&quot; means before build
             </li>
             <li className="flex gap-3">
               <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent-violet" />
-              Get a working slice in weeks, not months of blind commitment
+              Ship something testable, then iterate weekly on Scale if you want
+              ongoing capacity
             </li>
             <li className="flex gap-3">
               <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent-violet" />
-              Full build carries less risk once feasibility is grounded in data
+              Pause or cancel the Scale subscription when your roadmap shifts
             </li>
           </ul>
           <div className="mt-8">

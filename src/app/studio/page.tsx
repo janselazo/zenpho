@@ -4,9 +4,9 @@ import VenturesGrid from "@/components/studio/VenturesGrid";
 import CTASection from "@/components/home/CTASection";
 
 export const metadata: Metadata = {
-  title: "Studio",
+  title: "Labs",
   description:
-    "Studio product—SoldTools—for car sales teams, built alongside client work. Custom software starts on Services or Contact.",
+    "Labs — in-house products like SoldTools for car sales teams, built alongside client work. Custom builds start on Services or Contact.",
 };
 
 export default function StudioPage() {

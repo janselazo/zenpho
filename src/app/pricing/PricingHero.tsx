@@ -27,9 +27,9 @@ export default function PricingHero() {
           transition={{ duration: 0.5, delay: 0.06 }}
           className="heading-display text-4xl font-bold leading-tight tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
         >
-          Transparent pricing for
+          Simple packages for
           <br />
-          <span className="text-accent">custom software</span>
+          <span className="text-accent">AI & product builds</span>
         </motion.h1>
 
         <motion.p
@@ -38,9 +38,8 @@ export default function PricingHero() {
           transition={{ duration: 0.45, delay: 0.14 }}
           className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-text-secondary"
         >
-          Custom software development structured like product engineering —
-          clear phases from discovery through production. Hourly execution when
-          you need flexibility:{" "}
+          Start with a one-hour strategy call, ship an MVP to validate demand, or
+          subscribe for ongoing capacity — pause Scale anytime. Outside packages:{" "}
           <span className="font-medium text-text-primary">$100–150/h</span>.
         </motion.p>
       </div>

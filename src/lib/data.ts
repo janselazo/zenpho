@@ -89,91 +89,97 @@ export interface ServicePackage {
 
 export const services: Service[] = [
   {
-    title: "SaaS & web applications",
+    title: "AI applications",
     description:
-      "Custom web applications your team and customers use daily — dashboards, account management, workflows, and the integrations that tie them to your business.",
+      "Intelligent product surfaces your users actually adopt — not demos bolted on at the end.",
     details: [
-      "Authenticated experiences with role-based access and permissions",
-      "Admin consoles, internal tools, and customer-facing product surfaces",
-      "API design, third-party integrations, and data layer architecture",
-      "Deployment, monitoring, and iteration after launch",
+      "Copilots and in-app assistants",
+      "Chat and semantic search over your data",
+      "Predictive analytics and recommendations",
+    ],
+    icon: "brain",
+  },
+  {
+    title: "Web applications",
+    description:
+      "Modern web apps that are secure, scalable, and pleasant to maintain as you grow.",
+    details: [
+      "Next.js / React and solid API design",
+      "Auth, roles, and production-grade patterns",
+      "Performance, observability, and CI-friendly delivery",
     ],
     icon: "code",
   },
   {
-    title: "Ecommerce & online stores",
-    description:
-      "Online stores with catalog management, checkout, payments, and back-office tooling — so marketing and fulfillment can run without waiting on engineering.",
-    details: [
-      "Shopify themes, custom storefronts, or fully custom carts",
-      "Product pages, inventory, tax, and shipping integrations",
-      "Mobile-first checkout and conversion-focused UX",
-      "Merchandising tools the team can operate day to day",
-    ],
-    icon: "store",
-  },
-  {
     title: "Mobile apps",
     description:
-      "Native and cross-platform mobile products — React Native or Swift/Kotlin depending on your constraints. App Store submission, push, offline support, and iteration after launch.",
+      "iOS and Android experiences that stay usable when connectivity drops.",
     details: [
-      "React Native for cross-platform or Swift/Kotlin for native",
-      "Push notifications, offline-first patterns, and background sync",
-      "App Store and Play Store submission and review process",
-      "Analytics, crash reporting, and post-launch iteration",
+      "React Native or native paths by constraint",
+      "Offline-first sync and resilient UX",
+      "Store submission, push, and post-launch iteration",
     ],
     icon: "rocket",
   },
   {
-    title: "Websites & marketing sites",
+    title: "Automation & workflows",
     description:
-      "Fast, well-built marketing and content sites. SEO-friendly, CMS-integrated, and wired to your analytics and CRM.",
+      "Connect people, data, and systems so ops runs without copy-paste heroics.",
     details: [
-      "Next.js and modern static/dynamic rendering patterns",
-      "CMS, forms, CRM, and analytics wired for your GTM team",
-      "Accessibility and Core Web Vitals as defaults, not afterthoughts",
-      "Content workflows that let non-technical teammates publish",
+      "Internal ops automation",
+      "Agents and multi-step workflows with guardrails",
+      "CRM, docs, ticketing, and custom API integrations",
     ],
-    icon: "compass",
+    icon: "zap",
   },
   {
-    title: "AI features & integrations",
+    title: "Content generation",
     description:
-      "A growing part of what I build: LLM-powered features, search, automation, and retrieval added to products where they solve a real problem — not bolted on for the sake of it.",
+      "Image, text, and video pipelines for in-product experiences and marketing — where quality and brand safety matter.",
     details: [
-      "OpenAI and Anthropic integrations with structured outputs",
-      "Search, summarization, and retrieval features in existing apps",
-      "Workflow automation tied to your data and internal tools",
-      "Evaluation, guardrails, and cost-aware architecture",
+      "In-app generation and templated outputs",
+      "Marketing and lifecycle content workflows",
+      "Human-in-the-loop where outputs are customer-facing",
     ],
-    icon: "brain",
+    icon: "sparkle",
+  },
+  {
+    title: "APIs & integrations",
+    description:
+      "Glue that holds your stack together: auth, payments, analytics, and third-party platforms.",
+    details: [
+      "OAuth, SSO, and permission models",
+      "Payments, webhooks, and event pipelines",
+      "Analytics, CDPs, and partner APIs",
+    ],
+    icon: "plug",
   },
 ];
 
 export const processSteps: ProcessStep[] = [
   {
     number: "01",
-    title: "Discovery",
+    title: "Scope",
     description:
-      "We align on users, constraints, and what success looks like — before anyone writes code.",
+      "We lock the problem, users, and success criteria — tight scope so the first release proves something real.",
   },
   {
     number: "02",
-    title: "Design & architecture",
+    title: "Design",
     description:
-      "Solution design covers UX, APIs, data models, and how the system should handle edge cases and failures.",
+      "UX, flows, and architecture that fit your stack — designed to ship, not to decorate a slide deck.",
   },
   {
     number: "03",
-    title: "Build & iterate",
+    title: "Build",
     description:
-      "Short cycles with visible progress: working software, feedback from your team, and adjustments along the way — not slide decks.",
+      "AI-accelerated development with senior judgment: small increments, visible progress, tests where they earn their keep.",
   },
   {
     number: "04",
-    title: "Launch & handoff",
+    title: "Ship",
     description:
-      "Production rollout with monitoring, documentation, and a clear path for your team to operate and extend what we built.",
+      "Production rollout, monitoring, and handoff — then iterate weekly from real usage, not assumptions.",
   },
 ];
 
@@ -385,71 +391,49 @@ export const experienceStats = [
 
 export const pricingTiers: PricingTier[] = [
   {
-    name: "Flexible consultancy",
+    name: "Consultation",
     description:
-      "Senior guidance on software strategy, architecture, and what to build first — before you commit to a full engagement.",
-    price: "From $2K",
-    priceNote: "flexible hours",
+      "A focused hour to pressure-test your idea, stack, and roadmap — leave with a clear picture of what to build first and why.",
+    price: "$50",
+    priceNote: "1-hour strategy session",
     features: [
-      "10+ hours you can use across strategy and review",
-      "Direct access to a senior engineer (me)",
-      "Architecture & feasibility review",
-      "Technology and tooling evaluation",
-      "Clear “what next?” roadmap",
+      "Product and technical direction",
+      "Scope, risk, and sequencing",
+      "Honest fit check before a larger engagement",
     ],
     highlighted: false,
-    cta: "Get started",
+    cta: "Book a session",
   },
   {
-    name: "Proof of concept",
+    name: "Product MVP",
     description:
-      "Validate the riskiest assumptions with a working slice — real data, real integrations, not a slide deck.",
-    price: "$5K – $10K",
-    priceNote: "typical range",
+      "One shippable MVP with 4–5 core features — built with AI-accelerated delivery and real engineering discipline so you can test demand fast.",
+    price: "$1,999",
+    priceNote: "one-time",
     features: [
-      "Roughly 6–8 week timeline",
-      "Working prototype you can test internally",
-      "Technical feasibility & integration notes",
-      "Risk and constraint assessment",
-      "Short post-delivery support window",
-    ],
-    highlighted: false,
-    cta: "Plan a PoC",
-  },
-  {
-    name: "Production ready",
-    description:
-      "Full custom software: implementation, integration, deployment, and handoff so your team can run it in production.",
-    price: "$10K – $50K",
-    priceNote: "typical range",
-    features: [
-      "Roughly 3–4 month timeline (scope-dependent)",
-      "End-to-end build: app, APIs, integrations, workflows",
-      "Integration with your existing stack and data",
-      "Training, documentation, and team handoff",
-      "Performance, reliability, and production tuning",
-      "Post-launch stabilization period",
+      "Single MVP scoped to prove traction",
+      "4–5 core features end-to-end",
+      "Integrations and UX aligned to your users",
+      "Handoff you can extend or grow with Scale",
     ],
     highlighted: true,
     badge: "Most popular",
-    cta: "Build with me",
+    cta: "Get started",
   },
   {
-    name: "Enterprise scale",
+    name: "Scale subscription",
     description:
-      "Larger programs: multiple systems, phased releases, and ongoing optimization across workstreams.",
-    price: "$50K – $100K",
-    priceNote: "program-based",
+      "Fractional product engineering with predictable weekly output — move fast, stay flexible, and pause when your roadmap shifts.",
+    price: "$3,999",
+    priceNote: "/ month",
     features: [
-      "6+ month timelines for complex portfolios",
-      "Multiple workstreams or phased releases",
-      "Advanced integrations and operational guardrails",
-      "Dedicated cadence: demos, milestones, reporting",
-      "Ongoing optimization after initial launch",
-      "Priority response for production issues",
+      "10 hours / week dedicated capacity",
+      "Unlimited features & API integrations (fair use)",
+      "Weekly cadence — ship small, test early, iterate",
+      "Pause or cancel anytime",
     ],
     highlighted: false,
-    cta: "Discuss scope",
+    cta: "Start subscription",
   },
 ];
 
@@ -619,7 +603,7 @@ These aren't just product questions — they're architecture questions. The way 
       "How I built and launched a live SaaS product for car sales teams while running client engagements — and what I'd do differently.",
     date: "2026-01-20",
     readTime: "6 min read",
-    category: "Studio",
+    category: "Labs",
     content: `SoldTools is my own product — a toolkit for car sales professionals that handles lead capture, appointment scheduling, deal intelligence, and referrals. It's live at app.soldtools.com and being used by real salespeople.
 
 Building it alongside client work was one of the hardest things I've done. Here's what that actually looks like.
@@ -724,11 +708,11 @@ export const resourceItems: ResourceItem[] = [
     tag: "Engagement",
   },
   {
-    title: "Studio",
+    title: "Labs",
     description:
-      "SoldTools — a live product for car sales teams, built alongside client work.",
+      "In-house products like SoldTools — experiments and studio builds alongside client work.",
     href: "/studio",
-    tag: "Product",
+    tag: "Labs",
   },
   {
     title: "Newsletter",
@@ -757,7 +741,7 @@ export interface NavLinkItem {
 export const navLinks: NavLinkItem[] = [
   { label: "Services", href: "/services" },
   { label: "Case Studies", href: "/case-studies" },
-  { label: "Studio", href: "/studio" },
+  { label: "Labs", href: "/studio" },
   {
     label: "Resources",
     href: "/resources",

@@ -13,14 +13,15 @@ export default function AboutIntro() {
         className="text-center"
       >
         <p className="text-lg leading-relaxed text-text-secondary sm:text-xl">
-          For nine years I&apos;ve shipped custom software for startups and
-          growing teams — SaaS platforms, ecommerce stores, dashboards, and
-          mobile apps. I&apos;m adding{" "}
+          <span className="font-medium text-text-primary">Who it&apos;s for:</span>{" "}
+          early-stage founders who need a focused MVP to test demand; teams who
+          want help scoping, accelerating delivery, or adding AI; and companies
+          that prefer{" "}
           <span className="font-medium text-text-primary">
-            AI to that toolkit
-          </span>{" "}
-          because it&apos;s starting to solve real problems, not because it
-          looks good on a landing page.
+            transparent pricing and predictable weekly output
+          </span>
+          . Nine years shipping software — now organized like a modern AI product
+          studio, with Labs for products we own (like SoldTools).
         </p>
       </motion.div>
     </section>

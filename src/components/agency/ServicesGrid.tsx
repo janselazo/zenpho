@@ -54,6 +54,24 @@ const iconMap: Record<string, React.ReactNode> = {
       />
     </svg>
   ),
+  sparkle: (
+    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.847a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.847.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z"
+      />
+    </svg>
+  ),
+  plug: (
+    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244"
+      />
+    </svg>
+  ),
 };
 
 /* Relink-style: white glyph on saturated circular badge */
@@ -72,9 +90,9 @@ export default function ServicesGrid() {
     <section className="mx-auto max-w-7xl px-6 py-32 lg:px-8">
       <SectionHeading
         label="Services"
-        title="Custom AI software"
-        titleAccent="development"
-        description="Web apps, mobile, websites, ecommerce, and AI agents—prioritized for production quality, your stack, and how your team ships."
+        title="What we"
+        titleAccent="build"
+        description="AI applications, web and mobile, automation, content pipelines, and integrations — scoped for production and weekly iteration."
       />
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -90,7 +108,7 @@ export default function ServicesGrid() {
               <div
                 className={`mb-4 flex h-11 w-11 items-center justify-center rounded-full ${iconAccent(i)}`}
               >
-                {iconMap[service.icon]}
+                {iconMap[service.icon] ?? iconMap.code}
               </div>
               <h3 className="text-lg font-semibold text-text-primary">
                 {service.title}

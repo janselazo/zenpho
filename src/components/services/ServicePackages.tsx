@@ -41,7 +41,7 @@ export default function ServicePackages() {
           label="How it runs"
           title="From idea"
           titleAccent="to production"
-          description="Typical phases inside AI builds—whether you start with consultancy, a PoC, or a full production engagement."
+          description="Typical phases inside SaaS, app, and AI builds—from discovery through launch and optional maintenance."
         />
 
         <div className="grid gap-8 lg:grid-cols-3">

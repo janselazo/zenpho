@@ -10,9 +10,18 @@ export default function Process() {
       <SectionHeading
         label="Process"
         title="How we work"
-        titleAccent="together"
-        titleAccentInline
-        description="Clear phases so you always know what’s next—especially important when models, data, and UX evolve in parallel."
+        description={
+          <>
+            <p>
+              <span className="font-medium text-text-primary">Scope → design → build → ship</span>
+              , with AI-accelerated development where it earns its place.
+            </p>
+            <p>
+              Communication stays tight; we ship small, test early, and iterate
+              weekly — so you always see progress, not surprises.
+            </p>
+          </>
+        }
       />
 
       <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">

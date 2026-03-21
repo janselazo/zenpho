@@ -14,7 +14,7 @@ export default function ServicesHero() {
           transition={{ duration: 0.45 }}
           className={`mb-5 ${SECTION_EYEBROW_CLASSNAME}`}
         >
-          Services
+          What we build
         </motion.span>
 
         <motion.h1
@@ -23,9 +23,9 @@ export default function ServicesHero() {
           transition={{ duration: 0.5, delay: 0.06 }}
           className="heading-display text-4xl font-bold leading-tight text-text-primary sm:text-5xl lg:text-6xl"
         >
-          Custom software
+          AI apps, web, mobile,
           <br />
-          <span className="text-accent">built for your product</span>
+          <span className="text-accent">automation & integrations</span>
         </motion.h1>
 
         <motion.p
@@ -34,8 +34,9 @@ export default function ServicesHero() {
           transition={{ duration: 0.45, delay: 0.14 }}
           className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-text-secondary sm:text-lg"
         >
-          Web apps, SaaS platforms, ecommerce stores, mobile apps, and internal
-          tools — scoped so your team can run and extend what we ship.
+          From copilots and workflows to full-stack web, offline-first mobile, and
+          APIs — scoped for production, weekly iteration, and transparent
+          pricing.
         </motion.p>
 
         <motion.p

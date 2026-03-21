@@ -7,19 +7,19 @@ import SectionHeading from "@/components/ui/SectionHeading";
 const faqs = [
   {
     q: "How quickly can we get started?",
-    a: "Flexible consultancy blocks can usually begin within days. PoC and production work typically kick off within one to two weeks once scope, timeline, and paperwork are aligned.",
+    a: "The $50 strategy hour can usually be booked within days. MVP and Scale engagements typically start within one to two weeks once scope and paperwork are aligned.",
   },
   {
     q: "Do you only advise, or do you build and deploy?",
-    a: "Both. The consultancy tier is for strategy and architecture. PoC and production tiers are hands-on build, integration, and deployment—with documentation and handoff so your team can run it.",
+    a: "I scope, build, integrate, and deploy end to end—with documentation and handoff so your team can run what we ship. Strategy and architecture are part of discovery before any build.",
   },
   {
     q: "Can we change the level of engagement over time?",
-    a: "Yes. Common path: short discovery, then a PoC, then a production program—sometimes with hourly or advisory blocks alongside for steering.",
+    a: "Yes. Common path: $50 consult → $1,999 MVP to validate → $3,999/mo Scale for ongoing shipping. You can pause or cancel Scale anytime. Hourly ($100–150) works for ad-hoc work outside packages.",
   },
   {
     q: "What does $100–150/h cover?",
-    a: "Time-and-materials execution: implementation, integration, reviews, and iteration when a fixed package isn’t the right fit. Fixed ranges on this page are anchors; every quote is tailored after we clarify scope.",
+    a: "Time-and-materials when Consultation, MVP, or Scale isn’t the right fit — implementation, integration, reviews, and iteration billed as we go.",
   },
   {
     q: "What technologies do you use?",
@@ -40,7 +40,7 @@ export default function FAQ() {
         label="FAQ"
         title="Common"
         titleAccent="questions"
-        description="How consultancy, project builds, and hourly work usually fit together."
+        description="How the $50 consult, $1,999 MVP, $3,999/mo Scale subscription, and hourly work fit together."
       />
 
       <div className="mx-auto max-w-3xl space-y-3">

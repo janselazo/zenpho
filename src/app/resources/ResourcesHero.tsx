@@ -33,8 +33,8 @@ export default function ResourcesHero() {
           transition={{ duration: 0.45, delay: 0.14 }}
           className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-text-secondary sm:text-lg"
         >
-          Blog posts, case studies, pricing, the Studio page (personal
-          projects), newsletter, and LinkedIn—in one place.
+          Blog posts, case studies, pricing, Labs (in-house products),
+          newsletter, and LinkedIn — in one place.
         </motion.p>
 
         <motion.div
