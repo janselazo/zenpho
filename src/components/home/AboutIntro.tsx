@@ -20,9 +20,7 @@ export default function AboutIntro() {
           <span className="font-medium text-text-primary">
             transparent pricing and predictable weekly output
           </span>
-          . Nine years shipping production software, brought together as a modern
-          AI product development agency — with Studio for products we own,
-          including SoldTools.
+          .
         </p>
       </motion.div>
     </section>

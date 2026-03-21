@@ -41,6 +41,7 @@ export default function ServicePackages() {
           label="How it runs"
           title="From idea"
           titleAccent="to production"
+          titleAccentInline
           description="Typical phases inside SaaS, app, and AI builds—from discovery through launch and optional maintenance."
         />
 

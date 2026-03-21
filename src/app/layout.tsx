@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
 import "./globals.css";
 
 const inter = Inter({
@@ -18,13 +16,13 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Janse Lazo — AI Product Development Agency & Studio",
+    default: "Janse Lazo — AI Software Development Agency & Studio",
     template: "%s | Janse Lazo",
   },
   description:
-    "AI product development agency: AI apps, web, mobile, automation, and integrations — MVP from $1,999 or Scale from $3,999/mo. Studio for in-house products.",
+    "AI software development agency: AI apps, web, mobile, automation, and integrations — MVP from $1,999 or Scale from $3,999/mo. Studio for in-house products.",
   openGraph: {
-    title: "Janse Lazo — AI Product Development Agency & Studio",
+    title: "Janse Lazo — AI Software Development Agency & Studio",
     description:
       "Design, build, and launch products that scale. Transparent pricing, weekly output, Studio for in-house builds.",
     type: "website",
@@ -42,11 +40,7 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${jetbrainsMono.variable} min-h-screen bg-background font-sans text-foreground antialiased`}
       >
-        <div className="relative">
-          <Navbar />
-          <main className="relative">{children}</main>
-          <Footer />
-        </div>
+        {children}
       </body>
     </html>
   );

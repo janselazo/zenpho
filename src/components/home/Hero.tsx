@@ -23,7 +23,7 @@ export default function Hero() {
           transition={{ duration: 0.55 }}
         >
           <span className={`mb-5 ${SECTION_EYEBROW_CLASSNAME}`}>
-            AI Product Development Agency
+            AI Software Development Agency
           </span>
         </motion.div>
 
@@ -43,7 +43,7 @@ export default function Hero() {
           transition={{ duration: 0.5, delay: 0.12 }}
           className="mx-auto mt-4 max-w-2xl text-lg font-medium leading-snug text-text-secondary sm:text-xl"
         >
-          An AI product development agency for your roadmap — transparent pricing and
+          An AI software development agency for your roadmap — transparent pricing and
           predictable weekly output.
         </motion.p>
 

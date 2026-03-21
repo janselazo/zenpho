@@ -73,6 +73,22 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
+## Agency CRM (Supabase)
+
+Internal CRM and client portal live alongside the marketing site:
+
+| Path | Purpose |
+|------|---------|
+| `/login`, `/register`, `/forgot-password` | Supabase Auth |
+| `/dashboard`, `/leads`, `/clients`, `/projects`, `/calendar`, `/settings` | Agency app (sidebar) |
+| `/portal`, `/portal/projects/[id]` | Client portal (RLS-scoped) |
+
+1. Copy `.env.example` to `.env.local` and set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+2. Run the SQL in [`supabase/migrations/20250321000000_init_crm.sql`](supabase/migrations/20250321000000_init_crm.sql) in the Supabase SQL editor.
+3. See [`supabase/README.md`](supabase/README.md) for roles and client linking.
+
+Without Supabase env vars, CRM routes stay reachable for layout preview; middleware does not enforce login until keys are set.
+
 ## Deploy on Vercel
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.

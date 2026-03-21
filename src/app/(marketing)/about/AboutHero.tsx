@@ -28,22 +28,10 @@ export default function AboutHero() {
         >
           <span className="block">Janse Lazo —</span>
           <span className="mt-1 block">
-            <span className="text-accent">AI product development agency</span>
+            <span className="text-accent">AI software development agency</span>
             <span className="text-text-primary"> &amp; Studio</span>
           </span>
         </motion.h1>
-
-        <motion.p
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, delay: 0.14 }}
-          className="mx-auto mt-4 max-w-xl text-base text-text-secondary"
-        >
-          Software engineer with an MBA — nine years shipping products. Today:
-          an AI product development agency for client roadmaps and Studio for
-          in-house builds
-          like SoldTools. Bilingual (English / Spanish), Miami, FL.
-        </motion.p>
       </div>
     </section>
   );

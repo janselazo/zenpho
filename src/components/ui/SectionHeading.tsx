@@ -43,9 +43,13 @@ export default function SectionHeading({
       <h2 className="heading-display text-3xl font-bold tracking-tight text-text-primary sm:text-4xl lg:text-5xl">
         {titleAccent ? (
           titleAccentInline ? (
-            <span className="block leading-[1.08] sm:leading-[1.1]">
-              <span className="text-text-primary">{title}</span>{" "}
-              <span className="text-accent">{titleAccent}</span>
+            <span
+              className={`flex flex-row flex-nowrap items-baseline gap-x-2 leading-[1.08] sm:leading-[1.1] ${
+                align === "center" ? "justify-center" : "justify-start"
+              }`}
+            >
+              <span className="shrink-0 text-text-primary">{title}</span>
+              <span className="shrink-0 text-accent">{titleAccent}</span>
             </span>
           ) : (
             <span

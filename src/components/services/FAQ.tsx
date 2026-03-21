@@ -40,6 +40,7 @@ export default function FAQ() {
         label="FAQ"
         title="Common"
         titleAccent="questions"
+        titleAccentInline
         description="How the $50 consult, $1,999 MVP, $3,999/mo Scale subscription, and hourly work fit together."
       />
 

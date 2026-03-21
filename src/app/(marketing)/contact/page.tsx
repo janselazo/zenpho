@@ -6,7 +6,7 @@ import ContactForm from "@/components/contact/ContactForm";
 export const metadata: Metadata = {
   title: "Contact",
   description:
-    "Book a call or message Janse Lazo — AI product development agency for MVPs, web, mobile, plus in-house Studio products.",
+    "Book a call or message Janse Lazo — AI software development agency for MVPs, web, mobile, plus in-house Studio products.",
 };
 
 export default function ContactPage() {

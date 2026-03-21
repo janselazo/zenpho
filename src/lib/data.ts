@@ -402,7 +402,7 @@ export const pricingTiers: PricingTier[] = [
       "Honest fit check before a larger engagement",
     ],
     highlighted: false,
-    cta: "Book a session",
+    cta: "Book a call",
   },
   {
     name: "Product MVP",
@@ -433,7 +433,7 @@ export const pricingTiers: PricingTier[] = [
       "Pause or cancel anytime",
     ],
     highlighted: false,
-    cta: "Start subscription",
+    cta: "Book a call",
   },
 ];
 
