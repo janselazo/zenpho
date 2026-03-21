@@ -23,7 +23,7 @@ export default function Hero() {
           transition={{ duration: 0.55 }}
         >
           <span className={`mb-5 ${SECTION_EYEBROW_CLASSNAME}`}>
-            AI Product Studio
+            AI Product Development Agency
           </span>
         </motion.div>
 
@@ -43,9 +43,8 @@ export default function Hero() {
           transition={{ duration: 0.5, delay: 0.12 }}
           className="mx-auto mt-4 max-w-2xl text-lg font-medium leading-snug text-text-secondary sm:text-xl"
         >
-          An AI product studio for your roadmap — transparent pricing, tight
-          async communication, and weekly output. Labs is where we ship our own
-          products (like SoldTools) alongside client work.
+          An AI product development agency for your roadmap — transparent pricing and
+          predictable weekly output.
         </motion.p>
 
         <motion.div
@@ -54,7 +53,7 @@ export default function Hero() {
           transition={{ duration: 0.5, delay: 0.24 }}
           className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4"
         >
-          <Button href="/contact" variant="primary" size="lg">
+          <Button href="/contact#booking" variant="primary" size="lg">
             Book a call
           </Button>
           <Button href="/pricing" variant="dark" size="lg" showLiveDot>

@@ -10,8 +10,8 @@ const faqs = [
     a: "AI applications (copilots, chat/search, predictive analytics), modern web apps, offline-first mobile, automation and agents, content generation pipelines, and APIs/integrations (auth, payments, analytics, third parties).",
   },
   {
-    q: "Client work vs. Labs — what’s the difference?",
-    a: "Client work is your roadmap: we scope, build, and hand off what you own. Labs is where I ship in-house products (e.g. SoldTools) on our own timeline, separate from your engagement.",
+    q: "Client work vs. Studio — what’s the difference?",
+    a: "Client work is your roadmap: we scope, build, and hand off what you own. Studio is where I ship in-house products (e.g. SoldTools) on our own timeline, separate from your engagement.",
   },
   {
     q: "Do you only work with startups?",

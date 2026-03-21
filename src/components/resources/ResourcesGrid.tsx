@@ -57,7 +57,7 @@ export default function ResourcesGrid({
           label="Resources"
           title="Go deeper on"
           titleAccent="how I work"
-          description="Writing, selected work, how engagements work, the studio product, and ways to follow along."
+          description="Writing, selected work, how engagements work, in-house Studio products, and ways to follow along."
         />
       )}
 

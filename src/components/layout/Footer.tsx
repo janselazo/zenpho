@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import NewsletterSignup from "@/components/ui/NewsletterSignup";
-import { navLinks } from "@/lib/data";
+import { footerNavLinks } from "@/lib/data";
 
 export default function Footer() {
   return (
@@ -16,8 +16,8 @@ export default function Footer() {
               </span>
             </Link>
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-text-secondary">
-              AI product studio — AI apps, web, mobile, automation, and
-              integrations. Labs for products we build in-house.
+              AI product development agency — AI apps, web, mobile, automation,
+              and integrations. Studio for products we build in-house.
             </p>
           </div>
 
@@ -26,7 +26,7 @@ export default function Footer() {
               Navigate
             </h4>
             <div className="flex flex-col gap-3">
-              {navLinks.map((link) =>
+              {footerNavLinks.map((link) =>
                 link.children ? (
                   <div key={link.href} className="flex flex-col gap-2">
                     <Link

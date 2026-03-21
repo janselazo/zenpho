@@ -35,14 +35,14 @@ const cards = [
     initial: "C",
   },
   {
-    label: "Labs",
+    label: "Studio",
     badgeClass: "bg-accent-warm text-white",
     title: "Our own",
     titleAccent: "products.",
-    body: "SoldTools and other studio experiments — built in Labs alongside client delivery, separate from your roadmap.",
+    body: "SoldTools and other in-house experiments — shipped in Studio alongside client delivery, separate from your roadmap.",
     href: "/studio",
-    cta: "Open Labs",
-    initial: "L",
+    cta: "Open Studio",
+    initial: "S",
   },
 ] as const;
 

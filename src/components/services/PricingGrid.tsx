@@ -147,7 +147,7 @@ export default function PricingGrid() {
                 </ul>
 
                 <Button
-                  href="/contact"
+                  href="/contact#booking"
                   variant={tier.highlighted ? "primary" : "secondary"}
                   size="lg"
                   className="mt-10 w-full justify-center"

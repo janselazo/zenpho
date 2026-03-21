@@ -19,7 +19,7 @@ export default function StudioHero() {
           transition={{ duration: 0.45 }}
           className={`mb-5 ${SECTION_EYEBROW_CLASSNAME}`}
         >
-          Labs
+          Studio
         </motion.span>
 
         <motion.h1
@@ -38,9 +38,9 @@ export default function StudioHero() {
           transition={{ duration: 0.45, delay: 0.14 }}
           className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-text-secondary sm:text-lg"
         >
-          Labs is separate from client roadmaps — a place to ship our own ideas
-          at full quality. Today that includes SoldTools for car sales teams.
-          Custom work for your company starts on Services.
+          Studio is separate from client roadmaps — a place to ship our own
+          ideas at full quality. Today that includes SoldTools for car sales
+          teams. Custom work for your company starts on Services.
         </motion.p>
 
         <motion.div
@@ -50,7 +50,7 @@ export default function StudioHero() {
           className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4"
         >
           <Button href="#studio-projects" variant="primary" size="lg">
-            Browse Labs projects
+            Browse Studio projects
           </Button>
           <Button href="/contact" variant="dark" size="lg" showLiveDot>
             Start a client project

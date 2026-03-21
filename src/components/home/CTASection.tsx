@@ -36,8 +36,8 @@ export default function CTASection() {
             what a good first milestone looks like.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
-            <Button href="/contact" variant="primary" size="lg">
-              Get started
+            <Button href="/contact#booking" variant="primary" size="lg">
+              Book a call
             </Button>
             <Button href="/services" variant="dark" size="lg" showLiveDot>
               Services & pricing

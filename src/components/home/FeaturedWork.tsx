@@ -33,7 +33,7 @@ export default function FeaturedWork() {
                     project.type === "agency" ? "text-accent" : "text-accent-violet"
                   }`}
                 >
-                  {project.type === "agency" ? "Client build" : "Labs"}
+                  {project.type === "agency" ? "Client build" : "Studio"}
                 </span>
                 {project.result && (
                   <span className="rounded-full bg-surface px-2.5 py-0.5 text-xs font-medium text-accent">

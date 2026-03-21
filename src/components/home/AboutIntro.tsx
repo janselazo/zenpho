@@ -15,13 +15,14 @@ export default function AboutIntro() {
         <p className="text-lg leading-relaxed text-text-secondary sm:text-xl">
           <span className="font-medium text-text-primary">Who it&apos;s for:</span>{" "}
           early-stage founders who need a focused MVP to test demand; teams who
-          want help scoping, accelerating delivery, or adding AI; and companies
-          that prefer{" "}
+          want help with scoping, faster delivery, or adding AI to the product;
+          and companies that want{" "}
           <span className="font-medium text-text-primary">
             transparent pricing and predictable weekly output
           </span>
-          . Nine years shipping software — now organized like a modern AI product
-          studio, with Labs for products we own (like SoldTools).
+          . Nine years shipping production software, brought together as a modern
+          AI product development agency — with Studio for products we own,
+          including SoldTools.
         </p>
       </motion.div>
     </section>

@@ -188,7 +188,7 @@ export const ventures: Venture[] = [
     name: "SoldTools",
     tagline: "The toolkit car sales teams run on.",
     description:
-      "A live studio product: lead capture from 10+ sources, appointment scheduling, deal intelligence, and a referral engine—built for the showroom, not generic CRM slides.",
+      "A live in-house product: lead capture from 10+ sources, appointment scheduling, deal intelligence, and a referral engine—built for the showroom, not generic CRM slides.",
     status: "live",
     category: "Automotive / SaaS",
     metrics: "Production app — car sales professionals",
@@ -274,7 +274,7 @@ export const portfolioProjects: PortfolioProject[] = [
   {
     title: "SoldTools",
     description:
-      "Live studio product for car sales teams: lead capture from multiple sources, appointment scheduling, deal intelligence, and a referral engine—shipping in production at app.soldtools.com.",
+      "Live in-house product for car sales teams: lead capture from multiple sources, appointment scheduling, deal intelligence, and a referral engine—shipping in production at app.soldtools.com.",
     tags: ["SaaS", "Automotive", "Web app"],
     type: "studio",
     category: "saas-platform",
@@ -386,7 +386,7 @@ export const experienceStats = [
   { value: "15+", label: "Projects shipped" },
   { value: "9+", label: "Years building software" },
   { value: "10+", label: "Client teams" },
-  { value: "1", label: "Live studio product" },
+  { value: "1", label: "Live in-house product" },
 ];
 
 export const pricingTiers: PricingTier[] = [
@@ -418,7 +418,7 @@ export const pricingTiers: PricingTier[] = [
     ],
     highlighted: true,
     badge: "Most popular",
-    cta: "Get started",
+    cta: "Book a call",
   },
   {
     name: "Scale subscription",
@@ -603,7 +603,7 @@ These aren't just product questions — they're architecture questions. The way 
       "How I built and launched a live SaaS product for car sales teams while running client engagements — and what I'd do differently.",
     date: "2026-01-20",
     readTime: "6 min read",
-    category: "Labs",
+    category: "Studio",
     content: `SoldTools is my own product — a toolkit for car sales professionals that handles lead capture, appointment scheduling, deal intelligence, and referrals. It's live at app.soldtools.com and being used by real salespeople.
 
 Building it alongside client work was one of the hardest things I've done. Here's what that actually looks like.
@@ -708,11 +708,11 @@ export const resourceItems: ResourceItem[] = [
     tag: "Engagement",
   },
   {
-    title: "Labs",
+    title: "Studio",
     description:
-      "In-house products like SoldTools — experiments and studio builds alongside client work.",
+      "In-house products like SoldTools — experiments we ship on our own roadmap alongside client work.",
     href: "/studio",
-    tag: "Labs",
+    tag: "Studio",
   },
   {
     title: "Newsletter",
@@ -738,16 +738,24 @@ export interface NavLinkItem {
   children?: NavLinkItem[];
 }
 
-export const navLinks: NavLinkItem[] = [
+/** Primary header: About, Work, Studio, Pricing (+ Book a call CTA in layout). */
+export const headerNavLinks: NavLinkItem[] = [
+  { label: "About", href: "/about" },
+  { label: "Work", href: "/case-studies" },
+  { label: "Studio", href: "/studio" },
+  { label: "Pricing", href: "/pricing" },
+];
+
+/** Footer: former header items (Services, case studies, resources hub, contact). */
+export const footerNavLinks: NavLinkItem[] = [
   { label: "Services", href: "/services" },
   { label: "Case Studies", href: "/case-studies" },
-  { label: "Labs", href: "/studio" },
   {
     label: "Resources",
     href: "/resources",
     children: [
       { label: "Pricing", href: "/pricing" },
-      { label: "About Me", href: "/about" },
+      { label: "About", href: "/about" },
       { label: "Blog", href: "/blog" },
     ],
   },

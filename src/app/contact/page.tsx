@@ -1,17 +1,19 @@
 import type { Metadata } from "next";
 import ContactHero from "./ContactHero";
+import BookingSection from "@/components/contact/BookingSection";
 import ContactForm from "@/components/contact/ContactForm";
 
 export const metadata: Metadata = {
   title: "Contact",
   description:
-    "Get in touch with Janse Lazo — custom software development for startups and growing teams.",
+    "Book a call or message Janse Lazo — AI product development agency for MVPs, web, mobile, plus in-house Studio products.",
 };
 
 export default function ContactPage() {
   return (
     <>
       <ContactHero />
+      <BookingSection />
       <section className="mx-auto max-w-7xl px-6 pb-32 lg:px-8">
         <div className="grid gap-16 lg:grid-cols-5">
           <div className="lg:col-span-3">

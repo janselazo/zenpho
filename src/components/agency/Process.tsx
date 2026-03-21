@@ -13,8 +13,9 @@ export default function Process() {
         description={
           <>
             <p>
-              <span className="font-medium text-text-primary">Scope → design → build → ship</span>
-              , with AI-accelerated development where it earns its place.
+              <span className="font-medium text-text-primary">
+                Scope → design → build → ship.
+              </span>
             </p>
             <p>
               Communication stays tight; we ship small, test early, and iterate

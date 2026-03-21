@@ -11,7 +11,7 @@ export default function VenturesGrid() {
   return (
     <section id="studio-projects" className="mx-auto max-w-7xl px-6 py-24 lg:px-8 lg:py-32">
       <SectionHeading
-        label="Labs"
+        label="Studio"
         title="In-house"
         titleAccent="ventures"
         description="Shipped on our own roadmap — same engineering bar as client work. SoldTools is live for car sales teams; more experiments land here over time."

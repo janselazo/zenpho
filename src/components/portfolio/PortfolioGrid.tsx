@@ -9,7 +9,7 @@ import Badge from "@/components/ui/Badge";
 
 const typeFilters = [
   { id: "all", label: "All" },
-  { id: "studio", label: "Labs" },
+  { id: "studio", label: "Studio" },
   { id: "agency", label: "Client" },
 ] as const;
 
@@ -48,7 +48,7 @@ export default function PortfolioGrid() {
         title="Selected"
         titleAccent="work"
         titleAccentInline
-        description="Real outcomes for current clients—SaaS platforms, ecommerce, and web products—plus SoldTools, my live studio product for automotive sales teams."
+        description="Real outcomes for current clients—SaaS platforms, ecommerce, and web products—plus SoldTools, a live in-house product for automotive sales teams."
       />
 
       <div className="mb-8 flex flex-wrap justify-center gap-2">
@@ -108,7 +108,7 @@ export default function PortfolioGrid() {
                           : "bg-accent-violet"
                       }`}
                     />
-                    {project.type === "agency" ? "Client" : "Labs"}
+                    {project.type === "agency" ? "Client" : "Studio"}
                   </span>
                   <span className="rounded-full border border-border bg-surface px-2 py-0.5 text-[10px] font-medium text-text-secondary">
                     {categoryFilters.find((f) => f.id === project.category)
