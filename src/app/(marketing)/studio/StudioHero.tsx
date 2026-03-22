@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { motion } from "framer-motion";
 import Button from "@/components/ui/Button";
 import { SECTION_EYEBROW_CLASSNAME } from "@/components/ui/SectionHeading";
@@ -42,23 +41,7 @@ export default function StudioHero() {
           Studio is where we build and scale{" "}
           <span className="text-text-primary">our own</span> software — web apps,
           mobile, and SaaS — on our timeline, not a client’s. Same team and standards
-          as our Agency; different roadmap. We obsess over every detail that drives
-          growth, then live with maintenance and support like any serious product
-          team. Custom work for your business lives under{" "}
-          <Link
-            href="/case-studies"
-            className="font-medium text-text-primary underline-offset-2 hover:underline"
-          >
-            Work
-          </Link>
-          ,{" "}
-          <Link
-            href="/services"
-            className="font-medium text-text-primary underline-offset-2 hover:underline"
-          >
-            Services
-          </Link>
-          , or a call.
+          as our Agency; different roadmap.
         </motion.p>
 
         <motion.div
