@@ -163,7 +163,7 @@ function PricingTierCards({
               </ul>
 
               <Button
-                href="/contact#booking"
+                href="/booking"
                 variant={tier.highlighted ? "primary" : "secondary"}
                 size="lg"
                 className={

@@ -3,6 +3,7 @@ import AboutIntro from "@/components/home/AboutIntro";
 import SplitIntro from "@/components/home/SplitIntro";
 import Process from "@/components/agency/Process";
 import FeaturedWork from "@/components/home/FeaturedWork";
+import Testimonials from "@/components/home/Testimonials";
 import TechStrip from "@/components/home/TechStrip";
 import HomeFAQ from "@/components/home/HomeFAQ";
 import NewsletterSignup from "@/components/ui/NewsletterSignup";
@@ -16,6 +17,7 @@ export default function HomePage() {
       <SplitIntro />
       <Process />
       <FeaturedWork />
+      <Testimonials />
       <TechStrip />
       <HomeFAQ />
       <NewsletterSignup />

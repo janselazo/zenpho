@@ -48,7 +48,7 @@ export default function ServicesHero() {
           transition={{ duration: 0.45, delay: 0.22 }}
           className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4"
         >
-          <Button href="/contact#booking" variant="primary" size="lg">
+          <Button href="/booking" variant="primary" size="lg">
             Book a call
           </Button>
           <Button href="/pricing" variant="dark" size="lg" showLiveDot>

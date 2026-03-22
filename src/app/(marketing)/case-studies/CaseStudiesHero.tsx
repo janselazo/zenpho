@@ -48,7 +48,7 @@ export default function CaseStudiesHero() {
           <Button href="#projects" variant="primary" size="lg">
             Explore projects
           </Button>
-          <Button href="/contact#booking" variant="dark" size="lg" showLiveDot>
+          <Button href="/booking" variant="dark" size="lg" showLiveDot>
             Book a call
           </Button>
         </motion.div>

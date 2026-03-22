@@ -55,7 +55,7 @@ export default function Navbar() {
           </div>
 
           <div className="ml-auto flex shrink-0 items-center gap-2 md:gap-3">
-            <Button href="/contact#booking" variant="primary" size="sm" className="!px-5">
+            <Button href="/booking" variant="primary" size="sm" className="!px-5">
               Book a call
             </Button>
             <button

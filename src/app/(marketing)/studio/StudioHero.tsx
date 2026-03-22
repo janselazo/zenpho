@@ -53,7 +53,7 @@ export default function StudioHero() {
           <Button href="#studio-projects" variant="primary" size="lg">
             Browse Studio projects
           </Button>
-          <Button href="/contact#booking" variant="dark" size="lg" showLiveDot>
+          <Button href="/booking" variant="dark" size="lg" showLiveDot>
             Book a call
           </Button>
         </motion.div>

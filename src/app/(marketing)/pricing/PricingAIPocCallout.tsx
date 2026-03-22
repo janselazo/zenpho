@@ -47,7 +47,7 @@ export default function PricingAIPocCallout() {
               </li>
             </ul>
             <div className="mt-8">
-              <Button href="/contact#booking" variant="primary" size="lg">
+              <Button href="/booking" variant="primary" size="lg">
                 Book a Development call
               </Button>
             </div>
@@ -92,7 +92,7 @@ export default function PricingAIPocCallout() {
             </ul>
             <div className="mt-8">
               <Button
-                href="/contact#booking"
+                href="/booking"
                 variant="primary"
                 size="lg"
                 className="!border-0 !bg-accent-green !text-white shadow-sm hover:!bg-emerald-700 hover:!shadow-md"
