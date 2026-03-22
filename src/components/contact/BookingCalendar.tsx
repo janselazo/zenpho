@@ -169,6 +169,7 @@ export default function BookingCalendar() {
         body: JSON.stringify({
           name: fd.get("name"),
           email: fd.get("email"),
+          phone: fd.get("phone"),
           company: fd.get("company"),
           message: fd.get("message"),
           starts_at: selectedSlot.start.toISOString(),
@@ -421,17 +422,31 @@ export default function BookingCalendar() {
                   />
                 </div>
               </div>
-              <div>
-                <label htmlFor="book-company" className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary">
-                  Company
-                </label>
-                <input
-                  id="book-company"
-                  name="company"
-                  type="text"
-                  className={inputClass}
-                  placeholder="Your company (optional)"
-                />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="book-phone" className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary">
+                    Phone
+                  </label>
+                  <input
+                    id="book-phone"
+                    name="phone"
+                    type="tel"
+                    className={inputClass}
+                    placeholder="+1 (555) 000-0000"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="book-company" className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary">
+                    Company
+                  </label>
+                  <input
+                    id="book-company"
+                    name="company"
+                    type="text"
+                    className={inputClass}
+                    placeholder="Your company (optional)"
+                  />
+                </div>
               </div>
               <div>
                 <label htmlFor="book-message" className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary">

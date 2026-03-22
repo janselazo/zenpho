@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
 
   const name = String(body.name ?? "").trim();
   const email = String(body.email ?? "").trim();
+  const phone = String(body.phone ?? "").trim();
   const company = String(body.company ?? "").trim();
   const message = String(body.message ?? "").trim();
   const startsAt = String(body.starts_at ?? "").trim();
@@ -79,6 +80,7 @@ export async function POST(req: NextRequest) {
       .insert({
         name,
         email,
+        phone: phone || null,
         company: company || null,
         source: "Website Booking",
         stage: "new",
