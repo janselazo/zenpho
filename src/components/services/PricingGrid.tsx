@@ -2,7 +2,11 @@
 
 import { motion } from "framer-motion";
 import type { ReactNode } from "react";
-import { pricingTiers } from "@/lib/data";
+import {
+  developmentPricingTiers,
+  growthPricingTiers,
+  type PricingTier,
+} from "@/lib/data";
 import SectionHeading from "@/components/ui/SectionHeading";
 import Button from "@/components/ui/Button";
 
@@ -39,19 +43,162 @@ function CheckIcon({ className }: { className?: string }) {
   );
 }
 
+function PricingTierCards({
+  tiers,
+  variant = "development",
+}: {
+  tiers: PricingTier[];
+  variant?: "development" | "growth";
+}) {
+  const g = variant === "growth";
+
+  return (
+    <div className="grid grid-cols-1 gap-8 pt-2 sm:grid-cols-2 sm:gap-8 lg:grid-cols-3 lg:gap-6 lg:pt-4">
+      {tiers.map((tier, i) => {
+        const showRibbon = Boolean(tier.badge ?? (tier.highlighted ? "Recommended" : null));
+        const ribbonLabel = tier.badge ?? "Recommended";
+
+        const hiShell = g
+          ? "border-accent-green/35 bg-white shadow-soft-lg ring-2 ring-accent-green/25 lg:scale-[1.02] lg:shadow-xl"
+          : "border-accent/40 bg-gradient-to-b from-accent/[0.07] via-white to-white shadow-soft-lg ring-2 ring-accent/25 lg:scale-[1.02] lg:shadow-xl";
+        const loShell =
+          "border-border bg-white hover:border-border hover:shadow-soft-lg";
+
+        return (
+          <motion.div
+            key={tier.name}
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.15 }}
+            transition={{ duration: 0.45, delay: i * 0.06 }}
+            className={`relative flex min-h-full flex-col overflow-visible rounded-[1.35rem] border shadow-soft transition-shadow duration-300 ${
+              tier.highlighted ? hiShell : loShell
+            }`}
+          >
+            {showRibbon ? (
+              <span
+                className={`absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-white shadow-md ring-[3px] ring-white ${
+                  g ? "bg-accent-green" : "bg-accent"
+                }`}
+              >
+                {ribbonLabel}
+              </span>
+            ) : null}
+
+            <div
+              className={`flex min-h-full flex-col px-7 pb-8 pt-10 sm:px-8 sm:pb-9 sm:pt-11 ${
+                tier.highlighted ? "sm:pt-12" : ""
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <span
+                  className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl ${
+                    tier.highlighted
+                      ? g
+                        ? "bg-accent-green text-white shadow-sm"
+                        : "bg-accent text-white shadow-sm"
+                      : g
+                        ? "bg-accent-green-soft text-accent-green ring-1 ring-accent-green/25"
+                        : "bg-surface-light text-accent ring-1 ring-border"
+                  }`}
+                >
+                  {tierIcons[i] ?? tierIcons[0]}
+                </span>
+                <div className="min-w-0 flex-1 pt-0.5">
+                  <h3 className="heading-display text-lg font-bold leading-snug text-text-primary">
+                    {tier.name}
+                  </h3>
+                </div>
+              </div>
+
+              <p className="mt-4 text-sm leading-relaxed text-text-secondary">
+                {tier.description}
+              </p>
+
+              <div
+                className={`mt-8 rounded-2xl border px-5 py-5 sm:py-5 ${
+                  tier.highlighted
+                    ? g
+                      ? "border-accent-green/20 bg-surface-light/50 shadow-sm"
+                      : "border-accent/20 bg-white/80 shadow-sm"
+                    : "border-border/90 bg-surface-light/60"
+                }`}
+              >
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                    {tier.priceNote}
+                  </span>
+                  <span
+                    className={`text-[1.65rem] font-semibold leading-none tracking-tight sm:text-[1.85rem] ${
+                      g ? "text-accent-green" : "text-accent"
+                    }`}
+                  >
+                    {tier.price}
+                  </span>
+                </div>
+              </div>
+
+              <p className="mb-3 mt-8 text-[11px] font-semibold uppercase tracking-wider text-text-secondary/90">
+                What&apos;s included
+              </p>
+              <ul className="flex flex-1 flex-col gap-3">
+                {tier.features.map((feature) => (
+                  <li key={feature} className="flex gap-3 text-sm leading-snug text-text-secondary">
+                    <span
+                      className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full ${
+                        g
+                          ? tier.highlighted
+                            ? "bg-accent-green/15 text-accent-green"
+                            : "bg-accent-green/10 text-accent-green"
+                          : tier.highlighted
+                            ? "bg-accent/12 text-accent"
+                            : "bg-accent/8 text-accent"
+                      }`}
+                    >
+                      <CheckIcon className="h-3 w-3" />
+                    </span>
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <Button
+                href="/contact#booking"
+                variant={tier.highlighted ? "primary" : "secondary"}
+                size="lg"
+                className={
+                  g
+                    ? tier.highlighted
+                      ? "mt-10 w-full justify-center !border-0 !bg-accent-green !text-white shadow-sm hover:!bg-emerald-700 hover:!shadow-md"
+                      : "mt-10 w-full justify-center border-accent-green/35 text-accent-green hover:border-accent-green/50 hover:bg-accent-green-soft"
+                    : "mt-10 w-full justify-center"
+                }
+              >
+                {tier.cta}
+              </Button>
+            </div>
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function PricingGrid() {
   return (
     <section className="mx-auto max-w-7xl px-6 py-24 lg:px-8">
       <SectionHeading
         label="Pricing"
-        title="Transparent"
-        titleAccent="pricing"
+        title="Development &"
+        titleAccent="Growth"
+        titleAccentInline
         description={
           <>
             <p>
-              Start with a strategy hour, ship an MVP to test demand, or scale
-              with a monthly subscription — predictable output, pause or cancel
-              on Scale when you need to.
+              <span className="font-medium text-text-primary">Development</span>{" "}
+              is for building and shipping product;{" "}
+              <span className="font-medium text-text-primary">Growth</span> is for
+              acquisition, retention, monetization, and experiments.
             </p>
             <p>
               Outside these packages, hourly work typically runs{" "}
@@ -61,103 +208,36 @@ export default function PricingGrid() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-8 pt-6 sm:grid-cols-2 sm:gap-8 lg:grid-cols-3 lg:gap-6 lg:pt-8">
-        {pricingTiers.map((tier, i) => {
-          const showRibbon = Boolean(tier.badge ?? (tier.highlighted ? "Recommended" : null));
-          const ribbonLabel = tier.badge ?? "Recommended";
+      <div className="space-y-20 lg:space-y-24">
+        <div>
+          <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="inline-flex rounded-full bg-accent px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-white">
+                Development
+              </span>
+              <p className="max-w-xl text-sm text-text-secondary">
+                Web apps, mobile apps, websites, and ecommerce — scope, build,
+                deploy, and handoff.
+              </p>
+            </div>
+          </div>
+          <PricingTierCards tiers={developmentPricingTiers} />
+        </div>
 
-          return (
-            <motion.div
-              key={tier.name}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.15 }}
-              transition={{ duration: 0.45, delay: i * 0.06 }}
-              className={`relative flex min-h-full flex-col overflow-visible rounded-[1.35rem] border shadow-soft transition-shadow duration-300 ${
-                tier.highlighted
-                  ? "border-accent/40 bg-gradient-to-b from-accent/[0.07] via-white to-white shadow-soft-lg ring-2 ring-accent/25 lg:scale-[1.02] lg:shadow-xl"
-                  : "border-border bg-white hover:border-border hover:shadow-soft-lg"
-              }`}
-            >
-              {showRibbon ? (
-                <span className="absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-accent px-3.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-white shadow-md ring-[3px] ring-white">
-                  {ribbonLabel}
-                </span>
-              ) : null}
-
-              <div
-                className={`flex min-h-full flex-col px-7 pb-8 pt-10 sm:px-8 sm:pb-9 sm:pt-11 ${
-                  tier.highlighted ? "sm:pt-12" : ""
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <span
-                    className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl ${
-                      tier.highlighted
-                        ? "bg-accent text-white shadow-sm"
-                        : "bg-surface-light text-accent ring-1 ring-border"
-                    }`}
-                  >
-                    {tierIcons[i] ?? tierIcons[0]}
-                  </span>
-                  <div className="min-w-0 flex-1 pt-0.5">
-                    <h3 className="heading-display text-lg font-bold leading-snug text-text-primary">
-                      {tier.name}
-                    </h3>
-                  </div>
-                </div>
-
-                <p className="mt-4 text-sm leading-relaxed text-text-secondary">
-                  {tier.description}
-                </p>
-
-                <div
-                  className={`mt-8 rounded-2xl border px-5 py-5 sm:py-5 ${
-                    tier.highlighted
-                      ? "border-accent/20 bg-white/80 shadow-sm"
-                      : "border-border/90 bg-surface-light/60"
-                  }`}
-                >
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
-                      {tier.priceNote}
-                    </span>
-                    <span className="text-[1.65rem] font-semibold leading-none tracking-tight text-accent sm:text-[1.85rem]">
-                      {tier.price}
-                    </span>
-                  </div>
-                </div>
-
-                <p className="mb-3 mt-8 text-[11px] font-semibold uppercase tracking-wider text-text-secondary/90">
-                  What&apos;s included
-                </p>
-                <ul className="flex flex-1 flex-col gap-3">
-                  {tier.features.map((feature) => (
-                    <li key={feature} className="flex gap-3 text-sm leading-snug text-text-secondary">
-                      <span
-                        className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full ${
-                          tier.highlighted ? "bg-accent/12 text-accent" : "bg-accent/8 text-accent"
-                        }`}
-                      >
-                        <CheckIcon className="h-3 w-3" />
-                      </span>
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <Button
-                  href="/contact#booking"
-                  variant={tier.highlighted ? "primary" : "secondary"}
-                  size="lg"
-                  className="mt-10 w-full justify-center"
-                >
-                  {tier.cta}
-                </Button>
-              </div>
-            </motion.div>
-          );
-        })}
+        <div>
+          <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="inline-flex rounded-full border-2 border-accent-green bg-white px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-accent-green">
+                Growth
+              </span>
+              <p className="max-w-xl text-sm text-text-secondary">
+                Product-led growth: funnels, retention, monetization, and
+                data-backed experiments — not vanity dashboards.
+              </p>
+            </div>
+          </div>
+          <PricingTierCards tiers={growthPricingTiers} variant="growth" />
+        </div>
       </div>
     </section>
   );

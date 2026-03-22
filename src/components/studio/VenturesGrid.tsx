@@ -11,10 +11,11 @@ export default function VenturesGrid() {
   return (
     <section id="studio-projects" className="mx-auto max-w-7xl px-6 py-24 lg:px-8 lg:py-32">
       <SectionHeading
-        label="Studio"
-        title="In-house"
-        titleAccent="ventures"
-        description="Shipped on our own roadmap — same engineering bar as client work. SoldTools is live for car sales teams; more experiments land here over time."
+        label="Studio products"
+        title="On our"
+        titleAccent="roadmap"
+        titleAccentInline
+        description="Not billed by the sprint to a client brief — owned, shipped, and iterated like the products we build for you through the Agency. Same stack discipline and growth mindset; we just hold the P&amp;L."
       />
 
       <div className="grid gap-6 sm:grid-cols-2">
@@ -36,7 +37,7 @@ export default function VenturesGrid() {
               <h3 className="text-xl font-bold text-text-primary">
                 {venture.name}
               </h3>
-              <p className="mt-1 text-sm italic text-accent-violet/70">
+              <p className="mt-1 text-sm italic text-accent-warm/90">
                 {venture.tagline}
               </p>
               <p className="mt-3 flex-1 text-sm leading-relaxed text-text-secondary">

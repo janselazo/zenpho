@@ -39,8 +39,8 @@ export default function CTASection() {
             <Button href="/contact#booking" variant="primary" size="lg">
               Book a call
             </Button>
-            <Button href="/services" variant="dark" size="lg" showLiveDot>
-              Services & pricing
+            <Button href="/pricing" variant="dark" size="lg" showLiveDot>
+              View Pricing
             </Button>
           </div>
         </div>

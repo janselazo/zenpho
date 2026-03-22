@@ -1,45 +1,32 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { portfolioProjects, type ProjectCategory } from "@/lib/data";
 import SectionHeading from "@/components/ui/SectionHeading";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 
-const typeFilters = [
-  { id: "all", label: "All" },
-  { id: "studio", label: "Studio" },
-  { id: "agency", label: "Client" },
-] as const;
-
 const categoryFilters: { id: ProjectCategory | "all"; label: string }[] = [
   { id: "all", label: "All" },
   { id: "mobile-app", label: "Mobile App" },
   { id: "web-app", label: "Web App" },
-  { id: "ai-agent", label: "AI Agent" },
-  { id: "saas-platform", label: "SaaS Platform" },
-  { id: "data-platform", label: "Data Platform" },
-  { id: "automation", label: "Automation" },
+  { id: "website", label: "Website" },
+  { id: "ecommerce-store", label: "Ecommerce Store" },
+  { id: "product-growth", label: "Product Growth" },
 ];
 
 export default function PortfolioGrid() {
-  const [typeFilter, setTypeFilter] = useState<"all" | "studio" | "agency">(
-    "all"
-  );
   const [categoryFilter, setCategoryFilter] = useState<
     ProjectCategory | "all"
   >("all");
 
   const filteredProjects = useMemo(() => {
     return portfolioProjects.filter((p) => {
-      const matchesType =
-        typeFilter === "all" || p.type === typeFilter;
-      const matchesCategory =
-        categoryFilter === "all" || p.category === categoryFilter;
-      return matchesType && matchesCategory;
+      return categoryFilter === "all" || p.category === categoryFilter;
     });
-  }, [typeFilter, categoryFilter]);
+  }, [categoryFilter]);
 
   return (
     <section id="projects" className="mx-auto max-w-7xl px-6 py-32 lg:px-8">
@@ -48,16 +35,16 @@ export default function PortfolioGrid() {
         title="Selected"
         titleAccent="work"
         titleAccentInline
-        description="Real outcomes for current clients—SaaS platforms, ecommerce, and web products—plus SoldTools, a live in-house product for automotive sales teams."
+        description="Filter by type of work. Cards still show whether each build is Agency (client) or Studio (in-house)."
       />
 
-      <div className="mb-8 flex flex-wrap justify-center gap-2">
-        {typeFilters.map((filter) => (
+      <div className="mb-12 flex flex-wrap justify-center gap-2">
+        {categoryFilters.map((filter) => (
           <button
             key={filter.id}
-            onClick={() => setTypeFilter(filter.id)}
+            onClick={() => setCategoryFilter(filter.id)}
             className={`rounded-full border px-4 py-2 text-xs font-medium transition-all ${
-              typeFilter === filter.id
+              categoryFilter === filter.id
                 ? "border-accent bg-accent/10 text-accent"
                 : "border-border bg-white text-text-secondary hover:border-accent/40"
             }`}
@@ -66,21 +53,16 @@ export default function PortfolioGrid() {
           </button>
         ))}
       </div>
-      <div className="mb-12 flex flex-wrap justify-center gap-2">
-        {categoryFilters.map((filter) => (
-          <button
-            key={filter.id}
-            onClick={() => setCategoryFilter(filter.id)}
-            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
-              categoryFilter === filter.id
-                ? "border-accent-violet/40 bg-accent-violet/10 text-accent-violet"
-                : "border-border bg-white text-text-secondary hover:border-accent-violet/30"
-            }`}
-          >
-            {filter.label}
-          </button>
-        ))}
-      </div>
+
+      {filteredProjects.length === 0 ? (
+        <p className="text-center text-sm text-text-secondary">
+          No case studies in this category yet —{" "}
+          <Link href="/contact" className="font-medium text-accent hover:underline">
+            tell us about your project
+          </Link>
+          .
+        </p>
+      ) : null}
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {filteredProjects.map((project, i) => (

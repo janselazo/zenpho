@@ -26,12 +26,19 @@ export default function AboutHero() {
           transition={{ duration: 0.5, delay: 0.06 }}
           className="heading-display text-4xl font-bold leading-tight tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
         >
-          <span className="block">Janse Lazo —</span>
-          <span className="mt-1 block">
-            <span className="text-accent">AI software development agency</span>
-            <span className="text-text-primary"> &amp; Studio</span>
-          </span>
+          Janse Lazo
         </motion.h1>
+        <motion.p
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, delay: 0.12 }}
+          className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-text-secondary sm:text-lg"
+        >
+          Founder of{" "}
+          <span className="font-medium text-text-primary">AI Product Studio</span>
+          . We run an Agency for client builds and a Studio for products we own —
+          same team, Miami-based, English &amp; Spanish.
+        </motion.p>
       </div>
     </section>
   );

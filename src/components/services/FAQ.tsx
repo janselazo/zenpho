@@ -6,20 +6,24 @@ import SectionHeading from "@/components/ui/SectionHeading";
 
 const faqs = [
   {
-    q: "How quickly can we get started?",
-    a: "The $50 strategy hour can usually be booked within days. MVP and Scale engagements typically start within one to two weeks once scope and paperwork are aligned.",
+    q: "What’s the difference between Development and Growth pricing?",
+    a: "Same dollar structure, different outcomes. Development packages are for building and shipping product — web apps, mobile, websites, ecommerce. Growth packages are for acquisition, retention, monetization, and experiments. You can run one track, the other, or both (e.g. Growth sprint while engineering is in-house).",
   },
   {
-    q: "Do you only advise, or do you build and deploy?",
-    a: "I scope, build, integrate, and deploy end to end—with documentation and handoff so your team can run what we ship. Strategy and architecture are part of discovery before any build.",
+    q: "How quickly can we get started?",
+    a: "The $150 strategy hours can usually be booked within days. MVP, Growth sprint, and Scale engagements typically start within one to two weeks once scope and paperwork are aligned.",
+  },
+  {
+    q: "Do you only advise on Growth, or do you build too?",
+    a: "Growth work includes shipped experiments and close coordination with your stack; bigger product changes often pair with Development Scale. On Development, we scope, build, integrate, and deploy end to end — with documentation and handoff so your team can run what we ship.",
   },
   {
     q: "Can we change the level of engagement over time?",
-    a: "Yes. Common path: $50 consult → $1,999 MVP to validate → $3,999/mo Scale for ongoing shipping. You can pause or cancel Scale anytime. Hourly ($100–150) works for ad-hoc work outside packages.",
+    a: "Yes. Common paths: $150 Development or Growth strategy → $1,999 Product MVP or Growth sprint → $3,999/mo Development Scale or Growth Scale. Pause or cancel either Scale plan anytime. Hourly ($100–150) covers work outside packages.",
   },
   {
     q: "What does $100–150/h cover?",
-    a: "Time-and-materials when Consultation, MVP, or Scale isn’t the right fit — implementation, integration, reviews, and iteration billed as we go.",
+    a: "Time-and-materials when a package isn’t the right fit — implementation, integrations, growth experiments, reviews, and iteration billed as we go.",
   },
   {
     q: "What technologies do you use?",
@@ -27,7 +31,7 @@ const faqs = [
   },
   {
     q: "Do you work with non-technical stakeholders?",
-    a: "Often. I translate goals into milestones, risks, and options so product and ops leaders can make decisions without drowning in stack details.",
+    a: "Often. We translate goals into milestones, risks, and options so product and ops leaders can decide without drowning in stack details.",
   },
 ];
 
@@ -41,7 +45,7 @@ export default function FAQ() {
         title="Common"
         titleAccent="questions"
         titleAccentInline
-        description="How the $50 consult, $1,999 MVP, $3,999/mo Scale subscription, and hourly work fit together."
+        description="How Development vs Growth packages map to the same transparent structure — and when hourly makes sense."
       />
 
       <div className="mx-auto max-w-3xl space-y-3">

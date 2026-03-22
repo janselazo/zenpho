@@ -42,10 +42,9 @@ export interface FeaturedProject {
 export type ProjectCategory =
   | "mobile-app"
   | "web-app"
-  | "ai-agent"
-  | "saas-platform"
-  | "data-platform"
-  | "automation";
+  | "website"
+  | "ecommerce-store"
+  | "product-growth";
 
 export interface PortfolioProject {
   title: string;
@@ -79,80 +78,72 @@ export interface PricingTier {
   badge?: string;
 }
 
-export interface ServicePackage {
-  title: string;
-  description: string;
-  icon: string;
-  deliverables: string[];
-  timeline: string;
-}
-
 export const services: Service[] = [
   {
-    title: "AI applications",
+    title: "Websites & ecommerce",
     description:
-      "Intelligent product surfaces your users actually adopt — not demos bolted on at the end.",
+      "Marketing sites and online stores that load fast, convert, and stay easy for your team to run without paging engineering for every change.",
     details: [
-      "Copilots and in-app assistants",
-      "Chat and semantic search over your data",
-      "Predictive analytics and recommendations",
+      "Responsive sites, landing systems, and brand storytelling",
+      "Catalog, checkout, payments, and fulfillment-friendly workflows",
+      "SEO-conscious structure and analytics you can act on",
     ],
-    icon: "brain",
+    icon: "store",
   },
   {
     title: "Web applications",
     description:
-      "Modern web apps that are secure, scalable, and pleasant to maintain as you grow.",
+      "SaaS, dashboards, and internal tools — secure, maintainable, and ready to grow with real traffic and real users.",
     details: [
-      "Next.js / React and solid API design",
-      "Auth, roles, and production-grade patterns",
+      "Next.js / React, APIs, auth, roles, and production patterns",
       "Performance, observability, and CI-friendly delivery",
+      "Handoff your team can extend — no mystery box codebase",
     ],
     icon: "code",
   },
   {
     title: "Mobile apps",
     description:
-      "iOS and Android experiences that stay usable when connectivity drops.",
+      "iOS and Android when the product belongs in someone’s pocket — including offline-first when the job doesn’t stop at the signal bar.",
     details: [
-      "React Native or native paths by constraint",
-      "Offline-first sync and resilient UX",
-      "Store submission, push, and post-launch iteration",
+      "React Native or native where constraints demand it",
+      "Push, store submission, and post-launch iteration",
+      "Aligned with the same metrics mindset as your web product",
     ],
     icon: "rocket",
   },
   {
-    title: "Automation & workflows",
+    title: "AI in your product",
     description:
-      "Connect people, data, and systems so ops runs without copy-paste heroics.",
+      "Copilots, search, and assistive flows people actually adopt — grounded in your data with guardrails, not a keynote demo.",
     details: [
-      "Internal ops automation",
-      "Agents and multi-step workflows with guardrails",
-      "CRM, docs, ticketing, and custom API integrations",
+      "In-app assistants, chat, and semantic search over your content",
+      "Recommendations and signals with evaluation hooks",
+      "Workflow and content assistance with human-in-the-loop when it’s customer-facing",
+    ],
+    icon: "brain",
+  },
+  {
+    title: "Automation & integrations",
+    description:
+      "Connect CRMs, payments, data stores, and custom APIs so ops, sales, and support stop living in copy-paste and spreadsheets.",
+    details: [
+      "OAuth, SSO, webhooks, and event pipelines",
+      "Agents and multi-step workflows with approvals and guardrails",
+      "Payments, partner APIs, and internal tools wired end to end",
     ],
     icon: "zap",
   },
   {
-    title: "Content generation",
+    title: "Product-led growth",
     description:
-      "Image, text, and video pipelines for in-product experiences and marketing — where quality and brand safety matter.",
+      "Acquisition, retention, and monetization — shipped experiments and honest readouts tied to revenue, not vanity charts.",
     details: [
-      "In-app generation and templated outputs",
-      "Marketing and lifecycle content workflows",
-      "Human-in-the-loop where outputs are customer-facing",
+      "Funnels, onboarding, lifecycle, and churn diagnostics",
+      "Pricing, packaging, and A/B tests coordinated with your stack",
+      "Weekly rhythm: measure, decide, double down or kill — see Growth pricing",
     ],
-    icon: "sparkle",
-  },
-  {
-    title: "APIs & integrations",
-    description:
-      "Glue that holds your stack together: auth, payments, analytics, and third-party platforms.",
-    details: [
-      "OAuth, SSO, and permission models",
-      "Payments, webhooks, and event pipelines",
-      "Analytics, CDPs, and partner APIs",
-    ],
-    icon: "plug",
+    icon: "chart",
   },
 ];
 
@@ -188,10 +179,10 @@ export const ventures: Venture[] = [
     name: "SoldTools",
     tagline: "The toolkit car sales teams run on.",
     description:
-      "A live in-house product: lead capture from 10+ sources, appointment scheduling, deal intelligence, and a referral engine—built for the showroom, not generic CRM slides.",
+      "Live Studio product — web SaaS for the showroom floor: leads from 10+ sources, scheduling, deal context, referrals, and the ops glue teams actually use. Built with the same full-stack and growth lens we apply to client SaaS; we run it, support it, and improve it on our own roadmap.",
     status: "live",
     category: "Automotive / SaaS",
-    metrics: "Production app — car sales professionals",
+    metrics: "Production — app.soldtools.com",
     ctaLabel: "Open SoldTools",
     ctaHref: "https://app.soldtools.com/login",
     ctaExternal: true,
@@ -228,7 +219,7 @@ export const portfolioProjects: PortfolioProject[] = [
       "Built the full-stack platform behind Taptok: NFC tap-to-share cards, QR code networking, contact management with lead enrichment and AI-powered scoring, analytics dashboards, and team management — all designed to replace paper cards and turn every interaction into a measurable lead. Outcome: a production SaaS with free, professional, and enterprise tiers serving users from Miami and scaling nationwide.",
     tags: ["SaaS", "Mobile", "NFC", "Growth"],
     type: "agency",
-    category: "saas-platform",
+    category: "mobile-app",
     result: "Production launch",
   },
   {
@@ -238,7 +229,7 @@ export const portfolioProjects: PortfolioProject[] = [
       "Shipped a production SaaS web application so inspectors capture residential and commercial property details, bind the right report template, and complete structured sections in one guided flow. Outcome: a single source of truth per job, fewer incomplete reports, and a product the team can extend without re-platforming.",
     tags: ["SaaS", "Inspections", "Web app"],
     type: "agency",
-    category: "saas-platform",
+    category: "web-app",
     result: "Production launch",
   },
   {
@@ -248,7 +239,7 @@ export const portfolioProjects: PortfolioProject[] = [
       "Ecommerce store bringing authentic tequeños to doorsteps across the U.S. with temperature-controlled shipping. Product catalog, mobile-first checkout, and fulfillment workflows — so the team can focus on the food while the store handles nationwide orders.",
     tags: ["Ecommerce", "Food & Beverage", "DTC"],
     type: "agency",
-    category: "web-app",
+    category: "ecommerce-store",
     result: "Live commerce",
   },
   {
@@ -258,7 +249,7 @@ export const portfolioProjects: PortfolioProject[] = [
       "End-to-end online store with a clean catalog, PDPs tuned for clarity, checkout and payments, and back-office patterns so marketing and fulfillment could update the catalog without waiting on deploys. Outcome: live commerce with a storefront the brand runs day to day.",
     tags: ["Ecommerce", "Store", "Checkout"],
     type: "agency",
-    category: "web-app",
+    category: "ecommerce-store",
     result: "Live commerce",
   },
   {
@@ -268,7 +259,7 @@ export const portfolioProjects: PortfolioProject[] = [
       "Rally- and automotive-themed ecommerce build focused on speed, mobile checkout, and catalog organization for kits, accessories, and seasonal drops. Outcome: a store that stays fast under traffic spikes and gives the team levers to merchandise without engineering every change.",
     tags: ["Ecommerce", "Automotive", "Performance"],
     type: "agency",
-    category: "web-app",
+    category: "ecommerce-store",
     result: "Store live",
   },
   {
@@ -277,7 +268,7 @@ export const portfolioProjects: PortfolioProject[] = [
       "Live in-house product for car sales teams: lead capture from multiple sources, appointment scheduling, deal intelligence, and a referral engine—shipping in production at app.soldtools.com.",
     tags: ["SaaS", "Automotive", "Web app"],
     type: "studio",
-    category: "saas-platform",
+    category: "web-app",
     status: "live",
     result: "Production app",
   },
@@ -389,17 +380,18 @@ export const experienceStats = [
   { value: "1", label: "Live in-house product" },
 ];
 
-export const pricingTiers: PricingTier[] = [
+/** Build & ship: web apps, mobile, websites, ecommerce (matches homepage Development). */
+export const developmentPricingTiers: PricingTier[] = [
   {
-    name: "Consultation",
+    name: "Development strategy",
     description:
-      "A focused hour to pressure-test your idea, stack, and roadmap — leave with a clear picture of what to build first and why.",
-    price: "$50",
-    priceNote: "1-hour strategy session",
+      "One hour to align on users, scope, and stack for what you’re building — leave with a clear first slice to ship and how it ladders to the full product.",
+    price: "$150",
+    priceNote: "1-hour session",
     features: [
-      "Product and technical direction",
-      "Scope, risk, and sequencing",
-      "Honest fit check before a larger engagement",
+      "Technical and product direction for your build",
+      "Scope, risk, and sequencing for a first version",
+      "Fit check before MVP or Scale",
     ],
     highlighted: false,
     cta: "Book a call",
@@ -407,77 +399,87 @@ export const pricingTiers: PricingTier[] = [
   {
     name: "Product MVP",
     description:
-      "One shippable MVP with 4–5 core features — built with AI-accelerated delivery and real engineering discipline so you can test demand fast.",
+      "A shippable first version (typically 4–5 core features) for web, mobile, or ecommerce — so you can validate demand fast, not after a long runway.",
     price: "$1,999",
     priceNote: "one-time",
     features: [
-      "Single MVP scoped to prove traction",
-      "4–5 core features end-to-end",
-      "Integrations and UX aligned to your users",
-      "Handoff you can extend or grow with Scale",
+      "Scoped MVP aligned to your users and metrics",
+      "4–5 core features end-to-end (UX, integrations, deploy)",
+      "Handoff you can run or extend with Development Scale",
+      "Aim for a working slice in ~2 weeks, then iterate",
     ],
     highlighted: true,
     badge: "Most popular",
     cta: "Book a call",
   },
   {
-    name: "Scale subscription",
+    name: "Development Scale",
     description:
-      "Fractional product engineering with predictable weekly output — move fast, stay flexible, and pause when your roadmap shifts.",
+      "Fractional engineering with predictable weekly output — same mindset as the homepage: steady shipping, not surprise drops.",
     price: "$3,999",
     priceNote: "/ month",
     features: [
-      "10 hours / week dedicated capacity",
-      "Unlimited features & API integrations (fair use)",
-      "Weekly cadence — ship small, test early, iterate",
-      "Pause or cancel anytime",
+      "Monthly engineering capacity scoped with your roadmap — no black-box timelines",
+      "Features, integrations, polish, and production hardening (fair use)",
+      "Weekly cadence: incremental releases and tight feedback loops",
+      "Clear priorities each cycle; pause or cancel anytime",
     ],
     highlighted: false,
     cta: "Book a call",
   },
 ];
 
-export const servicePackages: ServicePackage[] = [
+/** Acquisition, retention, monetization & experiments (matches homepage Growth). */
+export const growthPricingTiers: PricingTier[] = [
   {
-    title: "Discovery & architecture",
+    name: "Growth strategy",
     description:
-      "Align on users, constraints, and risks before you fund a larger build — so scope matches what’s feasible.",
-    icon: "brain",
-    deliverables: [
-      "Stakeholder workshops and success criteria",
-      "Target architecture & integration map",
-      "Technology shortlist with tradeoffs",
-      "Written feasibility, risks, and “go / no-go” notes",
+      "One hour on funnels, retention, or monetization — where you’re leaking value, what to measure, and the smallest test worth running next.",
+    price: "$150",
+    priceNote: "1-hour session",
+    features: [
+      "Funnel or lifecycle snapshot and priorities",
+      "Metric and experiment framing (not vanity charts)",
+      "Honest fit before a sprint or retainer",
     ],
-    timeline: "Typically 2–3 weeks",
+    highlighted: false,
+    cta: "Book a call",
   },
   {
-    title: "Build, integrate & deploy",
+    name: "Growth sprint",
     description:
-      "Implementation of apps, APIs, and integrations with production deployment, monitoring, and documentation.",
-    icon: "rocket",
-    deliverables: [
-      "Incremental releases toward staging / production",
-      "Integration with auth, data stores, and internal APIs",
-      "Evaluation hooks, logging, and basic monitoring",
-      "Security-conscious defaults on all integration paths",
+      "A focused two-week push: baseline the numbers, pick 1–2 hypotheses, ship experiments, and read results — product-led growth in practice.",
+    price: "$1,999",
+    priceNote: "one-time",
+    features: [
+      "Baseline + quick audit of acquisition / retention / revenue",
+      "1–2 experiments designed and shipped with you",
+      "Readout: what moved, what to try next",
+      "Optional handoff into Growth Scale for compounding",
     ],
-    timeline: "Scoped to PoC or production tier",
+    highlighted: true,
+    badge: "Best for traction",
+    cta: "Book a call",
   },
   {
-    title: "Enablement & iteration",
+    name: "Growth Scale",
     description:
-      "Documentation, training, and a clear runway for your team to operate and extend the system after go-live.",
-    icon: "zap",
-    deliverables: [
-      "Runbooks and operator-focused documentation",
-      "Knowledge transfer sessions",
-      "Prioritized improvement backlog",
-      "Optional ongoing advisory or sprint blocks",
+      "Ongoing retainer for loops, experiments, and analytics rhythm — mirrors Development Scale’s cadence, focused entirely on growth work.",
+    price: "$3,999",
+    priceNote: "/ month",
+    features: [
+      "Dedicated weekly growth capacity — experiments, funnels, and readouts (fair use)",
+      "Onboarding, pricing, lifecycle, and channel tests tied to your metrics",
+      "Weekly rhythm: ship, measure, decide the next bet",
+      "Aligned backlog; pause or cancel anytime",
     ],
-    timeline: "Overlaps launch; extends as needed",
+    highlighted: false,
+    cta: "Book a call",
   },
 ];
+
+/** @deprecated Use developmentPricingTiers — kept for any external references */
+export const pricingTiers = developmentPricingTiers;
 
 export interface BlogPost {
   slug: string;
@@ -566,11 +568,11 @@ The builders who will do well with AI are the ones who already know how to ship 
     slug: "lessons-from-taptok-growth",
     title: "Lessons from Growing TapTok to 15,000 Customers",
     excerpt:
-      "The real story of scaling a product from zero to enterprise clients like AT&T, NASA, and Harvard — and what it taught me about building software that grows.",
+      "The real story of scaling a product from zero to enterprise clients like AT&T, Coral Gables City, and Harvard — and what it taught me about building software that grows.",
     date: "2026-02-05",
     readTime: "6 min read",
     category: "Product Growth",
-    content: `TapTok was the project that taught me the most about what happens after you ship. We grew it from zero to 15,000 customers, landing accounts at AT&T, Harvard University, NASA, Authentic Brands Group, and thousands of small businesses. The technical challenges were real, but the growth lessons were more valuable.
+    content: `TapTok was the project that taught me the most about what happens after you ship. We grew it from zero to 15,000 customers, landing accounts at AT&T, Harvard University, Coral Gables City, Authentic Brands Group, and thousands of small businesses. The technical challenges were real, but the growth lessons were more valuable.
 
 ## The product had to work for everyone
 
@@ -738,26 +740,22 @@ export interface NavLinkItem {
   children?: NavLinkItem[];
 }
 
-/** Primary header: About, Work, Studio, Pricing (+ Book a call CTA in layout). */
+/** Primary header: About → Work → Services → Pricing → Studio. */
 export const headerNavLinks: NavLinkItem[] = [
   { label: "About", href: "/about" },
   { label: "Work", href: "/case-studies" },
-  { label: "Studio", href: "/studio" },
+  { label: "Services", href: "/services" },
   { label: "Pricing", href: "/pricing" },
+  { label: "Studio", href: "/studio" },
 ];
 
-/** Footer: former header items (Services, case studies, resources hub, contact). */
+/** Footer: same primary links as header. */
 export const footerNavLinks: NavLinkItem[] = [
+  { label: "About", href: "/about" },
+  { label: "Work", href: "/case-studies" },
   { label: "Services", href: "/services" },
-  { label: "Case Studies", href: "/case-studies" },
-  {
-    label: "Resources",
-    href: "/resources",
-    children: [
-      { label: "Pricing", href: "/pricing" },
-      { label: "About", href: "/about" },
-      { label: "Blog", href: "/blog" },
-    ],
-  },
+  { label: "Pricing", href: "/pricing" },
+  { label: "Studio", href: "/studio" },
+  { label: "Blog", href: "/blog" },
   { label: "Contact", href: "/contact" },
 ];

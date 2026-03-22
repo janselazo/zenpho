@@ -57,7 +57,7 @@ export default function Hero() {
             Book a call
           </Button>
           <Button href="/pricing" variant="dark" size="lg" showLiveDot>
-            View pricing
+            View Pricing
           </Button>
         </motion.div>
 

@@ -7,14 +7,14 @@ import Button from "@/components/ui/Button";
 export const metadata: Metadata = {
   title: "About",
   description:
-    "Janse Lazo — software engineer with an MBA, nine years building custom products. Miami, FL.",
+    "Janse Lazo leads AI Product Studio: Agency builds for web, mobile, websites & ecommerce; Studio ships in-house products. Growth-minded delivery — first version in 2 weeks. Miami, FL.",
 };
 
 const highlights = [
   "10x10K Cuba — Mikma",
   "Startup Weekend Havana — Sírvete",
-  "TapTok — scaled from 0 to 15,000 customers, with teams at Authentic Brands Group, Coral Gables, AT&T, Harvard University, NASA, RP Realty, and more",
-  "TapTok — press: Miami Herald, Refresh Miami, El Nuevo Herald, New York Wire",
+  "Taptok — scaled from 0 to 15,000 customers, with teams at Authentic Brands Group, Coral Gables City, AT&T, Harvard University, RP Realty, and more",
+  "Taptok — press: Miami Herald, Refresh Miami, El Nuevo Herald, New York Wire",
 ] as const;
 
 const credentials = [
@@ -33,41 +33,43 @@ export default function AboutPage() {
         <SectionHeading
           align="left"
           label="Story"
-          title="From strong foundations to"
-          titleAccent="shipping software"
-          description="My path is shaped by engineering at CUJAE, an MBA, and building software businesses in the U.S. — with real experience in product growth and products that scale so teams can run them after launch."
+          title="From engineering roots to"
+          titleAccent="products that scale"
+          description="I'm a software engineer with an MBA and real product growth experience — years building in the U.S. showed me that great software is never only code. It's how people discover it, trust it, and come back. That thread runs from my own ventures to how we work with clients today."
         />
         <Card className="border-border/80 bg-white p-8 shadow-soft sm:p-10">
           <p className="text-base leading-relaxed text-text-secondary">
-            I care about the full stack of building: not only code, but how
-            software reaches users, earns trust, and grows through clear
-            positioning and real distribution. That lens shows up in how I scope
-            features, ship web and mobile apps, and partner with founders and
-            operators who need outcomes — not experiments stuck in slides.
+            I started AI Product Studio because too many teams get pretty mockups
+            and slow cycles instead of momentum. We take the same stance as on
+            the homepage:{" "}
+            <span className="font-medium text-text-primary">
+              most agencies build what you ask for; we build what you need to
+              win
+            </span>
+            — web apps, mobile apps, websites, and ecommerce, with growth and
+            retention in the room from day one. You should see a{" "}
+            <span className="font-medium text-text-primary">
+              first working version in two weeks
+            </span>
+            , then steady weekly progress — not a big reveal months later.
           </p>
           <p className="mt-6 text-base leading-relaxed text-text-secondary">
-            One chapter that cemented that for me was{" "}
-            <span className="font-medium text-text-primary">TapTok</span>: we
+            A chapter that proved that for me was{" "}
+            <span className="font-medium text-text-primary">Taptok</span>: we
             grew it from{" "}
             <span className="font-medium text-text-primary">0 to 15,000</span>{" "}
-            customers, landing and supporting use cases across{" "}
+            customers —{" "}
             <span className="font-medium text-text-primary">
               Authentic Brands Group
             </span>
             ,{" "}
-            <span className="font-medium text-text-primary">Coral Gables</span>
-            ,{" "}
-            <span className="font-medium text-text-primary">AT&amp;T</span>,{" "}
             <span className="font-medium text-text-primary">
-              Harvard University
+              Coral Gables City
             </span>
-            ,{" "}
-            <span className="font-medium text-text-primary">NASA</span>, and{" "}
-            <span className="font-medium text-text-primary">RP Realty</span>
-            — alongside thousands of SMBs. That mix of household names, public
-            institutions, and high-volume SMB taught me how to tighten
-            onboarding, keep product and growth aligned, and ship when the story
-            and the software both have to hold up in the room.
+            , and thousands of SMBs. Living inside that curve — onboarding,
+            support, product, and growth as one system — is what we bring when we
+            partner with founders and operators who need software that holds up in
+            the real world, not just in a deck.
           </p>
         </Card>
       </section>
@@ -76,24 +78,28 @@ export default function AboutPage() {
         <SectionHeading
           align="left"
           label="Today"
-          title="Client work &"
-          titleAccent="SoldTools"
-          description="I build custom software for startups and growing teams, and ship my own product on the side — a toolkit for car sales professionals."
+          title="Agency &"
+          titleAccent="Studio"
+          titleAccentInline
+          description="Client work through the Agency — our own roadmap through the Studio. Same standards for both: ship fast, measure, iterate."
         />
         <Card className="border-border/80 bg-white p-8 shadow-soft sm:p-10">
           <p className="text-base leading-relaxed text-text-secondary">
-            Most of my time goes to client engagements — SaaS platforms,
-            ecommerce stores, dashboards, and internal tools for teams that need
-            focused execution. I work across the full stack: scoping, design,
-            implementation, and handoff.
+            Most of our calendar is{" "}
+            <span className="font-medium text-text-primary">Agency</span> work:
+            SaaS, ecommerce, marketing sites, dashboards, and internal tools for
+            teams that need focused execution. We own the full path — scope,
+            design, build, and handoff — so you can run what we ship without
+            friction.
           </p>
           <p className="mt-6 text-base leading-relaxed text-text-secondary">
-            Alongside client work, I build and run{" "}
+            <span className="font-medium text-text-primary">Studio</span> is
+            where we build and run{" "}
             <span className="font-medium text-text-primary">SoldTools</span> — a
-            live product for car sales teams that handles lead capture,
-            scheduling, deal intelligence, and referrals. Building my own product
-            keeps me honest about what it takes to ship and maintain software
-            long-term.
+            live product for car sales teams (leads, scheduling, deal context,
+            referrals). Keeping something in production under our own name keeps
+            us honest about maintenance, support, and the long tail after launch —
+            the same bar we hold for your product.
           </p>
           <div className="mt-8">
             <Button href="/contact" variant="primary" size="md">
@@ -109,6 +115,7 @@ export default function AboutPage() {
           label="Highlights"
           title="Selected"
           titleAccent="milestones"
+          titleAccentInline
           description="A few public touchpoints from entrepreneurship, community, and media."
         />
         <ul className="space-y-4">
@@ -128,7 +135,8 @@ export default function AboutPage() {
           label="Credentials"
           title="Trust"
           titleAccent="& craft"
-          description="MBA plus marketing and growth-platform certifications I maintain alongside hands-on engineering — useful when products need to connect to campaigns, funnels, and analytics."
+          titleAccentInline
+          description="Software engineer with an MBA and real product growth experience, backed by marketing-platform certifications — so engineering and go-to-market choices serve your product goals, not the tool-of-the-week."
         />
         <div className="flex flex-wrap gap-3">
           {credentials.map((c) => (

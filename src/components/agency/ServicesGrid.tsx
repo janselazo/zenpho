@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { services } from "@/lib/data";
 import SectionHeading from "@/components/ui/SectionHeading";
@@ -89,10 +90,29 @@ export default function ServicesGrid() {
   return (
     <section className="mx-auto max-w-7xl px-6 py-32 lg:px-8">
       <SectionHeading
-        label="Services"
-        title="What we"
-        titleAccent="build"
-        description="AI applications, web and mobile, automation, content pipelines, and integrations — scoped for production and weekly iteration."
+        label="Capabilities"
+        title="Development"
+        titleAccent="& Growth"
+        titleAccentInline
+        description={
+          <>
+            <p>
+              <span className="font-medium text-text-primary">Development</span>{" "}
+              covers product across web, mobile, storefronts, and the glue in
+              between.{" "}
+              <span className="font-medium text-text-primary">Growth</span> is
+              experiments, funnels, and lifecycle work — always tied to metrics you
+              care about, not vanity dashboards.
+            </p>
+            <p className="mt-3">
+              Stack choices follow your goals (
+              <Link href="/" className="text-accent underline-offset-2 hover:underline">
+                same promise as Tools &amp; platforms
+              </Link>
+              ).
+            </p>
+          </>
+        }
       />
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

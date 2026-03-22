@@ -14,7 +14,7 @@ export default function CaseStudiesHero() {
           transition={{ duration: 0.45 }}
           className={`mb-5 ${SECTION_EYEBROW_CLASSNAME}`}
         >
-          Case studies
+          Work
         </motion.span>
 
         <motion.h1
@@ -23,19 +23,20 @@ export default function CaseStudiesHero() {
           transition={{ duration: 0.5, delay: 0.06 }}
           className="heading-display text-4xl font-bold leading-tight text-text-primary sm:text-5xl lg:text-6xl"
         >
-          Software that
-          <br />
-          <span className="text-accent">shipped</span>
+          <span className="block">Products that</span>
+          <span className="mt-1 block text-accent">scale</span>
         </motion.h1>
 
         <motion.p
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, delay: 0.14 }}
-          className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-text-secondary sm:text-lg"
+          className="mx-auto mt-6 max-w-2xl text-base font-medium leading-relaxed text-text-secondary sm:text-lg"
         >
-          Client builds in production — SaaS platforms, ecommerce stores, and
-          dashboards. Each card covers what we built and how it turned out.
+          Web apps, mobile apps, websites, and ecommerce — from idea toward
+          product-market fit. Agency builds for clients and Studio products we
+          own; each write-up is something in production, built with growth in mind
+          and handed off so your team can run it.
         </motion.p>
 
         <motion.div
@@ -45,10 +46,10 @@ export default function CaseStudiesHero() {
           className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4"
         >
           <Button href="#projects" variant="primary" size="lg">
-            Browse case studies
+            Explore projects
           </Button>
-          <Button href="/contact" variant="dark" size="lg" showLiveDot>
-            Start a project
+          <Button href="/contact#booking" variant="dark" size="lg" showLiveDot>
+            Book a call
           </Button>
         </motion.div>
       </div>

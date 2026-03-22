@@ -3,9 +3,9 @@ import CaseStudiesHero from "./CaseStudiesHero";
 import PortfolioGrid from "@/components/portfolio/PortfolioGrid";
 
 export const metadata: Metadata = {
-  title: "Case Studies",
+  title: "Work",
   description:
-    "Case studies in custom Software: web apps, mobile, agents, and automation for teams that ship to production.",
+    "Agency & Studio work: web apps, mobile apps, websites, and ecommerce — shipped for growth, handed off cleanly. Case studies from AI Product Studio.",
 };
 
 export default function CaseStudiesPage() {

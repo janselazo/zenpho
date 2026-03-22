@@ -6,7 +6,7 @@ import CTASection from "@/components/home/CTASection";
 export const metadata: Metadata = {
   title: "Studio",
   description:
-    "Studio — in-house products like SoldTools for car sales teams, built alongside client work. Custom builds start on Services or Contact.",
+    "AI Product Studio: products we own and scale — same team as our Agency, separate roadmap. SoldTools for car sales teams is live. Client work: Work, Services, or book a call.",
 };
 
 export default function StudioPage() {

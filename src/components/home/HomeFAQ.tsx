@@ -31,7 +31,7 @@ const faqs = [
   },
   {
     q: "Where can I see pricing?",
-    a: "$50 strategy hour, $1,999 Product MVP (one-time), and $3,999/mo Scale (10 hrs/week, pause or cancel anytime). See the Pricing page for full details.",
+    a: "We publish Development and Growth tracks separately: each has a $150 strategy hour, a $1,999 one-time sprint (Product MVP or Growth sprint), and $3,999/mo Scale (pause anytime). See the Pricing page for full details.",
   },
   {
     q: "Where are you based?",

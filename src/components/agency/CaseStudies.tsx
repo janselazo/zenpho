@@ -14,7 +14,8 @@ export default function CaseStudies() {
         label="Results"
         title="Client"
         titleAccent="outcomes"
-        description="SaaS web apps, ecommerce, and websites where the goal was something real customers could use—not a slide deck milestone."
+        titleAccentInline
+        description="Web apps, mobile apps, websites, and ecommerce — real customers, real production systems, not slide-deck milestones."
       />
 
       <div className="grid gap-8 lg:grid-cols-2">

@@ -9,8 +9,10 @@ export default function Process() {
     <section className="mx-auto max-w-7xl px-6 py-32 lg:px-8">
       <SectionHeading
         label="Process"
-        title="How we work"
-        description="We take the complexity out of building software and replace it with weekly momentum."
+        title="How we"
+        titleAccent="work"
+        titleAccentInline
+        description="We take the complexity out of building software and replace it with weekly momentum — Discover, Design, Build, and Grow with your metrics in the room from day one."
       />
 
       <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
