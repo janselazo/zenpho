@@ -13,7 +13,10 @@ export default function AboutIntro() {
         className="text-center"
       >
         <p className="text-lg leading-relaxed text-text-secondary sm:text-xl">
-          Most agencies build what you ask for. We build what you need to win.
+          <span className="font-bold text-text-primary">
+            Most agencies build what you ask for. We build what you need to
+            win.{" "}
+          </span>
           From concept to launch, every decision is made with growth in mind
           — so your product doesn&apos;t just work, it scales.{" "}
           <span className="font-medium text-text-primary">
