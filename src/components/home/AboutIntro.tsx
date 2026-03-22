@@ -18,18 +18,11 @@ export default function AboutIntro() {
             win.{" "}
           </span>
           From concept to launch, every decision is made with growth in mind
-          — so your product doesn&apos;t just work, it scales.
-        </p>
-
-        <div className="mt-14 flex flex-col items-center gap-5 sm:mt-16">
-          <div
-            className="h-px w-12 bg-text-primary/15 sm:w-14"
-            aria-hidden
-          />
-          <h2 className="heading-display max-w-lg text-center text-xl font-semibold leading-snug tracking-tight text-text-primary sm:text-2xl">
+          — so your product doesn&apos;t just work, it scales.{" "}
+          <span className="font-medium text-text-primary">
             First working version in 2 weeks.
-          </h2>
-        </div>
+          </span>
+        </p>
       </motion.div>
     </section>
   );
