@@ -10,19 +10,7 @@ export default function Process() {
       <SectionHeading
         label="Process"
         title="How we work"
-        description={
-          <>
-            <p>
-              <span className="font-medium text-text-primary">
-                Scope → design → build → ship.
-              </span>
-            </p>
-            <p>
-              Communication stays tight; we ship small, test early, and iterate
-              weekly — so you always see progress, not surprises.
-            </p>
-          </>
-        }
+        description="We take the complexity out of building software and replace it with weekly momentum."
       />
 
       <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">

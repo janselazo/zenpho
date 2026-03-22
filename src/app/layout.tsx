@@ -16,7 +16,7 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Janse Lazo — AI Software Development Agency & Studio",
+    default: "Janse Lazo — AI Product Studio",
     template: "%s | Janse Lazo",
   },
   description:

@@ -14,7 +14,7 @@ export default function FeaturedWork() {
         title="Recent"
         titleAccent="outcomes"
         titleAccentInline
-        description="SaaS web apps, ecommerce stores, and platforms for the teams you see above. Each build ships cleanly and hands off without friction."
+        description="Each build ships cleanly and hands off without friction."
       />
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

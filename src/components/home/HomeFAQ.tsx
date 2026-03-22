@@ -6,32 +6,36 @@ import SectionHeading from "@/components/ui/SectionHeading";
 
 const faqs = [
   {
-    q: "What do you actually build?",
-    a: "AI applications (copilots, chat/search, predictive analytics), modern web apps, offline-first mobile, automation and agents, content generation pipelines, and APIs/integrations (auth, payments, analytics, third parties).",
+    q: "What do you build?",
+    a: "Web apps, mobile apps, websites, and ecommerce stores. We also handle growth services — product-led growth strategy, retention, acquisition, monetization, and growth experiments.",
   },
   {
-    q: "Client work vs. Studio — what’s the difference?",
-    a: "Client work is your roadmap: we scope, build, and hand off what you own. Studio is where I ship in-house products (e.g. SoldTools) on our own timeline, separate from your engagement.",
+    q: "How fast can I get a first version?",
+    a: "Your first working version ships in 2 weeks. We run focused weekly sprints so you see real progress every single week, not a big reveal months later.",
   },
   {
-    q: "Do you only work with startups?",
-    a: "Most clients are startups or small product teams, but I’ve also worked with larger organizations that need focused execution on a specific product or feature.",
+    q: "Do I need to be technical?",
+    a: "Not at all. We work with both non-tech and tech founders. You bring the vision — we handle the architecture, design, and execution.",
   },
   {
     q: "How do projects usually start?",
-    a: "A short conversation about your product, users, and timeline. Then a phased plan — often starting small to validate the approach before committing to a larger build.",
+    a: "A short conversation about your idea, users, and goals. From there we move into Discover → Design → Build → Grow — starting lean and scaling what works.",
+  },
+  {
+    q: "What's the difference between Development, Growth, and Studio?",
+    a: "Development is building your product. Growth is making it succeed — acquisition, retention, monetization, and experiments. Studio is where we build our own products with the same mindset we bring to yours.",
   },
   {
     q: "Can you work with our existing stack?",
-    a: "Yes. I’ve integrated with CRMs, payment processors, third-party APIs, and legacy systems. I’ll work with what you have rather than push a rewrite.",
+    a: "Yes. We've integrated with CRMs, payment processors, third-party APIs, and legacy systems. We work with what you have rather than push a rewrite.",
   },
   {
     q: "Where can I see pricing?",
-    a: "$50 strategy hour, $1,999 Product MVP (one-time), and $3,999/mo Scale (10 hrs/week, pause or cancel anytime). See the Pricing page for what’s included. Hourly $100–150 outside packages.",
+    a: "$50 strategy hour, $1,999 Product MVP (one-time), and $3,999/mo Scale (10 hrs/week, pause or cancel anytime). See the Pricing page for full details.",
   },
   {
     q: "Where are you based?",
-    a: "Miami, FL. I work remotely and have collaborated with teams across the U.S. and Latin America. Bilingual — English and Spanish.",
+    a: "Miami, FL. We work remotely with teams across the U.S. and Latin America. Bilingual — English and Spanish.",
   },
 ];
 
@@ -45,7 +49,7 @@ export default function HomeFAQ() {
         title="Common"
         titleAccent="questions"
         titleAccentInline
-        description="Straight answers about how I work with teams building software products."
+        description="No surprises — just clear answers about how we work."
       />
 
       <div className="mx-auto max-w-3xl space-y-3">

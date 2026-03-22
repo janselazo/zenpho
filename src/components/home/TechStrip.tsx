@@ -19,7 +19,7 @@ export default function TechStrip() {
         title="Tools"
         titleAccent="& platforms"
         titleAccentInline
-        description="Typical building blocks—always chosen for your constraints, not my preferences alone."
+        description="Every stack decision is driven by your product goals."
       />
 
       <div className="w-full overflow-x-auto overflow-y-hidden scroll-smooth pb-1 [-webkit-overflow-scrolling:touch]">

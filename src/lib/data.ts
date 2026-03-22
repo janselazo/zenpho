@@ -159,27 +159,27 @@ export const services: Service[] = [
 export const processSteps: ProcessStep[] = [
   {
     number: "01",
-    title: "Scope",
+    title: "Discover",
     description:
-      "We lock the problem, users, and success criteria — tight scope so the first release proves something real.",
+      "We define the problem, target users, and success metrics — so the first sprint solves something that matters.",
   },
   {
     number: "02",
     title: "Design",
     description:
-      "UX, flows, and architecture that fit your stack — designed to ship, not to decorate a slide deck.",
+      "UX flows, architecture, and a growth strategy shaped together — every screen is designed to convert, not just look good.",
   },
   {
     number: "03",
     title: "Build",
     description:
-      "AI-accelerated development with senior judgment: small increments, visible progress, tests where they earn their keep.",
+      "Focused weekly sprints with visible output. Your first working version ships in 2 weeks, not 2 months.",
   },
   {
     number: "04",
-    title: "Ship",
+    title: "Grow",
     description:
-      "Production rollout, monitoring, and handoff — then iterate weekly from real usage, not assumptions.",
+      "Launch, measure, and iterate — we run growth experiments, optimize retention, and scale what works.",
   },
 ];
 
@@ -222,10 +222,20 @@ export const techStack: TechItem[] = [
 export const portfolioProjects: PortfolioProject[] = [
   // Client case studies (current engagements)
   {
+    client: "Taptok",
+    title: "Digital business card SaaS & mobile app",
+    description:
+      "Built the full-stack platform behind Taptok: NFC tap-to-share cards, QR code networking, contact management with lead enrichment and AI-powered scoring, analytics dashboards, and team management — all designed to replace paper cards and turn every interaction into a measurable lead. Outcome: a production SaaS with free, professional, and enterprise tiers serving users from Miami and scaling nationwide.",
+    tags: ["SaaS", "Mobile", "NFC", "Growth"],
+    type: "agency",
+    category: "saas-platform",
+    result: "Production launch",
+  },
+  {
     client: "Apex Inspection Pro",
     title: "SaaS home inspection platform",
     description:
-      "Shipped a production SaaS web application so inspectors capture residential and commercial property details, bind the right report template, and complete structured sections—roof, attic, electrical, plumbing, interior, and more—in one guided flow. Outcome: a single source of truth per job, fewer incomplete reports, and a product the team can extend without re-platforming.",
+      "Shipped a production SaaS web application so inspectors capture residential and commercial property details, bind the right report template, and complete structured sections in one guided flow. Outcome: a single source of truth per job, fewer incomplete reports, and a product the team can extend without re-platforming.",
     tags: ["SaaS", "Inspections", "Web app"],
     type: "agency",
     category: "saas-platform",
@@ -233,19 +243,19 @@ export const portfolioProjects: PortfolioProject[] = [
   },
   {
     client: "TQMuch",
-    title: "SaaS product & customer dashboard",
+    title: "Ecommerce store — nationwide food delivery",
     description:
-      "Built the core web app and dashboard around their SaaS offer: authenticated experiences, account lifecycle, and integrations aligned with how end customers actually adopt the product. Outcome: faster onboarding for new accounts, clearer ownership of product vs. admin surfaces, and a codebase structured for the next feature wave.",
-    tags: ["SaaS", "Dashboard", "APIs"],
+      "Ecommerce store bringing authentic tequeños to doorsteps across the U.S. with temperature-controlled shipping. Product catalog, mobile-first checkout, and fulfillment workflows — so the team can focus on the food while the store handles nationwide orders.",
+    tags: ["Ecommerce", "Food & Beverage", "DTC"],
     type: "agency",
-    category: "saas-platform",
-    result: "Shipped to active users",
+    category: "web-app",
+    result: "Live commerce",
   },
   {
     client: "Craveclean",
     title: "Ecommerce store & catalog operations",
     description:
-      "End-to-end online store with merchandising-friendly catalog, PDPs tuned for clarity, checkout and payments, and back-office patterns so marketing and fulfillment could update the catalog without waiting on deploys. Outcome: live commerce with a storefront the brand runs day to day.",
+      "End-to-end online store with a clean catalog, PDPs tuned for clarity, checkout and payments, and back-office patterns so marketing and fulfillment could update the catalog without waiting on deploys. Outcome: live commerce with a storefront the brand runs day to day.",
     tags: ["Ecommerce", "Store", "Checkout"],
     type: "agency",
     category: "web-app",
@@ -262,16 +272,6 @@ export const portfolioProjects: PortfolioProject[] = [
     result: "Store live",
   },
   {
-    client: "BeZazzy",
-    title: "Customer-facing SaaS web application",
-    description:
-      "Delivered a multi-tenant style SaaS experience with sign-in, role-aware UI, and API-backed workflows so the client could onboard users, iterate features, and scale usage without a ground-up rewrite. Outcome: production environment ready for growth and handoff documentation their team can own.",
-    tags: ["SaaS", "Product", "TypeScript"],
-    type: "agency",
-    category: "saas-platform",
-    result: "Production launch",
-  },
-  {
     title: "SoldTools",
     description:
       "Live in-house product for car sales teams: lead capture from multiple sources, appointment scheduling, deal intelligence, and a referral engine—shipping in production at app.soldtools.com.",
@@ -285,20 +285,29 @@ export const portfolioProjects: PortfolioProject[] = [
 
 export const featuredProjects: FeaturedProject[] = [
   {
+    client: "Taptok",
+    title: "SaaS platform & mobile app",
+    description:
+      "Digital business card platform with NFC tap-to-share, QR codes, contact management, lead scoring, and analytics — helping professionals replace paper cards and network smarter.",
+    tags: ["SaaS", "Mobile", "NFC"],
+    type: "agency",
+    result: "Production launch",
+  },
+  {
     client: "Apex Inspection Pro",
     title: "SaaS web application",
     description:
-      "An intuitive, easy-to-use SaaS web app for inspection teams: enter residential or commercial property details, select the inspection report tied to that property, and work through the categories in that report—roof, attic, electrical, plumbing, interior, and more—so every run follows the same clear structure.",
+      "An intuitive, easy-to-use SaaS web app for inspection teams: enter residential or commercial property details, select the inspection report tied to that property, and work through the categories in that report so every run follows the same clear structure.",
     tags: ["SaaS", "Web app", "Inspections"],
     type: "agency",
     result: "Production launch",
   },
   {
     client: "TQMuch",
-    title: "SaaS platform & dashboard",
+    title: "Ecommerce store",
     description:
-      "Web application and dashboard for a SaaS offer: core product UX, account management patterns, and integrations that match how their customers work day to day.",
-    tags: ["SaaS", "Dashboard", "Web"],
+      "Online store shipping authentic tequeños nationwide — product catalog, mobile checkout, and fulfillment tools so the team runs daily operations without engineering.",
+    tags: ["Ecommerce", "Food & Beverage", "DTC"],
     type: "agency",
     result: "Shipped to users",
   },
@@ -306,7 +315,7 @@ export const featuredProjects: FeaturedProject[] = [
     client: "Craveclean",
     title: "Ecommerce store",
     description:
-      "Full online store: catalog and PDPs, checkout and payments, and day-to-day tooling so the brand could run merchandising and fulfillment without blocking on engineering.",
+      "Full online store: catalog and PDPs, checkout and payments, and day-to-day tooling so the brand could run fulfillment without blocking on engineering.",
     tags: ["Ecommerce", "Store", "Checkout"],
     type: "agency",
     result: "Live commerce",
@@ -319,15 +328,6 @@ export const featuredProjects: FeaturedProject[] = [
     tags: ["Ecommerce", "Automotive", "Performance"],
     type: "agency",
     result: "Store live",
-  },
-  {
-    client: "BeZazzy",
-    title: "SaaS web application",
-    description:
-      "Customer-facing SaaS web app with sign-in, role-aware screens, and API-backed workflows—so the team could onboard users, ship features, and grow without a rewrite.",
-    tags: ["SaaS", "Web app", "Product"],
-    type: "agency",
-    result: "Production launch",
   },
 ];
 

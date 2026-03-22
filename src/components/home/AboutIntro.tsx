@@ -13,14 +13,12 @@ export default function AboutIntro() {
         className="text-center"
       >
         <p className="text-lg leading-relaxed text-text-secondary sm:text-xl">
-          <span className="font-medium text-text-primary">Who it&apos;s for:</span>{" "}
-          early-stage founders who need a focused MVP to test demand; teams who
-          want help with scoping, faster delivery, or adding AI to the product;
-          and companies that want{" "}
+          Most agencies build what you ask for. We build what you need to win.
+          From concept to launch, every decision is made with growth in mind
+          — so your product doesn&apos;t just work, it scales.{" "}
           <span className="font-medium text-text-primary">
-            transparent pricing and predictable weekly output
+            First working version in 2 weeks.
           </span>
-          .
         </p>
       </motion.div>
     </section>

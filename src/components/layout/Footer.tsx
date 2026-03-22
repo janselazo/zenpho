@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import NewsletterSignup from "@/components/ui/NewsletterSignup";
 import { footerNavLinks } from "@/lib/data";
 
 export default function Footer() {
@@ -16,8 +15,7 @@ export default function Footer() {
               </span>
             </Link>
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-text-secondary">
-              AI software development agency — AI apps, web, mobile, automation,
-              and integrations. Studio for products we build in-house.
+              We build and scale software products through our Agency, and launch our own through Studio — same team, same standards.
             </p>
           </div>
 
@@ -62,10 +60,6 @@ export default function Footer() {
 
           <div>
             <h4 className="mb-4 text-xs font-semibold uppercase tracking-widest text-text-primary">
-              Newsletter
-            </h4>
-            <NewsletterSignup compact />
-            <h4 className="mb-3 mt-8 text-xs font-semibold uppercase tracking-widest text-text-primary">
               Connect
             </h4>
             <div className="flex flex-col gap-2">

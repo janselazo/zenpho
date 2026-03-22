@@ -6,11 +6,11 @@ import { SECTION_EYEBROW_CLASSNAME } from "@/components/ui/SectionHeading";
 import { experienceStats } from "@/lib/data";
 
 const clients = [
-  "BeZazzy",
+  "Taptok",
+  "Apex Inspection Pro",
   "Craveclean",
   "TQMuch",
   "USRallyStripes",
-  "Apex Inspection Pro",
 ];
 
 export default function Hero() {
@@ -23,7 +23,7 @@ export default function Hero() {
           transition={{ duration: 0.55 }}
         >
           <span className={`mb-5 ${SECTION_EYEBROW_CLASSNAME}`}>
-            AI Software Development Agency
+            AI Product Studio
           </span>
         </motion.div>
 
@@ -33,8 +33,8 @@ export default function Hero() {
           transition={{ duration: 0.55, delay: 0.06 }}
           className="heading-display text-4xl font-bold leading-[1.15] text-text-primary sm:text-5xl sm:leading-[1.12] lg:text-6xl lg:leading-[1.1]"
         >
-          <span className="block">Design, build, and launch</span>
-          <span className="mt-1 block text-accent">products that scale</span>
+          <span className="block">We build and scale</span>
+          <span className="mt-1 block text-accent">software products</span>
         </motion.h1>
 
         <motion.p
@@ -43,8 +43,8 @@ export default function Hero() {
           transition={{ duration: 0.5, delay: 0.12 }}
           className="mx-auto mt-4 max-w-2xl text-lg font-medium leading-snug text-text-secondary sm:text-xl"
         >
-          An AI software development agency for your roadmap — transparent pricing and
-          predictable weekly output.
+          Web apps, mobile apps, websites, and ecommerce stores — from idea to
+          product-market fit.
         </motion.p>
 
         <motion.div
