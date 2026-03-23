@@ -53,11 +53,24 @@ export interface MockTeamMember {
   name: string;
   email: string;
   role: string;
+  /** Legacy project linkage; derived from primary tag when using groups */
   teamId: string;
+  /** Groups such as Developers, Designers (multi-assign) */
+  tags: string[];
   utilization: number;
   activeProjects: number;
   avatarFallback: string;
 }
+
+/** Quick-pick labels for the Team tag field (you can still type custom groups) */
+export const SUGGESTED_TEAM_TAGS = [
+  "Developers",
+  "Designers",
+  "QA",
+  "Product",
+  "Marketing",
+  "Ops",
+] as const;
 
 export interface MockTeam {
   id: string;
@@ -113,6 +126,17 @@ export const LEAD_STAGE_LABELS: Record<LeadStage, string> = {
   qualified: "Qualified",
   not_qualified: "Not Qualified",
 };
+
+/** Lead "Project type" dropdown (stored as-display on `lead.project_type`) */
+export const LEAD_PROJECT_TYPE_OPTIONS = [
+  "Web App",
+  "Mobile App",
+  "Website",
+  "Ecommerce Store",
+  "Other",
+] as const;
+
+export type LeadProjectType = (typeof LEAD_PROJECT_TYPE_OPTIONS)[number];
 
 export const teams: MockTeam[] = [];
 

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createLead } from "@/app/(crm)/actions/crm";
+import { LEAD_PROJECT_TYPE_OPTIONS } from "@/lib/crm/mock-data";
 
 const inputClass =
   "w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/15";
@@ -70,6 +71,26 @@ export default function NewLeadForm() {
             Phone
           </label>
           <input name="phone" type="tel" className={inputClass} />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="mb-1 block text-xs font-medium text-text-secondary">
+            Project type
+          </label>
+          <select
+            name="project_type"
+            required
+            defaultValue=""
+            className={inputClass}
+          >
+            <option value="" disabled>
+              Select project type…
+            </option>
+            {LEAD_PROJECT_TYPE_OPTIONS.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="sm:col-span-2">
           <label className="mb-1 block text-xs font-medium text-text-secondary">

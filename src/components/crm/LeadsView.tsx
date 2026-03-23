@@ -4,7 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Search } from "lucide-react";
-import { LEAD_STAGE_LABELS, type LeadStage } from "@/lib/crm/mock-data";
+import {
+  LEAD_STAGE_LABELS,
+  LEAD_PROJECT_TYPE_OPTIONS,
+  type LeadStage,
+} from "@/lib/crm/mock-data";
 import { createLead } from "@/app/(crm)/actions/crm";
 
 export interface Lead {
@@ -16,6 +20,7 @@ export interface Lead {
   stage: string | null;
   source?: string | null;
   notes?: string | null;
+  project_type?: string | null;
   created_at?: string | null;
 }
 
@@ -67,7 +72,8 @@ export default function LeadsView({ leads }: { leads: Lead[] }) {
       l.name?.toLowerCase().includes(q) ||
       l.email?.toLowerCase().includes(q) ||
       l.company?.toLowerCase().includes(q) ||
-      l.source?.toLowerCase().includes(q)
+      l.source?.toLowerCase().includes(q) ||
+      l.project_type?.toLowerCase().includes(q)
     );
   });
 
@@ -142,6 +148,9 @@ function LeadsTable({ leads }: { leads: Lead[] }) {
             <th className="px-4 py-3 font-semibold text-text-secondary">Email</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Status</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Source</th>
+            <th className="px-4 py-3 font-semibold text-text-secondary">
+              Project type
+            </th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Date</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Actions</th>
           </tr>
@@ -200,6 +209,9 @@ function LeadsTable({ leads }: { leads: Lead[] }) {
                   ) : (
                     <span className="text-text-secondary">—</span>
                   )}
+                </td>
+                <td className="px-4 py-3 text-text-secondary">
+                  {lead.project_type ?? "—"}
                 </td>
                 <td className="px-4 py-3 text-text-secondary">
                   {formatDate(lead.created_at)}
@@ -297,6 +309,26 @@ function NewLeadModal({ onClose }: { onClose: () => void }) {
               </label>
               <input name="phone" type="tel" className={inputClass} />
             </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-text-primary">
+              Project type
+            </label>
+            <select
+              name="project_type"
+              required
+              defaultValue=""
+              className={inputClass}
+            >
+              <option value="" disabled>
+                Select project type…
+              </option>
+              {LEAD_PROJECT_TYPE_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-text-primary">

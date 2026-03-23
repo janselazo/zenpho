@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { updateLead } from "@/app/(crm)/actions/crm";
+import { LEAD_PROJECT_TYPE_OPTIONS } from "@/lib/crm/mock-data";
 import TabBar from "@/components/crm/TabBar";
 
 const inputClass =
@@ -39,6 +40,7 @@ type Lead = {
   source: string | null;
   stage: string | null;
   notes: string | null;
+  project_type: string | null;
 };
 
 type DealRow = {
@@ -173,6 +175,23 @@ export default function LeadEditForm({
                 defaultValue={lead.source ?? ""}
                 className={inputClass}
               />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-text-secondary">
+                Project type
+              </label>
+              <select
+                name="project_type"
+                defaultValue={lead.project_type ?? ""}
+                className={inputClass}
+              >
+                <option value="">Not set</option>
+                {LEAD_PROJECT_TYPE_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-text-secondary">

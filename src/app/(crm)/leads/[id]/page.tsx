@@ -21,7 +21,7 @@ export default async function LeadDetailPage({ params }: Props) {
   const { data: lead, error } = await supabase
     .from("lead")
     .select(
-      "id, name, email, company, phone, source, stage, notes, created_at"
+      "id, name, email, company, phone, source, stage, notes, project_type, created_at"
     )
     .eq("id", id)
     .maybeSingle();

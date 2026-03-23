@@ -2,6 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { LEAD_PROJECT_TYPE_OPTIONS } from "@/lib/crm/mock-data";
+
+const PROJECT_TYPE_SET = new Set<string>(LEAD_PROJECT_TYPE_OPTIONS);
+
+function parseProjectType(formData: FormData): string | null {
+  const raw = String(formData.get("project_type") ?? "").trim();
+  if (!raw || !PROJECT_TYPE_SET.has(raw)) return null;
+  return raw;
+}
 
 export async function createLead(formData: FormData) {
   const supabase = await createClient();
@@ -16,9 +25,14 @@ export async function createLead(formData: FormData) {
   const phone = String(formData.get("phone") ?? "").trim();
   const source = String(formData.get("source") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
+  const project_type = parseProjectType(formData);
 
   if (!name && !email) {
     return { error: "Add at least a name or email." };
+  }
+
+  if (!project_type) {
+    return { error: "Please select a project type." };
   }
 
   const { error } = await supabase.from("lead").insert({
@@ -28,6 +42,7 @@ export async function createLead(formData: FormData) {
     phone: phone || null,
     source: source || null,
     notes: notes || null,
+    project_type,
     stage: "new",
     owner_id: user.id,
   });
@@ -55,6 +70,7 @@ export async function updateLead(formData: FormData) {
   const source = String(formData.get("source") ?? "").trim();
   const stage = String(formData.get("stage") ?? "new").trim();
   const notes = String(formData.get("notes") ?? "").trim();
+  const project_type = parseProjectType(formData);
 
   const allowedStages = [
     "new",
@@ -78,6 +94,7 @@ export async function updateLead(formData: FormData) {
       source: source || null,
       stage,
       notes: notes || null,
+      project_type,
     })
     .eq("id", id);
 

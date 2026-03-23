@@ -1,17 +1,16 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import {
   Search,
-  Plus,
   FolderKanban,
   Mail,
   ChevronDown,
+  X,
 } from "lucide-react";
 import {
   type MockTeamMember,
-  type MockTeam,
   type MockProject,
   type MockTask,
   teams as allTeams,
@@ -19,6 +18,7 @@ import {
   tasks as allTasks,
   PLAN_LABELS,
   PLAN_COLORS,
+  SUGGESTED_TEAM_TAGS,
 } from "@/lib/crm/mock-data";
 
 const ROLE_COLORS: Record<string, string> = {
@@ -32,6 +32,34 @@ const ROLE_COLORS: Record<string, string> = {
 
 function getRoleClasses(role: string) {
   return ROLE_COLORS[role] ?? "bg-gray-100 text-gray-700";
+}
+
+function slugTag(tag: string) {
+  const s = tag
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+  return s || "group";
+}
+
+/** Keeps project teamId in sync when using tag-based groups */
+function tagsToTeamId(tags: string[]) {
+  if (tags.length === 0) return "team-general";
+  return `tag-${slugTag(tags[0])}`;
+}
+
+function colorForTagLabel(tag: string) {
+  let h = 0;
+  for (let i = 0; i < tag.length; i += 1) {
+    h = tag.charCodeAt(i) + ((h << 5) - h);
+  }
+  const hue = Math.abs(h) % 360;
+  return `hsl(${hue} 52% 42%)`;
+}
+
+function normalizeMember(m: MockTeamMember): MockTeamMember {
+  return { ...m, tags: m.tags ?? [] };
 }
 
 function initials(name: string) {
@@ -65,24 +93,35 @@ export default function TeamsView({
 }: {
   members: MockTeamMember[];
 }) {
-  const [members, setMembers] = useState(initialMembers);
+  const [members, setMembers] = useState(() =>
+    initialMembers.map(normalizeMember)
+  );
   const [search, setSearch] = useState("");
-  const [teamFilter, setTeamFilter] = useState<string>("all");
+  const [tagFilter, setTagFilter] = useState<string>("all");
   const [modalOpen, setModalOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  const tagsInUse = useMemo(() => {
+    const s = new Set<string>();
+    for (const m of members) {
+      for (const t of m.tags) s.add(t);
+    }
+    return Array.from(s).sort((a, b) => a.localeCompare(b));
+  }, [members]);
+
   const filtered = useMemo(() => {
     return members.filter((m) => {
-      if (teamFilter !== "all" && m.teamId !== teamFilter) return false;
+      if (tagFilter !== "all" && !m.tags.includes(tagFilter)) return false;
       if (!search) return true;
       const q = search.toLowerCase();
       return (
         m.name.toLowerCase().includes(q) ||
         m.role.toLowerCase().includes(q) ||
-        m.email.toLowerCase().includes(q)
+        m.email.toLowerCase().includes(q) ||
+        m.tags.some((t) => t.toLowerCase().includes(q))
       );
     });
-  }, [members, search, teamFilter]);
+  }, [members, search, tagFilter]);
 
   function handleAdd(member: MockTeamMember) {
     setMembers((prev) => [...prev, member]);
@@ -121,26 +160,26 @@ export default function TeamsView({
       </div>
 
       {/* Filters */}
-      <div className="mt-4 flex items-center gap-2">
+      <div className="mt-4 flex flex-wrap items-center gap-2">
         <FilterPill
-          active={teamFilter === "all"}
-          onClick={() => setTeamFilter("all")}
+          active={tagFilter === "all"}
+          onClick={() => setTagFilter("all")}
         >
           All ({members.length})
         </FilterPill>
-        {allTeams.map((t) => {
-          const count = members.filter((m) => m.teamId === t.id).length;
+        {tagsInUse.map((tag) => {
+          const count = members.filter((m) => m.tags.includes(tag)).length;
           return (
             <FilterPill
-              key={t.id}
-              active={teamFilter === t.id}
-              onClick={() => setTeamFilter(t.id)}
+              key={tag}
+              active={tagFilter === tag}
+              onClick={() => setTagFilter(tag)}
             >
               <span
                 className="h-2 w-2 rounded-full"
-                style={{ backgroundColor: t.color }}
+                style={{ backgroundColor: colorForTagLabel(tag) }}
               />
-              {t.name} ({count})
+              {tag} ({count})
             </FilterPill>
           );
         })}
@@ -150,6 +189,9 @@ export default function TeamsView({
       <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {filtered.map((m) => {
           const team = allTeams.find((t) => t.id === m.teamId);
+          const avatarColor =
+            team?.color ??
+            (m.tags[0] ? colorForTagLabel(m.tags[0]) : "#6b7280");
           const assigned = getAssignedProjects(m, allProjects, allTasks);
           const expanded = expandedId === m.id;
 
@@ -162,7 +204,7 @@ export default function TeamsView({
               <div className="flex items-start gap-3">
                 <span
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
-                  style={{ backgroundColor: team?.color ?? "#6b7280" }}
+                  style={{ backgroundColor: avatarColor }}
                 >
                   {m.avatarFallback}
                 </span>
@@ -175,6 +217,19 @@ export default function TeamsView({
                   >
                     {m.role}
                   </span>
+                  {m.tags.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {m.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="rounded-md px-2 py-0.5 text-[10px] font-semibold text-white"
+                          style={{ backgroundColor: colorForTagLabel(tag) }}
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -297,6 +352,158 @@ function FilterPill({
   );
 }
 
+function TeamTagsField({
+  tags,
+  onChange,
+  id,
+}: {
+  tags: string[];
+  onChange: (tags: string[]) => void;
+  id: string;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [input, setInput] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const suggestions = useMemo(() => {
+    const q = input.trim().toLowerCase();
+    const pool = [...SUGGESTED_TEAM_TAGS];
+    const seen = new Set(tags.map((t) => t.toLowerCase()));
+    return pool.filter(
+      (s) =>
+        !seen.has(s.toLowerCase()) &&
+        (!q || s.toLowerCase().includes(q))
+    );
+  }, [input, tags]);
+
+  const addTag = (raw: string) => {
+    const t = raw.trim();
+    if (!t) return;
+    if (tags.some((x) => x.toLowerCase() === t.toLowerCase())) return;
+    onChange([...tags, t]);
+    setInput("");
+  };
+
+  const removeTag = (index: number) => {
+    onChange(tags.filter((_, i) => i !== index));
+  };
+
+  const startEditTag = (index: number) => {
+    const v = tags[index];
+    onChange(tags.filter((_, i) => i !== index));
+    setInput(v);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      const root = inputRef.current?.closest("[data-team-tags-root]");
+      if (root && !root.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  return (
+    <div className="relative" data-team-tags-root>
+      <label
+        htmlFor={id}
+        className="mb-1 block text-sm font-medium text-text-primary"
+      >
+        Team
+      </label>
+      <p className="mb-2 text-xs text-text-secondary">
+        Assign groups (e.g. Developers): type and press Enter, pick a suggestion,
+        click a tag to edit, or ✕ to remove.
+      </p>
+      <div
+        className={`flex min-h-[46px] flex-wrap items-center gap-1.5 rounded-xl border border-border bg-white px-2 py-1.5 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/15 ${
+          open && suggestions.length > 0 ? "rounded-b-none border-b-0" : ""
+        }`}
+      >
+        {tags.map((tag, i) => (
+          <span
+            key={`${tag}-${i}`}
+            className="inline-flex max-w-full items-center gap-0.5 rounded-lg bg-accent/12 pl-2 text-xs font-medium text-accent"
+          >
+            <button
+              type="button"
+              title="Edit tag"
+              className="max-w-[160px] truncate py-1.5 text-left hover:underline"
+              onClick={() => startEditTag(i)}
+            >
+              {tag}
+            </button>
+            <button
+              type="button"
+              title={`Remove ${tag}`}
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-text-secondary hover:bg-accent/10 hover:text-text-primary"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                removeTag(i);
+              }}
+            >
+              <X className="h-3.5 w-3.5" aria-hidden />
+            </button>
+          </span>
+        ))}
+        <input
+          ref={inputRef}
+          id={id}
+          type="text"
+          value={input}
+          autoComplete="off"
+          placeholder={
+            tags.length === 0
+              ? "e.g. Developers — type and press Enter"
+              : "Add another group…"
+          }
+          className="min-w-[8rem] flex-1 border-0 bg-transparent px-1 py-2 text-sm text-text-primary outline-none placeholder:text-text-secondary/50"
+          onChange={(e) => {
+            setInput(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addTag(input);
+            }
+            if (e.key === "Backspace" && !input && tags.length > 0) {
+              removeTag(tags.length - 1);
+            }
+            if (e.key === "Escape") setOpen(false);
+          }}
+        />
+      </div>
+      {open && suggestions.length > 0 && (
+        <ul
+          className="absolute z-10 max-h-40 w-full overflow-auto rounded-b-xl border border-t-0 border-border bg-white py-1 shadow-lg"
+          role="listbox"
+        >
+          {suggestions.map((s) => (
+            <li key={s}>
+              <button
+                type="button"
+                role="option"
+                className="w-full px-3 py-2 text-left text-sm text-text-primary hover:bg-surface"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  addTag(s);
+                  setOpen(true);
+                }}
+              >
+                {s}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function NewMemberModal({
   onClose,
   onAdd,
@@ -304,6 +511,7 @@ function NewMemberModal({
   onClose: () => void;
   onAdd: (m: MockTeamMember) => void;
 }) {
+  const [teamTags, setTeamTags] = useState<string[]>([]);
   const inputClass =
     "w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/15";
 
@@ -316,7 +524,8 @@ function NewMemberModal({
       name,
       email: (fd.get("email") as string) || "",
       role: (fd.get("role") as string) || "Developer",
-      teamId: (fd.get("teamId") as string) || allTeams[0].id,
+      teamId: tagsToTeamId(teamTags),
+      tags: teamTags,
       utilization: 0,
       activeProjects: 0,
       avatarFallback: initials(name),
@@ -374,18 +583,11 @@ function NewMemberModal({
               className={inputClass}
             />
           </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-text-primary">
-              Team
-            </label>
-            <select name="teamId" className={inputClass}>
-              {allTeams.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <TeamTagsField
+            id="team-tags-input"
+            tags={teamTags}
+            onChange={setTeamTags}
+          />
           <div className="flex gap-2 pt-1">
             <button
               type="submit"
