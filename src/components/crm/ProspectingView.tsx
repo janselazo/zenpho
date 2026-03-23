@@ -40,7 +40,18 @@ import {
   type ProspectingTaskType,
   type ProspectingTaskStatus,
 } from "@/lib/crm/mock-data";
-import { getCompletions, saveCompletions } from "@/lib/crm/playbook-store";
+import {
+  getCompletions,
+  saveCompletions,
+  loadPlaybookCategories,
+  savePlaybookCategories,
+} from "@/lib/crm/playbook-store";
+import {
+  fetchUserProspectingPlaybook,
+  upsertUserProspectingPlaybook,
+} from "@/lib/crm/playbook-remote";
+import { createClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 // ── Shared helpers ──────────────────────────────────────────────────────────
 
@@ -387,19 +398,148 @@ function MonthlyGoalsCard({
 // ── Playbook Tab ────────────────────────────────────────────────────────────
 
 function PlaybookTab() {
-  const [completions, setCompletions] = useState<Record<string, number>>(getCompletions);
+  const [completions, setCompletions] = useState<Record<string, number>>({});
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [categories, setCategories] = useState<PlaybookCategory[]>(playbookCategories);
+  const [playbookReady, setPlaybookReady] = useState(false);
+  const [playbookUserId, setPlaybookUserId] = useState<string | null>(null);
   const [editingActivity, setEditingActivity] = useState<string | null>(null);
   const [editFields, setEditFields] = useState({ title: "", points: 0, target: 0, timeEstimate: "" });
+  const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
+  const [sectionNameDraft, setSectionNameDraft] = useState("");
 
   useEffect(() => {
-    saveCompletions(completions);
-  }, [completions]);
+    if (!isSupabaseConfigured()) {
+      const loaded = loadPlaybookCategories();
+      if (loaded !== null) setCategories(loaded);
+      setCompletions(getCompletions());
+      setPlaybookUserId(null);
+      setPlaybookReady(true);
+      return;
+    }
+
+    const supabase = createClient();
+    let cancelled = false;
+
+    function applyGuestLocal() {
+      if (cancelled) return;
+      const loaded = loadPlaybookCategories();
+      if (loaded !== null) setCategories(loaded);
+      setCompletions(getCompletions());
+      setPlaybookUserId(null);
+      setPlaybookReady(true);
+    }
+
+    async function hydrateForUser(user: { id: string }) {
+      if (cancelled) return;
+      const result = await fetchUserProspectingPlaybook(supabase, user.id);
+      if (cancelled) return;
+
+      const lsCats = loadPlaybookCategories();
+      const lsCompletions = getCompletions();
+      const hasLocalData = lsCats !== null && lsCats.length > 0;
+
+      if (!result.found) {
+        if (hasLocalData) {
+          setCategories(lsCats);
+          setCompletions(lsCompletions);
+          await upsertUserProspectingPlaybook(
+            supabase,
+            user.id,
+            lsCats,
+            lsCompletions
+          );
+        } else {
+          setCategories([]);
+          setCompletions({});
+        }
+      } else {
+        const { categories: dbCats, completions: dbComp } = result;
+        if (dbCats.length > 0) {
+          setCategories(dbCats);
+          setCompletions(dbComp);
+        } else if (hasLocalData) {
+          setCategories(lsCats);
+          setCompletions(lsCompletions);
+          await upsertUserProspectingPlaybook(
+            supabase,
+            user.id,
+            lsCats,
+            lsCompletions
+          );
+        } else {
+          setCategories([]);
+          setCompletions(dbComp);
+        }
+      }
+
+      setPlaybookUserId(user.id);
+      setPlaybookReady(true);
+    }
+
+    void supabase.auth.getUser().then(({ data: { user } }) => {
+      if (cancelled) return;
+      if (user) void hydrateForUser(user);
+      else applyGuestLocal();
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (cancelled) return;
+      if (session?.user) void hydrateForUser(session.user);
+      else applyGuestLocal();
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!playbookReady) return;
+    const t = window.setTimeout(() => {
+      if (playbookUserId) {
+        const supabase = createClient();
+        void upsertUserProspectingPlaybook(
+          supabase,
+          playbookUserId,
+          categories,
+          completions
+        );
+      } else {
+        savePlaybookCategories(categories);
+        saveCompletions(completions);
+      }
+    }, 450);
+    return () => window.clearTimeout(t);
+  }, [categories, completions, playbookReady, playbookUserId]);
 
   function startEditActivity(a: PlaybookActivity) {
+    setEditingSectionId(null);
     setEditingActivity(a.id);
     setEditFields({ title: a.title, points: a.points, target: a.target, timeEstimate: a.timeEstimate });
+  }
+
+  function startEditSection(cat: PlaybookCategory) {
+    setEditingActivity(null);
+    setEditingSectionId(cat.id);
+    setSectionNameDraft(cat.name);
+  }
+
+  function confirmEditSection() {
+    if (!editingSectionId) return;
+    const id = editingSectionId;
+    const name = sectionNameDraft.trim() || "Untitled section";
+    setCategories((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, name } : c))
+    );
+    setEditingSectionId(null);
+  }
+
+  function cancelEditSection() {
+    setEditingSectionId(null);
   }
 
   function confirmEditActivity() {
@@ -442,13 +582,17 @@ function PlaybookTab() {
 
   function addSection() {
     const newId = `cat-${Date.now()}`;
+    setEditingActivity(null);
     setCategories((prev) => [
       ...prev,
       { id: newId, name: "New Section", icon: "phone", color: "#6366f1", activities: [] },
     ]);
+    setEditingSectionId(newId);
+    setSectionNameDraft("New Section");
   }
 
   function deleteSection(catId: string) {
+    if (editingSectionId === catId) setEditingSectionId(null);
     setCategories((prev) => prev.filter((c) => c.id !== catId));
   }
 
@@ -550,11 +694,13 @@ function PlaybookTab() {
               className="rounded-2xl border border-border bg-white shadow-sm"
             >
               {/* Section header */}
-              <div className="flex items-center gap-3 px-5 py-4">
+              <div className="group/sec flex items-center gap-3 px-5 py-4">
                 <button
                   type="button"
                   onClick={() => toggleCollapse(cat.id)}
-                  className="flex flex-1 items-center gap-3"
+                  aria-expanded={isOpen}
+                  aria-label={isOpen ? "Collapse section" : "Expand section"}
+                  className="flex shrink-0 items-center gap-2 rounded-lg py-1 pl-0 pr-2 text-text-secondary transition-colors hover:bg-surface hover:text-text-primary"
                 >
                   <span
                     className="flex h-8 w-8 items-center justify-center rounded-lg text-white"
@@ -564,10 +710,62 @@ function PlaybookTab() {
                       <Circle className="h-4 w-4" />
                     )}
                   </span>
-                  <span className="text-sm font-semibold text-text-primary">
-                    {cat.name}
-                  </span>
-                  <div className="ml-2 h-1.5 w-20 overflow-hidden rounded-full bg-gray-100">
+                  <ChevronDown
+                    className={`h-4 w-4 transition-transform ${
+                      isOpen ? "" : "-rotate-90"
+                    }`}
+                  />
+                </button>
+
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  {editingSectionId === cat.id ? (
+                    <>
+                      <input
+                        autoFocus
+                        value={sectionNameDraft}
+                        onChange={(e) => setSectionNameDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") confirmEditSection();
+                          if (e.key === "Escape") cancelEditSection();
+                        }}
+                        placeholder="Section name"
+                        className="min-w-0 flex-1 rounded-lg border border-accent bg-white px-2.5 py-1.5 text-sm font-semibold text-text-primary outline-none ring-2 ring-accent/15"
+                      />
+                      <button
+                        type="button"
+                        onClick={confirmEditSection}
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-emerald-500 hover:bg-emerald-50"
+                        aria-label="Save section name"
+                      >
+                        <CheckCircle2 className="h-5 w-5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelEditSection}
+                        className="shrink-0 rounded px-2 py-1 text-xs text-text-secondary hover:text-text-primary"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="truncate text-sm font-semibold text-text-primary">
+                        {cat.name}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => startEditSection(cat)}
+                        className="rounded p-1 text-text-secondary/0 transition-colors group-hover/sec:text-text-secondary/50 hover:text-accent"
+                        aria-label="Rename section"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                <div className="flex shrink-0 items-center gap-2">
+                  <div className="h-1.5 w-20 overflow-hidden rounded-full bg-gray-100">
                     <div
                       className="h-full rounded-full transition-all"
                       style={{
@@ -576,19 +774,16 @@ function PlaybookTab() {
                       }}
                     />
                   </div>
-                  <span className="text-xs text-text-secondary">
+                  <span className="text-xs tabular-nums text-text-secondary">
                     {catEarned}/{catTotal} pts
                   </span>
-                  <ChevronDown
-                    className={`ml-auto h-4 w-4 text-text-secondary transition-transform ${
-                      isOpen ? "" : "-rotate-90"
-                    }`}
-                  />
-                </button>
+                </div>
+
                 <button
                   type="button"
                   onClick={() => deleteSection(cat.id)}
                   className="rounded p-1 text-text-secondary/40 transition-colors hover:text-red-500"
+                  aria-label="Delete section"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -597,10 +792,11 @@ function PlaybookTab() {
               {/* Activities */}
               {isOpen && (
                 <div className="border-t border-border">
-                  {cat.activities.map((activity) => (
+                  {cat.activities.map((activity, activityIndex) => (
                     <ActivityRow
                       key={activity.id}
                       activity={activity}
+                      listIndex={activityIndex + 1}
                       completed={completions[activity.id] ?? 0}
                       isEditing={editingActivity === activity.id}
                       editFields={editFields}
@@ -643,6 +839,7 @@ function PlaybookTab() {
 
 function ActivityRow({
   activity,
+  listIndex,
   completed,
   isEditing,
   editFields,
@@ -654,6 +851,8 @@ function ActivityRow({
   onIncrement,
 }: {
   activity: PlaybookActivity;
+  /** 1-based position in the section (not the internal id — those can be long timestamps). */
+  listIndex: number;
   completed: number;
   isEditing: boolean;
   editFields: { title: string; points: number; target: number; timeEstimate: string };
@@ -722,10 +921,10 @@ function ActivityRow({
 
   return (
     <div className="group flex items-center gap-3 border-b border-border px-5 py-3 last:border-b-0">
-      <span className="w-6 text-center text-[11px] font-bold text-text-secondary/50">
-        {activity.id.replace("a-", "")}
+      <span className="w-6 shrink-0 text-center text-[11px] font-bold tabular-nums text-text-secondary/50">
+        {listIndex}
       </span>
-      <div className="flex-1">
+      <div className="min-w-0 flex-1">
         <p
           className={`text-sm ${
             isDone

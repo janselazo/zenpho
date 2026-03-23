@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { SUPABASE_ENV_SETUP_MESSAGE } from "@/lib/supabase/config";
 
 export default function RegisterForm({ configured }: { configured: boolean }) {
   const router = useRouter();
@@ -19,7 +20,7 @@ export default function RegisterForm({ configured }: { configured: boolean }) {
     setError(null);
     setMessage(null);
     if (!configured) {
-      setError("Configure Supabase environment variables first.");
+      setError(SUPABASE_ENV_SETUP_MESSAGE);
       return;
     }
     setLoading(true);

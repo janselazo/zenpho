@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { SUPABASE_ENV_SETUP_MESSAGE } from "@/lib/supabase/config";
 
 export default function LoginForm({ configured }: { configured: boolean }) {
   const router = useRouter();
@@ -19,7 +20,7 @@ export default function LoginForm({ configured }: { configured: boolean }) {
     e.preventDefault();
     setError(null);
     if (!configured) {
-      setError("Configure Supabase environment variables first.");
+      setError(SUPABASE_ENV_SETUP_MESSAGE);
       return;
     }
     setLoading(true);
@@ -45,10 +46,10 @@ export default function LoginForm({ configured }: { configured: boolean }) {
   return (
     <>
       <h1 className="heading-display text-2xl font-bold text-text-primary">
-        Sign in
+        Welcome back
       </h1>
       <p className="mt-1 text-sm text-text-secondary">
-        Agency CRM — use your Supabase account.
+        Sign in to your agency workspace with your work email and password.
       </p>
 
       <form onSubmit={onSubmit} className="mt-8 space-y-4">

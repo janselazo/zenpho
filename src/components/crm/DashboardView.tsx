@@ -32,10 +32,18 @@ import {
   DEAL_STAGE_LABELS,
   DEAL_STAGE_COLORS,
   type DealStage,
+  type PlaybookCategory,
   type ProspectingTask,
   type ProspectingTaskType,
 } from "@/lib/crm/mock-data";
-import { getCompletions } from "@/lib/crm/playbook-store";
+import {
+  getCompletions,
+  loadPlaybookCategories,
+  PLAYBOOK_STRUCTURE_CHANGED_EVENT,
+} from "@/lib/crm/playbook-store";
+import { fetchUserProspectingPlaybook } from "@/lib/crm/playbook-remote";
+import { createClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 import type { DailyMoneyPoint } from "@/components/crm/DashboardCharts";
 
 const dashCard =
@@ -201,19 +209,71 @@ export default function DashboardView({
   const profit = revenueWeek - expensesWeek;
 
   const chartTheme = useDashboardChartTheme();
-  const completions = getCompletions();
-  const totalActivities = playbookCategories.reduce(
-    (s, c) => s + c.activities.length, 0
+  const [playbookCats, setPlaybookCats] = useState<PlaybookCategory[]>(
+    playbookCategories
   );
-  const completedActivities = playbookCategories.reduce(
+  const [playbookCompletions, setPlaybookCompletions] = useState<
+    Record<string, number>
+  >({});
+
+  useEffect(() => {
+    async function syncPlaybookKpis() {
+      if (!isSupabaseConfigured()) {
+        const loaded = loadPlaybookCategories();
+        if (loaded !== null) setPlaybookCats(loaded);
+        setPlaybookCompletions(getCompletions());
+        return;
+      }
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        const loaded = loadPlaybookCategories();
+        if (loaded !== null) setPlaybookCats(loaded);
+        setPlaybookCompletions(getCompletions());
+        return;
+      }
+      const result = await fetchUserProspectingPlaybook(supabase, user.id);
+      if (!result.found) {
+        setPlaybookCats([]);
+        setPlaybookCompletions({});
+        return;
+      }
+      setPlaybookCats(result.categories);
+      setPlaybookCompletions(result.completions);
+    }
+
+    void syncPlaybookKpis();
+    window.addEventListener(PLAYBOOK_STRUCTURE_CHANGED_EVENT, syncPlaybookKpis);
+    const supabase = isSupabaseConfigured() ? createClient() : null;
+    const sub = supabase?.auth.onAuthStateChange(() => {
+      void syncPlaybookKpis();
+    });
+    return () => {
+      window.removeEventListener(
+        PLAYBOOK_STRUCTURE_CHANGED_EVENT,
+        syncPlaybookKpis
+      );
+      sub?.data.subscription.unsubscribe();
+    };
+  }, []);
+
+  const completions = playbookCompletions;
+  const totalActivities = playbookCats.reduce(
+    (s, c) => s + c.activities.length,
+    0
+  );
+  const completedActivities = playbookCats.reduce(
     (s, c) =>
       s + c.activities.filter((a) => (completions[a.id] ?? 0) >= a.target).length,
     0
   );
-  const totalPoints = playbookCategories.reduce(
-    (s, c) => s + c.activities.reduce((a, act) => a + act.points, 0), 0
+  const totalPoints = playbookCats.reduce(
+    (s, c) => s + c.activities.reduce((a, act) => a + act.points, 0),
+    0
   );
-  const earnedPoints = playbookCategories.reduce(
+  const earnedPoints = playbookCats.reduce(
     (s, c) =>
       s + c.activities.reduce((a, act) => {
         const done = completions[act.id] ?? 0;

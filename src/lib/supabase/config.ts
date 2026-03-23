@@ -1,3 +1,7 @@
+/** Shown in auth UI when `NEXT_PUBLIC_SUPABASE_*` is missing (e.g. new clone). */
+export const SUPABASE_ENV_SETUP_MESSAGE =
+  "Supabase isn’t configured. Copy .env.example to .env.local, set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY (Supabase → Project Settings → API), then restart the dev server.";
+
 export function isSupabaseConfigured(): boolean {
   return Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL &&
