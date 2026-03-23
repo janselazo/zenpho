@@ -8,6 +8,16 @@ const nextConfig = {
   turbopack: {
     root: __dirname,
   },
+  // Tree-shake icon/chart/animation barrels so each route ships less JS (Vercel / Next guidance).
+  experimental: {
+    optimizePackageImports: [
+      "lucide-react",
+      "recharts",
+      "framer-motion",
+      "@fullcalendar/react",
+      "@fullcalendar/core",
+    ],
+  },
   async redirects() {
     return [
       { source: "/portfolio", destination: "/case-studies", permanent: true },

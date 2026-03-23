@@ -49,12 +49,11 @@ export default function CrmTopBar({
 
   useEffect(() => {
     const stored = localStorage.getItem(THEME_KEY) as "light" | "dark" | null;
-    const prefersDark =
-      stored ??
-      (window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light");
-    setTheme(prefersDark === "dark" ? "dark" : "light");
+    if (stored === "dark" || stored === "light") {
+      setTheme(stored);
+      return;
+    }
+    setTheme("light");
   }, []);
 
   useEffect(() => {

@@ -1,7 +1,16 @@
-import DashboardView from "@/components/crm/DashboardView";
+import dynamic from "next/dynamic";
+import type { DailyMoneyPoint } from "@/lib/crm/transaction-series";
 import { getLastSevenDaysMoney } from "@/lib/crm/transaction-series";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
+
+const DashboardView = dynamic(() => import("@/components/crm/DashboardView"), {
+  loading: () => (
+    <div className="flex min-h-[50vh] items-center justify-center p-8 text-sm text-text-secondary dark:text-zinc-400">
+      Loading dashboard…
+    </div>
+  ),
+});
 
 async function getCounts() {
   const supabase = await createClient();
@@ -74,13 +83,21 @@ export default async function DashboardPage() {
     expensesWeek: 0,
     errors: [] as unknown[],
   };
+  let chartData: DailyMoneyPoint[] = [];
   try {
-    counts = await getCounts();
+    const [countsResult, chartResult] = await Promise.allSettled([
+      getCounts(),
+      getLastSevenDaysMoney(),
+    ]);
+    if (countsResult.status === "fulfilled") {
+      counts = countsResult.value;
+    }
+    if (chartResult.status === "fulfilled") {
+      chartData = chartResult.value;
+    }
   } catch {
     // schema not applied yet
   }
-
-  const chartData = await getLastSevenDaysMoney();
 
   return (
     <div className="p-8">
