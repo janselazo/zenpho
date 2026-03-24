@@ -4,6 +4,7 @@ import { useEffect, useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Check,
+  ListTodo,
   Loader2,
   Pencil,
   Search,
@@ -12,6 +13,7 @@ import {
 } from "lucide-react";
 import KanbanBoard, { type KanbanColumn } from "@/components/crm/KanbanBoard";
 import CrmPopoverDateField from "@/components/crm/CrmPopoverDateField";
+import CrmQuickTaskModal from "@/components/crm/CrmQuickTaskModal";
 import {
   createDealRecord,
   deleteDealRecord,
@@ -63,6 +65,16 @@ function formatDate(iso: string) {
   });
 }
 
+function dealQuickTaskContextLabel(deal: MockDeal): string {
+  return (
+    deal.contactName?.trim() ||
+    deal.contactEmail?.trim() ||
+    deal.title?.trim() ||
+    deal.company?.trim() ||
+    "this deal"
+  );
+}
+
 export default function DealsView({
   deals,
   persistDeals = false,
@@ -79,6 +91,7 @@ export default function DealsView({
   const [modalOpen, setModalOpen] = useState(false);
   const [createDealOpen, setCreateDealOpen] = useState(false);
   const [editing, setEditing] = useState<MockDeal | null>(null);
+  const [quickTaskDeal, setQuickTaskDeal] = useState<MockDeal | null>(null);
 
   useEffect(() => {
     setLocalDeals(deals);
@@ -230,6 +243,8 @@ export default function DealsView({
           <DealsTable
             deals={filtered}
             lockContactFields={persistDeals}
+            persistDeals={persistDeals}
+            onQuickTask={setQuickTaskDeal}
             onSaveDeal={async (updated) => {
               if (persistDeals) return handlePersistSave(updated);
               handleLocalSave(updated);
@@ -251,23 +266,54 @@ export default function DealsView({
           <KanbanBoard
             columns={kanbanColumns}
             onMove={handleMove}
-            renderCard={(deal) => (
-              <button
-                type="button"
-                onClick={() => setEditing(deal)}
-                className="w-full rounded-xl border border-border bg-white p-3 text-left shadow-sm transition-shadow hover:shadow-md"
-              >
-                <p className="text-sm font-medium text-text-primary">
-                  {deal.title}
-                </p>
-                <p className="mt-1 text-xs text-text-secondary">
-                  {deal.company}
-                </p>
-                <p className="mt-2 text-sm font-semibold text-text-primary">
-                  {formatCurrency(deal.value)}
-                </p>
-              </button>
-            )}
+            emptyColumnLabel="No deals"
+            renderCard={(deal) => {
+              const stopDragMouseDown = (e: React.MouseEvent) => {
+                e.stopPropagation();
+              };
+              const taskLabel =
+                deal.title?.trim() || deal.company?.trim() || "this deal";
+              return (
+                <div className="flex flex-col rounded-xl border border-border bg-white shadow-sm transition-shadow hover:shadow-md">
+                  <button
+                    type="button"
+                    onClick={() => setEditing(deal)}
+                    className="w-full p-3 text-left"
+                  >
+                    <p className="text-sm font-medium text-text-primary">
+                      {deal.title}
+                    </p>
+                    <p className="mt-1 text-xs text-text-secondary">
+                      {deal.company}
+                    </p>
+                    <p className="mt-2 text-sm font-semibold text-text-primary">
+                      {formatCurrency(deal.value)}
+                    </p>
+                  </button>
+                  {persistDeals ? (
+                    <div
+                      className="flex items-center gap-1 border-t border-border px-2 py-2 dark:border-zinc-700"
+                      onMouseDown={stopDragMouseDown}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setQuickTaskDeal(deal)}
+                        disabled={!deal.leadId}
+                        title={
+                          deal.leadId
+                            ? "Quick task"
+                            : "Quick tasks need a linked lead"
+                        }
+                        className="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                        aria-label={`Add task for ${taskLabel}`}
+                      >
+                        <ListTodo className="h-4 w-4 shrink-0" aria-hidden />
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            }}
           />
         )}
       </div>
@@ -302,6 +348,15 @@ export default function DealsView({
           onDelete={handleDelete}
         />
       )}
+
+      {quickTaskDeal?.leadId ? (
+        <CrmQuickTaskModal
+          leadId={quickTaskDeal.leadId}
+          contextLabel={dealQuickTaskContextLabel(quickTaskDeal)}
+          resetKey={quickTaskDeal.id}
+          onClose={() => setQuickTaskDeal(null)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -315,11 +370,15 @@ const iconActionClass =
 function DealsTable({
   deals,
   lockContactFields,
+  persistDeals,
+  onQuickTask,
   onSaveDeal,
   onDelete,
 }: {
   deals: MockDeal[];
   lockContactFields: boolean;
+  persistDeals: boolean;
+  onQuickTask: (deal: MockDeal) => void;
   onSaveDeal: (updated: MockDeal) => Promise<string | undefined>;
   onDelete: (id: string) => void;
 }) {
@@ -416,10 +475,12 @@ function DealsTable({
                 patchDraft={patchDraft}
                 initials={initials}
                 lockContactFields={lockContactFields}
+                persistDeals={persistDeals}
                 saving={saving}
                 onStartEdit={() => startEdit(deal)}
                 onCancelEdit={cancelEdit}
                 onCommitEdit={() => void commitEdit()}
+                onQuickTask={() => onQuickTask(deal)}
                 onDelete={() => onDelete(deal.id)}
               />
             );
@@ -437,10 +498,12 @@ function DealsTableRow({
   patchDraft,
   initials,
   lockContactFields,
+  persistDeals,
   saving,
   onStartEdit,
   onCancelEdit,
   onCommitEdit,
+  onQuickTask,
   onDelete,
 }: {
   deal: MockDeal;
@@ -449,10 +512,12 @@ function DealsTableRow({
   patchDraft: (patch: Partial<MockDeal>) => void;
   initials: string;
   lockContactFields: boolean;
+  persistDeals: boolean;
   saving: boolean;
   onStartEdit: () => void;
   onCancelEdit: () => void;
   onCommitEdit: () => void;
+  onQuickTask: () => void;
   onDelete: () => void;
 }) {
   const expectedCloseId = useId();
@@ -628,16 +693,50 @@ function DealsTableRow({
               >
                 <X className="h-4 w-4" aria-hidden />
               </button>
+              {persistDeals ? (
+                <button
+                  type="button"
+                  onClick={onQuickTask}
+                  disabled={saving || !deal.leadId}
+                  title={
+                    deal.leadId
+                      ? "Quick task"
+                      : "Quick tasks need a linked lead"
+                  }
+                  className={`${iconActionClass} text-zinc-600 hover:bg-zinc-100 disabled:cursor-not-allowed dark:text-zinc-400 dark:hover:bg-zinc-800`}
+                  aria-label={`Add task for ${deal.title?.trim() || deal.company || "deal"}`}
+                >
+                  <ListTodo className="h-4 w-4" aria-hidden />
+                </button>
+              ) : null}
             </>
           ) : (
-            <button
-              type="button"
-              onClick={onStartEdit}
-              className={`${iconActionClass} text-accent hover:bg-accent/10`}
-              aria-label="Edit deal"
-            >
-              <Pencil className="h-4 w-4" aria-hidden />
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={onStartEdit}
+                className={`${iconActionClass} text-accent hover:bg-accent/10`}
+                aria-label="Edit deal"
+              >
+                <Pencil className="h-4 w-4" aria-hidden />
+              </button>
+              {persistDeals ? (
+                <button
+                  type="button"
+                  onClick={onQuickTask}
+                  disabled={!deal.leadId}
+                  title={
+                    deal.leadId
+                      ? "Quick task"
+                      : "Quick tasks need a linked lead"
+                  }
+                  className={`${iconActionClass} text-zinc-600 hover:bg-zinc-100 disabled:cursor-not-allowed dark:text-zinc-400 dark:hover:bg-zinc-800`}
+                  aria-label={`Add task for ${deal.title?.trim() || deal.company || "deal"}`}
+                >
+                  <ListTodo className="h-4 w-4" aria-hidden />
+                </button>
+              ) : null}
+            </>
           )}
           <button
             type="button"

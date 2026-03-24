@@ -638,6 +638,7 @@ export async function createLeadQuickTask(input: {
 
   revalidatePath("/leads");
   revalidatePath(`/leads/${leadId}`);
+  revalidatePath("/deals");
   revalidatePath("/dashboard");
   revalidatePath("/calendar");
   return { ok: true };
