@@ -133,8 +133,35 @@ export async function updateLead(formData: FormData) {
   const expectedClose =
     dealExpectedClose === "" ? null : dealExpectedClose;
 
-  const { error: dealErr } = await supabase.from("deal").upsert(
-    {
+  const dealId = String(formData.get("deal_id") ?? "").trim();
+
+  const hasNewDealPayload =
+    Boolean(dealTitle) ||
+    Boolean(dealCompany) ||
+    dealValueRaw !== "" ||
+    Boolean(dealContactEmail.trim()) ||
+    Boolean(dealWebsite.trim()) ||
+    expectedClose != null;
+
+  if (dealId) {
+    const { error: dealErr } = await supabase
+      .from("deal")
+      .update({
+        title: dealTitle || null,
+        company: dealCompany || null,
+        value: valueNum,
+        stage: dealStage,
+        expected_close: expectedClose,
+        contact_email: dealContactEmail || null,
+        website: dealWebsite || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", dealId)
+      .eq("lead_id", id);
+
+    if (dealErr) return { error: dealErr.message };
+  } else if (hasNewDealPayload) {
+    const { error: dealErr } = await supabase.from("deal").insert({
       lead_id: id,
       title: dealTitle || null,
       company: dealCompany || null,
@@ -144,11 +171,10 @@ export async function updateLead(formData: FormData) {
       contact_email: dealContactEmail || null,
       website: dealWebsite || null,
       updated_at: new Date().toISOString(),
-    },
-    { onConflict: "lead_id" }
-  );
+    });
 
-  if (dealErr) return { error: dealErr.message };
+    if (dealErr) return { error: dealErr.message };
+  }
 
   const linked = await ensureClientFromClosedDeal(
     supabase,
@@ -207,6 +233,66 @@ export async function updateLeadRow(formData: FormData) {
 
   revalidatePath("/leads");
   revalidatePath(`/leads/${id}`);
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+export async function updateClientRow(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) return { error: "Missing client id" };
+
+  const name = String(formData.get("name") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim();
+  const company = String(formData.get("company") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "").trim();
+
+  if (!name) {
+    return { error: "Name is required." };
+  }
+
+  const { error } = await supabase
+    .from("client")
+    .update({
+      name,
+      email: email || null,
+      company: company || null,
+      phone: phone || null,
+      notes: notes || null,
+    })
+    .eq("id", id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/clients");
+  revalidatePath("/projects");
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+export async function deleteClient(id: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const trimmed = id.trim();
+  if (!trimmed) return { error: "Missing client id" };
+
+  const { error } = await supabase.from("client").delete().eq("id", trimmed);
+  if (error) return { error: error.message };
+
+  revalidatePath("/clients");
+  revalidatePath("/projects");
+  revalidatePath("/leads");
+  revalidatePath("/deals");
   revalidatePath("/dashboard");
   return { ok: true };
 }
@@ -489,19 +575,6 @@ export async function createDealRecord(input: {
     )
   ) {
     return { error: "Invalid deal stage" };
-  }
-
-  const { data: existing } = await supabase
-    .from("deal")
-    .select("id")
-    .eq("lead_id", leadId)
-    .maybeSingle();
-
-  if (existing) {
-    return {
-      error:
-        "This lead already has a deal. Edit it from Deals or the lead record.",
-    };
   }
 
   const valueNum = input.value;

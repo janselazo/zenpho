@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import KanbanBoard, { type KanbanColumn } from "@/components/crm/KanbanBoard";
 import CrmPopoverDateField from "@/components/crm/CrmPopoverDateField";
+import CrmNewProjectFromDealModal from "@/components/crm/CrmNewProjectFromDealModal";
 import CrmQuickTaskModal from "@/components/crm/CrmQuickTaskModal";
 import {
   createDealRecord,
@@ -93,6 +94,7 @@ export default function DealsView({
   const [createDealOpen, setCreateDealOpen] = useState(false);
   const [editing, setEditing] = useState<MockDeal | null>(null);
   const [quickTaskDeal, setQuickTaskDeal] = useState<MockDeal | null>(null);
+  const [newProjectDealId, setNewProjectDealId] = useState<string | null>(null);
 
   useEffect(() => {
     setLocalDeals(deals);
@@ -245,11 +247,7 @@ export default function DealsView({
             deals={filtered}
             lockContactFields={persistDeals}
             persistDeals={persistDeals}
-            onCreateProject={(dealId) => {
-              router.push(
-                `/projects?new=1&dealId=${encodeURIComponent(dealId)}`
-              );
-            }}
+            onCreateProject={(dealId) => setNewProjectDealId(dealId)}
             onQuickTask={setQuickTaskDeal}
             onSaveDeal={async (updated) => {
               if (persistDeals) return handlePersistSave(updated);
@@ -303,6 +301,18 @@ export default function DealsView({
                     >
                       <button
                         type="button"
+                        onClick={() => setNewProjectDealId(deal.id)}
+                        title="Create project from deal"
+                        className="inline-flex items-center justify-center rounded-md p-1.5 text-violet-600 transition-colors hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-950/40"
+                        aria-label={`Create project for ${taskLabel}`}
+                      >
+                        <FolderKanban
+                          className="h-4 w-4 shrink-0"
+                          aria-hidden
+                        />
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => setQuickTaskDeal(deal)}
                         disabled={!deal.leadId}
                         title={
@@ -314,22 +324,6 @@ export default function DealsView({
                         aria-label={`Add task for ${taskLabel}`}
                       >
                         <ListTodo className="h-4 w-4 shrink-0" aria-hidden />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          router.push(
-                            `/projects?new=1&dealId=${encodeURIComponent(deal.id)}`
-                          )
-                        }
-                        title="Create project from deal"
-                        className="inline-flex items-center justify-center rounded-md p-1.5 text-violet-600 transition-colors hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-950/40"
-                        aria-label={`Create project for ${taskLabel}`}
-                      >
-                        <FolderKanban
-                          className="h-4 w-4 shrink-0"
-                          aria-hidden
-                        />
                       </button>
                     </div>
                   ) : null}
@@ -377,6 +371,13 @@ export default function DealsView({
           contextLabel={dealQuickTaskContextLabel(quickTaskDeal)}
           resetKey={quickTaskDeal.id}
           onClose={() => setQuickTaskDeal(null)}
+        />
+      ) : null}
+
+      {newProjectDealId ? (
+        <CrmNewProjectFromDealModal
+          dealId={newProjectDealId}
+          onClose={() => setNewProjectDealId(null)}
         />
       ) : null}
     </div>
@@ -723,6 +724,18 @@ function DealsTableRow({
               {persistDeals ? (
                 <button
                   type="button"
+                  onClick={onCreateProject}
+                  disabled={saving}
+                  title="Create project from deal"
+                  className={`${iconActionClass} text-violet-600 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-950/40`}
+                  aria-label={`Create project for ${deal.title?.trim() || deal.company || "deal"}`}
+                >
+                  <FolderKanban className="h-4 w-4" aria-hidden />
+                </button>
+              ) : null}
+              {persistDeals ? (
+                <button
+                  type="button"
                   onClick={onQuickTask}
                   disabled={saving || !deal.leadId}
                   title={
@@ -736,11 +749,13 @@ function DealsTableRow({
                   <ListTodo className="h-4 w-4" aria-hidden />
                 </button>
               ) : null}
+            </>
+          ) : (
+            <>
               {persistDeals ? (
                 <button
                   type="button"
                   onClick={onCreateProject}
-                  disabled={saving}
                   title="Create project from deal"
                   className={`${iconActionClass} text-violet-600 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-950/40`}
                   aria-label={`Create project for ${deal.title?.trim() || deal.company || "deal"}`}
@@ -748,9 +763,6 @@ function DealsTableRow({
                   <FolderKanban className="h-4 w-4" aria-hidden />
                 </button>
               ) : null}
-            </>
-          ) : (
-            <>
               {persistDeals ? (
                 <button
                   type="button"
@@ -775,17 +787,6 @@ function DealsTableRow({
               >
                 <Pencil className="h-4 w-4" aria-hidden />
               </button>
-              {persistDeals ? (
-                <button
-                  type="button"
-                  onClick={onCreateProject}
-                  title="Create project from deal"
-                  className={`${iconActionClass} text-violet-600 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-950/40`}
-                  aria-label={`Create project for ${deal.title?.trim() || deal.company || "deal"}`}
-                >
-                  <FolderKanban className="h-4 w-4" aria-hidden />
-                </button>
-              ) : null}
             </>
           )}
           <button
@@ -1005,19 +1006,14 @@ function CreateDealModal({
   const [pending, setPending] = useState(false);
 
   const selected = leadOptions.find((o) => o.id === leadId);
-  const selectableCount = leadOptions.filter((o) => !o.hasDeal).length;
 
-  const canSubmit =
-    Boolean(leadId) &&
-    Boolean(selected) &&
-    !selected?.hasDeal &&
-    selectableCount > 0;
+  const canSubmit = Boolean(leadId) && Boolean(selected);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    if (!leadId || !selected || selected.hasDeal) {
-      setError("Select a lead that does not already have a deal.");
+    if (!leadId || !selected) {
+      setError("Select a lead.");
       return;
     }
     setPending(true);
@@ -1080,22 +1076,14 @@ function CreateDealModal({
               >
                 <option value="">Select a lead…</option>
                 {leadOptions.map((o) => (
-                  <option key={o.id} value={o.id} disabled={o.hasDeal}>
+                  <option key={o.id} value={o.id}>
                     {o.label}
-                    {o.hasDeal ? " — already has deal" : ""}
                   </option>
                 ))}
               </select>
             </div>
 
-            {selectableCount === 0 && (
-              <p className="text-sm text-text-secondary">
-                Every lead already has a deal. Add a new lead or remove an
-                existing deal first.
-              </p>
-            )}
-
-            {selected && !selected.hasDeal && (
+            {selected && (
               <DealFormFields
                 key={selected.id}
                 deal={draftDealFromLeadOption(selected)}
@@ -1109,12 +1097,7 @@ function CreateDealModal({
         <div className="flex gap-2 pt-1">
           <button
             type="submit"
-            disabled={
-              pending ||
-              leadOptions.length === 0 ||
-              selectableCount === 0 ||
-              !canSubmit
-            }
+            disabled={pending || leadOptions.length === 0 || !canSubmit}
             className="rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-60"
           >
             {pending ? "Creating…" : "Create deal"}

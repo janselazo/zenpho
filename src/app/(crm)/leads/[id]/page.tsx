@@ -31,12 +31,14 @@ export default async function LeadDetailPage({ params }: Props) {
   const dealQuery = await supabase
     .from("deal")
     .select(
-      "title, company, value, stage, expected_close, contact_email, website"
+      "id, title, company, value, stage, expected_close, contact_email, website"
     )
     .eq("lead_id", id)
-    .maybeSingle();
+    .order("updated_at", { ascending: false })
+    .limit(1);
 
-  const deal = dealQuery.error ? null : dealQuery.data;
+  const deal =
+    dealQuery.error || !dealQuery.data?.length ? null : dealQuery.data[0];
 
   return (
     <div className="p-8">

@@ -3,13 +3,12 @@ import { createClient } from "@/lib/supabase/server";
 export type LeadDealPickerOption = {
   id: string;
   label: string;
-  hasDeal: boolean;
   email: string | null;
   name: string | null;
 };
 
 /**
- * Leads for the Create deal flow: label + whether a deal already exists (unique per lead).
+ * Leads for the Create deal flow (a lead may have multiple deals).
  */
 export async function fetchLeadsForDealPicker(): Promise<LeadDealPickerOption[]> {
   const supabase = await createClient();
@@ -21,11 +20,6 @@ export async function fetchLeadsForDealPicker(): Promise<LeadDealPickerOption[]>
 
   if (error || !leads?.length) return [];
 
-  const { data: dealRows } = await supabase.from("deal").select("lead_id");
-  const leadIdsWithDeal = new Set(
-    (dealRows ?? []).map((r) => r.lead_id as string)
-  );
-
   return leads.map((l) => {
     const name = l.name?.trim() ?? "";
     const email = l.email?.trim() ?? "";
@@ -34,7 +28,6 @@ export async function fetchLeadsForDealPicker(): Promise<LeadDealPickerOption[]>
     return {
       id: l.id,
       label,
-      hasDeal: leadIdsWithDeal.has(l.id),
       email: l.email,
       name: l.name,
     };

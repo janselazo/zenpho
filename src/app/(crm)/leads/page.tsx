@@ -13,25 +13,13 @@ export default async function LeadsPage() {
   }
 
   const supabase = await createClient();
-  const [leadsRes, dealsRes] = await Promise.all([
-    supabase
-      .from("lead")
-      .select(
-        "id, name, email, phone, company, stage, source, notes, project_type, created_at"
-      )
-      .order("created_at", { ascending: false })
-      .limit(200),
-    supabase.from("deal").select("lead_id"),
-  ]);
-
-  const { data: leads, error } = leadsRes;
-  const leadIdsWithDeal = new Set(
-    (dealsRes.data ?? []).map((r) => r.lead_id as string)
-  );
-  const leadsWithDealFlag = (leads ?? []).map((l) => ({
-    ...l,
-    has_deal: leadIdsWithDeal.has(l.id),
-  }));
+  const { data: leads, error } = await supabase
+    .from("lead")
+    .select(
+      "id, name, email, phone, company, stage, source, notes, project_type, created_at"
+    )
+    .order("created_at", { ascending: false })
+    .limit(200);
 
   return (
     <div className="p-8">
@@ -46,7 +34,7 @@ export default async function LeadsPage() {
           </p>
         </div>
       ) : (
-        <LeadsView leads={leadsWithDealFlag} />
+        <LeadsView leads={leads ?? []} />
       )}
     </div>
   );

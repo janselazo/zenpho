@@ -1,3 +1,4 @@
+import ClientsView from "@/components/crm/ClientsView";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
@@ -14,11 +15,41 @@ export default async function ClientsPage() {
   }
 
   const supabase = await createClient();
-  const { data: clients, error } = await supabase
-    .from("client")
-    .select("id, name, email, phone, company, notes, created_at")
-    .order("created_at", { ascending: false })
-    .limit(200);
+  const [clientsRes, leadsRes] = await Promise.all([
+    supabase
+      .from("client")
+      .select("id, name, email, phone, company, notes, created_at")
+      .order("created_at", { ascending: false })
+      .limit(200),
+    supabase
+      .from("lead")
+      .select("id, name, email, company, converted_client_id, created_at")
+      .not("converted_client_id", "is", null)
+      .order("created_at", { ascending: false }),
+  ]);
+
+  const { data: clients, error } = clientsRes;
+
+  const leadByClientId = new Map<
+    string,
+    { id: string; name: string | null; email: string | null; company: string | null }
+  >();
+  for (const row of leadsRes.data ?? []) {
+    const cid = row.converted_client_id as string | null;
+    if (!cid || leadByClientId.has(cid)) continue;
+    leadByClientId.set(cid, {
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      company: row.company,
+    });
+  }
+
+  const rows =
+    clients?.map((c) => ({
+      ...c,
+      linkedLead: leadByClientId.get(c.id) ?? null,
+    })) ?? [];
 
   return (
     <div className="p-8">
@@ -36,46 +67,8 @@ export default async function ClientsPage() {
           {error.message}. Apply{" "}
           <code className="font-mono text-xs">supabase/migrations</code>.
         </p>
-      ) : !clients || clients.length === 0 ? (
-        <div className="mt-6 rounded-2xl border border-dashed border-border bg-white py-16 text-center text-sm text-text-secondary">
-          No clients yet. A client record is created when a deal for a lead reaches
-          Won or Lost (once per lead).
-        </div>
       ) : (
-        <div className="mt-6 overflow-x-auto rounded-2xl border border-border bg-white shadow-sm">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="px-4 py-3 font-semibold text-text-secondary">Name</th>
-                <th className="px-4 py-3 font-semibold text-text-secondary">Email</th>
-                <th className="px-4 py-3 font-semibold text-text-secondary">Phone</th>
-                <th className="px-4 py-3 font-semibold text-text-secondary">Company</th>
-                <th className="px-4 py-3 font-semibold text-text-secondary">Added</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {clients.map((c) => (
-                <tr key={c.id} className="transition-colors hover:bg-surface/50">
-                  <td className="px-4 py-3 font-medium text-text-primary">
-                    {c.name ?? "—"}
-                  </td>
-                  <td className="px-4 py-3 text-text-secondary">{c.email ?? "—"}</td>
-                  <td className="px-4 py-3 text-text-secondary">{c.phone ?? "—"}</td>
-                  <td className="px-4 py-3 text-text-secondary">{c.company ?? "—"}</td>
-                  <td className="px-4 py-3 text-text-secondary">
-                    {c.created_at
-                      ? new Date(c.created_at).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })
-                      : "—"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ClientsView clients={rows} />
       )}
     </div>
   );

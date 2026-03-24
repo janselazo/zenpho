@@ -43,6 +43,7 @@ type Lead = {
 };
 
 type DealRow = {
+  id: string;
   title: string | null;
   company: string | null;
   value: number | null;
@@ -235,6 +236,9 @@ export default function LeadEditForm({
           <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/60">
             Deal
           </p>
+          {deal?.id ? (
+            <input type="hidden" name="deal_id" value={deal.id} />
+          ) : null}
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs font-medium text-text-secondary">
