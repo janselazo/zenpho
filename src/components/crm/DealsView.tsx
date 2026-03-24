@@ -4,6 +4,7 @@ import { useEffect, useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Check,
+  FolderKanban,
   ListTodo,
   Loader2,
   Pencil,
@@ -244,6 +245,11 @@ export default function DealsView({
             deals={filtered}
             lockContactFields={persistDeals}
             persistDeals={persistDeals}
+            onCreateProject={(dealId) => {
+              router.push(
+                `/projects?new=1&dealId=${encodeURIComponent(dealId)}`
+              );
+            }}
             onQuickTask={setQuickTaskDeal}
             onSaveDeal={async (updated) => {
               if (persistDeals) return handlePersistSave(updated);
@@ -309,6 +315,22 @@ export default function DealsView({
                       >
                         <ListTodo className="h-4 w-4 shrink-0" aria-hidden />
                       </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          router.push(
+                            `/projects?new=1&dealId=${encodeURIComponent(deal.id)}`
+                          )
+                        }
+                        title="Create project from deal"
+                        className="inline-flex items-center justify-center rounded-md p-1.5 text-violet-600 transition-colors hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-950/40"
+                        aria-label={`Create project for ${taskLabel}`}
+                      >
+                        <FolderKanban
+                          className="h-4 w-4 shrink-0"
+                          aria-hidden
+                        />
+                      </button>
                     </div>
                   ) : null}
                 </div>
@@ -371,6 +393,7 @@ function DealsTable({
   deals,
   lockContactFields,
   persistDeals,
+  onCreateProject,
   onQuickTask,
   onSaveDeal,
   onDelete,
@@ -378,6 +401,7 @@ function DealsTable({
   deals: MockDeal[];
   lockContactFields: boolean;
   persistDeals: boolean;
+  onCreateProject: (dealId: string) => void;
   onQuickTask: (deal: MockDeal) => void;
   onSaveDeal: (updated: MockDeal) => Promise<string | undefined>;
   onDelete: (id: string) => void;
@@ -481,6 +505,7 @@ function DealsTable({
                 onCancelEdit={cancelEdit}
                 onCommitEdit={() => void commitEdit()}
                 onQuickTask={() => onQuickTask(deal)}
+                onCreateProject={() => onCreateProject(deal.id)}
                 onDelete={() => onDelete(deal.id)}
               />
             );
@@ -504,6 +529,7 @@ function DealsTableRow({
   onCancelEdit,
   onCommitEdit,
   onQuickTask,
+  onCreateProject,
   onDelete,
 }: {
   deal: MockDeal;
@@ -518,6 +544,7 @@ function DealsTableRow({
   onCancelEdit: () => void;
   onCommitEdit: () => void;
   onQuickTask: () => void;
+  onCreateProject: () => void;
   onDelete: () => void;
 }) {
   const expectedCloseId = useId();
@@ -709,6 +736,18 @@ function DealsTableRow({
                   <ListTodo className="h-4 w-4" aria-hidden />
                 </button>
               ) : null}
+              {persistDeals ? (
+                <button
+                  type="button"
+                  onClick={onCreateProject}
+                  disabled={saving}
+                  title="Create project from deal"
+                  className={`${iconActionClass} text-violet-600 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-950/40`}
+                  aria-label={`Create project for ${deal.title?.trim() || deal.company || "deal"}`}
+                >
+                  <FolderKanban className="h-4 w-4" aria-hidden />
+                </button>
+              ) : null}
             </>
           ) : (
             <>
@@ -734,6 +773,17 @@ function DealsTableRow({
                   aria-label={`Add task for ${deal.title?.trim() || deal.company || "deal"}`}
                 >
                   <ListTodo className="h-4 w-4" aria-hidden />
+                </button>
+              ) : null}
+              {persistDeals ? (
+                <button
+                  type="button"
+                  onClick={onCreateProject}
+                  title="Create project from deal"
+                  className={`${iconActionClass} text-violet-600 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-950/40`}
+                  aria-label={`Create project for ${deal.title?.trim() || deal.company || "deal"}`}
+                >
+                  <FolderKanban className="h-4 w-4" aria-hidden />
                 </button>
               ) : null}
             </>

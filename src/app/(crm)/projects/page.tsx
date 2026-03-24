@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, useRef, type ReactNode } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   projects as initialProjects,
   projectClientDisplayLabel,
@@ -128,7 +129,18 @@ function priorityFlagColor(plan: PlanStage) {
   }
 }
 
+type NewProjectDealPrefill = {
+  clientId: string | null;
+  title: string;
+  budget: string;
+  website: string;
+  projectType: string | null;
+  missingClientNote: boolean;
+};
+
 export default function ProjectsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [view, setView] = useState<ViewMode>("kanban");
   const [filterPlan, setFilterPlan] = useState<string>("all");
   const [filterTeam, setFilterTeam] = useState<string>("all");
@@ -138,6 +150,69 @@ export default function ProjectsPage() {
     ...initialProjects,
   ]);
   const [modalOpen, setModalOpen] = useState(false);
+  const [dealPrefill, setDealPrefill] = useState<NewProjectDealPrefill | null>(
+    null
+  );
+
+  const spNew = searchParams.get("new");
+  const spDealId = searchParams.get("dealId");
+
+  useEffect(() => {
+    if (spNew !== "1" || !spDealId?.trim()) return;
+    if (!isSupabaseConfigured()) {
+      router.replace("/projects");
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const sb = createClient();
+      const { data: deal, error: dErr } = await sb
+        .from("deal")
+        .select("title, value, website, lead_id")
+        .eq("id", spDealId.trim())
+        .maybeSingle();
+      if (cancelled) return;
+      if (dErr || !deal?.lead_id) {
+        router.replace("/projects");
+        return;
+      }
+      const { data: lead } = await sb
+        .from("lead")
+        .select("converted_client_id, project_type")
+        .eq("id", deal.lead_id)
+        .maybeSingle();
+      if (cancelled) return;
+      const clientId = lead?.converted_client_id?.trim() || null;
+      const title =
+        deal.title?.trim() || "New project";
+      const valueNum =
+        deal.value != null && deal.value !== ""
+          ? Number(deal.value)
+          : NaN;
+      const budget =
+        Number.isFinite(valueNum) && valueNum > 0
+          ? String(Math.round(valueNum))
+          : "";
+      const website = String(deal.website ?? "").trim();
+      const pt = lead?.project_type?.trim() || null;
+      const projectTypeValid =
+        !!pt &&
+        (LEAD_PROJECT_TYPE_OPTIONS as readonly string[]).includes(pt);
+      setDealPrefill({
+        clientId,
+        title,
+        budget,
+        website,
+        projectType: projectTypeValid ? pt : null,
+        missingClientNote: !clientId,
+      });
+      setModalOpen(true);
+      router.replace("/projects", { scroll: false });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [spNew, spDealId, router]);
 
   useEffect(() => {
     const stored = readStoredProjects();
@@ -270,7 +345,10 @@ export default function ProjectsPage() {
           </button>
           <button
             type="button"
-            onClick={() => setModalOpen(true)}
+            onClick={() => {
+              setDealPrefill(null);
+              setModalOpen(true);
+            }}
             className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_1px_2px_rgba(0,0,0,0.06)] transition-colors hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500"
           >
             + Add project
@@ -393,7 +471,10 @@ export default function ProjectsPage() {
             renderCard={(project) => (
               <ProjectCard project={project} hidePlanTag />
             )}
-            onAddNew={() => setModalOpen(true)}
+            onAddNew={() => {
+              setDealPrefill(null);
+              setModalOpen(true);
+            }}
             onMove={handleMove}
           />
         ) : (
@@ -403,7 +484,11 @@ export default function ProjectsPage() {
 
       {modalOpen && (
         <NewProjectModal
-          onClose={() => setModalOpen(false)}
+          dealPrefill={dealPrefill}
+          onClose={() => {
+            setModalOpen(false);
+            setDealPrefill(null);
+          }}
           onAdd={(project) => {
             setProjectList((prev) => {
               const next = [...prev, project];
@@ -411,6 +496,7 @@ export default function ProjectsPage() {
               return next;
             });
             setModalOpen(false);
+            setDealPrefill(null);
           }}
         />
       )}
@@ -596,9 +682,11 @@ function clientPickerLabel(c: ClientPickerRow): string {
 }
 
 function NewProjectModal({
+  dealPrefill,
   onClose,
   onAdd,
 }: {
+  dealPrefill: NewProjectDealPrefill | null;
   onClose: () => void;
   onAdd: (p: MockProject) => void;
 }) {
@@ -616,6 +704,33 @@ function NewProjectModal({
   const [clientsLoading, setClientsLoading] = useState(false);
   const [clientsError, setClientsError] = useState<string | null>(null);
   const [clientId, setClientId] = useState("");
+  const appliedDealClientRef = useRef(false);
+
+  useEffect(() => {
+    appliedDealClientRef.current = false;
+    if (!dealPrefill) {
+      setTitle("");
+      setBudget("");
+      setWebsite("");
+      setProjectType(LEAD_PROJECT_TYPE_OPTIONS[0]);
+      setClientId("");
+      return;
+    }
+    setTitle(dealPrefill.title);
+    setBudget(dealPrefill.budget);
+    setWebsite(dealPrefill.website);
+    if (dealPrefill.projectType) {
+      setProjectType(dealPrefill.projectType);
+    }
+    setClientId("");
+  }, [dealPrefill]);
+
+  useEffect(() => {
+    if (!dealPrefill?.clientId || appliedDealClientRef.current) return;
+    if (!clients.some((c) => c.id === dealPrefill.clientId)) return;
+    setClientId(dealPrefill.clientId);
+    appliedDealClientRef.current = true;
+  }, [dealPrefill, clients]);
 
   useEffect(() => {
     if (!isSupabaseConfigured()) {
@@ -738,6 +853,17 @@ function NewProjectModal({
             Link the project to a client, then name your build and set status and
             type. Target date is optional (TBD if skipped).
           </p>
+
+          {dealPrefill?.missingClientNote ? (
+            <p
+              className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/35 dark:text-amber-100"
+              role="status"
+            >
+              No client is linked to this lead yet. Mark the deal as{" "}
+              <span className="font-semibold">Won</span> to create one
+              automatically, or choose any client below.
+            </p>
+          ) : null}
 
           <div className="mt-8 space-y-5">
             <div>
