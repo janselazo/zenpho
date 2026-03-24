@@ -106,10 +106,10 @@ export const PLAN_COLORS: Record<PlanStage, string> = {
 };
 
 export const PLAN_LABELS: Record<PlanStage, string> = {
-  pipeline: "Pipeline",
-  planning: "Planning",
-  mvp: "MVP",
-  growth: "Growth",
+  pipeline: "Pending",
+  planning: "Progress",
+  mvp: "Review",
+  growth: "Done",
 };
 
 export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
