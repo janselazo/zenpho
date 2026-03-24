@@ -33,19 +33,37 @@ function clientPickerLabel(c: ClientPickerRow): string {
   return c.email?.trim() || "Unnamed client";
 }
 
+function endDateInputValue(p: MockProject): string {
+  const raw = p.expectedEndDate?.trim() ?? "";
+  if (!raw || raw === "TBD") return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const t = Date.parse(raw);
+  if (Number.isNaN(t)) return "";
+  const d = new Date(t);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 export default function NewProjectModal({
   dealPrefill,
   lockedClientId = null,
   lockedClientTitleHint = null,
+  editProject = null,
   onClose,
   onAdd,
+  onUpdate,
 }: {
   dealPrefill: NewProjectDealPrefill | null;
   /** When set, client is fixed and the picker is disabled (e.g. new project from Clients). */
   lockedClientId?: string | null;
   lockedClientTitleHint?: string | null;
+  /** When set, modal edits this row (calls `onUpdate` instead of `onAdd`). */
+  editProject?: MockProject | null;
   onClose: () => void;
   onAdd: (p: MockProject) => void;
+  onUpdate?: (p: MockProject) => void;
 }) {
   const teamMembers = useCrmTeamMembers();
   const [title, setTitle] = useState("");
@@ -63,46 +81,89 @@ export default function NewProjectModal({
   const [clientId, setClientId] = useState("");
   const appliedDealClientRef = useRef(false);
 
-  const lockClient = Boolean(lockedClientId?.trim());
+  const lockClient = Boolean(lockedClientId?.trim()) && !editProject;
+  const isEdit = Boolean(editProject);
 
   useEffect(() => {
     appliedDealClientRef.current = false;
+    if (editProject) {
+      setTitle(editProject.title);
+      setPlan(editProject.plan);
+      const pt = editProject.projectType?.trim() ?? "";
+      setProjectType(
+        pt && (LEAD_PROJECT_TYPE_OPTIONS as readonly string[]).includes(pt)
+          ? pt
+          : LEAD_PROJECT_TYPE_OPTIONS[0]
+      );
+      setEndDate(endDateInputValue(editProject));
+      setBudget(
+        editProject.budget != null && !Number.isNaN(Number(editProject.budget))
+          ? String(editProject.budget)
+          : ""
+      );
+      setWebsite(editProject.website ?? "");
+      setClientId(editProject.clientId?.trim() ?? "");
+      setTeamMemberId("");
+      return;
+    }
     if (dealPrefill) {
+      setPlan("pipeline");
       setTitle(dealPrefill.title);
       setBudget(dealPrefill.budget);
       setWebsite(dealPrefill.website);
       if (dealPrefill.projectType) {
         setProjectType(dealPrefill.projectType);
       }
+      setEndDate("");
       setClientId("");
       return;
     }
     if (lockClient) {
+      setPlan("pipeline");
       setTitle((lockedClientTitleHint ?? "").trim());
       setBudget("");
       setWebsite("");
       setProjectType(LEAD_PROJECT_TYPE_OPTIONS[0]);
+      setEndDate("");
       setClientId("");
       return;
     }
+    setPlan("pipeline");
     setTitle("");
     setBudget("");
     setWebsite("");
     setProjectType(LEAD_PROJECT_TYPE_OPTIONS[0]);
+    setEndDate("");
     setClientId("");
-  }, [dealPrefill, lockClient, lockedClientTitleHint]);
+  }, [editProject, dealPrefill, lockClient, lockedClientTitleHint]);
+
+  useEffect(() => {
+    if (editProject?.teamName?.trim() && teamMembers.length > 0) {
+      const match = teamMembers.find(
+        (m) => m.name.trim() === editProject.teamName!.trim()
+      );
+      setTeamMemberId(match?.id ?? "");
+    }
+  }, [editProject, teamMembers]);
 
   useEffect(() => {
     const locked = lockedClientId?.trim();
-    if (locked && clients.some((c) => c.id === locked)) {
+    if (!editProject && locked && clients.some((c) => c.id === locked)) {
       setClientId(locked);
+      return;
+    }
+    if (
+      editProject?.clientId?.trim() &&
+      clients.some((c) => c.id === editProject.clientId)
+    ) {
+      setClientId(editProject.clientId.trim());
       return;
     }
     if (!dealPrefill?.clientId || appliedDealClientRef.current) return;
     if (!clients.some((c) => c.id === dealPrefill.clientId)) return;
     setClientId(dealPrefill.clientId);
     appliedDealClientRef.current = true;
-  }, [dealPrefill, clients, lockedClientId]);
+  }, [dealPrefill, clients, lockedClientId, editProject]);
 
   useEffect(() => {
     if (!isSupabaseConfigured()) {
@@ -168,6 +229,24 @@ export default function NewProjectModal({
       ? teamMembers.find((m) => m.id === teamMemberId)
       : undefined;
     const name = member?.name.trim() ?? "";
+    if (editProject) {
+      if (onUpdate) {
+        onUpdate({
+          ...editProject,
+          title: title.trim(),
+          plan,
+          clientId: client.id,
+          clientName: clientPickerLabel(client),
+          teamId: member ? member.teamId : editProject.teamId,
+          teamName: name || null,
+          projectType,
+          expectedEndDate: endDate || "TBD",
+          budget: budgetNum,
+          website: website.trim() || null,
+        });
+      }
+      return;
+    }
     onAdd({
       id: createProjectId(),
       title: title.trim(),
@@ -207,22 +286,23 @@ export default function NewProjectModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="new-project-title"
-        className="max-h-[min(92vh,44rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-white shadow-2xl"
+        className="max-h-[min(92vh,44rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-white shadow-2xl dark:border-zinc-700 dark:bg-zinc-950"
         onClick={(e) => e.stopPropagation()}
       >
         <form onSubmit={handleSubmit} className="p-6 sm:p-8">
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-text-secondary">
-            Create
+            {isEdit ? "Update" : "Create"}
           </p>
           <h2
             id="new-project-title"
-            className="mt-1 font-sans text-xl font-bold tracking-tight text-text-primary"
+            className="mt-1 font-sans text-xl font-bold tracking-tight text-text-primary dark:text-zinc-50"
           >
-            New project
+            {isEdit ? "Edit project" : "New project"}
           </h2>
-          <p className="mt-1.5 text-sm leading-relaxed text-text-secondary">
-            Link the project to a client, then name your build and set status and
-            type. Target date is optional (TBD if skipped).
+          <p className="mt-1.5 text-sm leading-relaxed text-text-secondary dark:text-zinc-400">
+            {isEdit
+              ? "Change client, status, team, or schedule. Sprint and task counts are unchanged here."
+              : "Link the project to a client, then name your build and set status and type. Target date is optional (TBD if skipped)."}
           </p>
 
           {dealPrefill?.missingClientNote ? (
@@ -440,7 +520,7 @@ export default function NewProjectModal({
               disabled={submitDisabled}
               className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-600 dark:hover:bg-blue-500"
             >
-              Add project
+              {isEdit ? "Save changes" : "Add project"}
             </button>
           </div>
         </form>

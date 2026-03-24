@@ -171,7 +171,7 @@ export const PLAN_COLORS: Record<PlanStage, string> = {
 };
 
 export const PLAN_LABELS: Record<PlanStage, string> = {
-  pipeline: "Pending",
+  pipeline: "Backlog",
   planning: "Progress",
   mvp: "Review",
   growth: "Done",

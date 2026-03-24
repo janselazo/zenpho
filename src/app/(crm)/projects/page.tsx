@@ -25,9 +25,11 @@ import {
   LayoutGrid,
   List,
   ListFilter,
-  MoreVertical,
+  Loader2,
+  Pencil,
   RotateCw,
   Search,
+  Trash2,
 } from "lucide-react";
 import KanbanBoard, { type KanbanColumn } from "@/components/crm/KanbanBoard";
 import NewProjectModal from "@/components/crm/NewProjectModal";
@@ -139,6 +141,8 @@ export default function ProjectsPage() {
   const [dealPrefill, setDealPrefill] = useState<NewProjectDealPrefill | null>(
     null
   );
+  const [editProject, setEditProject] = useState<MockProject | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const spNew = searchParams.get("new");
   const spDealId = searchParams.get("dealId");
@@ -257,6 +261,30 @@ export default function ProjectsPage() {
     });
   }
 
+  function openCreateModal() {
+    setEditProject(null);
+    setDealPrefill(null);
+    setModalOpen(true);
+  }
+
+  function openEditModal(project: MockProject) {
+    setDealPrefill(null);
+    setEditProject(project);
+    setModalOpen(true);
+  }
+
+  function handleDeleteProject(project: MockProject) {
+    const label = project.title.trim() || "this project";
+    if (!confirm(`Delete “${label}”? This cannot be undone.`)) return;
+    setDeletingId(project.id);
+    setProjectList((prev) => {
+      const next = prev.filter((p) => p.id !== project.id);
+      writeStoredProjects(next);
+      return next;
+    });
+    setDeletingId(null);
+  }
+
   return (
     <div className="p-6 sm:p-8">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -297,10 +325,7 @@ export default function ProjectsPage() {
           </button>
           <button
             type="button"
-            onClick={() => {
-              setDealPrefill(null);
-              setModalOpen(true);
-            }}
+            onClick={openCreateModal}
             className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_1px_2px_rgba(0,0,0,0.06)] transition-colors hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500"
           >
             + Add project
@@ -421,25 +446,35 @@ export default function ProjectsPage() {
           <KanbanBoard
             columns={kanbanColumns}
             renderCard={(project) => (
-              <ProjectCard project={project} hidePlanTag />
+              <ProjectCard
+                project={project}
+                hidePlanTag
+                onEdit={() => openEditModal(project)}
+                onDelete={() => void handleDeleteProject(project)}
+                deleteBusy={deletingId === project.id}
+              />
             )}
-            onAddNew={() => {
-              setDealPrefill(null);
-              setModalOpen(true);
-            }}
+            onAddNew={openCreateModal}
             onMove={handleMove}
           />
         ) : (
-          <ProjectTable projects={sortedForBoard} />
+          <ProjectTable
+            projects={sortedForBoard}
+            onEdit={openEditModal}
+            onDelete={handleDeleteProject}
+            deletingId={deletingId}
+          />
         )}
       </div>
 
       {modalOpen && (
         <NewProjectModal
-          dealPrefill={dealPrefill}
+          dealPrefill={editProject ? null : dealPrefill}
+          editProject={editProject}
           onClose={() => {
             setModalOpen(false);
             setDealPrefill(null);
+            setEditProject(null);
           }}
           onAdd={(project) => {
             setProjectList((prev) => {
@@ -449,6 +484,19 @@ export default function ProjectsPage() {
             });
             setModalOpen(false);
             setDealPrefill(null);
+            setEditProject(null);
+          }}
+          onUpdate={(project) => {
+            setProjectList((prev) => {
+              const next = prev.map((p) =>
+                p.id === project.id ? project : p
+              );
+              writeStoredProjects(next);
+              return next;
+            });
+            setModalOpen(false);
+            setDealPrefill(null);
+            setEditProject(null);
           }}
         />
       )}
@@ -456,13 +504,22 @@ export default function ProjectsPage() {
   );
 }
 
+const cardActionBtnClass =
+  "rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200";
+
 function ProjectCard({
   project,
   hidePlanTag,
+  onEdit,
+  onDelete,
+  deleteBusy,
 }: {
   project: MockProject;
   /** Hide plan pill on kanban — column already encodes stage. */
   hidePlanTag?: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+  deleteBusy?: boolean;
 }) {
   const teamLabel = projectTeamDisplayName(project);
   const initials =
@@ -481,14 +538,42 @@ function ProjectCard({
         <span className="font-mono text-[11px] font-medium tracking-wide text-zinc-400 dark:text-zinc-500">
           {projectRefId(project.id)}
         </span>
-        <button
-          type="button"
-          className="-mr-1 -mt-1 rounded-lg p-1 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 dark:text-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
-          aria-label="Card actions"
+        <div
+          className="-mr-1 -mt-1 flex shrink-0 items-center gap-0.5"
           onMouseDown={(e) => e.stopPropagation()}
         >
-          <MoreVertical className="h-4 w-4" />
-        </button>
+          <button
+            type="button"
+            className={cardActionBtnClass}
+            aria-label={`Edit ${project.title}`}
+            title="Edit"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onEdit();
+            }}
+          >
+            <Pencil className="h-4 w-4" aria-hidden />
+          </button>
+          <button
+            type="button"
+            className={`${cardActionBtnClass} hover:text-red-600 dark:hover:text-red-400`}
+            aria-label={`Delete ${project.title}`}
+            title="Delete"
+            disabled={deleteBusy}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              void onDelete();
+            }}
+          >
+            {deleteBusy ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <Trash2 className="h-4 w-4" aria-hidden />
+            )}
+          </button>
+        </div>
       </div>
       <Link
         href={`/projects/${project.id}`}
@@ -544,12 +629,25 @@ function ProjectCard({
   );
 }
 
-function ProjectTable({ projects: items }: { projects: MockProject[] }) {
+function ProjectTable({
+  projects: items,
+  onEdit,
+  onDelete,
+  deletingId,
+}: {
+  projects: MockProject[];
+  onEdit: (p: MockProject) => void;
+  onDelete: (p: MockProject) => void;
+  deletingId: string | null;
+}) {
+  const iconBtn =
+    "inline-flex items-center justify-center rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800";
+
   return (
-    <div className="overflow-x-auto rounded-2xl border border-border bg-white shadow-sm">
-      <table className="w-full text-left text-sm">
+    <div className="overflow-x-auto rounded-2xl border border-border bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-950">
+      <table className="w-full min-w-[64rem] text-left text-sm">
         <thead>
-          <tr className="border-b border-border">
+          <tr className="border-b border-border dark:border-zinc-700">
             <th className="px-4 py-3 font-semibold text-text-secondary">Project</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Client</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Type</th>
@@ -560,13 +658,14 @@ function ProjectTable({ projects: items }: { projects: MockProject[] }) {
             <th className="px-4 py-3 font-semibold text-text-secondary">Website</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Sprints</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Tasks</th>
+            <th className="px-4 py-3 font-semibold text-text-secondary">Actions</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-border">
+        <tbody className="divide-y divide-border dark:divide-zinc-700">
           {items.map((p) => {
             const teamLabel = projectTeamDisplayName(p);
             return (
-              <tr key={p.id} className="hover:bg-surface/50">
+              <tr key={p.id} className="hover:bg-surface/50 dark:hover:bg-zinc-900/40">
                 <td className="px-4 py-3">
                   <Link
                     href={`/projects/${p.id}`}
@@ -611,6 +710,37 @@ function ProjectTable({ projects: items }: { projects: MockProject[] }) {
                 </td>
                 <td className="px-4 py-3 text-text-secondary">{p.sprintCount}</td>
                 <td className="px-4 py-3 text-text-secondary">{p.taskCount}</td>
+                <td className="px-4 py-3">
+                  <div className="flex flex-wrap items-center gap-1">
+                    <button
+                      type="button"
+                      className={iconBtn}
+                      aria-label={`Edit ${p.title}`}
+                      title="Edit"
+                      onClick={() => onEdit(p)}
+                    >
+                      <Pencil className="h-4 w-4 shrink-0" aria-hidden />
+                    </button>
+                    <button
+                      type="button"
+                      className={`${iconBtn} text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40`}
+                      aria-label={`Delete ${p.title}`}
+                      title="Delete"
+                      disabled={deletingId === p.id}
+                      aria-busy={deletingId === p.id}
+                      onClick={() => void onDelete(p)}
+                    >
+                      {deletingId === p.id ? (
+                        <Loader2
+                          className="h-4 w-4 shrink-0 animate-spin"
+                          aria-hidden
+                        />
+                      ) : (
+                        <Trash2 className="h-4 w-4 shrink-0" aria-hidden />
+                      )}
+                    </button>
+                  </div>
+                </td>
               </tr>
             );
           })}

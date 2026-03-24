@@ -2,10 +2,12 @@
 
 import {
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type CSSProperties,
 } from "react";
+import { createPortal } from "react-dom";
 import { DayPicker } from "react-day-picker";
 import {
   Calendar as CalendarIcon,
@@ -46,7 +48,15 @@ export default function CrmPopoverDateField({
   displayFormat = "medium",
 }: Props) {
   const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerWrapRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const [popoverPos, setPopoverPos] = useState<{
+    left: number;
+    top: number;
+    flipUp: boolean;
+    /** Trigger top edge (viewport); used when flipUp to set `bottom`. */
+    triggerTop: number;
+  } | null>(null);
   const selected = parseIso(value);
   const display = selected
     ? displayFormat === "numeric"
@@ -64,10 +74,43 @@ export default function CrmPopoverDateField({
   const placeholder =
     displayFormat === "numeric" ? "mm/dd/yyyy" : "mm / dd / yyyy";
 
+  const updatePopoverPosition = () => {
+    const el = triggerWrapRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const estimatedHeight = 340;
+    const gap = 8;
+    const spaceBelow = window.innerHeight - rect.bottom - gap;
+    const flipUp = spaceBelow < estimatedHeight && rect.top > spaceBelow;
+    setPopoverPos({
+      left: rect.left,
+      flipUp,
+      triggerTop: rect.top,
+      top: rect.bottom + gap,
+    });
+  };
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setPopoverPos(null);
+      return;
+    }
+    updatePopoverPosition();
+    window.addEventListener("scroll", updatePopoverPosition, true);
+    window.addEventListener("resize", updatePopoverPosition);
+    return () => {
+      window.removeEventListener("scroll", updatePopoverPosition, true);
+      window.removeEventListener("resize", updatePopoverPosition);
+    };
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     const onDoc = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (triggerWrapRef.current?.contains(t)) return;
+      if (popoverRef.current?.contains(t)) return;
+      setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
@@ -80,8 +123,124 @@ export default function CrmPopoverDateField({
     };
   }, [open]);
 
+  const popoverContent = open && popoverPos && (
+    <div
+      ref={popoverRef}
+      className="z-[220] w-[min(calc(100vw-1.5rem),20.5rem)] overflow-hidden rounded-xl border-2 border-zinc-200 bg-white shadow-[0_10px_40px_-10px_rgba(0,0,0,0.25)] dark:border-zinc-600 dark:bg-zinc-900 dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)]"
+      style={{
+        position: "fixed",
+        left: Math.max(12, Math.min(popoverPos.left, window.innerWidth - 12 - 328)),
+        ...(popoverPos.flipUp
+          ? {
+              bottom: window.innerHeight - popoverPos.triggerTop + 8,
+              top: "auto",
+            }
+          : { top: popoverPos.top, bottom: "auto" }),
+      }}
+      role="dialog"
+      aria-label="Choose date"
+    >
+      <div className="p-3 pb-2">
+        <DayPicker
+          mode="single"
+          selected={selected}
+          showOutsideDays
+          weekStartsOn={0}
+          onSelect={(d) => {
+            if (d) {
+              onChange(toIso(d));
+              setOpen(false);
+            }
+          }}
+          defaultMonth={selected ?? new Date()}
+          captionLayout="label"
+          startMonth={new Date(2000, 0)}
+          endMonth={new Date(2040, 11)}
+          className="crm-rdp text-text-primary dark:text-zinc-100"
+          components={{
+            Chevron: ({ className, size, orientation }) => {
+              const dim = size ?? 20;
+              if (orientation === "left") {
+                return (
+                  <ChevronLeft
+                    className={className}
+                    size={dim}
+                    strokeWidth={2}
+                    aria-hidden
+                  />
+                );
+              }
+              if (orientation === "right") {
+                return (
+                  <ChevronRight
+                    className={className}
+                    size={dim}
+                    strokeWidth={2}
+                    aria-hidden
+                  />
+                );
+              }
+              return (
+                <ChevronDown
+                  className={className}
+                  size={dim}
+                  strokeWidth={2}
+                  aria-hidden
+                />
+              );
+            },
+          }}
+          classNames={{
+            button_previous:
+              "inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800",
+            button_next:
+              "inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800",
+          }}
+          modifiersClassNames={{
+            today:
+              "rounded-lg font-semibold text-blue-700 ring-1 ring-inset ring-blue-200/90 dark:text-blue-300 dark:ring-blue-800/70",
+            selected:
+              "!bg-blue-600 !text-white hover:!bg-blue-600 focus:!bg-blue-600 rounded-lg font-semibold !shadow-none !ring-0",
+            outside: "text-zinc-400 opacity-55 dark:text-zinc-500",
+          }}
+          style={
+            {
+              "--rdp-accent-color": "#2563eb",
+              "--rdp-accent-background-color": "rgba(37, 99, 235, 0.14)",
+              "--rdp-day_button-height": "2.35rem",
+              "--rdp-day_button-width": "2.35rem",
+              "--rdp-nav-height": "2.5rem",
+            } as CSSProperties
+          }
+        />
+      </div>
+      <div className="flex items-center justify-between border-t border-zinc-200 px-3 py-2.5 dark:border-zinc-700">
+        <button
+          type="button"
+          className="text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+          onClick={() => {
+            onChange("");
+            setOpen(false);
+          }}
+        >
+          Clear
+        </button>
+        <button
+          type="button"
+          className="text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+          onClick={() => {
+            onChange(toIso(new Date()));
+            setOpen(false);
+          }}
+        >
+          Today
+        </button>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="relative" ref={rootRef}>
+    <div className="relative" ref={triggerWrapRef}>
       <button
         type="button"
         id={id}
@@ -109,110 +268,9 @@ export default function CrmPopoverDateField({
         />
       </button>
 
-      {open ? (
-        <div
-          className="absolute left-0 top-full z-[110] mt-2 overflow-hidden rounded-xl border-2 border-zinc-200 bg-white shadow-[0_10px_40px_-10px_rgba(0,0,0,0.25)] dark:border-zinc-600 dark:bg-zinc-900 dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)]"
-          role="dialog"
-          aria-label="Choose date"
-        >
-          <div className="p-3 pb-2">
-            <DayPicker
-              mode="single"
-              selected={selected}
-              showOutsideDays
-              weekStartsOn={0}
-              onSelect={(d) => {
-                if (d) {
-                  onChange(toIso(d));
-                  setOpen(false);
-                }
-              }}
-              defaultMonth={selected ?? new Date()}
-              captionLayout="label"
-              startMonth={new Date(2000, 0)}
-              endMonth={new Date(2040, 11)}
-              className="crm-rdp text-text-primary dark:text-zinc-100"
-              components={{
-                Chevron: ({ className, size, orientation }) => {
-                  const dim = size ?? 20;
-                  if (orientation === "left") {
-                    return (
-                      <ChevronLeft
-                        className={className}
-                        size={dim}
-                        strokeWidth={2}
-                        aria-hidden
-                      />
-                    );
-                  }
-                  if (orientation === "right") {
-                    return (
-                      <ChevronRight
-                        className={className}
-                        size={dim}
-                        strokeWidth={2}
-                        aria-hidden
-                      />
-                    );
-                  }
-                  return (
-                    <ChevronDown
-                      className={className}
-                      size={dim}
-                      strokeWidth={2}
-                      aria-hidden
-                    />
-                  );
-                },
-              }}
-              classNames={{
-                button_previous:
-                  "inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800",
-                button_next:
-                  "inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800",
-              }}
-              modifiersClassNames={{
-                today:
-                  "rounded-lg font-semibold text-blue-700 ring-1 ring-inset ring-blue-200/90 dark:text-blue-300 dark:ring-blue-800/70",
-                selected:
-                  "!bg-blue-600 !text-white hover:!bg-blue-600 focus:!bg-blue-600 rounded-lg font-semibold !shadow-none !ring-0",
-                outside: "text-zinc-400 opacity-55 dark:text-zinc-500",
-              }}
-              style={
-                {
-                  "--rdp-accent-color": "#2563eb",
-                  "--rdp-accent-background-color": "rgba(37, 99, 235, 0.14)",
-                  "--rdp-day_button-height": "2.35rem",
-                  "--rdp-day_button-width": "2.35rem",
-                  "--rdp-nav-height": "2.5rem",
-                } as CSSProperties
-              }
-            />
-          </div>
-          <div className="flex items-center justify-between border-t border-zinc-200 px-3 py-2.5 dark:border-zinc-700">
-            <button
-              type="button"
-              className="text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
-              onClick={() => {
-                onChange("");
-                setOpen(false);
-              }}
-            >
-              Clear
-            </button>
-            <button
-              type="button"
-              className="text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
-              onClick={() => {
-                onChange(toIso(new Date()));
-                setOpen(false);
-              }}
-            >
-              Today
-            </button>
-          </div>
-        </div>
-      ) : null}
+      {typeof document !== "undefined" && popoverContent
+        ? createPortal(popoverContent, document.body)
+        : null}
     </div>
   );
 }
