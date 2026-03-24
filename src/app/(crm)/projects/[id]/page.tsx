@@ -24,6 +24,7 @@ import ProjectScopeView from "@/components/crm/project/ProjectScopeView";
 import ProjectMeetingsView from "@/components/crm/project/ProjectMeetingsView";
 import ProjectResourcesView from "@/components/crm/project/ProjectResourcesView";
 import ProjectGanttView from "@/components/crm/project/ProjectGanttView";
+import ProjectCalendarView from "@/components/crm/project/ProjectCalendarView";
 import ProjectMilestonesView from "@/components/crm/project/ProjectMilestonesView";
 import ProjectTasksView, {
   type TaskCreateIntent,
@@ -36,12 +37,13 @@ import type {
 } from "@/lib/crm/project-workspace-types";
 
 const tabs: Tab[] = [
-  { id: "sprint-board", label: "Sprint Board" },
-  { id: "tasks", label: "Tasks" },
   { id: "backlog", label: "Backlog" },
+  { id: "sprint-board", label: "Sprints" },
+  { id: "tasks", label: "Tasks" },
   { id: "requests", label: "Requests" },
   { id: "milestones", label: "Milestones" },
   { id: "gantt", label: "Gantt" },
+  { id: "calendar", label: "Calendar" },
   { id: "scope", label: "Scope" },
   { id: "meetings", label: "Meetings" },
   { id: "resources", label: "Resources" },
@@ -62,7 +64,7 @@ export default function ProjectDetailPage({ params }: Props) {
   const [project, setProject] = useState<MockProject | null | undefined>(
     undefined
   );
-  const [activeTab, setActiveTab] = useState("sprint-board");
+  const [activeTab, setActiveTab] = useState("backlog");
   const [sprintModalOpen, setSprintModalOpen] = useState(false);
   const [editingSprintId, setEditingSprintId] = useState<string | null>(null);
   const [sprintName, setSprintName] = useState("");
@@ -226,6 +228,15 @@ export default function ProjectDetailPage({ params }: Props) {
     panelContent = (
       <p className="text-sm text-text-secondary">Loading workspace…</p>
     );
+  } else if (activeTab === "backlog") {
+    panelContent = (
+      <ProjectBacklogView
+        tasks={workspace.tasks}
+        sprints={sprints}
+        onAddTask={(input) => addTask({ ...input, sprintId: input.sprintId })}
+        onUpdateTask={updateTask}
+      />
+    );
   } else if (activeTab === "sprint-board") {
     panelContent =
       currentSprint ? (
@@ -284,15 +295,6 @@ export default function ProjectDetailPage({ params }: Props) {
         onConsumedCreateIntent={onConsumedTaskCreateIntent}
       />
     );
-  } else if (activeTab === "backlog") {
-    panelContent = (
-      <ProjectBacklogView
-        tasks={workspace.tasks}
-        sprints={sprints}
-        onAddTask={(input) => addTask({ ...input, sprintId: input.sprintId })}
-        onUpdateTask={updateTask}
-      />
-    );
   } else if (activeTab === "requests") {
     panelContent = (
       <ProjectRequestsView
@@ -317,6 +319,8 @@ export default function ProjectDetailPage({ params }: Props) {
         }
       />
     );
+  } else if (activeTab === "calendar") {
+    panelContent = <ProjectCalendarView tasks={workspace.tasks} />;
   } else if (activeTab === "scope") {
     panelContent = (
       <ProjectScopeView
@@ -579,7 +583,7 @@ function SprintBoard({
     <div>
       <div className="mb-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
         <h2 className="text-lg font-bold text-text-primary dark:text-zinc-100">
-          Sprint Board
+          Sprints
         </h2>
         <MetaField label="Sprint">
           <div className="flex flex-wrap items-center gap-1">

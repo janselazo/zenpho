@@ -368,8 +368,8 @@ export default function ProjectTasksView({
             Tasks
           </h2>
           <p className="mt-1 text-sm text-text-secondary">
-            All work items for this project. Same list powers Sprint Board,
-            Backlog, and Gantt.
+            All work items for this project. Same list powers Sprints,
+            Backlog, Gantt, and Calendar.
           </p>
         </div>
         <button
