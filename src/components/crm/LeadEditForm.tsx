@@ -18,7 +18,7 @@ const leadStages = [
 ] as const;
 
 const dealStages = [
-  { value: "prospect", label: "Prospect" },
+  { value: "prospect", label: "Open" },
   { value: "proposal", label: "Proposal" },
   { value: "negotiation", label: "Negotiation" },
   { value: "closed_won", label: "Closed Won" },

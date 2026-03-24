@@ -342,7 +342,7 @@ export interface MockDeal {
 }
 
 export const DEAL_STAGE_LABELS: Record<DealStage, string> = {
-  prospect: "Prospect",
+  prospect: "Open",
   proposal: "Proposal",
   negotiation: "Negotiation",
   closed_won: "Closed Won",
