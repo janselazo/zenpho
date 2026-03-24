@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { enumerateDays } from "@/lib/crm/dashboard-range";
 
 export type DailyMoneyPoint = {
   label: string;
@@ -52,4 +53,119 @@ export async function getLastSevenDaysMoney(): Promise<DailyMoneyPoint[]> {
       expense: map[d].expense,
     };
   });
+}
+
+function parseLocalYmd(s: string): Date {
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function toLocalYmd(d: Date): string {
+  const y = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${mo}-${day}`;
+}
+
+/** Sunday-start week containing `d` (local). */
+function startOfWeekSunday(d: Date): Date {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  x.setDate(x.getDate() - x.getDay());
+  return x;
+}
+
+/**
+ * Revenue & expense per day or per week (if range > 45 days), inclusive `from`–`to`.
+ */
+export async function getMoneySeriesForRange(
+  from: string,
+  to: string
+): Promise<DailyMoneyPoint[]> {
+  const supabase = await createClient();
+  const days = enumerateDays(from, to);
+  if (days.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("transaction")
+    .select("date, type, amount")
+    .gte("date", from)
+    .lte("date", to);
+
+  if (error) {
+    return [];
+  }
+
+  const useMonthly = days.length > 120;
+  const useWeekly = !useMonthly && days.length > 45;
+  const bucketKeys: string[] = [];
+  const bucketLabel: Record<string, string> = {};
+
+  if (!useWeekly && !useMonthly) {
+    for (const d of days) {
+      bucketKeys.push(d);
+      const dt = parseLocalYmd(d);
+      bucketLabel[d] = dt.toLocaleDateString(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      });
+    }
+  } else if (useMonthly) {
+    const seen = new Set<string>();
+    for (const d of days) {
+      const ym = d.slice(0, 7);
+      if (!seen.has(ym)) {
+        seen.add(ym);
+        bucketKeys.push(ym);
+        const dt = parseLocalYmd(`${ym}-01`);
+        bucketLabel[ym] = dt.toLocaleDateString(undefined, {
+          month: "short",
+          year: "numeric",
+        });
+      }
+    }
+  } else {
+    const seen = new Set<string>();
+    for (const d of days) {
+      const ws = startOfWeekSunday(parseLocalYmd(d));
+      const key = toLocalYmd(ws);
+      if (!seen.has(key)) {
+        seen.add(key);
+        bucketKeys.push(key);
+        bucketLabel[key] = ws.toLocaleDateString(undefined, {
+          month: "short",
+          day: "numeric",
+        });
+      }
+    }
+  }
+
+  const sums: Record<string, { revenue: number; expense: number }> = {};
+  for (const k of bucketKeys) {
+    sums[k] = { revenue: 0, expense: 0 };
+  }
+
+  for (const row of data ?? []) {
+    const keyDay = row.date as string;
+    if (keyDay < from || keyDay > to) continue;
+    let bucket: string;
+    if (useMonthly) {
+      bucket = keyDay.slice(0, 7);
+    } else if (useWeekly) {
+      bucket = toLocalYmd(startOfWeekSunday(parseLocalYmd(keyDay)));
+    } else {
+      bucket = keyDay;
+    }
+    if (!sums[bucket]) continue;
+    const n = Number(row.amount);
+    if (row.type === "revenue") sums[bucket].revenue += n;
+    else if (row.type === "expense") sums[bucket].expense += n;
+  }
+
+  return bucketKeys.map((k) => ({
+    label: bucketLabel[k] ?? k,
+    revenue: sums[k].revenue,
+    expense: sums[k].expense,
+  }));
 }

@@ -9,6 +9,8 @@ import {
 } from "@/lib/crm/mock-data";
 import { useCrmTeamMembers } from "@/lib/crm/use-crm-team-members";
 import { formatISODate } from "@/lib/crm/project-date-utils";
+import CrmPopoverDateField from "@/components/crm/CrmPopoverDateField";
+import CrmPopoverTimeField from "@/components/crm/CrmPopoverTimeField";
 import type {
   WorkspaceSprint,
   WorkspaceTask,
@@ -118,6 +120,11 @@ export default function ProjectTasksView({
   onConsumedCreateIntent,
 }: Props) {
   const teamMembers = useCrmTeamMembers();
+  const resolveAssigneeMember = useCallback(
+    (id: string) =>
+      teamMembers.find((m) => m.id === id) ?? getMemberById(id),
+    [teamMembers]
+  );
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [isNew, setIsNew] = useState(false);
@@ -337,6 +344,9 @@ export default function ProjectTasksView({
   const remainingHours = Math.max(0, estimate - loggedHours);
   const barFilled = Math.round(progressPct / 10);
 
+  const taskDateTriggerClass =
+    "mt-1 w-full rounded-xl border border-border px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 relative flex min-h-[2.625rem] items-center text-left";
+
   const assigneePickList = teamMembers.filter((m) => {
     const q = assigneeSearch.trim().toLowerCase();
     if (!q) return true;
@@ -452,14 +462,14 @@ export default function ProjectTasksView({
                           <span className="text-xs text-text-secondary">—</span>
                         ) : (
                           ids.map((aid) => {
-                            const m = getMemberById(aid);
+                            const m = resolveAssigneeMember(aid);
                             return (
                               <span
                                 key={aid}
                                 className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-0.5 text-xs dark:bg-zinc-800"
                               >
                                 <span className="font-medium">
-                                  {m?.name ?? aid.slice(0, 8)}
+                                  {m?.name ?? "Unknown"}
                                 </span>
                               </span>
                             );
@@ -581,13 +591,13 @@ export default function ProjectTasksView({
                     {draftAssigneeIds.length > 0 ? (
                       <div className="mt-2 flex flex-wrap gap-1">
                         {draftAssigneeIds.map((id) => {
-                          const m = getMemberById(id);
+                          const m = resolveAssigneeMember(id);
                           return (
                             <span
                               key={id}
                               className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-xs dark:border-zinc-600 dark:bg-zinc-800"
                             >
-                              {m?.name ?? id}
+                              {m?.name ?? "Unknown"}
                               <button
                                 type="button"
                                 onClick={() =>
@@ -608,42 +618,64 @@ export default function ProjectTasksView({
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <label className="block text-xs font-medium text-text-secondary">
-                      Start date
-                      <input
-                        type="date"
+                    <div>
+                      <label
+                        htmlFor="task-start-date"
+                        className="block text-xs font-medium text-text-secondary"
+                      >
+                        Start date
+                      </label>
+                      <CrmPopoverDateField
+                        id="task-start-date"
                         value={draftStartDate}
-                        onChange={(e) => setDraftStartDate(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800"
+                        onChange={setDraftStartDate}
+                        displayFormat="numeric"
+                        triggerClassName={taskDateTriggerClass}
                       />
-                    </label>
-                    <label className="block text-xs font-medium text-text-secondary">
-                      End date
-                      <input
-                        type="date"
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="task-end-date"
+                        className="block text-xs font-medium text-text-secondary"
+                      >
+                        End date
+                      </label>
+                      <CrmPopoverDateField
+                        id="task-end-date"
                         value={draftEndDate}
-                        onChange={(e) => setDraftEndDate(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800"
+                        onChange={setDraftEndDate}
+                        displayFormat="numeric"
+                        triggerClassName={taskDateTriggerClass}
                       />
-                    </label>
-                    <label className="block text-xs font-medium text-text-secondary">
-                      Start time
-                      <input
-                        type="time"
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="task-start-time"
+                        className="block text-xs font-medium text-text-secondary"
+                      >
+                        Start time
+                      </label>
+                      <CrmPopoverTimeField
+                        id="task-start-time"
                         value={draftStartTime}
-                        onChange={(e) => setDraftStartTime(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800"
+                        onChange={setDraftStartTime}
+                        triggerClassName={taskDateTriggerClass}
                       />
-                    </label>
-                    <label className="block text-xs font-medium text-text-secondary">
-                      End time
-                      <input
-                        type="time"
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="task-end-time"
+                        className="block text-xs font-medium text-text-secondary"
+                      >
+                        End time
+                      </label>
+                      <CrmPopoverTimeField
+                        id="task-end-time"
                         value={draftEndTime}
-                        onChange={(e) => setDraftEndTime(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800"
+                        onChange={setDraftEndTime}
+                        triggerClassName={taskDateTriggerClass}
                       />
-                    </label>
+                    </div>
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2">

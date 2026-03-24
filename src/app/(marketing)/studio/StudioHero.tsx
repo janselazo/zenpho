@@ -40,8 +40,7 @@ export default function StudioHero() {
         >
           Studio is where we build and scale{" "}
           <span className="text-text-primary">our own</span> software — web apps,
-          mobile, and SaaS — on our timeline, not a client’s. Same team and standards
-          as our Agency; different roadmap.
+          mobile, and SaaS. Same team and standards as our Agency.
         </motion.p>
 
         <motion.div

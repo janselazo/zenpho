@@ -89,6 +89,49 @@ export function useProjectWorkspace(projectId: string | undefined) {
     [mutate]
   );
 
+  const updateSprint = useCallback(
+    (
+      sprintId: string,
+      patch: Partial<
+        Pick<WorkspaceSprint, "name" | "milestone" | "startDate" | "endDate">
+      >
+    ) => {
+      mutate((w) => ({
+        ...w,
+        sprints: w.sprints.map((s) =>
+          s.id === sprintId ? { ...s, ...patch } : s
+        ),
+      }));
+    },
+    [mutate]
+  );
+
+  const deleteSprint = useCallback(
+    (sprintId: string) => {
+      mutate((w) => {
+        const deleted = w.sprints.find((s) => s.id === sprintId);
+        if (!deleted) return w;
+        const remaining = w.sprints.filter((s) => s.id !== sprintId);
+        let sprints = remaining;
+        if (deleted.isCurrent && remaining.length > 0) {
+          const nextId = remaining[0].id;
+          sprints = remaining.map((s) => ({
+            ...s,
+            isCurrent: s.id === nextId,
+          }));
+        }
+        return {
+          ...w,
+          sprints,
+          tasks: w.tasks.map((t) =>
+            t.sprintId === sprintId ? { ...t, sprintId: null } : t
+          ),
+        };
+      });
+    },
+    [mutate]
+  );
+
   const addTask = useCallback(
     (input: {
       title: string;
@@ -349,6 +392,8 @@ export function useProjectWorkspace(projectId: string | undefined) {
     workspace,
     hydrated,
     addSprint,
+    updateSprint,
+    deleteSprint,
     setCurrentSprint,
     addTask,
     updateTask,

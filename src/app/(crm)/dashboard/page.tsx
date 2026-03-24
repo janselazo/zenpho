@@ -1,8 +1,18 @@
 import dynamic from "next/dynamic";
+import {
+  fetchDashboardFunnel,
+  fetchDashboardKpis,
+  fetchLeadsAppointmentsSeries,
+  type DashboardFunnelStage,
+  type LeadsAppointmentsPoint,
+} from "@/lib/crm/dashboard-data";
+import {
+  formatDashboardRangeLabel,
+  parseDashboardRangeQuery,
+} from "@/lib/crm/dashboard-range";
 import type { DailyMoneyPoint } from "@/lib/crm/transaction-series";
-import { getLastSevenDaysMoney } from "@/lib/crm/transaction-series";
+import { getMoneySeriesForRange } from "@/lib/crm/transaction-series";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { createClient } from "@/lib/supabase/server";
 
 const DashboardView = dynamic(() => import("@/components/crm/DashboardView"), {
   loading: () => (
@@ -12,57 +22,19 @@ const DashboardView = dynamic(() => import("@/components/crm/DashboardView"), {
   ),
 });
 
-async function getCounts() {
-  const supabase = await createClient();
-  const startOfWeek = new Date();
-  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
-  startOfWeek.setHours(0, 0, 0, 0);
-  const startIso = startOfWeek.toISOString();
-  const weekStartDate = startIso.slice(0, 10);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+const emptyFunnel: DashboardFunnelStage[] = [
+  { label: "Leads", count: 0, value: 0, color: "#3b82f6", bg: "bg-blue-50 dark:bg-blue-500/12" },
+  { label: "Appointments", count: 0, value: 0, color: "#8b5cf6", bg: "bg-violet-50 dark:bg-violet-500/12" },
+  { label: "Qualified", count: 0, value: 0, color: "#10b981", bg: "bg-emerald-50 dark:bg-emerald-500/12" },
+  { label: "Deals Closed", count: 0, value: 0, color: "#f59e0b", bg: "bg-amber-50 dark:bg-amber-500/12" },
+  { label: "Revenue", count: 0, value: 0, color: "#10b981", bg: "bg-emerald-50 dark:bg-emerald-500/12" },
+];
 
-  const [leads, appts, revenue, expenses] = await Promise.all([
-    supabase
-      .from("lead")
-      .select("*", { count: "exact", head: true })
-      .gte("created_at", startIso),
-    supabase
-      .from("appointment")
-      .select("*", { count: "exact", head: true })
-      .gte("starts_at", today.toISOString())
-      .lt("starts_at", tomorrow.toISOString()),
-    supabase
-      .from("transaction")
-      .select("amount")
-      .eq("type", "revenue")
-      .gte("date", weekStartDate),
-    supabase
-      .from("transaction")
-      .select("amount")
-      .eq("type", "expense")
-      .gte("date", weekStartDate),
-  ]);
-
-  const revSum =
-    revenue.data?.reduce((s, r) => s + Number(r.amount), 0) ?? 0;
-  const expSum =
-    expenses.data?.reduce((s, r) => s + Number(r.amount), 0) ?? 0;
-
-  return {
-    leadsThisWeek: leads.count ?? 0,
-    appointmentsToday: appts.count ?? 0,
-    revenueWeek: revSum,
-    expensesWeek: expSum,
-    errors: [leads.error, appts.error, revenue.error, expenses.error].filter(
-      Boolean
-    ),
-  };
-}
-
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string; to?: string; range?: string }>;
+}) {
   if (!isSupabaseConfigured()) {
     return (
       <div className="p-8">
@@ -76,45 +48,77 @@ export default async function DashboardPage() {
     );
   }
 
+  const sp = await searchParams;
+  const parsed = parseDashboardRangeQuery(sp);
+  const { from, to, isAllTime } = parsed;
+  const rangeLabel = isAllTime
+    ? "All time"
+    : formatDashboardRangeLabel(from, to);
+
   let counts = {
-    leadsThisWeek: 0,
-    appointmentsToday: 0,
+    activeClients: 0,
+    activeProjects: 0,
     revenueWeek: 0,
     expensesWeek: 0,
     errors: [] as unknown[],
   };
   let chartData: DailyMoneyPoint[] = [];
+  let funnel: DashboardFunnelStage[] = emptyFunnel;
+  let leadsChartData: LeadsAppointmentsPoint[] = [];
+
   try {
-    const [countsResult, chartResult] = await Promise.allSettled([
-      getCounts(),
-      getLastSevenDaysMoney(),
+    const [kpis, money, funnelRes, leadsRes] = await Promise.allSettled([
+      fetchDashboardKpis(from, to),
+      getMoneySeriesForRange(from, to),
+      fetchDashboardFunnel(from, to),
+      fetchLeadsAppointmentsSeries(from, to),
     ]);
-    if (countsResult.status === "fulfilled") {
-      counts = countsResult.value;
+
+    if (kpis.status === "fulfilled") {
+      const c = kpis.value;
+      counts = {
+        activeClients: c.activeClients,
+        activeProjects: c.activeProjects,
+        revenueWeek: c.revenueInRange,
+        expensesWeek: c.expensesInRange,
+        errors: c.errors,
+      };
     }
-    if (chartResult.status === "fulfilled") {
-      chartData = chartResult.value;
+    if (money.status === "fulfilled") {
+      chartData = money.value;
+    }
+    if (funnelRes.status === "fulfilled") {
+      funnel = funnelRes.value;
+    }
+    if (leadsRes.status === "fulfilled") {
+      leadsChartData = leadsRes.value;
     }
   } catch {
-    // schema not applied yet
+    /* schema not applied yet */
   }
 
   return (
-    <div className="p-8">
+    <div className="space-y-6 p-8">
       {counts.errors.length > 0 && (
-        <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100">
+        <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100">
           Run{" "}
           <code className="font-mono text-xs">supabase/migrations/*.sql</code>{" "}
           in the Supabase SQL editor if tables are missing.
         </p>
       )}
       <DashboardView
-        leadsThisWeek={counts.leadsThisWeek}
-        appointmentsToday={counts.appointmentsToday}
+        activeClients={counts.activeClients}
+        activeProjects={counts.activeProjects}
         revenueWeek={counts.revenueWeek}
         expensesWeek={counts.expensesWeek}
         chartData={chartData}
         hasErrors={counts.errors.length > 0}
+        dateFrom={from}
+        dateTo={to}
+        rangeLabel={rangeLabel}
+        isAllTime={isAllTime}
+        funnel={funnel}
+        leadsChartData={leadsChartData}
       />
     </div>
   );

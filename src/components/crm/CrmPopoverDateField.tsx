@@ -14,6 +14,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
 } from "lucide-react";
 import "react-day-picker/style.css";
 
@@ -126,7 +127,7 @@ export default function CrmPopoverDateField({
   const popoverContent = open && popoverPos && (
     <div
       ref={popoverRef}
-      className="z-[220] w-[min(calc(100vw-1.5rem),20.5rem)] overflow-hidden rounded-xl border-2 border-zinc-200 bg-white shadow-[0_10px_40px_-10px_rgba(0,0,0,0.25)] dark:border-zinc-600 dark:bg-zinc-900 dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)]"
+      className="z-[280] w-[min(calc(100vw-1.5rem),20.5rem)] overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-[0_10px_40px_-10px_rgba(0,0,0,0.25)] dark:border-zinc-600 dark:bg-zinc-900 dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)]"
       style={{
         position: "fixed",
         left: Math.max(12, Math.min(popoverPos.left, window.innerWidth - 12 - 328)),
@@ -180,6 +181,16 @@ export default function CrmPopoverDateField({
                   />
                 );
               }
+              if (orientation === "up") {
+                return (
+                  <ChevronUp
+                    className={className}
+                    size={dim}
+                    strokeWidth={2}
+                    aria-hidden
+                  />
+                );
+              }
               return (
                 <ChevronDown
                   className={className}
@@ -195,12 +206,14 @@ export default function CrmPopoverDateField({
               "inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800",
             button_next:
               "inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800",
+            day_button:
+              "m-0 rounded-lg border-2 border-transparent text-sm font-medium outline-none transition-colors hover:bg-zinc-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:ring-offset-0 dark:hover:bg-zinc-800",
           }}
           modifiersClassNames={{
             today:
-              "rounded-lg font-semibold text-blue-700 ring-1 ring-inset ring-blue-200/90 dark:text-blue-300 dark:ring-blue-800/70",
+              "[&_button]:rounded-lg [&_button]:font-semibold [&_button]:text-blue-700 [&_button]:ring-1 [&_button]:ring-inset [&_button]:ring-blue-200/90 dark:[&_button]:text-blue-300 dark:[&_button]:ring-blue-800/70",
             selected:
-              "!bg-blue-600 !text-white hover:!bg-blue-600 focus:!bg-blue-600 rounded-lg font-semibold !shadow-none !ring-0",
+              "[&_button]:!border-transparent [&_button]:!bg-blue-600 [&_button]:!text-white [&_button]:hover:!bg-blue-600 [&_button]:focus:!bg-blue-600 [&_button]:!font-semibold [&_button]:!shadow-none [&_button]:!ring-0 [&_button]:focus-visible:!ring-2 [&_button]:focus-visible:!ring-white/60",
             outside: "text-zinc-400 opacity-55 dark:text-zinc-500",
           }}
           style={
@@ -210,6 +223,8 @@ export default function CrmPopoverDateField({
               "--rdp-day_button-height": "2.35rem",
               "--rdp-day_button-width": "2.35rem",
               "--rdp-nav-height": "2.5rem",
+              "--rdp-selected-border": "2px solid transparent",
+              "--rdp-day_button-border": "2px solid transparent",
             } as CSSProperties
           }
         />

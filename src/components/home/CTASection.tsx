@@ -27,12 +27,12 @@ export default function CTASection() {
             <span className={SECTION_EYEBROW_CLASSNAME}>Next step</span>
           </div>
           <h2 className="heading-display text-3xl font-bold tracking-tight text-text-primary sm:text-4xl lg:text-5xl lg:leading-tight">
-            <span className="block">Tell me what you&apos;re</span>
+            <span className="block">Tell Us what you&apos;re</span>
             <span className="mt-1 block text-accent">building</span>
           </h2>
           <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-text-secondary sm:text-base">
             Share a short brief — what the product does, who uses it, and
-            your timeline. I&apos;ll respond with how I&apos;d approach it and
+            your timeline. We&apos;ll respond with how we would approach it and
             what a good first milestone looks like.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">

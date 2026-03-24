@@ -15,7 +15,7 @@ export default async function ClientsPage() {
   }
 
   const supabase = await createClient();
-  const [clientsRes, leadsRes] = await Promise.all([
+  const [clientsRes, leadsRes, dealsRes] = await Promise.all([
     supabase
       .from("client")
       .select("id, name, email, phone, company, notes, created_at")
@@ -23,16 +23,29 @@ export default async function ClientsPage() {
       .limit(200),
     supabase
       .from("lead")
-      .select("id, name, email, company, converted_client_id, created_at")
+      .select(
+        "id, name, email, company, source, converted_client_id, created_at"
+      )
       .not("converted_client_id", "is", null)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("deal")
+      .select("title, lead_id, updated_at")
+      .order("updated_at", { ascending: false })
+      .limit(500),
   ]);
 
   const { data: clients, error } = clientsRes;
 
   const leadByClientId = new Map<
     string,
-    { id: string; name: string | null; email: string | null; company: string | null }
+    {
+      id: string;
+      name: string | null;
+      email: string | null;
+      company: string | null;
+      source: string | null;
+    }
   >();
   for (const row of leadsRes.data ?? []) {
     const cid = row.converted_client_id as string | null;
@@ -42,14 +55,32 @@ export default async function ClientsPage() {
       name: row.name,
       email: row.email,
       company: row.company,
+      source: row.source,
     });
   }
 
+  /** First non-empty title per lead, preferring most recently updated deals. */
+  const dealTitleByLeadId = new Map<string, string>();
+  for (const row of dealsRes.data ?? []) {
+    const lid = row.lead_id as string | null;
+    if (!lid || dealTitleByLeadId.has(lid)) continue;
+    const t = (row.title ?? "").trim();
+    if (!t) continue;
+    dealTitleByLeadId.set(lid, t);
+  }
+
   const rows =
-    clients?.map((c) => ({
-      ...c,
-      linkedLead: leadByClientId.get(c.id) ?? null,
-    })) ?? [];
+    clients?.map((c) => {
+      const linkedLead = leadByClientId.get(c.id) ?? null;
+      const dealName = linkedLead
+        ? (dealTitleByLeadId.get(linkedLead.id) ?? null)
+        : null;
+      return {
+        ...c,
+        linkedLead,
+        dealName,
+      };
+    }) ?? [];
 
   return (
     <div className="p-8">

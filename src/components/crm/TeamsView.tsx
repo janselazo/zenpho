@@ -30,6 +30,7 @@ import {
   parseTeamMemberPermission,
   TEAM_MEMBER_PERMISSION_LABELS,
   TEAM_MEMBER_PERMISSION_ORDER,
+  getProjectTeamSelectOptions,
 } from "@/lib/crm/mock-data";
 import {
   readStoredTeamMembers,
@@ -68,6 +69,17 @@ function displayLocation(m: MockTeamMember) {
   const loc = m.location?.trim();
   if (loc) return loc;
   return DEMO_LOCATIONS[hashId(m.id) % DEMO_LOCATIONS.length];
+}
+
+const projectTeamOptions = getProjectTeamSelectOptions();
+
+function displayTeamName(m: MockTeamMember) {
+  const fromCatalog = allTeams.find((t) => t.id === m.teamId);
+  if (fromCatalog?.name) return fromCatalog.name;
+  const fromOptions = projectTeamOptions.find((t) => t.id === m.teamId);
+  if (fromOptions?.name) return fromOptions.name;
+  if (m.tags.length > 0) return m.tags.join(", ");
+  return "—";
 }
 
 function memberOnline(m: MockTeamMember) {
@@ -194,7 +206,8 @@ export default function TeamsView({
         m.name.toLowerCase().includes(q) ||
         m.role.toLowerCase().includes(q) ||
         m.email.toLowerCase().includes(q) ||
-        m.tags.some((t) => t.toLowerCase().includes(q))
+        m.tags.some((t) => t.toLowerCase().includes(q)) ||
+        displayTeamName(m).toLowerCase().includes(q)
       );
     });
   }, [members, search, tagFilter]);
@@ -406,7 +419,7 @@ export default function TeamsView({
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900/40">
-        <table className="w-full min-w-[860px] text-left text-sm">
+        <table className="w-full min-w-[960px] text-left text-sm">
           <thead>
             <tr className="border-b border-zinc-200 dark:border-zinc-700">
               <th className="w-10 px-3 py-3">
@@ -424,6 +437,9 @@ export default function TeamsView({
               </th>
               <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">
                 Role
+              </th>
+              <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                Team
               </th>
               <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">
                 Current projects
@@ -497,6 +513,11 @@ export default function TeamsView({
                   </td>
                   <td className="px-3 py-3 align-middle text-zinc-700 dark:text-zinc-300">
                     {m.role}
+                  </td>
+                  <td className="max-w-[14rem] px-3 py-3 align-middle text-zinc-700 dark:text-zinc-300">
+                    <span className="line-clamp-2" title={displayTeamName(m)}>
+                      {displayTeamName(m)}
+                    </span>
                   </td>
                   <td className="px-3 py-3 align-middle">
                     <ProjectAvatarStack projects={assigned} />

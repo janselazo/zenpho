@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -20,7 +20,8 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { projects } from "@/lib/crm/mock-data";
+import { projects as seedProjects } from "@/lib/crm/mock-data";
+import { getMergedProjectsList } from "@/lib/crm/projects-storage";
 
 const prospectsNav = [
   { href: "/leads", label: "Leads", icon: UsersRound },
@@ -44,7 +45,26 @@ export default function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [projectsOpen, setProjectsOpen] = useState(true);
+  const [sidebarProjects, setSidebarProjects] =
+    useState(() => seedProjects);
 
+  useEffect(() => {
+    const sync = () => {
+      const list = getMergedProjectsList();
+      setSidebarProjects(
+        [...list].sort((a, b) =>
+          a.title.localeCompare(b.title, undefined, { sensitivity: "base" })
+        )
+      );
+    };
+    sync();
+    window.addEventListener("crm-projects-changed", sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener("crm-projects-changed", sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
 
   async function signOut() {
     try {
@@ -120,7 +140,7 @@ export default function AppSidebar() {
           open={projectsOpen}
           onToggle={() => setProjectsOpen(!projectsOpen)}
         >
-          {projects.map((p) => (
+          {sidebarProjects.map((p) => (
             <NavLink
               key={p.id}
               href={`/projects/${p.id}`}

@@ -21,7 +21,6 @@ import {
   Circle,
   CircleDot,
   Flag,
-  Info,
   LayoutGrid,
   List,
   ListFilter,
@@ -308,21 +307,6 @@ export default function ProjectsPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-3.5 py-2 text-sm font-medium text-text-primary shadow-sm transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
-            title="Workspace overview"
-          >
-            <LayoutGrid className="h-4 w-4 text-text-secondary" aria-hidden />
-            Overview
-          </button>
-          <button
-            type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-white text-text-secondary shadow-sm transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:hover:bg-zinc-800"
-            aria-label="About this board"
-          >
-            <Info className="h-4 w-4" />
-          </button>
           <button
             type="button"
             onClick={openCreateModal}

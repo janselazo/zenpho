@@ -95,6 +95,7 @@ export default function DealsView({
   const [editing, setEditing] = useState<MockDeal | null>(null);
   const [quickTaskDeal, setQuickTaskDeal] = useState<MockDeal | null>(null);
   const [newProjectDealId, setNewProjectDealId] = useState<string | null>(null);
+  const [pipelineDeleteId, setPipelineDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     setLocalDeals(deals);
@@ -294,39 +295,94 @@ export default function DealsView({
                       {formatCurrency(deal.value)}
                     </p>
                   </button>
-                  {persistDeals ? (
-                    <div
-                      className="flex items-center gap-1 border-t border-border px-2 py-2 dark:border-zinc-700"
-                      onMouseDown={stopDragMouseDown}
+                  <div
+                    className="flex flex-wrap items-center gap-1 border-t border-border px-2 py-2 dark:border-zinc-700"
+                    onMouseDown={stopDragMouseDown}
+                  >
+                    {persistDeals ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setNewProjectDealId(deal.id)}
+                          title="Create project from deal"
+                          className="inline-flex items-center justify-center rounded-md p-1.5 text-violet-600 transition-colors hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-950/40"
+                          aria-label={`Create project for ${taskLabel}`}
+                        >
+                          <FolderKanban
+                            className="h-4 w-4 shrink-0"
+                            aria-hidden
+                          />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setQuickTaskDeal(deal)}
+                          disabled={!deal.leadId}
+                          title={
+                            deal.leadId
+                              ? "Quick task"
+                              : "Quick tasks need a linked lead"
+                          }
+                          className="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                          aria-label={`Add task for ${taskLabel}`}
+                        >
+                          <ListTodo className="h-4 w-4 shrink-0" aria-hidden />
+                        </button>
+                      </>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setEditing(deal);
+                      }}
+                      title="Edit deal"
+                      className="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                      aria-label={`Edit ${taskLabel}`}
                     >
-                      <button
-                        type="button"
-                        onClick={() => setNewProjectDealId(deal.id)}
-                        title="Create project from deal"
-                        className="inline-flex items-center justify-center rounded-md p-1.5 text-violet-600 transition-colors hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-950/40"
-                        aria-label={`Create project for ${taskLabel}`}
-                      >
-                        <FolderKanban
-                          className="h-4 w-4 shrink-0"
+                      <Pencil className="h-4 w-4 shrink-0" aria-hidden />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={pipelineDeleteId === deal.id}
+                      title="Delete deal"
+                      className="inline-flex items-center justify-center rounded-md p-1.5 text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-950/40"
+                      aria-label={`Delete ${taskLabel}`}
+                      aria-busy={pipelineDeleteId === deal.id}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const label =
+                          deal.title?.trim() ||
+                          deal.company?.trim() ||
+                          "this deal";
+                        if (
+                          !confirm(
+                            `Delete deal “${label}”? This cannot be undone.`
+                          )
+                        ) {
+                          return;
+                        }
+                        void (async () => {
+                          setPipelineDeleteId(deal.id);
+                          try {
+                            await handleDelete(deal.id);
+                          } finally {
+                            setPipelineDeleteId(null);
+                          }
+                        })();
+                      }}
+                    >
+                      {pipelineDeleteId === deal.id ? (
+                        <Loader2
+                          className="h-4 w-4 shrink-0 animate-spin"
                           aria-hidden
                         />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setQuickTaskDeal(deal)}
-                        disabled={!deal.leadId}
-                        title={
-                          deal.leadId
-                            ? "Quick task"
-                            : "Quick tasks need a linked lead"
-                        }
-                        className="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                        aria-label={`Add task for ${taskLabel}`}
-                      >
-                        <ListTodo className="h-4 w-4 shrink-0" aria-hidden />
-                      </button>
-                    </div>
-                  ) : null}
+                      ) : (
+                        <Trash2 className="h-4 w-4 shrink-0" aria-hidden />
+                      )}
+                    </button>
+                  </div>
                 </div>
               );
             }}

@@ -29,11 +29,32 @@ export type ClientTableRow = {
     name: string | null;
     email: string | null;
     company: string | null;
+    /** Same `lead.source` as on the Leads table */
+    source: string | null;
   } | null;
+  /** Latest non-empty deal title for the linked lead (by deal.updated_at) */
+  dealName: string | null;
 };
 
 const neutralChipBase =
   "inline-flex rounded-full border border-border bg-white px-2.5 py-0.5 text-xs font-semibold dark:border-zinc-600 dark:bg-zinc-900/35";
+
+/** Match Leads table source pill colors */
+const sourceTextClasses: Record<string, string> = {
+  website: "text-sky-700 dark:text-sky-400",
+  referral: "text-teal-700 dark:text-teal-400",
+  linkedin: "text-blue-700 dark:text-blue-400",
+  "cold outreach": "text-orange-700 dark:text-orange-400",
+  conference: "text-purple-700 dark:text-purple-400",
+  facebook: "text-indigo-700 dark:text-indigo-400",
+};
+
+function getSourceTextClass(source: string) {
+  return (
+    sourceTextClasses[source.toLowerCase()] ??
+    "text-zinc-700 dark:text-zinc-300"
+  );
+}
 
 const inlineInputClass =
   "w-full min-w-0 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-xs text-text-primary outline-none placeholder:text-zinc-400 focus:border-blue-400 focus:ring-1 focus:ring-blue-400/20 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500";
@@ -157,7 +178,7 @@ export default function ClientsView({ clients }: { clients: ClientTableRow[] }) 
             <th className="px-4 py-3 font-semibold text-text-secondary">Phone</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Email</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Status</th>
-            <th className="px-4 py-3 font-semibold text-text-secondary">Service</th>
+            <th className="px-4 py-3 font-semibold text-text-secondary">Project</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Company</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Source</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Date</th>
@@ -273,7 +294,17 @@ export default function ClientsView({ clients }: { clients: ClientTableRow[] }) 
                     Client
                   </span>
                 </td>
-                <td className="px-4 py-3 align-top text-text-secondary">—</td>
+                <td className="px-4 py-3 align-top">
+                  {c.dealName?.trim() ? (
+                    <span
+                      className={`${neutralChipBase} font-medium text-sky-800 dark:text-sky-300`}
+                    >
+                      {c.dealName.trim()}
+                    </span>
+                  ) : (
+                    <span className="text-text-secondary">—</span>
+                  )}
+                </td>
                 <td className="px-4 py-3 align-top">
                   {isEditing && draft ? (
                     <input
@@ -298,11 +329,15 @@ export default function ClientsView({ clients }: { clients: ClientTableRow[] }) 
                   )}
                 </td>
                 <td className="px-4 py-3 align-top">
-                  <span
-                    className={`${neutralChipBase} font-medium text-slate-700 dark:text-slate-300`}
-                  >
-                    CRM
-                  </span>
+                  {c.linkedLead?.source?.trim() ? (
+                    <span
+                      className={`${neutralChipBase} font-medium capitalize ${getSourceTextClass(c.linkedLead.source)}`}
+                    >
+                      {c.linkedLead.source.trim()}
+                    </span>
+                  ) : (
+                    <span className="text-text-secondary">—</span>
+                  )}
                 </td>
                 <td className="px-4 py-3 align-top text-text-secondary">
                   {formatDate(c.created_at)}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Bar,
@@ -25,8 +25,6 @@ import {
   MoreHorizontal,
 } from "lucide-react";
 import {
-  leads,
-  deals,
   playbookCategories,
   prospectingTasks,
   DEAL_STAGE_LABELS,
@@ -36,6 +34,11 @@ import {
   type ProspectingTask,
   type ProspectingTaskType,
 } from "@/lib/crm/mock-data";
+import type {
+  DashboardFunnelStage,
+  LeadsAppointmentsPoint,
+} from "@/lib/crm/dashboard-data";
+import DashboardRangePicker from "@/components/crm/DashboardRangePicker";
 import {
   getCompletions,
   loadPlaybookCategories,
@@ -105,60 +108,23 @@ const TASK_TYPE_ICONS: Record<ProspectingTaskType, React.ReactNode> = {
   other: <MoreHorizontal className="h-4 w-4" />,
 };
 
-// ── Sales funnel data ───────────────────────────────────────────────────────
-
-type FunnelStage = {
-  label: string;
-  count: number;
-  value: number;
-  color: string;
-  bg: string;
-};
-
-function buildFunnel(): FunnelStage[] {
-  const leadCount = leads.length;
-  const appointmentCount = leads.filter(
-    (l) => l.stage !== "new"
-  ).length;
-  const qualifiedCount = leads.filter(
-    (l) => l.stage === "qualified"
-  ).length;
-  const dealsClosed = deals.filter(
-    (d) => d.stage === "closed_won"
-  );
-  const closedCount = dealsClosed.length;
-  const revenue = dealsClosed.reduce((s, d) => s + d.value, 0);
-
-  return [
-    { label: "Leads", count: leadCount, value: 0, color: "#3b82f6", bg: "bg-blue-50 dark:bg-blue-500/12" },
-    { label: "Appointments", count: appointmentCount, value: 0, color: "#8b5cf6", bg: "bg-violet-50 dark:bg-violet-500/12" },
-    { label: "Qualified", count: qualifiedCount, value: 0, color: "#10b981", bg: "bg-emerald-50 dark:bg-emerald-500/12" },
-    { label: "Deals Closed", count: closedCount, value: 0, color: "#f59e0b", bg: "bg-amber-50 dark:bg-amber-500/12" },
-    { label: "Revenue", count: 0, value: revenue, color: "#10b981", bg: "bg-emerald-50 dark:bg-emerald-500/12" },
-  ];
-}
-
 function convRate(a: number, b: number) {
   if (a === 0) return "—";
   return `${Math.round((b / a) * 100)}%`;
 }
 
-// ── Leads & appointments chart data ─────────────────────────────────────────
-
-function buildLeadsChart() {
-  const months = ["Oct", "Nov", "Dec", "Jan", "Feb", "Mar"];
-  return months.map((m) => ({
-    month: m,
-    appointments: 0,
-    leads: 0,
-  }));
-}
-
 // ── Active tasks for dashboard ──────────────────────────────────────────────
 
-function getActiveTasks(today: Date): ProspectingTask[] {
+function getActiveTasks(
+  today: Date,
+  range: { from: string; to: string }
+): ProspectingTask[] {
   return prospectingTasks
-    .filter((t) => t.status !== "completed" && t.status !== "skipped")
+    .filter((t) => {
+      if (t.status === "completed" || t.status === "skipped") return false;
+      const d = t.dueDate.slice(0, 10);
+      return d >= range.from && d <= range.to;
+    })
     .sort((a, b) => {
       const aOver = daysBetween(a.dueDate, today) > 0 ? 0 : 1;
       const bOver = daysBetween(b.dueDate, today) > 0 ? 0 : 1;
@@ -185,28 +151,47 @@ function buildDealsHeatmap() {
 // ── Component ───────────────────────────────────────────────────────────────
 
 interface DashboardViewProps {
-  leadsThisWeek: number;
-  appointmentsToday: number;
+  activeClients: number;
+  activeProjects: number;
   revenueWeek: number;
   expensesWeek: number;
   chartData: DailyMoneyPoint[];
   hasErrors: boolean;
+  dateFrom: string;
+  dateTo: string;
+  rangeLabel: string;
+  isAllTime: boolean;
+  funnel: DashboardFunnelStage[];
+  leadsChartData: LeadsAppointmentsPoint[];
 }
 
 export default function DashboardView({
-  leadsThisWeek,
-  appointmentsToday,
+  activeClients,
+  activeProjects,
   revenueWeek,
   expensesWeek,
   chartData,
   hasErrors,
+  dateFrom,
+  dateTo,
+  rangeLabel,
+  isAllTime,
+  funnel,
+  leadsChartData,
 }: DashboardViewProps) {
   const today = new Date();
-  const funnel = buildFunnel();
-  const activeTasks = getActiveTasks(today);
-  const leadsChartData = buildLeadsChart();
+  const range = { from: dateFrom, to: dateTo };
+  const activeTasks = getActiveTasks(today, range);
   const heatmap = buildDealsHeatmap();
   const profit = revenueWeek - expensesWeek;
+
+  const leadsBars = useMemo(
+    () =>
+      leadsChartData.length > 0
+        ? leadsChartData
+        : [{ label: "—", leads: 0, appointments: 0 }],
+    [leadsChartData]
+  );
 
   const chartTheme = useDashboardChartTheme();
   const [playbookCats, setPlaybookCats] = useState<PlaybookCategory[]>(
@@ -285,31 +270,34 @@ export default function DashboardView({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <h1 className="heading-display text-2xl font-bold text-text-primary dark:text-zinc-50">
             Dashboard
           </h1>
           <p className="text-sm text-text-secondary dark:text-zinc-400">
-            This week · at-a-glance
+            {rangeLabel}
           </p>
         </div>
-        <Link
-          href="/leads"
-          className="text-sm font-medium text-accent hover:underline dark:text-blue-400 dark:hover:text-blue-300"
-        >
-          Manage leads →
-        </Link>
+        <DashboardRangePicker
+          from={dateFrom}
+          to={dateTo}
+          isAllTime={isAllTime}
+        />
       </div>
 
       {/* KPIs */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <KpiCard label="New leads (week)" value={String(leadsThisWeek)} />
-        <KpiCard label="Appointments today" value={String(appointmentsToday)} />
-        <KpiCard label="Revenue (week)" value={fmt(revenueWeek)} />
-        <KpiCard label="Expenses (week)" value={fmt(expensesWeek)} />
-        <KpiCard label="Profit (week)" value={fmt(profit)} accent />
+        <KpiCard label="Active clients" value={String(activeClients)} />
+        <KpiCard label="Active projects" value={String(activeProjects)} />
+        <KpiCard label="Revenue" value={fmt(revenueWeek)} />
+        <KpiCard label="Expenses" value={fmt(expensesWeek)} />
+        <KpiCard label="Profit" value={fmt(profit)} accent />
       </div>
+      <p className="text-xs text-text-secondary/80 dark:text-zinc-500">
+        KPIs and charts use the selected date range (clients and projects: created
+        in range; revenue and expenses: transaction dates in range).
+      </p>
 
       {/* Daily Playbook summary */}
       <div className={`${dashCard} p-5`}>
@@ -357,7 +345,9 @@ export default function DashboardView({
           <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/60 dark:text-zinc-500">
             Sales Funnel
           </p>
-          <span className="text-xs text-text-secondary dark:text-zinc-500">All time</span>
+          <span className="text-xs text-text-secondary dark:text-zinc-500">
+            {rangeLabel}
+          </span>
         </div>
         <div className="mt-5 flex items-center justify-between gap-2">
           {funnel.map((stage, i) => (
@@ -484,16 +474,18 @@ export default function DashboardView({
             <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/60 dark:text-zinc-500">
               Leads & Appointments
             </p>
-            <span className="text-xs text-text-secondary dark:text-zinc-500">This Month</span>
+            <span className="text-xs text-text-secondary dark:text-zinc-500">
+              {rangeLabel}
+            </span>
           </div>
           <div className="mt-4 h-[220px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
-                data={leadsChartData}
+                data={leadsBars}
                 margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} vertical={false} />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill: chartTheme.tick }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: chartTheme.tick }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: chartTheme.tick }} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip
                   contentStyle={{
@@ -518,7 +510,9 @@ export default function DashboardView({
             <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/60 dark:text-zinc-500">
               Deals Activity
             </p>
-            <span className="text-xs text-text-secondary dark:text-zinc-500">This Week</span>
+            <span className="text-xs text-text-secondary dark:text-zinc-500">
+              {rangeLabel}
+            </span>
           </div>
           <div className="mt-4 overflow-x-auto">
             <div className="grid min-w-[400px]" style={{ gridTemplateColumns: `auto repeat(${heatmap.hours.length}, 1fr)` }}>
@@ -574,7 +568,7 @@ export default function DashboardView({
       {!hasErrors && chartData.length > 0 && (
         <div className={`${dashCard} p-6`}>
           <h2 className="text-sm font-semibold uppercase tracking-wider text-text-secondary dark:text-zinc-400">
-            Revenue vs expenses (last 7 days)
+            Revenue vs expenses · {rangeLabel}
           </h2>
           <div className="mt-4 h-[280px] w-full min-w-0">
             <ResponsiveContainer width="100%" height="100%">

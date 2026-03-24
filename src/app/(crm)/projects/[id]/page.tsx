@@ -28,6 +28,8 @@ import ProjectMilestonesView from "@/components/crm/project/ProjectMilestonesVie
 import ProjectTasksView, {
   type TaskCreateIntent,
 } from "@/components/crm/project/ProjectTasksView";
+import CrmPopoverDateField from "@/components/crm/CrmPopoverDateField";
+import { Loader2, Pencil, Trash2 } from "lucide-react";
 import type {
   WorkspaceSprint,
   WorkspaceTask,
@@ -62,12 +64,14 @@ export default function ProjectDetailPage({ params }: Props) {
   );
   const [activeTab, setActiveTab] = useState("sprint-board");
   const [sprintModalOpen, setSprintModalOpen] = useState(false);
+  const [editingSprintId, setEditingSprintId] = useState<string | null>(null);
   const [sprintName, setSprintName] = useState("");
   const [sprintMilestone, setSprintMilestone] = useState("Milestone 1");
   const [sprintStart, setSprintStart] = useState(() =>
     formatISODate(new Date())
   );
   const [sprintEnd, setSprintEnd] = useState(() => formatISODate(new Date()));
+  const [sprintDeleteId, setSprintDeleteId] = useState<string | null>(null);
   const [taskCreateIntent, setTaskCreateIntent] =
     useState<TaskCreateIntent>(null);
 
@@ -80,6 +84,8 @@ export default function ProjectDetailPage({ params }: Props) {
     workspace,
     hydrated,
     addSprint,
+    updateSprint,
+    deleteSprint,
     setCurrentSprint,
     addTask,
     updateTask,
@@ -136,18 +142,82 @@ export default function ProjectDetailPage({ params }: Props) {
     ? sprints.filter((s) => s.milestone === currentSprint.milestone).length
     : 0;
 
-  function submitCreateSprint(e: FormEvent) {
+  const sprintDateTriggerClass =
+    "mt-1 w-full rounded-lg border border-border px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 relative flex min-h-[2.625rem] items-center text-left";
+
+  function resetSprintFormDefaults() {
+    setSprintName("");
+    setSprintMilestone("Milestone 1");
+    const today = formatISODate(new Date());
+    setSprintStart(today);
+    setSprintEnd(today);
+  }
+
+  function openCreateSprintModal() {
+    setEditingSprintId(null);
+    resetSprintFormDefaults();
+    setSprintModalOpen(true);
+  }
+
+  function openEditSprintModal(s: WorkspaceSprint) {
+    setEditingSprintId(s.id);
+    setSprintName(s.name);
+    setSprintMilestone(s.milestone);
+    setSprintStart(s.startDate);
+    setSprintEnd(s.endDate);
+    setSprintModalOpen(true);
+  }
+
+  function closeSprintModal() {
+    setSprintModalOpen(false);
+    setEditingSprintId(null);
+    resetSprintFormDefaults();
+  }
+
+  function submitSprintModal(e: FormEvent) {
     e.preventDefault();
     if (!sprintName.trim()) return;
-    addSprint({
-      name: sprintName.trim(),
-      milestone: sprintMilestone.trim() || "Milestone",
-      startDate: sprintStart,
-      endDate: sprintEnd,
-      isCurrent: false,
-    });
-    setSprintModalOpen(false);
-    setSprintName("");
+    const name = sprintName.trim();
+    const milestone = sprintMilestone.trim() || "Milestone";
+    if (editingSprintId) {
+      updateSprint(editingSprintId, {
+        name,
+        milestone,
+        startDate: sprintStart,
+        endDate: sprintEnd,
+      });
+    } else {
+      addSprint({
+        name,
+        milestone,
+        startDate: sprintStart,
+        endDate: sprintEnd,
+        isCurrent: false,
+      });
+    }
+    closeSprintModal();
+  }
+
+  function handleDeleteSprint(s: WorkspaceSprint) {
+    const taskCount = workspace.tasks.filter((t) => t.sprintId === s.id).length;
+    const label = s.name?.trim() || "this sprint";
+    const backlogNote =
+      taskCount > 0
+        ? ` ${taskCount} task${taskCount === 1 ? "" : "s"} will move to the backlog.`
+        : "";
+    if (
+      !confirm(
+        `Delete sprint “${label}”?${backlogNote} This cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    setSprintDeleteId(s.id);
+    try {
+      deleteSprint(s.id);
+    } finally {
+      setSprintDeleteId(null);
+    }
   }
 
   let panelContent: React.ReactNode = null;
@@ -167,7 +237,10 @@ export default function ProjectDetailPage({ params }: Props) {
           sprints={sprints}
           sprintsInMilestone={sprintsInMilestone}
           onSetCurrentSprint={setCurrentSprint}
-          onOpenCreateSprint={() => setSprintModalOpen(true)}
+          onOpenCreateSprint={openCreateSprintModal}
+          onEditSprint={openEditSprintModal}
+          onDeleteSprint={handleDeleteSprint}
+          sprintDeleteId={sprintDeleteId}
           onAddTask={(status) => {
             setActiveTab("tasks");
             setTaskCreateIntent({
@@ -186,7 +259,7 @@ export default function ProjectDetailPage({ params }: Props) {
           </p>
           <button
             type="button"
-            onClick={() => setSprintModalOpen(true)}
+            onClick={openCreateSprintModal}
             className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white"
           >
             Create sprint
@@ -384,15 +457,15 @@ export default function ProjectDetailPage({ params }: Props) {
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           role="presentation"
-          onClick={() => setSprintModalOpen(false)}
+          onClick={closeSprintModal}
         >
           <form
             className="w-full max-w-md rounded-2xl border border-border bg-white p-6 shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
             onClick={(e) => e.stopPropagation()}
-            onSubmit={submitCreateSprint}
+            onSubmit={submitSprintModal}
           >
             <h3 className="text-lg font-bold text-text-primary dark:text-zinc-100">
-              Create sprint
+              {editingSprintId ? "Edit sprint" : "Create sprint"}
             </h3>
             <div className="mt-4 space-y-3">
               <label className="block text-sm text-text-secondary">
@@ -413,29 +486,41 @@ export default function ProjectDetailPage({ params }: Props) {
                   className="mt-1 w-full rounded-lg border border-border px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800"
                 />
               </label>
-              <label className="block text-sm text-text-secondary">
-                Start date
-                <input
-                  type="date"
+              <div>
+                <label
+                  htmlFor="sprint-start-date"
+                  className="block text-sm text-text-secondary"
+                >
+                  Start date
+                </label>
+                <CrmPopoverDateField
+                  id="sprint-start-date"
                   value={sprintStart}
-                  onChange={(e) => setSprintStart(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-border px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800"
+                  onChange={setSprintStart}
+                  displayFormat="numeric"
+                  triggerClassName={sprintDateTriggerClass}
                 />
-              </label>
-              <label className="block text-sm text-text-secondary">
-                End date
-                <input
-                  type="date"
+              </div>
+              <div>
+                <label
+                  htmlFor="sprint-end-date"
+                  className="block text-sm text-text-secondary"
+                >
+                  End date
+                </label>
+                <CrmPopoverDateField
+                  id="sprint-end-date"
                   value={sprintEnd}
-                  onChange={(e) => setSprintEnd(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-border px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800"
+                  onChange={setSprintEnd}
+                  displayFormat="numeric"
+                  triggerClassName={sprintDateTriggerClass}
                 />
-              </label>
+              </div>
             </div>
             <div className="mt-6 flex justify-end gap-2">
               <button
                 type="button"
-                onClick={() => setSprintModalOpen(false)}
+                onClick={closeSprintModal}
                 className="rounded-lg border border-border px-4 py-2 text-sm dark:border-zinc-600"
               >
                 Cancel
@@ -444,7 +529,7 @@ export default function ProjectDetailPage({ params }: Props) {
                 type="submit"
                 className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white"
               >
-                Create
+                {editingSprintId ? "Save changes" : "Create"}
               </button>
             </div>
           </form>
@@ -461,6 +546,9 @@ function SprintBoard({
   sprintsInMilestone,
   onSetCurrentSprint,
   onOpenCreateSprint,
+  onEditSprint,
+  onDeleteSprint,
+  sprintDeleteId,
   onAddTask,
   onMoveTask,
 }: {
@@ -470,6 +558,9 @@ function SprintBoard({
   sprintsInMilestone: number;
   onSetCurrentSprint: (id: string) => void;
   onOpenCreateSprint: () => void;
+  onEditSprint: (s: WorkspaceSprint) => void;
+  onDeleteSprint: (s: WorkspaceSprint) => void;
+  sprintDeleteId: string | null;
   onAddTask: (status: TaskStatus) => void;
   onMoveTask: (
     taskId: string,
@@ -490,27 +581,51 @@ function SprintBoard({
         <h2 className="text-lg font-bold text-text-primary dark:text-zinc-100">
           Sprint Board
         </h2>
-        {sprints.length > 1 ? (
-          <MetaField label="Sprint">
-            <select
-              value={sprint.id}
-              onChange={(e) => onSetCurrentSprint(e.target.value)}
-              className="rounded-lg border border-border bg-white px-2 py-1 text-sm font-medium dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+        <MetaField label="Sprint">
+          <div className="flex flex-wrap items-center gap-1">
+            {sprints.length > 1 ? (
+              <select
+                value={sprint.id}
+                onChange={(e) => onSetCurrentSprint(e.target.value)}
+                className="rounded-lg border border-border bg-white px-2 py-1 text-sm font-medium dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+              >
+                {sprints.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span className="font-medium text-text-primary dark:text-zinc-100">
+                {sprint.name}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => onEditSprint(sprint)}
+              title="Edit sprint"
+              className="inline-flex items-center justify-center rounded-lg border border-border p-1.5 text-zinc-600 transition-colors hover:bg-surface dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              aria-label={`Edit ${sprint.name}`}
             >
-              {sprints.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </MetaField>
-        ) : (
-          <MetaField label="Current Sprint">
-            <span className="font-medium text-text-primary dark:text-zinc-100">
-              {sprint.name}
-            </span>
-          </MetaField>
-        )}
+              <Pencil className="h-4 w-4 shrink-0" aria-hidden />
+            </button>
+            <button
+              type="button"
+              disabled={sprintDeleteId === sprint.id}
+              title="Delete sprint"
+              className="inline-flex items-center justify-center rounded-lg border border-border p-1.5 text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:border-zinc-600 dark:text-red-400 dark:hover:bg-red-950/40"
+              aria-label={`Delete ${sprint.name}`}
+              aria-busy={sprintDeleteId === sprint.id}
+              onClick={() => onDeleteSprint(sprint)}
+            >
+              {sprintDeleteId === sprint.id ? (
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+              ) : (
+                <Trash2 className="h-4 w-4 shrink-0" aria-hidden />
+              )}
+            </button>
+          </div>
+        </MetaField>
         <MetaField label="Expected End Date">
           <span className="font-medium text-text-primary dark:text-zinc-100">
             {sprint.endDate}
