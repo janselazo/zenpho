@@ -751,14 +751,6 @@ function DealsTableRow({
             </>
           ) : (
             <>
-              <button
-                type="button"
-                onClick={onStartEdit}
-                className={`${iconActionClass} text-accent hover:bg-accent/10`}
-                aria-label="Edit deal"
-              >
-                <Pencil className="h-4 w-4" aria-hidden />
-              </button>
               {persistDeals ? (
                 <button
                   type="button"
@@ -775,6 +767,14 @@ function DealsTableRow({
                   <ListTodo className="h-4 w-4" aria-hidden />
                 </button>
               ) : null}
+              <button
+                type="button"
+                onClick={onStartEdit}
+                className={`${iconActionClass} text-accent hover:bg-accent/10`}
+                aria-label="Edit deal"
+              >
+                <Pencil className="h-4 w-4" aria-hidden />
+              </button>
               {persistDeals ? (
                 <button
                   type="button"
