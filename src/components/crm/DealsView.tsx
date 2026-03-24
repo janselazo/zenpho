@@ -2,7 +2,14 @@
 
 import { useEffect, useId, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search } from "lucide-react";
+import {
+  Check,
+  Loader2,
+  Pencil,
+  Search,
+  Trash2,
+  X,
+} from "lucide-react";
 import KanbanBoard, { type KanbanColumn } from "@/components/crm/KanbanBoard";
 import CrmPopoverDateField from "@/components/crm/CrmPopoverDateField";
 import {
@@ -46,7 +53,10 @@ function formatCurrency(n: number) {
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", {
+  if (!iso?.trim()) return "—";
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return "—";
+  return new Date(t).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -219,7 +229,12 @@ export default function DealsView({
         {view === "table" && (
           <DealsTable
             deals={filtered}
-            onEdit={setEditing}
+            lockContactFields={persistDeals}
+            onSaveDeal={async (updated) => {
+              if (persistDeals) return handlePersistSave(updated);
+              handleLocalSave(updated);
+              return undefined;
+            }}
             onDelete={(id) => {
               if (
                 !confirm(
@@ -291,15 +306,66 @@ export default function DealsView({
   );
 }
 
+const tableCellInputClass =
+  "w-full min-w-0 rounded-lg border border-border bg-white px-2 py-1.5 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100";
+
+const iconActionClass =
+  "inline-flex shrink-0 items-center justify-center rounded-lg p-2 transition-colors disabled:opacity-50";
+
 function DealsTable({
   deals,
-  onEdit,
+  lockContactFields,
+  onSaveDeal,
   onDelete,
 }: {
   deals: MockDeal[];
-  onEdit: (deal: MockDeal) => void;
+  lockContactFields: boolean;
+  onSaveDeal: (updated: MockDeal) => Promise<string | undefined>;
   onDelete: (id: string) => void;
 }) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<MockDeal | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (editingId && !deals.some((d) => d.id === editingId)) {
+      setEditingId(null);
+      setDraft(null);
+      setSaveError(null);
+    }
+  }, [deals, editingId]);
+
+  function patchDraft(patch: Partial<MockDeal>) {
+    setDraft((d) => (d ? { ...d, ...patch } : null));
+  }
+
+  function startEdit(deal: MockDeal) {
+    setSaveError(null);
+    setEditingId(deal.id);
+    setDraft({ ...deal });
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setDraft(null);
+    setSaveError(null);
+  }
+
+  async function commitEdit() {
+    if (!draft) return;
+    setSaving(true);
+    setSaveError(null);
+    const err = await onSaveDeal(draft);
+    setSaving(false);
+    if (err) {
+      setSaveError(err);
+      return;
+    }
+    setEditingId(null);
+    setDraft(null);
+  }
+
   if (deals.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-border bg-white py-16 text-center text-sm text-text-secondary">
@@ -309,10 +375,18 @@ function DealsTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-border bg-white shadow-sm">
+    <div className="overflow-x-auto rounded-2xl border border-border bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-950">
+      {saveError ? (
+        <div
+          className="border-b border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-200"
+          role="alert"
+        >
+          {saveError}
+        </div>
+      ) : null}
       <table className="w-full text-left text-sm">
         <thead>
-          <tr className="border-b border-border">
+          <tr className="border-b border-border dark:border-zinc-700">
             <th className="px-4 py-3 font-semibold text-text-secondary">Deal</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Company</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Budget</th>
@@ -322,81 +396,261 @@ function DealsTable({
             <th className="px-4 py-3 font-semibold text-text-secondary">Actions</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-border">
+        <tbody className="divide-y divide-border dark:divide-zinc-700">
           {deals.map((deal) => {
-            const initials = deal.company
+            const isEditing = editingId === deal.id;
+            const rowCompany = isEditing && draft ? draft.company : deal.company;
+            const initials = rowCompany
               .split(" ")
               .map((w) => w[0])
               .join("")
               .toUpperCase()
               .slice(0, 2);
+
             return (
-              <tr key={deal.id} className="transition-colors hover:bg-surface/50">
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2.5">
-                    <span
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-                      style={{ backgroundColor: DEAL_STAGE_COLORS[deal.stage] }}
-                    >
-                      {initials}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => onEdit(deal)}
-                      className="font-medium text-text-primary hover:text-accent"
-                    >
-                      {deal.title}
-                    </button>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-text-secondary">{deal.company}</td>
-                <td className="px-4 py-3 font-medium text-text-primary">
-                  {formatCurrency(deal.value)}
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${stageBgClasses[deal.stage]}`}
-                  >
-                    <span
-                      className="h-1.5 w-1.5 rounded-full"
-                      style={{ backgroundColor: DEAL_STAGE_COLORS[deal.stage] }}
-                    />
-                    {DEAL_STAGE_LABELS[deal.stage]}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <div>
-                    <p className="text-text-primary">{deal.contactName}</p>
-                    <p className="text-xs text-text-secondary">{deal.contactEmail}</p>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-text-secondary">
-                  {formatDate(deal.expectedClose)}
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <button
-                      type="button"
-                      onClick={() => onEdit(deal)}
-                      className="text-xs font-medium text-accent hover:underline"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onDelete(deal.id)}
-                      className="text-xs font-medium text-red-600 hover:underline dark:text-red-400"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </td>
-              </tr>
+              <DealsTableRow
+                key={deal.id}
+                deal={deal}
+                isEditing={isEditing}
+                draft={draft}
+                patchDraft={patchDraft}
+                initials={initials}
+                lockContactFields={lockContactFields}
+                saving={saving}
+                onStartEdit={() => startEdit(deal)}
+                onCancelEdit={cancelEdit}
+                onCommitEdit={() => void commitEdit()}
+                onDelete={() => onDelete(deal.id)}
+              />
             );
           })}
         </tbody>
       </table>
     </div>
+  );
+}
+
+function DealsTableRow({
+  deal,
+  isEditing,
+  draft,
+  patchDraft,
+  initials,
+  lockContactFields,
+  saving,
+  onStartEdit,
+  onCancelEdit,
+  onCommitEdit,
+  onDelete,
+}: {
+  deal: MockDeal;
+  isEditing: boolean;
+  draft: MockDeal | null;
+  patchDraft: (patch: Partial<MockDeal>) => void;
+  initials: string;
+  lockContactFields: boolean;
+  saving: boolean;
+  onStartEdit: () => void;
+  onCancelEdit: () => void;
+  onCommitEdit: () => void;
+  onDelete: () => void;
+}) {
+  const expectedCloseId = useId();
+  const stageForBadge = isEditing && draft ? draft.stage : deal.stage;
+
+  return (
+    <tr className="transition-colors hover:bg-surface/50 dark:hover:bg-zinc-900/40">
+      <td className="px-4 py-3 align-top">
+        <div className="flex items-start gap-2.5">
+          <span
+            className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+            style={{ backgroundColor: DEAL_STAGE_COLORS[stageForBadge] }}
+          >
+            {initials}
+          </span>
+          {isEditing && draft ? (
+            <input
+              type="text"
+              value={draft.title}
+              onChange={(e) => patchDraft({ title: e.target.value })}
+              className={`${tableCellInputClass} min-w-[10rem]`}
+              aria-label="Deal title"
+            />
+          ) : (
+            <span className="pt-1.5 font-medium text-text-primary dark:text-zinc-100">
+              {deal.title}
+            </span>
+          )}
+        </div>
+      </td>
+      <td className="px-4 py-3 align-top">
+        {isEditing && draft ? (
+          <input
+            type="text"
+            value={draft.company}
+            onChange={(e) => patchDraft({ company: e.target.value })}
+            className={tableCellInputClass}
+            aria-label="Company"
+          />
+        ) : (
+          <span className="text-text-secondary dark:text-zinc-400">
+            {deal.company}
+          </span>
+        )}
+      </td>
+      <td className="max-w-[7rem] px-4 py-3 align-top">
+        {isEditing && draft ? (
+          <input
+            type="number"
+            min={0}
+            value={draft.value}
+            onChange={(e) =>
+              patchDraft({ value: Number(e.target.value) || 0 })
+            }
+            className={tableCellInputClass}
+            aria-label="Budget"
+          />
+        ) : (
+          <span className="font-medium text-text-primary dark:text-zinc-100">
+            {formatCurrency(deal.value)}
+          </span>
+        )}
+      </td>
+      <td className="min-w-[9.5rem] px-4 py-3 align-top">
+        {isEditing && draft ? (
+          <select
+            value={draft.stage}
+            onChange={(e) =>
+              patchDraft({ stage: e.target.value as DealStage })
+            }
+            className={tableCellInputClass}
+            aria-label="Stage"
+          >
+            {stageOrder.map((s) => (
+              <option key={s} value={s}>
+                {DEAL_STAGE_LABELS[s]}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <span
+            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${stageBgClasses[deal.stage]}`}
+          >
+            <span
+              className="h-1.5 w-1.5 rounded-full"
+              style={{ backgroundColor: DEAL_STAGE_COLORS[deal.stage] }}
+            />
+            {DEAL_STAGE_LABELS[deal.stage]}
+          </span>
+        )}
+      </td>
+      <td className="min-w-[10rem] px-4 py-3 align-top">
+        {isEditing && draft ? (
+          lockContactFields ? (
+            <div className="pt-1">
+              <p className="text-text-primary dark:text-zinc-100">
+                {draft.contactName}
+              </p>
+              <p className="text-xs text-text-secondary dark:text-zinc-400">
+                {draft.contactEmail}
+              </p>
+              <p className="mt-1 text-xs text-text-secondary dark:text-zinc-500">
+                Edit contact on the lead record.
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              <input
+                type="text"
+                value={draft.contactName}
+                onChange={(e) => patchDraft({ contactName: e.target.value })}
+                className={tableCellInputClass}
+                aria-label="Contact name"
+              />
+              <input
+                type="email"
+                value={draft.contactEmail}
+                onChange={(e) => patchDraft({ contactEmail: e.target.value })}
+                className={tableCellInputClass}
+                aria-label="Contact email"
+              />
+            </div>
+          )
+        ) : (
+          <div>
+            <p className="text-text-primary dark:text-zinc-100">
+              {deal.contactName}
+            </p>
+            <p className="text-xs text-text-secondary dark:text-zinc-400">
+              {deal.contactEmail}
+            </p>
+          </div>
+        )}
+      </td>
+      <td className="min-w-[9rem] px-4 py-3 align-top">
+        {isEditing && draft ? (
+          <CrmPopoverDateField
+            id={expectedCloseId}
+            value={draft.expectedClose}
+            onChange={(iso) => patchDraft({ expectedClose: iso })}
+            displayFormat="numeric"
+            triggerClassName={`${tableCellInputClass} relative flex min-h-[2.25rem] items-center text-left`}
+          />
+        ) : (
+          <span className="text-text-secondary dark:text-zinc-400">
+            {formatDate(deal.expectedClose)}
+          </span>
+        )}
+      </td>
+      <td className="px-4 py-3 align-top">
+        <div className="flex flex-wrap items-center gap-1">
+          {isEditing ? (
+            <>
+              <button
+                type="button"
+                onClick={onCommitEdit}
+                disabled={saving}
+                className={`${iconActionClass} text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/50`}
+                aria-label="Save changes"
+              >
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                ) : (
+                  <Check className="h-4 w-4" aria-hidden />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={onCancelEdit}
+                disabled={saving}
+                className={`${iconActionClass} text-text-secondary hover:bg-surface dark:hover:bg-zinc-800`}
+                aria-label="Cancel editing"
+              >
+                <X className="h-4 w-4" aria-hidden />
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={onStartEdit}
+              className={`${iconActionClass} text-accent hover:bg-accent/10`}
+              aria-label="Edit deal"
+            >
+              <Pencil className="h-4 w-4" aria-hidden />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onDelete}
+            disabled={saving}
+            className={`${iconActionClass} text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40`}
+            aria-label="Delete deal"
+          >
+            <Trash2 className="h-4 w-4" aria-hidden />
+          </button>
+        </div>
+      </td>
+    </tr>
   );
 }
 
