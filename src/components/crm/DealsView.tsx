@@ -314,7 +314,7 @@ function DealsTable({
           <tr className="border-b border-border">
             <th className="px-4 py-3 font-semibold text-text-secondary">Deal</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Company</th>
-            <th className="px-4 py-3 font-semibold text-text-secondary">Revenue</th>
+            <th className="px-4 py-3 font-semibold text-text-secondary">Budget</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Stage</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Contact</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Expected Close</th>
@@ -438,7 +438,7 @@ function DealFormFields({
       </div>
       <div>
         <label className="mb-1 block text-sm font-medium text-text-primary">
-          Revenue ($)
+          Budget ($)
         </label>
         <input
           name="value"

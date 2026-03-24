@@ -1341,7 +1341,7 @@ function CreateDealForLeadModal({
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-text-primary">
-                Revenue ($)
+                Budget ($)
               </label>
               <input
                 name="value"

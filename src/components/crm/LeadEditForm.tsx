@@ -263,7 +263,7 @@ export default function LeadEditForm({
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-text-secondary">
-                Revenue ($)
+                Budget ($)
               </label>
               <input
                 name="deal_value"

@@ -506,7 +506,7 @@ export async function createDealRecord(input: {
 
   const valueNum = input.value;
   if (Number.isNaN(valueNum) || valueNum < 0) {
-    return { error: "Revenue must be a valid number." };
+    return { error: "Budget must be a valid number." };
   }
 
   const expectedClose =
