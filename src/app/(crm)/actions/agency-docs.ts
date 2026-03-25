@@ -12,7 +12,6 @@ import {
 } from "@/lib/crm/agency-custom-doc-server";
 import {
   isValidCustomDocSlugFormat,
-  normalizeSlugInput,
   slugifyTitle,
 } from "@/lib/crm/agency-custom-doc";
 import {
@@ -210,16 +209,13 @@ export async function reorderAgencyDocHubCards(orderedSlugs: string[]) {
 export async function createAgencyCustomDoc(form: {
   title: string;
   description: string;
-  slug?: string;
 }) {
   const title = form.title.trim();
   const desc = form.description.trim();
   if (!title) return { error: "Title is required." as const };
   if (!desc) return { error: "Description is required." as const };
 
-  let slug = form.slug?.trim()
-    ? normalizeSlugInput(form.slug)
-    : slugifyTitle(title);
+  const slug = slugifyTitle(title);
 
   if (!isValidCustomDocSlugFormat(slug)) {
     return {

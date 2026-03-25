@@ -10,7 +10,6 @@ export default function AgencyNewDocButton() {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [slug, setSlug] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -18,7 +17,6 @@ export default function AgencyNewDocButton() {
     if (!open) {
       setTitle("");
       setDescription("");
-      setSlug("");
       setError(null);
     }
   }, [open]);
@@ -27,11 +25,7 @@ export default function AgencyNewDocButton() {
     e.preventDefault();
     setError(null);
     startTransition(async () => {
-      const res = await createAgencyCustomDoc({
-        title,
-        description,
-        slug: slug.trim() || undefined,
-      });
+      const res = await createAgencyCustomDoc({ title, description });
       if ("error" in res && res.error) {
         setError(res.error);
         return;
@@ -79,8 +73,8 @@ export default function AgencyNewDocButton() {
               New document
             </h2>
             <p className="mt-1 text-sm text-text-secondary dark:text-zinc-400">
-              Add a doc to the hub. Slug is optional — we derive one from the
-              title if you leave it blank.
+              Add a doc to the hub. The page URL is generated automatically from
+              the title.
             </p>
 
             <label className="mt-5 block text-sm font-medium text-text-primary dark:text-zinc-200">
@@ -105,21 +99,6 @@ export default function AgencyNewDocButton() {
                 className="mt-1.5 w-full resize-y rounded-xl border border-border bg-white px-3 py-2 text-sm text-text-primary outline-none ring-accent/0 focus:border-accent/40 focus:ring-2 focus:ring-accent/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
                 placeholder="Short summary for the card on the hub"
                 required
-              />
-            </label>
-
-            <label className="mt-4 block text-sm font-medium text-text-primary dark:text-zinc-200">
-              URL slug{" "}
-              <span className="font-normal text-text-secondary dark:text-zinc-500">
-                (optional)
-              </span>
-              <input
-                type="text"
-                value={slug}
-                onChange={(e) => setSlug(e.target.value)}
-                className="mt-1.5 w-full rounded-xl border border-border bg-white px-3 py-2 font-mono text-sm text-text-primary outline-none ring-accent/0 focus:border-accent/40 focus:ring-2 focus:ring-accent/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-                placeholder="my-doc-name"
-                autoComplete="off"
               />
             </label>
 

@@ -721,3 +721,120 @@ create policy "agency_all_prospect_intel_report"
   with check (public.is_agency_staff());
 
 grant select, insert, update, delete on public.prospect_intel_report to authenticated;
+
+-- ----- 20260405120000_agency_workspace_doc.sql -----
+create table if not exists public.agency_workspace_doc (
+  slug text primary key,
+  body text not null default '',
+  updated_at timestamptz not null default now(),
+  updated_by uuid references auth.users (id) on delete set null
+);
+
+create index if not exists agency_workspace_doc_updated_at_idx
+  on public.agency_workspace_doc (updated_at desc);
+
+alter table public.agency_workspace_doc enable row level security;
+
+drop policy if exists "agency_workspace_doc_select" on public.agency_workspace_doc;
+create policy "agency_workspace_doc_select"
+  on public.agency_workspace_doc for select
+  using (public.is_agency_staff());
+
+drop policy if exists "agency_workspace_doc_insert" on public.agency_workspace_doc;
+create policy "agency_workspace_doc_insert"
+  on public.agency_workspace_doc for insert
+  with check (public.is_agency_staff());
+
+drop policy if exists "agency_workspace_doc_update" on public.agency_workspace_doc;
+create policy "agency_workspace_doc_update"
+  on public.agency_workspace_doc for update
+  using (public.is_agency_staff())
+  with check (public.is_agency_staff());
+
+drop policy if exists "agency_workspace_doc_delete" on public.agency_workspace_doc;
+create policy "agency_workspace_doc_delete"
+  on public.agency_workspace_doc for delete
+  using (public.is_agency_staff());
+
+grant select, insert, update, delete on public.agency_workspace_doc to authenticated;
+
+-- ----- 20260406120000_agency_doc_hub_card.sql -----
+create table if not exists public.agency_doc_hub_card (
+  slug text primary key,
+  hidden boolean not null default false,
+  title_override text,
+  description_override text,
+  updated_at timestamptz not null default now(),
+  updated_by uuid references auth.users (id) on delete set null
+);
+
+alter table public.agency_doc_hub_card enable row level security;
+
+drop policy if exists "agency_doc_hub_card_select" on public.agency_doc_hub_card;
+create policy "agency_doc_hub_card_select"
+  on public.agency_doc_hub_card for select
+  using (public.is_agency_staff());
+
+drop policy if exists "agency_doc_hub_card_insert" on public.agency_doc_hub_card;
+create policy "agency_doc_hub_card_insert"
+  on public.agency_doc_hub_card for insert
+  with check (public.is_agency_staff());
+
+drop policy if exists "agency_doc_hub_card_update" on public.agency_doc_hub_card;
+create policy "agency_doc_hub_card_update"
+  on public.agency_doc_hub_card for update
+  using (public.is_agency_staff())
+  with check (public.is_agency_staff());
+
+drop policy if exists "agency_doc_hub_card_delete" on public.agency_doc_hub_card;
+create policy "agency_doc_hub_card_delete"
+  on public.agency_doc_hub_card for delete
+  using (public.is_agency_staff());
+
+grant select, insert, update, delete on public.agency_doc_hub_card to authenticated;
+
+-- ----- 20260407120000_agency_doc_hub_card_sort_order.sql -----
+alter table public.agency_doc_hub_card
+  add column if not exists sort_order integer;
+
+comment on column public.agency_doc_hub_card.sort_order is
+  'Lower values appear first on the hub. Null falls back to registry order.';
+
+-- ----- 20260408120000_agency_custom_doc.sql -----
+create table if not exists public.agency_custom_doc (
+  id uuid primary key default gen_random_uuid(),
+  slug text not null unique,
+  title text not null,
+  description text not null,
+  icon_key text not null default 'file-text',
+  created_at timestamptz not null default now(),
+  created_by uuid references auth.users (id) on delete set null
+);
+
+create index if not exists agency_custom_doc_created_at_idx
+  on public.agency_custom_doc (created_at asc);
+
+alter table public.agency_custom_doc enable row level security;
+
+drop policy if exists "agency_custom_doc_select" on public.agency_custom_doc;
+create policy "agency_custom_doc_select"
+  on public.agency_custom_doc for select
+  using (public.is_agency_staff());
+
+drop policy if exists "agency_custom_doc_insert" on public.agency_custom_doc;
+create policy "agency_custom_doc_insert"
+  on public.agency_custom_doc for insert
+  with check (public.is_agency_staff());
+
+drop policy if exists "agency_custom_doc_update" on public.agency_custom_doc;
+create policy "agency_custom_doc_update"
+  on public.agency_custom_doc for update
+  using (public.is_agency_staff())
+  with check (public.is_agency_staff());
+
+drop policy if exists "agency_custom_doc_delete" on public.agency_custom_doc;
+create policy "agency_custom_doc_delete"
+  on public.agency_custom_doc for delete
+  using (public.is_agency_staff());
+
+grant select, insert, update, delete on public.agency_custom_doc to authenticated;
