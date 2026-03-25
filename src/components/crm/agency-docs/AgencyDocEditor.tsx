@@ -4,6 +4,16 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { saveAgencyWorkspaceDoc } from "@/app/(crm)/actions/agency-docs";
 import AgencyDocPreview from "@/components/crm/agency-docs/AgencyDocPreview";
+import AgencyDocBlockEditor, {
+  type AgencyDocBlockEditorHandle,
+} from "@/components/crm/agency-docs/AgencyDocBlockEditor";
+import {
+  blocksFromBody,
+  bodyFromBlocks,
+  isEmptyBlockHtml,
+  sanitizeDocHtml,
+  type AgencyDocBlock,
+} from "@/lib/crm/agency-doc-body";
 
 type AgencyDocEditorProps = {
   slug: string;
@@ -11,23 +21,8 @@ type AgencyDocEditorProps = {
   canPersist: boolean;
 };
 
-type BlockRow = { id: string; text: string };
-
-function blocksFromBody(body: string): BlockRow[] {
-  const t = body.trim();
-  if (!t) return [];
-  return body.split(/\n\n+/).map((s, i) => ({
-    id: `load-${i}-${s.length}`,
-    text: s.trim(),
-  }));
-}
-
-function bodyFromBlocks(rows: BlockRow[]): string {
-  return rows.map((r) => r.text).filter((b) => b.trim()).join("\n\n");
-}
-
-function newBlockRow(text = ""): BlockRow {
-  return { id: `b-${crypto.randomUUID()}`, text };
+function newBlockRow(): AgencyDocBlock {
+  return { id: `b-${crypto.randomUUID()}`, html: "<p></p>" };
 }
 
 export default function AgencyDocEditor({
@@ -35,32 +30,20 @@ export default function AgencyDocEditor({
   initialBody,
   canPersist,
 }: AgencyDocEditorProps) {
-  const [blocks, setBlocks] = useState<BlockRow[]>(() =>
+  const [blocks, setBlocks] = useState<AgencyDocBlock[]>(() =>
     blocksFromBody(initialBody)
   );
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [draft, setDraft] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const editTextareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    if (editingId === null) return;
-    const id = window.requestAnimationFrame(() => {
-      const el = editTextareaRef.current;
-      el?.focus();
-      el?.setSelectionRange(el.value.length, el.value.length);
-    });
-    return () => window.cancelAnimationFrame(id);
-  }, [editingId]);
+  const blockEditorRef = useRef<AgencyDocBlockEditorHandle>(null);
 
   useEffect(() => {
     setBlocks(blocksFromBody(initialBody));
     setEditingId(null);
-    setDraft("");
   }, [initialBody]);
 
-  function persist(nextRows: BlockRow[]) {
+  function persist(nextRows: AgencyDocBlock[]) {
     if (!canPersist) return;
     const text = bodyFromBlocks(nextRows);
     setErrorMessage(null);
@@ -83,16 +66,14 @@ export default function AgencyDocEditor({
     const i = rowIndex(id);
     if (i < 0) return;
     setEditingId(id);
-    setDraft(blocks[i].text);
   }
 
   function commitEdit() {
     if (editingId === null) return;
     const i = rowIndex(editingId);
     if (i < 0) return;
-    const next = blocks.map((b, j) =>
-      j === i ? { ...b, text: draft } : b
-    );
+    const html = blockEditorRef.current?.getHtml() ?? blocks[i].html;
+    const next = blocks.map((b, j) => (j === i ? { ...b, html } : b));
     setBlocks(next);
     setEditingId(null);
     persist(next);
@@ -100,17 +81,15 @@ export default function AgencyDocEditor({
 
   function cancelEdit() {
     setEditingId(null);
-    setDraft("");
   }
 
   function addAfter(id: string) {
     const i = rowIndex(id);
     if (i < 0) return;
-    const row = newBlockRow("");
+    const row = newBlockRow();
     const next = [...blocks.slice(0, i + 1), row, ...blocks.slice(i + 1)];
     setBlocks(next);
     setEditingId(row.id);
-    setDraft("");
   }
 
   function removeAt(id: string) {
@@ -119,23 +98,20 @@ export default function AgencyDocEditor({
     setBlocks(next);
     if (editingId === id) {
       setEditingId(null);
-      setDraft("");
     }
     persist(next);
   }
 
   function addFirstParagraph() {
-    const row = newBlockRow("");
+    const row = newBlockRow();
     setBlocks([row]);
     setEditingId(row.id);
-    setDraft("");
   }
 
   function addAtEnd() {
-    const row = newBlockRow("");
+    const row = newBlockRow();
     setBlocks([...blocks, row]);
     setEditingId(row.id);
-    setDraft("");
   }
 
   if (!canPersist) {
@@ -204,13 +180,14 @@ export default function AgencyDocEditor({
               <div className="min-w-0 flex-1">
                 {editingId === row.id ? (
                   <div className="space-y-2">
-                    <textarea
-                      ref={editTextareaRef}
-                      value={draft}
-                      onChange={(e) => setDraft(e.target.value)}
-                      rows={Math.max(3, draft.split("\n").length + 1)}
-                      className="w-full resize-y rounded-lg border border-border bg-white px-3 py-2 text-base leading-relaxed text-text-primary outline-none ring-accent/0 focus:border-accent/40 focus:ring-2 focus:ring-accent/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                      aria-label="Edit paragraph"
+                    <AgencyDocBlockEditor
+                      ref={blockEditorRef}
+                      key={`edit-${editingId}`}
+                      initialHtml={
+                        row.html?.trim() ? row.html : "<p></p>"
+                      }
+                      disabled={pending}
+                      autoFocus
                     />
                     <div className="flex gap-2">
                       <button
@@ -230,16 +207,17 @@ export default function AgencyDocEditor({
                       </button>
                     </div>
                   </div>
-                ) : (
-                  <p className="whitespace-pre-wrap text-text-secondary dark:text-zinc-400">
-                    {row.text.trim() ? (
-                      row.text
-                    ) : (
-                      <span className="italic text-text-secondary/60 dark:text-zinc-600">
-                        Empty paragraph — use edit to add text
-                      </span>
-                    )}
+                ) : isEmptyBlockHtml(row.html) ? (
+                  <p className="italic text-text-secondary/60 dark:text-zinc-600">
+                    Empty paragraph — use edit to add text
                   </p>
+                ) : (
+                  <div
+                    className="[&_code]:rounded [&_code]:bg-black/[0.06] [&_code]:px-1 [&_code]:text-sm [&_code]:dark:bg-white/10 [&_em]:italic [&_li]:my-0.5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_u]:underline [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5"
+                    dangerouslySetInnerHTML={{
+                      __html: sanitizeDocHtml(row.html),
+                    }}
+                  />
                 )}
               </div>
 

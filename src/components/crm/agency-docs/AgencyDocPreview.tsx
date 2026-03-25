@@ -1,19 +1,26 @@
+import {
+  blocksFromBody,
+  isEmptyBlockHtml,
+  sanitizeDocHtml,
+} from "@/lib/crm/agency-doc-body";
+
 type AgencyDocPreviewProps = {
   text: string;
   emptyLabel?: string;
 };
 
-/** Renders stored plain text as paragraphs (blocks separated by blank lines). */
+const readingClass =
+  "[&_code]:rounded [&_code]:bg-black/[0.06] [&_code]:px-1 [&_code]:text-sm [&_code]:dark:bg-white/10 [&_em]:italic [&_li]:my-0.5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_u]:underline [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5";
+
+/** Renders v2 JSON (HTML blocks) or legacy plain text from `blocksFromBody`. */
 export default function AgencyDocPreview({
   text,
   emptyLabel = "No content yet — add text in the editor below.",
 }: AgencyDocPreviewProps) {
-  const blocks = text
-    .split(/\n\n+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const blockRows = blocksFromBody(text);
+  const visible = blockRows.filter((b) => !isEmptyBlockHtml(b.html));
 
-  if (blocks.length === 0) {
+  if (visible.length === 0) {
     return (
       <p className="text-sm text-text-secondary dark:text-zinc-500">
         {emptyLabel}
@@ -23,13 +30,14 @@ export default function AgencyDocPreview({
 
   return (
     <article
-      className="max-w-2xl space-y-4 text-justify text-base leading-relaxed text-text-secondary dark:text-zinc-400"
+      className={`max-w-2xl space-y-4 text-justify text-base leading-relaxed text-text-secondary dark:text-zinc-400 ${readingClass}`}
       aria-label="Preview"
     >
-      {blocks.map((block, i) => (
-        <p key={i} className="whitespace-pre-wrap">
-          {block}
-        </p>
+      {visible.map((b) => (
+        <div
+          key={b.id}
+          dangerouslySetInnerHTML={{ __html: sanitizeDocHtml(b.html) }}
+        />
       ))}
     </article>
   );
