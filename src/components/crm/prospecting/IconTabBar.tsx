@@ -1,32 +1,35 @@
 "use client";
 
-export interface Tab {
+import type { LucideIcon } from "lucide-react";
+
+export interface IconTabItem {
   id: string;
   label: string;
+  icon: LucideIcon;
 }
 
-interface TabBarProps {
-  tabs: Tab[];
+interface IconTabBarProps {
+  tabs: IconTabItem[];
   activeTab: string;
   onTabChange: (id: string) => void;
-  /** Accessible name for the tab list (defaults to project sections). */
   ariaLabel?: string;
 }
 
-export default function TabBar({
+export default function IconTabBar({
   tabs,
   activeTab,
   onTabChange,
-  ariaLabel = "Project sections",
-}: TabBarProps) {
+  ariaLabel = "Section tabs",
+}: IconTabBarProps) {
   return (
     <div
-      className="flex gap-1 border-b border-border dark:border-zinc-800/80"
+      className="flex flex-wrap gap-1 border-b border-border dark:border-zinc-800/80"
       role="tablist"
       aria-label={ariaLabel}
     >
       {tabs.map((tab) => {
         const active = tab.id === activeTab;
+        const Icon = tab.icon;
         return (
           <button
             key={tab.id}
@@ -37,15 +40,16 @@ export default function TabBar({
             aria-controls={`${tab.id}-panel`}
             tabIndex={active ? 0 : -1}
             onClick={() => onTabChange(tab.id)}
-            className={`relative px-4 py-2.5 text-sm font-medium transition-colors ${
+            className={`relative flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
               active
-                ? "text-text-primary dark:text-zinc-100"
+                ? "text-accent dark:text-blue-400"
                 : "text-text-secondary hover:text-text-primary dark:text-zinc-500 dark:hover:text-zinc-200"
             }`}
           >
+            <Icon className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
             {tab.label}
             {active && (
-              <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-accent" />
+              <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-accent dark:bg-blue-400" />
             )}
           </button>
         );

@@ -327,7 +327,7 @@ export default function DashboardView({
             </div>
           </div>
           <Link
-            href="/prospecting"
+            href="/prospecting/playbook"
             className="ml-auto flex items-center gap-1 text-sm font-medium text-accent hover:underline dark:text-blue-400 dark:hover:text-blue-300"
           >
             Open Playbook <ArrowRight className="h-3.5 w-3.5" />
@@ -410,7 +410,7 @@ export default function DashboardView({
               Tasks
             </p>
             <Link
-              href="/prospecting"
+              href="/prospecting/playbook"
               className="text-xs font-medium text-accent hover:underline dark:text-blue-400 dark:hover:text-blue-300"
             >
               View all →

@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
-  Target,
   FolderKanban,
   UsersRound,
   Users,
@@ -19,8 +18,11 @@ import {
   ChevronDown,
   MessageSquare,
   FileText,
+  Gift,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { PROSPECTING_SECTIONS } from "@/lib/crm/prospecting-nav";
+import SoonBadge from "@/components/crm/prospecting/SoonBadge";
 import { projects as seedProjects } from "@/lib/crm/mock-data";
 import { getMergedProjectsList } from "@/lib/crm/projects-storage";
 
@@ -40,6 +42,7 @@ const workNav = [
 const agencyNav = [
   { href: "/team", label: "Team", icon: Users },
   { href: "/capacity", label: "Capacity", icon: BarChart3 },
+  { href: "/referrals", label: "Referrals", icon: Gift },
   { href: "/reports", label: "Reports", icon: FileBarChart },
 ];
 
@@ -99,10 +102,6 @@ export default function AppSidebar() {
               <LayoutDashboard className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
               Dashboard
             </NavLink>
-            <NavLink href="/prospecting" active={isActive(pathname, "/prospecting")}>
-              <Target className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-              Prospecting
-            </NavLink>
           </nav>
         </div>
 
@@ -112,6 +111,21 @@ export default function AppSidebar() {
             <NavLink key={href} href={href} active={isActive(pathname, href)}>
               <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
               {label}
+            </NavLink>
+          ))}
+        </NavGroup>
+
+        {/* Prospecting */}
+        <NavGroup label="Prospecting">
+          {PROSPECTING_SECTIONS.map(({ href, label, icon: Icon, soon }) => (
+            <NavLink
+              key={href}
+              href={href}
+              active={pathname === href || pathname.startsWith(`${href}/`)}
+            >
+              <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+              <span className="min-w-0 flex-1 truncate">{label}</span>
+              {soon ? <SoonBadge className="ml-auto" /> : null}
             </NavLink>
           ))}
         </NavGroup>
@@ -240,7 +254,7 @@ function NavLink({
   return (
     <Link
       href={href}
-      className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
+      className={`flex w-full min-w-0 items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
         active
           ? "bg-accent/10 text-accent dark:bg-blue-500/12 dark:text-blue-400"
           : "text-text-secondary hover:bg-surface hover:text-text-primary dark:text-zinc-400 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100"
