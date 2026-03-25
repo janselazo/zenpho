@@ -12,9 +12,30 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-/** True when the block has no visible text (allows empty tags / br only). */
+/**
+ * True when a block can be dropped on save (no meaningful content).
+ * Spacing-only blocks (`<p></p>`, `<p><br></p>`, or several of those) are NOT empty —
+ * users rely on them for gaps between sections.
+ */
 export function isEmptyBlockHtml(html: string): boolean {
-  const t = html
+  const trimmed = html.trim();
+  if (!trimmed) return true;
+
+  if (/<\s*hr\b/i.test(trimmed)) return false;
+  if (/<\s*ul\b/i.test(trimmed)) return false;
+  if (/<\s*ol\b/i.test(trimmed)) return false;
+  if (/<\s*blockquote\b/i.test(trimmed)) return false;
+
+  // Remove paragraphs used only as vertical space (empty or br-only)
+  const withoutSpacerPs = trimmed.replace(
+    /<p>(?:\s|<br\b[^>]*\/?>)*<\/p>/gi,
+    ""
+  );
+  if (withoutSpacerPs.trim().length === 0) {
+    return false;
+  }
+
+  const t = withoutSpacerPs
     .replace(/<[^>]*>/g, " ")
     .replace(/&nbsp;|\u00a0/g, " ")
     .replace(/\s+/g, " ")

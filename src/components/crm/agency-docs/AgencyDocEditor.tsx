@@ -153,7 +153,7 @@ export default function AgencyDocEditor({
       ) : null}
 
       <div
-        className="max-w-2xl space-y-1 text-justify text-base leading-relaxed text-text-secondary dark:text-zinc-400"
+        className="w-full space-y-1 text-justify text-base leading-relaxed text-text-secondary dark:text-zinc-400"
         role="region"
         aria-label="Document content"
       >

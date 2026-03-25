@@ -30,7 +30,7 @@ export default function AgencyDocPreview({
 
   return (
     <article
-      className={`max-w-2xl space-y-4 text-justify text-base leading-relaxed text-text-secondary dark:text-zinc-400 ${readingClass}`}
+      className={`w-full space-y-4 text-justify text-base leading-relaxed text-text-secondary dark:text-zinc-400 ${readingClass}`}
       aria-label="Preview"
     >
       {visible.map((b) => (
