@@ -19,6 +19,8 @@ import {
   MessageSquare,
   FileText,
   Gift,
+  Workflow,
+  Timer,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { PROSPECTING_SECTIONS } from "@/lib/crm/prospecting-nav";
@@ -42,7 +44,9 @@ const workNav = [
 const agencyNav = [
   { href: "/team", label: "Team", icon: Users },
   { href: "/capacity", label: "Capacity", icon: BarChart3 },
+  { href: "/time-tracking", label: "Time Tracking", icon: Timer },
   { href: "/referrals", label: "Referrals", icon: Gift },
+  { href: "/automations", label: "Automations", icon: Workflow },
   { href: "/reports", label: "Reports", icon: FileBarChart },
 ];
 

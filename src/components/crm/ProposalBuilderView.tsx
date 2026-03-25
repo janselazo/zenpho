@@ -186,7 +186,7 @@ export default function ProposalBuilderView({
       return;
     }
     if ("contractId" in res && res.contractId) {
-      router.push(`/contracts/${res.contractId}`);
+      router.push(`/proposals/agreements/${res.contractId}`);
       router.refresh();
     }
   }
@@ -282,7 +282,7 @@ export default function ProposalBuilderView({
 
           {readOnly && initial.contractId ? (
             <Link
-              href={`/contracts/${initial.contractId}`}
+              href={`/proposals/agreements/${initial.contractId}`}
               className="inline-flex rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
             >
               Open contract

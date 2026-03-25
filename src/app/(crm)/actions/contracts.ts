@@ -39,6 +39,49 @@ export async function updateContractStatus(
   if (error) return { error: error.message };
 
   revalidatePath(`/contracts/${id}`);
+  revalidatePath(`/proposals/agreements/${id}`);
+  revalidatePath("/proposals/agreements");
+  revalidatePath("/proposals");
+  return { ok: true };
+}
+
+export async function updateContractTermsSnapshot(
+  contractId: string,
+  terms: string
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const id = contractId.trim();
+  if (!id) return { error: "Missing contract id" };
+
+  const { data: row } = await supabase
+    .from("contract")
+    .select("id, status")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!row) return { error: "Contract not found" };
+  if (String(row.status).toLowerCase() === "signed") {
+    return { error: "Signed agreements cannot be edited." };
+  }
+
+  const { error } = await supabase
+    .from("contract")
+    .update({
+      terms_snapshot: terms,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/contracts/${id}`);
+  revalidatePath(`/proposals/agreements/${id}`);
+  revalidatePath("/proposals/agreements");
   revalidatePath("/proposals");
   return { ok: true };
 }
@@ -83,6 +126,8 @@ export async function recordContractSignature(
   if (error) return { error: error.message };
 
   revalidatePath(`/contracts/${id}`);
+  revalidatePath(`/proposals/agreements/${id}`);
+  revalidatePath("/proposals/agreements");
   revalidatePath("/proposals");
   return { ok: true };
 }

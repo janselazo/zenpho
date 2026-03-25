@@ -7,8 +7,9 @@
     "build": "node_modules/.bin/next build",
     "start": "node_modules/.bin/next start",
     "lint": "eslint",
+    "supabase:login": "supabase login",
     "supabase:link": "supabase link --project-ref lyvmiueigkksozyvvxpy",
-    "supabase:db:push": "supabase db push --yes",
+    "supabase:db:push": "node scripts/supabase-db-push.mjs",
     "supabase:db:apply:lead-project-type": "sh -c 'test -n \"$DATABASE_URL\" || (echo \"Set DATABASE_URL to your Postgres connection string (Dashboard → Database → URI, add ?sslmode=require).\" && exit 1); supabase db query -f supabase/migrations/20260323120000_lead_project_type.sql --db-url \"$DATABASE_URL\"'",
     "install:clean": "bun pm cache clean && rm -rf node_modules bun.lockb && bun install"
   },

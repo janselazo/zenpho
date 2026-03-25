@@ -178,6 +178,20 @@ const INTEGRATIONS: IntegrationItem[] = [
     description: "Email parsing for inbound leads",
     available: false,
   },
+  {
+    id: "google-calendar",
+    name: "Google Calendar",
+    category: "Calendar",
+    description: "Sync appointments and availability with your CRM",
+    available: true,
+  },
+  {
+    id: "microsoft-outlook",
+    name: "Microsoft Outlook",
+    category: "Calendar",
+    description: "Sync Outlook calendar events and meeting invites",
+    available: true,
+  },
 ];
 
 function categoryPillClass(category: string) {
@@ -192,6 +206,8 @@ function categoryPillClass(category: string) {
     return "bg-emerald-100 text-emerald-900 dark:bg-emerald-950/45 dark:text-emerald-200";
   if (c === "advertising")
     return "bg-amber-100 text-amber-950 dark:bg-amber-950/40 dark:text-amber-200";
+  if (c === "calendar")
+    return "bg-indigo-100 text-indigo-900 dark:bg-indigo-950/50 dark:text-indigo-200";
   return "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300";
 }
 

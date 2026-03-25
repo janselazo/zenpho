@@ -302,7 +302,11 @@ export async function acceptProposal(proposalId: string) {
   const cid = contractId as string | null;
   revalidatePath("/proposals");
   revalidatePath(`/proposals/${id}`);
-  if (cid) revalidatePath(`/contracts/${cid}`);
+  if (cid) {
+    revalidatePath(`/contracts/${cid}`);
+    revalidatePath(`/proposals/agreements/${cid}`);
+    revalidatePath("/proposals/agreements");
+  }
 
   return { ok: true, contractId: cid };
 }

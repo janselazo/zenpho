@@ -15,9 +15,8 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
-import {
-  deleteProposal,
-} from "@/app/(crm)/actions/proposals";
+import { deleteProposal } from "@/app/(crm)/actions/proposals";
+import ProposalsSubNav from "@/components/crm/ProposalsSubNav";
 import type { ProposalListKpis } from "@/lib/crm/fetch-proposals-for-list";
 import {
   formatProposalId,
@@ -93,6 +92,7 @@ export default function ProposalsListView({
 
   return (
     <div className="space-y-8">
+      <ProposalsSubNav />
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary dark:text-zinc-500">
