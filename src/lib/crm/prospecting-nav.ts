@@ -8,6 +8,7 @@ import {
   LayoutTemplate,
   Handshake,
   Search,
+  Gift,
 } from "lucide-react";
 
 export type ProspectingSectionSlug =
@@ -18,6 +19,7 @@ export type ProspectingSectionSlug =
   | "campaigns"
   | "marketplaces"
   | "partnerships"
+  | "referrals"
   | "seo";
 
 export interface ProspectingSection {
@@ -109,6 +111,14 @@ export const PROSPECTING_SECTIONS: ProspectingSection[] = [
     icon: Handshake,
     description:
       "Track referral partners, co-marketing motions, and shared pipeline.",
+  },
+  {
+    slug: "referrals",
+    label: "Referrals",
+    href: "/referrals",
+    icon: Gift,
+    description:
+      "Public review links, referral touchpoints, and social proof for prospects and partners.",
   },
   {
     slug: "seo",

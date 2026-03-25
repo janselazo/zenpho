@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import {
   isProspectingSectionSlug,
 } from "@/lib/crm/prospecting-nav";
@@ -12,6 +12,9 @@ export default async function ProspectingSectionPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  if (slug === "referrals") {
+    redirect("/referrals");
+  }
   if (!isProspectingSectionSlug(slug)) {
     notFound();
   }

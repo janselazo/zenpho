@@ -18,7 +18,6 @@ import {
   ChevronDown,
   MessageSquare,
   FileText,
-  Gift,
   Workflow,
   Timer,
 } from "lucide-react";
@@ -39,13 +38,12 @@ const workNav = [
   { href: "/clients", label: "Clients", icon: Building2 },
   { href: "/proposals", label: "Proposals", icon: FileText },
   { href: "/projects", label: "Projects", icon: FolderKanban },
+  { href: "/time-tracking", label: "Time Tracking", icon: Timer },
 ];
 
 const agencyNav = [
   { href: "/team", label: "Team", icon: Users },
   { href: "/capacity", label: "Capacity", icon: BarChart3 },
-  { href: "/time-tracking", label: "Time Tracking", icon: Timer },
-  { href: "/referrals", label: "Referrals", icon: Gift },
   { href: "/automations", label: "Automations", icon: Workflow },
   { href: "/reports", label: "Reports", icon: FileBarChart },
 ];
@@ -179,12 +177,6 @@ export default function AppSidebar() {
 
       {/* Bottom */}
       <div className="flex flex-col gap-0.5 border-t border-border p-2 dark:border-zinc-800/80">
-        <Link
-          href="/"
-          className="block rounded-xl px-3 py-2 text-xs text-text-secondary hover:bg-surface hover:text-text-primary dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-200"
-        >
-          ← Website
-        </Link>
         <NavLink href="/settings" active={isActive(pathname, "/settings")}>
           <Settings className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
           Settings

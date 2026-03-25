@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import {
   Bell,
   ChevronDown,
+  Globe,
   Moon,
   Settings,
   Sun,
@@ -94,6 +95,13 @@ export default function CrmTopBar({
   return (
     <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center justify-end gap-1 border-b border-border bg-white/95 px-3 backdrop-blur-md dark:border-zinc-800/80 dark:bg-zinc-900/90 dark:backdrop-blur-md sm:gap-2 sm:px-6">
       <div className="flex items-center gap-1 sm:gap-2">
+        <Link
+          href="/"
+          aria-label="Open marketing website"
+          className="rounded-full p-2 text-text-secondary transition-colors hover:bg-surface hover:text-text-primary dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+        >
+          <Globe className="h-4 w-4" aria-hidden />
+        </Link>
         <button
           type="button"
           aria-label="Light theme"

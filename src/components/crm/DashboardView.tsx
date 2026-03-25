@@ -286,15 +286,6 @@ export default function DashboardView({
         />
       </div>
 
-      {/* KPIs */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <KpiCard label="Active clients" value={String(activeClients)} />
-        <KpiCard label="Active projects" value={String(activeProjects)} />
-        <KpiCard label="Revenue" value={fmt(revenueWeek)} />
-        <KpiCard label="Expenses" value={fmt(expensesWeek)} />
-        <KpiCard label="Profit" value={fmt(profit)} accent />
-      </div>
-
       {/* Daily Playbook summary */}
       <div className={`${dashCard} p-5`}>
         <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/60 dark:text-zinc-500">
@@ -333,6 +324,15 @@ export default function DashboardView({
             Open Playbook <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
+      </div>
+
+      {/* KPIs */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <KpiCard label="Active clients" value={String(activeClients)} />
+        <KpiCard label="Active projects" value={String(activeProjects)} />
+        <KpiCard label="Revenue" value={fmt(revenueWeek)} />
+        <KpiCard label="Expenses" value={fmt(expensesWeek)} />
+        <KpiCard label="Profit" value={fmt(profit)} accent />
       </div>
 
       {/* Sales Funnel */}
