@@ -12,7 +12,7 @@ export default function AboutHero() {
       </div>
       <div className="relative z-10 mx-auto max-w-3xl text-center">
         <motion.span
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 1, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45 }}
           className={`mb-5 ${SECTION_EYEBROW_CLASSNAME}`}
@@ -21,7 +21,7 @@ export default function AboutHero() {
         </motion.span>
 
         <motion.h1
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 1, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.06 }}
           className="heading-display text-4xl font-bold leading-tight tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
@@ -29,7 +29,7 @@ export default function AboutHero() {
           Janse Lazo
         </motion.h1>
         <motion.p
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 1, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, delay: 0.12 }}
           className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-text-secondary sm:text-lg"

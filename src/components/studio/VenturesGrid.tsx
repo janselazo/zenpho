@@ -22,7 +22,7 @@ export default function VenturesGrid() {
         {ventures.map((venture, i) => (
           <motion.div
             key={venture.name}
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 1, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.2 }}
             transition={{ duration: 0.5, delay: i * 0.08 }}

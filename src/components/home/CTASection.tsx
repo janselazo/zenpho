@@ -8,9 +8,9 @@ export default function CTASection() {
   return (
     <section className="mx-auto max-w-7xl px-6 py-24 lg:px-8">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 1, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.3 }}
+        viewport={{ once: true, amount: 0.05, margin: "0px 0px 160px 0px" }}
         transition={{ duration: 0.5 }}
         className="relative overflow-hidden rounded-3xl border border-border bg-white p-12 text-center shadow-soft-lg lg:p-16"
       >

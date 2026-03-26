@@ -39,7 +39,7 @@ export default function Experience() {
   return (
     <section className="mx-auto max-w-7xl px-6 py-32 lg:px-8">
       <motion.div
-        initial={{ opacity: 0, y: 30 }}
+        initial={{ opacity: 1, y: 30 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.3 }}
         transition={{ duration: 0.6 }}
@@ -61,7 +61,7 @@ export default function Experience() {
         {experiences.map((exp, i) => (
           <motion.div
             key={exp.domain}
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 1, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.2 }}
             transition={{ duration: 0.5, delay: i * 0.1 }}

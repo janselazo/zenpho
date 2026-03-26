@@ -65,9 +65,9 @@ export default function NewsletterSignup({ compact }: NewsletterSignupProps) {
       className="mx-auto max-w-2xl scroll-mt-28 px-6 py-16 lg:px-8"
     >
       <motion.div
-        initial={{ opacity: 0, y: 16 }}
+        initial={{ opacity: 1, y: 16 }}
         whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.3 }}
+        viewport={{ once: true, amount: 0.05, margin: "0px 0px 120px 0px" }}
         transition={{ duration: 0.45 }}
         className="rounded-2xl border border-border bg-white p-8 text-center shadow-sm"
       >

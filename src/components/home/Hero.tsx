@@ -18,7 +18,7 @@ export default function Hero() {
     <section className="hero-sky relative overflow-hidden pb-12 pt-32 sm:pt-36">
       <div className="relative z-10 mx-auto flex w-full max-w-4xl flex-col px-6 pb-2 pt-2 text-center sm:pt-4">
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
+          initial={{ opacity: 1, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55 }}
         >
@@ -28,7 +28,7 @@ export default function Hero() {
         </motion.div>
 
         <motion.h1
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 1, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, delay: 0.06 }}
           className="heading-display text-4xl font-bold leading-[1.15] text-text-primary sm:text-5xl sm:leading-[1.12] lg:text-6xl lg:leading-[1.1]"
@@ -38,17 +38,17 @@ export default function Hero() {
         </motion.h1>
 
         <motion.p
-          initial={{ opacity: 0, y: 14 }}
+          initial={{ opacity: 1, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.12 }}
           className="mx-auto mt-4 max-w-2xl text-lg font-medium leading-snug text-text-secondary sm:text-xl"
         >
-          Web apps, mobile apps, websites, and ecommerce stores — from idea to
-          product-market fit.
+          We design, build, and launch your software product fast — so you can
+          validate, grow, and scale without the wait.
         </motion.p>
 
         <motion.div
-          initial={{ opacity: 0, y: 14 }}
+          initial={{ opacity: 1, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.24 }}
           className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4"
@@ -62,7 +62,7 @@ export default function Hero() {
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0 }}
+          initial={{ opacity: 1 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.55, delay: 0.4 }}
           className="mx-auto mt-14 grid max-w-3xl grid-cols-2 gap-3 sm:mt-16 sm:grid-cols-4"
@@ -70,7 +70,7 @@ export default function Hero() {
           {experienceStats.map((stat, i) => (
             <motion.div
               key={stat.label}
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 1, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.45 + i * 0.06 }}
               className="rounded-3xl border border-border/80 bg-white/90 px-4 py-5 text-center shadow-soft backdrop-blur-sm"
@@ -94,13 +94,13 @@ export default function Hero() {
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0 }}
+          initial={{ opacity: 1 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.75 }}
           className="mt-12 sm:mt-14"
         >
           <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-text-secondary/80">
-            Built for
+            Trusted by industry leaders
           </p>
           <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-3">
             {clients.map((client) => (

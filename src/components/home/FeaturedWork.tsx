@@ -21,9 +21,9 @@ export default function FeaturedWork() {
         {featuredProjects.map((project, i) => (
           <motion.div
             key={`${project.client ?? "project"}-${project.title}`}
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 1, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.2 }}
+            viewport={{ once: true, amount: 0.05, margin: "0px 0px 160px 0px" }}
             transition={{ duration: 0.45, delay: i * 0.08 }}
           >
             <Card className="flex h-full flex-col">

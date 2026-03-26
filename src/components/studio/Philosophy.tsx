@@ -30,7 +30,7 @@ export default function Philosophy() {
     <section className="mx-auto max-w-7xl px-6 py-32 lg:px-8">
       <div className="grid gap-16 lg:grid-cols-2 lg:items-center">
         <motion.div
-          initial={{ opacity: 0, x: -30 }}
+          initial={{ opacity: 1, x: -30 }}
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true, amount: 0.3 }}
           transition={{ duration: 0.6 }}
@@ -61,7 +61,7 @@ export default function Philosophy() {
           {principles.map((p, i) => (
             <motion.div
               key={p.title}
-              initial={{ opacity: 0, x: 30 }}
+              initial={{ opacity: 1, x: 30 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true, amount: 0.3 }}
               transition={{ duration: 0.5, delay: i * 0.1 }}

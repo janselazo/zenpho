@@ -91,9 +91,9 @@ export default function Testimonials() {
         {testimonials.map((t, i) => (
           <motion.div
             key={t.company}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 1, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.2 }}
+            viewport={{ once: true, amount: 0.05, margin: "0px 0px 200px 0px" }}
             transition={{ duration: 0.4, delay: i * 0.08 }}
             className="w-[320px] shrink-0 snap-start sm:w-[360px]"
           >

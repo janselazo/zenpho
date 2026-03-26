@@ -5,7 +5,7 @@ import Button from "@/components/ui/Button";
 import { SECTION_EYEBROW_COMPACT_CLASSNAME } from "@/components/ui/SectionHeading";
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
+  hidden: { opacity: 1, y: 20 },
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
@@ -15,31 +15,31 @@ const fadeUp = {
 
 const cards = [
   {
-    label: "Development",
+    label: "Services",
     badgeClass: "bg-accent text-white",
-    title: "Web apps, mobile apps,",
-    titleAccent: "websites & ecommerce.",
-    body: "Full-stack development for every platform — from responsive websites and online stores to native mobile apps and complex web applications.",
+    title: "Custom Software Development",
+    titleAccent: "",
+    body: "We design and build web apps, mobile apps, and e-commerce platforms tailored to your business — fast, scalable, and ready to grow with you.",
     href: "/services",
     cta: "Explore services",
-    initial: "D",
+    initial: "C",
   },
   {
-    label: "Growth",
+    label: "Launch",
     badgeClass: "bg-accent-violet text-white",
-    title: "Product-led growth,",
-    titleAccent: "retention & monetization.",
-    body: "Acquisition loops, retention strategies, monetization optimization, and rapid growth experiments — all driven by data.",
-    href: "/case-studies",
+    title: "From Idea to Launch in 2 Weeks",
+    titleAccent: "",
+    body: "Whether you're a tech or non-tech founder, we turn your idea into a fully functional, ready-to-launch software product — on time and at an affordable price.",
+    href: "/services",
     cta: "Explore services",
-    initial: "G",
+    initial: "L",
   },
   {
     label: "Studio",
     badgeClass: "bg-accent-warm text-white",
-    title: "Products that",
-    titleAccent: "matter.",
-    body: "We build our own products from zero to scale, obsessing over every detail that drives growth — the same mindset we bring to yours.",
+    title: "Where We Build Our Own Ideas",
+    titleAccent: "",
+    body: "Our AI Product Studio is our internal lab where we design, build, and launch our own software products turning our ideas into real tools that solve real problems.",
     href: "/studio",
     cta: "Open Studio",
     initial: "S",
@@ -55,7 +55,7 @@ export default function SplitIntro() {
             key={card.label}
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true, amount: 0.25 }}
+            viewport={{ once: true, amount: 0.05, margin: "0px 0px 160px 0px" }}
             custom={i}
             variants={fadeUp}
             className="relative overflow-hidden rounded-3xl border border-border bg-white p-8 shadow-soft lg:p-10"
@@ -71,9 +71,11 @@ export default function SplitIntro() {
               </span>
               <h3 className="heading-display mt-1 text-xl font-bold leading-snug text-text-primary lg:text-2xl">
                 <span className="block">{card.title}</span>
-                <span className="mt-0.5 block text-accent">
-                  {card.titleAccent}
-                </span>
+                {card.titleAccent ? (
+                  <span className="mt-0.5 block text-accent">
+                    {card.titleAccent}
+                  </span>
+                ) : null}
               </h3>
               <p className="mt-3 text-sm leading-relaxed text-text-secondary">
                 {card.body}

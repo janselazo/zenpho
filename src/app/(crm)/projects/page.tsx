@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Suspense, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -137,7 +137,7 @@ function priorityFlagColor(plan: PlanStage) {
   }
 }
 
-export default function ProjectsPage() {
+function ProjectsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [view, setView] = useState<ViewMode>("kanban");
@@ -586,6 +586,30 @@ export default function ProjectsPage() {
         />
       )}
     </div>
+  );
+}
+
+function ProjectsPageFallback() {
+  return (
+    <div
+      className="flex min-h-[50vh] flex-col items-center justify-center gap-3 p-6 sm:p-8"
+      role="status"
+      aria-live="polite"
+      aria-label="Loading projects"
+    >
+      <Loader2 className="h-8 w-8 animate-spin text-violet-500" aria-hidden />
+      <p className="text-sm text-text-secondary dark:text-zinc-400">
+        Loading projects…
+      </p>
+    </div>
+  );
+}
+
+export default function ProjectsPage() {
+  return (
+    <Suspense fallback={<ProjectsPageFallback />}>
+      <ProjectsPageContent />
+    </Suspense>
   );
 }
 

@@ -1,0 +1,37 @@
+---
+description: Run the Next.js app locally, open it in Cursor’s Simple Browser, and recover from common dev-server issues (agency-website).
+alwaysApply: true
+---
+
+# Launch (local dev + Cursor browser)
+
+## Start the app
+
+- From the repo root, use **`npm run dev`** only. It runs [`scripts/dev.mjs`](scripts/dev.mjs), which:
+  - **Frees port 3000** (avoids “Another next dev server is already running” and zombie `node` processes).
+  - On macOS/Linux, raises **`ulimit -n 65536`** before `next dev` to reduce **EMFILE / “too many open files”** from file watchers.
+  - Sets **`UV_THREADPOOL_SIZE=64`** unless you already set it.
+- Use **`npm run dev:next`** only if you need raw `next dev` without freeing the port or the ulimit wrapper.
+
+## Open in Cursor’s browser
+
+1. Wait until the terminal shows Next is **Ready** and prints a **Local** URL (default `http://localhost:3000`).
+2. **Command Palette** (`Cmd+Shift+P`) → **Simple Browser: Show** → enter **`http://localhost:3000`** (use **`localhost`**, not only `127.0.0.1`, so embedded browsers that resolve IPv6 match the server).
+
+## Environment
+
+- Copy [`.env.example`](.env.example) to **`.env.local`** and set **`NEXT_PUBLIC_SUPABASE_URL`** and **`NEXT_PUBLIC_SUPABASE_ANON_KEY`** (and other keys as needed). Restart dev after changing env.
+
+## If the site still fails (EMFILE / watchers)
+
+- Add to **`.env.local`**: **`WATCHPACK_POLLING=true`** (polling is slower but uses fewer file descriptors). Restart **`npm run dev`**.
+- If limits are still too low, raise the **system** open-file limit (e.g. macOS `launchctl limit maxfiles`).
+
+## App Router gotchas (this repo)
+
+- Client pages that use **`useSearchParams()`** must be wrapped in **`<Suspense>`** (see e.g. [`src/app/(crm)/projects/page.tsx`](src/app/(crm)/projects/page.tsx)) or the route can hang or show a blank page.
+- **Framer Motion**: sections used **`initial={{ opacity: 0 }}` + `whileInView`**; if `whileInView` never runs (embedded browser / intersection quirks), content stayed invisible. Home sections now default to **`opacity: 1`** on `initial` with relaxed **`viewport`** — keep that pattern for new scroll animations.
+
+## Marketing home route
+
+- **`/`** is served by [`src/app/page.tsx`](src/app/page.tsx) using [`MarketingShell`](src/components/layout/MarketingShell.tsx). Do not import a route **`layout.tsx`** as a component; use **`MarketingShell`** so layouts stay valid and hydration stays predictable.

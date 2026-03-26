@@ -150,27 +150,27 @@ export const services: Service[] = [
 export const processSteps: ProcessStep[] = [
   {
     number: "01",
-    title: "Discover",
+    title: "Discovery",
     description:
-      "We define the problem, target users, and success metrics — so the first sprint solves something that matters.",
+      "We listen to your idea, understand your goals, and define the scope of your product in a single strategy call.",
   },
   {
     number: "02",
     title: "Design",
     description:
-      "UX flows, architecture, and a growth strategy shaped together — every screen is designed to convert, not just look good.",
+      "We create the structure and visual flow of your product — so you can see exactly what we're building before we write a single line of code.",
   },
   {
     number: "03",
     title: "Build",
     description:
-      "Focused weekly sprints with visible output. Your first working version ships in 2 weeks, not 2 months.",
+      "Our team develops your fully functional web app, mobile app, or e-commerce platform — fast, clean, and built to scale.",
   },
   {
     number: "04",
-    title: "Grow",
+    title: "Launch",
     description:
-      "Launch, measure, and iterate — we run growth experiments, optimize retention, and scale what works.",
+      "We deliver your ready-to-launch product, support you through go-live, and make sure everything works perfectly from day one.",
   },
 ];
 

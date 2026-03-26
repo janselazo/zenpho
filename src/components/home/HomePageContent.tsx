@@ -9,7 +9,7 @@ import HomeFAQ from "@/components/home/HomeFAQ";
 import NewsletterSignup from "@/components/ui/NewsletterSignup";
 import CTASection from "@/components/home/CTASection";
 
-export default function HomePage() {
+export default function HomePageContent() {
   return (
     <>
       <Hero />

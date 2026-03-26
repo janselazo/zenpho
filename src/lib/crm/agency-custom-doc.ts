@@ -1,7 +1,5 @@
 /** Default body for custom docs when no row exists in `agency_workspace_doc`. */
-export const DEFAULT_CUSTOM_DOC_BODY = `Start writing…
-
-Edit below; content syncs to the database for your team.`;
+export const DEFAULT_CUSTOM_DOC_BODY = "";
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 

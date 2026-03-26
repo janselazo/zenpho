@@ -249,3 +249,8 @@ html.dark .crm-dark-bg {
 .crm-rdp .rdp-day_button:focus {
   outline: none;
 }
+
+/* Native <details> FAQ chevrons — rotate when open (works without Tailwind group-open) */
+details.faq-native[open] summary .faq-chevron {
+  transform: rotate(180deg);
+}

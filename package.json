@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "sh -c 'ulimit -n 10240 2>/dev/null; exec node_modules/.bin/next dev --hostname 127.0.0.1'",
+    "dev": "node scripts/dev.mjs",
+    "dev:next": "node_modules/.bin/next dev",
     "build": "node_modules/.bin/next build",
     "start": "node_modules/.bin/next start",
     "lint": "eslint",
@@ -44,6 +45,7 @@
     "@types/react-dom": "^19.2.3",
     "eslint": "^9",
     "eslint-config-next": "^16.2.1",
+    "kill-port": "^2.0.1",
     "supabase": "^2.83.0",
     "tailwindcss": "^4.2.2",
     "typescript": "^5"

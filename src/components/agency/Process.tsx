@@ -12,16 +12,16 @@ export default function Process() {
         title="How we"
         titleAccent="work"
         titleAccentInline
-        description="We take the complexity out of building software and replace it with weekly momentum — Discover, Design, Build, and Grow with your metrics in the room from day one."
+        description="We keep it simple, fast, and transparent. From the moment you share your idea with us, we take full ownership of the process — so you can focus on your business while we build your product."
       />
 
       <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
         {processSteps.map((step, i) => (
           <motion.div
             key={step.number}
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 1, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
+            viewport={{ once: true, amount: 0.05, margin: "0px 0px 120px 0px" }}
             transition={{ duration: 0.5, delay: i * 0.1 }}
             className="relative"
           >

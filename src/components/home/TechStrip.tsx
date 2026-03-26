@@ -24,18 +24,18 @@ export default function TechStrip() {
 
       <div className="w-full overflow-x-auto overflow-y-hidden scroll-smooth pb-1 [-webkit-overflow-scrolling:touch]">
         <motion.div
-          initial={{ opacity: 0 }}
+          initial={{ opacity: 1 }}
           whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
+          viewport={{ once: true, amount: 0.05, margin: "0px 0px 120px 0px" }}
           transition={{ duration: 0.5 }}
           className="mx-auto flex w-max max-w-none flex-nowrap items-center justify-center gap-2 px-1"
         >
           {techStack.map((tech, i) => (
             <motion.div
               key={tech.name}
-              initial={{ opacity: 0, scale: 0.96 }}
+              initial={{ opacity: 1, scale: 0.96 }}
               whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
+              viewport={{ once: true, amount: 0.05, margin: "0px 0px 120px 0px" }}
               transition={{ duration: 0.25, delay: i * 0.02 }}
               className={`shrink-0 whitespace-nowrap rounded-full border border-border bg-white px-4 py-2 text-sm font-medium text-text-secondary shadow-soft transition-all duration-200 ${chipClass(i)}`}
             >

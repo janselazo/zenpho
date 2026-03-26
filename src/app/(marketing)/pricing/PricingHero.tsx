@@ -13,7 +13,7 @@ export default function PricingHero() {
 
       <div className="relative z-10 mx-auto max-w-4xl px-6 text-center">
         <motion.span
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 1, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45 }}
           className={`mb-5 inline-block ${SECTION_EYEBROW_CLASSNAME}`}
@@ -22,7 +22,7 @@ export default function PricingHero() {
         </motion.span>
 
         <motion.h1
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 1, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.06 }}
           className="heading-display text-4xl font-bold leading-tight tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
@@ -32,7 +32,7 @@ export default function PricingHero() {
         </motion.h1>
 
         <motion.p
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 1, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, delay: 0.14 }}
           className="mx-auto mt-6 max-w-2xl text-base font-medium leading-relaxed text-text-secondary sm:text-lg"

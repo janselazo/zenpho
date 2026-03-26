@@ -9,7 +9,7 @@ export default function ResourcesHero() {
     <section className="hero-sky relative flex min-h-[55vh] items-center justify-center overflow-hidden pt-28 pb-16">
       <div className="relative z-10 mx-auto max-w-3xl px-6 text-center">
         <motion.span
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 1, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45 }}
           className={`mb-5 ${SECTION_EYEBROW_CLASSNAME}`}
@@ -18,7 +18,7 @@ export default function ResourcesHero() {
         </motion.span>
 
         <motion.h1
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 1, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.06 }}
           className="heading-display text-4xl font-bold leading-tight text-text-primary sm:text-5xl"
@@ -28,7 +28,7 @@ export default function ResourcesHero() {
         </motion.h1>
 
         <motion.p
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 1, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, delay: 0.14 }}
           className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-text-secondary sm:text-lg"
@@ -38,7 +38,7 @@ export default function ResourcesHero() {
         </motion.p>
 
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 1, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, delay: 0.22 }}
           className="mt-8"

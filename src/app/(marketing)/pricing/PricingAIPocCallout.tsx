@@ -9,7 +9,7 @@ export default function PricingAIPocCallout() {
       <div className="mx-auto max-w-6xl px-6 py-16 lg:px-8">
         <div className="grid gap-8 lg:grid-cols-2">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 1, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.25 }}
             transition={{ duration: 0.45 }}
@@ -54,7 +54,7 @@ export default function PricingAIPocCallout() {
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 1, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.25 }}
             transition={{ duration: 0.45, delay: 0.06 }}

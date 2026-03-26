@@ -202,7 +202,7 @@ export default function BookingCalendar() {
         {step === "pick" && (
           <motion.div
             key="pick"
-            initial={{ opacity: 0, x: -12 }}
+            initial={{ opacity: 1, x: -12 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 12 }}
             transition={{ duration: 0.25 }}
@@ -358,7 +358,7 @@ export default function BookingCalendar() {
         {step === "form" && selectedSlot && (
           <motion.div
             key="form"
-            initial={{ opacity: 0, x: 12 }}
+            initial={{ opacity: 1, x: 12 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -12 }}
             transition={{ duration: 0.25 }}
@@ -474,7 +474,7 @@ export default function BookingCalendar() {
         {step === "done" && selectedSlot && (
           <motion.div
             key="done"
-            initial={{ opacity: 0, scale: 0.97 }}
+            initial={{ opacity: 1, scale: 0.97 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3 }}
             className="flex flex-col items-center justify-center px-6 py-16 text-center sm:py-20"
