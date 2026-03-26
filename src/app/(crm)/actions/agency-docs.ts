@@ -14,6 +14,7 @@ import {
   isValidCustomDocSlugFormat,
   slugifyTitle,
 } from "@/lib/crm/agency-custom-doc";
+import { pickAgencyDocIconKey } from "@/lib/crm/agency-doc-icon-pick";
 import {
   getAllAgencyDocs,
   isAgencyDocSlug,
@@ -246,11 +247,13 @@ export async function createAgencyCustomDoc(form: {
     }
   }
 
+  const icon_key = pickAgencyDocIconKey(title, desc);
+
   const { error: docErr } = await supabase.from("agency_custom_doc").insert({
     slug: candidate,
     title,
     description: desc,
-    icon_key: "file-text",
+    icon_key,
     created_by: user.id,
   });
 

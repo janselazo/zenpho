@@ -74,9 +74,8 @@ export default function NewsletterSignup({ compact }: NewsletterSignupProps) {
         <div className="mb-4 flex justify-center">
           <span className={SECTION_EYEBROW_CLASSNAME}>Newsletter</span>
         </div>
-        <h3 className="heading-display text-xl font-bold tracking-tight text-text-primary sm:text-2xl lg:text-3xl">
-          <span className="block">Build smarter,</span>
-          <span className="mt-1 block text-accent">ship faster</span>
+        <h3 className="heading-display whitespace-nowrap text-xl font-bold tracking-tight text-text-primary sm:text-2xl lg:text-3xl">
+          Build smarter, <span className="text-accent">ship faster</span>
         </h3>
         <p className="mt-2 text-sm text-text-secondary">
           Practical lessons on building products, scaling growth, and using AI
