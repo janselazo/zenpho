@@ -16,6 +16,12 @@ export type AgencyHubDocItem = {
   iconKey?: string | null;
 };
 
+/** Cards hidden from the hub (still open at /docs/[slug] when built-in or custom row exists). */
+export type HiddenHubDocItem = {
+  slug: string;
+  title: string;
+};
+
 type HubCardRow = {
   slug: string;
   hidden: boolean;
@@ -186,5 +192,38 @@ export async function getAgencyHubDocItems(): Promise<AgencyHubDocItem[]> {
       title: d.title,
       description: d.description,
     }));
+  }
+}
+
+/** Hub cards marked hidden — used to offer “Restore” so built-ins (e.g. Customer Journey) reappear. */
+export async function getHiddenAgencyHubDocItems(): Promise<HiddenHubDocItem[]> {
+  if (!isSupabaseConfigured()) return [];
+
+  try {
+    const supabase = await createClient();
+    const { data: rows, error } = await supabase
+      .from("agency_doc_hub_card")
+      .select("slug, hidden, title_override")
+      .eq("hidden", true);
+
+    if (error || !rows?.length) return [];
+
+    const items: HiddenHubDocItem[] = [];
+
+    for (const row of rows as Pick<
+      HubCardRow,
+      "slug" | "title_override"
+    >[]) {
+      const baseline = await getHubCardBaseline(row.slug);
+      if (!baseline) continue;
+      const title = row.title_override?.trim()
+        ? row.title_override.trim()
+        : baseline.title;
+      items.push({ slug: row.slug, title });
+    }
+
+    return items.sort((a, b) => a.title.localeCompare(b.title));
+  } catch {
+    return [];
   }
 }

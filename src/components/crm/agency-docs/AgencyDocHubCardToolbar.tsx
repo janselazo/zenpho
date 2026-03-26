@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
 import { hideAgencyDocHubCard } from "@/app/(crm)/actions/agency-docs";
+import { getAgencyDocBySlug } from "@/lib/crm/agency-docs";
 import AgencyDocHubCardEditModal from "@/components/crm/agency-docs/AgencyDocHubCardEditModal";
 
 type AgencyDocHubCardToolbarProps = {
@@ -25,8 +26,11 @@ export default function AgencyDocHubCardToolbar({
   if (!canPersist) return null;
 
   async function onDelete() {
+    const isBuiltIn = Boolean(getAgencyDocBySlug(slug));
     const ok = window.confirm(
-      "Remove this card from the hub? The document page still opens from a direct link."
+      isBuiltIn
+        ? "Remove this card from the hub? The built-in document still opens from a direct link."
+        : "Delete this custom document? Its hub card and saved content will be removed, and you can create a new doc with the same title."
     );
     if (!ok) return;
     const res = await hideAgencyDocHubCard(slug);

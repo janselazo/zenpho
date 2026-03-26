@@ -16,6 +16,7 @@ import {
 } from "@/lib/crm/agency-custom-doc";
 import { pickAgencyDocIconKey } from "@/lib/crm/agency-doc-icon-pick";
 import {
+  getAgencyDocBySlug,
   getAllAgencyDocs,
   isAgencyDocSlug,
   RESERVED_REGISTRY_SLUGS,
@@ -110,6 +111,31 @@ export async function hideAgencyDocHubCard(slug: string) {
   } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized" as const };
 
+  // Custom doc: delete rows so the slug can be reused when creating a new doc.
+  if (!isAgencyDocSlug(slug)) {
+    const { error: workspaceErr } = await supabase
+      .from("agency_workspace_doc")
+      .delete()
+      .eq("slug", slug);
+    if (workspaceErr) return { error: workspaceErr.message };
+
+    const { error: customErr } = await supabase
+      .from("agency_custom_doc")
+      .delete()
+      .eq("slug", slug);
+    if (customErr) return { error: customErr.message };
+
+    const { error: hubErr } = await supabase
+      .from("agency_doc_hub_card")
+      .delete()
+      .eq("slug", slug);
+    if (hubErr) return { error: hubErr.message };
+
+    revalidatePath("/docs");
+    revalidatePath(`/docs/${slug}`);
+    return { ok: true as const };
+  }
+
   const now = new Date().toISOString();
   const { data: existing } = await supabase
     .from("agency_doc_hub_card")
@@ -136,6 +162,32 @@ export async function hideAgencyDocHubCard(slug: string) {
     });
     if (error) return { error: error.message };
   }
+
+  revalidatePath("/docs");
+  return { ok: true as const };
+}
+
+export async function unhideAgencyDocHubCard(slug: string) {
+  const baseline = await getHubCardBaseline(slug);
+  if (!baseline) return { error: "Invalid document" as const };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" as const };
+
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from("agency_doc_hub_card")
+    .update({
+      hidden: false,
+      updated_by: user.id,
+      updated_at: now,
+    })
+    .eq("slug", slug);
+
+  if (error) return { error: error.message };
 
   revalidatePath("/docs");
   return { ok: true as const };
@@ -226,8 +278,10 @@ export async function createAgencyCustomDoc(form: {
   }
 
   if (RESERVED_REGISTRY_SLUGS.has(slug)) {
+    const def = getAgencyDocBySlug(slug);
+    const name = def?.title ?? slug;
     return {
-      error: "That slug is reserved for a built-in document.",
+      error: `“${name}” is already a built-in workspace doc (/docs/${slug}). Open it from the hub, or pick another title — custom docs can’t reuse a built-in URL.`,
     } as const;
   }
 
