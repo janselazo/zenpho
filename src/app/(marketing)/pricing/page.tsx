@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import PricingHero from "./PricingHero";
-import PricingAIPocCallout from "./PricingAIPocCallout";
 import PricingGrid from "@/components/services/PricingGrid";
 import FAQ from "@/components/services/FAQ";
 import CTASection from "@/components/home/CTASection";
@@ -8,14 +7,13 @@ import CTASection from "@/components/home/CTASection";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Development Services pricing: $150 strategy hour, $1,999 sprint (Product MVP or Growth sprint), $3,999/mo Scale per track (pause anytime). $100–$150/h outside packages.",
+    "Development Services: Web App & SaaS ($2,999–$14,999), Mobile App ($3,999–$18,999), Website & Ecommerce ($999–$9,999). Starter, Growth, and Scale tiers. Book a call. Custom work $100–$150/h.",
 };
 
 export default function PricingPage() {
   return (
     <>
       <PricingHero />
-      <PricingAIPocCallout />
       <PricingGrid />
       <FAQ />
       <CTASection />

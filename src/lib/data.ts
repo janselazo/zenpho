@@ -65,17 +65,217 @@ export interface MethodologyPillar {
   principles: string[];
 }
 
-export interface PricingTier {
-  name: string;
-  description: string;
-  price: string;
-  priceNote: string;
-  features: string[];
-  highlighted: boolean;
-  cta: string;
-  /** Ribbon label, e.g. "Most Popular" */
-  badge?: string;
+/** Cell in a development pricing comparison table */
+export type PricingTableCell =
+  | { kind: "text"; value: string }
+  | { kind: "bool"; value: boolean };
+
+export interface PricingTableRow {
+  label: string;
+  starter: PricingTableCell;
+  growth: PricingTableCell;
+  scale: PricingTableCell;
 }
+
+export interface PricingTableCategory {
+  id: string;
+  /** Short label for pricing tabs (e.g. "Web & SaaS") */
+  tabLabel: string;
+  /** Full heading (may include a leading emoji, e.g. "🖥️ Web App & SaaS") */
+  title: string;
+  rows: PricingTableRow[];
+}
+
+const cell = (value: string): PricingTableCell => ({ kind: "text", value });
+const yes = (): PricingTableCell => ({ kind: "bool", value: true });
+const no = (): PricingTableCell => ({ kind: "bool", value: false });
+
+/** Fixed-price development packages by product type (Starter / Growth / Scale columns). */
+export const developmentPricingTableCategories: PricingTableCategory[] = [
+  {
+    id: "web-saas",
+    tabLabel: "Web & SaaS",
+    title: "🖥️ Web App & SaaS",
+    rows: [
+      {
+        label: "Price",
+        starter: cell("$2,999"),
+        growth: cell("$7,999"),
+        scale: cell("$14,999"),
+      },
+      {
+        label: "Delivery",
+        starter: cell("2 weeks"),
+        growth: cell("4 weeks"),
+        scale: cell("Custom"),
+      },
+      {
+        label: "Features",
+        starter: cell("Up to 5"),
+        growth: cell("Up to 15"),
+        scale: cell("Unlimited"),
+      },
+      {
+        label: "UI/UX Design",
+        starter: cell("Basic"),
+        growth: cell("Custom"),
+        scale: cell("Premium"),
+      },
+      {
+        label: "Revisions",
+        starter: cell("Unlimited"),
+        growth: cell("Unlimited"),
+        scale: cell("Unlimited"),
+      },
+      {
+        label: "Post-Launch Support",
+        starter: cell("30 days"),
+        growth: cell("60 days"),
+        scale: cell("90 days"),
+      },
+      {
+        label: "Project Manager",
+        starter: no(),
+        growth: no(),
+        scale: yes(),
+      },
+      {
+        label: "Slack Channel",
+        starter: yes(),
+        growth: yes(),
+        scale: yes(),
+      },
+    ],
+  },
+  {
+    id: "mobile",
+    tabLabel: "Mobile App",
+    title: "📱 Mobile App",
+    rows: [
+      {
+        label: "Price",
+        starter: cell("$3,999"),
+        growth: cell("$9,999"),
+        scale: cell("$18,999"),
+      },
+      {
+        label: "Delivery",
+        starter: cell("2 weeks"),
+        growth: cell("5 weeks"),
+        scale: cell("Custom"),
+      },
+      {
+        label: "Platform",
+        starter: cell("iOS or Android"),
+        growth: cell("iOS & Android"),
+        scale: cell("iOS & Android"),
+      },
+      {
+        label: "Features",
+        starter: cell("Up to 5"),
+        growth: cell("Up to 15"),
+        scale: cell("Unlimited"),
+      },
+      {
+        label: "UI/UX Design",
+        starter: cell("Basic"),
+        growth: cell("Custom"),
+        scale: cell("Premium"),
+      },
+      {
+        label: "Revisions",
+        starter: cell("Unlimited"),
+        growth: cell("Unlimited"),
+        scale: cell("Unlimited"),
+      },
+      {
+        label: "Post-Launch Support",
+        starter: cell("30 days"),
+        growth: cell("60 days"),
+        scale: cell("90 days"),
+      },
+      {
+        label: "Project Manager",
+        starter: no(),
+        growth: no(),
+        scale: yes(),
+      },
+      {
+        label: "Slack Channel",
+        starter: yes(),
+        growth: yes(),
+        scale: yes(),
+      },
+    ],
+  },
+  {
+    id: "website-ecommerce",
+    tabLabel: "Website & Ecommerce",
+    title: "🌐 Website & Ecommerce",
+    rows: [
+      {
+        label: "Price",
+        starter: cell("$999"),
+        growth: cell("$4,999"),
+        scale: cell("$9,999"),
+      },
+      {
+        label: "Delivery",
+        starter: cell("1 week"),
+        growth: cell("2 weeks"),
+        scale: cell("Custom"),
+      },
+      {
+        label: "Pages / Products",
+        starter: cell("Up to 5"),
+        growth: cell("Up to 15 / 500"),
+        scale: cell("Unlimited"),
+      },
+      {
+        label: "UI/UX Design",
+        starter: cell("Basic"),
+        growth: cell("Custom"),
+        scale: cell("Premium"),
+      },
+      {
+        label: "SEO Setup",
+        starter: cell("Basic"),
+        growth: cell("Advanced"),
+        scale: cell("Advanced"),
+      },
+      {
+        label: "CMS",
+        starter: no(),
+        growth: yes(),
+        scale: yes(),
+      },
+      {
+        label: "Revisions",
+        starter: cell("Unlimited"),
+        growth: cell("Unlimited"),
+        scale: cell("Unlimited"),
+      },
+      {
+        label: "Post-Launch Support",
+        starter: cell("30 days"),
+        growth: cell("60 days"),
+        scale: cell("90 days"),
+      },
+      {
+        label: "Project Manager",
+        starter: no(),
+        growth: no(),
+        scale: yes(),
+      },
+      {
+        label: "Slack Channel",
+        starter: yes(),
+        growth: yes(),
+        scale: yes(),
+      },
+    ],
+  },
+];
 
 export const services: Service[] = [
   {
@@ -439,107 +639,6 @@ export const experienceStats = [
   { value: "10+", label: "Client teams" },
   { value: "1", label: "Live in-house product" },
 ];
-
-/** Build & ship: web apps, mobile, websites, ecommerce (matches homepage Development). */
-export const developmentPricingTiers: PricingTier[] = [
-  {
-    name: "Development strategy",
-    description:
-      "One hour to align on users, scope, and stack for what you’re building — leave with a clear first slice to ship and how it ladders to the full product.",
-    price: "$150",
-    priceNote: "1-hour session",
-    features: [
-      "Technical and product direction for your build",
-      "Scope, risk, and sequencing for a first version",
-      "Fit check before MVP or Scale",
-    ],
-    highlighted: false,
-    cta: "Book a call",
-  },
-  {
-    name: "Product MVP",
-    description:
-      "A shippable first version (typically 4–5 core features) for web, mobile, or ecommerce — so you can validate demand fast, not after a long runway.",
-    price: "$1,999",
-    priceNote: "one-time",
-    features: [
-      "Scoped MVP aligned to your users and metrics",
-      "4–5 core features end-to-end (UX, integrations, deploy)",
-      "Handoff you can run or extend with Development Scale",
-      "Aim for a working slice in ~2 weeks, then iterate",
-    ],
-    highlighted: true,
-    badge: "Most popular",
-    cta: "Book a call",
-  },
-  {
-    name: "Development Scale",
-    description:
-      "Fractional engineering with predictable weekly output — same mindset as the homepage: steady shipping, not surprise drops.",
-    price: "$3,999",
-    priceNote: "/ month",
-    features: [
-      "Monthly engineering capacity scoped with your roadmap — no black-box timelines",
-      "Features, integrations, polish, and production hardening (fair use)",
-      "Weekly cadence: incremental releases and tight feedback loops",
-      "Clear priorities each cycle; pause or cancel anytime",
-    ],
-    highlighted: false,
-    cta: "Book a call",
-  },
-];
-
-/** Acquisition, retention, monetization & experiments (matches homepage Growth). */
-export const growthPricingTiers: PricingTier[] = [
-  {
-    name: "Growth strategy",
-    description:
-      "One hour on funnels, retention, or monetization — where you’re leaking value, what to measure, and the smallest test worth running next.",
-    price: "$150",
-    priceNote: "1-hour session",
-    features: [
-      "Funnel or lifecycle snapshot and priorities",
-      "Metric and experiment framing (not vanity charts)",
-      "Honest fit before a sprint or retainer",
-    ],
-    highlighted: false,
-    cta: "Book a call",
-  },
-  {
-    name: "Growth sprint",
-    description:
-      "A focused two-week push: baseline the numbers, pick 1–2 hypotheses, ship experiments, and read results — product-led growth in practice.",
-    price: "$1,999",
-    priceNote: "one-time",
-    features: [
-      "Baseline + quick audit of acquisition / retention / revenue",
-      "1–2 experiments designed and shipped with you",
-      "Readout: what moved, what to try next",
-      "Optional handoff into Growth Scale for compounding",
-    ],
-    highlighted: true,
-    badge: "Best for traction",
-    cta: "Book a call",
-  },
-  {
-    name: "Growth Scale",
-    description:
-      "Ongoing retainer for loops, experiments, and analytics rhythm — mirrors Development Scale’s cadence, focused entirely on growth work.",
-    price: "$3,999",
-    priceNote: "/ month",
-    features: [
-      "Dedicated weekly growth capacity — experiments, funnels, and readouts (fair use)",
-      "Onboarding, pricing, lifecycle, and channel tests tied to your metrics",
-      "Weekly rhythm: ship, measure, decide the next bet",
-      "Aligned backlog; pause or cancel anytime",
-    ],
-    highlighted: false,
-    cta: "Book a call",
-  },
-];
-
-/** @deprecated Use developmentPricingTiers — kept for any external references */
-export const pricingTiers = developmentPricingTiers;
 
 export interface BlogPost {
   slug: string;
