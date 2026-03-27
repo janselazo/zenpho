@@ -18,6 +18,7 @@ import {
 } from "@/lib/crm/prospecting-nav";
 import ColdOutreachView from "@/components/crm/prospecting/ColdOutreachView";
 import ProspectsIntelligenceView from "@/components/crm/prospecting/ProspectsIntelligenceView";
+import NetworkingEventsView from "@/components/crm/prospecting/NetworkingEventsView";
 import SocialMediaProspectingPlaceholder from "@/components/crm/prospecting/SocialMediaProspectingPlaceholder";
 import ComingSoonModule from "@/components/crm/prospecting/ComingSoonModule";
 import ProspectingTabbedShell, {
@@ -38,6 +39,10 @@ export default function ProspectingSectionClient({
 
   if (slug === "prospects") {
     return <ProspectsIntelligenceView />;
+  }
+
+  if (slug === "networking") {
+    return <NetworkingEventsView />;
   }
 
   if (slug === "social-media") {

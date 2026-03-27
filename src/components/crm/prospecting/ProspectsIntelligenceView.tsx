@@ -277,7 +277,7 @@ export default function ProspectsIntelligenceView() {
     <div className="space-y-8">
       <div>
         <h1 className="heading-display text-2xl font-bold text-text-primary dark:text-zinc-100">
-          Prospects
+          Research
         </h1>
         <p className="mt-1 max-w-3xl text-sm text-text-secondary dark:text-zinc-400">
           Research outbound targets with Google Places (official API) and quick website

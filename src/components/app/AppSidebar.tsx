@@ -105,9 +105,13 @@ export default function AppSidebar() {
           </span>
         </div>
 
-        {/* Playbook + Dashboard */}
+        {/* Dashboard + Playbook */}
         <div className="px-2 pt-4">
           <nav className="flex flex-col gap-0.5">
+            <NavLink href="/dashboard" active={isActive(pathname, "/dashboard")}>
+              <LayoutDashboard className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+              Dashboard
+            </NavLink>
             {playbookSection && PlaybookNavIcon ? (
               <NavLink
                 href={playbookSection.href}
@@ -120,10 +124,6 @@ export default function AppSidebar() {
                 {playbookSection.label}
               </NavLink>
             ) : null}
-            <NavLink href="/dashboard" active={isActive(pathname, "/dashboard")}>
-              <LayoutDashboard className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-              Dashboard
-            </NavLink>
           </nav>
         </div>
 

@@ -10,11 +10,13 @@ import {
   Search,
   Gift,
   UserSearch,
+  Network,
 } from "lucide-react";
 
 export type ProspectingSectionSlug =
   | "playbook"
   | "prospects"
+  | "networking"
   | "creatives"
   | "landing-pages"
   | "social-media"
@@ -47,11 +49,19 @@ export const PROSPECTING_SECTIONS: ProspectingSection[] = [
   },
   {
     slug: "prospects",
-    label: "Prospects",
+    label: "Research",
     href: "/prospecting/prospects",
     icon: UserSearch,
     description:
       "Discover businesses via Google Places, analyze websites, and get software, AI automation, and growth ideas—then add targets as Leads.",
+  },
+  {
+    slug: "networking",
+    label: "Networking",
+    href: "/prospecting/networking",
+    icon: Network,
+    description:
+      "Find networking-style events in a city by date range—venues, organizers, and links (Ticketmaster catalog).",
   },
   {
     slug: "creatives",
