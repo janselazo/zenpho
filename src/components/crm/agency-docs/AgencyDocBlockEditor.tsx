@@ -4,11 +4,17 @@ import {
   forwardRef,
   useEffect,
   useImperativeHandle,
+  useMemo,
+  useRef,
   type ReactNode,
 } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
+import type { Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
+import { TableKit } from "@tiptap/extension-table";
+import { plainTextToTableHtml } from "@/lib/crm/agency-doc-paste-table";
+import { AGENCY_DOC_TABLE_PROSE_CLASS } from "@/lib/crm/agency-doc-body";
 import {
   Bold,
   Italic,
@@ -17,7 +23,6 @@ import {
   Minus,
   Underline as UnderlineIcon,
 } from "lucide-react";
-import type { Editor } from "@tiptap/core";
 
 export type AgencyDocBlockEditorHandle = {
   getHtml: () => string;
@@ -34,23 +39,57 @@ const AgencyDocBlockEditor = forwardRef<AgencyDocBlockEditorHandle, Props>(
     { initialHtml, disabled = false, autoFocus = true },
     ref
   ) {
-    const editor = useEditor({
-      extensions: [
+    const editorRef = useRef<Editor | null>(null);
+
+    const extensions = useMemo(
+      () => [
         StarterKit.configure({
           heading: false,
         }),
         Underline,
+        TableKit.configure({
+          table: { resizable: false },
+        }),
       ],
-      content: initialHtml || "<p></p>",
-      editable: !disabled,
-      immediatelyRender: false,
-      editorProps: {
+      []
+    );
+
+    const editorProps = useMemo(
+      () => ({
         attributes: {
-          class:
-            "agency-doc-tiptap min-h-[120px] px-3 py-2 text-base leading-relaxed text-text-primary focus:outline-none dark:text-zinc-100 [&_hr]:my-4 [&_hr]:border-border dark:[&_hr]:border-zinc-600 [&_li]:my-0.5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5",
+          class: `agency-doc-tiptap min-h-[120px] px-3 py-2 text-base leading-relaxed text-text-primary focus:outline-none dark:text-zinc-100 [&_hr]:my-4 [&_hr]:border-border dark:[&_hr]:border-zinc-600 [&_li]:my-0.5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 ${AGENCY_DOC_TABLE_PROSE_CLASS}`,
+        },
+        handlePaste: (_view: unknown, event: ClipboardEvent) => {
+          const ed = editorRef.current;
+          if (!ed) return false;
+          const text = event.clipboardData?.getData("text/plain");
+          if (!text) return false;
+          const tableHtml = plainTextToTableHtml(text);
+          if (!tableHtml) return false;
+          event.preventDefault();
+          ed.chain().focus().insertContent(tableHtml).run();
+          return true;
+        },
+      }),
+      []
+    );
+
+    const editor = useEditor(
+      {
+        extensions,
+        content: initialHtml || "<p></p>",
+        editable: !disabled,
+        immediatelyRender: false,
+        editorProps,
+        onCreate: ({ editor: ed }) => {
+          editorRef.current = ed;
+        },
+        onDestroy: () => {
+          editorRef.current = null;
         },
       },
-    });
+      [initialHtml]
+    );
 
     useEffect(() => {
       if (!editor) return;
@@ -143,7 +182,9 @@ const AgencyDocBlockEditor = forwardRef<AgencyDocBlockEditorHandle, Props>(
             <Minus className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
           </ToolbarBtn>
         </div>
-        <EditorContent editor={editor} />
+        <div className="max-w-full overflow-x-auto">
+          <EditorContent editor={editor} />
+        </div>
       </div>
     );
   }

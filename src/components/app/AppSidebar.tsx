@@ -36,8 +36,8 @@ const opportunitiesNav = [
 ];
 
 const workNav = [
-  { href: "/clients", label: "Clients", icon: Building2 },
   { href: "/proposals", label: "Proposals", icon: FileText },
+  { href: "/clients", label: "Clients", icon: Building2 },
   { href: "/projects", label: "Projects", icon: FolderKanban },
   { href: "/time-tracking", label: "Time Tracking", icon: Timer },
 ];
@@ -49,6 +49,12 @@ const agencyNav = [
   { href: "/reports", label: "Reports", icon: FileBarChart },
   { href: "/docs", label: "Docs", icon: BookOpen },
 ];
+
+const playbookSection = PROSPECTING_SECTIONS.find((s) => s.slug === "playbook");
+const prospectingSectionsWithoutPlaybook = playbookSection
+  ? PROSPECTING_SECTIONS.filter((s) => s.slug !== "playbook")
+  : PROSPECTING_SECTIONS;
+const PlaybookNavIcon = playbookSection?.icon;
 
 export default function AppSidebar() {
   const pathname = usePathname();
@@ -99,9 +105,21 @@ export default function AppSidebar() {
           </span>
         </div>
 
-        {/* Dashboard */}
+        {/* Playbook + Dashboard */}
         <div className="px-2 pt-4">
           <nav className="flex flex-col gap-0.5">
+            {playbookSection && PlaybookNavIcon ? (
+              <NavLink
+                href={playbookSection.href}
+                active={
+                  pathname === playbookSection.href ||
+                  pathname.startsWith(`${playbookSection.href}/`)
+                }
+              >
+                <PlaybookNavIcon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+                {playbookSection.label}
+              </NavLink>
+            ) : null}
             <NavLink href="/dashboard" active={isActive(pathname, "/dashboard")}>
               <LayoutDashboard className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
               Dashboard
@@ -111,7 +129,7 @@ export default function AppSidebar() {
 
         {/* Prospecting */}
         <NavGroup label="Prospecting">
-          {PROSPECTING_SECTIONS.map(({ href, label, icon: Icon, soon }) => (
+          {prospectingSectionsWithoutPlaybook.map(({ href, label, icon: Icon, soon }) => (
             <NavLink
               key={href}
               href={href}

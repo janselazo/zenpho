@@ -2,6 +2,10 @@ import DOMPurify from "isomorphic-dompurify";
 
 export const AGENCY_DOC_BODY_VERSION = 2 as const;
 
+/** Shared Tailwind for `<table>` in doc preview + editor (keep in sync with AgencyDocBlockEditor). */
+export const AGENCY_DOC_TABLE_PROSE_CLASS =
+  "[&_table]:my-4 [&_table]:block [&_table]:w-full [&_table]:max-w-full [&_table]:border-collapse [&_table]:text-sm [&_th]:border [&_th]:border-border [&_th]:bg-surface/60 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:align-top [&_td]:border [&_td]:border-border [&_td]:px-3 [&_td]:py-2 [&_td]:align-top [&_table_p]:m-0 dark:[&_th]:border-zinc-600 dark:[&_td]:border-zinc-600 dark:[&_th]:bg-zinc-800/50";
+
 export type AgencyDocBlock = { id: string; html: string };
 
 function escapeHtml(s: string): string {
@@ -25,6 +29,7 @@ export function isEmptyBlockHtml(html: string): boolean {
   if (/<\s*ul\b/i.test(trimmed)) return false;
   if (/<\s*ol\b/i.test(trimmed)) return false;
   if (/<\s*blockquote\b/i.test(trimmed)) return false;
+  if (/<\s*table\b/i.test(trimmed)) return false;
 
   // Remove paragraphs used only as vertical space (empty or br-only)
   const withoutSpacerPs = trimmed.replace(
@@ -110,7 +115,13 @@ export function sanitizeDocHtml(html: string): string {
       "blockquote",
       "code",
       "pre",
+      "table",
+      "thead",
+      "tbody",
+      "tr",
+      "th",
+      "td",
     ],
-    ALLOWED_ATTR: ["class"],
+    ALLOWED_ATTR: ["class", "colspan", "rowspan"],
   });
 }

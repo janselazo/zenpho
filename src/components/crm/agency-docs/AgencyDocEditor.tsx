@@ -8,6 +8,7 @@ import AgencyDocBlockEditor, {
   type AgencyDocBlockEditorHandle,
 } from "@/components/crm/agency-docs/AgencyDocBlockEditor";
 import {
+  AGENCY_DOC_TABLE_PROSE_CLASS,
   blocksFromBody,
   bodyFromBlocks,
   isEmptyBlockHtml,
@@ -213,7 +214,7 @@ export default function AgencyDocEditor({
                   </p>
                 ) : (
                   <div
-                    className="[&_code]:rounded [&_code]:bg-black/[0.06] [&_code]:px-1 [&_code]:text-sm [&_code]:dark:bg-white/10 [&_em]:italic [&_hr]:my-4 [&_hr]:border-border dark:[&_hr]:border-zinc-600 [&_li]:my-0.5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_u]:underline [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5"
+                    className={`max-w-full overflow-x-auto ${AGENCY_DOC_TABLE_PROSE_CLASS} [&_code]:rounded [&_code]:bg-black/[0.06] [&_code]:px-1 [&_code]:text-sm [&_code]:dark:bg-white/10 [&_em]:italic [&_hr]:my-4 [&_hr]:border-border dark:[&_hr]:border-zinc-600 [&_li]:my-0.5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_u]:underline [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5`}
                     dangerouslySetInnerHTML={{
                       __html: sanitizeDocHtml(row.html),
                     }}
