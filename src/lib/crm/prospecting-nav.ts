@@ -56,14 +56,6 @@ export const PROSPECTING_SECTIONS: ProspectingSection[] = [
       "Discover businesses via Google Places, analyze websites, and get software, AI automation, and growth ideas—then add targets as Leads.",
   },
   {
-    slug: "networking",
-    label: "Networking",
-    href: "/prospecting/networking",
-    icon: Network,
-    description:
-      "Find networking-style events in a city by date range—venues, organizers, and links (Ticketmaster catalog).",
-  },
-  {
     slug: "creatives",
     label: "Creatives",
     href: "/prospecting/creatives",
@@ -131,6 +123,14 @@ export const PROSPECTING_SECTIONS: ProspectingSection[] = [
     icon: Handshake,
     description:
       "Track referral partners, co-marketing motions, and shared pipeline.",
+  },
+  {
+    slug: "networking",
+    label: "Networking",
+    href: "/prospecting/networking",
+    icon: Network,
+    description:
+      "Find networking-style events in a city by date range—venues, organizers, and links (Ticketmaster catalog).",
   },
   {
     slug: "referrals",
