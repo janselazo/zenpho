@@ -494,12 +494,12 @@ export default function TimeTrackingView() {
               />
             </div>
           </div>
-          <div className="flex shrink-0 flex-col items-stretch gap-3 sm:flex-row sm:items-center lg:flex-col lg:items-end xl:flex-row">
-            <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-zinc-50/90 px-4 py-3 dark:border-zinc-700/80 dark:bg-zinc-900/50 sm:justify-end">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary dark:text-zinc-500">
+          <div className="flex shrink-0 flex-col items-stretch gap-2 sm:flex-row sm:items-center lg:flex-col lg:items-end xl:flex-row">
+            <div className="flex min-w-[9.5rem] items-center justify-between gap-3 rounded-lg border border-zinc-200/90 bg-zinc-50 px-3 py-2 dark:border-zinc-700/70 dark:bg-zinc-900/45 sm:justify-end">
+              <span className="text-[10px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-500">
                 {runningEntry ? "Elapsed" : "Ready"}
               </span>
-              <span className="font-mono text-2xl font-semibold tabular-nums tracking-tight text-text-primary dark:text-zinc-50">
+              <span className="font-mono text-lg font-medium tabular-nums tracking-tight text-zinc-800 dark:text-zinc-100">
                 {formatDurationSeconds(
                   runningEntry ? runningElapsed : 0
                 )}
@@ -509,22 +509,22 @@ export default function TimeTrackingView() {
               type="button"
               disabled={actionBusy}
               onClick={() => void onStartStop()}
-              className={`flex h-12 w-full shrink-0 items-center justify-center gap-2 rounded-xl px-6 text-sm font-semibold text-white shadow-md transition sm:h-12 sm:w-auto sm:min-w-[7.5rem] ${
+              className={`flex h-9 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg px-4 text-xs font-semibold shadow-sm transition sm:h-9 sm:w-auto sm:min-w-[6.25rem] ${
                 runningEntry
-                  ? "bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-500"
-                  : "bg-text-primary hover:opacity-95 dark:bg-blue-600 dark:hover:bg-blue-500"
+                  ? "bg-rose-500 text-white hover:bg-rose-600 dark:bg-rose-600 dark:hover:bg-rose-500"
+                  : "bg-accent text-white hover:bg-accent/90 dark:bg-blue-500 dark:hover:bg-blue-400"
               } disabled:opacity-50`}
             >
               {actionBusy ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : runningEntry ? (
                 <>
-                  <Square className="h-4 w-4 fill-current" />
+                  <Square className="h-3.5 w-3.5 fill-current" />
                   Stop
                 </>
               ) : (
                 <>
-                  <Play className="h-5 w-5 translate-x-0.5 fill-current" />
+                  <Play className="h-3.5 w-3.5 translate-x-px fill-current" />
                   Start
                 </>
               )}

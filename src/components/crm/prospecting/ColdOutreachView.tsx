@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -238,18 +238,68 @@ function MonthlyGoalsCard({
   goals: MonthlyGoal[];
   onChange: (goals: MonthlyGoal[]) => void;
 }) {
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState(0);
+  const [goalEdit, setGoalEdit] = useState<
+    null | { id: string; mode: "title" | "target" }
+  >(null);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [targetDraft, setTargetDraft] = useState(0);
+  const skipTitleBlurSave = useRef(false);
 
-  function startEdit(g: MonthlyGoal) {
-    setEditingId(g.id);
-    setEditValue(g.unit === "currency" ? g.target : g.target);
+  function commitPendingEdit() {
+    if (!goalEdit) return;
+    if (goalEdit.mode === "title") {
+      const trimmed = titleDraft.trim() || "New Goal";
+      onChange(
+        goals.map((goal) =>
+          goal.id === goalEdit.id ? { ...goal, title: trimmed } : goal
+        )
+      );
+    } else {
+      const val = Math.max(1, targetDraft);
+      onChange(
+        goals.map((goal) =>
+          goal.id === goalEdit.id ? { ...goal, target: val } : goal
+        )
+      );
+    }
   }
 
-  function confirmEdit(g: MonthlyGoal) {
-    const val = Math.max(1, editValue);
+  function startEditTitle(g: MonthlyGoal) {
+    if (goalEdit?.id === g.id && goalEdit.mode === "title") return;
+    if (goalEdit) commitPendingEdit();
+    setGoalEdit({ id: g.id, mode: "title" });
+    setTitleDraft(g.title);
+  }
+
+  function confirmTitleEdit(goalId: string) {
+    const trimmed = titleDraft.trim() || "New Goal";
+    onChange(
+      goals.map((goal) =>
+        goal.id === goalId ? { ...goal, title: trimmed } : goal
+      )
+    );
+    setGoalEdit(null);
+  }
+
+  function cancelTitleEdit() {
+    skipTitleBlurSave.current = true;
+    setGoalEdit(null);
+    requestAnimationFrame(() => {
+      skipTitleBlurSave.current = false;
+    });
+  }
+
+  function startEditTarget(g: MonthlyGoal) {
+    if (goalEdit?.id === g.id && goalEdit.mode === "target") return;
+    if (goalEdit) commitPendingEdit();
+    setGoalEdit({ id: g.id, mode: "target" });
+    setTargetDraft(g.target);
+  }
+
+  function confirmTargetEdit(g: MonthlyGoal) {
+    const val = Math.max(1, targetDraft);
     onChange(goals.map((goal) => (goal.id === g.id ? { ...goal, target: val } : goal)));
-    setEditingId(null);
+    setGoalEdit(null);
   }
 
   function addGoal() {
@@ -293,62 +343,111 @@ function MonthlyGoalsCard({
           );
           const GoalIcon =
             g.icon === "handshake" ? Handshake : DollarSign;
-          const isEditing = editingId === g.id;
+          const isEditingTarget =
+            goalEdit?.id === g.id && goalEdit.mode === "target";
+          const isEditingTitle =
+            goalEdit?.id === g.id && goalEdit.mode === "title";
 
           return (
             <div key={g.id}>
               {/* Header row */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <GoalIcon className="h-4 w-4 text-text-secondary" />
-                  <span className="text-sm font-medium text-text-primary">
-                    {g.title}
-                  </span>
+              <div className="flex items-center justify-between gap-3">
+                <div className="group flex min-w-0 flex-1 items-center gap-2">
+                  <GoalIcon className="h-4 w-4 shrink-0 text-text-secondary" />
+                  {isEditingTitle ? (
+                    <div className="flex min-w-0 flex-1 items-center gap-1">
+                      <input
+                        type="text"
+                        value={titleDraft}
+                        onChange={(e) => setTitleDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            confirmTitleEdit(g.id);
+                          }
+                          if (e.key === "Escape") {
+                            e.preventDefault();
+                            cancelTitleEdit();
+                          }
+                        }}
+                        onBlur={() => {
+                          if (skipTitleBlurSave.current) return;
+                          confirmTitleEdit(g.id);
+                        }}
+                        maxLength={120}
+                        autoFocus
+                        className="min-w-0 flex-1 rounded-lg border border-accent bg-white px-2 py-1 text-sm font-medium text-text-primary outline-none ring-2 ring-accent/15 dark:bg-zinc-900 dark:text-zinc-100"
+                      />
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => confirmTitleEdit(g.id)}
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/50"
+                        title="Save name"
+                      >
+                        <CheckCircle2 className="h-5 w-5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => startEditTitle(g)}
+                      className="min-w-0 flex-1 truncate text-left text-sm font-medium text-text-primary underline-offset-2 hover:underline dark:text-zinc-100"
+                      title="Edit goal name"
+                    >
+                      {g.title}
+                    </button>
+                  )}
                 </div>
 
-                {isEditing ? (
-                  <div className="flex items-center gap-1.5">
+                {isEditingTarget ? (
+                  <div className="flex shrink-0 items-center gap-1.5">
                     {g.unit === "currency" && (
                       <span className="text-sm text-text-secondary">$</span>
                     )}
                     <input
                       type="number"
                       min="1"
-                      value={editValue}
-                      onChange={(e) => setEditValue(Number(e.target.value))}
+                      value={targetDraft}
+                      onChange={(e) => setTargetDraft(Number(e.target.value))}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") confirmEdit(g);
-                        if (e.key === "Escape") setEditingId(null);
+                        if (e.key === "Enter") confirmTargetEdit(g);
+                        if (e.key === "Escape") setGoalEdit(null);
                       }}
                       autoFocus
-                      className="w-20 rounded-lg border border-accent bg-white px-2 py-1 text-right text-sm font-semibold text-text-primary outline-none ring-2 ring-accent/15"
+                      className="w-20 rounded-lg border border-accent bg-white px-2 py-1 text-right text-sm font-semibold text-text-primary outline-none ring-2 ring-accent/15 dark:bg-zinc-900 dark:text-zinc-100"
                     />
                     <button
                       type="button"
-                      onClick={() => confirmEdit(g)}
-                      className="flex h-7 w-7 items-center justify-center rounded-full text-emerald-500 hover:bg-emerald-50"
+                      onClick={() => confirmTargetEdit(g)}
+                      className="flex h-7 w-7 items-center justify-center rounded-full text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/50"
                     >
                       <CheckCircle2 className="h-5 w-5" />
                     </button>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-semibold text-text-primary">
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <span className="text-sm font-semibold tabular-nums text-text-primary dark:text-zinc-100">
                       {g.unit === "currency"
                         ? `${g.current} / ${g.target}`
                         : `${g.current} / ${g.target}`}
                     </span>
                     <button
                       type="button"
-                      onClick={() => startEdit(g)}
+                      onClick={() => startEditTarget(g)}
                       className="rounded p-0.5 text-text-secondary/40 transition-colors hover:text-accent"
+                      title="Edit target"
                     >
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
                     <button
                       type="button"
-                      onClick={() => onChange(goals.filter((x) => x.id !== g.id))}
+                      onClick={() => {
+                        if (goalEdit?.id === g.id) setGoalEdit(null);
+                        onChange(goals.filter((x) => x.id !== g.id));
+                      }}
                       className="rounded p-0.5 text-text-secondary/40 transition-colors hover:text-red-500"
+                      title="Delete goal"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>

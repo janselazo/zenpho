@@ -33,16 +33,9 @@ const opportunitiesNav: Array<{
   href: string;
   label: string;
   icon: LucideIcon;
-  nestedUnderDeals?: boolean;
 }> = [
   { href: "/leads", label: "Leads", icon: UsersRound },
   { href: "/deals", label: "Deals", icon: Handshake },
-  {
-    href: "/proposals",
-    label: "Proposals",
-    icon: FileText,
-    nestedUnderDeals: true,
-  },
   { href: "/conversations", label: "Conversations", icon: MessageSquare },
   { href: "/calendar", label: "Appointments", icon: Calendar },
 ];
@@ -155,19 +148,20 @@ export default function AppSidebar() {
 
         {/* Opportunities */}
         <NavGroup label="Opportunities">
-          {opportunitiesNav.map(
-            ({ href, label, icon: Icon, nestedUnderDeals }) => (
-              <NavLink
-                key={href}
-                href={href}
-                active={isActive(pathname, href)}
-                nestedUnderDeals={nestedUnderDeals}
-              >
-                <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-                {label}
-              </NavLink>
-            )
-          )}
+          {opportunitiesNav.map(({ href, label, icon: Icon }) => (
+            <NavLink key={href} href={href} active={isActive(pathname, href)}>
+              <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+              {label}
+            </NavLink>
+          ))}
+        </NavGroup>
+
+        {/* Proposals */}
+        <NavGroup label="Proposals">
+          <NavLink href="/proposals" active={isActive(pathname, "/proposals")}>
+            <FileText className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+            Proposals
+          </NavLink>
         </NavGroup>
 
         {/* Work */}
@@ -279,22 +273,16 @@ function CollapsibleGroup({
 function NavLink({
   href,
   active,
-  nestedUnderDeals,
   children,
 }: {
   href: string;
   active: boolean;
-  nestedUnderDeals?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <Link
       href={href}
-      className={`flex w-full min-w-0 items-center gap-2 rounded-xl py-2 text-sm font-medium transition-colors ${
-        nestedUnderDeals
-          ? "ml-2 border-l-2 border-border pl-3 pr-3 dark:border-zinc-700"
-          : "px-3"
-      } ${
+      className={`flex w-full min-w-0 items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
         active
           ? "bg-accent/10 text-accent dark:bg-blue-500/12 dark:text-blue-400"
           : "text-text-secondary hover:bg-surface hover:text-text-primary dark:text-zinc-400 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100"
