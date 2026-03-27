@@ -36,6 +36,7 @@ const opportunitiesNav: Array<{
 }> = [
   { href: "/leads", label: "Leads", icon: UsersRound },
   { href: "/deals", label: "Deals", icon: Handshake },
+  { href: "/proposals", label: "Proposals", icon: FileText },
   { href: "/conversations", label: "Conversations", icon: MessageSquare },
   { href: "/calendar", label: "Appointments", icon: Calendar },
 ];
@@ -154,14 +155,6 @@ export default function AppSidebar() {
               {label}
             </NavLink>
           ))}
-        </NavGroup>
-
-        {/* Proposals */}
-        <NavGroup label="Proposals">
-          <NavLink href="/proposals" active={isActive(pathname, "/proposals")}>
-            <FileText className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-            Proposals
-          </NavLink>
         </NavGroup>
 
         {/* Work */}

@@ -390,7 +390,28 @@ export interface MonthlyGoal {
   icon: string;
 }
 
-export const monthlyGoals: MonthlyGoal[] = [];
+/** Fixed playbook monthly goals: Clients (won this month) + Revenue (project budgets). */
+export const standardMonthlyGoals: MonthlyGoal[] = [
+  {
+    id: "mg-clients",
+    title: "Clients",
+    current: 0,
+    target: 15,
+    unit: "count",
+    icon: "users",
+  },
+  {
+    id: "mg-revenue",
+    title: "Revenue",
+    current: 0,
+    target: 8000,
+    unit: "currency",
+    icon: "dollar",
+  },
+];
+
+/** @deprecated Use `standardMonthlyGoals` — kept for imports that expect `monthlyGoals`. */
+export const monthlyGoals: MonthlyGoal[] = standardMonthlyGoals;
 
 export type ProspectingTaskType = "follow_up" | "call" | "email" | "text" | "appointment" | "other";
 export type ProspectingTaskStatus = "pending" | "in_progress" | "completed" | "skipped";

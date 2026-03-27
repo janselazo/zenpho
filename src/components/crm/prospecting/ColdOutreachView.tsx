@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -28,12 +28,12 @@ import {
   BookOpen,
   CalendarDays,
   ListTodo,
+  UsersRound,
 } from "lucide-react";
 import IconTabBar from "@/components/crm/prospecting/IconTabBar";
 import {
   playbookCategories,
-  monthlyGoals,
-  deals,
+  standardMonthlyGoals,
   prospectingTasks,
   PROSPECTING_TASK_TYPE_LABELS,
   type PlaybookCategory,
@@ -43,6 +43,15 @@ import {
   type ProspectingTaskType,
   type ProspectingTaskStatus,
 } from "@/lib/crm/mock-data";
+import {
+  fetchMonthlyClientsWonCount,
+  fetchMonthlyRevenueFromWonClientProjects,
+} from "@/lib/crm/monthly-goals-metrics";
+import {
+  loadMonthlyGoalTargets,
+  monthKeyFromDate,
+  saveMonthlyGoalTargets,
+} from "@/lib/crm/monthly-goals-targets";
 import {
   getCompletions,
   saveCompletions,
@@ -157,36 +166,73 @@ const TABS = [
   { id: "tasks", label: "Tasks", icon: ListTodo },
 ];
 
-function getMonthlyDealsMetrics() {
-  const now = new Date();
-  const month = now.getMonth();
-  const year = now.getFullYear();
-  const wonThisMonth = deals.filter((d) => {
-    if (d.stage !== "closed_won") return false;
-    const close = new Date(d.expectedClose);
-    return close.getMonth() === month && close.getFullYear() === year;
-  });
-  return {
-    wonCount: wonThisMonth.length,
-    wonRevenue: wonThisMonth.reduce((s, d) => s + d.value, 0),
-  };
-}
+const DEFAULT_MONTHLY_TARGETS = {
+  clients: standardMonthlyGoals[0].target,
+  revenue: standardMonthlyGoals[1].target,
+};
 
 export default function ColdOutreachView() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("playbook");
   const [currentDate, setCurrentDate] = useState(() => new Date());
-  const [goals, setGoals] = useState<MonthlyGoal[]>(monthlyGoals);
+  const [goals, setGoals] = useState<MonthlyGoal[]>(() => [
+    ...standardMonthlyGoals,
+  ]);
+  const [clientsActual, setClientsActual] = useState(0);
+  const [revenueActual, setRevenueActual] = useState(0);
 
-  const { wonCount, wonRevenue } = getMonthlyDealsMetrics();
+  useEffect(() => {
+    const ym = monthKeyFromDate(new Date());
+    const t = loadMonthlyGoalTargets(ym, DEFAULT_MONTHLY_TARGETS);
+    setGoals([
+      { ...standardMonthlyGoals[0], target: t.clients },
+      { ...standardMonthlyGoals[1], target: t.revenue },
+    ]);
+  }, []);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured()) {
+      setClientsActual(0);
+      setRevenueActual(0);
+      return;
+    }
+    let cancelled = false;
+    const supabase = createClient();
+    void (async () => {
+      const [c, r] = await Promise.all([
+        fetchMonthlyClientsWonCount(supabase),
+        fetchMonthlyRevenueFromWonClientProjects(supabase),
+      ]);
+      if (!cancelled) {
+        setClientsActual(c);
+        setRevenueActual(r);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const goalsWithActuals = useMemo(
     () =>
       goals.map((g) => {
-        if (g.id === "mg-1") return { ...g, current: wonCount };
-        if (g.id === "mg-2") return { ...g, current: wonRevenue };
+        if (g.id === "mg-clients") return { ...g, current: clientsActual };
+        if (g.id === "mg-revenue") return { ...g, current: revenueActual };
         return g;
       }),
-    [goals, wonCount, wonRevenue]
+    [goals, clientsActual, revenueActual]
   );
+
+  function handleGoalsChange(next: MonthlyGoal[]) {
+    setGoals(next);
+    const ym = monthKeyFromDate(new Date());
+    const clientsT =
+      next.find((x) => x.id === "mg-clients")?.target ??
+      DEFAULT_MONTHLY_TARGETS.clients;
+    const revenueT =
+      next.find((x) => x.id === "mg-revenue")?.target ??
+      DEFAULT_MONTHLY_TARGETS.revenue;
+    saveMonthlyGoalTargets(ym, { clients: clientsT, revenue: revenueT });
+  }
 
   return (
     <div>
@@ -201,7 +247,7 @@ export default function ColdOutreachView() {
       </div>
 
       {/* Monthly Goals */}
-      <MonthlyGoalsCard goals={goalsWithActuals} onChange={setGoals} />
+      <MonthlyGoalsCard goals={goalsWithActuals} onChange={handleGoalsChange} />
 
       {/* Date navigator */}
       <div className="mt-6">
@@ -231,6 +277,13 @@ export default function ColdOutreachView() {
 
 // ── Monthly Goals Card ──────────────────────────────────────────────────────
 
+function formatCompactUsd(n: number) {
+  const abs = Math.abs(n);
+  if (abs >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1000) return `$${(n / 1000).toFixed(1)}k`;
+  return formatCurrency(n);
+}
+
 function MonthlyGoalsCard({
   goals,
   onChange,
@@ -238,82 +291,18 @@ function MonthlyGoalsCard({
   goals: MonthlyGoal[];
   onChange: (goals: MonthlyGoal[]) => void;
 }) {
-  const [goalEdit, setGoalEdit] = useState<
-    null | { id: string; mode: "title" | "target" }
-  >(null);
-  const [titleDraft, setTitleDraft] = useState("");
+  const [editingTargetId, setEditingTargetId] = useState<string | null>(null);
   const [targetDraft, setTargetDraft] = useState(0);
-  const skipTitleBlurSave = useRef(false);
-
-  function commitPendingEdit() {
-    if (!goalEdit) return;
-    if (goalEdit.mode === "title") {
-      const trimmed = titleDraft.trim() || "New Goal";
-      onChange(
-        goals.map((goal) =>
-          goal.id === goalEdit.id ? { ...goal, title: trimmed } : goal
-        )
-      );
-    } else {
-      const val = Math.max(1, targetDraft);
-      onChange(
-        goals.map((goal) =>
-          goal.id === goalEdit.id ? { ...goal, target: val } : goal
-        )
-      );
-    }
-  }
-
-  function startEditTitle(g: MonthlyGoal) {
-    if (goalEdit?.id === g.id && goalEdit.mode === "title") return;
-    if (goalEdit) commitPendingEdit();
-    setGoalEdit({ id: g.id, mode: "title" });
-    setTitleDraft(g.title);
-  }
-
-  function confirmTitleEdit(goalId: string) {
-    const trimmed = titleDraft.trim() || "New Goal";
-    onChange(
-      goals.map((goal) =>
-        goal.id === goalId ? { ...goal, title: trimmed } : goal
-      )
-    );
-    setGoalEdit(null);
-  }
-
-  function cancelTitleEdit() {
-    skipTitleBlurSave.current = true;
-    setGoalEdit(null);
-    requestAnimationFrame(() => {
-      skipTitleBlurSave.current = false;
-    });
-  }
 
   function startEditTarget(g: MonthlyGoal) {
-    if (goalEdit?.id === g.id && goalEdit.mode === "target") return;
-    if (goalEdit) commitPendingEdit();
-    setGoalEdit({ id: g.id, mode: "target" });
+    setEditingTargetId(g.id);
     setTargetDraft(g.target);
   }
 
   function confirmTargetEdit(g: MonthlyGoal) {
-    const val = Math.max(1, targetDraft);
+    const val = Math.max(1, Math.floor(targetDraft));
     onChange(goals.map((goal) => (goal.id === g.id ? { ...goal, target: val } : goal)));
-    setGoalEdit(null);
-  }
-
-  function addGoal() {
-    onChange([
-      ...goals,
-      {
-        id: `mg-${Date.now()}`,
-        title: "New Goal",
-        current: 0,
-        target: 10,
-        unit: "count",
-        icon: "handshake",
-      },
-    ]);
+    setEditingTargetId(null);
   }
 
   const now = new Date();
@@ -323,17 +312,15 @@ function MonthlyGoalsCard({
   });
 
   return (
-    <div className="mt-6 rounded-2xl border border-border bg-white p-5 shadow-sm">
+    <div className="mt-6 rounded-2xl border border-border bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/40">
       <div className="flex items-center justify-between">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/60">
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/60 dark:text-zinc-500">
           Monthly Goals
         </p>
-        <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs font-medium text-text-primary">
-            <Calendar className="h-3 w-3 text-accent" />
-            {monthLabel}
-          </span>
-        </div>
+        <span className="flex items-center gap-1.5 rounded-full border border-violet-200/90 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/15 dark:text-violet-200">
+          <Calendar className="h-3 w-3 text-violet-600 dark:text-violet-400" aria-hidden />
+          {monthLabel}
+        </span>
       </div>
       <div className="mt-4 space-y-5">
         {goals.map((g) => {
@@ -342,80 +329,46 @@ function MonthlyGoalsCard({
             100
           );
           const GoalIcon =
-            g.icon === "handshake" ? Handshake : DollarSign;
-          const isEditingTarget =
-            goalEdit?.id === g.id && goalEdit.mode === "target";
-          const isEditingTitle =
-            goalEdit?.id === g.id && goalEdit.mode === "title";
+            g.icon === "users" ? UsersRound : DollarSign;
+          const isEditingTarget = editingTargetId === g.id;
+          const displayDots = Math.min(g.target, 40);
+          const filledDots =
+            g.target > 0
+              ? Math.min(
+                  displayDots,
+                  Math.floor((g.current / g.target) * displayDots)
+                )
+              : 0;
 
           return (
             <div key={g.id}>
-              {/* Header row */}
               <div className="flex items-center justify-between gap-3">
-                <div className="group flex min-w-0 flex-1 items-center gap-2">
-                  <GoalIcon className="h-4 w-4 shrink-0 text-text-secondary" />
-                  {isEditingTitle ? (
-                    <div className="flex min-w-0 flex-1 items-center gap-1">
-                      <input
-                        type="text"
-                        value={titleDraft}
-                        onChange={(e) => setTitleDraft(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            confirmTitleEdit(g.id);
-                          }
-                          if (e.key === "Escape") {
-                            e.preventDefault();
-                            cancelTitleEdit();
-                          }
-                        }}
-                        onBlur={() => {
-                          if (skipTitleBlurSave.current) return;
-                          confirmTitleEdit(g.id);
-                        }}
-                        maxLength={120}
-                        autoFocus
-                        className="min-w-0 flex-1 rounded-lg border border-accent bg-white px-2 py-1 text-sm font-medium text-text-primary outline-none ring-2 ring-accent/15 dark:bg-zinc-900 dark:text-zinc-100"
-                      />
-                      <button
-                        type="button"
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => confirmTitleEdit(g.id)}
-                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/50"
-                        title="Save name"
-                      >
-                        <CheckCircle2 className="h-5 w-5" />
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => startEditTitle(g)}
-                      className="min-w-0 flex-1 truncate text-left text-sm font-medium text-text-primary underline-offset-2 hover:underline dark:text-zinc-100"
-                      title="Edit goal name"
-                    >
-                      {g.title}
-                    </button>
-                  )}
+                <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800/90">
+                    <GoalIcon className="h-4 w-4 text-zinc-600 dark:text-zinc-400" aria-hidden />
+                  </span>
+                  <span className="truncate text-sm font-medium text-text-primary dark:text-zinc-100">
+                    {g.title}
+                  </span>
                 </div>
 
                 {isEditingTarget ? (
                   <div className="flex shrink-0 items-center gap-1.5">
                     {g.unit === "currency" && (
-                      <span className="text-sm text-text-secondary">$</span>
+                      <span className="text-sm text-text-secondary dark:text-zinc-500">$</span>
                     )}
                     <input
                       type="number"
                       min="1"
+                      step="1"
                       value={targetDraft}
                       onChange={(e) => setTargetDraft(Number(e.target.value))}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") confirmTargetEdit(g);
-                        if (e.key === "Escape") setGoalEdit(null);
+                        if (e.key === "Escape") setEditingTargetId(null);
                       }}
                       autoFocus
-                      className="w-20 rounded-lg border border-accent bg-white px-2 py-1 text-right text-sm font-semibold text-text-primary outline-none ring-2 ring-accent/15 dark:bg-zinc-900 dark:text-zinc-100"
+                      className="w-24 rounded-lg border border-accent bg-white px-2 py-1 text-right text-sm font-semibold text-text-primary outline-none ring-2 ring-accent/15 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
                     />
                     <button
                       type="button"
@@ -428,57 +381,58 @@ function MonthlyGoalsCard({
                 ) : (
                   <div className="flex shrink-0 items-center gap-1.5">
                     <span className="text-sm font-semibold tabular-nums text-text-primary dark:text-zinc-100">
-                      {g.unit === "currency"
-                        ? `${g.current} / ${g.target}`
-                        : `${g.current} / ${g.target}`}
+                      {g.unit === "currency" ? (
+                        <>
+                          {formatCompactUsd(g.current)} / {formatCompactUsd(g.target)}
+                        </>
+                      ) : (
+                        <>
+                          {g.current} / {g.target}
+                        </>
+                      )}
                     </span>
                     <button
                       type="button"
                       onClick={() => startEditTarget(g)}
-                      className="rounded p-0.5 text-text-secondary/40 transition-colors hover:text-accent"
-                      title="Edit target"
+                      className="rounded p-0.5 text-text-secondary/40 transition-colors hover:text-accent dark:hover:text-violet-400"
+                      title="Edit monthly target"
                     >
                       <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (goalEdit?.id === g.id) setGoalEdit(null);
-                        onChange(goals.filter((x) => x.id !== g.id));
-                      }}
-                      className="rounded p-0.5 text-text-secondary/40 transition-colors hover:text-red-500"
-                      title="Delete goal"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 )}
               </div>
 
-              {/* Progress visualization */}
               {g.unit === "count" ? (
-                <div className="mt-2 flex items-center gap-1.5">
-                  {Array.from({ length: g.target }).map((_, i) => (
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  {Array.from({ length: displayDots }).map((_, i) => (
                     <span
                       key={i}
                       className={`h-2.5 w-2.5 rounded-full ${
-                        i < g.current
+                        i < filledDots
                           ? "bg-emerald-500"
-                          : "bg-gray-200"
+                          : "bg-gray-200 dark:bg-zinc-700"
                       }`}
                     />
                   ))}
+                  {g.target > 40 ? (
+                    <span className="text-[10px] text-text-secondary dark:text-zinc-500">
+                      ({g.target} total)
+                    </span>
+                  ) : null}
                 </div>
               ) : (
                 <div className="mt-2">
-                  <div className="h-2 overflow-hidden rounded-full bg-gray-100">
+                  <div className="h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-zinc-800">
                     <div
-                      className="h-full rounded-full bg-amber-400 transition-all"
+                      className="h-full rounded-full bg-amber-400 transition-all dark:bg-amber-500/90"
                       style={{ width: `${pct}%` }}
                     />
                   </div>
-                  <p className="mt-1 text-right text-xs text-text-secondary">
-                    {formatCurrency(g.current)} earned
+                  <p className="mt-1 text-right text-xs text-text-secondary dark:text-zinc-500">
+                    {g.current >= g.target
+                      ? "Goal reached"
+                      : `${formatCompactUsd(Math.max(0, g.target - g.current))} more!`}
                   </p>
                 </div>
               )}
@@ -486,14 +440,6 @@ function MonthlyGoalsCard({
           );
         })}
       </div>
-
-      <button
-        type="button"
-        onClick={addGoal}
-        className="mt-4 flex w-full items-center justify-center gap-1 rounded-xl border border-dashed border-border py-2 text-xs font-medium text-text-secondary hover:border-accent hover:text-accent"
-      >
-        <Plus className="h-3 w-3" /> Add Goal
-      </button>
     </div>
   );
 }
