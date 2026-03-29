@@ -6,20 +6,12 @@ import { Loader2, X } from "lucide-react";
 import CrmPopoverDateField from "@/components/crm/CrmPopoverDateField";
 import { createDealRecord } from "@/app/(crm)/actions/crm";
 import {
-  DEAL_STAGE_LABELS,
-  type DealStage,
-} from "@/lib/crm/mock-data";
+  DEFAULT_DEAL_PIPELINE_COLUMNS,
+  type PipelineColumnDef,
+} from "@/lib/crm/pipeline-columns";
 
 const dealFormInputClass =
   "w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/15 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100";
-
-const DEAL_FORM_STAGE_ORDER: DealStage[] = [
-  "prospect",
-  "proposal",
-  "negotiation",
-  "closed_won",
-  "closed_lost",
-];
 
 export type CreateDealLeadRef = {
   id: string;
@@ -30,9 +22,11 @@ export type CreateDealLeadRef = {
 
 export default function CreateDealForLeadModal({
   lead,
+  dealPipelineColumns = DEFAULT_DEAL_PIPELINE_COLUMNS,
   onClose,
 }: {
   lead: CreateDealLeadRef;
+  dealPipelineColumns?: PipelineColumnDef[];
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -163,12 +157,12 @@ export default function CreateDealForLeadModal({
               </label>
               <select
                 name="stage"
-                defaultValue="prospect"
+                defaultValue={dealPipelineColumns[0]?.slug ?? "prospect"}
                 className={dealFormInputClass}
               >
-                {DEAL_FORM_STAGE_ORDER.map((s) => (
-                  <option key={s} value={s}>
-                    {DEAL_STAGE_LABELS[s]}
+                {dealPipelineColumns.map((c) => (
+                  <option key={c.slug} value={c.slug}>
+                    {c.label}
                   </option>
                 ))}
               </select>

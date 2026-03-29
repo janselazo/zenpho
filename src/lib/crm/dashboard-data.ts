@@ -114,7 +114,12 @@ export async function fetchDashboardFunnel(
     supabase
       .from("lead")
       .select("*", { count: "exact", head: true })
-      .eq("stage", "qualified")
+      .in("stage", [
+        "qualified",
+        "discoverycall_completed",
+        "proposal_sent",
+        "negotiation",
+      ])
       .gte("created_at", rs)
       .lte("created_at", re),
     supabase

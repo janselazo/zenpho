@@ -6,24 +6,16 @@ import { updateLead } from "@/app/(crm)/actions/crm";
 import { LEAD_PROJECT_TYPE_OPTIONS } from "@/lib/crm/mock-data";
 import CrmPopoverDateField from "@/components/crm/CrmPopoverDateField";
 import TabBar from "@/components/crm/TabBar";
+import {
+  DEFAULT_DEAL_PIPELINE_COLUMNS,
+  DEFAULT_LEAD_PIPELINE_COLUMNS,
+  dealStageLabelColor,
+  leadStageLabelColor,
+  type PipelineColumnDef,
+} from "@/lib/crm/pipeline-columns";
 
 const inputClass =
   "w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/15";
-
-const leadStages = [
-  { value: "new", label: "New" },
-  { value: "contacted", label: "Contacted" },
-  { value: "qualified", label: "Qualified" },
-  { value: "not_qualified", label: "Not Qualified" },
-] as const;
-
-const dealStages = [
-  { value: "prospect", label: "Open" },
-  { value: "proposal", label: "Proposal" },
-  { value: "negotiation", label: "Negotiation" },
-  { value: "closed_won", label: "Won" },
-  { value: "closed_lost", label: "Lost" },
-] as const;
 
 const LEAD_TABS = [
   { id: "contact", label: "Contact" },
@@ -61,9 +53,13 @@ function dateInputValue(iso: string | null | undefined): string {
 export default function LeadEditForm({
   lead,
   deal,
+  leadPipelineColumns = DEFAULT_LEAD_PIPELINE_COLUMNS,
+  dealPipelineColumns = DEFAULT_DEAL_PIPELINE_COLUMNS,
 }: {
   lead: Lead;
   deal: DealRow | null;
+  leadPipelineColumns?: PipelineColumnDef[];
+  dealPipelineColumns?: PipelineColumnDef[];
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -72,11 +68,31 @@ export default function LeadEditForm({
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
+  const leadStageOptions: PipelineColumnDef[] = (() => {
+    const list = leadPipelineColumns.map((c) => ({ ...c }));
+    const s = (lead.stage ?? "").trim();
+    if (s && !list.some((c) => c.slug === s)) {
+      const m = leadStageLabelColor(s, leadPipelineColumns);
+      list.unshift({ slug: s, label: m.label, color: m.color });
+    }
+    return list;
+  })();
+
+  const dealStageOptions: PipelineColumnDef[] = (() => {
+    const list = dealPipelineColumns.map((c) => ({ ...c }));
+    const s = (deal?.stage ?? "").trim();
+    if (s && !list.some((c) => c.slug === s)) {
+      const m = dealStageLabelColor(s, dealPipelineColumns);
+      list.unshift({ slug: s, label: `${m.label} (legacy)`, color: m.color });
+    }
+    return list;
+  })();
+
+  const rawDealStage = (deal?.stage ?? "").trim();
   const dealStageDefault =
-    deal?.stage &&
-    dealStages.some((s) => s.value === deal.stage)
-      ? deal.stage
-      : "prospect";
+    rawDealStage && dealStageOptions.some((c) => c.slug === rawDealStage)
+      ? rawDealStage
+      : dealPipelineColumns[0]?.slug ?? "prospect";
 
   const [expectedClose, setExpectedClose] = useState(() =>
     dateInputValue(deal?.expected_close)
@@ -214,12 +230,16 @@ export default function LeadEditForm({
               </label>
               <select
                 name="stage"
-                defaultValue={lead.stage ?? "new"}
+                defaultValue={
+                  (lead.stage ?? "").trim() ||
+                  leadPipelineColumns[0]?.slug ||
+                  "new"
+                }
                 className={inputClass}
               >
-                {leadStages.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
+                {leadStageOptions.map((c) => (
+                  <option key={c.slug} value={c.slug}>
+                    {c.label}
                   </option>
                 ))}
               </select>
@@ -295,9 +315,9 @@ export default function LeadEditForm({
                 defaultValue={dealStageDefault}
                 className={inputClass}
               >
-                {dealStages.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
+                {dealStageOptions.map((c) => (
+                  <option key={c.slug} value={c.slug}>
+                    {c.label}
                   </option>
                 ))}
               </select>

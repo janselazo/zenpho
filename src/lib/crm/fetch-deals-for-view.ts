@@ -1,17 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
-import type { DealStage, MockDeal } from "@/lib/crm/mock-data";
+import type { MockDeal } from "@/lib/crm/mock-data";
 
-const DEAL_STAGES: DealStage[] = [
-  "prospect",
-  "proposal",
-  "negotiation",
-  "closed_won",
-  "closed_lost",
-];
-
-function parseStage(raw: string | null): DealStage {
-  if (raw && DEAL_STAGES.includes(raw as DealStage)) return raw as DealStage;
-  return "prospect";
+function parseStage(raw: string | null): string {
+  const s = raw?.trim();
+  return s || "prospect";
 }
 
 /**

@@ -9,36 +9,42 @@ export type TaskStatus =
   | "in_progress"
   | "test_qa"
   | "completed";
-export type LeadStage =
-  | "new"
-  | "contacted"
-  | "qualified"
-  | "not_qualified";
-
-/** Kanban / pipeline column order (must match DB `lead.stage` values). */
+/** Kanban / pipeline column order (aligned with `DEFAULT_LEAD_PIPELINE_COLUMNS`). */
 export const LEAD_PIPELINE_STAGES = [
   "new",
   "contacted",
-  "qualified",
-  "not_qualified",
+  "discoverycall_scheduled",
+  "discoverycall_completed",
+  "proposal_sent",
+  "negotiation",
+  "closed_won",
+  "closed_lost",
+  "nurture",
 ] as const;
 
 export type LeadPipelineStage = (typeof LEAD_PIPELINE_STAGES)[number];
+export type LeadStage = LeadPipelineStage;
 
 export const LEAD_PIPELINE_COLUMN_COLORS: Record<LeadPipelineStage, string> = {
   new: "#64748b",
   contacted: "#3b82f6",
-  qualified: "#8b5cf6",
-  not_qualified: "#f59e0b",
+  discoverycall_scheduled: "#06b6d4",
+  discoverycall_completed: "#8b5cf6",
+  proposal_sent: "#a855f7",
+  negotiation: "#f59e0b",
+  closed_won: "#10b981",
+  closed_lost: "#ef4444",
+  nurture: "#94a3b8",
 };
 
 export function parseLeadPipelineStage(
   value: string | null | undefined
 ): LeadPipelineStage {
   const s = (value ?? "new").trim().toLowerCase();
-  // Legacy values (removed from pipeline — map for display / Kanban grouping)
-  if (s === "won") return "qualified";
-  if (s === "lost") return "not_qualified";
+  if (s === "won") return "closed_won";
+  if (s === "lost") return "closed_lost";
+  if (s === "qualified") return "discoverycall_completed";
+  if (s === "not_qualified") return "closed_lost";
   if ((LEAD_PIPELINE_STAGES as readonly string[]).includes(s)) {
     return s as LeadPipelineStage;
   }
@@ -194,10 +200,15 @@ export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
 };
 
 export const LEAD_STAGE_LABELS: Record<LeadStage, string> = {
-  new: "New",
+  new: "New Lead",
   contacted: "Contacted",
-  qualified: "Qualified",
-  not_qualified: "Not Qualified",
+  discoverycall_scheduled: "DiscoveryCall Scheduled",
+  discoverycall_completed: "DiscoveryCall Completed",
+  proposal_sent: "Proposal Sent",
+  negotiation: "Negotiation",
+  closed_won: "Closed Won",
+  closed_lost: "Closed Lost",
+  nurture: "Nurture",
 };
 
 /** Lead "Project type" dropdown (stored as-display on `lead.project_type`) */
@@ -320,12 +331,8 @@ export function getMembersForTeam(teamId: string) {
 
 // ── Deals ──────────────────────────────────────────────────────────────────
 
-export type DealStage =
-  | "prospect"
-  | "proposal"
-  | "negotiation"
-  | "closed_won"
-  | "closed_lost";
+/** Stored on `deal.stage`; configurable via CRM pipeline settings (defaults below). */
+export type DealStage = string;
 
 export interface MockDeal {
   id: string;
@@ -343,7 +350,8 @@ export interface MockDeal {
   leadId?: string;
 }
 
-export const DEAL_STAGE_LABELS: Record<DealStage, string> = {
+/** Default labels when pipeline config is unavailable. */
+export const DEAL_STAGE_LABELS: Record<string, string> = {
   prospect: "Open",
   proposal: "Proposal",
   negotiation: "Negotiation",
@@ -351,7 +359,7 @@ export const DEAL_STAGE_LABELS: Record<DealStage, string> = {
   closed_lost: "Lost",
 };
 
-export const DEAL_STAGE_COLORS: Record<DealStage, string> = {
+export const DEAL_STAGE_COLORS: Record<string, string> = {
   prospect: "#6b7280",
   proposal: "#3b82f6",
   negotiation: "#f59e0b",

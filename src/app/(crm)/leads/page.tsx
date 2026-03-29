@@ -1,4 +1,5 @@
 import LeadsView from "@/components/crm/LeadsView";
+import { fetchCrmPipelineSettings } from "@/lib/crm/fetch-pipeline-settings";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
@@ -48,6 +49,8 @@ export default async function LeadsPage() {
     deal: dealByLeadId.get(l.id) ?? null,
   }));
 
+  const pipeline = await fetchCrmPipelineSettings();
+
   return (
     <div className="p-8">
       {error ? (
@@ -61,7 +64,11 @@ export default async function LeadsPage() {
           </p>
         </div>
       ) : (
-        <LeadsView leads={leadsWithDeals} />
+        <LeadsView
+          leads={leadsWithDeals}
+          leadPipelineColumns={pipeline.lead}
+          dealPipelineColumns={pipeline.deal}
+        />
       )}
     </div>
   );

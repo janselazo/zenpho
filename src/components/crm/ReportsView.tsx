@@ -145,9 +145,20 @@ export default function ReportsView() {
           teamMembers.reduce((s, m) => s + m.utilization, 0) / teamMembers.length
         );
   const completedTasks = tasks.filter((t) => t.status === "completed").length;
-  const winRate = leads.length > 0
-    ? Math.round((leads.filter((l) => l.stage === "qualified").length / leads.length) * 100)
-    : 0;
+  const leadProgressedStages = new Set([
+    "discoverycall_completed",
+    "proposal_sent",
+    "negotiation",
+    "closed_won",
+  ]);
+  const winRate =
+    leads.length > 0
+      ? Math.round(
+          (leads.filter((l) => leadProgressedStages.has(l.stage)).length /
+            leads.length) *
+            100
+        )
+      : 0;
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "revenue", label: "Revenue" },
@@ -371,9 +382,20 @@ function SalesTab() {
   const sourceData = buildLeadSourceBreakdown();
   const maxFunnel = Math.max(...funnel.map((f) => f.count), 1);
 
-  const conversionRate = leads.length > 0
-    ? ((leads.filter((l) => l.stage === "qualified").length / leads.length) * 100).toFixed(1)
-    : "0";
+  const leadProgressedStages = new Set([
+    "discoverycall_completed",
+    "proposal_sent",
+    "negotiation",
+    "closed_won",
+  ]);
+  const conversionRate =
+    leads.length > 0
+      ? (
+          (leads.filter((l) => leadProgressedStages.has(l.stage)).length /
+            leads.length) *
+          100
+        ).toFixed(1)
+      : "0";
   const avgDealSize = deals.length > 0
     ? fmt(Math.round(deals.reduce((s, d) => s + d.value, 0) / deals.length))
     : "$0";

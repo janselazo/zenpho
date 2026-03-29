@@ -6,16 +6,19 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
+  LabelList,
   Legend,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
 import {
-  Target,
   Flame,
   Clock,
+  Zap,
   ArrowRight,
   Calendar,
   Phone,
@@ -52,6 +55,48 @@ import type { DailyMoneyPoint } from "@/components/crm/DashboardCharts";
 const dashCard =
   "rounded-2xl border border-border bg-white shadow-sm dark:border-zinc-800/70 dark:bg-zinc-900/60 dark:shadow-none dark:ring-1 dark:ring-white/[0.05]";
 
+/** Donut ring: orange arc on grey track (matches Daily Playbook reference). */
+function PlaybookProgressRing({ percent }: { percent: number }) {
+  const r = 20;
+  const stroke = 3.5;
+  const c = 2 * Math.PI * r;
+  const p = Math.min(100, Math.max(0, percent));
+  const offset = c - (p / 100) * c;
+  const size = (r + stroke) * 2;
+  const vb = size / 2;
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+      className="shrink-0 -rotate-90"
+      aria-hidden
+    >
+      <circle
+        cx={vb}
+        cy={vb}
+        r={r}
+        fill="none"
+        strokeWidth={stroke}
+        className="text-zinc-200 dark:text-zinc-700"
+        stroke="currentColor"
+      />
+      <circle
+        cx={vb}
+        cy={vb}
+        r={r}
+        fill="none"
+        strokeWidth={stroke}
+        strokeLinecap="round"
+        stroke="currentColor"
+        className="text-amber-500 dark:text-amber-400"
+        strokeDasharray={c}
+        strokeDashoffset={offset}
+      />
+    </svg>
+  );
+}
+
 function useDashboardChartTheme() {
   const [dark, setDark] = useState(false);
   useEffect(() => {
@@ -70,6 +115,9 @@ function useDashboardChartTheme() {
         tooltipBorder: "#3f3f46",
         tooltipColor: "#e4e4e7",
         legendColor: "#a1a1aa",
+        barPrimary: "#a1a1aa",
+        barProfit: "#60a5fa",
+        refLine: "#3f3f46",
       }
     : {
         grid: "#e8ecf1",
@@ -78,6 +126,9 @@ function useDashboardChartTheme() {
         tooltipBorder: "#e8ecf1",
         tooltipColor: "#111827",
         legendColor: "#5c6370",
+        barPrimary: "#18181b",
+        barProfit: "#2563eb",
+        refLine: "#e5e7eb",
       };
 }
 
@@ -267,6 +318,70 @@ export default function DashboardView({
     0
   );
 
+  const progressPercent =
+    totalActivities > 0
+      ? Math.round((completedActivities / totalActivities) * 100)
+      : 0;
+  const streakDays = completedActivities > 0 ? 1 : 0;
+
+  const volumeChartData = useMemo(
+    () => [
+      {
+        name: "Active clients",
+        v: activeClients,
+        display: String(activeClients),
+      },
+      {
+        name: "Active projects",
+        v: activeProjects,
+        display: String(activeProjects),
+      },
+    ],
+    [activeClients, activeProjects]
+  );
+
+  const financeChartData = useMemo(
+    () => [
+      {
+        name: "Revenue",
+        v: revenueWeek,
+        display: fmt(revenueWeek),
+        profitRow: false,
+      },
+      {
+        name: "Expenses",
+        v: expensesWeek,
+        display: fmt(expensesWeek),
+        profitRow: false,
+      },
+      {
+        name: "Profit",
+        v: profit,
+        display: fmt(profit),
+        profitRow: true,
+      },
+    ],
+    [revenueWeek, expensesWeek, profit]
+  );
+
+  const volumeAxisMax = Math.max(
+    5,
+    Math.ceil(Math.max(1, activeClients, activeProjects) * 1.2)
+  );
+
+  const financeAxisMin = Math.min(0, profit);
+  const financeAxisMax = Math.max(
+    1,
+    revenueWeek,
+    expensesWeek,
+    profit,
+    financeAxisMin < 0 ? -financeAxisMin * 0.05 : 0
+  );
+  const financeDomain: [number, number] = [
+    financeAxisMin < 0 ? Math.floor(financeAxisMin * 1.08) : 0,
+    Math.ceil(financeAxisMax * 1.08),
+  ];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -287,44 +402,75 @@ export default function DashboardView({
       </div>
 
       {/* Daily Playbook summary */}
-      <div className={`${dashCard} p-5`}>
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/60 dark:text-zinc-500">
+      <section className="space-y-2">
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
           Daily Playbook
         </p>
-        <div className="mt-3 flex flex-wrap items-center gap-6">
-          <div className="flex items-center gap-2">
-            <Target className="h-5 w-5 text-text-secondary dark:text-zinc-500" />
-            <div>
-              <p className="text-xs text-text-secondary dark:text-zinc-500">Today&apos;s Progress</p>
-              <p className="text-sm font-semibold text-text-primary dark:text-zinc-100">
+        <div
+          className={`${dashCard} flex flex-col divide-y divide-border overflow-hidden dark:divide-zinc-800/80 md:flex-row md:divide-x md:divide-y-0`}
+        >
+          <div className="flex flex-1 items-center gap-4 px-5 py-4 md:py-5">
+            <div className="relative flex h-[52px] w-[52px] shrink-0 items-center justify-center">
+              <PlaybookProgressRing percent={progressPercent} />
+              <span className="pointer-events-none absolute text-sm font-bold tabular-nums text-text-primary dark:text-zinc-50">
+                {progressPercent}%
+              </span>
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-text-secondary dark:text-zinc-500">
+                Today&apos;s Progress
+              </p>
+              <p className="mt-0.5 text-lg font-bold tabular-nums text-text-primary dark:text-zinc-50">
                 {completedActivities} / {totalActivities}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Flame className="h-5 w-5 text-amber-500 dark:text-amber-400" />
-            <div>
-              <p className="text-xs text-text-secondary dark:text-zinc-500">Points Today</p>
-              <p className="text-sm font-semibold text-text-primary dark:text-zinc-100">
+
+          <div className="flex flex-1 items-center gap-4 px-5 py-4 md:py-5">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/35">
+              <Zap
+                className="h-5 w-5 text-emerald-600 dark:text-emerald-400"
+                aria-hidden
+              />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-text-secondary dark:text-zinc-500">
+                Points Today
+              </p>
+              <p className="mt-0.5 text-lg font-bold tabular-nums text-text-primary dark:text-zinc-50">
                 {earnedPoints} / {totalPoints}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-text-secondary dark:text-zinc-500" />
-            <div>
-              <p className="text-xs text-text-secondary dark:text-zinc-500">Current Streak</p>
-              <p className="text-sm font-semibold text-text-primary dark:text-zinc-100">{completedActivities > 0 ? "1" : "0"} days</p>
+
+          <div className="flex flex-1 items-center gap-4 px-5 py-4 md:py-5">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800/80">
+              <Flame
+                className="h-5 w-5 text-zinc-600 dark:text-zinc-400"
+                aria-hidden
+              />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-text-secondary dark:text-zinc-500">
+                Current Streak
+              </p>
+              <p className="mt-0.5 text-lg font-bold tabular-nums text-text-primary dark:text-zinc-50">
+                {streakDays} {streakDays === 1 ? "day" : "days"}
+              </p>
             </div>
           </div>
-          <Link
-            href="/prospecting/playbook"
-            className="ml-auto flex items-center gap-1 text-sm font-medium text-accent hover:underline dark:text-blue-400 dark:hover:text-blue-300"
-          >
-            Open Playbook <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
+
+          <div className="flex items-center justify-end px-5 py-4 md:min-w-[10.5rem] md:flex-none md:py-5">
+            <Link
+              href="/prospecting/playbook"
+              className="group inline-flex items-center gap-1.5 text-sm font-semibold text-text-primary transition-colors hover:text-accent dark:text-zinc-100 dark:hover:text-blue-400"
+            >
+              Open Playbook
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          </div>
         </div>
-      </div>
+      </section>
 
       {/* KPIs */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -333,6 +479,158 @@ export default function DashboardView({
         <KpiCard label="Revenue" value={fmt(revenueWeek)} />
         <KpiCard label="Expenses" value={fmt(expensesWeek)} />
         <KpiCard label="Profit" value={fmt(profit)} accent />
+      </div>
+
+      {/* KPI overview chart — same metrics as cards, horizontal bars */}
+      <div className={`${dashCard} p-5`}>
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
+            Business snapshot
+          </p>
+          <p className="text-xs text-text-secondary dark:text-zinc-500">
+            Same figures as the KPI row · {rangeLabel}
+          </p>
+        </div>
+        <div className="mt-6 grid gap-10 lg:grid-cols-2">
+          <div>
+            <p className="mb-3 text-xs font-medium text-text-secondary dark:text-zinc-400">
+              Volume
+            </p>
+            <div className="h-[140px] w-full min-w-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  layout="vertical"
+                  data={volumeChartData}
+                  margin={{ top: 4, right: 48, left: 4, bottom: 4 }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke={chartTheme.grid}
+                    horizontal
+                    vertical={false}
+                  />
+                  <XAxis
+                    type="number"
+                    domain={[0, volumeAxisMax]}
+                    tick={{ fontSize: 11, fill: chartTheme.tick }}
+                    axisLine={false}
+                    tickLine={false}
+                    allowDecimals={false}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    width={108}
+                    tick={{ fontSize: 11, fill: chartTheme.tick }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    formatter={(value: number) => [String(value), "Count"]}
+                    contentStyle={{
+                      borderRadius: 12,
+                      border: `1px solid ${chartTheme.tooltipBorder}`,
+                      fontSize: 12,
+                      backgroundColor: chartTheme.tooltipBg,
+                      color: chartTheme.tooltipColor,
+                    }}
+                  />
+                  <Bar
+                    dataKey="v"
+                    radius={[0, 6, 6, 0]}
+                    maxBarSize={22}
+                    fill={chartTheme.barPrimary}
+                  >
+                    <LabelList
+                      dataKey="display"
+                      position="right"
+                      fill={chartTheme.tick}
+                      fontSize={12}
+                      fontWeight={600}
+                    />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          <div>
+            <p className="mb-3 text-xs font-medium text-text-secondary dark:text-zinc-400">
+              Finance
+            </p>
+            <div className="h-[180px] w-full min-w-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  layout="vertical"
+                  data={financeChartData}
+                  margin={{ top: 4, right: 56, left: 4, bottom: 4 }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke={chartTheme.grid}
+                    horizontal
+                    vertical={false}
+                  />
+                  <XAxis
+                    type="number"
+                    domain={financeDomain}
+                    tick={{ fontSize: 11, fill: chartTheme.tick }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(v) =>
+                      Math.abs(v) >= 1000
+                        ? `$${(v / 1000).toFixed(v % 1000 === 0 ? 0 : 1)}k`
+                        : `$${v}`
+                    }
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    width={88}
+                    tick={{ fontSize: 11, fill: chartTheme.tick }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    formatter={(value: number) => [fmt(value), ""]}
+                    contentStyle={{
+                      borderRadius: 12,
+                      border: `1px solid ${chartTheme.tooltipBorder}`,
+                      fontSize: 12,
+                      backgroundColor: chartTheme.tooltipBg,
+                      color: chartTheme.tooltipColor,
+                    }}
+                  />
+                  {financeAxisMin < 0 ? (
+                    <ReferenceLine
+                      x={0}
+                      stroke={chartTheme.refLine}
+                      strokeWidth={1}
+                    />
+                  ) : null}
+                  <Bar dataKey="v" radius={[0, 6, 6, 0]} maxBarSize={22}>
+                    {financeChartData.map((row) => (
+                      <Cell
+                        key={row.name}
+                        fill={
+                          row.profitRow
+                            ? chartTheme.barProfit
+                            : chartTheme.barPrimary
+                        }
+                      />
+                    ))}
+                    <LabelList
+                      dataKey="display"
+                      position="right"
+                      fill={chartTheme.tick}
+                      fontSize={12}
+                      fontWeight={600}
+                    />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Sales Funnel */}

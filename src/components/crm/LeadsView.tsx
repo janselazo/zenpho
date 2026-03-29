@@ -8,23 +8,28 @@ import {
   Building2,
   Check,
   ChevronDown,
+  FolderKanban,
   Handshake,
+  ListTodo,
   Loader2,
   Pencil,
   Search,
+  Settings2,
   StickyNote,
   Trash2,
   X,
 } from "lucide-react";
-import {
-  LEAD_PIPELINE_COLUMN_COLORS,
-  LEAD_PIPELINE_STAGES,
-  LEAD_STAGE_LABELS,
-  LEAD_PROJECT_TYPE_OPTIONS,
-  parseLeadPipelineStage,
-} from "@/lib/crm/mock-data";
+import { LEAD_PROJECT_TYPE_OPTIONS } from "@/lib/crm/mock-data";
 import CreateDealForLeadModal from "@/components/crm/CreateDealForLeadModal";
+import CrmNewProjectFromLeadModal from "@/components/crm/CrmNewProjectFromLeadModal";
+import CrmQuickTaskModal from "@/components/crm/CrmQuickTaskModal";
 import KanbanBoard, { type KanbanColumn } from "@/components/crm/KanbanBoard";
+import PipelineSettingsModal from "@/components/crm/PipelineSettingsModal";
+import {
+  leadStageLabelColor,
+  normalizeLeadStageForPipeline,
+  type PipelineColumnDef,
+} from "@/lib/crm/pipeline-columns";
 import {
   createLead,
   deleteLead,
@@ -48,24 +53,9 @@ export interface Lead {
   deal?: { id: string; title: string | null } | null;
 }
 
-/** Dot color in status pill (matches stage). */
-const stageColors: Record<string, string> = {
-  new: "#64748b",
-  contacted: "#2563eb",
-  qualified: "#7c3aed",
-  not_qualified: "#f59e0b",
-};
-
 /** Shared chip shell: white / dark surface, no tinted fill. Text color applied per column. */
 const neutralChipBase =
   "inline-flex rounded-full border border-border bg-white px-2.5 py-0.5 text-xs font-semibold dark:border-zinc-600 dark:bg-zinc-900/35";
-
-const stageTextClasses: Record<string, string> = {
-  new: "text-slate-700 dark:text-slate-300",
-  contacted: "text-blue-700 dark:text-blue-400",
-  qualified: "text-violet-700 dark:text-violet-400",
-  not_qualified: "text-amber-800 dark:text-amber-400",
-};
 
 const sourceTextClasses: Record<string, string> = {
   website: "text-sky-700 dark:text-sky-400",
@@ -145,7 +135,7 @@ function normalizeSourceForSelect(source: string): string {
   return raw;
 }
 
-function leadToDraft(lead: Lead): LeadDraft {
+function leadToDraft(lead: Lead, pipeline: PipelineColumnDef[]): LeadDraft {
   const { first, last } = splitName(lead.name);
   return {
     nameFirst: first,
@@ -154,7 +144,7 @@ function leadToDraft(lead: Lead): LeadDraft {
     phone: lead.phone ?? "",
     company: lead.company ?? "",
     source: normalizeSourceForSelect(lead.source ?? ""),
-    stage: parseLeadPipelineStage(lead.stage),
+    stage: normalizeLeadStageForPipeline(lead.stage, pipeline),
     project_type: lead.project_type ?? "",
     notes: lead.notes ?? "",
   };
@@ -207,9 +197,19 @@ function PillSelect({
   );
 }
 
-function leadStageLabel(rawStage: string | null | undefined): string {
-  const normalized = parseLeadPipelineStage(rawStage);
-  return LEAD_STAGE_LABELS[normalized];
+function leadStageLabel(
+  rawStage: string | null | undefined,
+  pipeline: PipelineColumnDef[]
+): string {
+  const key = normalizeLeadStageForPipeline(rawStage, pipeline);
+  return leadStageLabelColor(key, pipeline).label;
+}
+
+function leadKanbanKey(
+  lead: Lead,
+  pipeline: PipelineColumnDef[]
+): string {
+  return normalizeLeadStageForPipeline(lead.stage, pipeline);
 }
 
 function formatLeadPhone(phone: string | null | undefined): string {
@@ -238,18 +238,42 @@ function formatPipelineCardDate(iso?: string | null) {
   });
 }
 
+function leadQuickTaskContextLabel(lead: Lead): string {
+  return (
+    lead.name?.trim() ||
+    lead.email?.trim() ||
+    lead.company?.trim() ||
+    "this lead"
+  );
+}
+
 type LeadsViewMode = "table" | "pipeline";
 
-export default function LeadsView({ leads }: { leads: Lead[] }) {
+export default function LeadsView({
+  leads,
+  leadPipelineColumns,
+  dealPipelineColumns,
+}: {
+  leads: Lead[];
+  leadPipelineColumns: PipelineColumnDef[];
+  dealPipelineColumns: PipelineColumnDef[];
+}) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [view, setView] = useState<LeadsViewMode>("table");
   const [leadsSnapshot, setLeadsSnapshot] = useState(leads);
+  const [leadPipeline, setLeadPipeline] =
+    useState<PipelineColumnDef[]>(leadPipelineColumns);
+  const [pipelineSettingsOpen, setPipelineSettingsOpen] = useState(false);
 
   useEffect(() => {
     setLeadsSnapshot(leads);
   }, [leads]);
+
+  useEffect(() => {
+    setLeadPipeline(leadPipelineColumns.map((c) => ({ ...c })));
+  }, [leadPipelineColumns]);
 
   const filtered = leadsSnapshot.filter((l) => {
     if (!search) return true;
@@ -264,18 +288,43 @@ export default function LeadsView({ leads }: { leads: Lead[] }) {
     );
   });
 
-  const pipelineColumns: KanbanColumn<Lead>[] = useMemo(
-    () =>
-      LEAD_PIPELINE_STAGES.map((stage) => ({
-        id: stage,
-        label: LEAD_STAGE_LABELS[stage],
-        color: LEAD_PIPELINE_COLUMN_COLORS[stage],
+  const leadStageCounts = leadsSnapshot.reduce<Record<string, number>>(
+    (acc, l) => {
+      const s = (l.stage ?? "").trim() || "new";
+      acc[s] = (acc[s] ?? 0) + 1;
+      return acc;
+    },
+    {}
+  );
+
+  const pipelineColumns: KanbanColumn<Lead>[] = useMemo(() => {
+    const configuredSlugs = new Set(leadPipeline.map((c) => c.slug));
+    const keys = new Set(
+      filtered.map((l) => leadKanbanKey(l, leadPipeline))
+    );
+    const orphanSlugs = [...keys].filter((k) => !configuredSlugs.has(k));
+    return [
+      ...leadPipeline.map((col) => ({
+        id: col.slug,
+        label: col.label,
+        color: col.color,
         items: filtered.filter(
-          (l) => parseLeadPipelineStage(l.stage) === stage
+          (l) => leadKanbanKey(l, leadPipeline) === col.slug
         ),
       })),
-    [filtered]
-  );
+      ...orphanSlugs.map((slug) => {
+        const meta = leadStageLabelColor(slug, leadPipeline);
+        return {
+          id: slug,
+          label: `${meta.label} (legacy)`,
+          color: meta.color,
+          items: filtered.filter(
+            (l) => leadKanbanKey(l, leadPipeline) === slug
+          ),
+        };
+      }),
+    ];
+  }, [filtered, leadPipeline]);
 
   function handlePipelineMove(
     itemId: string,
@@ -304,10 +353,12 @@ export default function LeadsView({ leads }: { leads: Lead[] }) {
   const [savePending, setSavePending] = useState(false);
   const [createDealLead, setCreateDealLead] = useState<Lead | null>(null);
   const [notesLead, setNotesLead] = useState<Lead | null>(null);
+  const [newProjectLeadId, setNewProjectLeadId] = useState<string | null>(null);
+  const [quickTaskLead, setQuickTaskLead] = useState<Lead | null>(null);
 
   function startEdit(lead: Lead) {
     setEditingId(lead.id);
-    setDraft(leadToDraft(lead));
+    setDraft(leadToDraft(lead, leadPipeline));
   }
 
   function cancelEdit() {
@@ -397,7 +448,7 @@ export default function LeadsView({ leads }: { leads: Lead[] }) {
         </div>
       </div>
 
-      <div className="mt-4 flex items-center gap-4">
+      <div className="mt-4 flex flex-wrap items-center gap-4">
         <div className="inline-flex rounded-lg border border-border bg-surface/50 p-0.5">
           {(["table", "pipeline"] as LeadsViewMode[]).map((v) => (
             <button
@@ -414,12 +465,24 @@ export default function LeadsView({ leads }: { leads: Lead[] }) {
             </button>
           ))}
         </div>
+        <span className="text-sm text-text-secondary">
+          {filtered.length} leads
+        </span>
+        <button
+          type="button"
+          onClick={() => setPipelineSettingsOpen(true)}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:border-accent hover:text-accent dark:border-zinc-600"
+        >
+          <Settings2 className="h-3.5 w-3.5" />
+          Pipeline stages
+        </button>
       </div>
 
       <div className="mt-6">
         {view === "table" ? (
           <LeadsTable
             leads={filtered}
+            leadPipeline={leadPipeline}
             router={router}
             editingId={editingId}
             draft={draft}
@@ -432,16 +495,19 @@ export default function LeadsView({ leads }: { leads: Lead[] }) {
             handleDeleteLead={handleDeleteLead}
             setCreateDealLead={setCreateDealLead}
             setNotesLead={setNotesLead}
+            onCreateProject={(lead) => setNewProjectLeadId(lead.id)}
+            onQuickTask={setQuickTaskLead}
           />
         ) : (
           <LeadsPipelineBoard
             columns={pipelineColumns}
             onMove={handlePipelineMove}
-            router={router}
             editingId={editingId}
             deletingId={deletingId}
             onNotes={setNotesLead}
             onCreateDeal={setCreateDealLead}
+            onCreateProject={(lead) => setNewProjectLeadId(lead.id)}
+            onQuickTask={setQuickTaskLead}
             onEditFromPipeline={startEditFromPipeline}
             onDelete={handleDeleteLead}
           />
@@ -451,13 +517,37 @@ export default function LeadsView({ leads }: { leads: Lead[] }) {
       {createDealLead && (
         <CreateDealForLeadModal
           lead={createDealLead}
+          dealPipelineColumns={dealPipelineColumns}
           onClose={() => setCreateDealLead(null)}
         />
       )}
       {notesLead && (
         <LeadNotesModal lead={notesLead} onClose={() => setNotesLead(null)} />
       )}
+      {newProjectLeadId ? (
+        <CrmNewProjectFromLeadModal
+          leadId={newProjectLeadId}
+          onClose={() => setNewProjectLeadId(null)}
+        />
+      ) : null}
+      {quickTaskLead ? (
+        <CrmQuickTaskModal
+          leadId={quickTaskLead.id}
+          contextLabel={leadQuickTaskContextLabel(quickTaskLead)}
+          resetKey={quickTaskLead.id}
+          onClose={() => setQuickTaskLead(null)}
+        />
+      ) : null}
       {modalOpen && <NewLeadModal onClose={() => setModalOpen(false)} />}
+
+      <PipelineSettingsModal
+        open={pipelineSettingsOpen}
+        onClose={() => setPipelineSettingsOpen(false)}
+        kind="lead"
+        columns={leadPipeline}
+        stageCounts={leadStageCounts}
+        onSaved={() => router.refresh()}
+      />
     </div>
   );
 }
@@ -466,6 +556,7 @@ type LeadsRouter = ReturnType<typeof useRouter>;
 
 type LeadsTableProps = {
   leads: Lead[];
+  leadPipeline: PipelineColumnDef[];
   router: LeadsRouter;
   editingId: string | null;
   draft: LeadDraft | null;
@@ -478,26 +569,30 @@ type LeadsTableProps = {
   handleDeleteLead: (lead: Lead) => Promise<void>;
   setCreateDealLead: Dispatch<SetStateAction<Lead | null>>;
   setNotesLead: Dispatch<SetStateAction<Lead | null>>;
+  onCreateProject: (lead: Lead) => void;
+  onQuickTask: (lead: Lead) => void;
 };
 
 function LeadsPipelineBoard({
   columns,
   onMove,
-  router,
   editingId,
   deletingId,
   onNotes,
   onCreateDeal,
+  onCreateProject,
+  onQuickTask,
   onEditFromPipeline,
   onDelete,
 }: {
   columns: KanbanColumn<Lead>[];
   onMove: (itemId: string, fromCol: string, toCol: string) => void;
-  router: LeadsRouter;
   editingId: string | null;
   deletingId: string | null;
   onNotes: (lead: Lead) => void;
   onCreateDeal: (lead: Lead) => void;
+  onCreateProject: (lead: Lead) => void;
+  onQuickTask: (lead: Lead) => void;
   onEditFromPipeline: (lead: Lead) => void;
   onDelete: (lead: Lead) => void;
 }) {
@@ -578,9 +673,29 @@ function LeadsPipelineBoard({
             >
               <button
                 type="button"
+                onClick={() => onCreateProject(lead)}
+                disabled={editingId !== null}
+                className="inline-flex items-center justify-center rounded-md p-1.5 text-violet-600 transition-colors hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-40 dark:text-violet-400 dark:hover:bg-violet-950/40"
+                aria-label={`Create project for ${deleteLabel}`}
+                title="Create project from lead"
+              >
+                <FolderKanban className="h-4 w-4 shrink-0" aria-hidden />
+              </button>
+              <button
+                type="button"
+                onClick={() => onQuickTask(lead)}
+                disabled={editingId !== null}
+                title="Quick task"
+                className="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                aria-label={`Add task for ${deleteLabel}`}
+              >
+                <ListTodo className="h-4 w-4 shrink-0" aria-hidden />
+              </button>
+              <button
+                type="button"
                 onClick={() => onCreateDeal(lead)}
                 disabled={editingId !== null}
-                className="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                className="inline-flex items-center justify-center rounded-md p-1.5 text-emerald-600 transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-40 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
                 aria-label={`Create a deal for ${deleteLabel}`}
                 title="Create a deal"
               >
@@ -591,11 +706,7 @@ function LeadsPipelineBoard({
                 onClick={() => onNotes(lead)}
                 disabled={editingId !== null}
                 title="Notes"
-                className={`inline-flex items-center justify-center rounded-md p-1.5 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-zinc-800 ${
-                  lead.notes?.trim()
-                    ? "text-amber-700 dark:text-amber-400"
-                    : "text-zinc-600 dark:text-zinc-400"
-                }`}
+                className="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800"
                 aria-label={`View notes for ${deleteLabel}`}
               >
                 <StickyNote className="h-4 w-4 shrink-0" aria-hidden />
@@ -604,7 +715,7 @@ function LeadsPipelineBoard({
                 type="button"
                 onClick={() => onEditFromPipeline(lead)}
                 disabled={Boolean(editingId && editingId !== lead.id)}
-                className="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                className="inline-flex items-center justify-center rounded-md p-1.5 text-accent transition-colors hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-40"
                 aria-label={`Edit ${deleteLabel}`}
                 title="Edit"
               >
@@ -640,6 +751,7 @@ function LeadsPipelineBoard({
 
 function LeadsTable({
   leads,
+  leadPipeline,
   router,
   editingId,
   draft,
@@ -652,6 +764,8 @@ function LeadsTable({
   handleDeleteLead,
   setCreateDealLead,
   setNotesLead,
+  onCreateProject,
+  onQuickTask,
 }: LeadsTableProps) {
   if (leads.length === 0) {
     return (
@@ -663,7 +777,7 @@ function LeadsTable({
 
   return (
     <div className="overflow-x-auto rounded-2xl border border-border bg-white shadow-sm">
-      <table className="w-full min-w-[80rem] text-left text-sm">
+      <table className="w-full min-w-[88rem] text-left text-sm">
         <thead>
           <tr className="border-b border-border">
             <th className="px-4 py-3 font-semibold text-text-secondary">Name</th>
@@ -680,7 +794,11 @@ function LeadsTable({
         </thead>
         <tbody className="divide-y divide-border">
           {leads.map((lead) => {
-            const stage = parseLeadPipelineStage(lead.stage);
+            const stageKey = normalizeLeadStageForPipeline(
+              lead.stage,
+              leadPipeline
+            );
+            const stageMeta = leadStageLabelColor(stageKey, leadPipeline);
             const isEditing = editingId === lead.id && draft !== null;
             const initials = (lead.name ?? "?")
               .split(/\s+/)
@@ -778,38 +896,48 @@ function LeadsTable({
                   )}
                 </td>
                 <td className="px-4 py-3 align-top">
-                  {isEditing ? (
+                  {isEditing && draft ? (
                     <PillSelect
                       value={draft.stage}
                       onChange={(v) =>
                         setDraft((d) => (d ? { ...d, stage: v } : d))
                       }
-                      dotColor={stageColors[draft.stage] ?? "#64748b"}
-                      textClassName={
-                        stageTextClasses[draft.stage] ??
-                        "text-zinc-700 dark:text-zinc-300"
+                      dotColor={
+                        leadStageLabelColor(draft.stage, leadPipeline).color
                       }
+                      textClassName="text-zinc-700 dark:text-zinc-300"
                     >
-                      {LEAD_PIPELINE_STAGES.map((s) => (
-                        <option key={s} value={s}>
-                          {LEAD_STAGE_LABELS[s]}
-                        </option>
-                      ))}
+                      {(() => {
+                        const opts = leadPipeline.map((c) => ({ ...c }));
+                        if (!opts.some((c) => c.slug === draft.stage)) {
+                          const m = leadStageLabelColor(
+                            draft.stage,
+                            leadPipeline
+                          );
+                          opts.unshift({
+                            slug: draft.stage,
+                            label: m.label,
+                            color: m.color,
+                          });
+                        }
+                        return opts.map((c) => (
+                          <option key={c.slug} value={c.slug}>
+                            {c.label}
+                          </option>
+                        ));
+                      })()}
                     </PillSelect>
                   ) : (
                     <span
-                      className={`${neutralChipBase} items-center gap-1.5 ${
-                        stageTextClasses[stage] ??
-                        "text-zinc-700 dark:text-zinc-300"
-                      }`}
+                      className={`${neutralChipBase} items-center gap-1.5 text-zinc-700 dark:text-zinc-300`}
                     >
                       <span
                         className="h-2 w-2 shrink-0 rounded-full ring-2 ring-border dark:ring-zinc-600"
                         style={{
-                          backgroundColor: stageColors[stage] ?? "#64748b",
+                          backgroundColor: stageMeta.color,
                         }}
                       />
-                      {leadStageLabel(lead.stage)}
+                      {leadStageLabel(lead.stage, leadPipeline)}
                     </span>
                   )}
                 </td>
@@ -949,9 +1077,29 @@ function LeadsTable({
                       <>
                         <button
                           type="button"
+                          onClick={() => onCreateProject(lead)}
+                          disabled={editingId !== null}
+                          className="inline-flex items-center justify-center rounded-md p-1.5 text-violet-600 transition-colors hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-40 dark:text-violet-400 dark:hover:bg-violet-950/40"
+                          aria-label={`Create project for ${deleteLabel}`}
+                          title="Create project from lead"
+                        >
+                          <FolderKanban className="h-4 w-4 shrink-0" aria-hidden />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onQuickTask(lead)}
+                          disabled={editingId !== null}
+                          title="Quick task"
+                          className="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                          aria-label={`Add task for ${deleteLabel}`}
+                        >
+                          <ListTodo className="h-4 w-4 shrink-0" aria-hidden />
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => setCreateDealLead(lead)}
                           disabled={editingId !== null}
-                          className="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                          className="inline-flex items-center justify-center rounded-md p-1.5 text-emerald-600 transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-40 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
                           aria-label={`Create a deal for ${deleteLabel}`}
                           title="Create a deal"
                         >
@@ -962,11 +1110,7 @@ function LeadsTable({
                           onClick={() => setNotesLead(lead)}
                           disabled={editingId !== null}
                           title="Notes"
-                          className={`inline-flex items-center justify-center rounded-md p-1.5 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-zinc-800 ${
-                            lead.notes?.trim()
-                              ? "text-amber-700 dark:text-amber-400"
-                              : "text-zinc-600 dark:text-zinc-400"
-                          }`}
+                          className="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800"
                           aria-label={`View notes for ${deleteLabel}`}
                         >
                           <StickyNote className="h-4 w-4 shrink-0" aria-hidden />
@@ -975,7 +1119,7 @@ function LeadsTable({
                           type="button"
                           onClick={() => startEdit(lead)}
                           disabled={Boolean(editingId && editingId !== lead.id)}
-                          className="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                          className="inline-flex items-center justify-center rounded-md p-1.5 text-accent transition-colors hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-40"
                           aria-label={`Edit ${deleteLabel}`}
                           title="Edit"
                         >

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import LeadEditForm from "@/components/crm/LeadEditForm";
+import { fetchCrmPipelineSettings } from "@/lib/crm/fetch-pipeline-settings";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
@@ -41,6 +42,8 @@ export default async function LeadDetailPage({ params }: Props) {
   const deal =
     dealQuery.error || !dealQuery.data?.length ? null : dealQuery.data[0];
 
+  const pipeline = await fetchCrmPipelineSettings();
+
   return (
     <div className="p-8">
       <Link
@@ -64,7 +67,12 @@ export default async function LeadDetailPage({ params }: Props) {
             <div className="h-64 animate-pulse rounded-2xl border border-border bg-surface/60 dark:bg-zinc-800/40" />
           }
         >
-          <LeadEditForm lead={lead} deal={deal} />
+          <LeadEditForm
+            lead={lead}
+            deal={deal}
+            leadPipelineColumns={pipeline.lead}
+            dealPipelineColumns={pipeline.deal}
+          />
         </Suspense>
       </div>
     </div>

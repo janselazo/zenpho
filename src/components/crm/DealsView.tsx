@@ -9,10 +9,12 @@ import {
   Loader2,
   Pencil,
   Search,
+  Settings2,
   Trash2,
   X,
 } from "lucide-react";
 import KanbanBoard, { type KanbanColumn } from "@/components/crm/KanbanBoard";
+import PipelineSettingsModal from "@/components/crm/PipelineSettingsModal";
 import CrmPopoverDateField from "@/components/crm/CrmPopoverDateField";
 import CrmNewProjectFromDealModal from "@/components/crm/CrmNewProjectFromDealModal";
 import CrmQuickTaskModal from "@/components/crm/CrmQuickTaskModal";
@@ -23,30 +25,13 @@ import {
   updateDealStage,
 } from "@/app/(crm)/actions/crm";
 import type { LeadDealPickerOption } from "@/lib/crm/fetch-leads-for-deal-picker";
+import { type MockDeal, type DealStage } from "@/lib/crm/mock-data";
 import {
-  type MockDeal,
-  type DealStage,
-  DEAL_STAGE_LABELS,
-  DEAL_STAGE_COLORS,
-} from "@/lib/crm/mock-data";
+  dealStageLabelColor,
+  type PipelineColumnDef,
+} from "@/lib/crm/pipeline-columns";
 
 type ViewMode = "table" | "pipeline";
-
-const stageOrder: DealStage[] = [
-  "prospect",
-  "proposal",
-  "negotiation",
-  "closed_won",
-  "closed_lost",
-];
-
-const stageBgClasses: Record<DealStage, string> = {
-  prospect: "bg-gray-100 text-gray-800",
-  proposal: "bg-blue-100 text-blue-800",
-  negotiation: "bg-amber-100 text-amber-800",
-  closed_won: "bg-emerald-100 text-emerald-800",
-  closed_lost: "bg-red-100 text-red-800",
-};
 
 function formatCurrency(n: number) {
   return new Intl.NumberFormat("en-US", {
@@ -101,15 +86,20 @@ export default function DealsView({
   deals,
   persistDeals = false,
   leadPickerOptions = [],
+  dealPipelineColumns,
 }: {
   deals: MockDeal[];
   persistDeals?: boolean;
   leadPickerOptions?: LeadDealPickerOption[];
+  dealPipelineColumns: PipelineColumnDef[];
 }) {
   const router = useRouter();
   const [view, setView] = useState<ViewMode>("table");
   const [search, setSearch] = useState("");
   const [localDeals, setLocalDeals] = useState<MockDeal[]>(deals);
+  const [dealPipeline, setDealPipeline] =
+    useState<PipelineColumnDef[]>(dealPipelineColumns);
+  const [pipelineSettingsOpen, setPipelineSettingsOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [createDealOpen, setCreateDealOpen] = useState(false);
   const [editing, setEditing] = useState<MockDeal | null>(null);
@@ -121,6 +111,10 @@ export default function DealsView({
     setLocalDeals(deals);
   }, [deals]);
 
+  useEffect(() => {
+    setDealPipeline(dealPipelineColumns.map((c) => ({ ...c })));
+  }, [dealPipelineColumns]);
+
   const filtered = localDeals.filter((d) => {
     if (!search) return true;
     const q = search.toLowerCase();
@@ -131,12 +125,35 @@ export default function DealsView({
     );
   });
 
-  const kanbanColumns: KanbanColumn<MockDeal>[] = stageOrder.map((stage) => ({
-    id: stage,
-    label: DEAL_STAGE_LABELS[stage],
-    color: DEAL_STAGE_COLORS[stage],
-    items: filtered.filter((d) => d.stage === stage),
-  }));
+  const dealStageCounts = localDeals.reduce<Record<string, number>>((acc, d) => {
+    acc[d.stage] = (acc[d.stage] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  const configuredSlugs = new Set(dealPipeline.map((c) => c.slug));
+  const orphanSlugs = [
+    ...new Set(
+      filtered.filter((d) => !configuredSlugs.has(d.stage)).map((d) => d.stage)
+    ),
+  ];
+
+  const kanbanColumns: KanbanColumn<MockDeal>[] = [
+    ...dealPipeline.map((col) => ({
+      id: col.slug,
+      label: col.label,
+      color: col.color,
+      items: filtered.filter((d) => d.stage === col.slug),
+    })),
+    ...orphanSlugs.map((slug) => {
+      const meta = dealStageLabelColor(slug, dealPipeline);
+      return {
+        id: slug,
+        label: `${meta.label} (legacy)`,
+        color: meta.color,
+        items: filtered.filter((d) => d.stage === slug),
+      };
+    }),
+  ];
 
   const totalValue = filtered.reduce((sum, d) => sum + d.value, 0);
 
@@ -260,6 +277,16 @@ export default function DealsView({
         <span className="text-sm text-text-secondary">
           {filtered.length} deals · {formatCurrency(totalValue)} total
         </span>
+        {persistDeals && (
+          <button
+            type="button"
+            onClick={() => setPipelineSettingsOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:border-accent hover:text-accent dark:border-zinc-600"
+          >
+            <Settings2 className="h-3.5 w-3.5" />
+            Pipeline stages
+          </button>
+        )}
       </div>
 
       {/* Content */}
@@ -267,6 +294,7 @@ export default function DealsView({
         {view === "table" && (
           <DealsTable
             deals={filtered}
+            dealPipeline={dealPipeline}
             lockContactFields={persistDeals}
             persistDeals={persistDeals}
             onCreateProject={(dealId) => setNewProjectDealId(dealId)}
@@ -413,6 +441,7 @@ export default function DealsView({
 
       {modalOpen && (
         <NewDealModal
+          dealPipeline={dealPipeline}
           onClose={() => setModalOpen(false)}
           onAdd={(deal) => {
             setLocalDeals((prev) => [deal, ...prev]);
@@ -423,6 +452,7 @@ export default function DealsView({
 
       {createDealOpen && (
         <CreateDealModal
+          dealPipeline={dealPipeline}
           leadOptions={leadPickerOptions}
           onClose={() => setCreateDealOpen(false)}
         />
@@ -431,6 +461,7 @@ export default function DealsView({
       {editing && (
         <EditDealModal
           deal={editing}
+          dealPipeline={dealPipeline}
           lockContactFields={persistDeals}
           includeWebsite={persistDeals}
           onClose={() => setEditing(null)}
@@ -458,6 +489,17 @@ export default function DealsView({
           onClose={() => setNewProjectDealId(null)}
         />
       ) : null}
+
+      {persistDeals && (
+        <PipelineSettingsModal
+          open={pipelineSettingsOpen}
+          onClose={() => setPipelineSettingsOpen(false)}
+          kind="deal"
+          columns={dealPipeline}
+          stageCounts={dealStageCounts}
+          onSaved={() => router.refresh()}
+        />
+      )}
     </div>
   );
 }
@@ -470,6 +512,7 @@ const iconActionClass =
 
 function DealsTable({
   deals,
+  dealPipeline,
   lockContactFields,
   persistDeals,
   onCreateProject,
@@ -478,6 +521,7 @@ function DealsTable({
   onDelete,
 }: {
   deals: MockDeal[];
+  dealPipeline: PipelineColumnDef[];
   lockContactFields: boolean;
   persistDeals: boolean;
   onCreateProject: (dealId: string) => void;
@@ -573,6 +617,7 @@ function DealsTable({
               <DealsTableRow
                 key={deal.id}
                 deal={deal}
+                dealPipeline={dealPipeline}
                 isEditing={isEditing}
                 draft={draft}
                 patchDraft={patchDraft}
@@ -597,6 +642,7 @@ function DealsTable({
 
 function DealsTableRow({
   deal,
+  dealPipeline,
   isEditing,
   draft,
   patchDraft,
@@ -612,6 +658,7 @@ function DealsTableRow({
   onDelete,
 }: {
   deal: MockDeal;
+  dealPipeline: PipelineColumnDef[];
   isEditing: boolean;
   draft: MockDeal | null;
   patchDraft: (patch: Partial<MockDeal>) => void;
@@ -695,21 +742,32 @@ function DealsTableRow({
             className={tableCellInputClass}
             aria-label="Stage"
           >
-            {stageOrder.map((s) => (
-              <option key={s} value={s}>
-                {DEAL_STAGE_LABELS[s]}
+            {(dealPipeline.some((c) => c.slug === draft.stage)
+              ? dealPipeline
+              : [
+                  ...dealPipeline,
+                  {
+                    slug: draft.stage,
+                    label: `${draft.stage} (legacy)`,
+                    color: "#64748b",
+                  },
+                ]
+            ).map((s) => (
+              <option key={s.slug} value={s.slug}>
+                {s.label}
               </option>
             ))}
           </select>
         ) : (
-          <span
-            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${stageBgClasses[deal.stage]}`}
-          >
+          <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 dark:bg-zinc-800 dark:text-zinc-200">
             <span
               className="h-1.5 w-1.5 rounded-full"
-              style={{ backgroundColor: DEAL_STAGE_COLORS[deal.stage] }}
+              style={{
+                backgroundColor: dealStageLabelColor(deal.stage, dealPipeline)
+                  .color,
+              }}
             />
-            {DEAL_STAGE_LABELS[deal.stage]}
+            {dealStageLabelColor(deal.stage, dealPipeline).label}
           </span>
         )}
       </td>
@@ -885,10 +943,12 @@ const INPUT_CLASS =
 
 function DealFormFields({
   deal,
+  dealPipeline,
   lockContactFields,
   includeWebsite,
 }: {
   deal?: MockDeal;
+  dealPipeline: PipelineColumnDef[];
   lockContactFields?: boolean;
   includeWebsite?: boolean;
 }) {
@@ -899,6 +959,19 @@ function DealFormFields({
   useEffect(() => {
     setExpectedClose(deal?.expectedClose ?? "");
   }, [deal?.expectedClose, deal?.id]);
+
+  const stageOptions =
+    deal?.stage &&
+    !dealPipeline.some((c) => c.slug === deal.stage)
+      ? [
+          ...dealPipeline,
+          {
+            slug: deal.stage,
+            label: `${deal.stage} (legacy)`,
+            color: "#64748b",
+          },
+        ]
+      : dealPipeline;
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -943,12 +1016,12 @@ function DealFormFields({
         </label>
         <select
           name="stage"
-          defaultValue={deal?.stage ?? "prospect"}
+          defaultValue={deal?.stage ?? dealPipeline[0]?.slug ?? "prospect"}
           className={INPUT_CLASS}
         >
-          {stageOrder.map((s) => (
-            <option key={s} value={s}>
-              {DEAL_STAGE_LABELS[s]}
+          {stageOptions.map((s) => (
+            <option key={s.slug} value={s.slug}>
+              {s.label}
             </option>
           ))}
         </select>
@@ -1070,9 +1143,11 @@ function draftDealFromLeadOption(o: LeadDealPickerOption): MockDeal {
 }
 
 function CreateDealModal({
+  dealPipeline,
   leadOptions,
   onClose,
 }: {
+  dealPipeline: PipelineColumnDef[];
   leadOptions: LeadDealPickerOption[];
   onClose: () => void;
 }) {
@@ -1163,6 +1238,7 @@ function CreateDealModal({
               <DealFormFields
                 key={selected.id}
                 deal={draftDealFromLeadOption(selected)}
+                dealPipeline={dealPipeline}
                 lockContactFields
                 includeWebsite
               />
@@ -1192,9 +1268,11 @@ function CreateDealModal({
 }
 
 function NewDealModal({
+  dealPipeline,
   onClose,
   onAdd,
 }: {
+  dealPipeline: PipelineColumnDef[];
   onClose: () => void;
   onAdd: (deal: MockDeal) => void;
 }) {
@@ -1218,7 +1296,7 @@ function NewDealModal({
   return (
     <ModalShell id="new-deal-title" title="New Deal" onClose={onClose}>
       <form onSubmit={onSubmit} className="mt-5 space-y-4">
-        <DealFormFields />
+        <DealFormFields dealPipeline={dealPipeline} />
         <div className="flex gap-2 pt-1">
           <button
             type="submit"
@@ -1241,6 +1319,7 @@ function NewDealModal({
 
 function EditDealModal({
   deal,
+  dealPipeline,
   lockContactFields,
   includeWebsite,
   onClose,
@@ -1248,6 +1327,7 @@ function EditDealModal({
   onDelete,
 }: {
   deal: MockDeal;
+  dealPipeline: PipelineColumnDef[];
   lockContactFields?: boolean;
   includeWebsite?: boolean;
   onClose: () => void;
@@ -1294,6 +1374,7 @@ function EditDealModal({
         )}
         <DealFormFields
           deal={deal}
+          dealPipeline={dealPipeline}
           lockContactFields={lockContactFields}
           includeWebsite={includeWebsite}
         />
