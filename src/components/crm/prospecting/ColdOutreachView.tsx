@@ -107,6 +107,26 @@ const PLAYBOOK_CATEGORY_ICON_KEYS = [
   "flame",
 ] as const;
 
+/** Preset tile colors for playbook section icons (stored on `PlaybookCategory.color`). */
+const PLAYBOOK_SECTION_COLORS = [
+  "#6366f1",
+  "#2563eb",
+  "#0ea5e9",
+  "#059669",
+  "#ca8a04",
+  "#ea580c",
+  "#dc2626",
+  "#7c3aed",
+  "#db2777",
+  "#64748b",
+  "#f59e0b",
+  "#14b8a6",
+] as const;
+
+function playbookColorsMatch(a: string, b: string) {
+  return a.replace(/\s/g, "").toLowerCase() === b.replace(/\s/g, "").toLowerCase();
+}
+
 function renderPlaybookCategoryIcon(key: string): React.ReactNode {
   const cls = "h-4 w-4";
   switch (key) {
@@ -551,6 +571,7 @@ function PlaybookCategoryRow({
   iconPickerForCategoryId,
   onToggleIconPicker,
   onPickSectionIcon,
+  onPickSectionColor,
 }: {
   cat: PlaybookCategory;
   isOpen: boolean;
@@ -578,6 +599,7 @@ function PlaybookCategoryRow({
   iconPickerForCategoryId: string | null;
   onToggleIconPicker: (catId: string) => void;
   onPickSectionIcon: (catId: string, iconKey: string) => void;
+  onPickSectionColor: (catId: string, color: string) => void;
 }) {
   const {
     attributes,
@@ -633,11 +655,14 @@ function PlaybookCategoryRow({
           </button>
           {iconPickerOpen && (
             <div
-              className="absolute left-0 top-full z-50 mt-1 max-h-56 w-48 overflow-y-auto rounded-xl border border-border bg-white p-2 shadow-lg"
+              className="absolute left-0 top-full z-50 mt-1 w-52 max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-white p-2 shadow-lg"
               role="dialog"
-              aria-label="Choose icon"
+              aria-label="Choose section icon and color"
             >
-              <div className="grid grid-cols-4 gap-1">
+              <p className="px-1 pb-1 text-[10px] font-semibold uppercase tracking-wide text-text-secondary/80">
+                Icon
+              </p>
+              <div className="grid max-h-44 grid-cols-4 gap-1 overflow-y-auto">
                 {PLAYBOOK_CATEGORY_ICON_KEYS.map((key) => (
                   <button
                     key={key}
@@ -655,6 +680,30 @@ function PlaybookCategoryRow({
                     )}
                   </button>
                 ))}
+              </div>
+              <p className="mt-2 px-1 pb-1 text-[10px] font-semibold uppercase tracking-wide text-text-secondary/80">
+                Color
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {PLAYBOOK_SECTION_COLORS.map((hex) => {
+                  const selected = playbookColorsMatch(cat.color, hex);
+                  return (
+                    <button
+                      key={hex}
+                      type="button"
+                      onClick={() => onPickSectionColor(cat.id, hex)}
+                      className={`h-7 w-7 shrink-0 rounded-full border border-black/10 shadow-sm outline-none ring-offset-2 transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:ring-accent dark:border-white/20 ${
+                        selected ? "ring-2 ring-text-primary ring-offset-2" : ""
+                      }`}
+                      style={{ backgroundColor: hex }}
+                      aria-label={
+                        selected
+                          ? `Section color ${hex}, selected`
+                          : `Set section color to ${hex}`
+                      }
+                    />
+                  );
+                })}
               </div>
             </div>
           )}
@@ -1172,7 +1221,13 @@ function PlaybookTab() {
                         c.id === catId ? { ...c, icon: iconKey } : c
                       )
                     );
-                    setIconPickerForCategoryId(null);
+                  }}
+                  onPickSectionColor={(catId, color) => {
+                    setCategories((prev) =>
+                      prev.map((c) =>
+                        c.id === catId ? { ...c, color } : c
+                      )
+                    );
                   }}
                 />
               );
@@ -1188,6 +1243,62 @@ function PlaybookTab() {
       >
         <Plus className="h-4 w-4" /> Add New Section
       </button>
+    </div>
+  );
+}
+
+/** Ring + fraction for playbook activity progress (matches CRM playbook visual). */
+function ActivityProgressRing({
+  completed,
+  target,
+}: {
+  completed: number;
+  target: number;
+}) {
+  const size = 44;
+  const stroke = 3;
+  const r = (size - stroke) / 2 - 1;
+  const c = 2 * Math.PI * r;
+  const safeTarget = Math.max(1, target);
+  const pct = Math.min(Math.max(completed / safeTarget, 0), 1);
+  const dashOffset = c * (1 - pct);
+
+  return (
+    <div
+      className="relative h-11 w-11 shrink-0"
+      aria-hidden
+    >
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        className="absolute inset-0 -rotate-90"
+      >
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          className="stroke-gray-200 dark:stroke-zinc-700"
+          strokeWidth={stroke}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          className="stroke-[var(--color-accent-warm)] transition-[stroke-dashoffset] duration-300 ease-out"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={c}
+          strokeDashoffset={dashOffset}
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center px-0.5">
+        <span className="text-center text-[10px] font-bold leading-tight tabular-nums text-text-primary">
+          {completed}/{target}
+        </span>
+      </div>
     </div>
   );
 }
@@ -1221,6 +1332,9 @@ function ActivityRow({
   onDecrement: () => void;
 }) {
   const isDone = completed >= activity.target;
+  const capped = Math.min(completed, activity.target);
+  const maxPts = activity.target * activity.points;
+  const earnedPts = capped * activity.points;
 
   if (isEditing) {
     return (
@@ -1277,10 +1391,12 @@ function ActivityRow({
   }
 
   return (
-    <div className="group flex items-center gap-3 border-b border-border px-5 py-3 last:border-b-0">
-      <span className="w-6 shrink-0 text-center text-[11px] font-bold tabular-nums text-text-secondary/50">
-        {listIndex}
-      </span>
+    <div
+      className="group flex items-center gap-3 border-b border-border px-5 py-3 last:border-b-0"
+      role="listitem"
+      aria-label={`Activity ${listIndex}: ${activity.title}, ${completed} of ${activity.target} done`}
+    >
+      <ActivityProgressRing completed={completed} target={activity.target} />
       <div className="min-w-0 flex-1">
         <p
           className={`text-sm ${
@@ -1292,7 +1408,8 @@ function ActivityRow({
           {activity.title}
         </p>
         <p className="text-xs text-text-secondary/60">
-          {activity.points} pts each · {activity.timeEstimate}
+          +{activity.points} pts each · {earnedPts}/{maxPts} pts ·{" "}
+          {activity.timeEstimate}
         </p>
       </div>
       <div className="flex items-center gap-1.5">
@@ -1316,11 +1433,11 @@ function ActivityRow({
             onClick={onDecrement}
             disabled={completed <= 0}
             aria-label="Decrease progress"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-l-[7px] border-r border-border text-text-secondary transition-colors hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-40"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-l-md border-r border-border text-text-secondary transition-colors hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-40"
           >
-            <Minus className="h-3.5 w-3.5" />
+            <Minus className="h-2.5 w-2.5 stroke-[2.25]" aria-hidden />
           </button>
-          <span className="flex min-w-[2rem] items-center justify-center text-sm font-semibold tabular-nums text-text-primary">
+          <span className="flex min-w-[1.75rem] items-center justify-center px-0.5 text-xs font-semibold tabular-nums text-text-primary">
             {completed}
           </span>
           <button
@@ -1328,16 +1445,20 @@ function ActivityRow({
             onClick={onIncrement}
             disabled={isDone}
             aria-label={isDone ? "Target reached" : "Increase progress"}
-            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-r-[7px] border-l text-text-secondary transition-colors disabled:pointer-events-none disabled:opacity-40 ${
+            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-r-md border-l transition-colors disabled:pointer-events-none ${
               isDone
-                ? "border-emerald-200 bg-emerald-50 text-emerald-600"
+                ? "border-emerald-300 bg-emerald-50"
                 : "border-accent/35 bg-accent/5 text-accent hover:bg-accent/10"
             }`}
           >
             {isDone ? (
-              <CheckCircle2 className="h-4 w-4" />
+              <CheckCircle2
+                className="h-3 w-3 text-emerald-600"
+                strokeWidth={2.5}
+                aria-hidden
+              />
             ) : (
-              <Plus className="h-3.5 w-3.5" />
+              <Plus className="h-2.5 w-2.5 stroke-[2.25] text-accent" aria-hidden />
             )}
           </button>
         </div>
