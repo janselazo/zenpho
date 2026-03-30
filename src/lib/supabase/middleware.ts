@@ -19,6 +19,7 @@ const AGENCY_APP_PREFIXES = [
   "/reports",
   "/prospecting",
   "/docs",
+  "/lead-magnets",
 ];
 
 function isAuthPath(pathname: string) {

@@ -15,6 +15,7 @@ import {
   FolderKanban,
   LayoutDashboard,
   LogOut,
+  Magnet,
   MessageSquare,
   Settings,
   Timer,
@@ -58,6 +59,7 @@ const agencyNav = [
   { href: "/automations", label: "Automations", icon: Workflow },
   { href: "/reports", label: "Reports", icon: FileBarChart },
   { href: "/docs", label: "Docs", icon: BookOpen },
+  { href: "/lead-magnets", label: "Lead magnets", icon: Magnet },
 ];
 
 const playbookSection = PROSPECTING_SECTIONS.find((s) => s.slug === "playbook");
