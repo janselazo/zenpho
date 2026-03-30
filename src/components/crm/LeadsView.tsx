@@ -843,7 +843,7 @@ function LeadsTable({
             <th className="px-4 py-3 font-semibold text-text-secondary">Status</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Service</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Company</th>
-            <th className="px-4 py-3 font-semibold text-text-secondary">Project</th>
+            <th className="px-4 py-3 font-semibold text-text-secondary">Product</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Source</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Date</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Actions</th>

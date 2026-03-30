@@ -1,4 +1,5 @@
 import type { MockSprint, TaskStatus } from "@/lib/crm/mock-data";
+import type { MilestoneKey } from "@/lib/crm/product-milestones";
 
 /** Sprint row stored per project (same shape as MockSprint). */
 export type WorkspaceSprint = MockSprint;
@@ -41,6 +42,8 @@ export interface WorkspaceTask {
   attachments?: WorkspaceTaskAttachment[];
   /** Multi-assignee; first id is mirrored to assigneeId for legacy views */
   assigneeIds?: string[];
+  /** Standard delivery ladder (see product-milestones). */
+  milestoneKey?: MilestoneKey;
   milestoneTags?: string[];
   /** Display-only times (HH:mm) paired with startDate/endDate */
   startTime?: string;

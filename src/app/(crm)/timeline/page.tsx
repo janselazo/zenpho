@@ -144,7 +144,7 @@ export default function TimelinePage() {
                 style={{ backgroundColor: project.color }}
               />
               <Link
-                href={`/projects/${project.id}`}
+                href={`/products/${project.id}`}
                 className="truncate text-sm font-medium text-text-primary hover:text-accent"
               >
                 {project.title}

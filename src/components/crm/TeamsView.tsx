@@ -987,7 +987,7 @@ function ProjectAvatarStack({ projects }: { projects: MockProject[] }) {
         {show.map((p) => (
           <Link
             key={p.id}
-            href={`/projects/${p.id}`}
+            href={`/products/${p.id}`}
             title={p.title}
             className="relative z-0 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-white text-[10px] font-bold text-white shadow-sm ring-0 transition-transform hover:z-10 hover:scale-105 dark:border-zinc-900"
             style={{ backgroundColor: p.color }}

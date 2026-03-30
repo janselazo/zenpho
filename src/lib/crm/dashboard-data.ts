@@ -48,6 +48,7 @@ export async function fetchDashboardKpis(from: string, to: string) {
     supabase
       .from("project")
       .select("*", { count: "exact", head: true })
+      .is("parent_project_id", null)
       .gte("created_at", rs)
       .lte("created_at", re),
   ]);
@@ -98,6 +99,7 @@ export async function fetchDashboardFunnel(
     supabase
       .from("project")
       .select("budget")
+      .is("parent_project_id", null)
       .gte("created_at", rs)
       .lte("created_at", re),
   ]);

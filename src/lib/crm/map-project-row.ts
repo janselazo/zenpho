@@ -49,11 +49,14 @@ export type ProjectRow = {
   plan_stage: string | null;
   project_type: string | null;
   metadata: unknown;
+  /** null = top-level product; set = phase row under product */
+  parent_project_id?: string | null;
 };
 
 export function projectRowToMock(
   row: ProjectRow,
-  clientLabel: string
+  clientLabel: string,
+  options?: { primaryPhaseId?: string | null }
 ): MockProject {
   const meta =
     row.metadata &&
@@ -88,5 +91,6 @@ export function projectRowToMock(
     website: row.website?.trim() || null,
     sprintCount: 0,
     taskCount: 0,
+    primaryPhaseId: options?.primaryPhaseId ?? null,
   };
 }

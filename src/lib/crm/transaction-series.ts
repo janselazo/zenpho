@@ -212,6 +212,7 @@ export async function getProjectBudgetSeriesForRange(
   const { data, error } = await supabase
     .from("project")
     .select("created_at, budget")
+    .is("parent_project_id", null)
     .gte("created_at", `${from}T00:00:00.000Z`)
     .lte("created_at", `${to}T23:59:59.999Z`);
 

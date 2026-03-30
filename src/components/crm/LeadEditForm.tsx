@@ -228,7 +228,7 @@ export default function LeadEditForm({
           <div className={activeTab === "projects" ? "space-y-4" : "hidden"}>
             <p className="text-sm text-text-secondary">
               Commercial work and delivery run on{" "}
-              <Link href="/projects" className="font-medium text-accent hover:underline">
+              <Link href="/products" className="font-medium text-accent hover:underline">
                 Projects
               </Link>
               . Create a project from this lead to capture budget, timeline, and
@@ -255,7 +255,7 @@ export default function LeadEditForm({
                     {clientProjects.map((p) => (
                       <li key={p.id}>
                         <Link
-                          href={`/projects/${p.id}`}
+                          href={`/products/${p.id}`}
                           className="block px-4 py-3 text-sm font-medium text-accent hover:bg-surface hover:underline"
                         >
                           {p.title?.trim() || "Untitled project"}

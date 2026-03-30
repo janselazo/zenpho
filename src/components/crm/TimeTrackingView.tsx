@@ -229,6 +229,7 @@ export default function TimeTrackingView() {
       supabase
         .from("project")
         .select("id, title, client:client_id ( name, company, email )")
+        .not("parent_project_id", "is", null)
         .order("title")
         .limit(300),
       supabase
@@ -409,7 +410,8 @@ export default function TimeTrackingView() {
             </h1>
           </div>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-text-secondary dark:text-zinc-400">
-            Start working without losing time — log hours to tasks and projects.
+            Start working without losing time — log hours to tasks and delivery
+            phases.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
@@ -583,7 +585,7 @@ export default function TimeTrackingView() {
                 disabled={Boolean(runningEntry)}
                 className={`${selectBaseClass} disabled:opacity-60`}
               >
-                <option value="">Select project…</option>
+                <option value="">Select phase…</option>
                 {projects.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.title}

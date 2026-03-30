@@ -16,6 +16,11 @@ import type {
   WorkspaceTask,
 } from "@/lib/crm/project-workspace-types";
 import {
+  MILESTONE_LABELS,
+  MILESTONE_ORDER,
+  type MilestoneKey,
+} from "@/lib/crm/product-milestones";
+import {
   Check,
   FileText,
   MessageSquare,
@@ -60,6 +65,7 @@ type Props = {
     assigneeId?: string | null;
     startDate?: string;
     endDate?: string;
+    milestoneKey?: MilestoneKey;
   }) => string | undefined;
   onUpdateTask: (taskId: string, patch: Partial<WorkspaceTask>) => void;
   onDeleteTask: (taskId: string) => void;
@@ -104,6 +110,13 @@ function formatDurationLabel(hours: number) {
   return `${h > 0 ? `${h}h ` : ""}${m > 0 ? `${m}m` : ""}`.trim();
 }
 
+function milestoneRank(key: MilestoneKey | undefined): number {
+  const k = key ?? "unassigned";
+  if (k === "unassigned") return 999;
+  const i = MILESTONE_ORDER.indexOf(k);
+  return i < 0 ? 998 : i;
+}
+
 export default function ProjectTasksView({
   tasks,
   sprints,
@@ -144,6 +157,8 @@ export default function ProjectTasksView({
   >("");
   const [draftAssigneeIds, setDraftAssigneeIds] = useState<string[]>([]);
   const [draftMilestoneTags, setDraftMilestoneTags] = useState<string[]>([]);
+  const [draftMilestoneKey, setDraftMilestoneKey] =
+    useState<MilestoneKey>("unassigned");
   const [draftProgress, setDraftProgress] = useState(0);
   const [draftEstimate, setDraftEstimate] = useState(1);
   const [newMilestoneInput, setNewMilestoneInput] = useState("");
@@ -181,6 +196,7 @@ export default function ProjectTasksView({
       setDraftPriority("");
       setDraftAssigneeIds([]);
       setDraftMilestoneTags([]);
+      setDraftMilestoneKey("unassigned");
       setDraftProgress(0);
       setDraftEstimate(1);
       setCommentDraft("");
@@ -208,6 +224,7 @@ export default function ProjectTasksView({
     setDraftPriority(task.priority ?? "");
     setDraftAssigneeIds(assigneeList(task));
     setDraftMilestoneTags(task.milestoneTags ?? []);
+    setDraftMilestoneKey(task.milestoneKey ?? "unassigned");
     setDraftProgress(task.progress ?? 0);
     setDraftEstimate(task.estimateHours ?? 1);
     setCommentDraft("");
@@ -254,6 +271,8 @@ export default function ProjectTasksView({
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
+      const mr = milestoneRank(a.milestoneKey) - milestoneRank(b.milestoneKey);
+      if (mr !== 0) return mr;
       const ae = a.endDate || "";
       const be = b.endDate || "";
       return ae.localeCompare(be);
@@ -275,6 +294,7 @@ export default function ProjectTasksView({
       assigneeId: primary,
       assigneeIds: draftAssigneeIds.length ? draftAssigneeIds : undefined,
       milestoneTags: draftMilestoneTags.length ? draftMilestoneTags : undefined,
+      milestoneKey: draftMilestoneKey,
       progress: Math.min(100, Math.max(0, draftProgress)),
       estimateHours: Math.max(0.25, draftEstimate),
     });
@@ -291,6 +311,7 @@ export default function ProjectTasksView({
         assigneeId: primary,
         startDate: draftStartDate,
         endDate: draftEndDate,
+        milestoneKey: draftMilestoneKey,
       });
       if (id) {
         onUpdateTask(id, {
@@ -400,6 +421,9 @@ export default function ProjectTasksView({
                 Task
               </th>
               <th className="px-4 py-3 font-semibold text-text-secondary">
+                Milestone
+              </th>
+              <th className="px-4 py-3 font-semibold text-text-secondary">
                 Status
               </th>
               <th className="px-4 py-3 font-semibold text-text-secondary">
@@ -420,7 +444,7 @@ export default function ProjectTasksView({
             {sorted.length === 0 ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   className="px-4 py-12 text-center text-text-secondary"
                 >
                   No tasks yet. Add one to see it on the sprint board and
@@ -439,6 +463,9 @@ export default function ProjectTasksView({
                       <span className="font-medium text-text-primary dark:text-zinc-100">
                         {t.title}
                       </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-text-secondary">
+                      {MILESTONE_LABELS[t.milestoneKey ?? "unassigned"]}
                     </td>
                     <td className="px-4 py-3">
                       <span
@@ -714,6 +741,23 @@ export default function ProjectTasksView({
                       </select>
                     </label>
                   </div>
+
+                  <label className="block text-xs font-medium text-text-secondary">
+                    Delivery milestone
+                    <select
+                      value={draftMilestoneKey}
+                      onChange={(e) =>
+                        setDraftMilestoneKey(e.target.value as MilestoneKey)
+                      }
+                      className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800"
+                    >
+                      {[...MILESTONE_ORDER, "unassigned" as const].map((k) => (
+                        <option key={k} value={k}>
+                          {MILESTONE_LABELS[k]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
 
                   <label className="block text-xs font-medium text-text-secondary">
                     Sprint / placement

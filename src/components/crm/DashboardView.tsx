@@ -696,7 +696,7 @@ export default function DashboardView({
         display: String(activeClients),
       },
       {
-        name: "Active projects",
+        name: "Active products",
         v: activeProjects,
         display: String(activeProjects),
       },
@@ -973,7 +973,7 @@ export default function DashboardView({
                       <Cell
                         key={row.name}
                         fill={
-                          row.name === "Active projects"
+                          row.name === "Active products"
                             ? chartTheme.barVolumeProjects
                             : chartTheme.barVolume
                         }

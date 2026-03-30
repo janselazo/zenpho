@@ -26,11 +26,14 @@ function humanizeProjectDbError(message: string): string {
     m.includes("pgrst205");
   if (
     looksMissing &&
-    (m.includes("project") || m.includes("plan_stage") || m.includes("metadata"))
+    (    m.includes("project") ||
+      m.includes("plan_stage") ||
+      m.includes("metadata") ||
+      m.includes("parent_project"))
   ) {
     return (
       "Project columns are not on this database yet. Apply " +
-      "`supabase/migrations/20260401120000_project_crm_fields.sql` (or run `supabase db push`)."
+      "`supabase/migrations` through `20260429120000_product_phase_issue.sql` (or run `supabase db push`)."
     );
   }
   return message;
@@ -62,8 +65,9 @@ export async function listCrmProjectsForAgency(): Promise<{
   const { data: rows, error } = await supabase
     .from("project")
     .select(
-      "id, client_id, title, description, status, target_date, website, budget, plan_stage, project_type, metadata"
+      "id, client_id, title, description, status, target_date, website, budget, plan_stage, project_type, metadata, parent_project_id"
     )
+    .is("parent_project_id", null)
     .order("created_at", { ascending: false })
     .limit(500);
 
@@ -86,15 +90,32 @@ export async function listCrmProjectsForAgency(): Promise<{
     return c.email?.trim() || "Client";
   };
 
+  const productIds = (rows as ProjectRow[]).map((r) => r.id);
+  const { data: phaseRows } = await supabase
+    .from("project")
+    .select("id, parent_project_id")
+    .in("parent_project_id", productIds)
+    .order("created_at", { ascending: true });
+
+  const primaryPhaseByProduct = new Map<string, string>();
+  for (const ph of phaseRows ?? []) {
+    const pid = ph.parent_project_id as string;
+    if (!primaryPhaseByProduct.has(pid)) {
+      primaryPhaseByProduct.set(pid, ph.id as string);
+    }
+  }
+
   const projects = (rows as ProjectRow[]).map((row) =>
-    projectRowToMock(row, labelFor(row.client_id))
+    projectRowToMock(row, labelFor(row.client_id), {
+      primaryPhaseId: primaryPhaseByProduct.get(row.id) ?? null,
+    })
   );
   return { projects, error: null };
 }
 
 export async function createCrmProject(
   input: CrmProjectPersistInput
-): Promise<{ ok: true; id: string } | { error: string }> {
+): Promise<{ ok: true; id: string; phaseId: string } | { error: string }> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -113,7 +134,7 @@ export async function createCrmProject(
     teamName: input.teamName?.trim() || null,
   };
 
-  const { data: row, error } = await supabase
+  const { data: productRow, error: prodErr } = await supabase
     .from("project")
     .insert({
       client_id: clientId,
@@ -129,18 +150,48 @@ export async function createCrmProject(
       plan_stage: input.plan,
       project_type: input.projectType?.trim() || null,
       metadata,
+      parent_project_id: null,
     })
     .select("id")
     .single();
 
-  if (error) return { error: humanizeProjectDbError(error.message) };
-  const id = row?.id as string | undefined;
-  if (!id) return { error: "Could not create project" };
+  if (prodErr) return { error: humanizeProjectDbError(prodErr.message) };
+  const productId = productRow?.id as string | undefined;
+  if (!productId) return { error: "Could not create product" };
 
+  const { data: phaseRow, error: phaseErr } = await supabase
+    .from("project")
+    .insert({
+      client_id: clientId,
+      title: "Main",
+      description: null,
+      status: "active",
+      target_date: null,
+      website: null,
+      budget: null,
+      plan_stage: "pipeline",
+      project_type: input.projectType?.trim() || null,
+      metadata,
+      parent_project_id: productId,
+    })
+    .select("id")
+    .single();
+
+  if (phaseErr) {
+    await supabase.from("project").delete().eq("id", productId);
+    return { error: humanizeProjectDbError(phaseErr.message) };
+  }
+  const phaseId = phaseRow?.id as string | undefined;
+  if (!phaseId) {
+    await supabase.from("project").delete().eq("id", productId);
+    return { error: "Could not create default phase" };
+  }
+
+  revalidatePath("/products");
   revalidatePath("/projects");
   revalidatePath("/portal");
   revalidatePath("/dashboard");
-  return { ok: true, id };
+  return { ok: true, id: productId, phaseId };
 }
 
 /** Create project and ensure a client exists for the lead (creates client from lead if needed). */
@@ -148,7 +199,7 @@ export async function createCrmProjectFromLead(
   leadId: string,
   input: CrmProjectPersistInput,
   hints?: { company?: string | null; email?: string | null }
-): Promise<{ ok: true; id: string } | { error: string }> {
+): Promise<{ ok: true; id: string; phaseId: string } | { error: string }> {
   const lid = leadId.trim();
   if (!lid) return { error: "Missing lead id" };
 
@@ -185,6 +236,20 @@ export async function updateCrmProject(
   const id = projectId.trim();
   if (!id) return { error: "Missing project id" };
 
+  const { data: existing, error: exErr } = await supabase
+    .from("project")
+    .select("parent_project_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (exErr) return { error: humanizeProjectDbError(exErr.message) };
+  if (!existing) return { error: "Not found" };
+  if (existing.parent_project_id) {
+    return {
+      error:
+        "This row is a delivery phase. Edit the parent product from Products, or update the phase on its workspace page.",
+    };
+  }
+
   const clientId = input.clientId.trim();
   if (!clientId) return { error: "Select a client" };
   const title = input.title.trim();
@@ -216,7 +281,9 @@ export async function updateCrmProject(
 
   if (error) return { error: humanizeProjectDbError(error.message) };
 
+  revalidatePath("/products");
   revalidatePath("/projects");
+  revalidatePath(`/products/${id}`);
   revalidatePath(`/projects/${id}`);
   revalidatePath("/portal");
   revalidatePath("/dashboard");
@@ -238,6 +305,7 @@ export async function deleteCrmProject(
   const { error } = await supabase.from("project").delete().eq("id", id);
   if (error) return { error: humanizeProjectDbError(error.message) };
 
+  revalidatePath("/products");
   revalidatePath("/projects");
   revalidatePath("/portal");
   revalidatePath("/dashboard");
@@ -258,6 +326,17 @@ export async function updateCrmProjectPlanStage(
   if (!id) return { error: "Missing project id" };
   if (!PLAN_SET.has(plan)) return { error: "Invalid plan stage" };
 
+  const { data: row, error: readErr } = await supabase
+    .from("project")
+    .select("parent_project_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (readErr) return { error: humanizeProjectDbError(readErr.message) };
+  if (!row) return { error: "Not found" };
+  if (row.parent_project_id) {
+    return { error: "Plan stage applies to the product, not an individual phase." };
+  }
+
   const { error } = await supabase
     .from("project")
     .update({ plan_stage: plan })
@@ -265,7 +344,235 @@ export async function updateCrmProjectPlanStage(
 
   if (error) return { error: humanizeProjectDbError(error.message) };
 
+  revalidatePath("/products");
   revalidatePath("/projects");
+  revalidatePath(`/products/${id}`);
   revalidatePath(`/projects/${id}`);
+  return { ok: true };
+}
+
+export type PhaseRow = {
+  id: string;
+  title: string;
+  plan_stage: string | null;
+  created_at: string;
+};
+
+export async function listCrmPhasesForProduct(
+  productId: string
+): Promise<{ phases: PhaseRow[]; error: string | null }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { phases: [], error: "Unauthorized" };
+
+  const pid = productId.trim();
+  if (!pid) return { phases: [], error: "Missing product id" };
+
+  const { data: rows, error } = await supabase
+    .from("project")
+    .select("id, title, plan_stage, created_at")
+    .eq("parent_project_id", pid)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    return { phases: [], error: humanizeProjectDbError(error.message) };
+  }
+  return { phases: (rows ?? []) as PhaseRow[], error: null };
+}
+
+export async function createCrmPhase(
+  productId: string,
+  title: string
+): Promise<{ ok: true; id: string } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const pid = productId.trim();
+  const t = title.trim();
+  if (!pid) return { error: "Missing product" };
+  if (!t) return { error: "Title is required" };
+
+  const { data: parent, error: pErr } = await supabase
+    .from("project")
+    .select("id, client_id, metadata, project_type")
+    .eq("id", pid)
+    .is("parent_project_id", null)
+    .maybeSingle();
+
+  if (pErr) return { error: humanizeProjectDbError(pErr.message) };
+  if (!parent) return { error: "Product not found" };
+
+  const metadata =
+    parent.metadata &&
+    typeof parent.metadata === "object" &&
+    !Array.isArray(parent.metadata)
+      ? parent.metadata
+      : {};
+
+  const { data: row, error } = await supabase
+    .from("project")
+    .insert({
+      client_id: parent.client_id as string,
+      title: t,
+      description: null,
+      status: "active",
+      plan_stage: "pipeline",
+      project_type: (parent.project_type as string | null) ?? null,
+      metadata,
+      parent_project_id: pid,
+    })
+    .select("id")
+    .single();
+
+  if (error) return { error: humanizeProjectDbError(error.message) };
+  const id = row?.id as string | undefined;
+  if (!id) return { error: "Could not create phase" };
+
+  revalidatePath(`/products/${pid}`);
+  revalidatePath("/products");
+  return { ok: true, id };
+}
+
+export type IssueRow = {
+  id: string;
+  project_id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  severity: string;
+  related_task_id: string | null;
+  created_at: string;
+};
+
+export async function listIssuesForPhase(
+  phaseId: string
+): Promise<{ issues: IssueRow[]; error: string | null }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { issues: [], error: "Unauthorized" };
+
+  const id = phaseId.trim();
+  if (!id) return { issues: [], error: "Missing phase" };
+
+  const { data: rows, error } = await supabase
+    .from("issue")
+    .select(
+      "id, project_id, title, description, status, severity, related_task_id, created_at"
+    )
+    .eq("project_id", id)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return { issues: [], error: humanizeProjectDbError(error.message) };
+  }
+  return { issues: (rows ?? []) as IssueRow[], error: null };
+}
+
+export async function createCrmIssue(input: {
+  phaseId: string;
+  title: string;
+  description?: string | null;
+  severity?: string;
+}): Promise<{ ok: true; id: string } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const phaseId = input.phaseId.trim();
+  const title = input.title.trim();
+  if (!phaseId) return { error: "Missing phase" };
+  if (!title) return { error: "Title is required" };
+
+  const sev = (input.severity ?? "medium").toLowerCase();
+  const allowed = new Set(["low", "medium", "high", "critical"]);
+  if (!allowed.has(sev)) return { error: "Invalid severity" };
+
+  const { data: row, error } = await supabase
+    .from("issue")
+    .insert({
+      project_id: phaseId,
+      title,
+      description: input.description?.trim() || null,
+      severity: sev,
+      status: "open",
+      created_by: user.id,
+    })
+    .select("id")
+    .single();
+
+  if (error) return { error: humanizeProjectDbError(error.message) };
+  const id = row?.id as string | undefined;
+  if (!id) return { error: "Could not create issue" };
+
+  revalidatePath(`/products`);
+  return { ok: true, id };
+}
+
+export async function updateCrmIssue(
+  issueId: string,
+  patch: { status?: string; severity?: string; title?: string }
+): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const id = issueId.trim();
+  if (!id) return { error: "Missing issue id" };
+
+  const updates: Record<string, string> = {};
+  if (patch.title !== undefined) {
+    const t = patch.title.trim();
+    if (!t) return { error: "Title required" };
+    updates.title = t;
+  }
+  if (patch.status !== undefined) {
+    const st = patch.status.trim();
+    const allowed = new Set(["open", "in_progress", "resolved", "closed"]);
+    if (!allowed.has(st)) return { error: "Invalid status" };
+    updates.status = st;
+  }
+  if (patch.severity !== undefined) {
+    const sev = patch.severity.toLowerCase();
+    if (!["low", "medium", "high", "critical"].includes(sev)) {
+      return { error: "Invalid severity" };
+    }
+    updates.severity = sev;
+  }
+
+  if (Object.keys(updates).length === 0) return { ok: true };
+
+  const { error } = await supabase.from("issue").update(updates).eq("id", id);
+
+  if (error) return { error: humanizeProjectDbError(error.message) };
+  revalidatePath("/products");
+  return { ok: true };
+}
+
+export async function deleteCrmIssue(
+  issueId: string
+): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const id = issueId.trim();
+  if (!id) return { error: "Missing issue id" };
+
+  const { error } = await supabase.from("issue").delete().eq("id", id);
+  if (error) return { error: humanizeProjectDbError(error.message) };
+  revalidatePath("/products");
   return { ok: true };
 }

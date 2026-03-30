@@ -37,6 +37,7 @@ export default async function LeadDetailPage({ params }: Props) {
       .from("project")
       .select("id, title, created_at")
       .eq("client_id", cid)
+      .is("parent_project_id", null)
       .order("created_at", { ascending: false })
       .limit(50);
     clientProjects = rows ?? [];

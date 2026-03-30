@@ -56,6 +56,7 @@ export async function fetchMonthlyRevenueFromWonClientProjects(
   const { data: projects, error } = await supabase
     .from("project")
     .select("budget")
+    .is("parent_project_id", null)
     .gte("created_at", startIso)
     .lte("created_at", endIso);
 

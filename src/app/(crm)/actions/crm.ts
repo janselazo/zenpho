@@ -197,6 +197,7 @@ export async function updateClientRow(formData: FormData) {
   if (error) return { error: error.message };
 
   revalidatePath("/leads");
+  revalidatePath("/products");
   revalidatePath("/projects");
   revalidatePath("/dashboard");
   return { ok: true };
@@ -215,6 +216,7 @@ export async function deleteClient(id: string) {
   const { error } = await supabase.from("client").delete().eq("id", trimmed);
   if (error) return { error: error.message };
 
+  revalidatePath("/products");
   revalidatePath("/projects");
   revalidatePath("/leads");
   revalidatePath("/dashboard");

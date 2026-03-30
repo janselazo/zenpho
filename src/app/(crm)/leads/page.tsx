@@ -70,6 +70,7 @@ export default async function LeadsPage({
       .from("project")
       .select("client_id, title, created_at")
       .in("client_id", clientIds)
+      .is("parent_project_id", null)
       .order("created_at", { ascending: false });
     for (const row of projRows ?? []) {
       const cid = row.client_id as string;

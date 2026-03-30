@@ -10,6 +10,7 @@ const AGENCY_APP_PREFIXES = [
   "/deals",
   "/clients",
   "/projects",
+  "/products",
   "/calendar",
   "/settings",
 

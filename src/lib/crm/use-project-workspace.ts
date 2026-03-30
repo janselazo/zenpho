@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { TaskStatus } from "@/lib/crm/mock-data";
+import type { MilestoneKey } from "@/lib/crm/product-milestones";
 import {
   CRM_PROJECT_WORKSPACE_EVENT,
   readProjectWorkspace,
@@ -140,6 +141,7 @@ export function useProjectWorkspace(projectId: string | undefined) {
       assigneeId?: string | null;
       startDate?: string;
       endDate?: string;
+      milestoneKey?: MilestoneKey;
     }): string | undefined => {
       if (!projectId) return undefined;
       const today = formatISODate(new Date());
@@ -157,6 +159,7 @@ export function useProjectWorkspace(projectId: string | undefined) {
         endDate: input.endDate ?? input.startDate ?? today,
         progress: 0,
         estimateHours: 1,
+        milestoneKey: input.milestoneKey ?? "unassigned",
       };
       mutate((w) => ({ ...w, tasks: [...w.tasks, task] }));
       return id;

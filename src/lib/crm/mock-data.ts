@@ -75,6 +75,8 @@ export interface MockProject {
   slackChannel?: string;
   sprintCount: number;
   taskCount: number;
+  /** Default phase to open workspace (`/products/.../phases/...`) */
+  primaryPhaseId?: string | null;
 }
 
 export interface MockSprint {

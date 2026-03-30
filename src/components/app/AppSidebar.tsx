@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
@@ -25,8 +25,16 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { PROSPECTING_SECTIONS } from "@/lib/crm/prospecting-nav";
 import SoonBadge from "@/components/crm/prospecting/SoonBadge";
-import { projects as seedProjects } from "@/lib/crm/mock-data";
-import { getMergedProjectsList } from "@/lib/crm/projects-storage";
+import {
+  projects as seedProjects,
+  type MockProject,
+  type PlanStage,
+} from "@/lib/crm/mock-data";
+import {
+  getMergedProjectsList,
+  CRM_SUPABASE_PROJECTS_CHANGED_EVENT,
+} from "@/lib/crm/projects-storage";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 const opportunitiesNav: Array<{
   href: string;
@@ -40,7 +48,7 @@ const opportunitiesNav: Array<{
 ];
 
 const workNav = [
-  { href: "/projects", label: "Projects", icon: FolderKanban },
+  { href: "/products", label: "Products", icon: FolderKanban },
   { href: "/time-tracking", label: "Time Tracking", icon: Timer },
 ];
 
@@ -58,28 +66,104 @@ const prospectingSectionsWithoutPlaybook = playbookSection
   : PROSPECTING_SECTIONS;
 const PlaybookNavIcon = playbookSection?.icon;
 
+function sortSidebarProducts(list: MockProject[]): MockProject[] {
+  return [...list].sort((a, b) =>
+    a.title.localeCompare(b.title, undefined, { sensitivity: "base" })
+  );
+}
+
+async function loadSidebarProductRoots(): Promise<MockProject[]> {
+  if (!isSupabaseConfigured()) {
+    return sortSidebarProducts(getMergedProjectsList());
+  }
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return sortSidebarProducts(getMergedProjectsList());
+  }
+  const { data, error } = await supabase
+    .from("project")
+    .select("id, title")
+    .is("parent_project_id", null)
+    .order("title", { ascending: true })
+    .limit(75);
+  if (error || data === null) {
+    return sortSidebarProducts(getMergedProjectsList());
+  }
+  return data.map((row) => ({
+    id: row.id as string,
+    title: ((row.title as string) ?? "").trim() || "Untitled",
+    plan: "pipeline" as PlanStage,
+    teamId: "team-general",
+    clientId: "",
+    color: "#6366f1",
+    expectedEndDate: "TBD",
+    sprintCount: 0,
+    taskCount: 0,
+  }));
+}
+
+const SIDEBAR_SECTION_STORAGE_PREFIX = "zenpho-sidebar-section-";
+
+function useSidebarSectionOpen(sectionKey: string, defaultOpen = true) {
+  const storageKey = `${SIDEBAR_SECTION_STORAGE_PREFIX}${sectionKey}`;
+  const [open, setOpenState] = useState(defaultOpen);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw === "0") setOpenState(false);
+      else if (raw === "1") setOpenState(true);
+    } catch {
+      /* private mode / quota */
+    }
+  }, [storageKey]);
+
+  const toggle = useCallback(() => {
+    setOpenState((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(storageKey, next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, [storageKey]);
+
+  return [open, toggle] as const;
+}
+
 export default function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const [projectsOpen, setProjectsOpen] = useState(true);
-  const [sidebarProjects, setSidebarProjects] =
-    useState(() => seedProjects);
+  const [opportunitiesOpen, toggleOpportunities] =
+    useSidebarSectionOpen("opportunities");
+  const [workOpen, toggleWork] = useSidebarSectionOpen("work");
+  const [prospectingOpen, toggleProspecting] =
+    useSidebarSectionOpen("prospecting");
+  const [agencyOpen, toggleAgency] = useSidebarSectionOpen("agency");
+  const [productsOpen, toggleProducts] = useSidebarSectionOpen("products");
+  const [sidebarProducts, setSidebarProducts] = useState(() => seedProjects);
 
   useEffect(() => {
+    let cancelled = false;
     const sync = () => {
-      const list = getMergedProjectsList();
-      setSidebarProjects(
-        [...list].sort((a, b) =>
-          a.title.localeCompare(b.title, undefined, { sensitivity: "base" })
-        )
-      );
+      void loadSidebarProductRoots().then((list) => {
+        if (!cancelled) setSidebarProducts(list);
+      });
     };
     sync();
     window.addEventListener("crm-projects-changed", sync);
     window.addEventListener("storage", sync);
+    window.addEventListener(CRM_SUPABASE_PROJECTS_CHANGED_EVENT, sync);
     return () => {
+      cancelled = true;
       window.removeEventListener("crm-projects-changed", sync);
       window.removeEventListener("storage", sync);
+      window.removeEventListener(CRM_SUPABASE_PROJECTS_CHANGED_EVENT, sync);
     };
   }, []);
 
@@ -137,27 +221,39 @@ export default function AppSidebar() {
         </div>
 
         {/* Opportunities */}
-        <NavGroup label="Opportunities">
+        <SidebarSection
+          label="Opportunities"
+          open={opportunitiesOpen}
+          onToggle={toggleOpportunities}
+        >
           {opportunitiesNav.map(({ href, label, icon: Icon }) => (
             <NavLink key={href} href={href} active={isActive(pathname, href)}>
               <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
               {label}
             </NavLink>
           ))}
-        </NavGroup>
+        </SidebarSection>
 
         {/* Work */}
-        <NavGroup label="Work">
+        <SidebarSection
+          label="Work"
+          open={workOpen}
+          onToggle={toggleWork}
+        >
           {workNav.map(({ href, label, icon: Icon }) => (
             <NavLink key={href} href={href} active={isActive(pathname, href)}>
               <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
               {label}
             </NavLink>
           ))}
-        </NavGroup>
+        </SidebarSection>
 
         {/* Prospecting */}
-        <NavGroup label="Prospecting">
+        <SidebarSection
+          label="Prospecting"
+          open={prospectingOpen}
+          onToggle={toggleProspecting}
+        >
           {prospectingSectionsWithoutPlaybook.map(({ href, label, icon: Icon, soon }) => (
             <NavLink
               key={href}
@@ -169,29 +265,32 @@ export default function AppSidebar() {
               {soon ? <SoonBadge className="ml-auto" /> : null}
             </NavLink>
           ))}
-        </NavGroup>
+        </SidebarSection>
 
         {/* Agency */}
-        <NavGroup label="Agency">
+        <SidebarSection label="Agency" open={agencyOpen} onToggle={toggleAgency}>
           {agencyNav.map(({ href, label, icon: Icon }) => (
             <NavLink key={href} href={href} active={isActive(pathname, href)}>
               <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
               {label}
             </NavLink>
           ))}
-        </NavGroup>
+        </SidebarSection>
 
-        {/* Projects list */}
-        <CollapsibleGroup
-          label="Projects"
-          open={projectsOpen}
-          onToggle={() => setProjectsOpen(!projectsOpen)}
+        {/* Product shortcuts (root rows from Supabase when configured) */}
+        <SidebarSection
+          label="Products"
+          open={productsOpen}
+          onToggle={toggleProducts}
         >
-          {sidebarProjects.map((p) => (
+          {sidebarProducts.map((p) => (
             <NavLink
               key={p.id}
-              href={`/projects/${p.id}`}
-              active={pathname === `/projects/${p.id}`}
+              href={`/products/${p.id}`}
+              active={
+                pathname === `/products/${p.id}` ||
+                pathname.startsWith(`/products/${p.id}/`)
+              }
             >
               <span
                 className="h-2.5 w-2.5 shrink-0 rounded-full"
@@ -200,7 +299,7 @@ export default function AppSidebar() {
               <span className="truncate">{p.title}</span>
             </NavLink>
           ))}
-        </CollapsibleGroup>
+        </SidebarSection>
 
       </div>
 
@@ -224,22 +323,12 @@ export default function AppSidebar() {
 }
 
 function isActive(pathname: string, href: string) {
-  if (href === "/projects") return pathname === "/projects";
+  if (href === "/products")
+    return pathname === "/products" || pathname.startsWith("/products/");
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function NavGroup({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="px-2 pt-6">
-      <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-widest text-text-secondary/50 dark:text-zinc-500">
-        {label}
-      </p>
-      <nav className="flex flex-col gap-0.5">{children}</nav>
-    </div>
-  );
-}
-
-function CollapsibleGroup({
+function SidebarSection({
   label,
   open,
   onToggle,
@@ -250,19 +339,32 @@ function CollapsibleGroup({
   onToggle: () => void;
   children: React.ReactNode;
 }) {
+  const sectionId = `sidebar-section-${label.toLowerCase().replace(/\s+/g, "-")}`;
   return (
     <div className="px-2 pt-6">
       <button
         type="button"
+        id={`${sectionId}-trigger`}
         onClick={onToggle}
-        className="mb-1 flex w-full items-center gap-1 px-3 text-[10px] font-bold uppercase tracking-widest text-text-secondary/60 hover:text-text-secondary dark:text-zinc-500 dark:hover:text-zinc-400"
+        aria-expanded={open}
+        aria-controls={`${sectionId}-nav`}
+        className="mb-1.5 flex w-full items-center gap-1 px-3 text-left text-[11px] font-semibold uppercase tracking-widest text-text-secondary/50 hover:text-text-secondary/70 dark:text-zinc-500 dark:hover:text-zinc-400"
       >
-        {label}
+        <span className="min-w-0 flex-1">{label}</span>
         <ChevronDown
-          className={`ml-auto h-3 w-3 transition-transform ${open ? "" : "-rotate-90"}`}
+          className={`h-3.5 w-3.5 shrink-0 opacity-70 transition-transform duration-200 ${open ? "" : "-rotate-90"}`}
+          aria-hidden
         />
       </button>
-      {open && <nav className="flex flex-col gap-0.5">{children}</nav>}
+      {open ? (
+        <nav
+          id={`${sectionId}-nav`}
+          className="flex flex-col gap-0.5"
+          aria-labelledby={`${sectionId}-trigger`}
+        >
+          {children}
+        </nav>
+      ) : null}
     </div>
   );
 }
