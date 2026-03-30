@@ -140,21 +140,6 @@ export default function AppSidebar() {
           </nav>
         </div>
 
-        {/* Prospecting */}
-        <NavGroup label="Prospecting">
-          {prospectingSectionsWithoutPlaybook.map(({ href, label, icon: Icon, soon }) => (
-            <NavLink
-              key={href}
-              href={href}
-              active={pathname === href || pathname.startsWith(`${href}/`)}
-            >
-              <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-              <span className="min-w-0 flex-1 truncate">{label}</span>
-              {soon ? <SoonBadge className="ml-auto" /> : null}
-            </NavLink>
-          ))}
-        </NavGroup>
-
         {/* Opportunities */}
         <NavGroup label="Opportunities">
           {opportunitiesNav.map(({ href, label, icon: Icon }) => (
@@ -171,6 +156,21 @@ export default function AppSidebar() {
             <NavLink key={href} href={href} active={isActive(pathname, href)}>
               <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
               {label}
+            </NavLink>
+          ))}
+        </NavGroup>
+
+        {/* Prospecting */}
+        <NavGroup label="Prospecting">
+          {prospectingSectionsWithoutPlaybook.map(({ href, label, icon: Icon, soon }) => (
+            <NavLink
+              key={href}
+              href={href}
+              active={pathname === href || pathname.startsWith(`${href}/`)}
+            >
+              <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+              <span className="min-w-0 flex-1 truncate">{label}</span>
+              {soon ? <SoonBadge className="ml-auto" /> : null}
             </NavLink>
           ))}
         </NavGroup>

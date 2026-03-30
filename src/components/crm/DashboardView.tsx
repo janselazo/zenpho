@@ -47,7 +47,7 @@ import {
   type DashboardFunnelStage,
   type DashboardRangeTotals,
   type LeadsAppointmentsPoint,
-} from "@/lib/crm/dashboard-data";
+} from "@/lib/crm/dashboard-types";
 import DashboardRangePicker from "@/components/crm/DashboardRangePicker";
 import {
   getCompletions,

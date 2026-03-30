@@ -1,16 +1,18 @@
 import dynamic from "next/dynamic";
 import {
   fetchClientsCreatedSeries,
-  DASHBOARD_FUNNEL_REVENUE_STAGE_LABEL,
   fetchDashboardFunnel,
   fetchDashboardKpis,
   fetchDashboardRangeTotals,
   fetchLeadsAppointmentsSeries,
+} from "@/lib/crm/dashboard-data";
+import {
+  DASHBOARD_FUNNEL_REVENUE_STAGE_LABEL,
   type ClientsCreatedPoint,
   type DashboardFunnelStage,
   type DashboardRangeTotals,
   type LeadsAppointmentsPoint,
-} from "@/lib/crm/dashboard-data";
+} from "@/lib/crm/dashboard-types";
 import {
   formatDashboardRangeLabel,
   parseDashboardRangeQuery,

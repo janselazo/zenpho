@@ -1,34 +1,12 @@
-import { createClient } from "@/lib/supabase/server";
 import { enumerateDays } from "@/lib/crm/dashboard-range";
-
-export type DashboardFunnelStage = {
-  label: string;
-  count: number;
-  value: number;
-  color: string;
-  bg: string;
-};
-
-export type LeadsAppointmentsPoint = {
-  label: string;
-  leads: number;
-  appointments: number;
-};
-
-export type ClientsCreatedPoint = {
-  label: string;
-  clients: number;
-};
-
-export type DashboardRangeTotals = {
-  leads: number;
-  appointments: number;
-  clients: number;
-  revenue: number;
-};
-
-/** Funnel + snapshot Finance use this label for closed-won deal revenue in range. */
-export const DASHBOARD_FUNNEL_REVENUE_STAGE_LABEL = "Revenue" as const;
+import {
+  DASHBOARD_FUNNEL_REVENUE_STAGE_LABEL,
+  type ClientsCreatedPoint,
+  type DashboardFunnelStage,
+  type DashboardRangeTotals,
+  type LeadsAppointmentsPoint,
+} from "@/lib/crm/dashboard-types";
+import { createClient } from "@/lib/supabase/server";
 
 function toLocalYmd(d: Date): string {
   const y = d.getFullYear();
