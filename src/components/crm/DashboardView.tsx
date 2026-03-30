@@ -526,7 +526,7 @@ export default function DashboardView({
                     tickLine={false}
                   />
                   <Tooltip
-                    formatter={(value: number) => [String(value), "Count"]}
+                    formatter={(value) => [String(value ?? 0), "Count"]}
                     contentStyle={{
                       borderRadius: 12,
                       border: `1px solid ${chartTheme.tooltipBorder}`,
@@ -591,7 +591,7 @@ export default function DashboardView({
                     tickLine={false}
                   />
                   <Tooltip
-                    formatter={(value: number) => [fmt(value), ""]}
+                    formatter={(value) => [fmt(Number(value ?? 0)), ""]}
                     contentStyle={{
                       borderRadius: 12,
                       border: `1px solid ${chartTheme.tooltipBorder}`,
