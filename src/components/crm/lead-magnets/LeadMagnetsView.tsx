@@ -17,7 +17,7 @@ export default function LeadMagnetsView() {
 
   const intro = useMemo(
     () =>
-      "Pick an industry and optional niche, then generate lead-magnet concepts using live web snippets (Reddit, Google-style results, long-tail queries) plus OpenAI — built for Zenpho’s agency pipeline. Bookmark ideas or add your own; review them in Saved.",
+      "Choose a vertical and niche, then generate concepts from live web snippets plus OpenAI, or load curated samples without API keys. Bookmark from Discover; add your own ideas in Saved.",
     []
   );
 

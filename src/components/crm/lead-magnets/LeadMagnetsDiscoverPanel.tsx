@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { Bookmark, Plus } from "lucide-react";
+import { Bookmark, Lightbulb, Loader2 } from "lucide-react";
 import {
   DEFAULT_NICHE_ID,
   INDUSTRIES,
@@ -14,7 +14,6 @@ import {
 import { saveLeadMagnetFromIdea } from "@/app/(crm)/actions/saved-lead-magnets";
 import { formatBadgeClass } from "@/components/crm/lead-magnets/lead-magnet-card-styles";
 import { HorizontalPillScroller } from "@/components/crm/lead-magnets/lead-magnets-scroll";
-import ManualLeadMagnetModal from "@/components/crm/lead-magnets/ManualLeadMagnetModal";
 
 type GenerateResponse = {
   ideas?: LeadMagnetIdea[];
@@ -47,13 +46,21 @@ export default function LeadMagnetsDiscoverPanel({ onSaved }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
-  const [manualOpen, setManualOpen] = useState(false);
 
   const key = cacheKey(industryId, nicheId);
   const current = cache[key];
   const niches = useMemo(
     () => getNichesForIndustry(industryId),
     [industryId]
+  );
+
+  const industryLabel = useMemo(
+    () => INDUSTRIES.find((i) => i.id === industryId)?.label ?? industryId,
+    [industryId]
+  );
+  const nicheLabel = useMemo(
+    () => niches.find((n) => n.id === nicheId)?.label ?? nicheId,
+    [niches, nicheId]
   );
 
   const runGenerate = useCallback(
@@ -130,89 +137,145 @@ export default function LeadMagnetsDiscoverPanel({ onSaved }: Props) {
   };
 
   return (
-    <div>
-      <div className="mt-0">
-        <p className="text-xs font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
-          Industry
-        </p>
-        <div className="mt-2">
-          <HorizontalPillScroller
-            depKey="industries"
-            labelLeft="Scroll industries left"
-            labelRight="Scroll industries right"
-          >
-            {INDUSTRIES.map((ind) => (
-              <button
-                key={ind.id}
-                type="button"
-                onClick={() => onIndustryChange(ind.id)}
-                className={`shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
-                  industryId === ind.id
-                    ? "border-accent bg-accent/10 text-accent dark:border-blue-500 dark:bg-blue-500/15 dark:text-blue-400"
-                    : "border-border bg-white text-text-secondary hover:border-accent/30 hover:text-text-primary dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
-                }`}
-              >
-                {ind.label}
-              </button>
-            ))}
-          </HorizontalPillScroller>
-        </div>
-      </div>
+    <div className="space-y-8">
+      <section
+        aria-labelledby="lm-scope-heading"
+        className="rounded-2xl border border-border bg-white p-5 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/40 sm:p-6"
+      >
+        <div className="flex flex-col gap-6">
+          <header className="space-y-1">
+            <h2
+              id="lm-scope-heading"
+              className="text-sm font-semibold text-text-primary dark:text-zinc-100"
+            >
+              Scope
+            </h2>
+            <p className="text-xs leading-relaxed text-text-secondary dark:text-zinc-500">
+              Choose the vertical and audience. Pills scroll sideways; use the
+              arrows if your pick is off-screen.
+            </p>
+          </header>
 
-      <div className="mt-8">
-        <p className="text-xs font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
-          Niche
-        </p>
-        <div className="mt-2">
-          <HorizontalPillScroller
-            depKey={`niches-${industryId}`}
-            labelLeft="Scroll niches left"
-            labelRight="Scroll niches right"
-          >
-            {niches.map((n) => (
-              <button
-                key={n.id}
-                type="button"
-                onClick={() => onNicheChange(n.id)}
-                className={`shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
-                  nicheId === n.id
-                    ? "border-accent bg-accent/10 text-accent dark:border-blue-500 dark:bg-blue-500/15 dark:text-blue-400"
-                    : "border-border bg-white text-text-secondary hover:border-accent/30 hover:text-text-primary dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
-                }`}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
+              Industry
+            </p>
+            <div className="mt-2">
+              <HorizontalPillScroller
+                depKey="industries"
+                labelLeft="Scroll industries left"
+                labelRight="Scroll industries right"
               >
-                {n.label}
-              </button>
-            ))}
-          </HorizontalPillScroller>
-        </div>
-      </div>
+                {INDUSTRIES.map((ind) => (
+                  <button
+                    key={ind.id}
+                    type="button"
+                    onClick={() => onIndustryChange(ind.id)}
+                    className={`snap-start shrink-0 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+                      industryId === ind.id
+                        ? "border-accent bg-accent/10 text-accent ring-2 ring-accent/20 dark:border-blue-500 dark:bg-blue-500/15 dark:text-blue-400 dark:ring-blue-500/25"
+                        : "border-border bg-white text-text-secondary hover:border-accent/30 hover:text-text-primary dark:border-zinc-700 dark:bg-zinc-950/50 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
+                    }`}
+                  >
+                    {ind.label}
+                  </button>
+                ))}
+              </HorizontalPillScroller>
+            </div>
+          </div>
 
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          disabled={loading}
-          onClick={() => void runGenerate({})}
-          className="rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90 disabled:opacity-50 dark:bg-blue-600 dark:hover:bg-blue-500"
-        >
-          {loading ? "Generating…" : current ? "Regenerate" : "Generate ideas"}
-        </button>
-        <button
-          type="button"
-          disabled={loading}
-          onClick={() => void runGenerate({ useFallback: true })}
-          className="rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:bg-surface hover:text-text-primary disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400 dark:hover:bg-zinc-800/80 dark:hover:text-zinc-200"
-        >
-          Load starter ideas (no API)
-        </button>
-        <button
-          type="button"
-          onClick={() => setManualOpen(true)}
-          className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:bg-surface hover:text-text-primary dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400 dark:hover:bg-zinc-800/80 dark:hover:text-zinc-200"
-        >
-          <Plus className="h-4 w-4" aria-hidden />
-          Add idea manually
-        </button>
-      </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
+              Niche
+            </p>
+            <div className="mt-2">
+              <HorizontalPillScroller
+                depKey={`niches-${industryId}`}
+                labelLeft="Scroll niches left"
+                labelRight="Scroll niches right"
+              >
+                {niches.map((n) => (
+                  <button
+                    key={n.id}
+                    type="button"
+                    onClick={() => onNicheChange(n.id)}
+                    className={`snap-start shrink-0 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+                      nicheId === n.id
+                        ? "border-accent bg-accent/10 text-accent ring-2 ring-accent/20 dark:border-blue-500 dark:bg-blue-500/15 dark:text-blue-400 dark:ring-blue-500/25"
+                        : "border-border bg-white text-text-secondary hover:border-accent/30 hover:text-text-primary dark:border-zinc-700 dark:bg-zinc-950/50 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
+                    }`}
+                  >
+                    {n.label}
+                  </button>
+                ))}
+              </HorizontalPillScroller>
+            </div>
+          </div>
+
+          <div className="border-t border-border pt-5 dark:border-zinc-800/80">
+            <p className="text-xs font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
+              Generate for
+            </p>
+            <p className="mt-2 text-sm font-medium text-text-primary dark:text-zinc-100">
+              <span className="text-text-primary dark:text-zinc-100">
+                {industryLabel}
+              </span>
+              <span
+                className="mx-2 text-text-secondary/40 dark:text-zinc-600"
+                aria-hidden
+              >
+                ·
+              </span>
+              <span className="text-text-primary dark:text-zinc-100">
+                {nicheLabel}
+              </span>
+            </p>
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <button
+                type="button"
+                disabled={loading}
+                aria-busy={loading}
+                onClick={() => void runGenerate({})}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90 disabled:opacity-50 sm:w-auto sm:min-w-[11rem] dark:bg-blue-600 dark:hover:bg-blue-500"
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                ) : null}
+                {loading
+                  ? current
+                    ? "Refreshing…"
+                    : "Generating…"
+                  : current
+                    ? "Regenerate"
+                    : "Generate ideas"}
+              </button>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => void runGenerate({ useFallback: true })}
+                className="flex w-full flex-col items-stretch rounded-xl border border-border bg-white px-4 py-3 text-left transition-colors hover:bg-surface disabled:opacity-50 sm:w-auto sm:min-w-[12rem] dark:border-zinc-700 dark:bg-zinc-950/50 dark:hover:bg-zinc-800/60"
+              >
+                <span className="text-sm font-semibold text-text-primary dark:text-zinc-200">
+                  Sample ideas
+                </span>
+                <span className="mt-0.5 text-xs font-normal text-text-secondary dark:text-zinc-500">
+                  Curated starters, no API keys
+                </span>
+              </button>
+            </div>
+            <p className="mt-3 text-xs leading-relaxed text-text-secondary dark:text-zinc-500">
+              <strong className="font-medium text-text-primary/90 dark:text-zinc-400">
+                Generate ideas
+              </strong>{" "}
+              uses live context when keys are configured. Use{" "}
+              <strong className="font-medium text-text-primary/90 dark:text-zinc-400">
+                Sample ideas
+              </strong>{" "}
+              to preview the flow anytime.
+            </p>
+          </div>
+        </div>
+      </section>
 
       {saveMsg ? (
         <p className="mt-3 text-sm text-emerald-700 dark:text-emerald-400" role="status">
@@ -257,7 +320,17 @@ export default function LeadMagnetsDiscoverPanel({ onSaved }: Props) {
         </div>
       ) : null}
 
-      <div className="mt-10">
+      <div>
+        {loading && current ? (
+          <p
+            className="mb-4 flex items-center gap-2 text-sm text-text-secondary dark:text-zinc-400"
+            aria-live="polite"
+          >
+            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-accent dark:text-blue-400" aria-hidden />
+            Updating ideas — your previous set stays below until the new one is ready.
+          </p>
+        ) : null}
+
         {loading && !current ? (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -269,8 +342,13 @@ export default function LeadMagnetsDiscoverPanel({ onSaved }: Props) {
           </div>
         ) : null}
 
-        {current && !loading ? (
-          <ul className="grid list-none gap-4 p-0 sm:grid-cols-2 xl:grid-cols-3">
+        {current ? (
+          <ul
+            className={`grid list-none gap-4 p-0 sm:grid-cols-2 xl:grid-cols-3 ${
+              loading ? "pointer-events-none opacity-60 saturate-75" : ""
+            }`}
+            aria-busy={loading}
+          >
             {current.ideas.map((idea, idx) => {
               const sk = `${key}:${idx}:${idea.title}`;
               const busy = savingKey === sk;
@@ -320,19 +398,32 @@ export default function LeadMagnetsDiscoverPanel({ onSaved }: Props) {
         ) : null}
 
         {!loading && !current ? (
-          <p className="text-sm text-text-secondary dark:text-zinc-500">
-            Choose an industry and niche, then click <strong>Generate ideas</strong>{" "}
-            to pull web context and synthesize concepts, or load starter ideas
-            without API keys.
-          </p>
+          <div className="rounded-2xl border border-dashed border-border bg-surface/40 px-6 py-12 text-center dark:border-zinc-800 dark:bg-zinc-900/25 sm:px-10">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/10 text-accent dark:bg-blue-500/15 dark:text-blue-400">
+              <Lightbulb className="h-7 w-7" aria-hidden />
+            </div>
+            <p className="mt-5 text-sm font-semibold text-text-primary dark:text-zinc-100">
+              No ideas yet
+            </p>
+            <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-text-secondary dark:text-zinc-500">
+              Set industry and niche above, then run{" "}
+              <strong className="font-medium text-text-primary/90 dark:text-zinc-400">
+                Generate ideas
+              </strong>{" "}
+              for web-backed concepts, or{" "}
+              <strong className="font-medium text-text-primary/90 dark:text-zinc-400">
+                Sample ideas
+              </strong>{" "}
+              for instant starters. Bookmark anything you like, or add custom
+              ideas from the{" "}
+              <strong className="font-medium text-text-primary/90 dark:text-zinc-400">
+                Saved
+              </strong>{" "}
+              tab.
+            </p>
+          </div>
         ) : null}
       </div>
-
-      <ManualLeadMagnetModal
-        open={manualOpen}
-        onClose={() => setManualOpen(false)}
-        onSaved={onSaved}
-      />
     </div>
   );
 }

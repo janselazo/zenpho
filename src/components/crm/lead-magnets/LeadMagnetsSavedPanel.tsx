@@ -16,6 +16,7 @@ import {
   listSavedLeadMagnets,
 } from "@/app/(crm)/actions/saved-lead-magnets";
 import { formatBadgeClass } from "@/components/crm/lead-magnets/lead-magnet-card-styles";
+import ManualLeadMagnetModal from "@/components/crm/lead-magnets/ManualLeadMagnetModal";
 
 type FilterIndustry = "all" | IndustryId;
 type FilterNiche = "all" | NicheId;
@@ -36,6 +37,7 @@ export default function LeadMagnetsSavedPanel({
     useState<FilterIndustry>("all");
   const [filterNiche, setFilterNiche] = useState<FilterNiche>("all");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [manualOpen, setManualOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -87,7 +89,8 @@ export default function LeadMagnetsSavedPanel({
 
   return (
     <div>
-      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
+      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
         <label className="block min-w-[200px]">
           <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary dark:text-zinc-500">
             Filter by industry
@@ -129,6 +132,14 @@ export default function LeadMagnetsSavedPanel({
             ))}
           </select>
         </label>
+        </div>
+        <button
+          type="button"
+          onClick={() => setManualOpen(true)}
+          className="shrink-0 rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:bg-surface hover:text-text-primary dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400 dark:hover:bg-zinc-800/80 dark:hover:text-zinc-200"
+        >
+          Add Idea 💡
+        </button>
       </div>
       {filterIndustry === "all" ? (
         <p className="mt-2 text-xs text-text-secondary dark:text-zinc-500">
@@ -154,8 +165,8 @@ export default function LeadMagnetsSavedPanel({
         {!loading && filtered.length === 0 ? (
           <p className="text-sm text-text-secondary dark:text-zinc-500">
             No saved lead magnets match these filters. Use{" "}
-            <strong>Discover</strong> to generate ideas and bookmark them, or add
-            one manually.
+            <strong>Discover</strong> to generate ideas and bookmark them, or tap{" "}
+            <strong>Add Idea 💡</strong> above.
           </p>
         ) : null}
         {!loading && filtered.length > 0 ? (
@@ -218,6 +229,14 @@ export default function LeadMagnetsSavedPanel({
           </ul>
         ) : null}
       </div>
+
+      <ManualLeadMagnetModal
+        open={manualOpen}
+        onClose={() => setManualOpen(false)}
+        onSaved={() => {
+          void load();
+        }}
+      />
     </div>
   );
 }
