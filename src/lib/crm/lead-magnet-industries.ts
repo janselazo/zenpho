@@ -23,7 +23,6 @@ export type NicheId =
   | "tech_ai_saas"
   | "tech_devtools"
   | "healthcare_dental"
-  | "healthcare_mental_health"
   | "fintech_payments"
   | "ecommerce_subscription"
   | "hospitality_hotels"
@@ -148,91 +147,84 @@ export const LEAD_MAGNET_NICHES: readonly NicheDefinition[] = [
   },
   {
     id: "entertainment_music",
-    label: "Entertainment — Music",
+    label: "Music",
     searchTerms:
       "music industry labels streaming touring artists rights B2B lead magnet",
     industries: ["media_marketing"],
   },
   {
     id: "entertainment_film",
-    label: "Entertainment — Film & TV",
+    label: "Film & TV",
     searchTerms:
       "film TV production studio distribution streaming B2B marketing tool",
     industries: ["media_marketing"],
   },
   {
     id: "entertainment_gaming",
-    label: "Entertainment — Gaming & esports",
+    label: "Gaming & esports",
     searchTerms:
       "gaming esports publisher studio UA creator economy B2B",
     industries: ["media_marketing"],
   },
   {
     id: "tech_ai_saas",
-    label: "Tech — AI & SaaS",
+    label: "AI & SaaS",
     searchTerms:
       "AI SaaS PLG enterprise sales automation B2B software",
     industries: ["tech"],
   },
   {
     id: "tech_devtools",
-    label: "Tech — Devtools & infra",
+    label: "Devtools & infra",
     searchTerms:
       "developer tools API infrastructure observability DX B2B",
     industries: ["tech"],
   },
   {
     id: "healthcare_dental",
-    label: "Healthcare — Dental",
+    label: "Dental",
     searchTerms:
       "dental practice DSO patient acquisition scheduling B2B",
     industries: ["healthcare"],
   },
   {
-    id: "healthcare_mental_health",
-    label: "Healthcare — Mental health",
-    searchTerms:
-      "mental health therapy telehealth practice intake B2B",
-    industries: ["healthcare"],
-  },
-  {
     id: "fintech_payments",
-    label: "Fintech — Payments & cards",
+    label: "Payments & cards",
     searchTerms:
       "payments card issuing acquiring SMB merchant B2B fintech",
     industries: ["fintech"],
   },
   {
     id: "ecommerce_subscription",
-    label: "E‑commerce — Subscription & retention",
+    label: "Subscription & retention",
     searchTerms:
       "subscription box DTC retention churn LTV email B2B",
     industries: ["ecommerce"],
   },
   {
     id: "hospitality_hotels",
-    label: "Hospitality — Hotels & lodging",
+    label: "Hotels & lodging",
     searchTerms:
       "hotel lodging RevPAR direct booking OTA B2B hospitality",
     industries: ["hospitality"],
   },
   {
     id: "education_k12_higher",
-    label: "Education — K‑12 & higher ed",
+    label: "K‑12 & higher ed",
     searchTerms:
       "K-12 higher education LMS admissions enrollment B2B edtech",
     industries: ["education"],
   },
   {
     id: "construction_residential",
-    label: "Construction — Residential & remodel",
+    label: "Residential & remodel",
     searchTerms:
       "residential remodel home builder contractor lead gen B2B",
     industries: ["construction"],
   },
   {
     id: "nonprofit_fundraising",
-    label: "Nonprofit — Fundraising & grants",
+    label: "Fundraising & grants",
     searchTerms:
       "nonprofit fundraising grant writing donor CRM B2B",
     industries: ["nonprofit"],
