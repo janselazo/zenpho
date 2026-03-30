@@ -7,7 +7,7 @@ import NewProjectModal from "@/components/crm/NewProjectModal";
 import { fetchLeadPrefillForNewProject } from "@/lib/crm/fetch-lead-prefill-for-new-project";
 import type { NewProjectDealPrefill } from "@/lib/crm/new-project-deal-prefill";
 import type { MockProject } from "@/lib/crm/mock-data";
-import { createCrmProject } from "@/app/(crm)/actions/projects";
+import { createCrmProjectFromLead } from "@/app/(crm)/actions/projects";
 import { crmPayloadFromMock } from "@/lib/crm/map-project-row";
 import {
   readStoredProjects,
@@ -49,7 +49,10 @@ export default function CrmNewProjectFromLeadModal({
 
   async function handleAdd(project: MockProject) {
     if (isSupabaseConfigured()) {
-      const res = await createCrmProject(crmPayloadFromMock(project));
+      const res = await createCrmProjectFromLead(
+        leadId,
+        crmPayloadFromMock(project)
+      );
       if ("error" in res) {
         alert(res.error);
         return;
@@ -129,6 +132,8 @@ export default function CrmNewProjectFromLeadModal({
   return (
     <NewProjectModal
       dealPrefill={prefill}
+      lockedClientId={prefill.clientId}
+      fromLeadId={leadId}
       onClose={onClose}
       onAdd={handleAdd}
     />

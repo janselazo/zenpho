@@ -10,7 +10,6 @@ import {
   ChevronDown,
   ExternalLink,
   FolderKanban,
-  Handshake,
   ListTodo,
   Loader2,
   Pencil,
@@ -22,11 +21,9 @@ import {
   X,
 } from "lucide-react";
 import { LEAD_PROJECT_TYPE_OPTIONS } from "@/lib/crm/mock-data";
-import CreateDealForLeadModal from "@/components/crm/CreateDealForLeadModal";
 import ClientsView from "@/components/crm/ClientsView";
 import CrmNewProjectFromLeadModal from "@/components/crm/CrmNewProjectFromLeadModal";
 import CrmQuickTaskModal from "@/components/crm/CrmQuickTaskModal";
-import DealsView from "@/components/crm/DealsView";
 import KanbanBoard, { type KanbanColumn } from "@/components/crm/KanbanBoard";
 import LeadsPipelineSummary from "@/components/crm/LeadsPipelineSummary";
 import PipelineSettingsModal from "@/components/crm/PipelineSettingsModal";
@@ -43,9 +40,6 @@ import {
   updateLeadStage,
 } from "@/app/(crm)/actions/crm";
 import type { ClientTableRow } from "@/lib/crm/client-table-row";
-import type { LeadDealPickerOption } from "@/lib/crm/fetch-leads-for-deal-picker";
-import type { MockDeal } from "@/lib/crm/mock-data";
-
 export interface Lead {
   id: string;
   name: string | null;
@@ -57,8 +51,8 @@ export interface Lead {
   notes?: string | null;
   project_type?: string | null;
   created_at?: string | null;
-  /** Most recently updated deal for this lead, if any */
-  deal?: { id: string; title: string | null } | null;
+  /** Latest project title for the lead’s converted client, if any */
+  primaryProject?: { title: string | null } | null;
 }
 
 /** Shared chip shell: white / dark surface, no tinted fill. Text color applied per column. */
@@ -255,12 +249,11 @@ function leadQuickTaskContextLabel(lead: Lead): string {
   );
 }
 
-export type LeadsSectionTab = "pipeline" | "leads" | "deals" | "clients";
+export type LeadsSectionTab = "pipeline" | "leads" | "clients";
 
 const SECTION_TABS: { id: LeadsSectionTab; label: string }[] = [
   { id: "pipeline", label: "Pipeline" },
   { id: "leads", label: "Leads" },
-  { id: "deals", label: "Deals" },
   { id: "clients", label: "Clients" },
 ];
 
@@ -270,8 +263,6 @@ function leadsSectionSubtitle(tab: LeadsSectionTab): string {
       return "Drag cards between stages to update pipeline status. Project types reflect the work each contact is interested in.";
     case "leads":
       return "Track inbound inquiries and nurture them through qualification.";
-    case "deals":
-      return "Track deals from first touch to close.";
     case "clients":
       return "Companies and contacts you work with.";
     default:
@@ -282,21 +273,14 @@ function leadsSectionSubtitle(tab: LeadsSectionTab): string {
 export default function LeadsView({
   leads,
   leadPipelineColumns,
-  dealPipelineColumns,
-  dealsForTab = [],
-  dealLeadPickerOptions = [],
   clientsForTab = [],
   clientsTabLoadError = null,
   initialSection,
 }: {
   leads: Lead[];
   leadPipelineColumns: PipelineColumnDef[];
-  dealPipelineColumns: PipelineColumnDef[];
-  dealsForTab?: MockDeal[];
-  dealLeadPickerOptions?: LeadDealPickerOption[];
   clientsForTab?: ClientTableRow[];
   clientsTabLoadError?: { message: string } | null;
-  /** From `/leads?section=` (e.g. redirect from `/deals`). */
   initialSection?: LeadsSectionTab;
 }) {
   const router = useRouter();
@@ -331,7 +315,7 @@ export default function LeadsView({
       l.company?.toLowerCase().includes(q) ||
       l.source?.toLowerCase().includes(q) ||
       l.project_type?.toLowerCase().includes(q) ||
-      (l.deal?.title?.toLowerCase().includes(q) ?? false)
+      (l.primaryProject?.title?.toLowerCase().includes(q) ?? false)
     );
   });
 
@@ -398,7 +382,6 @@ export default function LeadsView({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<LeadDraft | null>(null);
   const [savePending, setSavePending] = useState(false);
-  const [createDealLead, setCreateDealLead] = useState<Lead | null>(null);
   const [notesLead, setNotesLead] = useState<Lead | null>(null);
   const [newProjectLeadId, setNewProjectLeadId] = useState<string | null>(null);
   const [quickTaskLead, setQuickTaskLead] = useState<Lead | null>(null);
@@ -445,7 +428,7 @@ export default function LeadsView({
     const label = lead.name?.trim() || lead.email?.trim() || "this lead";
     if (
       !confirm(
-        `Delete ${label}? This will remove the lead and its linked deal data.`
+        `Delete ${label}? This will remove the lead and related CRM links.`
       )
     ) {
       return;
@@ -552,7 +535,6 @@ export default function LeadsView({
             cancelEdit={cancelEdit}
             saveEdit={saveEdit}
             handleDeleteLead={handleDeleteLead}
-            setCreateDealLead={setCreateDealLead}
             setNotesLead={setNotesLead}
             onCreateProject={(lead) => setNewProjectLeadId(lead.id)}
             onQuickTask={setQuickTaskLead}
@@ -565,20 +547,10 @@ export default function LeadsView({
             editingId={editingId}
             deletingId={deletingId}
             onNotes={setNotesLead}
-            onCreateDeal={setCreateDealLead}
             onCreateProject={(lead) => setNewProjectLeadId(lead.id)}
             onQuickTask={setQuickTaskLead}
             onEditFromPipeline={setPipelineEditMenuLead}
             onDelete={handleDeleteLead}
-          />
-        ) : null}
-        {view === "deals" ? (
-          <DealsView
-            deals={dealsForTab}
-            persistDeals
-            leadPickerOptions={dealLeadPickerOptions}
-            dealPipelineColumns={dealPipelineColumns}
-            variant="embedded"
           />
         ) : null}
         {view === "clients" ? (
@@ -602,13 +574,6 @@ export default function LeadsView({
         ) : null}
       </div>
 
-      {createDealLead && (
-        <CreateDealForLeadModal
-          lead={createDealLead}
-          dealPipelineColumns={dealPipelineColumns}
-          onClose={() => setCreateDealLead(null)}
-        />
-      )}
       {notesLead && (
         <LeadNotesModal lead={notesLead} onClose={() => setNotesLead(null)} />
       )}
@@ -670,7 +635,6 @@ type LeadsTableProps = {
   cancelEdit: () => void;
   saveEdit: (leadId: string) => Promise<void>;
   handleDeleteLead: (lead: Lead) => Promise<void>;
-  setCreateDealLead: Dispatch<SetStateAction<Lead | null>>;
   setNotesLead: Dispatch<SetStateAction<Lead | null>>;
   onCreateProject: (lead: Lead) => void;
   onQuickTask: (lead: Lead) => void;
@@ -682,7 +646,6 @@ function LeadsPipelineBoard({
   editingId,
   deletingId,
   onNotes,
-  onCreateDeal,
   onCreateProject,
   onQuickTask,
   onEditFromPipeline,
@@ -693,7 +656,6 @@ function LeadsPipelineBoard({
   editingId: string | null;
   deletingId: string | null;
   onNotes: (lead: Lead) => void;
-  onCreateDeal: (lead: Lead) => void;
   onCreateProject: (lead: Lead) => void;
   onQuickTask: (lead: Lead) => void;
   onEditFromPipeline: (lead: Lead) => void;
@@ -747,12 +709,12 @@ function LeadsPipelineBoard({
                 </span>
               </div>
             ) : null}
-            {lead.deal ? (
+            {lead.primaryProject ? (
               <Link
-                href={`/leads/${lead.id}?tab=deal`}
+                href={`/leads/${lead.id}`}
                 className="mt-1.5 block min-w-0 truncate text-xs font-medium text-accent hover:underline dark:text-blue-400"
               >
-                {lead.deal.title?.trim() || "Untitled deal"}
+                {lead.primaryProject.title?.trim() || "Project"}
               </Link>
             ) : null}
             <div className="mt-2 flex min-w-0 items-center gap-1.5 text-xs">
@@ -786,16 +748,6 @@ function LeadsPipelineBoard({
                 title="Create project"
               >
                 <FolderKanban className="h-4 w-4 shrink-0" aria-hidden />
-              </button>
-              <button
-                type="button"
-                onClick={() => onCreateDeal(lead)}
-                disabled={editingId !== null}
-                className="inline-flex items-center justify-center rounded-md p-1.5 text-emerald-600 transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-40 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
-                aria-label={`Create a deal for ${deleteLabel}`}
-                title="Create a deal"
-              >
-                <Handshake className="h-4 w-4 shrink-0" aria-hidden />
               </button>
               <button
                 type="button"
@@ -868,7 +820,6 @@ function LeadsTable({
   cancelEdit,
   saveEdit,
   handleDeleteLead,
-  setCreateDealLead,
   setNotesLead,
   onCreateProject,
   onQuickTask,
@@ -892,7 +843,7 @@ function LeadsTable({
             <th className="px-4 py-3 font-semibold text-text-secondary">Status</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Service</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Company</th>
-            <th className="px-4 py-3 font-semibold text-text-secondary">Deal</th>
+            <th className="px-4 py-3 font-semibold text-text-secondary">Project</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Source</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Date</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Actions</th>
@@ -1109,12 +1060,12 @@ function LeadsTable({
                   )}
                 </td>
                 <td className="px-4 py-3 align-top">
-                  {lead.deal ? (
+                  {lead.primaryProject ? (
                     <Link
-                      href={`/leads/${lead.id}?tab=deal`}
+                      href={`/leads/${lead.id}`}
                       className="font-medium text-accent hover:underline dark:text-blue-400"
                     >
-                      {lead.deal.title?.trim() || "Untitled deal"}
+                      {lead.primaryProject.title?.trim() || "Project"}
                     </Link>
                   ) : (
                     <span className="text-text-secondary">—</span>
@@ -1194,16 +1145,6 @@ function LeadsTable({
                           title="Create project"
                         >
                           <FolderKanban className="h-4 w-4 shrink-0" aria-hidden />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setCreateDealLead(lead)}
-                          disabled={editingId !== null}
-                          className="inline-flex items-center justify-center rounded-md p-1.5 text-emerald-600 transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-40 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
-                          aria-label={`Create a deal for ${deleteLabel}`}
-                          title="Create a deal"
-                        >
-                          <Handshake className="h-4 w-4 shrink-0" aria-hidden />
                         </button>
                         <button
                           type="button"
@@ -1343,7 +1284,7 @@ function PipelineLeadEditOptionsModal({
             <span className="min-w-0 flex-1">
               <span className="block font-semibold">Open full lead page</span>
               <span className="mt-0.5 block text-xs font-normal text-text-secondary">
-                All fields, deal info, and save on a dedicated page
+                All fields, projects, and save on a dedicated page
               </span>
             </span>
           </button>

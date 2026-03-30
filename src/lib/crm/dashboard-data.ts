@@ -71,7 +71,7 @@ export async function fetchDashboardFunnel(
     leadsRes,
     apptsRes,
     qualifiedRes,
-    dealsRes,
+    projectsRes,
   ] = await Promise.all([
     supabase
       .from("lead")
@@ -94,17 +94,20 @@ export async function fetchDashboardFunnel(
       ])
       .gte("created_at", rs)
       .lte("created_at", re),
+    /** Projects created in range — budget sums feed funnel “revenue” column (deal table deprecated). */
     supabase
-      .from("deal")
-      .select("value")
-      .eq("stage", "closed_won")
-      .gte("updated_at", rs)
-      .lte("updated_at", re),
+      .from("project")
+      .select("budget")
+      .gte("created_at", rs)
+      .lte("created_at", re),
   ]);
 
-  const closedRows = dealsRes.data ?? [];
-  const closedCount = closedRows.length;
-  const revenue = closedRows.reduce((s, d) => s + Number(d.value ?? 0), 0);
+  const projectRows = projectsRes.data ?? [];
+  const projectsCreatedCount = projectRows.length;
+  const revenue = projectRows.reduce(
+    (s, p) => s + Number(p.budget ?? 0),
+    0
+  );
 
   return [
     {
@@ -129,8 +132,8 @@ export async function fetchDashboardFunnel(
       bg: "bg-emerald-50 dark:bg-emerald-500/12",
     },
     {
-      label: "Deals Closed",
-      count: closedCount,
+      label: "Projects",
+      count: projectsCreatedCount,
       value: 0,
       color: "#f59e0b",
       bg: "bg-amber-50 dark:bg-amber-500/12",

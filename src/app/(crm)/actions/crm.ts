@@ -115,132 +115,7 @@ export async function createLead(formData: FormData) {
   return { ok: true };
 }
 
-export async function updateLead(formData: FormData) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "Unauthorized" };
-
-  const id = String(formData.get("id") ?? "").trim();
-  if (!id) return { error: "Missing lead id" };
-
-  const name = String(formData.get("name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim();
-  const company = String(formData.get("company") ?? "").trim();
-  const phone = String(formData.get("phone") ?? "").trim();
-  const source = String(formData.get("source") ?? "").trim();
-  const stage = String(formData.get("stage") ?? "new").trim();
-  const notes = String(formData.get("notes") ?? "").trim();
-  const project_type = parseProjectType(formData);
-
-  const leadStages = await leadStageSlugSet(supabase);
-  if (!leadStages.has(stage)) {
-    return { error: "Invalid stage" };
-  }
-
-  const { error } = await supabase
-    .from("lead")
-    .update({
-      name: name || null,
-      email: email || null,
-      company: company || null,
-      phone: phone || null,
-      source: source || null,
-      stage,
-      notes: notes || null,
-      project_type,
-    })
-    .eq("id", id);
-
-  if (error) return { error: error.message };
-
-  const dealTitle = String(formData.get("deal_title") ?? "").trim();
-  const dealCompany = String(formData.get("deal_company") ?? "").trim();
-  const dealValueRaw = String(formData.get("deal_value") ?? "").trim();
-  const dealStage = String(formData.get("deal_stage") ?? "prospect").trim();
-  const dealExpectedClose = String(
-    formData.get("deal_expected_close") ?? ""
-  ).trim();
-  const dealContactEmail = String(
-    formData.get("deal_contact_email") ?? ""
-  ).trim();
-  const dealWebsite = String(formData.get("deal_website") ?? "").trim();
-
-  const dealStages = await dealStageSlugSet(supabase);
-  if (!dealStages.has(dealStage)) {
-    return { error: "Invalid deal stage" };
-  }
-
-  let valueNum: number | null = null;
-  if (dealValueRaw !== "") {
-    const n = Number(dealValueRaw.replace(/,/g, ""));
-    if (Number.isNaN(n) || n < 0) {
-      return { error: "Deal value must be a valid number" };
-    }
-    valueNum = n;
-  }
-
-  const expectedClose =
-    dealExpectedClose === "" ? null : dealExpectedClose;
-
-  const dealId = String(formData.get("deal_id") ?? "").trim();
-
-  const hasNewDealPayload =
-    Boolean(dealTitle) ||
-    Boolean(dealCompany) ||
-    dealValueRaw !== "" ||
-    Boolean(dealContactEmail.trim()) ||
-    Boolean(dealWebsite.trim()) ||
-    expectedClose != null;
-
-  if (dealId) {
-    const { error: dealErr } = await supabase
-      .from("deal")
-      .update({
-        title: dealTitle || null,
-        company: dealCompany || null,
-        value: valueNum,
-        stage: dealStage,
-        expected_close: expectedClose,
-        contact_email: dealContactEmail || null,
-        website: dealWebsite || null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", dealId)
-      .eq("lead_id", id);
-
-    if (dealErr) return { error: dealErr.message };
-  } else if (hasNewDealPayload) {
-    const { error: dealErr } = await supabase.from("deal").insert({
-      lead_id: id,
-      title: dealTitle || null,
-      company: dealCompany || null,
-      value: valueNum,
-      stage: dealStage,
-      expected_close: expectedClose,
-      contact_email: dealContactEmail || null,
-      website: dealWebsite || null,
-      updated_at: new Date().toISOString(),
-    });
-
-    if (dealErr) return { error: dealErr.message };
-  }
-
-  await ensureClientFromClosedDeal(
-    supabase,
-    id,
-    dealStage,
-    dealCompany || null
-  );
-  await ensureClientFromWonLeadStage(supabase, id);
-  revalidatePath("/leads");
-  revalidatePath(`/leads/${id}`);
-  revalidatePath("/dashboard");
-  return { ok: true };
-}
-
-/** Lead fields only (e.g. table inline edit). Does not create/update linked deal rows. */
+/** Lead fields only (e.g. table inline edit and lead detail contact tab). */
 export async function updateLeadRow(formData: FormData) {
   const supabase = await createClient();
   const {
@@ -458,6 +333,80 @@ async function insertClientFromLeadAndLink(
     .eq("id", lead.id);
 
   return !updErr;
+}
+
+/**
+ * Resolve `client` for a lead: return existing `converted_client_id`, or create
+ * client from lead (same as Won conversion) for “project from lead” flows.
+ */
+export async function resolveOrCreateClientForLead(
+  leadId: string,
+  hints?: { company?: string | null; email?: string | null }
+): Promise<{ clientId: string } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const id = leadId.trim();
+  if (!id) return { error: "Missing lead id" };
+
+  const { data: lead, error: leadErr } = await supabase
+    .from("lead")
+    .select(
+      "id, name, email, phone, company, notes, converted_client_id"
+    )
+    .eq("id", id)
+    .maybeSingle();
+
+  if (leadErr || !lead) return { error: "Lead not found" };
+
+  if (lead.converted_client_id?.trim()) {
+    const cid = lead.converted_client_id.trim();
+    const email = hints?.email?.trim();
+    const company = hints?.company?.trim();
+    if (email || company) {
+      const patch: Record<string, string | null> = {};
+      if (email) patch.email = email;
+      if (company) patch.company = company;
+      if (Object.keys(patch).length > 0) {
+        await supabase.from("client").update(patch).eq("id", cid);
+      }
+    }
+    return { clientId: cid };
+  }
+
+  const stamp = new Date().toISOString().slice(0, 10);
+  const conversionLine = `[${stamp}] Client created when starting project from lead.`;
+
+  const leadForInsert = {
+    ...lead,
+    email: hints?.email?.trim() || lead.email,
+    company: hints?.company?.trim() || lead.company,
+  };
+
+  const created = await insertClientFromLeadAndLink(
+    supabase,
+    leadForInsert,
+    conversionLine,
+    hints?.company?.trim() || lead.company
+  );
+
+  if (!created) {
+    return { error: "Could not create client from this lead." };
+  }
+
+  const { data: again } = await supabase
+    .from("lead")
+    .select("converted_client_id")
+    .eq("id", id)
+    .maybeSingle();
+
+  const cid = again?.converted_client_id?.trim();
+  if (!cid) return { error: "Client was not linked to the lead." };
+
+  return { clientId: cid };
 }
 
 /**

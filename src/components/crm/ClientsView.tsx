@@ -5,14 +5,12 @@ import { useRouter } from "next/navigation";
 import {
   Check,
   FolderKanban,
-  Handshake,
   Loader2,
   Pencil,
   Trash2,
   X,
 } from "lucide-react";
 import { deleteClient, updateClientRow } from "@/app/(crm)/actions/crm";
-import CreateDealForLeadModal from "@/components/crm/CreateDealForLeadModal";
 import CrmNewProjectForClientModal from "@/components/crm/CrmNewProjectForClientModal";
 import type { ClientTableRow } from "@/lib/crm/client-table-row";
 
@@ -93,7 +91,6 @@ export default function ClientsView({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [projectForClient, setProjectForClient] =
     useState<ClientTableRow | null>(null);
-  const [dealForLead, setDealForLead] = useState<ClientTableRow | null>(null);
 
   useEffect(() => {
     setSnapshot(clients);
@@ -369,20 +366,6 @@ export default function ClientsView({
                       <>
                         <button
                           type="button"
-                          onClick={() => setDealForLead(c)}
-                          disabled={editingId !== null || !c.linkedLead}
-                          title={
-                            c.linkedLead
-                              ? "Create deal (linked lead)"
-                              : "No linked lead — deals are tied to leads"
-                          }
-                          className="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                          aria-label={`Create deal for ${deleteLabel}`}
-                        >
-                          <Handshake className="h-4 w-4 shrink-0" aria-hidden />
-                        </button>
-                        <button
-                          type="button"
                           onClick={() => setProjectForClient(c)}
                           disabled={editingId !== null}
                           className="inline-flex items-center justify-center rounded-md p-1.5 text-violet-600 transition-colors hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-40 dark:text-violet-400 dark:hover:bg-violet-950/40"
@@ -437,13 +420,6 @@ export default function ClientsView({
           clientName={projectForClient.name}
           company={projectForClient.company}
           onClose={() => setProjectForClient(null)}
-        />
-      ) : null}
-
-      {dealForLead?.linkedLead ? (
-        <CreateDealForLeadModal
-          lead={dealForLead.linkedLead}
-          onClose={() => setDealForLead(null)}
         />
       ) : null}
     </div>

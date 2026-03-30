@@ -23,24 +23,24 @@ export default async function LeadDetailPage({ params }: Props) {
   const { data: lead, error } = await supabase
     .from("lead")
     .select(
-      "id, name, email, company, phone, source, stage, notes, project_type, created_at"
+      "id, name, email, company, phone, source, stage, notes, project_type, created_at, converted_client_id"
     )
     .eq("id", id)
     .maybeSingle();
 
   if (error || !lead) notFound();
 
-  const dealQuery = await supabase
-    .from("deal")
-    .select(
-      "id, title, company, value, stage, expected_close, contact_email, website"
-    )
-    .eq("lead_id", id)
-    .order("updated_at", { ascending: false })
-    .limit(1);
-
-  const deal =
-    dealQuery.error || !dealQuery.data?.length ? null : dealQuery.data[0];
+  const cid = (lead.converted_client_id as string | null)?.trim() ?? null;
+  let clientProjects: { id: string; title: string | null }[] = [];
+  if (cid) {
+    const { data: rows } = await supabase
+      .from("project")
+      .select("id, title, created_at")
+      .eq("client_id", cid)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    clientProjects = rows ?? [];
+  }
 
   const pipeline = await fetchCrmPipelineSettings();
 
@@ -69,9 +69,9 @@ export default async function LeadDetailPage({ params }: Props) {
         >
           <LeadEditForm
             lead={lead}
-            deal={deal}
+            clientProjects={clientProjects}
+            convertedClientId={cid}
             leadPipelineColumns={pipeline.lead}
-            dealPipelineColumns={pipeline.deal}
           />
         </Suspense>
       </div>

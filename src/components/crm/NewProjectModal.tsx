@@ -50,6 +50,8 @@ export default function NewProjectModal({
   dealPrefill,
   lockedClientId = null,
   lockedClientTitleHint = null,
+  /** When set, submit uses create-from-lead path (client may be auto-created). */
+  fromLeadId = null,
   editProject = null,
   onClose,
   onAdd,
@@ -59,6 +61,7 @@ export default function NewProjectModal({
   /** When set, client is fixed and the picker is disabled (e.g. new project from Clients). */
   lockedClientId?: string | null;
   lockedClientTitleHint?: string | null;
+  fromLeadId?: string | null;
   /** When set, modal edits this row (calls `onUpdate` instead of `onAdd`). */
   editProject?: MockProject | null;
   onClose: () => void;
@@ -83,6 +86,9 @@ export default function NewProjectModal({
   const appliedDealClientRef = useRef(false);
 
   const lockClient = Boolean(lockedClientId?.trim()) && !editProject;
+  const fromLeadFlow =
+    Boolean(fromLeadId?.trim()) && !editProject && isSupabaseConfigured();
+  const hideTeamForLeadCreate = fromLeadFlow;
   const isEdit = Boolean(editProject);
 
   useEffect(() => {
@@ -217,9 +223,12 @@ export default function NewProjectModal({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) return;
-    if (!isSupabaseConfigured() || !clientId.trim()) return;
-    const client = clients.find((c) => c.id === clientId);
-    if (!client) return;
+    const supabaseOn = isSupabaseConfigured();
+    if (supabaseOn && !fromLeadFlow && !clientId.trim()) return;
+    const client = clientId.trim()
+      ? clients.find((c) => c.id === clientId)
+      : undefined;
+    if (supabaseOn && !fromLeadFlow && !client) return;
     const budgetRaw = budget.replace(/,/g, "").trim();
     let budgetNum: number | null = null;
     if (budgetRaw !== "") {
@@ -230,10 +239,14 @@ export default function NewProjectModal({
       ? teamMembers.find((m) => m.id === teamMemberId)
       : undefined;
     const name = member?.name.trim() ?? "";
+    const resolvedClientId = client?.id ?? "";
+    const resolvedClientName = client
+      ? clientPickerLabel(client)
+      : "";
     setSubmitting(true);
     try {
       if (editProject) {
-        if (onUpdate) {
+        if (onUpdate && client) {
           await onUpdate({
             ...editProject,
             title: title.trim(),
@@ -254,10 +267,14 @@ export default function NewProjectModal({
         id: createProjectId(),
         title: title.trim(),
         plan,
-        clientId: client.id,
-        clientName: clientPickerLabel(client),
-        teamId: member ? member.teamId : "team-general",
-        teamName: name || null,
+        clientId: resolvedClientId,
+        clientName: resolvedClientName,
+        teamId: hideTeamForLeadCreate
+          ? "team-general"
+          : member
+            ? member.teamId
+            : "team-general",
+        teamName: hideTeamForLeadCreate ? null : name || null,
         projectType,
         color: "#6366f1",
         expectedEndDate: endDate || "TBD",
@@ -271,14 +288,17 @@ export default function NewProjectModal({
     }
   }
 
+  const supabaseOn = isSupabaseConfigured();
   const canPickClient =
-    isSupabaseConfigured() &&
-    !clientsLoading &&
-    !clientsError &&
-    clients.length > 0 &&
-    Boolean(clientId.trim()) &&
-    clients.some((c) => c.id === clientId);
-  const submitDisabled = !title.trim() || !canPickClient;
+    supabaseOn &&
+    (fromLeadFlow ||
+      (!clientsLoading &&
+        !clientsError &&
+        clients.length > 0 &&
+        Boolean(clientId.trim()) &&
+        clients.some((c) => c.id === clientId)));
+  const submitDisabled =
+    !title.trim() || (supabaseOn && !fromLeadFlow && !canPickClient);
 
   return (
     <div
@@ -311,7 +331,7 @@ export default function NewProjectModal({
               : "Link the project to a client, then name your build and set status and type."}
           </p>
 
-          {dealPrefill?.missingClientNote ? (
+          {dealPrefill?.missingClientNote && !fromLeadFlow ? (
             <p
               className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/35 dark:text-amber-100"
               role="status"
@@ -327,7 +347,12 @@ export default function NewProjectModal({
               <label htmlFor="np-client" className={labelClass}>
                 Client
               </label>
-              {!isSupabaseConfigured() ? (
+              {fromLeadFlow && !dealPrefill?.clientId ? (
+                <p className="rounded-lg border border-border bg-surface/60 px-3 py-2.5 text-sm text-text-secondary dark:border-zinc-700 dark:bg-zinc-800/40">
+                  A client record will be created from this lead when you add the
+                  project.
+                </p>
+              ) : !isSupabaseConfigured() ? (
                 <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100">
                   Configure Supabase to load clients and link this project.
                 </p>
@@ -352,7 +377,7 @@ export default function NewProjectModal({
                 <div className="relative">
                   <select
                     id="np-client"
-                    required
+                    required={!fromLeadFlow}
                     value={clientId}
                     onChange={(e) => setClientId(e.target.value)}
                     disabled={lockClient}
@@ -388,7 +413,9 @@ export default function NewProjectModal({
               />
             </div>
 
-            <div className="grid gap-5 sm:grid-cols-2">
+            <div
+              className={`grid gap-5 ${hideTeamForLeadCreate ? "" : "sm:grid-cols-2"}`}
+            >
               <div>
                 <label htmlFor="np-status" className={labelClass}>
                   Status
@@ -412,32 +439,38 @@ export default function NewProjectModal({
                   />
                 </div>
               </div>
-              <div>
-                <label htmlFor="np-team-name" className={labelClass}>
-                  Team name
-                </label>
-                <div className="relative">
-                  <select
-                    id="np-team-name"
-                    value={teamMemberId}
-                    onChange={(e) => setTeamMemberId(e.target.value)}
-                    className={selectClass}
-                    disabled={teamMembers.length === 0}
-                  >
-                    <option value="">Member</option>
-                    {teamMembers.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name}
-                        {m.role ? ` · ${m.role}` : ""}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown
-                    className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary/55"
-                    aria-hidden
-                  />
+              {hideTeamForLeadCreate ? (
+                <p className="text-xs text-text-secondary sm:col-span-1 sm:self-end sm:pb-2">
+                  Assign team members on the project after it&apos;s created.
+                </p>
+              ) : (
+                <div>
+                  <label htmlFor="np-team-name" className={labelClass}>
+                    Team name
+                  </label>
+                  <div className="relative">
+                    <select
+                      id="np-team-name"
+                      value={teamMemberId}
+                      onChange={(e) => setTeamMemberId(e.target.value)}
+                      className={selectClass}
+                      disabled={teamMembers.length === 0}
+                    >
+                      <option value="">Member</option>
+                      {teamMembers.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name}
+                          {m.role ? ` · ${m.role}` : ""}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary/55"
+                      aria-hidden
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             <div>

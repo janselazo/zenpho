@@ -41,7 +41,7 @@ const emptyFunnel: DashboardFunnelStage[] = [
   { label: "Leads", count: 0, value: 0, color: "#3b82f6", bg: "bg-blue-50 dark:bg-blue-500/12" },
   { label: "Appointments", count: 0, value: 0, color: "#8b5cf6", bg: "bg-violet-50 dark:bg-violet-500/12" },
   { label: "Qualified", count: 0, value: 0, color: "#10b981", bg: "bg-emerald-50 dark:bg-emerald-500/12" },
-  { label: "Deals Closed", count: 0, value: 0, color: "#f59e0b", bg: "bg-amber-50 dark:bg-amber-500/12" },
+  { label: "Projects", count: 0, value: 0, color: "#f59e0b", bg: "bg-amber-50 dark:bg-amber-500/12" },
   {
     label: DASHBOARD_FUNNEL_REVENUE_STAGE_LABEL,
     count: 0,

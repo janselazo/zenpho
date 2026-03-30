@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { resolveOrCreateClientForLead } from "@/app/(crm)/actions/crm";
 import { createClient } from "@/lib/supabase/server";
 import {
   projectRowToMock,
@@ -140,6 +141,35 @@ export async function createCrmProject(
   revalidatePath("/portal");
   revalidatePath("/dashboard");
   return { ok: true, id };
+}
+
+/** Create project and ensure a client exists for the lead (creates client from lead if needed). */
+export async function createCrmProjectFromLead(
+  leadId: string,
+  input: CrmProjectPersistInput,
+  hints?: { company?: string | null; email?: string | null }
+): Promise<{ ok: true; id: string } | { error: string }> {
+  const lid = leadId.trim();
+  if (!lid) return { error: "Missing lead id" };
+
+  const resolved = await resolveOrCreateClientForLead(lid, hints);
+  if ("error" in resolved) return resolved;
+
+  const picked = input.clientId.trim();
+  if (picked && picked !== resolved.clientId) {
+    return { error: "Selected client does not match this lead." };
+  }
+
+  const result = await createCrmProject({
+    ...input,
+    clientId: resolved.clientId,
+  });
+
+  if ("ok" in result) {
+    revalidatePath("/leads");
+    revalidatePath(`/leads/${lid}`);
+  }
+  return result;
 }
 
 export async function updateCrmProject(

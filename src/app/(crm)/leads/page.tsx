@@ -1,28 +1,23 @@
 import LeadsView from "@/components/crm/LeadsView";
 import { fetchClientsForClientsView } from "@/lib/crm/fetch-clients-for-view";
-import { fetchDealsForDealsView } from "@/lib/crm/fetch-deals-for-view";
-import { fetchLeadsForDealPicker } from "@/lib/crm/fetch-leads-for-deal-picker";
 import { fetchCrmPipelineSettings } from "@/lib/crm/fetch-pipeline-settings";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-const LEADS_SECTIONS = ["pipeline", "leads", "deals", "clients"] as const;
+const LEADS_SECTIONS = ["pipeline", "leads", "clients"] as const;
 type LeadsSectionQuery = (typeof LEADS_SECTIONS)[number];
 
 function parseLeadsSection(
   raw: string | string[] | undefined
 ): LeadsSectionQuery | undefined {
   const v = Array.isArray(raw) ? raw[0] : raw;
-  if (
-    v === "pipeline" ||
-    v === "leads" ||
-    v === "deals" ||
-    v === "clients"
-  ) {
+  if (v === "pipeline" || v === "leads" || v === "clients") {
     return v;
   }
+  /** Legacy `?section=deals` (removed tab) → pipeline */
+  if (v === "deals") return "pipeline";
   return undefined;
 }
 
@@ -43,54 +38,59 @@ export default async function LeadsPage({
   }
 
   const supabase = await createClient();
-  const [
-    leadsRes,
-    pipeline,
-    dealsForTab,
-    leadPickerOptions,
-    clientsPack,
-  ] = await Promise.all([
+  const [leadsRes, pipeline, clientsPack] = await Promise.all([
     supabase
       .from("lead")
       .select(
-        "id, name, email, phone, company, stage, source, notes, project_type, created_at"
+        "id, name, email, phone, company, stage, source, notes, project_type, created_at, converted_client_id"
       )
       .order("created_at", { ascending: false })
       .limit(200),
     fetchCrmPipelineSettings(),
-    fetchDealsForDealsView(),
-    fetchLeadsForDealPicker(),
     fetchClientsForClientsView(),
   ]);
 
   const { data: leads, error } = leadsRes;
 
   const leadRows = leads ?? [];
-  const leadIds = leadRows.map((l) => l.id);
-  const dealByLeadId = new Map<
+  const clientIds = [
+    ...new Set(
+      leadRows
+        .map((l) => l.converted_client_id as string | null)
+        .filter((id): id is string => Boolean(id?.trim()))
+    ),
+  ];
+
+  const primaryProjectByClientId = new Map<
     string,
-    { id: string; title: string | null }
+    { title: string | null }
   >();
-  if (leadIds.length > 0) {
-    const { data: dealRows } = await supabase
-      .from("deal")
-      .select("id, lead_id, title, updated_at")
-      .in("lead_id", leadIds)
-      .order("updated_at", { ascending: false });
-    for (const row of dealRows ?? []) {
-      if (!dealByLeadId.has(row.lead_id)) {
-        dealByLeadId.set(row.lead_id, {
-          id: row.id,
-          title: row.title,
+  if (clientIds.length > 0) {
+    const { data: projRows } = await supabase
+      .from("project")
+      .select("client_id, title, created_at")
+      .in("client_id", clientIds)
+      .order("created_at", { ascending: false });
+    for (const row of projRows ?? []) {
+      const cid = row.client_id as string;
+      if (!primaryProjectByClientId.has(cid)) {
+        primaryProjectByClientId.set(cid, {
+          title: (row.title as string | null) ?? null,
         });
       }
     }
   }
 
-  const leadsWithDeals = leadRows.map((l) => ({
-    ...l,
-    deal: dealByLeadId.get(l.id) ?? null,
-  }));
+  const leadsForView = leadRows.map((l) => {
+    const cid = (l.converted_client_id as string | null)?.trim() ?? null;
+    return {
+      ...l,
+      primaryProject:
+        cid && primaryProjectByClientId.has(cid)
+          ? primaryProjectByClientId.get(cid)!
+          : null,
+    };
+  });
 
   const clientsForTab = clientsPack.error ? [] : clientsPack.rows;
 
@@ -108,11 +108,8 @@ export default async function LeadsPage({
         </div>
       ) : (
         <LeadsView
-          leads={leadsWithDeals}
+          leads={leadsForView}
           leadPipelineColumns={pipeline.lead}
-          dealPipelineColumns={pipeline.deal}
-          dealsForTab={dealsForTab}
-          dealLeadPickerOptions={leadPickerOptions}
           clientsForTab={clientsForTab}
           clientsTabLoadError={clientsPack.error}
           initialSection={initialSection}

@@ -2,7 +2,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Calendar month bounds as ISO strings for timestamptz filters.
- * Deal.updated_at / project.created_at use the same pattern as dashboard-data.
  */
 export function monthBoundsIso(anchor: Date): { startIso: string; endIso: string } {
   const y = anchor.getFullYear();
@@ -19,43 +18,34 @@ export function monthBoundsIso(anchor: Date): { startIso: string; endIso: string
 }
 
 /**
- * Distinct clients (via lead.converted_client_id) with a deal marked closed_won
- * whose updated_at falls in the month. "Won" uses deal.updated_at as proxy (no won_at column).
+ * Distinct clients linked to leads moved to `closed_won` in the month
+ * (`lead.updated_at` in range). Aligns with pipeline “won” without the deal table.
  */
 export async function fetchMonthlyClientsWonCount(
   supabase: SupabaseClient,
   anchor: Date = new Date()
 ): Promise<number> {
   const { startIso, endIso } = monthBoundsIso(anchor);
-  const { data: deals, error } = await supabase
-    .from("deal")
-    .select("lead_id")
+  const { data: rows, error } = await supabase
+    .from("lead")
+    .select("converted_client_id")
     .eq("stage", "closed_won")
     .gte("updated_at", startIso)
     .lte("updated_at", endIso);
 
-  if (error || !deals?.length) return 0;
-
-  const leadIds = [...new Set(deals.map((d) => d.lead_id).filter(Boolean))];
-  if (leadIds.length === 0) return 0;
-
-  const { data: leads, error: le } = await supabase
-    .from("lead")
-    .select("converted_client_id")
-    .in("id", leadIds);
-
-  if (le) return 0;
+  if (error || !rows?.length) return 0;
 
   const clientIds = new Set<string>();
-  for (const row of leads ?? []) {
+  for (const row of rows) {
     const cid = row.converted_client_id as string | null;
-    if (cid) clientIds.add(cid);
+    if (cid?.trim()) clientIds.add(cid.trim());
   }
   return clientIds.size;
 }
 
 /**
- * Sum of project.budget for projects created this month whose client has at least one closed_won deal.
+ * Sum of `project.budget` for projects created in the calendar month.
+ * Matches dashboard funnel revenue semantics (projects, not deals).
  */
 export async function fetchMonthlyRevenueFromWonClientProjects(
   supabase: SupabaseClient,
@@ -63,43 +53,13 @@ export async function fetchMonthlyRevenueFromWonClientProjects(
 ): Promise<number> {
   const { startIso, endIso } = monthBoundsIso(anchor);
 
-  const { data: wonDeals, error: de } = await supabase
-    .from("deal")
-    .select("lead_id")
-    .eq("stage", "closed_won");
-
-  if (de || !wonDeals?.length) return 0;
-
-  const wonLeadIds = [...new Set(wonDeals.map((d) => d.lead_id).filter(Boolean))];
-  if (wonLeadIds.length === 0) return 0;
-
-  const { data: leads, error: le } = await supabase
-    .from("lead")
-    .select("converted_client_id")
-    .in("id", wonLeadIds);
-
-  if (le) return 0;
-
-  const clientIds = [
-    ...new Set(
-      (leads ?? [])
-        .map((l) => l.converted_client_id as string | null)
-        .filter((cid): cid is string => Boolean(cid))
-    ),
-  ];
-  if (clientIds.length === 0) return 0;
-
-  const { data: projects, error: pe } = await supabase
+  const { data: projects, error } = await supabase
     .from("project")
     .select("budget")
-    .in("client_id", clientIds)
     .gte("created_at", startIso)
     .lte("created_at", endIso);
 
-  if (pe) return 0;
+  if (error) return 0;
 
-  return (projects ?? []).reduce(
-    (s, p) => s + Number(p.budget ?? 0),
-    0
-  );
+  return (projects ?? []).reduce((s, p) => s + Number(p.budget ?? 0), 0);
 }

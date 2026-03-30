@@ -478,7 +478,7 @@ function BusinessOverviewCard({
 interface DashboardViewProps {
   activeClients: number;
   activeProjects: number;
-  /** Sum of `deal.value` for deals marked closed_won in the selected range (see funnel Revenue). */
+  /** Sum of new-project `budget` in range (matches funnel revenue column; from `fetchDashboardFunnel`). */
   wonRevenue: number;
   chartData: DailyMoneyPoint[];
   hasErrors: boolean;
