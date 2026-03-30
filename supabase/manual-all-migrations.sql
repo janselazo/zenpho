@@ -1034,3 +1034,14 @@ grant select, insert, update, delete on public.saved_lead_magnet to authenticate
 -- ----- 20260430180000_issue_workspace_task_id.sql -----
 alter table public.issue
   add column if not exists workspace_task_id text;
+
+-- ----- 20260430200000_issue_category.sql -----
+alter table public.issue
+  add column if not exists category text not null default 'bug_report';
+
+alter table public.issue drop constraint if exists issue_category_check;
+
+alter table public.issue
+  add constraint issue_category_check check (
+    category in ('feature_request', 'bug_report', 'customer_request')
+  );

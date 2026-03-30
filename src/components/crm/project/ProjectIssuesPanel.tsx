@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   createCrmIssue,
   deleteCrmIssue,
@@ -8,6 +8,11 @@ import {
   updateCrmIssue,
   type IssueRow,
 } from "@/app/(crm)/actions/projects";
+import {
+  ISSUE_CATEGORY_OPTIONS,
+  issueCategoryLabel,
+  type IssueCategoryValue,
+} from "@/lib/crm/issue-categories";
 import { Loader2, Trash2 } from "lucide-react";
 
 const SEVERITIES = ["low", "medium", "high", "critical"] as const;
@@ -24,6 +29,10 @@ export default function ProjectIssuesPanel({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [severity, setSeverity] = useState<string>("medium");
+  const [category, setCategory] = useState<IssueCategoryValue>("bug_report");
+  const [categoryFilter, setCategoryFilter] = useState<
+    "all" | IssueCategoryValue
+  >("all");
   const [pending, setPending] = useState(false);
 
   const load = useCallback(async () => {
@@ -43,6 +52,11 @@ export default function ProjectIssuesPanel({
     void load();
   }, [load]);
 
+  const visibleIssues = useMemo(() => {
+    if (categoryFilter === "all") return issues;
+    return issues.filter((i) => i.category === categoryFilter);
+  }, [issues, categoryFilter]);
+
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
     const t = title.trim();
@@ -54,6 +68,7 @@ export default function ProjectIssuesPanel({
       title: t,
       description: description.trim() || null,
       severity,
+      category,
     });
     setPending(false);
     if ("error" in res && res.error) {
@@ -105,6 +120,22 @@ export default function ProjectIssuesPanel({
                 ))}
               </select>
             </label>
+            <label className="text-xs font-medium text-text-secondary">
+              Category
+              <select
+                className="ml-2 rounded-lg border border-border px-2 py-1 text-sm dark:border-zinc-600 dark:bg-zinc-800"
+                value={category}
+                onChange={(e) =>
+                  setCategory(e.target.value as IssueCategoryValue)
+                }
+              >
+                {ISSUE_CATEGORY_OPTIONS.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </label>
             <button
               type="submit"
               disabled={pending || !title.trim()}
@@ -123,10 +154,27 @@ export default function ProjectIssuesPanel({
       ) : null}
 
       <div className="rounded-2xl border border-border bg-white dark:border-zinc-700 dark:bg-zinc-900">
-        <div className="border-b border-border px-4 py-3 dark:border-zinc-700">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3 dark:border-zinc-700">
           <h3 className="text-sm font-semibold text-text-primary dark:text-zinc-100">
             Issues
           </h3>
+          <label className="flex items-center gap-2 text-xs text-text-secondary">
+            <span>Category</span>
+            <select
+              value={categoryFilter}
+              onChange={(e) =>
+                setCategoryFilter(e.target.value as "all" | IssueCategoryValue)
+              }
+              className="rounded-lg border border-border px-2 py-1 text-sm text-text-primary dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+            >
+              <option value="all">All</option>
+              {ISSUE_CATEGORY_OPTIONS.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
         {loading ? (
           <div className="flex items-center gap-2 p-8 text-sm text-text-secondary">
@@ -137,9 +185,13 @@ export default function ProjectIssuesPanel({
           <p className="p-8 text-sm text-text-secondary">
             No issues yet. Add one when testing surfaces a problem.
           </p>
+        ) : visibleIssues.length === 0 ? (
+          <p className="p-8 text-sm text-text-secondary">
+            No issues in this category.
+          </p>
         ) : (
           <ul className="divide-y divide-border dark:divide-zinc-700">
-            {issues.map((issue) => (
+            {visibleIssues.map((issue) => (
               <li
                 key={issue.id}
                 className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
@@ -147,6 +199,9 @@ export default function ProjectIssuesPanel({
                 <div className="min-w-0">
                   <p className="font-medium text-text-primary dark:text-zinc-100">
                     {issue.title}
+                  </p>
+                  <p className="mt-0.5 text-xs text-text-secondary">
+                    {issueCategoryLabel(issue.category)}
                   </p>
                   {issue.description ? (
                     <p className="mt-1 text-sm text-text-secondary">
@@ -186,6 +241,24 @@ export default function ProjectIssuesPanel({
                     {SEVERITIES.map((s) => (
                       <option key={s} value={s}>
                         {s}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className="max-w-[10rem] rounded-lg border border-border px-2 py-1 text-xs dark:border-zinc-600 dark:bg-zinc-800"
+                    value={issue.category}
+                    onChange={async (e) => {
+                      const res = await updateCrmIssue(issue.id, {
+                        category: e.target.value,
+                      });
+                      if ("error" in res && res.error) setError(res.error);
+                      else void load();
+                    }}
+                    aria-label="Issue category"
+                  >
+                    {ISSUE_CATEGORY_OPTIONS.map((c) => (
+                      <option key={c.value} value={c.value}>
+                        {c.label}
                       </option>
                     ))}
                   </select>

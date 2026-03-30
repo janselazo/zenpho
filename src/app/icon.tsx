@@ -1,9 +1,10 @@
 import { ImageResponse } from "next/og";
 
-export const size = { width: 180, height: 180 };
+export const size = { width: 32, height: 32 };
 export const contentType = "image/png";
 
-export default function AppleIcon() {
+/** Favicon — white mark on dark field (matches apple-icon). */
+export default function Icon() {
   return new ImageResponse(
     (
       <div
@@ -15,7 +16,7 @@ export default function AppleIcon() {
           justifyContent: "center",
           background: "#0f172a",
           color: "#ffffff",
-          fontSize: 112,
+          fontSize: 22,
           fontWeight: 700,
           letterSpacing: "-0.03em",
           fontFamily:

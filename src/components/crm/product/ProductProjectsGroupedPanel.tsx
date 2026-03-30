@@ -1,11 +1,27 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { setCrmChildProjectTabGroup } from "@/app/(crm)/actions/projects";
 import type { ProductChildRow } from "@/components/crm/product/ProductDetailShell";
+import { PriorityFlagIcon } from "@/components/crm/product/PriorityFlagIcon";
+import ProductChildDeliveryStatusModal from "@/components/crm/product/ProductChildDeliveryStatusModal";
+import ProductCustomProjectStatusModal from "@/components/crm/product/ProductCustomProjectStatusModal";
 import {
-  CHILD_DELIVERY_STATUS_LABELS,
+  resolveChildDeliveryPresentation,
+  type ChildDeliveryStatusUiConfig,
+} from "@/lib/crm/child-delivery-status-ui";
+import {
+  customStatusPresentation,
+  isBuiltInTabGroupId,
+  parseCustomProjectStatuses,
+  resolveProjectsTabGroupId,
+  type CustomProjectStatusRow,
+} from "@/lib/crm/custom-project-status";
+import {
   CHILD_PROJECT_GROUP_ORDER,
+  CHILD_PROJECT_PRIORITY_LABELS,
   type ChildDeliveryStatus,
+  parseChildProjectPriority,
   resolveChildDeliveryGroup,
 } from "@/lib/crm/product-project-metadata";
 import { getMemberById, getMembersForTeam, teamMembers } from "@/lib/crm/mock-data";
@@ -17,7 +33,8 @@ import {
   Circle,
   CircleDashed,
   Clock,
-  Flag,
+  Layers,
+  Pencil,
   Plus,
   UserPlus,
   XCircle,
@@ -33,64 +50,43 @@ function parseLeadId(metadata: unknown): string | null {
   return typeof v === "string" && v.trim() ? v.trim() : null;
 }
 
-function parsePriorityLabel(metadata: unknown): string | null {
-  if (!isRecord(metadata)) return null;
-  const v = metadata.priority;
-  if (v === "urgent") return "Urgent";
-  if (v === "high") return "High";
-  if (v === "medium") return "Medium";
-  if (v === "low") return "Low";
-  return null;
-}
-
-const GROUP_BADGE: Record<
-  ChildDeliveryStatus,
-  { className: string; icon: ReactNode }
-> = {
-  in_progress: {
-    className:
-      "bg-violet-600/85 text-white dark:bg-violet-600 dark:text-white",
-    icon: <Clock className="h-3.5 w-3.5" aria-hidden />,
-  },
-  planned: {
-    className:
-      "bg-amber-500/90 text-amber-950 dark:bg-amber-500 dark:text-amber-950",
-    icon: <Clock className="h-3.5 w-3.5" aria-hidden />,
-  },
-  backlog: {
-    className: "bg-zinc-600 text-zinc-100 dark:bg-zinc-700 dark:text-zinc-200",
-    icon: <Circle className="h-3.5 w-3.5" aria-hidden />,
-  },
-  completed: {
-    className:
-      "bg-emerald-600/90 text-white dark:bg-emerald-600 dark:text-white",
-    icon: <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />,
-  },
-  canceled: {
-    className: "bg-zinc-500/80 text-white dark:bg-zinc-600 dark:text-zinc-100",
-    icon: <XCircle className="h-3.5 w-3.5" aria-hidden />,
-  },
+const GROUP_ICON: Record<ChildDeliveryStatus, ReactNode> = {
+  in_progress: <Clock className="h-3.5 w-3.5" aria-hidden />,
+  planned: <Clock className="h-3.5 w-3.5" aria-hidden />,
+  backlog: <Circle className="h-3.5 w-3.5" aria-hidden />,
+  completed: <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />,
+  canceled: <XCircle className="h-3.5 w-3.5" aria-hidden />,
 };
 
-function RowStatusDot({ status }: { status: ChildDeliveryStatus }) {
+function RowStatusDot({
+  status,
+  accent,
+}: {
+  status: ChildDeliveryStatus;
+  accent: string;
+}) {
   switch (status) {
     case "backlog":
       return (
         <span className="flex h-6 w-6 items-center justify-center" aria-hidden>
-          <CircleDashed className="h-4 w-4 text-zinc-500" />
+          <CircleDashed className="h-4 w-4" style={{ color: accent }} />
         </span>
       );
     case "planned":
       return (
         <span className="flex h-6 w-6 items-center justify-center" aria-hidden>
-          <Circle className="h-4 w-4 text-amber-500" />
+          <Circle className="h-4 w-4" style={{ color: accent }} />
         </span>
       );
     case "in_progress":
       return (
         <span className="flex h-6 w-6 items-center justify-center" aria-hidden>
           <span className="relative flex h-4 w-4">
-            <svg viewBox="0 0 16 16" className="h-4 w-4 text-violet-500">
+            <svg
+              viewBox="0 0 16 16"
+              className="h-4 w-4"
+              style={{ color: accent }}
+            >
               <circle
                 cx="8"
                 cy="8"
@@ -111,13 +107,13 @@ function RowStatusDot({ status }: { status: ChildDeliveryStatus }) {
     case "completed":
       return (
         <span className="flex h-6 w-6 items-center justify-center" aria-hidden>
-          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+          <CheckCircle2 className="h-4 w-4" style={{ color: accent }} />
         </span>
       );
     case "canceled":
       return (
         <span className="flex h-6 w-6 items-center justify-center" aria-hidden>
-          <XCircle className="h-4 w-4 text-zinc-500" />
+          <XCircle className="h-4 w-4" style={{ color: accent }} />
         </span>
       );
     default:
@@ -125,44 +121,174 @@ function RowStatusDot({ status }: { status: ChildDeliveryStatus }) {
   }
 }
 
+function CustomColumnDot({ accent }: { accent: string }) {
+  return (
+    <span className="flex h-6 w-6 items-center justify-center" aria-hidden>
+      <span
+        className="h-3.5 w-3.5 rounded-full"
+        style={{ backgroundColor: accent }}
+      />
+    </span>
+  );
+}
+
+type GroupRow = {
+  id: string;
+  kind: "builtin" | "custom";
+  builtinKey: ChildDeliveryStatus | null;
+  custom: CustomProjectStatusRow | null;
+  presentation: {
+    label: string;
+    labelUpper: string;
+    color: string;
+    foreground: string;
+  };
+  items: ProductChildRow[];
+};
+
 type Props = {
+  productId: string;
   teamId: string;
   projects: ProductChildRow[];
+  productMetadata: unknown;
+  childDeliveryStatusUi: ChildDeliveryStatusUiConfig;
   onOpenProject: (childId: string) => void;
-  onNewProject: (presetStatus?: ChildDeliveryStatus) => void;
+  onNewProject: (presetGroupId?: string) => void;
+  onDeliveryStatusUiSaved: () => void;
+  /** After changing a child’s status via the row icon */
+  onChildDeliveryChanged?: () => void;
 };
 
 export default function ProductProjectsGroupedPanel({
+  productId,
   teamId,
   projects,
+  productMetadata,
+  childDeliveryStatusUi,
   onOpenProject,
   onNewProject,
+  onDeliveryStatusUiSaved,
+  onChildDeliveryChanged,
 }: Props) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [cyclingId, setCyclingId] = useState<string | null>(null);
+  const [editingStatus, setEditingStatus] = useState<ChildDeliveryStatus | null>(
+    null
+  );
+  const [customModal, setCustomModal] = useState<
+    | { mode: "create" }
+    | { mode: "edit"; row: CustomProjectStatusRow }
+    | null
+  >(null);
 
   const members = useMemo(() => {
     const t = getMembersForTeam(teamId);
     return t.length > 0 ? t : teamMembers;
   }, [teamId]);
 
-  const groups = useMemo(() => {
-    const by: Record<ChildDeliveryStatus, ProductChildRow[]> = {
-      backlog: [],
-      planned: [],
-      in_progress: [],
-      completed: [],
-      canceled: [],
-    };
-    for (const p of projects) {
-      const k = resolveChildDeliveryGroup(p.metadata, p.plan_stage);
-      by[k].push(p);
+  const customStatuses = useMemo(
+    () => parseCustomProjectStatuses(productMetadata),
+    [productMetadata]
+  );
+
+  const customIdSet = useMemo(
+    () => new Set(customStatuses.map((c) => c.id)),
+    [customStatuses]
+  );
+
+  const customById = useMemo(() => {
+    const m = new Map<string, CustomProjectStatusRow>();
+    for (const c of customStatuses) m.set(c.id, c);
+    return m;
+  }, [customStatuses]);
+
+  const groups = useMemo((): GroupRow[] => {
+    const byId: Record<string, ProductChildRow[]> = {};
+    for (const id of CHILD_PROJECT_GROUP_ORDER) {
+      byId[id] = [];
     }
-    return CHILD_PROJECT_GROUP_ORDER.map((id) => ({
-      id,
-      label: CHILD_DELIVERY_STATUS_LABELS[id].toUpperCase(),
-      items: by[id],
-    }));
-  }, [projects]);
+    for (const c of customStatuses) {
+      byId[c.id] = [];
+    }
+    for (const p of projects) {
+      const gid = resolveProjectsTabGroupId(
+        p.metadata,
+        p.plan_stage,
+        customIdSet
+      );
+      if (byId[gid]) byId[gid].push(p);
+      else {
+        const fb = resolveChildDeliveryGroup(p.metadata, p.plan_stage);
+        byId[fb].push(p);
+      }
+    }
+
+    const builtIn: GroupRow[] = CHILD_PROJECT_GROUP_ORDER.map((id) => {
+      const pres = resolveChildDeliveryPresentation(id, childDeliveryStatusUi);
+      return {
+        id,
+        kind: "builtin",
+        builtinKey: id,
+        custom: null,
+        presentation: {
+          label: pres.label,
+          labelUpper: pres.labelUpper,
+          color: pres.color,
+          foreground: pres.foreground,
+        },
+        items: byId[id] ?? [],
+      };
+    });
+
+    const customRows: GroupRow[] = customStatuses.map((row) => {
+      const pres = customStatusPresentation(row);
+      return {
+        id: row.id,
+        kind: "custom",
+        builtinKey: null,
+        custom: row,
+        presentation: {
+          label: pres.label,
+          labelUpper: pres.labelUpper,
+          color: pres.color,
+          foreground: pres.foreground,
+        },
+        items: byId[row.id] ?? [],
+      };
+    });
+
+    return [...builtIn, ...customRows];
+  }, [
+    projects,
+    childDeliveryStatusUi,
+    customStatuses,
+    customIdSet,
+  ]);
+
+  const cycleOrderIds = useMemo(() => groups.map((g) => g.id), [groups]);
+
+  const cycleChildDeliveryStatus = useCallback(
+    async (p: ProductChildRow) => {
+      const current = resolveProjectsTabGroupId(
+        p.metadata,
+        p.plan_stage,
+        customIdSet
+      );
+      let idx = cycleOrderIds.indexOf(current);
+      if (idx < 0) idx = 0;
+      const next = cycleOrderIds[(idx + 1) % cycleOrderIds.length];
+      if (!next || next === current) return;
+      setCyclingId(p.id);
+      const res = await setCrmChildProjectTabGroup(productId, p.id, next);
+      setCyclingId(null);
+      if ("error" in res && res.error) {
+        window.alert(res.error);
+        return;
+      }
+      onChildDeliveryChanged?.();
+    },
+    [cycleOrderIds, customIdSet, productId, onChildDeliveryChanged]
+  );
 
   function formatDue(iso: string | null | undefined) {
     const s = iso?.trim();
@@ -178,11 +304,41 @@ export default function ProductProjectsGroupedPanel({
     }
   }
 
+  function rowVisuals(p: ProductChildRow): {
+    builtIn: ChildDeliveryStatus;
+    accent: string;
+    customDot: boolean;
+  } {
+    const tabId = resolveProjectsTabGroupId(
+      p.metadata,
+      p.plan_stage,
+      customIdSet
+    );
+    const inferred = resolveChildDeliveryGroup(p.metadata, p.plan_stage);
+    if (isBuiltInTabGroupId(tabId)) {
+      return {
+        builtIn: tabId,
+        accent: resolveChildDeliveryPresentation(tabId, childDeliveryStatusUi)
+          .color,
+        customDot: false,
+      };
+    }
+    const row = customById.get(tabId);
+    const accent = row
+      ? customStatusPresentation(row).color
+      : "#71717a";
+    return {
+      builtIn: inferred,
+      accent,
+      customDot: true,
+    };
+  }
+
   return (
     <section className="overflow-hidden rounded-xl border border-border bg-white dark:border-zinc-800 dark:bg-zinc-950">
       <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 dark:border-zinc-800">
         <h2 className="text-sm font-semibold text-text-primary dark:text-zinc-100">
-          Projects
+          Project Features
         </h2>
         <button
           type="button"
@@ -197,7 +353,7 @@ export default function ProductProjectsGroupedPanel({
       <div className="divide-y divide-border dark:divide-zinc-800/90">
         {groups.map((g) => {
           const isCollapsed = collapsed[g.id] === true;
-          const badge = GROUP_BADGE[g.id];
+          const pres = g.presentation;
           const count = g.items.length;
           return (
             <div key={g.id}>
@@ -216,14 +372,37 @@ export default function ProductProjectsGroupedPanel({
                     <ChevronDown className="h-4 w-4 shrink-0 text-text-secondary dark:text-zinc-500" />
                   )}
                   <span
-                    className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold tracking-wide ${badge.className}`}
+                    className="inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold tracking-wide"
+                    style={{
+                      backgroundColor: pres.color,
+                      color: pres.foreground,
+                    }}
                   >
-                    {badge.icon}
-                    {g.label}
+                    {g.kind === "builtin" && g.builtinKey
+                      ? GROUP_ICON[g.builtinKey]
+                      : (
+                          <Layers className="h-3.5 w-3.5" aria-hidden />
+                        )}
+                    {pres.labelUpper}
                   </span>
                   <span className="text-xs text-text-secondary dark:text-zinc-500">
                     {count}
                   </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (g.kind === "builtin" && g.builtinKey) {
+                      setEditingStatus(g.builtinKey);
+                    } else if (g.custom) {
+                      setCustomModal({ mode: "edit", row: g.custom });
+                    }
+                  }}
+                  className="shrink-0 rounded-lg p-1.5 text-text-secondary hover:bg-white hover:text-text-primary dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                  aria-label={`Edit name and color for ${pres.label}`}
+                  title="Edit column"
+                >
+                  <Pencil className="h-3.5 w-3.5" aria-hidden />
                 </button>
                 <button
                   type="button"
@@ -258,56 +437,83 @@ export default function ProductProjectsGroupedPanel({
                         const leadName = lead
                           ? getMemberById(lead)?.name ?? members.find((m) => m.id === lead)?.name
                           : null;
-                        const pri = parsePriorityLabel(p.metadata);
+                        const priLevel = parseChildProjectPriority(p.metadata);
+                        const priLabel = priLevel
+                          ? CHILD_PROJECT_PRIORITY_LABELS[priLevel]
+                          : null;
                         const due = formatDue(p.target_date);
-                        const statusKey = resolveChildDeliveryGroup(
-                          p.metadata,
-                          p.plan_stage
-                        );
+                        const rv = rowVisuals(p);
                         return (
                           <li key={p.id}>
-                            <button
-                              type="button"
-                              onClick={() => onOpenProject(p.id)}
-                              className="grid w-full grid-cols-[2rem_minmax(0,1fr)_7rem_7rem_5.5rem_2rem] items-center gap-2 px-3 py-2.5 text-left text-sm transition-colors hover:bg-surface/60 dark:hover:bg-zinc-900/80"
-                            >
-                              <RowStatusDot status={statusKey} />
-                              <span className="min-w-0 truncate font-medium text-text-primary dark:text-zinc-100">
-                                {p.title}
-                              </span>
-                              <span className="flex items-center justify-center text-text-secondary dark:text-zinc-500">
-                                {leadName ? (
-                                  <span className="truncate text-xs">
-                                    {leadName}
-                                  </span>
+                            <div className="grid grid-cols-[2rem_minmax(0,1fr)_7rem_7rem_5.5rem_2rem] items-center gap-2 px-3 py-2.5 text-sm transition-colors hover:bg-surface/60 dark:hover:bg-zinc-900/80">
+                              <button
+                                type="button"
+                                disabled={cyclingId === p.id}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  void cycleChildDeliveryStatus(p);
+                                }}
+                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-secondary hover:bg-border/50 disabled:opacity-50 dark:hover:bg-zinc-800"
+                                title="Change status"
+                                aria-label="Change project status"
+                              >
+                                {rv.customDot ? (
+                                  <CustomColumnDot accent={rv.accent} />
                                 ) : (
-                                  <UserPlus className="h-4 w-4 opacity-50" aria-hidden />
+                                  <RowStatusDot
+                                    status={rv.builtIn}
+                                    accent={rv.accent}
+                                  />
                                 )}
-                              </span>
-                              <span className="flex items-center justify-center text-text-secondary dark:text-zinc-500">
-                                {due ? (
-                                  <span className="truncate text-xs">{due}</span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-0.5 text-xs opacity-50">
-                                    <Calendar className="h-3.5 w-3.5" />
-                                    <Plus className="h-3 w-3" />
-                                  </span>
-                                )}
-                              </span>
-                              <span className="flex items-center justify-center text-text-secondary dark:text-zinc-500">
-                                {pri ? (
-                                  <span className="inline-flex items-center gap-1 text-xs">
-                                    <Flag className="h-3.5 w-3.5 opacity-70" />
-                                    {pri}
-                                  </span>
-                                ) : (
-                                  <Flag className="h-4 w-4 opacity-35" aria-hidden />
-                                )}
-                              </span>
-                              <span className="flex justify-center text-text-secondary opacity-40 dark:text-zinc-500">
-                                <Plus className="h-4 w-4" aria-hidden />
-                              </span>
-                            </button>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => onOpenProject(p.id)}
+                                className="col-span-5 grid grid-cols-[minmax(0,1fr)_7rem_7rem_5.5rem_2rem] items-center gap-2 text-left"
+                              >
+                                <span className="min-w-0 truncate font-medium text-text-primary dark:text-zinc-100">
+                                  {p.title}
+                                </span>
+                                <span className="flex items-center justify-center text-text-secondary dark:text-zinc-500">
+                                  {leadName ? (
+                                    <span className="truncate text-xs">
+                                      {leadName}
+                                    </span>
+                                  ) : (
+                                    <UserPlus className="h-4 w-4 opacity-50" aria-hidden />
+                                  )}
+                                </span>
+                                <span className="flex items-center justify-center text-text-secondary dark:text-zinc-500">
+                                  {due ? (
+                                    <span className="truncate text-xs">{due}</span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-0.5 text-xs opacity-50">
+                                      <Calendar className="h-3.5 w-3.5" />
+                                      <Plus className="h-3 w-3" />
+                                    </span>
+                                  )}
+                                </span>
+                                <span className="flex items-center justify-center text-text-secondary dark:text-zinc-500">
+                                  {priLevel ? (
+                                    <span className="inline-flex items-center gap-1 text-xs">
+                                      <PriorityFlagIcon level={priLevel} />
+                                      <span className="text-text-primary dark:text-zinc-200">
+                                        {priLabel}
+                                      </span>
+                                    </span>
+                                  ) : (
+                                    <PriorityFlagIcon
+                                      level=""
+                                      className="h-4 w-4 opacity-50"
+                                    />
+                                  )}
+                                </span>
+                                <span className="flex justify-center text-text-secondary opacity-40 dark:text-zinc-500">
+                                  <Plus className="h-4 w-4" aria-hidden />
+                                </span>
+                              </button>
+                            </div>
                           </li>
                         );
                       })
@@ -323,13 +529,32 @@ export default function ProductProjectsGroupedPanel({
       <div className="border-t border-border p-2 dark:border-zinc-800">
         <button
           type="button"
-          disabled
-          className="w-full rounded-lg border border-dashed border-border py-2.5 text-sm text-text-secondary opacity-60 dark:border-zinc-700 dark:text-zinc-500"
-          title="Custom status columns are not configurable yet."
+          onClick={() => setCustomModal({ mode: "create" })}
+          className="w-full rounded-lg border border-dashed border-border py-2.5 text-sm text-text-secondary transition-colors hover:border-accent/40 hover:bg-surface/40 hover:text-text-primary dark:border-zinc-700 dark:text-zinc-500 dark:hover:border-zinc-500 dark:hover:text-zinc-300"
         >
           + New status
         </button>
       </div>
+
+      <ProductChildDeliveryStatusModal
+        productId={productId}
+        open={editingStatus !== null}
+        statusId={editingStatus}
+        statusUi={childDeliveryStatusUi}
+        onClose={() => setEditingStatus(null)}
+        onSaved={onDeliveryStatusUiSaved}
+      />
+
+      <ProductCustomProjectStatusModal
+        productId={productId}
+        open={customModal !== null}
+        mode={customModal?.mode ?? "create"}
+        initial={
+          customModal?.mode === "edit" ? customModal.row : null
+        }
+        onClose={() => setCustomModal(null)}
+        onSaved={onDeliveryStatusUiSaved}
+      />
     </section>
   );
 }

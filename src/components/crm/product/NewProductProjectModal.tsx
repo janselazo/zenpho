@@ -4,11 +4,24 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { createCrmChildProject } from "@/app/(crm)/actions/projects";
 import { formatISODate } from "@/lib/crm/project-date-utils";
 import {
-  CHILD_DELIVERY_STATUSES,
-  CHILD_DELIVERY_STATUS_LABELS,
+  CRM_LABEL_PRESETS,
+  crmLabelPickerChipClass,
+} from "@/lib/crm/crm-label-presets";
+import {
+  resolveChildDeliveryPresentation,
+  type ChildDeliveryStatusUiConfig,
+} from "@/lib/crm/child-delivery-status-ui";
+import {
+  customStatusPresentation,
+  isBuiltInTabGroupId,
+  type CustomProjectStatusRow,
+} from "@/lib/crm/custom-project-status";
+import {
+  CHILD_PROJECT_GROUP_ORDER,
   type ChildDeliveryStatus,
   type ChildProjectPriority,
 } from "@/lib/crm/product-project-metadata";
+import { PriorityFlagIcon } from "@/components/crm/product/PriorityFlagIcon";
 import { getMembersForTeam, teamMembers } from "@/lib/crm/mock-data";
 import {
   Calendar,
@@ -17,7 +30,6 @@ import {
   Circle,
   CircleDashed,
   Loader2,
-  MoreHorizontal,
   Tag,
   User,
   UserPlus,
@@ -25,14 +37,6 @@ import {
   X,
   XCircle,
 } from "lucide-react";
-
-const LABEL_PRESETS = [
-  "Bug",
-  "Feature",
-  "Improvement",
-  "Docs",
-  "Chore",
-] as const;
 
 const PRIORITIES: { id: ChildProjectPriority | ""; label: string }[] = [
   { id: "", label: "No priority" },
@@ -58,23 +62,33 @@ function addDaysISO(days: number) {
   return formatISODate(d);
 }
 
-function StatusGlyph({ status }: { status: ChildDeliveryStatus }) {
-  const gray = "#6b7280";
-  const amber = "#f59e0b";
-  const blue = "#3b82f6";
+function StatusGlyph({
+  status,
+  accent,
+}: {
+  status: ChildDeliveryStatus;
+  accent: string;
+}) {
   switch (status) {
     case "backlog":
       return (
-        <CircleDashed className="h-3.5 w-3.5 shrink-0" style={{ color: gray }} />
+        <CircleDashed
+          className="h-3.5 w-3.5 shrink-0"
+          style={{ color: accent }}
+        />
       );
     case "planned":
       return (
-        <Circle className="h-3.5 w-3.5 shrink-0" style={{ color: gray }} />
+        <Circle className="h-3.5 w-3.5 shrink-0" style={{ color: accent }} />
       );
     case "in_progress":
       return (
         <span className="inline-flex h-3.5 w-3.5 shrink-0" aria-hidden>
-          <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" style={{ color: amber }}>
+          <svg
+            viewBox="0 0 16 16"
+            className="h-3.5 w-3.5"
+            style={{ color: accent }}
+          >
             <circle
               cx="8"
               cy="8"
@@ -95,27 +109,49 @@ function StatusGlyph({ status }: { status: ChildDeliveryStatus }) {
       return (
         <CheckCircle2
           className="h-3.5 w-3.5 shrink-0"
-          style={{ color: blue }}
+          style={{ color: accent }}
           aria-hidden
         />
       );
     case "canceled":
       return (
-        <XCircle className="h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden />
+        <XCircle
+          className="h-3.5 w-3.5 shrink-0"
+          style={{ color: accent }}
+          aria-hidden
+        />
       );
     default:
       return (
-        <Circle className="h-3.5 w-3.5 shrink-0" style={{ color: gray }} />
+        <Circle className="h-3.5 w-3.5 shrink-0" style={{ color: accent }} />
       );
   }
+}
+
+function TabGroupGlyph({
+  groupId,
+  accent,
+}: {
+  groupId: string;
+  accent: string;
+}) {
+  if (isBuiltInTabGroupId(groupId)) {
+    return <StatusGlyph status={groupId} accent={accent} />;
+  }
+  return (
+    <Circle className="h-3.5 w-3.5 shrink-0" style={{ color: accent }} aria-hidden />
+  );
 }
 
 type Props = {
   productId: string;
   teamId: string;
   open: boolean;
-  /** When opening from a status group, pre-select this delivery status. */
-  initialDeliveryStatus?: ChildDeliveryStatus | null;
+  /** Pre-select Projects tab column (built-in key or custom status id). */
+  initialProjectsTabGroupId?: string | null;
+  /** Product-level display overrides for built-in delivery columns. */
+  childDeliveryStatusUi?: ChildDeliveryStatusUiConfig;
+  customProjectStatuses?: CustomProjectStatusRow[];
   onClose: () => void;
   onCreated: (childId: string) => void;
 };
@@ -124,15 +160,16 @@ export default function NewProductProjectModal({
   productId,
   teamId,
   open,
-  initialDeliveryStatus,
+  initialProjectsTabGroupId,
+  childDeliveryStatusUi = {},
+  customProjectStatuses = [],
   onClose,
   onCreated,
 }: Props) {
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [description, setDescription] = useState("");
-  const [deliveryStatus, setDeliveryStatus] =
-    useState<ChildDeliveryStatus>("backlog");
+  const [selectedGroupId, setSelectedGroupId] = useState<string>("completed");
   const [priority, setPriority] = useState<ChildProjectPriority | "">("");
   const [leadMemberId, setLeadMemberId] = useState("");
   const [memberIds, setMemberIds] = useState<string[]>([]);
@@ -140,11 +177,6 @@ export default function NewProductProjectModal({
   const [targetDate, setTargetDate] = useState("");
   const [labels, setLabels] = useState<string[]>([]);
   const [labelDraft, setLabelDraft] = useState("");
-  const [milestoneRows, setMilestoneRows] = useState<string[]>([
-    "Design",
-    "Development",
-    "Testing",
-  ]);
   const [menu, setMenu] = useState<MenuKey>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -154,6 +186,25 @@ export default function NewProductProjectModal({
     const fromTeam = getMembersForTeam(teamId);
     return fromTeam.length > 0 ? fromTeam : teamMembers;
   }, [teamId]);
+
+  const deliveryPres = useMemo(() => {
+    const m = {} as Record<
+      ChildDeliveryStatus,
+      ReturnType<typeof resolveChildDeliveryPresentation>
+    >;
+    for (const s of CHILD_PROJECT_GROUP_ORDER) {
+      m[s] = resolveChildDeliveryPresentation(s, childDeliveryStatusUi);
+    }
+    return m;
+  }, [childDeliveryStatusUi]);
+
+  const selectedPres = useMemo(() => {
+    if (isBuiltInTabGroupId(selectedGroupId)) {
+      return deliveryPres[selectedGroupId];
+    }
+    const c = customProjectStatuses.find((x) => x.id === selectedGroupId);
+    return c ? customStatusPresentation(c) : deliveryPres.backlog;
+  }, [selectedGroupId, deliveryPres, customProjectStatuses]);
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
@@ -167,8 +218,16 @@ export default function NewProductProjectModal({
 
   useEffect(() => {
     if (!open) return;
-    setDeliveryStatus(initialDeliveryStatus ?? "backlog");
-  }, [open, initialDeliveryStatus]);
+    const init = initialProjectsTabGroupId?.trim();
+    if (init) {
+      const okCustom = customProjectStatuses.some((c) => c.id === init);
+      if (isBuiltInTabGroupId(init) || okCustom) {
+        setSelectedGroupId(init);
+        return;
+      }
+    }
+    setSelectedGroupId("completed");
+  }, [open, initialProjectsTabGroupId, customProjectStatuses]);
 
   if (!open) return null;
 
@@ -176,7 +235,7 @@ export default function NewProductProjectModal({
     setTitle("");
     setSummary("");
     setDescription("");
-    setDeliveryStatus("backlog");
+    setSelectedGroupId("completed");
     setPriority("");
     setLeadMemberId("");
     setMemberIds([]);
@@ -184,7 +243,6 @@ export default function NewProductProjectModal({
     setTargetDate("");
     setLabels([]);
     setLabelDraft("");
-    setMilestoneRows(["Design", "Development", "Testing"]);
     setMenu(null);
     setError(null);
   }
@@ -244,14 +302,16 @@ export default function NewProductProjectModal({
       title: t,
       summary: summary.trim() || null,
       description: description.trim() || null,
-      deliveryStatus,
+      projectsTabGroupId: selectedGroupId,
+      deliveryStatus: isBuiltInTabGroupId(selectedGroupId)
+        ? selectedGroupId
+        : undefined,
       priority: priority || null,
       leadMemberId: leadMemberId || null,
       memberIds,
       start_date: startDate.trim() || null,
       target_date: targetDate.trim() || null,
       labels,
-      milestoneTitles: milestoneRows.map((m) => m.trim()).filter(Boolean),
     });
     setPending(false);
     if ("error" in res) {
@@ -314,31 +374,54 @@ export default function NewProductProjectModal({
                 onClick={() => toggleMenu("status")}
                 aria-expanded={menu === "status"}
               >
-                <StatusGlyph status={deliveryStatus} />
-                {CHILD_DELIVERY_STATUS_LABELS[deliveryStatus]}
+                <TabGroupGlyph
+                  groupId={selectedGroupId}
+                  accent={selectedPres.color}
+                />
+                {selectedPres.label}
               </button>
               {menu === "status" ? (
                 <div className={menuClass} role="listbox">
                   <p className="border-b border-border px-3 py-2 text-xs text-text-secondary dark:border-zinc-800">
                     Change status…
                   </p>
-                  {CHILD_DELIVERY_STATUSES.map((s) => (
+                  {CHILD_PROJECT_GROUP_ORDER.map((s) => (
                     <button
                       key={s}
                       type="button"
                       onClick={() => {
-                        setDeliveryStatus(s);
+                        setSelectedGroupId(s);
                         setMenu(null);
                       }}
                       className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-surface/80 dark:hover:bg-zinc-800"
                     >
-                      <StatusGlyph status={s} />
-                      <span className="flex-1">{CHILD_DELIVERY_STATUS_LABELS[s]}</span>
-                      {deliveryStatus === s ? (
+                      <StatusGlyph status={s} accent={deliveryPres[s].color} />
+                      <span className="flex-1">{deliveryPres[s].label}</span>
+                      {selectedGroupId === s ? (
                         <Check className="h-4 w-4 text-accent" />
                       ) : null}
                     </button>
                   ))}
+                  {customProjectStatuses.map((c) => {
+                    const cp = customStatusPresentation(c);
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedGroupId(c.id);
+                          setMenu(null);
+                        }}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-surface/80 dark:hover:bg-zinc-800"
+                      >
+                        <TabGroupGlyph groupId={c.id} accent={cp.color} />
+                        <span className="flex-1">{c.label}</span>
+                        {selectedGroupId === c.id ? (
+                          <Check className="h-4 w-4 text-accent" />
+                        ) : null}
+                      </button>
+                    );
+                  })}
                 </div>
               ) : null}
             </div>
@@ -350,7 +433,7 @@ export default function NewProductProjectModal({
                 onClick={() => toggleMenu("priority")}
                 aria-expanded={menu === "priority"}
               >
-                <MoreHorizontal className="h-3.5 w-3.5 text-text-secondary" />
+                <PriorityFlagIcon level={priority} />
                 {priorityLabel}
               </button>
               {menu === "priority" ? (
@@ -366,9 +449,10 @@ export default function NewProductProjectModal({
                         setPriority(p.id);
                         setMenu(null);
                       }}
-                      className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-surface/80 dark:hover:bg-zinc-800"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-surface/80 dark:hover:bg-zinc-800"
                     >
-                      {p.label}
+                      <PriorityFlagIcon level={p.id} />
+                      <span className="min-w-0 flex-1">{p.label}</span>
                       {priority === p.id ? (
                         <Check className="h-4 w-4 text-accent" />
                       ) : null}
@@ -587,7 +671,7 @@ export default function NewProductProjectModal({
                     Add labels…
                   </p>
                   <div className="flex flex-wrap gap-1 border-b border-border p-2 dark:border-zinc-800">
-                    {LABEL_PRESETS.map((tag) => {
+                    {CRM_LABEL_PRESETS.map((tag) => {
                       const on = labels.includes(tag);
                       return (
                         <button
@@ -598,11 +682,7 @@ export default function NewProductProjectModal({
                               on ? prev.filter((x) => x !== tag) : [...prev, tag]
                             )
                           }
-                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                            on
-                              ? "bg-accent/20 text-accent dark:bg-blue-500/20 dark:text-blue-300"
-                              : "bg-surface/80 text-text-secondary dark:bg-zinc-800"
-                          }`}
+                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${crmLabelPickerChipClass(tag, on)}`}
                         >
                           {tag}
                         </button>
@@ -646,47 +726,6 @@ export default function NewProductProjectModal({
               className="w-full border-0 bg-transparent text-sm text-text-primary outline-none placeholder:text-zinc-500 dark:text-zinc-200"
               placeholder="Write a description, a project brief, or collect ideas…"
             />
-          </div>
-
-          <div className="rounded-xl border border-border p-4 dark:border-zinc-800">
-            <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary dark:text-zinc-500">
-              Milestones
-            </p>
-            <ul className="mt-3 space-y-2">
-              {milestoneRows.map((row, idx) => (
-                <li key={idx} className="flex gap-2">
-                  <span className="pt-2 text-text-secondary" aria-hidden>
-                    ◇
-                  </span>
-                  <input
-                    value={row}
-                    onChange={(e) =>
-                      setMilestoneRows((prev) =>
-                        prev.map((x, i) => (i === idx ? e.target.value : x))
-                      )
-                    }
-                    className="min-w-0 flex-1 rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800"
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setMilestoneRows((prev) => prev.filter((_, i) => i !== idx))
-                    }
-                    className="rounded-lg px-2 text-text-secondary hover:text-red-600"
-                    aria-label="Remove"
-                  >
-                    ×
-                  </button>
-                </li>
-              ))}
-            </ul>
-            <button
-              type="button"
-              onClick={() => setMilestoneRows((prev) => [...prev, ""])}
-              className="mt-3 text-sm font-medium text-accent hover:underline"
-            >
-              + Add milestone
-            </button>
           </div>
 
           {error ? (

@@ -213,6 +213,21 @@ export function useProjectWorkspace(projectId: string | undefined) {
     [mutate]
   );
 
+  /** Single persist: set sprint on many tasks (e.g. milestone → sprint). */
+  const bulkAssignTasksToSprint = useCallback(
+    (taskIds: string[], sprintId: string | null) => {
+      if (!taskIds.length) return;
+      const idSet = new Set(taskIds);
+      mutate((w) => ({
+        ...w,
+        tasks: w.tasks.map((t) =>
+          idSet.has(t.id) ? { ...t, sprintId } : t
+        ),
+      }));
+    },
+    [mutate]
+  );
+
   const addTaskCustomField = useCallback(
     (type: TaskCustomFieldType) => {
       if (!projectId) return;
@@ -505,6 +520,7 @@ export function useProjectWorkspace(projectId: string | undefined) {
     addTask,
     updateTask,
     deleteTask,
+    bulkAssignTasksToSprint,
     addTaskCustomField,
     removeTaskCustomField,
     setTaskStatusConfiguration,

@@ -78,10 +78,13 @@ function clientToDraft(c: ClientTableRow): ClientDraft {
 export default function ClientsView({
   clients,
   embedded = false,
+  highlightClientId,
 }: {
   clients: ClientTableRow[];
   /** When nested (e.g. Leads page tab), tighten vertical spacing. */
   embedded?: boolean;
+  /** If set and the client exists in the table, scroll to the row and briefly emphasize it. */
+  highlightClientId?: string;
 }) {
   const router = useRouter();
   const [snapshot, setSnapshot] = useState(clients);
@@ -91,10 +94,35 @@ export default function ClientsView({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [projectForClient, setProjectForClient] =
     useState<ClientTableRow | null>(null);
+  const [emphasisRowId, setEmphasisRowId] = useState<string | null>(null);
 
   useEffect(() => {
     setSnapshot(clients);
   }, [clients]);
+
+  useEffect(() => {
+    const raw = highlightClientId?.trim();
+    if (!raw) {
+      setEmphasisRowId(null);
+      return;
+    }
+    if (!snapshot.some((c) => c.id === raw)) {
+      setEmphasisRowId(null);
+      return;
+    }
+    setEmphasisRowId(raw);
+    const scrollT = window.setTimeout(() => {
+      const el = document.querySelector<HTMLElement>(
+        `[data-client-id="${CSS.escape(raw)}"]`
+      );
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 120);
+    const clearT = window.setTimeout(() => setEmphasisRowId(null), 2600);
+    return () => {
+      clearTimeout(scrollT);
+      clearTimeout(clearT);
+    };
+  }, [highlightClientId, snapshot]);
 
   function startEdit(c: ClientTableRow) {
     setEditingId(c.id);
@@ -190,10 +218,13 @@ export default function ClientsView({
             return (
               <tr
                 key={c.id}
+                data-client-id={c.id}
                 className={`transition-colors ${
                   isEditing
                     ? "bg-sky-50/60 dark:bg-sky-950/25"
-                    : "hover:bg-surface/50"
+                    : emphasisRowId === c.id
+                      ? "bg-sky-50/70 ring-2 ring-inset ring-sky-400/55 dark:bg-sky-950/30 dark:ring-sky-500/45"
+                      : "hover:bg-surface/50"
                 }`}
               >
                 <td className="px-4 py-3 align-top">

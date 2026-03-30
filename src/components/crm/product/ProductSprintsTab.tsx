@@ -2,21 +2,35 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import { useProjectWorkspace } from "@/lib/crm/use-project-workspace";
-import type { WorkspaceSprint } from "@/lib/crm/project-workspace-types";
+import type {
+  WorkspaceSprint,
+  WorkspaceTask,
+} from "@/lib/crm/project-workspace-types";
 import type { ProductMilestoneMeta } from "@/lib/crm/product-project-metadata";
 import { formatISODate } from "@/lib/crm/project-date-utils";
-import { Loader2, Pencil, Star, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Star, Trash2, ListPlus } from "lucide-react";
 
 type Props = {
   projectId: string;
-  milestoneLabels: string[];
+  /** Product milestones for this delivery project (ids match task.productMilestoneId). */
+  milestones: ProductMilestoneMeta[];
   onOpenTasksForSprint: (sprintId: string) => void;
   onOpenBacklogTasks: () => void;
 };
 
+function taskMatchesMilestoneSelection(
+  t: WorkspaceTask,
+  selectedMilestoneIds: Set<string>,
+  includeNoMilestone: boolean
+): boolean {
+  const mid = t.productMilestoneId?.trim() || null;
+  if (!mid) return includeNoMilestone;
+  return selectedMilestoneIds.has(mid);
+}
+
 export default function ProductSprintsTab({
   projectId,
-  milestoneLabels,
+  milestones,
   onOpenTasksForSprint,
   onOpenBacklogTasks,
 }: Props) {
@@ -27,6 +41,7 @@ export default function ProductSprintsTab({
     updateSprint,
     deleteSprint,
     setCurrentSprint,
+    bulkAssignTasksToSprint,
   } = useProjectWorkspace(projectId);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -35,6 +50,18 @@ export default function ProductSprintsTab({
   const [milestone, setMilestone] = useState("");
   const [startDate, setStartDate] = useState(() => formatISODate(new Date()));
   const [endDate, setEndDate] = useState(() => formatISODate(new Date()));
+
+  const [addTasksSprintId, setAddTasksSprintId] = useState<string | null>(null);
+  const [pickMilestoneIds, setPickMilestoneIds] = useState<Set<string>>(
+    () => new Set()
+  );
+  const [pickNoMilestone, setPickNoMilestone] = useState(false);
+  const [pickBacklogOnly, setPickBacklogOnly] = useState(true);
+
+  const milestoneLabels = useMemo(
+    () => milestones.map((m) => m.title),
+    [milestones]
+  );
 
   const backlogCount = useMemo(
     () => workspace.tasks.filter((t) => t.sprintId == null).length,
@@ -50,6 +77,31 @@ export default function ProductSprintsTab({
     }
     return m;
   }, [workspace.tasks]);
+
+  const milestonePickStats = useMemo(() => {
+    const stats = new Map<
+      string,
+      { backlog: number; total: number }
+    >();
+    for (const m of milestones) {
+      let backlog = 0;
+      let total = 0;
+      for (const t of workspace.tasks) {
+        if (t.productMilestoneId !== m.id) continue;
+        total += 1;
+        if (t.sprintId == null) backlog += 1;
+      }
+      stats.set(m.id, { backlog, total });
+    }
+    let noMsBacklog = 0;
+    let noMsTotal = 0;
+    for (const t of workspace.tasks) {
+      if (t.productMilestoneId?.trim()) continue;
+      noMsTotal += 1;
+      if (t.sprintId == null) noMsBacklog += 1;
+    }
+    return { byId: stats, noMilestone: { backlog: noMsBacklog, total: noMsTotal } };
+  }, [milestones, workspace.tasks]);
 
   function openCreate() {
     setEditingId(null);
@@ -73,6 +125,59 @@ export default function ProductSprintsTab({
   function closeModal() {
     setModalOpen(false);
     setEditingId(null);
+  }
+
+  function openAddTasksModal(sprintId: string) {
+    setAddTasksSprintId(sprintId);
+    setPickMilestoneIds(new Set());
+    setPickNoMilestone(false);
+    setPickBacklogOnly(true);
+  }
+
+  function closeAddTasksModal() {
+    setAddTasksSprintId(null);
+  }
+
+  function togglePickMilestone(id: string) {
+    setPickMilestoneIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function applyAddTasksToSprint() {
+    if (!addTasksSprintId) return;
+    if (pickMilestoneIds.size === 0 && !pickNoMilestone) {
+      window.alert(
+        "Select at least one milestone, or enable “Tasks without a milestone”."
+      );
+      return;
+    }
+    const ids: string[] = [];
+    for (const t of workspace.tasks) {
+      if (
+        !taskMatchesMilestoneSelection(
+          t,
+          pickMilestoneIds,
+          pickNoMilestone
+        )
+      ) {
+        continue;
+      }
+      if (pickBacklogOnly && t.sprintId != null) continue;
+      if (t.sprintId === addTasksSprintId) continue;
+      ids.push(t.id);
+    }
+    if (ids.length === 0) {
+      window.alert(
+        "No matching tasks. Select at least one milestone (or “No milestone”), ensure tasks exist on the Tasks / Milestones tabs, and try “Include tasks already in a sprint” if they are not in the backlog."
+      );
+      return;
+    }
+    bulkAssignTasksToSprint(ids, addTasksSprintId);
+    closeAddTasksModal();
   }
 
   function submitModal(e: FormEvent) {
@@ -108,13 +213,19 @@ export default function ProductSprintsTab({
     );
   }
 
+  const addTasksSprint = addTasksSprintId
+    ? workspace.sprints.find((s) => s.id === addTasksSprintId)
+    : null;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-text-secondary dark:text-zinc-500">
-          Plan iterations for this project. Tasks can be assigned to a sprint
-          from the Tasks tab (filter by sprint). Deleting a sprint moves its
-          tasks to the backlog.
+        <p className="max-w-3xl text-sm text-text-secondary dark:text-zinc-500">
+          Plan iterations for the <strong>selected project</strong> above. Add
+          tasks from your{" "}
+          <strong>milestones</strong> (and backlog) into a sprint without
+          leaving this tab. Sprints and tasks live in this project&apos;s
+          workspace; switch the project dropdown to plan another phase.
         </p>
         <button
           type="button"
@@ -148,7 +259,9 @@ export default function ProductSprintsTab({
 
       {workspace.sprints.length === 0 ? (
         <p className="text-sm text-text-secondary dark:text-zinc-500">
-          No sprints yet. Create one to group tasks by iteration.
+          No sprints yet. Create one, then use{" "}
+          <strong>Add milestone tasks</strong> to pull backlog tasks (by
+          product milestone) into that sprint.
         </p>
       ) : (
         <ul className="space-y-3">
@@ -186,6 +299,14 @@ export default function ProductSprintsTab({
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openAddTasksModal(s.id)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface/50 px-3 py-1.5 text-xs font-medium text-text-primary hover:bg-surface dark:border-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-100"
+                    >
+                      <ListPlus className="h-3.5 w-3.5" aria-hidden />
+                      Add milestone tasks
+                    </button>
                     <button
                       type="button"
                       onClick={() => onOpenTasksForSprint(s.id)}
@@ -299,6 +420,119 @@ export default function ProductSprintsTab({
               </button>
             </div>
           </form>
+        </div>
+      ) : null}
+
+      {addTasksSprintId && addTasksSprint ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          role="presentation"
+          onClick={closeAddTasksModal}
+        >
+          <div
+            className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-white p-6 shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-labelledby="add-milestone-tasks-title"
+          >
+            <h3
+              id="add-milestone-tasks-title"
+              className="text-lg font-semibold text-text-primary dark:text-zinc-100"
+            >
+              Add tasks to “{addTasksSprint.name}”
+            </h3>
+            <p className="mt-2 text-sm text-text-secondary dark:text-zinc-500">
+              Select product milestones (from the Milestones tab). Matching
+              tasks are assigned to this sprint. Task titles must already exist
+              on the Tasks or Milestones tabs.
+            </p>
+
+            <div className="mt-4 space-y-3">
+              {milestones.length === 0 ? (
+                <p className="text-sm text-amber-800 dark:text-amber-200/90">
+                  No milestones defined yet. Open the Milestones tab, save at
+                  least one milestone, then add tasks linked to it.
+                </p>
+              ) : (
+                milestones.map((m) => {
+                  const st = milestonePickStats.byId.get(m.id) ?? {
+                    backlog: 0,
+                    total: 0,
+                  };
+                  const shown = pickBacklogOnly ? st.backlog : st.total;
+                  return (
+                    <label
+                      key={m.id}
+                      className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3 dark:border-zinc-700"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={pickMilestoneIds.has(m.id)}
+                        onChange={() => togglePickMilestone(m.id)}
+                        className="mt-1"
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="font-medium text-text-primary dark:text-zinc-100">
+                          {m.title}
+                        </span>
+                        <span className="mt-0.5 block text-xs text-text-secondary dark:text-zinc-500">
+                          {pickBacklogOnly
+                            ? `${st.backlog} in backlog`
+                            : `${st.total} total`}{" "}
+                          {shown === 0 ? "(none match filter)" : ""}
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })
+              )}
+
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3 dark:border-zinc-700">
+                <input
+                  type="checkbox"
+                  checked={pickNoMilestone}
+                  onChange={(e) => setPickNoMilestone(e.target.checked)}
+                  className="mt-1"
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="font-medium text-text-primary dark:text-zinc-100">
+                    Tasks without a milestone
+                  </span>
+                  <span className="mt-0.5 block text-xs text-text-secondary dark:text-zinc-500">
+                    {pickBacklogOnly
+                      ? `${milestonePickStats.noMilestone.backlog} in backlog`
+                      : `${milestonePickStats.noMilestone.total} total`}
+                  </span>
+                </span>
+              </label>
+
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-text-primary dark:text-zinc-200">
+                <input
+                  type="checkbox"
+                  checked={pickBacklogOnly}
+                  onChange={(e) => setPickBacklogOnly(e.target.checked)}
+                />
+                Only backlog tasks (skip tasks already in a sprint)
+              </label>
+            </div>
+
+            <div className="mt-6 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeAddTasksModal}
+                className="rounded-lg border border-border px-4 py-2 text-sm dark:border-zinc-600"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={applyAddTasksToSprint}
+                className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white dark:bg-blue-600"
+              >
+                Assign to sprint
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
     </div>

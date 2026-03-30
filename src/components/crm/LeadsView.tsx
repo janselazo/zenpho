@@ -276,12 +276,15 @@ export default function LeadsView({
   clientsForTab = [],
   clientsTabLoadError = null,
   initialSection,
+  highlightClientId,
 }: {
   leads: Lead[];
   leadPipelineColumns: PipelineColumnDef[];
   clientsForTab?: ClientTableRow[];
   clientsTabLoadError?: { message: string } | null;
   initialSection?: LeadsSectionTab;
+  /** Deep link: scroll/highlight this client row on the Clients tab */
+  highlightClientId?: string;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -569,7 +572,11 @@ export default function LeadsView({
                 Companies and contacts you work with
               </p>
             </div>
-            <ClientsView clients={clientsForTab} embedded />
+            <ClientsView
+              clients={clientsForTab}
+              embedded
+              highlightClientId={highlightClientId}
+            />
           </div>
         ) : null}
       </div>

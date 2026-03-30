@@ -10,6 +10,11 @@ import {
 } from "@/app/(crm)/actions/projects";
 import { useProjectWorkspace } from "@/lib/crm/use-project-workspace";
 import CrmGroupedList, { type CrmListGroup } from "@/components/crm/product/CrmGroupedList";
+import {
+  ISSUE_CATEGORY_OPTIONS,
+  issueCategoryLabel,
+  type IssueCategoryValue,
+} from "@/lib/crm/issue-categories";
 import { Circle, Loader2 } from "lucide-react";
 
 const ISSUE_GROUPS: { id: string; label: string; statuses: string[] }[] = [
@@ -35,6 +40,10 @@ export default function ProductIssuesLinearTab({ projectId }: Props) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [severity, setSeverity] = useState<string>("medium");
+  const [category, setCategory] = useState<IssueCategoryValue>("bug_report");
+  const [categoryFilter, setCategoryFilter] = useState<
+    "all" | IssueCategoryValue
+  >("all");
   const [pending, setPending] = useState(false);
   const [convertBusy, setConvertBusy] = useState<string | null>(null);
 
@@ -57,13 +66,18 @@ export default function ProductIssuesLinearTab({ projectId }: Props) {
     void load();
   }, [load]);
 
+  const filteredIssues = useMemo(() => {
+    if (categoryFilter === "all") return issues;
+    return issues.filter((i) => i.category === categoryFilter);
+  }, [issues, categoryFilter]);
+
   const groups: CrmListGroup<IssueRow>[] = useMemo(() => {
     return ISSUE_GROUPS.map((g) => ({
       id: g.id,
       label: g.label,
-      items: issues.filter((i) => g.statuses.includes(i.status)),
+      items: filteredIssues.filter((i) => g.statuses.includes(i.status)),
     }));
-  }, [issues]);
+  }, [filteredIssues]);
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -76,6 +90,7 @@ export default function ProductIssuesLinearTab({ projectId }: Props) {
       title: t,
       description: description.trim() || null,
       severity,
+      category,
     });
     setPending(false);
     if ("error" in res && res.error) {
@@ -135,21 +150,36 @@ export default function ProductIssuesLinearTab({ projectId }: Props) {
         <p className="mt-1 text-xs text-text-secondary dark:text-zinc-500">
           Bugs and client requests. Convert to a task when you are ready to schedule work.
         </p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800"
+            className="rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 sm:col-span-1"
             placeholder="Title"
           />
           <select
             value={severity}
             onChange={(e) => setSeverity(e.target.value)}
             className="rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800"
+            aria-label="Priority"
           >
             {SEVERITIES.map((s) => (
               <option key={s} value={s}>
                 {s}
+              </option>
+            ))}
+          </select>
+          <select
+            value={category}
+            onChange={(e) =>
+              setCategory(e.target.value as IssueCategoryValue)
+            }
+            className="rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800"
+            aria-label="Category"
+          >
+            {ISSUE_CATEGORY_OPTIONS.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
               </option>
             ))}
           </select>
@@ -176,6 +206,32 @@ export default function ProductIssuesLinearTab({ projectId }: Props) {
         </p>
       ) : null}
 
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium text-text-secondary dark:text-zinc-500">
+          Filter by category
+        </span>
+        <select
+          value={categoryFilter}
+          onChange={(e) =>
+            setCategoryFilter(e.target.value as "all" | IssueCategoryValue)
+          }
+          className="rounded-lg border border-border px-3 py-1.5 text-sm dark:border-zinc-600 dark:bg-zinc-800"
+          aria-label="Filter issues by category"
+        >
+          <option value="all">All categories</option>
+          {ISSUE_CATEGORY_OPTIONS.map((c) => (
+            <option key={c.value} value={c.value}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {issues.length > 0 && filteredIssues.length === 0 ? (
+        <p className="text-sm text-text-secondary dark:text-zinc-500">
+          No issues match this category.
+        </p>
+      ) : (
       <CrmGroupedList
         groups={groups}
         getItemKey={(i) => i.id}
@@ -225,7 +281,8 @@ export default function ProductIssuesLinearTab({ projectId }: Props) {
                   {issue.title}
                 </p>
                 <p className="text-xs text-text-secondary dark:text-zinc-500">
-                  {issue.severity} · {issue.status}
+                  {issueCategoryLabel(issue.category)} · {issue.severity} ·{" "}
+                  {issue.status}
                   {linked ? " · linked to task" : ""}
                 </p>
               </div>
@@ -255,6 +312,7 @@ export default function ProductIssuesLinearTab({ projectId }: Props) {
           );
         }}
       />
+      )}
     </div>
   );
 }

@@ -17,7 +17,13 @@ import {
   type TaskCustomFieldType,
   type WorkspaceTaskCustomFieldDef,
 } from "@/lib/crm/project-workspace-types";
+import {
+  CRM_LABEL_PRESETS,
+  crmLabelDisplayChipClass,
+  crmLabelPickerChipClass,
+} from "@/lib/crm/crm-label-presets";
 import type { ProductMilestoneMeta } from "@/lib/crm/product-project-metadata";
+import { PriorityFlagIcon } from "@/components/crm/product/PriorityFlagIcon";
 import ProductTaskStatusModal from "@/components/crm/product/ProductTaskStatusModal";
 import {
   AlignLeft,
@@ -30,7 +36,6 @@ import {
   CircleDashed,
   Hash,
   Loader2,
-  MoreHorizontal,
   Plus,
   Tag,
   Trash2,
@@ -122,14 +127,6 @@ function TaskStatusGlyph({ status }: { status: TaskStatus }) {
       );
   }
 }
-
-const TASK_LABEL_PRESETS = [
-  "Bug",
-  "Feature",
-  "Improvement",
-  "Docs",
-  "Chore",
-] as const;
 
 type NewTaskMenu =
   | null
@@ -611,7 +608,7 @@ export default function ProductTasksLinearTab({
               onClick={() => toggleNewMenu("priority")}
               aria-expanded={newTaskMenu === "priority"}
             >
-              <MoreHorizontal className="h-3.5 w-3.5 text-text-secondary" />
+              <PriorityFlagIcon level={newTaskPriority} />
               {priorityPillLabel}
             </button>
             {newTaskMenu === "priority" ? (
@@ -627,9 +624,12 @@ export default function ProductTasksLinearTab({
                       setNewTaskPriority(p.id);
                       setNewTaskMenu(null);
                     }}
-                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-surface/80 dark:hover:bg-zinc-800"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-surface/80 dark:hover:bg-zinc-800"
                   >
-                    <span>{p.label === "—" ? "No priority" : p.label}</span>
+                    <PriorityFlagIcon level={p.id} />
+                    <span className="min-w-0 flex-1">
+                      {p.label === "—" ? "No priority" : p.label}
+                    </span>
                     {newTaskPriority === p.id ? (
                       <Check className="h-4 w-4 shrink-0 text-accent" />
                     ) : null}
@@ -790,7 +790,7 @@ export default function ProductTasksLinearTab({
                   Add labels…
                 </p>
                 <div className="flex flex-wrap gap-1 border-b border-border p-2 dark:border-zinc-800">
-                  {TASK_LABEL_PRESETS.map((tag) => {
+                  {CRM_LABEL_PRESETS.map((tag) => {
                     const on = newTags.includes(tag);
                     return (
                       <button
@@ -801,11 +801,7 @@ export default function ProductTasksLinearTab({
                             on ? prev.filter((x) => x !== tag) : [...prev, tag]
                           )
                         }
-                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                          on
-                            ? "bg-accent/20 text-accent dark:bg-blue-500/20 dark:text-blue-300"
-                            : "bg-surface/80 text-text-secondary dark:bg-zinc-800"
-                        }`}
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${crmLabelPickerChipClass(tag, on)}`}
                       >
                         {tag}
                       </button>
@@ -1015,10 +1011,14 @@ export default function ProductTasksLinearTab({
                     <div className="flex min-w-0 items-center gap-1">
                       <button
                         type="button"
-                        onClick={() => cycleTaskStatus(task)}
-                        className="shrink-0 rounded-lg p-1 hover:bg-border/60 dark:hover:bg-zinc-800"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          cycleTaskStatus(task);
+                        }}
+                        className="shrink-0 cursor-pointer rounded-lg p-1.5 hover:bg-border/60 dark:hover:bg-zinc-800"
                         title={`${statusDisplay(task.status, workspace.taskStatusLabels)} — click to advance`}
-                        aria-label={`Status ${statusDisplay(task.status, workspace.taskStatusLabels)}. Click to cycle.`}
+                        aria-label={`Status ${statusDisplay(task.status, workspace.taskStatusLabels)}. Click the circle to cycle.`}
                       >
                         <TaskStatusGlyph status={task.status} />
                       </button>
@@ -1059,7 +1059,7 @@ export default function ProductTasksLinearTab({
                         {task.milestoneTags.map((tag) => (
                           <span
                             key={tag}
-                            className="rounded-full bg-zinc-200/80 px-2 py-0.5 text-[10px] font-medium text-text-primary dark:bg-zinc-700 dark:text-zinc-200"
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${crmLabelDisplayChipClass(tag)}`}
                           >
                             {tag}
                           </span>

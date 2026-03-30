@@ -72,6 +72,16 @@ export function projectRowToMock(
     typeof meta.teamName === "string" && meta.teamName.trim()
       ? meta.teamName.trim()
       : null;
+  const pointOfContactMemberId =
+    typeof meta.pointOfContactMemberId === "string" &&
+    meta.pointOfContactMemberId.trim()
+      ? meta.pointOfContactMemberId.trim()
+      : null;
+  const pointOfContactName =
+    typeof meta.pointOfContactName === "string" &&
+    meta.pointOfContactName.trim()
+      ? meta.pointOfContactName.trim()
+      : null;
   const td = row.target_date ? String(row.target_date).slice(0, 10) : "";
   return {
     id: row.id,
@@ -81,6 +91,8 @@ export function projectRowToMock(
     clientName: clientLabel,
     teamId,
     teamName,
+    pointOfContactMemberId,
+    pointOfContactName,
     projectType: row.project_type?.trim() || undefined,
     color: "#6366f1",
     expectedEndDate: td || "TBD",

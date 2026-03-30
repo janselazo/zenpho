@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { projectRowToMock, type ProjectRow } from "@/lib/crm/map-project-row";
+import { parseChildDeliveryStatusUi } from "@/lib/crm/child-delivery-status-ui";
 import { parseProductResources } from "@/lib/crm/product-project-metadata";
 import ProductDetailShell from "@/components/crm/product/ProductDetailShell";
 
@@ -57,6 +58,7 @@ export default async function ProductOverviewPage({
     .order("created_at", { ascending: true });
 
   const initialProductResources = parseProductResources(row.metadata);
+  const childDeliveryStatusUi = parseChildDeliveryStatusUi(row.metadata);
 
   return (
     <Suspense
@@ -67,6 +69,8 @@ export default async function ProductOverviewPage({
         product={project}
         childrenProjects={children ?? []}
         initialProductResources={initialProductResources}
+        childDeliveryStatusUi={childDeliveryStatusUi}
+        productMetadata={row.metadata}
       />
     </Suspense>
   );

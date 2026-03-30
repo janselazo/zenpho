@@ -16,7 +16,23 @@ import {
   type ChildProjectPriority,
   type ProductMilestoneMeta,
 } from "@/lib/crm/product-project-metadata";
+import {
+  applyChildDeliveryStatusUiToMetadata,
+  defaultChildDeliveryLabel,
+  DEFAULT_CHILD_DELIVERY_STATUS_COLORS,
+  normalizeHexColor,
+  parseChildDeliveryStatusUi,
+  type ChildDeliveryStatusUiConfig,
+  type ChildDeliveryStatusUiEntry,
+} from "@/lib/crm/child-delivery-status-ui";
+import {
+  CUSTOM_PROJECT_STATUSES_KEY,
+  parseCustomProjectStatuses,
+  PROJECTS_TAB_GROUP_ID_KEY,
+} from "@/lib/crm/custom-project-status";
 import type { WorkspaceResource } from "@/lib/crm/project-workspace-types";
+
+const MAX_CUSTOM_PROJECT_STATUSES = 24;
 
 const PLAN_SET = new Set<string>([
   "pipeline",
@@ -41,7 +57,7 @@ function humanizeProjectDbError(message: string): string {
   ) {
     return (
       "Project columns are not on this database yet. Apply " +
-      "`supabase/migrations` through `20260429120000_product_phase_issue.sql` (or run `supabase db push`)."
+      "`supabase/migrations` through `20260430200000_issue_category.sql` (or run `supabase db push`)."
     );
   }
   return message;
@@ -246,7 +262,7 @@ export async function updateCrmProject(
 
   const { data: existing, error: exErr } = await supabase
     .from("project")
-    .select("parent_project_id")
+    .select("parent_project_id, metadata")
     .eq("id", id)
     .maybeSingle();
   if (exErr) return { error: humanizeProjectDbError(exErr.message) };
@@ -265,7 +281,17 @@ export async function updateCrmProject(
   if (!PLAN_SET.has(input.plan)) return { error: "Invalid plan stage" };
 
   const target_date = parseTargetDate(input.expectedEndDate);
+  const prevMeta =
+    existing.metadata &&
+    typeof existing.metadata === "object" &&
+    !Array.isArray(existing.metadata)
+      ? ({ ...(existing.metadata as Record<string, unknown>) } as Record<
+          string,
+          unknown
+        >)
+      : {};
   const metadata = {
+    ...prevMeta,
     teamId: input.teamId.trim() || "team-general",
     teamName: input.teamName?.trim() || null,
   };
@@ -295,6 +321,64 @@ export async function updateCrmProject(
   revalidatePath(`/projects/${id}`);
   revalidatePath("/portal");
   revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+/** Root product only: main point of contact (Team page roster member id + display name in metadata). */
+export async function setProductPointOfContact(
+  productId: string,
+  input: { memberId: string | null; displayName?: string | null }
+): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const id = productId.trim();
+  if (!id) return { error: "Missing product id" };
+
+  const { data: root, error: rErr } = await supabase
+    .from("project")
+    .select("id, parent_project_id, metadata")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (rErr) return { error: humanizeProjectDbError(rErr.message) };
+  if (!root) return { error: "Product not found" };
+  if (root.parent_project_id) {
+    return { error: "Only products can have a point-of-contact owner." };
+  }
+
+  const meta =
+    root.metadata &&
+    typeof root.metadata === "object" &&
+    !Array.isArray(root.metadata)
+      ? ({ ...(root.metadata as Record<string, unknown>) } as Record<
+          string,
+          unknown
+        >)
+      : {};
+
+  const mid = input.memberId?.trim() || null;
+  if (!mid) {
+    delete meta.pointOfContactMemberId;
+    delete meta.pointOfContactName;
+  } else {
+    meta.pointOfContactMemberId = mid;
+    const name = input.displayName?.trim();
+    if (name) meta.pointOfContactName = name;
+    else delete meta.pointOfContactName;
+  }
+
+  const { error } = await supabase
+    .from("project")
+    .update({ metadata: meta })
+    .eq("id", id);
+
+  if (error) return { error: humanizeProjectDbError(error.message) };
+  revalidatePath(`/products/${id}`);
+  revalidatePath("/products");
   return { ok: true };
 }
 
@@ -477,6 +561,8 @@ export type CreateCrmChildProjectInput = {
   labels?: string[];
   /** Titles only; server assigns stable ids */
   milestoneTitles?: string[];
+  /** Projects tab column: built-in delivery key or custom status id */
+  projectsTabGroupId?: string | null;
 };
 
 /** Create a child project (delivery project) under a product with optional metadata milestones. */
@@ -512,18 +598,38 @@ export async function createCrmChildProject(
       ? (parent.metadata as Record<string, unknown>)
       : {};
 
-  let deliveryStatus: ChildDeliveryStatus;
-  let plan: string;
+  let deliveryStatus: ChildDeliveryStatus = "backlog";
+  let plan = "pipeline";
+  let projectsTabGroupId = "";
 
-  if (input.deliveryStatus && CHILD_DELIVERY_SET.has(input.deliveryStatus)) {
-    deliveryStatus = input.deliveryStatus;
-    plan = DELIVERY_STATUS_TO_PLAN_STAGE[deliveryStatus];
-  } else if (input.plan_stage && PLAN_SET.has(input.plan_stage)) {
-    plan = input.plan_stage;
-    deliveryStatus = inferDeliveryStatusFromPlanStage(plan);
-  } else {
-    deliveryStatus = "backlog";
-    plan = "pipeline";
+  const customList = parseCustomProjectStatuses(parentMeta);
+  const customIds = new Set(customList.map((c) => c.id));
+  const reqGroup = input.projectsTabGroupId?.trim() ?? "";
+
+  if (reqGroup) {
+    if (CHILD_DELIVERY_SET.has(reqGroup)) {
+      deliveryStatus = reqGroup as ChildDeliveryStatus;
+      plan = DELIVERY_STATUS_TO_PLAN_STAGE[deliveryStatus];
+      projectsTabGroupId = reqGroup;
+    } else if (customIds.has(reqGroup)) {
+      deliveryStatus = "in_progress";
+      plan = "mvp";
+      projectsTabGroupId = reqGroup;
+    }
+  }
+
+  if (!projectsTabGroupId) {
+    if (input.deliveryStatus && CHILD_DELIVERY_SET.has(input.deliveryStatus)) {
+      deliveryStatus = input.deliveryStatus;
+      plan = DELIVERY_STATUS_TO_PLAN_STAGE[deliveryStatus];
+    } else if (input.plan_stage && PLAN_SET.has(input.plan_stage)) {
+      plan = input.plan_stage;
+      deliveryStatus = inferDeliveryStatusFromPlanStage(plan);
+    } else {
+      deliveryStatus = "backlog";
+      plan = "pipeline";
+    }
+    projectsTabGroupId = deliveryStatus;
   }
 
   const target_date = parseTargetDate(input.target_date ?? undefined);
@@ -549,9 +655,7 @@ export async function createCrmChildProject(
 
   const titles =
     input.milestoneTitles?.map((t) => t.trim()).filter(Boolean) ?? [];
-  const milestoneSeed =
-    titles.length > 0 ? titles : ["Design", "Development", "Testing"];
-  const milestones = milestoneSeed.map((t) => ({
+  const milestones = titles.map((t) => ({
     id: crypto.randomUUID(),
     title: t,
     targetDate: null as string | null,
@@ -569,6 +673,7 @@ export async function createCrmChildProject(
         ? input.summary.trim()
         : null,
     deliveryStatus,
+    [PROJECTS_TAB_GROUP_ID_KEY]: projectsTabGroupId,
     priority,
     leadMemberId,
     memberIds: memberIds.length ? memberIds : [],
@@ -655,6 +760,91 @@ export async function updateCrmChildProjectMilestones(
   return { ok: true };
 }
 
+/** Move a child delivery project to another Projects-tab column (built-in or custom). */
+export async function setCrmChildProjectTabGroup(
+  productId: string,
+  childId: string,
+  tabGroupId: string
+): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const pid = productId.trim();
+  const cid = childId.trim();
+  const gid = tabGroupId.trim();
+  if (!pid || !cid || !gid) return { error: "Missing id" };
+
+  const { data: parent, error: pErr } = await supabase
+    .from("project")
+    .select("id, metadata")
+    .eq("id", pid)
+    .is("parent_project_id", null)
+    .maybeSingle();
+
+  if (pErr) return { error: humanizeProjectDbError(pErr.message) };
+  if (!parent) return { error: "Product not found" };
+
+  const parentMeta =
+    parent.metadata &&
+    typeof parent.metadata === "object" &&
+    !Array.isArray(parent.metadata)
+      ? (parent.metadata as Record<string, unknown>)
+      : {};
+  const customIds = new Set(
+    parseCustomProjectStatuses(parentMeta).map((c) => c.id)
+  );
+
+  let deliveryStatus: ChildDeliveryStatus;
+  let plan: string;
+
+  if (CHILD_DELIVERY_SET.has(gid)) {
+    deliveryStatus = gid as ChildDeliveryStatus;
+    plan = DELIVERY_STATUS_TO_PLAN_STAGE[deliveryStatus];
+  } else if (customIds.has(gid)) {
+    deliveryStatus = "in_progress";
+    plan = "mvp";
+  } else {
+    return { error: "Invalid status column" };
+  }
+
+  const { data: child, error: cErr } = await supabase
+    .from("project")
+    .select("id, metadata, parent_project_id")
+    .eq("id", cid)
+    .maybeSingle();
+
+  if (cErr) return { error: humanizeProjectDbError(cErr.message) };
+  if (!child || (child.parent_project_id as string | null) !== pid) {
+    return { error: "Project not found under this product" };
+  }
+
+  const meta =
+    child.metadata &&
+    typeof child.metadata === "object" &&
+    !Array.isArray(child.metadata)
+      ? ({ ...(child.metadata as Record<string, unknown>) } as Record<
+          string,
+          unknown
+        >)
+      : {};
+
+  meta.deliveryStatus = deliveryStatus;
+  meta[PROJECTS_TAB_GROUP_ID_KEY] = gid;
+
+  const { error } = await supabase
+    .from("project")
+    .update({ metadata: meta, plan_stage: plan })
+    .eq("id", cid);
+
+  if (error) return { error: humanizeProjectDbError(error.message) };
+  revalidatePath(`/products/${pid}`);
+  revalidatePath("/products");
+  return { ok: true };
+}
+
 export async function updateProductResources(
   productId: string,
   resources: WorkspaceResource[]
@@ -700,6 +890,267 @@ export async function updateProductResources(
   return { ok: true };
 }
 
+export async function updateProductChildDeliveryStatusUi(
+  productId: string,
+  statusId: ChildDeliveryStatus,
+  input:
+    | { resetToDefaults: true }
+    | { label: string; color: string; resetToDefaults?: false }
+): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const pid = productId.trim();
+  if (!pid) return { error: "Missing product" };
+  if (!CHILD_DELIVERY_SET.has(statusId)) {
+    return { error: "Invalid status" };
+  }
+
+  const { data: root, error: rErr } = await supabase
+    .from("project")
+    .select("id, metadata")
+    .eq("id", pid)
+    .is("parent_project_id", null)
+    .maybeSingle();
+
+  if (rErr) return { error: humanizeProjectDbError(rErr.message) };
+  if (!root) return { error: "Product not found" };
+
+  const meta =
+    root.metadata &&
+    typeof root.metadata === "object" &&
+    !Array.isArray(root.metadata)
+      ? ({ ...(root.metadata as Record<string, unknown>) } as Record<
+          string,
+          unknown
+        >)
+      : {};
+
+  const current = parseChildDeliveryStatusUi(meta);
+  const next: ChildDeliveryStatusUiConfig = { ...current };
+
+  if ("resetToDefaults" in input && input.resetToDefaults) {
+    delete next[statusId];
+  } else {
+    const label = input.label.trim();
+    if (!label || label.length > 64) {
+      return { error: "Name is required (max 64 characters)." };
+    }
+    const color = normalizeHexColor(input.color);
+    if (!color) {
+      return { error: "Pick a valid color." };
+    }
+    const defLabel = defaultChildDeliveryLabel(statusId);
+    const defColor = DEFAULT_CHILD_DELIVERY_STATUS_COLORS[statusId];
+    const entry: ChildDeliveryStatusUiEntry = {};
+    if (label !== defLabel) entry.label = label;
+    if (color !== defColor) entry.color = color;
+    if (Object.keys(entry).length === 0) {
+      delete next[statusId];
+    } else {
+      next[statusId] = entry;
+    }
+  }
+
+  const newMeta = applyChildDeliveryStatusUiToMetadata(meta, next);
+
+  const { error } = await supabase
+    .from("project")
+    .update({ metadata: newMeta })
+    .eq("id", pid);
+
+  if (error) return { error: humanizeProjectDbError(error.message) };
+  revalidatePath(`/products/${pid}`);
+  revalidatePath("/products");
+  return { ok: true };
+}
+
+export async function addCustomProjectStatus(
+  productId: string,
+  input: { label: string; color: string }
+): Promise<{ ok: true; id: string } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const pid = productId.trim();
+  const label = input.label.trim();
+  const color = normalizeHexColor(input.color);
+  if (!pid) return { error: "Missing product" };
+  if (!label || label.length > 64) {
+    return { error: "Name is required (max 64 characters)." };
+  }
+  if (!color) return { error: "Pick a valid color." };
+
+  const { data: root, error: rErr } = await supabase
+    .from("project")
+    .select("id, metadata")
+    .eq("id", pid)
+    .is("parent_project_id", null)
+    .maybeSingle();
+
+  if (rErr) return { error: humanizeProjectDbError(rErr.message) };
+  if (!root) return { error: "Product not found" };
+
+  const meta =
+    root.metadata &&
+    typeof root.metadata === "object" &&
+    !Array.isArray(root.metadata)
+      ? ({ ...(root.metadata as Record<string, unknown>) } as Record<
+          string,
+          unknown
+        >)
+      : {};
+
+  const list = parseCustomProjectStatuses(meta);
+  if (list.length >= MAX_CUSTOM_PROJECT_STATUSES) {
+    return { error: `At most ${MAX_CUSTOM_PROJECT_STATUSES} custom statuses.` };
+  }
+
+  const id = crypto.randomUUID();
+  list.push({ id, label, color });
+  meta[CUSTOM_PROJECT_STATUSES_KEY] = list;
+
+  const { error } = await supabase
+    .from("project")
+    .update({ metadata: meta })
+    .eq("id", pid);
+
+  if (error) return { error: humanizeProjectDbError(error.message) };
+  revalidatePath(`/products/${pid}`);
+  revalidatePath("/products");
+  return { ok: true, id };
+}
+
+export async function updateCustomProjectStatus(
+  productId: string,
+  statusId: string,
+  input: { label: string; color: string }
+): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const pid = productId.trim();
+  const sid = statusId.trim();
+  const label = input.label.trim();
+  const color = normalizeHexColor(input.color);
+  if (!pid || !sid) return { error: "Missing id" };
+  if (!label || label.length > 64) {
+    return { error: "Name is required (max 64 characters)." };
+  }
+  if (!color) return { error: "Pick a valid color." };
+
+  const { data: root, error: rErr } = await supabase
+    .from("project")
+    .select("id, metadata")
+    .eq("id", pid)
+    .is("parent_project_id", null)
+    .maybeSingle();
+
+  if (rErr) return { error: humanizeProjectDbError(rErr.message) };
+  if (!root) return { error: "Product not found" };
+
+  const meta =
+    root.metadata &&
+    typeof root.metadata === "object" &&
+    !Array.isArray(root.metadata)
+      ? ({ ...(root.metadata as Record<string, unknown>) } as Record<
+          string,
+          unknown
+        >)
+      : {};
+
+  const list = parseCustomProjectStatuses(meta);
+  const idx = list.findIndex((r) => r.id === sid);
+  if (idx < 0) return { error: "Status not found" };
+  list[idx] = { id: sid, label, color };
+  meta[CUSTOM_PROJECT_STATUSES_KEY] = list;
+
+  const { error } = await supabase
+    .from("project")
+    .update({ metadata: meta })
+    .eq("id", pid);
+
+  if (error) return { error: humanizeProjectDbError(error.message) };
+  revalidatePath(`/products/${pid}`);
+  revalidatePath("/products");
+  return { ok: true };
+}
+
+export async function deleteCustomProjectStatus(
+  productId: string,
+  statusId: string
+): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const pid = productId.trim();
+  const sid = statusId.trim();
+  if (!pid || !sid) return { error: "Missing id" };
+
+  const { data: kids, error: kErr } = await supabase
+    .from("project")
+    .select("metadata")
+    .eq("parent_project_id", pid);
+
+  if (kErr) return { error: humanizeProjectDbError(kErr.message) };
+
+  const inUse = (kids ?? []).some((row) => {
+    const m = row.metadata as Record<string, unknown> | null;
+    return m && m[PROJECTS_TAB_GROUP_ID_KEY] === sid;
+  });
+  if (inUse) {
+    return {
+      error: "Move projects out of this column before deleting it.",
+    };
+  }
+
+  const { data: root, error: rErr } = await supabase
+    .from("project")
+    .select("id, metadata")
+    .eq("id", pid)
+    .is("parent_project_id", null)
+    .maybeSingle();
+
+  if (rErr) return { error: humanizeProjectDbError(rErr.message) };
+  if (!root) return { error: "Product not found" };
+
+  const meta =
+    root.metadata &&
+    typeof root.metadata === "object" &&
+    !Array.isArray(root.metadata)
+      ? ({ ...(root.metadata as Record<string, unknown>) } as Record<
+          string,
+          unknown
+        >)
+      : {};
+
+  const list = parseCustomProjectStatuses(meta).filter((r) => r.id !== sid);
+  if (list.length === 0) delete meta[CUSTOM_PROJECT_STATUSES_KEY];
+  else meta[CUSTOM_PROJECT_STATUSES_KEY] = list;
+
+  const { error } = await supabase
+    .from("project")
+    .update({ metadata: meta })
+    .eq("id", pid);
+
+  if (error) return { error: humanizeProjectDbError(error.message) };
+  revalidatePath(`/products/${pid}`);
+  revalidatePath("/products");
+  return { ok: true };
+}
+
 export type IssueRow = {
   id: string;
   project_id: string;
@@ -707,6 +1158,8 @@ export type IssueRow = {
   description: string | null;
   status: string;
   severity: string;
+  /** feature_request | bug_report | customer_request */
+  category: string;
   related_task_id: string | null;
   workspace_task_id: string | null;
   created_at: string;
@@ -727,7 +1180,7 @@ export async function listIssuesForPhase(
   const { data: rows, error } = await supabase
     .from("issue")
     .select(
-      "id, project_id, title, description, status, severity, related_task_id, workspace_task_id, created_at"
+      "id, project_id, title, description, status, severity, category, related_task_id, workspace_task_id, created_at"
     )
     .eq("project_id", id)
     .order("created_at", { ascending: false });
@@ -736,20 +1189,31 @@ export async function listIssuesForPhase(
     return { issues: [], error: humanizeProjectDbError(error.message) };
   }
   const issues: IssueRow[] = (rows ?? []).map((r) => {
-    const row = r as IssueRow & { workspace_task_id?: string | null };
+    const row = r as IssueRow & {
+      workspace_task_id?: string | null;
+      category?: string;
+    };
     return {
       ...row,
+      category: row.category ?? "bug_report",
       workspace_task_id: row.workspace_task_id ?? null,
     };
   });
   return { issues, error: null };
 }
 
+const ISSUE_CATEGORIES = new Set([
+  "feature_request",
+  "bug_report",
+  "customer_request",
+]);
+
 export async function createCrmIssue(input: {
   phaseId: string;
   title: string;
   description?: string | null;
   severity?: string;
+  category?: string;
 }): Promise<{ ok: true; id: string } | { error: string }> {
   const supabase = await createClient();
   const {
@@ -763,8 +1227,11 @@ export async function createCrmIssue(input: {
   if (!title) return { error: "Title is required" };
 
   const sev = (input.severity ?? "medium").toLowerCase();
-  const allowed = new Set(["low", "medium", "high", "critical"]);
-  if (!allowed.has(sev)) return { error: "Invalid severity" };
+  const allowedSev = new Set(["low", "medium", "high", "critical"]);
+  if (!allowedSev.has(sev)) return { error: "Invalid severity" };
+
+  const cat = (input.category ?? "bug_report").trim();
+  if (!ISSUE_CATEGORIES.has(cat)) return { error: "Invalid category" };
 
   const { data: row, error } = await supabase
     .from("issue")
@@ -773,6 +1240,7 @@ export async function createCrmIssue(input: {
       title,
       description: input.description?.trim() || null,
       severity: sev,
+      category: cat,
       status: "open",
       created_by: user.id,
     })
@@ -792,6 +1260,7 @@ export async function updateCrmIssue(
   patch: {
     status?: string;
     severity?: string;
+    category?: string;
     title?: string;
     related_task_id?: string | null;
     workspace_task_id?: string | null;
@@ -824,6 +1293,11 @@ export async function updateCrmIssue(
       return { error: "Invalid severity" };
     }
     updates.severity = sev;
+  }
+  if (patch.category !== undefined) {
+    const c = patch.category.trim();
+    if (!ISSUE_CATEGORIES.has(c)) return { error: "Invalid category" };
+    updates.category = c;
   }
   if (patch.related_task_id !== undefined) {
     updates.related_task_id = patch.related_task_id;

@@ -62,6 +62,10 @@ export interface MockProject {
   clientName?: string | null;
   /** Display name for the squad (free text); takes precedence over teamId lookup */
   teamName?: string | null;
+  /** Root product: Team roster member id (localStorage) — main point of contact */
+  pointOfContactMemberId?: string | null;
+  /** Denormalized name stored with pointOfContactMemberId for SSR / history */
+  pointOfContactName?: string | null;
   /** Web App, Mobile App, etc. (optional for older seed rows) */
   projectType?: string;
   color: string;

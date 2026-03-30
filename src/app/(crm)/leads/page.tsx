@@ -21,13 +21,28 @@ function parseLeadsSection(
   return undefined;
 }
 
+function parseHighlightClientId(
+  raw: string | string[] | undefined
+): string | undefined {
+  const v = Array.isArray(raw) ? raw[0] : raw;
+  if (typeof v !== "string") return undefined;
+  const t = v.trim();
+  return t.length > 0 ? t : undefined;
+}
+
 export default async function LeadsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ section?: string | string[] }>;
+  searchParams: Promise<{
+    section?: string | string[];
+    client?: string | string[];
+  }>;
 }) {
   const sp = await searchParams;
-  const initialSection = parseLeadsSection(sp.section);
+  const highlightClientId = parseHighlightClientId(sp.client);
+  const initialSection =
+    parseLeadsSection(sp.section) ??
+    (highlightClientId ? "clients" : undefined);
   if (!isSupabaseConfigured()) {
     return (
       <div className="p-8">
@@ -114,6 +129,7 @@ export default async function LeadsPage({
           clientsForTab={clientsForTab}
           clientsTabLoadError={clientsPack.error}
           initialSection={initialSection}
+          highlightClientId={highlightClientId}
         />
       )}
     </div>

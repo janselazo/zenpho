@@ -8,11 +8,12 @@ import {
   PLAN_COLORS,
   PLAN_LABELS,
   projectClientDisplayLabel,
-  projectTeamDisplayName,
   type MockProject,
 } from "@/lib/crm/mock-data";
+import { projectTypeBadgeClass } from "@/lib/crm/project-type-badge";
 import type { WorkspaceResource } from "@/lib/crm/project-workspace-types";
-import type { ChildDeliveryStatus } from "@/lib/crm/product-project-metadata";
+import type { ChildDeliveryStatusUiConfig } from "@/lib/crm/child-delivery-status-ui";
+import { parseCustomProjectStatuses } from "@/lib/crm/custom-project-status";
 import { milestonesWithDefaults } from "@/lib/crm/product-project-metadata";
 import NewProductProjectModal from "@/components/crm/product/NewProductProjectModal";
 import ProductProjectsGroupedPanel from "@/components/crm/product/ProductProjectsGroupedPanel";
@@ -20,13 +21,14 @@ import ProductMilestonesTab from "@/components/crm/product/ProductMilestonesTab"
 import ProductSprintsTab from "@/components/crm/product/ProductSprintsTab";
 import ProductTasksLinearTab from "@/components/crm/product/ProductTasksLinearTab";
 import ProductIssuesLinearTab from "@/components/crm/product/ProductIssuesLinearTab";
+import ProductOwnerSummaryField from "@/components/crm/product/ProductOwnerSummaryField";
 import ProductResourcesTab from "@/components/crm/product/ProductResourcesTab";
 
 const TABS = [
-  { id: "projects", label: "Projects" },
+  { id: "projects", label: "Project Features" },
   { id: "milestones", label: "Milestones" },
-  { id: "sprints", label: "Sprints" },
   { id: "tasks", label: "Tasks" },
+  { id: "sprints", label: "Sprints" },
   { id: "issues", label: "Issues" },
   { id: "resources", label: "Resources" },
 ] as const;
@@ -44,6 +46,8 @@ type Props = {
   product: MockProject;
   childrenProjects: ProductChildRow[];
   initialProductResources: WorkspaceResource[];
+  childDeliveryStatusUi: ChildDeliveryStatusUiConfig;
+  productMetadata: unknown;
 };
 
 function MetaField({
@@ -66,14 +70,21 @@ export default function ProductDetailShell({
   product,
   childrenProjects,
   initialProductResources,
+  childDeliveryStatusUi,
+  productMetadata,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [modalOpen, setModalOpen] = useState(false);
-  const [newProjectStatusPreset, setNewProjectStatusPreset] = useState<
-    ChildDeliveryStatus | undefined
+  const [newProjectGroupPreset, setNewProjectGroupPreset] = useState<
+    string | undefined
   >(undefined);
+
+  const customProjectStatuses = useMemo(
+    () => parseCustomProjectStatuses(productMetadata),
+    [productMetadata]
+  );
 
   const tabParam = searchParams.get("tab");
   const activeTab = TABS.some((t) => t.id === tabParam)
@@ -134,8 +145,6 @@ export default function ProductDetailShell({
     [selectedChild?.metadata]
   );
 
-  const teamLabel = projectTeamDisplayName(product);
-
   const needsProject =
     activeTab === "milestones" ||
     activeTab === "sprints" ||
@@ -177,20 +186,34 @@ export default function ProductDetailShell({
           </MetaField>
           {product.projectType ? (
             <MetaField label="Type">
-              <span className="font-medium text-text-primary dark:text-zinc-100">
+              <span
+                className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${projectTypeBadgeClass(product.projectType)}`}
+              >
                 {product.projectType}
               </span>
             </MetaField>
           ) : null}
           <MetaField label="Client">
-            <span className="font-medium text-text-primary dark:text-zinc-100">
-              {projectClientDisplayLabel(product)}
-            </span>
+            {product.clientId?.trim() ? (
+              <Link
+                href={`/leads?section=clients&client=${encodeURIComponent(product.clientId.trim())}`}
+                className="rounded-sm font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+              >
+                {projectClientDisplayLabel(product)}
+              </Link>
+            ) : (
+              <span className="font-medium text-text-primary dark:text-zinc-100">
+                {projectClientDisplayLabel(product)}
+              </span>
+            )}
           </MetaField>
-          <MetaField label="Team name">
-            <span className="font-medium text-text-primary dark:text-zinc-100">
-              {teamLabel}
-            </span>
+          <MetaField label="Owner">
+            <ProductOwnerSummaryField
+              productId={productId}
+              teamId={product.teamId}
+              pointOfContactMemberId={product.pointOfContactMemberId ?? null}
+              pointOfContactName={product.pointOfContactName ?? null}
+            />
           </MetaField>
           <MetaField label="Expected end date">
             <span className="font-medium text-text-primary dark:text-zinc-100">
@@ -236,7 +259,7 @@ export default function ProductDetailShell({
             <button
               type="button"
               onClick={() => {
-                setNewProjectStatusPreset(undefined);
+                setNewProjectGroupPreset(undefined);
                 setModalOpen(true);
               }}
               className="text-sm font-medium text-accent hover:underline"
@@ -249,72 +272,22 @@ export default function ProductDetailShell({
 
       <div className="flex-1 overflow-auto p-8" role="tabpanel">
         {activeTab === "projects" ? (
-          <div className="space-y-6">
-            <section className="max-w-lg rounded-2xl border border-border bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900/60">
-              <h2 className="text-sm font-semibold text-text-primary dark:text-zinc-100">
-                Details
-              </h2>
-              <dl className="mt-4 space-y-2 text-sm">
-                <div>
-                  <dt className="text-text-secondary dark:text-zinc-500">
-                    Target
-                  </dt>
-                  <dd className="font-medium text-text-primary dark:text-zinc-100">
-                    {product.expectedEndDate === "TBD"
-                      ? "TBD"
-                      : product.expectedEndDate}
-                  </dd>
-                </div>
-                {product.budget != null ? (
-                  <div>
-                    <dt className="text-text-secondary dark:text-zinc-500">
-                      Budget
-                    </dt>
-                    <dd className="font-medium text-text-primary dark:text-zinc-100">
-                      {new Intl.NumberFormat("en-US", {
-                        style: "currency",
-                        currency: "USD",
-                        maximumFractionDigits: 0,
-                      }).format(product.budget)}
-                    </dd>
-                  </div>
-                ) : null}
-                {product.website ? (
-                  <div>
-                    <dt className="text-text-secondary dark:text-zinc-500">
-                      Website
-                    </dt>
-                    <dd>
-                      <a
-                        href={
-                          product.website.startsWith("http")
-                            ? product.website
-                            : `https://${product.website}`
-                        }
-                        className="font-medium text-accent hover:underline"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {product.website}
-                      </a>
-                    </dd>
-                  </div>
-                ) : null}
-              </dl>
-            </section>
-
-            <ProductProjectsGroupedPanel
-              teamId={product.teamId}
-              projects={childrenProjects}
-              onOpenProject={(id) =>
-                setQuery({ tab: "tasks", project: id })
-              }
-              onNewProject={(preset) => {
-                setNewProjectStatusPreset(preset);
-                setModalOpen(true);
-              }}
-            />
-          </div>
+          <ProductProjectsGroupedPanel
+            productId={productId}
+            teamId={product.teamId}
+            projects={childrenProjects}
+            productMetadata={productMetadata}
+            childDeliveryStatusUi={childDeliveryStatusUi}
+            onOpenProject={(id) =>
+              setQuery({ tab: "tasks", project: id })
+            }
+            onNewProject={(presetGroupId) => {
+              setNewProjectGroupPreset(presetGroupId);
+              setModalOpen(true);
+            }}
+            onDeliveryStatusUiSaved={() => router.refresh()}
+            onChildDeliveryChanged={() => router.refresh()}
+          />
         ) : null}
 
         {activeTab === "milestones" ? (
@@ -339,7 +312,7 @@ export default function ProductDetailShell({
           ) : (
             <ProductSprintsTab
               projectId={selectedProjectId}
-              milestoneLabels={milestoneList.map((m) => m.title)}
+              milestones={milestoneList}
               onOpenTasksForSprint={(sprintId) =>
                 setQuery({ tab: "tasks", sprint: sprintId })
               }
@@ -395,14 +368,16 @@ export default function ProductDetailShell({
         productId={productId}
         teamId={product.teamId}
         open={modalOpen}
-        initialDeliveryStatus={newProjectStatusPreset}
+        initialProjectsTabGroupId={newProjectGroupPreset}
+        childDeliveryStatusUi={childDeliveryStatusUi}
+        customProjectStatuses={customProjectStatuses}
         onClose={() => {
           setModalOpen(false);
-          setNewProjectStatusPreset(undefined);
+          setNewProjectGroupPreset(undefined);
         }}
         onCreated={(id) => {
           setModalOpen(false);
-          setNewProjectStatusPreset(undefined);
+          setNewProjectGroupPreset(undefined);
           router.refresh();
           setQuery({ tab: "milestones", project: id });
         }}

@@ -32,6 +32,13 @@ export const DELIVERY_STATUS_TO_PLAN_STAGE: Record<ChildDeliveryStatus, PlanStag
 
 export type ChildProjectPriority = "low" | "medium" | "high" | "urgent";
 
+export const CHILD_PROJECT_PRIORITY_LABELS: Record<ChildProjectPriority, string> = {
+  urgent: "Urgent",
+  high: "High",
+  medium: "Medium",
+  low: "Low",
+};
+
 /** Delivery milestones stored on child `project.metadata.milestones`. */
 export type ProductMilestoneMeta = {
   id: string;
@@ -39,14 +46,24 @@ export type ProductMilestoneMeta = {
   targetDate?: string | null;
 };
 
-export const DEFAULT_PRODUCT_MILESTONES: Omit<ProductMilestoneMeta, "id">[] = [
-  { title: "Design" },
-  { title: "Development" },
-  { title: "Testing" },
-];
-
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+const CHILD_PRIORITY_SET = new Set<string>([
+  "low",
+  "medium",
+  "high",
+  "urgent",
+]);
+
+export function parseChildProjectPriority(
+  metadata: unknown
+): ChildProjectPriority | null {
+  if (!isRecord(metadata)) return null;
+  const v = metadata.priority;
+  if (typeof v !== "string" || !CHILD_PRIORITY_SET.has(v)) return null;
+  return v as ChildProjectPriority;
 }
 
 export function parseChildDeliveryStatus(
@@ -118,14 +135,9 @@ export function parseProductMilestones(metadata: unknown): ProductMilestoneMeta[
   return out;
 }
 
+/** Milestones from project metadata only — no placeholder rows. */
 export function milestonesWithDefaults(metadata: unknown): ProductMilestoneMeta[] {
-  const parsed = parseProductMilestones(metadata);
-  if (parsed.length > 0) return parsed;
-  return DEFAULT_PRODUCT_MILESTONES.map((m, i) => ({
-    id: `default-${i}-${m.title.toLowerCase().replace(/\s+/g, "-")}`,
-    title: m.title,
-    targetDate: null,
-  }));
+  return parseProductMilestones(metadata);
 }
 
 export function parseProductResources(metadata: unknown): WorkspaceResource[] {
