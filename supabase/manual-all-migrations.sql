@@ -1071,3 +1071,7 @@ alter table public.project
       'release'
     )
   );
+
+-- ----- 20260501120000_lead_contact_category.sql -----
+alter table public.lead
+  add column if not exists contact_category text;

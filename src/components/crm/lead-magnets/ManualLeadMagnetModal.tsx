@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import {
-  DEFAULT_NICHE_ID,
   INDUSTRIES,
+  defaultNicheForIndustry,
   getNichesForIndustry,
   nicheAllowedForIndustry,
   type IndustryId,
@@ -34,7 +34,9 @@ export default function ManualLeadMagnetModal({
   const [industryId, setIndustryId] = useState<IndustryId>(
     INDUSTRIES[0]?.id ?? "tech"
   );
-  const [nicheId, setNicheId] = useState<NicheId>(DEFAULT_NICHE_ID);
+  const [nicheId, setNicheId] = useState<NicheId>(() =>
+    defaultNicheForIndustry(INDUSTRIES[0]?.id ?? "tech")
+  );
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [format, setFormat] = useState<LeadMagnetFormat>("Template");
@@ -51,7 +53,9 @@ export default function ManualLeadMagnetModal({
 
   const onIndustryPick = (id: IndustryId) => {
     setIndustryId(id);
-    setNicheId((n) => (nicheAllowedForIndustry(n, id) ? n : DEFAULT_NICHE_ID));
+    setNicheId((n) =>
+      nicheAllowedForIndustry(n, id) ? n : defaultNicheForIndustry(id)
+    );
   };
 
   const submit = async () => {

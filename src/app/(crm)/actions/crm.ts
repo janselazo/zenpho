@@ -2,7 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { LEAD_PROJECT_TYPE_OPTIONS } from "@/lib/crm/mock-data";
+import {
+  LEAD_CONTACT_CATEGORY_OPTIONS,
+  LEAD_PROJECT_TYPE_OPTIONS,
+} from "@/lib/crm/mock-data";
 import {
   mergeDealPipelineFromDb,
   mergeLeadPipelineFromDb,
@@ -67,10 +70,17 @@ async function dealStageSlugSet(supabase: SupabaseServer): Promise<Set<string>> 
 }
 
 const PROJECT_TYPE_SET = new Set<string>(LEAD_PROJECT_TYPE_OPTIONS);
+const CONTACT_CATEGORY_SET = new Set<string>(LEAD_CONTACT_CATEGORY_OPTIONS);
 
 function parseProjectType(formData: FormData): string | null {
   const raw = String(formData.get("project_type") ?? "").trim();
   if (!raw || !PROJECT_TYPE_SET.has(raw)) return null;
+  return raw;
+}
+
+function parseContactCategory(formData: FormData): string | null {
+  const raw = String(formData.get("contact_category") ?? "").trim();
+  if (!raw || !CONTACT_CATEGORY_SET.has(raw)) return null;
   return raw;
 }
 
@@ -88,6 +98,7 @@ export async function createLead(formData: FormData) {
   const source = String(formData.get("source") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
   const project_type = parseProjectType(formData);
+  const contact_category = parseContactCategory(formData);
 
   if (!name && !email) {
     return { error: "Add at least a name or email." };
@@ -105,6 +116,7 @@ export async function createLead(formData: FormData) {
     source: source || null,
     notes: notes || null,
     project_type,
+    contact_category,
     stage: "new",
     owner_id: user.id,
   });
@@ -134,6 +146,7 @@ export async function updateLeadRow(formData: FormData) {
   const stage = String(formData.get("stage") ?? "new").trim();
   const notes = String(formData.get("notes") ?? "").trim();
   const project_type = parseProjectType(formData);
+  const contact_category = parseContactCategory(formData);
 
   const leadStages = await leadStageSlugSet(supabase);
   if (!leadStages.has(stage)) {
@@ -151,6 +164,7 @@ export async function updateLeadRow(formData: FormData) {
       stage,
       notes: notes || null,
       project_type,
+      contact_category,
     })
     .eq("id", id);
 

@@ -239,6 +239,16 @@ export const LEAD_PROJECT_TYPE_OPTIONS = [
 
 export type LeadProjectType = (typeof LEAD_PROJECT_TYPE_OPTIONS)[number];
 
+/** Lead "Contact category" dropdown (stored as-display on `lead.contact_category`) */
+export const LEAD_CONTACT_CATEGORY_OPTIONS = [
+  "Tech Founder",
+  "SaaS Founder",
+  "Ecommerce Owner",
+] as const;
+
+export type LeadContactCategory =
+  (typeof LEAD_CONTACT_CATEGORY_OPTIONS)[number];
+
 export const teams: MockTeam[] = [];
 
 export const teamMembers: MockTeamMember[] = [];

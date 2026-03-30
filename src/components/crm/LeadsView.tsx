@@ -17,10 +17,14 @@ import {
   Settings2,
   StickyNote,
   Table2,
+  Tag,
   Trash2,
   X,
 } from "lucide-react";
-import { LEAD_PROJECT_TYPE_OPTIONS } from "@/lib/crm/mock-data";
+import {
+  LEAD_CONTACT_CATEGORY_OPTIONS,
+  LEAD_PROJECT_TYPE_OPTIONS,
+} from "@/lib/crm/mock-data";
 import ClientsView from "@/components/crm/ClientsView";
 import CrmNewProjectFromLeadModal from "@/components/crm/CrmNewProjectFromLeadModal";
 import CrmQuickTaskModal from "@/components/crm/CrmQuickTaskModal";
@@ -50,6 +54,7 @@ export interface Lead {
   source?: string | null;
   notes?: string | null;
   project_type?: string | null;
+  contact_category?: string | null;
   created_at?: string | null;
   /** Latest project title for the lead’s converted client, if any */
   primaryProject?: { title: string | null } | null;
@@ -90,6 +95,19 @@ function getProjectTypeTextClass(projectType: string) {
   );
 }
 
+const contactCategoryTextClasses: Record<string, string> = {
+  "tech founder": "text-indigo-700 dark:text-indigo-400",
+  "saas founder": "text-fuchsia-700 dark:text-fuchsia-400",
+  "ecommerce owner": "text-rose-700 dark:text-rose-400",
+};
+
+function getContactCategoryTextClass(category: string) {
+  const key = category.trim().toLowerCase();
+  return (
+    contactCategoryTextClasses[key] ?? "text-zinc-700 dark:text-zinc-300"
+  );
+}
+
 /** Preset source values for inline edit (custom values still supported). */
 const LEAD_SOURCE_OPTIONS = [
   "website",
@@ -112,6 +130,7 @@ type LeadDraft = {
   source: string;
   stage: string;
   project_type: string;
+  contact_category: string;
   notes: string;
 };
 
@@ -148,6 +167,7 @@ function leadToDraft(lead: Lead, pipeline: PipelineColumnDef[]): LeadDraft {
     source: normalizeSourceForSelect(lead.source ?? ""),
     stage: normalizeLeadStageForPipeline(lead.stage, pipeline),
     project_type: lead.project_type ?? "",
+    contact_category: lead.contact_category ?? "",
     notes: lead.notes ?? "",
   };
 }
@@ -318,6 +338,7 @@ export default function LeadsView({
       l.company?.toLowerCase().includes(q) ||
       l.source?.toLowerCase().includes(q) ||
       l.project_type?.toLowerCase().includes(q) ||
+      l.contact_category?.toLowerCase().includes(q) ||
       (l.primaryProject?.title?.toLowerCase().includes(q) ?? false)
     );
   });
@@ -417,6 +438,7 @@ export default function LeadsView({
     fd.set("stage", draft.stage);
     fd.set("notes", draft.notes);
     fd.set("project_type", draft.project_type);
+    fd.set("contact_category", draft.contact_category);
     const res = await updateLeadRow(fd);
     setSavePending(false);
     if ("error" in res && res.error) {
@@ -739,6 +761,19 @@ function LeadsPipelineBoard({
                 {lead.project_type?.trim() || "Project type —"}
               </span>
             </div>
+            {lead.contact_category?.trim() ? (
+              <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-xs">
+                <Tag
+                  className="h-3.5 w-3.5 shrink-0 text-zinc-400"
+                  aria-hidden
+                />
+                <span
+                  className={`min-w-0 truncate font-medium ${getContactCategoryTextClass(lead.contact_category)}`}
+                >
+                  {lead.contact_category.trim()}
+                </span>
+              </div>
+            ) : null}
             <p className="mt-2 text-[11px] text-zinc-400 dark:text-zinc-500">
               {formatPipelineCardDate(lead.created_at)}
             </p>
@@ -841,7 +876,7 @@ function LeadsTable({
 
   return (
     <div className="overflow-x-auto rounded-2xl border border-border bg-white shadow-sm">
-      <table className="w-full min-w-[88rem] text-left text-sm">
+      <table className="w-full min-w-[96rem] text-left text-sm">
         <thead>
           <tr className="border-b border-border">
             <th className="px-4 py-3 font-semibold text-text-secondary">Name</th>
@@ -849,6 +884,7 @@ function LeadsTable({
             <th className="px-4 py-3 font-semibold text-text-secondary">Email</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Status</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Service</th>
+            <th className="px-4 py-3 font-semibold text-text-secondary">Category</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Company</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Product</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Source</th>
@@ -1038,6 +1074,40 @@ function LeadsTable({
                       className={`${neutralChipBase} ${getProjectTypeTextClass(lead.project_type)}`}
                     >
                       {lead.project_type}
+                    </span>
+                  ) : (
+                    <span className="text-text-secondary">—</span>
+                  )}
+                </td>
+                <td className="px-4 py-3 align-top">
+                  {isEditing ? (
+                    <div className="relative min-w-[7rem] max-w-[12rem]">
+                      <select
+                        value={draft.contact_category}
+                        onChange={(e) =>
+                          setDraft((d) =>
+                            d ? { ...d, contact_category: e.target.value } : d
+                          )
+                        }
+                        className={`${inlineInputClass} appearance-none pr-7`}
+                      >
+                        <option value="">Not set</option>
+                        {LEAD_CONTACT_CATEGORY_OPTIONS.map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown
+                        className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400"
+                        aria-hidden
+                      />
+                    </div>
+                  ) : lead.contact_category?.trim() ? (
+                    <span
+                      className={`${neutralChipBase} ${getContactCategoryTextClass(lead.contact_category)}`}
+                    >
+                      {lead.contact_category}
                     </span>
                   ) : (
                     <span className="text-text-secondary">—</span>
@@ -1507,6 +1577,19 @@ function NewLeadModal({ onClose }: { onClose: () => void }) {
                 Select project type…
               </option>
               {LEAD_PROJECT_TYPE_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-text-primary">
+              Contact category
+            </label>
+            <select name="contact_category" defaultValue="" className={inputClass}>
+              <option value="">Not set</option>
+              {LEAD_CONTACT_CATEGORY_OPTIONS.map((opt) => (
                 <option key={opt} value={opt}>
                   {opt}
                 </option>

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import {
-  DEFAULT_NICHE_ID,
   FALLBACK_IDEAS_BY_INDUSTRY,
+  defaultNicheForIndustry,
   isIndustryId,
   isNicheId,
   nicheAllowedForIndustry,
@@ -58,7 +58,9 @@ export async function POST(req: Request) {
 
   const industryId = industryIdRaw as IndustryId;
 
-  const nicheRaw = String(body.nicheId ?? DEFAULT_NICHE_ID).trim();
+  const nicheRaw = String(
+    body.nicheId ?? defaultNicheForIndustry(industryId)
+  ).trim();
   if (!nicheRaw || nicheRaw.length > 64 || !isNicheId(nicheRaw)) {
     return NextResponse.json(
       { error: "Invalid nicheId.", ideas: [], fallback: false },

@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { updateLeadRow } from "@/app/(crm)/actions/crm";
-import { LEAD_PROJECT_TYPE_OPTIONS } from "@/lib/crm/mock-data";
+import {
+  LEAD_CONTACT_CATEGORY_OPTIONS,
+  LEAD_PROJECT_TYPE_OPTIONS,
+} from "@/lib/crm/mock-data";
 import CrmNewProjectFromLeadModal from "@/components/crm/CrmNewProjectFromLeadModal";
 import TabBar from "@/components/crm/TabBar";
 import {
@@ -31,6 +34,7 @@ type Lead = {
   stage: string | null;
   notes: string | null;
   project_type: string | null;
+  contact_category: string | null;
 };
 
 export type ClientProjectRow = {
@@ -207,6 +211,23 @@ export default function LeadEditForm({
                   {leadStageOptions.map((c) => (
                     <option key={c.slug} value={c.slug}>
                       {c.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-text-secondary">
+                  Contact category
+                </label>
+                <select
+                  name="contact_category"
+                  defaultValue={lead.contact_category ?? ""}
+                  className={inputClass}
+                >
+                  <option value="">Not set</option>
+                  {LEAD_CONTACT_CATEGORY_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
                     </option>
                   ))}
                 </select>

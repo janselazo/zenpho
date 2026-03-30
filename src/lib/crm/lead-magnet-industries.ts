@@ -1,34 +1,23 @@
-export type IndustryId =
-  | "tech"
-  | "automotive"
-  | "healthcare"
-  | "real_estate"
-  | "professional_services"
-  | "ecommerce"
-  | "hospitality"
-  | "education"
-  | "fintech"
-  | "manufacturing"
-  | "construction"
-  | "insurance"
-  | "nonprofit"
-  | "media_marketing";
+export type IndustryId = "tech" | "ecommerce" | "automotive";
 
 /** Allowlisted niches (globally unique ids). */
 export type NicheId =
-  | "vertical_broad"
-  | "entertainment_music"
-  | "entertainment_film"
-  | "entertainment_gaming"
-  | "tech_ai_saas"
-  | "tech_devtools"
-  | "healthcare_dental"
-  | "fintech_payments"
-  | "ecommerce_subscription"
-  | "hospitality_hotels"
-  | "education_k12_higher"
-  | "construction_residential"
-  | "nonprofit_fundraising";
+  | "tech_vertical_ai_saas_agents"
+  | "tech_fintech"
+  | "tech_blockchain"
+  | "tech_cybersecurity"
+  | "tech_edutech"
+  | "ecom_pet_supplies"
+  | "ecom_home_goods"
+  | "ecom_apparel_accessories"
+  | "ecom_hobby_craft"
+  | "ecom_home_fitness"
+  | "ecom_beauty_personal_care"
+  | "auto_dealerships_retail"
+  | "auto_fleet_commercial"
+  | "auto_parts_aftermarket"
+  | "auto_service_repair"
+  | "auto_ev_charging";
 
 export type NicheDefinition = {
   id: NicheId;
@@ -62,172 +51,133 @@ export type Industry = {
 export const INDUSTRIES: readonly Industry[] = [
   {
     id: "tech",
-    label: "Technology / SaaS",
-    synonyms: ["SaaS", "software", "startup", "product"],
+    label: "Technology",
+    synonyms: ["SaaS", "software", "startup", "B2B tech"],
+  },
+  {
+    id: "ecommerce",
+    label: "Ecommerce",
+    synonyms: ["DTC", "retail", "Shopify", "online store"],
   },
   {
     id: "automotive",
     label: "Automotive",
     synonyms: ["car dealer", "auto", "fleet", "dealership"],
   },
-  {
-    id: "healthcare",
-    label: "Healthcare",
-    synonyms: ["clinic", "medical", "dental", "wellness"],
-  },
-  {
-    id: "real_estate",
-    label: "Real estate",
-    synonyms: ["realtor", "property", "broker", "mortgage"],
-  },
-  {
-    id: "professional_services",
-    label: "Professional services",
-    synonyms: ["consulting", "legal", "accounting", "agency"],
-  },
-  {
-    id: "ecommerce",
-    label: "E‑commerce / DTC",
-    synonyms: ["DTC", "retail", "Shopify", "online store"],
-  },
-  {
-    id: "hospitality",
-    label: "Hospitality & restaurants",
-    synonyms: ["hotel", "restaurant", "catering", "venue"],
-  },
-  {
-    id: "education",
-    label: "Education & training",
-    synonyms: ["edtech", "LMS", "online courses", "corporate training"],
-  },
-  {
-    id: "fintech",
-    label: "Fintech & banking",
-    synonyms: ["payments", "lending", "wealth", "neobank"],
-  },
-  {
-    id: "manufacturing",
-    label: "Manufacturing & supply chain",
-    synonyms: ["industrial", "factory", "logistics", "B2B parts"],
-  },
-  {
-    id: "construction",
-    label: "Construction & trades",
-    synonyms: ["contractor", "home builder", "HVAC", "electrical"],
-  },
-  {
-    id: "insurance",
-    label: "Insurance",
-    synonyms: ["broker", "carrier", "claims", "agency"],
-  },
-  {
-    id: "nonprofit",
-    label: "Nonprofit & associations",
-    synonyms: ["NGO", "foundation", "501c3", "membership org"],
-  },
-  {
-    id: "media_marketing",
-    label: "Media & performance marketing",
-    synonyms: ["publisher", "ad agency", "creator economy", "performance ads"],
-  },
 ] as const;
-
-export const ALL_INDUSTRY_IDS: readonly IndustryId[] = INDUSTRIES.map(
-  (i) => i.id
-);
-
-export const DEFAULT_NICHE_ID: NicheId = "vertical_broad";
 
 export const LEAD_MAGNET_NICHES: readonly NicheDefinition[] = [
   {
-    id: "vertical_broad",
-    label: "Full vertical (broad)",
-    searchTerms: "",
-    industries: ALL_INDUSTRY_IDS,
-  },
-  {
-    id: "entertainment_music",
-    label: "Music",
+    id: "tech_vertical_ai_saas_agents",
+    label: "Vertical AI SaaS & Agents",
     searchTerms:
-      "music industry labels streaming touring artists rights B2B lead magnet",
-    industries: ["media_marketing"],
-  },
-  {
-    id: "entertainment_film",
-    label: "Film & TV",
-    searchTerms:
-      "film TV production studio distribution streaming B2B marketing tool",
-    industries: ["media_marketing"],
-  },
-  {
-    id: "entertainment_gaming",
-    label: "Gaming & esports",
-    searchTerms:
-      "gaming esports publisher studio UA creator economy B2B",
-    industries: ["media_marketing"],
-  },
-  {
-    id: "tech_ai_saas",
-    label: "AI & SaaS",
-    searchTerms:
-      "AI SaaS PLG enterprise sales automation B2B software",
+      "vertical AI SaaS AI agents B2B software PLG enterprise automation lead magnet",
     industries: ["tech"],
   },
   {
-    id: "tech_devtools",
-    label: "Devtools & infra",
+    id: "tech_fintech",
+    label: "Fintech",
     searchTerms:
-      "developer tools API infrastructure observability DX B2B",
+      "fintech B2B payments banking lending wealth neobank lead magnet calculator",
     industries: ["tech"],
   },
   {
-    id: "healthcare_dental",
-    label: "Dental",
+    id: "tech_blockchain",
+    label: "Blockchain",
     searchTerms:
-      "dental practice DSO patient acquisition scheduling B2B",
-    industries: ["healthcare"],
+      "blockchain enterprise crypto web3 infrastructure B2B lead magnet",
+    industries: ["tech"],
   },
   {
-    id: "fintech_payments",
-    label: "Payments & cards",
+    id: "tech_cybersecurity",
+    label: "Cybersecurity",
     searchTerms:
-      "payments card issuing acquiring SMB merchant B2B fintech",
-    industries: ["fintech"],
+      "cybersecurity B2B security software SOC2 compliance risk assessment lead magnet",
+    industries: ["tech"],
   },
   {
-    id: "ecommerce_subscription",
-    label: "Subscription & retention",
+    id: "tech_edutech",
+    label: "EduTech",
     searchTerms:
-      "subscription box DTC retention churn LTV email B2B",
+      "EdTech education technology LMS K-12 higher ed corporate training B2B lead magnet",
+    industries: ["tech"],
+  },
+  {
+    id: "ecom_pet_supplies",
+    label: "Pet Supplies",
+    searchTerms:
+      "pet supplies DTC ecommerce pet food accessories subscription lead magnet",
     industries: ["ecommerce"],
   },
   {
-    id: "hospitality_hotels",
-    label: "Hotels & lodging",
+    id: "ecom_home_goods",
+    label: "Home & Goods",
     searchTerms:
-      "hotel lodging RevPAR direct booking OTA B2B hospitality",
-    industries: ["hospitality"],
+      "home goods decor furniture DTC ecommerce lead magnet calculator",
+    industries: ["ecommerce"],
   },
   {
-    id: "education_k12_higher",
-    label: "K‑12 & higher ed",
+    id: "ecom_apparel_accessories",
+    label: "Apparel & Accessories",
     searchTerms:
-      "K-12 higher education LMS admissions enrollment B2B edtech",
-    industries: ["education"],
+      "apparel fashion accessories DTC ecommerce clothing lead magnet",
+    industries: ["ecommerce"],
   },
   {
-    id: "construction_residential",
-    label: "Residential & remodel",
+    id: "ecom_hobby_craft",
+    label: "Hobby & Craft",
     searchTerms:
-      "residential remodel home builder contractor lead gen B2B",
-    industries: ["construction"],
+      "hobby craft maker supplies DTC ecommerce lead magnet",
+    industries: ["ecommerce"],
   },
   {
-    id: "nonprofit_fundraising",
-    label: "Fundraising & grants",
+    id: "ecom_home_fitness",
+    label: "Home Fitness",
     searchTerms:
-      "nonprofit fundraising grant writing donor CRM B2B",
-    industries: ["nonprofit"],
+      "home fitness equipment workout DTC ecommerce wellness lead magnet",
+    industries: ["ecommerce"],
+  },
+  {
+    id: "ecom_beauty_personal_care",
+    label: "Beauty & Personal Care",
+    searchTerms:
+      "beauty skincare personal care cosmetics DTC ecommerce lead magnet",
+    industries: ["ecommerce"],
+  },
+  {
+    id: "auto_dealerships_retail",
+    label: "Dealerships & retail",
+    searchTerms:
+      "car dealership new used vehicle retail showroom digital retail lead magnet",
+    industries: ["automotive"],
+  },
+  {
+    id: "auto_fleet_commercial",
+    label: "Fleet & commercial",
+    searchTerms:
+      "commercial fleet vehicle management leasing telematics B2B lead magnet",
+    industries: ["automotive"],
+  },
+  {
+    id: "auto_parts_aftermarket",
+    label: "Parts & aftermarket",
+    searchTerms:
+      "auto parts aftermarket wholesale distribution B2B lead magnet",
+    industries: ["automotive"],
+  },
+  {
+    id: "auto_service_repair",
+    label: "Service & repair",
+    searchTerms:
+      "auto repair shop service center fixed ops scheduling B2B lead magnet",
+    industries: ["automotive"],
+  },
+  {
+    id: "auto_ev_charging",
+    label: "EV & charging",
+    searchTerms:
+      "electric vehicle EV charging infrastructure dealership fleet B2B lead magnet",
+    industries: ["automotive"],
   },
 ];
 
@@ -264,6 +214,16 @@ export function getNichesForIndustry(
   return LEAD_MAGNET_NICHES.filter((n) => n.industries.includes(industryId));
 }
 
+/** First niche for an industry (used when switching industry or omitting niche in API). */
+export function defaultNicheForIndustry(industryId: IndustryId): NicheId {
+  const list = getNichesForIndustry(industryId);
+  const first = list[0]?.id;
+  if (!first) {
+    throw new Error(`No niches configured for industry: ${industryId}`);
+  }
+  return first;
+}
+
 /** Parallel Serper queries: Reddit, broad web, niche long-tail */
 export function searchQueriesForIndustry(id: IndustryId): string[] {
   const ind = getIndustry(id);
@@ -278,7 +238,7 @@ export function searchQueriesForIndustry(id: IndustryId): string[] {
   ];
 }
 
-/** Same three query shapes; appends niche `searchTerms` when not broad */
+/** Same three query shapes; appends niche `searchTerms` for long-tail context */
 export function searchQueriesForIndustryAndNiche(
   industryId: IndustryId,
   nicheId: NicheId
@@ -290,7 +250,7 @@ export function searchQueriesForIndustryAndNiche(
   return base.map((q) => `${q} ${extra}`.trim());
 }
 
-/** When APIs are unavailable — minimal dev / degraded UX */
+/** When APIs are unavailable — minimal dev / degraded UX (per industry only). */
 export const FALLBACK_IDEAS_BY_INDUSTRY: Record<IndustryId, LeadMagnetIdea[]> = {
   tech: [
     {
@@ -307,62 +267,6 @@ export const FALLBACK_IDEAS_BY_INDUSTRY: Record<IndustryId, LeadMagnetIdea[]> = 
       format: "Template",
     },
   ],
-  automotive: [
-    {
-      title: "Lease vs finance comparison calculator",
-      description:
-        "Dealer-branded calculator with taxes, mileage, and residual assumptions for showroom and web.",
-      format: "Calculator",
-    },
-    {
-      title: "Trade-in value estimator",
-      description:
-        "Lightweight estimator tied to your acquisition ranges; captures lead for appraisal follow-up.",
-      format: "Assessment",
-    },
-  ],
-  healthcare: [
-    {
-      title: "Patient no-show cost calculator",
-      description:
-        "Shows revenue lost from missed appointments — positions scheduling or reminder solutions.",
-      format: "Calculator",
-    },
-    {
-      title: "HIPAA-ready vendor checklist",
-      description:
-        "PDF or interactive checklist for practices evaluating new software vendors.",
-      format: "Toolkit",
-    },
-  ],
-  real_estate: [
-    {
-      title: "Buyer affordability snapshot",
-      description:
-        "Simple calculator: income, debts, down payment → rough buying power + lender CTA.",
-      format: "Calculator",
-    },
-    {
-      title: "Listing prep scorecard",
-      description:
-        "Sellers rate staging, photos, pricing — score + tips; captures listing intent.",
-      format: "Assessment",
-    },
-  ],
-  professional_services: [
-    {
-      title: "Engagement scoping worksheet",
-      description:
-        "Structured worksheet for prospects to define goals, budget band, and timeline before a discovery call.",
-      format: "Template",
-    },
-    {
-      title: "ROI of outsourcing calculator",
-      description:
-        "Compare in-house loaded cost vs. agency engagement for a typical initiative.",
-      format: "Calculator",
-    },
-  ],
   ecommerce: [
     {
       title: "Shipping & margin impact calculator",
@@ -377,116 +281,18 @@ export const FALLBACK_IDEAS_BY_INDUSTRY: Record<IndustryId, LeadMagnetIdea[]> = 
       format: "Toolkit",
     },
   ],
-  hospitality: [
+  automotive: [
     {
-      title: "Labor cost vs. covers calculator",
+      title: "Lease vs finance comparison calculator",
       description:
-        "Operators plug in shifts, wages, and average check to stress-test staffing and menu pricing.",
+        "Dealer-branded calculator with taxes, mileage, and residual assumptions for showroom and web.",
       format: "Calculator",
     },
     {
-      title: "Private events & catering intake template",
+      title: "Trade-in value estimator",
       description:
-        "Structured form for headcount, dietary needs, and budget — routes to your sales inbox.",
-      format: "Template",
-    },
-  ],
-  education: [
-    {
-      title: "Course launch readiness scorecard",
-      description:
-        "Creators and L&D teams rate curriculum, tech stack, and distribution — surfaces gaps before go-live.",
+        "Lightweight estimator tied to your acquisition ranges; captures lead for appraisal follow-up.",
       format: "Assessment",
-    },
-    {
-      title: "Learner completion & cohort ROI worksheet",
-      description:
-        "Spreadsheet template tying enrollment, completion, and outcomes to program investment.",
-      format: "Template",
-    },
-  ],
-  fintech: [
-    {
-      title: "Payment stack total cost of ownership calculator",
-      description:
-        "Compare processors, interchange, and SaaS fees for a given monthly volume — great for SMB outreach.",
-      format: "Calculator",
-    },
-    {
-      title: "Vendor security & SOC2 readiness checklist",
-      description:
-        "Gated checklist for startups evaluating what buyers ask in enterprise sales.",
-      format: "Toolkit",
-    },
-  ],
-  manufacturing: [
-    {
-      title: "Downtime cost estimator",
-      description:
-        "Rough hourly loss from line stoppage — positions maintenance, IoT, or MES conversations.",
-      format: "Calculator",
-    },
-    {
-      title: "Supplier scorecard template",
-      description:
-        "Rate on-time delivery, quality, and responsiveness; export for quarterly business reviews.",
-      format: "Template",
-    },
-  ],
-  construction: [
-    {
-      title: "Change-order impact calculator",
-      description:
-        "Simple model: extra scope → labor, materials, schedule slip — for GCs and specialty trades.",
-      format: "Calculator",
-    },
-    {
-      title: "Job-site safety walkthrough checklist (digital)",
-      description:
-        "Mobile-friendly checklist with photo prompts; lead capture for compliance or training tools.",
-      format: "Toolkit",
-    },
-  ],
-  insurance: [
-    {
-      title: "Coverage gap self-assessment",
-      description:
-        "Consumers or SMBs answer a few questions; output highlights common gaps with broker CTA.",
-      format: "Assessment",
-    },
-    {
-      title: "Renewal comparison worksheet",
-      description:
-        "Side-by-side limits, deductibles, and premiums — positions your quoting workflow.",
-      format: "Template",
-    },
-  ],
-  nonprofit: [
-    {
-      title: "Grant readiness scorecard",
-      description:
-        "Nonprofits rate impact data, board engagement, and financials — surfaces consulting or CRM needs.",
-      format: "Assessment",
-    },
-    {
-      title: "Donor stewardship email sequence template",
-      description:
-        "3–5 email outline for year-end or campaign follow-up; gated content for development directors.",
-      format: "Template",
-    },
-  ],
-  media_marketing: [
-    {
-      title: "Creative fatigue & refresh planner",
-      description:
-        "Track hook angles, formats, and spend by ad set — when to rotate before CPA spikes.",
-      format: "Template",
-    },
-    {
-      title: "Channel mix budget allocator",
-      description:
-        "Interactive sliders for paid social, search, and creator spend against a monthly cap.",
-      format: "Calculator",
     },
   ],
 };

@@ -211,10 +211,7 @@ Rules:
 - Each idea should feel specific to the industry (and niche, when provided) and actionable for an agency to scope and sell.
 - "angle" is optional context (one short phrase); use empty string if none.`;
 
-  const nicheLine =
-    nicheId === "vertical_broad"
-      ? "Niche: Full vertical — ideas may span the whole industry."
-      : `Niche: ${niche.label} — strongly tailor ideas to this sub-vertical; avoid generic ideas that ignore the niche.`;
+  const nicheLine = `Niche: ${niche.label} — strongly tailor ideas to this sub-vertical; avoid generic ideas that ignore the niche.`;
 
   const user = `Industry: ${industry.label}
 Industry keywords: ${industry.synonyms.join(", ")}
