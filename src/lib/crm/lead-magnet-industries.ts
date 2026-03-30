@@ -4,7 +4,40 @@ export type IndustryId =
   | "healthcare"
   | "real_estate"
   | "professional_services"
-  | "ecommerce";
+  | "ecommerce"
+  | "hospitality"
+  | "education"
+  | "fintech"
+  | "manufacturing"
+  | "construction"
+  | "insurance"
+  | "nonprofit"
+  | "media_marketing";
+
+/** Allowlisted niches (globally unique ids). */
+export type NicheId =
+  | "vertical_broad"
+  | "entertainment_music"
+  | "entertainment_film"
+  | "entertainment_gaming"
+  | "tech_ai_saas"
+  | "tech_devtools"
+  | "healthcare_dental"
+  | "healthcare_mental_health"
+  | "fintech_payments"
+  | "ecommerce_subscription"
+  | "hospitality_hotels"
+  | "education_k12_higher"
+  | "construction_residential"
+  | "nonprofit_fundraising";
+
+export type NicheDefinition = {
+  id: NicheId;
+  label: string;
+  /** Appended to Serper queries when non-empty */
+  searchTerms: string;
+  industries: readonly IndustryId[];
+};
 
 export type LeadMagnetFormat =
   | "Calculator"
@@ -58,9 +91,156 @@ export const INDUSTRIES: readonly Industry[] = [
     label: "E‑commerce / DTC",
     synonyms: ["DTC", "retail", "Shopify", "online store"],
   },
+  {
+    id: "hospitality",
+    label: "Hospitality & restaurants",
+    synonyms: ["hotel", "restaurant", "catering", "venue"],
+  },
+  {
+    id: "education",
+    label: "Education & training",
+    synonyms: ["edtech", "LMS", "online courses", "corporate training"],
+  },
+  {
+    id: "fintech",
+    label: "Fintech & banking",
+    synonyms: ["payments", "lending", "wealth", "neobank"],
+  },
+  {
+    id: "manufacturing",
+    label: "Manufacturing & supply chain",
+    synonyms: ["industrial", "factory", "logistics", "B2B parts"],
+  },
+  {
+    id: "construction",
+    label: "Construction & trades",
+    synonyms: ["contractor", "home builder", "HVAC", "electrical"],
+  },
+  {
+    id: "insurance",
+    label: "Insurance",
+    synonyms: ["broker", "carrier", "claims", "agency"],
+  },
+  {
+    id: "nonprofit",
+    label: "Nonprofit & associations",
+    synonyms: ["NGO", "foundation", "501c3", "membership org"],
+  },
+  {
+    id: "media_marketing",
+    label: "Media & performance marketing",
+    synonyms: ["publisher", "ad agency", "creator economy", "performance ads"],
+  },
 ] as const;
 
+export const ALL_INDUSTRY_IDS: readonly IndustryId[] = INDUSTRIES.map(
+  (i) => i.id
+);
+
+export const DEFAULT_NICHE_ID: NicheId = "vertical_broad";
+
+export const LEAD_MAGNET_NICHES: readonly NicheDefinition[] = [
+  {
+    id: "vertical_broad",
+    label: "Full vertical (broad)",
+    searchTerms: "",
+    industries: ALL_INDUSTRY_IDS,
+  },
+  {
+    id: "entertainment_music",
+    label: "Entertainment — Music",
+    searchTerms:
+      "music industry labels streaming touring artists rights B2B lead magnet",
+    industries: ["media_marketing"],
+  },
+  {
+    id: "entertainment_film",
+    label: "Entertainment — Film & TV",
+    searchTerms:
+      "film TV production studio distribution streaming B2B marketing tool",
+    industries: ["media_marketing"],
+  },
+  {
+    id: "entertainment_gaming",
+    label: "Entertainment — Gaming & esports",
+    searchTerms:
+      "gaming esports publisher studio UA creator economy B2B",
+    industries: ["media_marketing"],
+  },
+  {
+    id: "tech_ai_saas",
+    label: "Tech — AI & SaaS",
+    searchTerms:
+      "AI SaaS PLG enterprise sales automation B2B software",
+    industries: ["tech"],
+  },
+  {
+    id: "tech_devtools",
+    label: "Tech — Devtools & infra",
+    searchTerms:
+      "developer tools API infrastructure observability DX B2B",
+    industries: ["tech"],
+  },
+  {
+    id: "healthcare_dental",
+    label: "Healthcare — Dental",
+    searchTerms:
+      "dental practice DSO patient acquisition scheduling B2B",
+    industries: ["healthcare"],
+  },
+  {
+    id: "healthcare_mental_health",
+    label: "Healthcare — Mental health",
+    searchTerms:
+      "mental health therapy telehealth practice intake B2B",
+    industries: ["healthcare"],
+  },
+  {
+    id: "fintech_payments",
+    label: "Fintech — Payments & cards",
+    searchTerms:
+      "payments card issuing acquiring SMB merchant B2B fintech",
+    industries: ["fintech"],
+  },
+  {
+    id: "ecommerce_subscription",
+    label: "E‑commerce — Subscription & retention",
+    searchTerms:
+      "subscription box DTC retention churn LTV email B2B",
+    industries: ["ecommerce"],
+  },
+  {
+    id: "hospitality_hotels",
+    label: "Hospitality — Hotels & lodging",
+    searchTerms:
+      "hotel lodging RevPAR direct booking OTA B2B hospitality",
+    industries: ["hospitality"],
+  },
+  {
+    id: "education_k12_higher",
+    label: "Education — K‑12 & higher ed",
+    searchTerms:
+      "K-12 higher education LMS admissions enrollment B2B edtech",
+    industries: ["education"],
+  },
+  {
+    id: "construction_residential",
+    label: "Construction — Residential & remodel",
+    searchTerms:
+      "residential remodel home builder contractor lead gen B2B",
+    industries: ["construction"],
+  },
+  {
+    id: "nonprofit_fundraising",
+    label: "Nonprofit — Fundraising & grants",
+    searchTerms:
+      "nonprofit fundraising grant writing donor CRM B2B",
+    industries: ["nonprofit"],
+  },
+];
+
 const INDUSTRY_IDS = new Set<string>(INDUSTRIES.map((i) => i.id));
+const NICHE_IDS = new Set<string>(LEAD_MAGNET_NICHES.map((n) => n.id));
 
 export function isIndustryId(value: string): value is IndustryId {
   return INDUSTRY_IDS.has(value);
@@ -68,6 +248,28 @@ export function isIndustryId(value: string): value is IndustryId {
 
 export function getIndustry(id: IndustryId): Industry | undefined {
   return INDUSTRIES.find((i) => i.id === id);
+}
+
+export function isNicheId(value: string): value is NicheId {
+  return NICHE_IDS.has(value);
+}
+
+export function getNiche(id: NicheId): NicheDefinition | undefined {
+  return LEAD_MAGNET_NICHES.find((n) => n.id === id);
+}
+
+export function nicheAllowedForIndustry(
+  nicheId: NicheId,
+  industryId: IndustryId
+): boolean {
+  const n = getNiche(nicheId);
+  return Boolean(n?.industries.includes(industryId));
+}
+
+export function getNichesForIndustry(
+  industryId: IndustryId
+): readonly NicheDefinition[] {
+  return LEAD_MAGNET_NICHES.filter((n) => n.industries.includes(industryId));
 }
 
 /** Parallel Serper queries: Reddit, broad web, niche long-tail */
@@ -82,6 +284,18 @@ export function searchQueriesForIndustry(id: IndustryId): string[] {
     `${core} ${syn} lead magnet calculator template interactive tool`,
     `${syn} niche B2B marketing tool audit scorecard checklist template calculator`,
   ];
+}
+
+/** Same three query shapes; appends niche `searchTerms` when not broad */
+export function searchQueriesForIndustryAndNiche(
+  industryId: IndustryId,
+  nicheId: NicheId
+): string[] {
+  const base = searchQueriesForIndustry(industryId);
+  const niche = getNiche(nicheId);
+  const extra = niche?.searchTerms.trim() ?? "";
+  if (!extra) return base;
+  return base.map((q) => `${q} ${extra}`.trim());
 }
 
 /** When APIs are unavailable — minimal dev / degraded UX */
@@ -169,6 +383,118 @@ export const FALLBACK_IDEAS_BY_INDUSTRY: Record<IndustryId, LeadMagnetIdea[]> = 
       description:
         "Template pack for headline/offer tests with simple scoring rubric.",
       format: "Toolkit",
+    },
+  ],
+  hospitality: [
+    {
+      title: "Labor cost vs. covers calculator",
+      description:
+        "Operators plug in shifts, wages, and average check to stress-test staffing and menu pricing.",
+      format: "Calculator",
+    },
+    {
+      title: "Private events & catering intake template",
+      description:
+        "Structured form for headcount, dietary needs, and budget — routes to your sales inbox.",
+      format: "Template",
+    },
+  ],
+  education: [
+    {
+      title: "Course launch readiness scorecard",
+      description:
+        "Creators and L&D teams rate curriculum, tech stack, and distribution — surfaces gaps before go-live.",
+      format: "Assessment",
+    },
+    {
+      title: "Learner completion & cohort ROI worksheet",
+      description:
+        "Spreadsheet template tying enrollment, completion, and outcomes to program investment.",
+      format: "Template",
+    },
+  ],
+  fintech: [
+    {
+      title: "Payment stack total cost of ownership calculator",
+      description:
+        "Compare processors, interchange, and SaaS fees for a given monthly volume — great for SMB outreach.",
+      format: "Calculator",
+    },
+    {
+      title: "Vendor security & SOC2 readiness checklist",
+      description:
+        "Gated checklist for startups evaluating what buyers ask in enterprise sales.",
+      format: "Toolkit",
+    },
+  ],
+  manufacturing: [
+    {
+      title: "Downtime cost estimator",
+      description:
+        "Rough hourly loss from line stoppage — positions maintenance, IoT, or MES conversations.",
+      format: "Calculator",
+    },
+    {
+      title: "Supplier scorecard template",
+      description:
+        "Rate on-time delivery, quality, and responsiveness; export for quarterly business reviews.",
+      format: "Template",
+    },
+  ],
+  construction: [
+    {
+      title: "Change-order impact calculator",
+      description:
+        "Simple model: extra scope → labor, materials, schedule slip — for GCs and specialty trades.",
+      format: "Calculator",
+    },
+    {
+      title: "Job-site safety walkthrough checklist (digital)",
+      description:
+        "Mobile-friendly checklist with photo prompts; lead capture for compliance or training tools.",
+      format: "Toolkit",
+    },
+  ],
+  insurance: [
+    {
+      title: "Coverage gap self-assessment",
+      description:
+        "Consumers or SMBs answer a few questions; output highlights common gaps with broker CTA.",
+      format: "Assessment",
+    },
+    {
+      title: "Renewal comparison worksheet",
+      description:
+        "Side-by-side limits, deductibles, and premiums — positions your quoting workflow.",
+      format: "Template",
+    },
+  ],
+  nonprofit: [
+    {
+      title: "Grant readiness scorecard",
+      description:
+        "Nonprofits rate impact data, board engagement, and financials — surfaces consulting or CRM needs.",
+      format: "Assessment",
+    },
+    {
+      title: "Donor stewardship email sequence template",
+      description:
+        "3–5 email outline for year-end or campaign follow-up; gated content for development directors.",
+      format: "Template",
+    },
+  ],
+  media_marketing: [
+    {
+      title: "Creative fatigue & refresh planner",
+      description:
+        "Track hook angles, formats, and spend by ad set — when to rotate before CPA spikes.",
+      format: "Template",
+    },
+    {
+      title: "Channel mix budget allocator",
+      description:
+        "Interactive sliders for paid social, search, and creator spend against a monthly cap.",
+      format: "Calculator",
     },
   ],
 };

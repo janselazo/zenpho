@@ -2,8 +2,10 @@ import OpenAI from "openai";
 import {
   type IndustryId,
   type LeadMagnetIdea,
+  type NicheId,
   getIndustry,
-  searchQueriesForIndustry,
+  getNiche,
+  searchQueriesForIndustryAndNiche,
 } from "@/lib/crm/lead-magnet-industries";
 
 const SERPER_URL = "https://google.serper.dev/search";
@@ -118,7 +120,8 @@ export type GenerateLeadMagnetsResult =
     };
 
 export async function generateLeadMagnetIdeas(
-  industryId: IndustryId
+  industryId: IndustryId,
+  nicheId: NicheId
 ): Promise<GenerateLeadMagnetsResult> {
   const serperKey = process.env.SERPER_API_KEY?.trim();
   const openaiKey = process.env.OPENAI_API_KEY?.trim();
@@ -148,7 +151,16 @@ export async function generateLeadMagnetIdeas(
     };
   }
 
-  const queries = searchQueriesForIndustry(industryId);
+  const niche = getNiche(nicheId);
+  if (!niche) {
+    return {
+      ok: false,
+      code: "search_failed",
+      message: "Unknown niche.",
+    };
+  }
+
+  const queries = searchQueriesForIndustryAndNiche(industryId, nicheId);
   const searchController = new AbortController();
   const searchTimeout = setTimeout(() => searchController.abort(), 18_000);
 
@@ -196,11 +208,17 @@ Rules:
 - Output must follow the JSON schema exactly.
 - Propose 6–10 distinct, buildable ideas (web apps, calculators, Notion/Sheet templates, PDF kits, etc.).
 - Use the web search snippets only as inspiration for what people discuss and what formats work. Do NOT copy titles or sentences verbatim from sources.
-- Each idea should feel specific to the industry and actionable for an agency to scope and sell.
+- Each idea should feel specific to the industry (and niche, when provided) and actionable for an agency to scope and sell.
 - "angle" is optional context (one short phrase); use empty string if none.`;
+
+  const nicheLine =
+    nicheId === "vertical_broad"
+      ? "Niche: Full vertical — ideas may span the whole industry."
+      : `Niche: ${niche.label} — strongly tailor ideas to this sub-vertical; avoid generic ideas that ignore the niche.`;
 
   const user = `Industry: ${industry.label}
 Industry keywords: ${industry.synonyms.join(", ")}
+${nicheLine}
 
 Web search snippets (may be noisy):
 ${contextText}

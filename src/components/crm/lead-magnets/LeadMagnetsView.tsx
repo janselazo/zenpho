@@ -2,9 +2,13 @@
 
 import { useCallback, useMemo, useState } from "react";
 import {
+  DEFAULT_NICHE_ID,
   INDUSTRIES,
+  getNichesForIndustry,
+  nicheAllowedForIndustry,
   type IndustryId,
   type LeadMagnetIdea,
+  type NicheId,
 } from "@/lib/crm/lead-magnet-industries";
 
 type GenerateResponse = {
@@ -29,13 +33,18 @@ function formatBadgeClass(format: LeadMagnetIdea["format"]): string {
   }
 }
 
+function cacheKey(industryId: IndustryId, nicheId: NicheId) {
+  return `${industryId}:${nicheId}`;
+}
+
 export default function LeadMagnetsView() {
   const defaultId = INDUSTRIES[0]?.id ?? "tech";
   const [industryId, setIndustryId] = useState<IndustryId>(defaultId);
+  const [nicheId, setNicheId] = useState<NicheId>(DEFAULT_NICHE_ID);
   const [cache, setCache] = useState<
     Partial<
       Record<
-        IndustryId,
+        string,
         { ideas: LeadMagnetIdea[]; fallback: boolean; warning?: string | null }
       >
     >
@@ -43,7 +52,12 @@ export default function LeadMagnetsView() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const current = cache[industryId];
+  const key = cacheKey(industryId, nicheId);
+  const current = cache[key];
+  const niches = useMemo(
+    () => getNichesForIndustry(industryId),
+    [industryId]
+  );
 
   const runGenerate = useCallback(
     async (opts: { useFallback?: boolean }) => {
@@ -55,6 +69,7 @@ export default function LeadMagnetsView() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             industryId,
+            nicheId,
             useFallback: opts.useFallback === true,
           }),
         });
@@ -71,7 +86,7 @@ export default function LeadMagnetsView() {
 
         setCache((c) => ({
           ...c,
-          [industryId]: {
+          [cacheKey(industryId, nicheId)]: {
             ideas,
             fallback: Boolean(data.fallback),
             warning: data.warning ?? data.error ?? null,
@@ -84,17 +99,23 @@ export default function LeadMagnetsView() {
         setLoading(false);
       }
     },
-    [industryId]
+    [industryId, nicheId]
   );
 
   const onIndustryChange = (id: IndustryId) => {
     setIndustryId(id);
     setError(null);
+    setNicheId((n) => (nicheAllowedForIndustry(n, id) ? n : DEFAULT_NICHE_ID));
+  };
+
+  const onNicheChange = (id: NicheId) => {
+    setNicheId(id);
+    setError(null);
   };
 
   const intro = useMemo(
     () =>
-      "Pick an industry, then generate lead-magnet concepts using live web snippets (Reddit, Google-style results, long-tail queries) plus OpenAI — built for Zenpho’s agency pipeline.",
+      "Pick an industry and optional niche, then generate lead-magnet concepts using live web snippets (Reddit, Google-style results, long-tail queries) plus OpenAI — built for Zenpho’s agency pipeline.",
     []
   );
 
@@ -124,6 +145,28 @@ export default function LeadMagnetsView() {
               }`}
             >
               {ind.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-8">
+        <p className="text-xs font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
+          Niche
+        </p>
+        <div className="mt-2 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {niches.map((n) => (
+            <button
+              key={n.id}
+              type="button"
+              onClick={() => onNicheChange(n.id)}
+              className={`shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                nicheId === n.id
+                  ? "border-accent bg-accent/10 text-accent dark:border-blue-500 dark:bg-blue-500/15 dark:text-blue-400"
+                  : "border-border bg-white text-text-secondary hover:border-accent/30 hover:text-text-primary dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
+              }`}
+            >
+              {n.label}
             </button>
           ))}
         </div>
@@ -166,11 +209,23 @@ export default function LeadMagnetsView() {
         </div>
       ) : null}
 
-      {current?.fallback && !current.warning ? (
-        <p className="mt-4 text-xs text-text-secondary dark:text-zinc-500">
-          Showing curated starter ideas (API keys not configured or fallback
-          mode).
-        </p>
+      {current?.fallback &&
+      (!current.warning || nicheId !== DEFAULT_NICHE_ID) ? (
+        <div className="mt-4 space-y-1 text-xs text-text-secondary dark:text-zinc-500">
+          {!current.warning ? (
+            <p>
+              Showing curated starter ideas (API keys not configured or fallback
+              mode).
+            </p>
+          ) : null}
+          {nicheId !== DEFAULT_NICHE_ID ? (
+            <p>
+              These starters are for the <strong>whole vertical</strong>, not
+              the selected niche — generate with API keys for niche-specific
+              ideas.
+            </p>
+          ) : null}
+        </div>
       ) : null}
 
       <div className="mt-10">
@@ -220,9 +275,9 @@ export default function LeadMagnetsView() {
 
         {!loading && !current ? (
           <p className="text-sm text-text-secondary dark:text-zinc-500">
-            Choose an industry and click <strong>Generate ideas</strong> to pull
-            web context and synthesize concepts, or load starter ideas without
-            API keys.
+            Choose an industry and niche, then click <strong>Generate ideas</strong>{" "}
+            to pull web context and synthesize concepts, or load starter ideas
+            without API keys.
           </p>
         ) : null}
       </div>

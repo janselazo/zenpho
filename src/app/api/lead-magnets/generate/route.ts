@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import {
+  DEFAULT_NICHE_ID,
   FALLBACK_IDEAS_BY_INDUSTRY,
   isIndustryId,
+  isNicheId,
+  nicheAllowedForIndustry,
   type IndustryId,
+  type NicheId,
 } from "@/lib/crm/lead-magnet-industries";
 import { generateLeadMagnetIdeas } from "@/lib/crm/lead-magnets-generate";
 
@@ -34,7 +38,7 @@ export async function POST(req: Request) {
     );
   }
 
-  let body: { industryId?: string; useFallback?: boolean };
+  let body: { industryId?: string; nicheId?: string; useFallback?: boolean };
   try {
     body = await req.json();
   } catch {
@@ -53,6 +57,22 @@ export async function POST(req: Request) {
   }
 
   const industryId = industryIdRaw as IndustryId;
+
+  const nicheRaw = String(body.nicheId ?? DEFAULT_NICHE_ID).trim();
+  if (!nicheRaw || nicheRaw.length > 64 || !isNicheId(nicheRaw)) {
+    return NextResponse.json(
+      { error: "Invalid nicheId.", ideas: [], fallback: false },
+      { status: 400 }
+    );
+  }
+  const nicheId = nicheRaw as NicheId;
+  if (!nicheAllowedForIndustry(nicheId, industryId)) {
+    return NextResponse.json(
+      { error: "This niche does not apply to the selected industry.", ideas: [], fallback: false },
+      { status: 400 }
+    );
+  }
+
   const forceFallback = body.useFallback === true;
 
   if (forceFallback) {
@@ -63,7 +83,7 @@ export async function POST(req: Request) {
     });
   }
 
-  const result = await generateLeadMagnetIdeas(industryId);
+  const result = await generateLeadMagnetIdeas(industryId, nicheId);
 
   if (result.ok) {
     return NextResponse.json({
