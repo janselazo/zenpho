@@ -780,6 +780,10 @@ export default function DashboardView({
                 <XAxis dataKey="label" tick={{ fontSize: 11, fill: chartTheme.tick }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: chartTheme.tick }} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip
+                  formatter={(value, name) => [
+                    String(value ?? 0),
+                    typeof name === "string" ? name : "",
+                  ]}
                   contentStyle={{
                     borderRadius: 12,
                     border: `1px solid ${chartTheme.tooltipBorder}`,
@@ -869,7 +873,7 @@ export default function DashboardView({
                 <XAxis dataKey="label" tick={{ fontSize: 11, fill: chartTheme.tick }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: chartTheme.tick }} axisLine={false} tickLine={false} tickFormatter={(v) => v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`} />
                 <Tooltip
-                  formatter={(value) => fmt(Number(value))}
+                  formatter={(value) => fmt(Number(value ?? 0))}
                   contentStyle={{
                     borderRadius: 12,
                     border: `1px solid ${chartTheme.tooltipBorder}`,
