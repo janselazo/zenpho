@@ -10,17 +10,20 @@ import {
   newEntityId,
 } from "@/lib/crm/project-workspace-storage";
 import {
+  DEFAULT_TASK_STATUS_CYCLE,
   defaultProjectWorkspace,
   type ProjectWorkspace,
   type RequestStatus,
   type ResourceKind,
   type ScopeSection,
+  type TaskCustomFieldType,
   type WorkspaceMeeting,
   type WorkspaceRequest,
   type WorkspaceResource,
   type WorkspaceSprint,
   type WorkspaceTask,
   type WorkspaceTaskAttachment,
+  type WorkspaceTaskCustomFieldDef,
 } from "@/lib/crm/project-workspace-types";
 import { formatISODate } from "@/lib/crm/project-date-utils";
 
@@ -28,15 +31,25 @@ export function useProjectWorkspace(projectId: string | undefined) {
   const [workspace, setWorkspace] = useState(defaultProjectWorkspace);
   const [hydrated, setHydrated] = useState(false);
 
-  const mutate = useCallback(
-    (fn: (w: ProjectWorkspace) => ProjectWorkspace) => {
-      if (!projectId) return;
-      const current = readProjectWorkspace(projectId);
+  const mutateProject = useCallback(
+    (pid: string | undefined, fn: (w: ProjectWorkspace) => ProjectWorkspace) => {
+      if (!pid) return;
+      const current = readProjectWorkspace(pid);
       const next = fn(current);
-      saveProjectWorkspace(projectId, next);
-      setWorkspace(next);
+      saveProjectWorkspace(pid, next);
+      if (pid === projectId) setWorkspace(next);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event(CRM_PROJECT_WORKSPACE_EVENT));
+      }
     },
     [projectId]
+  );
+
+  const mutate = useCallback(
+    (fn: (w: ProjectWorkspace) => ProjectWorkspace) => {
+      mutateProject(projectId, fn);
+    },
+    [projectId, mutateProject]
   );
 
   useEffect(() => {
@@ -138,20 +151,27 @@ export function useProjectWorkspace(projectId: string | undefined) {
       title: string;
       status: TaskStatus;
       sprintId: string | null;
+      /** When set, task is stored under this child project workspace. */
+      targetProjectId?: string;
       assigneeId?: string | null;
       startDate?: string;
       endDate?: string;
       milestoneKey?: MilestoneKey;
       productMilestoneId?: string | null;
       description?: string;
+      priority?: WorkspaceTask["priority"];
+      milestoneTags?: string[];
     }): string | undefined => {
-      if (!projectId) return undefined;
+      const pid = input.targetProjectId ?? projectId;
+      if (!pid) return undefined;
       const today = formatISODate(new Date());
       const assigneeId = input.assigneeId ?? null;
       const id = newEntityId("task");
+      const tags =
+        input.milestoneTags?.map((t) => t.trim()).filter(Boolean) ?? [];
       const task: WorkspaceTask = {
         id,
-        projectId,
+        projectId: pid,
         title: input.title.trim() || "Untitled task",
         status: input.status,
         assigneeId,
@@ -164,11 +184,13 @@ export function useProjectWorkspace(projectId: string | undefined) {
         milestoneKey: input.milestoneKey ?? "unassigned",
         productMilestoneId: input.productMilestoneId ?? null,
         description: input.description?.trim() || undefined,
+        priority: input.priority,
+        milestoneTags: tags.length ? tags : undefined,
       };
-      mutate((w) => ({ ...w, tasks: [...w.tasks, task] }));
+      mutateProject(pid, (w) => ({ ...w, tasks: [...w.tasks, task] }));
       return id;
     },
-    [projectId, mutate]
+    [projectId, mutateProject]
   );
 
   const updateTask = useCallback(
@@ -187,6 +209,84 @@ export function useProjectWorkspace(projectId: string | undefined) {
         ...w,
         tasks: w.tasks.filter((t) => t.id !== taskId),
       }));
+    },
+    [mutate]
+  );
+
+  const addTaskCustomField = useCallback(
+    (type: TaskCustomFieldType) => {
+      if (!projectId) return;
+      const id = newEntityId("fld");
+      const def: WorkspaceTaskCustomFieldDef =
+        type === "text"
+          ? { id, label: "Text", type: "text" }
+          : type === "number"
+            ? { id, label: "Number", type: "number" }
+            : type === "dropdown"
+              ? {
+                  id,
+                  label: "Dropdown",
+                  type: "dropdown",
+                  options: ["Option A", "Option B"],
+                }
+              : {
+                  id,
+                  label: "Labels",
+                  type: "labels",
+                  options: ["Label 1", "Label 2"],
+                };
+      mutate((w) => ({
+        ...w,
+        taskCustomFields: [...w.taskCustomFields, def],
+      }));
+    },
+    [projectId, mutate]
+  );
+
+  const removeTaskCustomField = useCallback(
+    (fieldId: string) => {
+      mutate((w) => ({
+        ...w,
+        taskCustomFields: w.taskCustomFields.filter((f) => f.id !== fieldId),
+        tasks: w.tasks.map((t) => {
+          const cv = { ...(t.customFieldValues ?? {}) };
+          delete cv[fieldId];
+          const keys = Object.keys(cv);
+          return {
+            ...t,
+            customFieldValues: keys.length ? cv : undefined,
+          };
+        }),
+      }));
+    },
+    [mutate]
+  );
+
+  const setTaskStatusConfiguration = useCallback(
+    (payload: {
+      labels: Partial<Record<TaskStatus, string>>;
+      cycleOrder: TaskStatus[];
+    }) => {
+      mutate((w) => {
+        const merged: Partial<Record<TaskStatus, string>> = {
+          ...(w.taskStatusLabels ?? {}),
+        };
+        for (const s of DEFAULT_TASK_STATUS_CYCLE) {
+          if (!Object.prototype.hasOwnProperty.call(payload.labels, s)) continue;
+          const t = (payload.labels[s] ?? "").trim();
+          if (t) merged[s] = t;
+          else delete merged[s];
+        }
+        return {
+          ...w,
+          taskStatusLabels:
+            Object.keys(merged).length > 0 ? merged : undefined,
+          taskStatusCycleOrder:
+            payload.cycleOrder.length === DEFAULT_TASK_STATUS_CYCLE.length
+              ? payload.cycleOrder
+              : w.taskStatusCycleOrder,
+        };
+      });
     },
     [mutate]
   );
@@ -405,6 +505,9 @@ export function useProjectWorkspace(projectId: string | undefined) {
     addTask,
     updateTask,
     deleteTask,
+    addTaskCustomField,
+    removeTaskCustomField,
+    setTaskStatusConfiguration,
     addTaskComment,
     addSubtask,
     updateSubtask,

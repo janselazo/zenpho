@@ -1,4 +1,36 @@
+import type { PlanStage } from "@/lib/crm/mock-data";
+import { PLAN_LABELS } from "@/lib/crm/mock-data";
 import type { WorkspaceResource } from "@/lib/crm/project-workspace-types";
+
+/** Linear-style delivery status on child `project.metadata.deliveryStatus`. */
+export const CHILD_DELIVERY_STATUSES = [
+  "backlog",
+  "planned",
+  "in_progress",
+  "completed",
+  "canceled",
+] as const;
+
+export type ChildDeliveryStatus = (typeof CHILD_DELIVERY_STATUSES)[number];
+
+export const CHILD_DELIVERY_STATUS_LABELS: Record<ChildDeliveryStatus, string> = {
+  backlog: "Backlog",
+  planned: "Planned",
+  in_progress: "In Progress",
+  completed: "Completed",
+  canceled: "Canceled",
+};
+
+/** Maps UI status to existing `plan_stage` check constraint. */
+export const DELIVERY_STATUS_TO_PLAN_STAGE: Record<ChildDeliveryStatus, PlanStage> = {
+  backlog: "pipeline",
+  planned: "planning",
+  in_progress: "mvp",
+  completed: "growth",
+  canceled: "pipeline",
+};
+
+export type ChildProjectPriority = "low" | "medium" | "high" | "urgent";
 
 /** Delivery milestones stored on child `project.metadata.milestones`. */
 export type ProductMilestoneMeta = {
@@ -15,6 +47,56 @@ export const DEFAULT_PRODUCT_MILESTONES: Omit<ProductMilestoneMeta, "id">[] = [
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+export function parseChildDeliveryStatus(
+  metadata: unknown
+): ChildDeliveryStatus | null {
+  if (!isRecord(metadata)) return null;
+  const v = metadata.deliveryStatus;
+  if (typeof v !== "string") return null;
+  return (CHILD_DELIVERY_STATUSES as readonly string[]).includes(v)
+    ? (v as ChildDeliveryStatus)
+    : null;
+}
+
+/** Resolve group bucket for a child project row (metadata + legacy plan_stage). */
+export function resolveChildDeliveryGroup(
+  metadata: unknown,
+  planStage: string | null | undefined
+): ChildDeliveryStatus {
+  const d = parseChildDeliveryStatus(metadata);
+  if (d) return d;
+  const p = typeof planStage === "string" ? planStage.trim().toLowerCase() : "";
+  if (p === "planning") return "planned";
+  if (p === "mvp") return "in_progress";
+  if (p === "growth") return "completed";
+  return "backlog";
+}
+
+/** Visual order for grouped project lists (active work first). */
+export const CHILD_PROJECT_GROUP_ORDER: ChildDeliveryStatus[] = [
+  "in_progress",
+  "planned",
+  "backlog",
+  "completed",
+  "canceled",
+];
+
+export function childProjectStatusDisplay(
+  metadata: unknown,
+  planStage: string | null | undefined
+): string {
+  const d = parseChildDeliveryStatus(metadata);
+  if (d) return CHILD_DELIVERY_STATUS_LABELS[d];
+  const p = typeof planStage === "string" ? planStage.trim().toLowerCase() : "";
+  if (p === "pipeline" || p === "planning" || p === "mvp" || p === "growth") {
+    return PLAN_LABELS[p as PlanStage];
+  }
+  if (p) {
+    return p.replace(/_/g, " ").replace(/\b\w/g, (ch) => ch.toUpperCase());
+  }
+  return "";
 }
 
 export function parseProductMilestones(metadata: unknown): ProductMilestoneMeta[] {

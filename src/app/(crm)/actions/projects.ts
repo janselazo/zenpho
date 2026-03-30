@@ -9,7 +9,13 @@ import {
   type CrmProjectPersistInput,
 } from "@/lib/crm/map-project-row";
 import type { MockProject, PlanStage } from "@/lib/crm/mock-data";
-import type { ProductMilestoneMeta } from "@/lib/crm/product-project-metadata";
+import {
+  CHILD_DELIVERY_STATUSES,
+  DELIVERY_STATUS_TO_PLAN_STAGE,
+  type ChildDeliveryStatus,
+  type ChildProjectPriority,
+  type ProductMilestoneMeta,
+} from "@/lib/crm/product-project-metadata";
 import type { WorkspaceResource } from "@/lib/crm/project-workspace-types";
 
 const PLAN_SET = new Set<string>([
@@ -440,12 +446,35 @@ export async function createCrmPhase(
   return { ok: true, id };
 }
 
+const CHILD_DELIVERY_SET = new Set<string>(CHILD_DELIVERY_STATUSES);
+const CHILD_PRIORITY_SET = new Set<string>([
+  "low",
+  "medium",
+  "high",
+  "urgent",
+]);
+
+function inferDeliveryStatusFromPlanStage(plan: string): ChildDeliveryStatus {
+  if (plan === "planning") return "planned";
+  if (plan === "mvp") return "in_progress";
+  if (plan === "growth") return "completed";
+  return "backlog";
+}
+
 export type CreateCrmChildProjectInput = {
   title: string;
   summary?: string | null;
   description?: string | null;
+  /** Linear-style status; drives `plan_stage` via mapping. */
+  deliveryStatus?: ChildDeliveryStatus;
+  /** Legacy override when `deliveryStatus` omitted */
   plan_stage?: string | null;
+  priority?: ChildProjectPriority | null;
+  leadMemberId?: string | null;
+  memberIds?: string[];
+  start_date?: string | null;
   target_date?: string | null;
+  labels?: string[];
   /** Titles only; server assigns stable ids */
   milestoneTitles?: string[];
 };
@@ -483,11 +512,40 @@ export async function createCrmChildProject(
       ? (parent.metadata as Record<string, unknown>)
       : {};
 
-  const plan =
-    input.plan_stage && PLAN_SET.has(input.plan_stage)
-      ? input.plan_stage
-      : "pipeline";
+  let deliveryStatus: ChildDeliveryStatus;
+  let plan: string;
+
+  if (input.deliveryStatus && CHILD_DELIVERY_SET.has(input.deliveryStatus)) {
+    deliveryStatus = input.deliveryStatus;
+    plan = DELIVERY_STATUS_TO_PLAN_STAGE[deliveryStatus];
+  } else if (input.plan_stage && PLAN_SET.has(input.plan_stage)) {
+    plan = input.plan_stage;
+    deliveryStatus = inferDeliveryStatusFromPlanStage(plan);
+  } else {
+    deliveryStatus = "backlog";
+    plan = "pipeline";
+  }
+
   const target_date = parseTargetDate(input.target_date ?? undefined);
+  const start_date = parseTargetDate(input.start_date ?? undefined);
+
+  const priorityRaw = input.priority;
+  const priority: ChildProjectPriority | null =
+    priorityRaw &&
+    CHILD_PRIORITY_SET.has(priorityRaw)
+      ? priorityRaw
+      : null;
+
+  const leadMemberId =
+    typeof input.leadMemberId === "string" && input.leadMemberId.trim()
+      ? input.leadMemberId.trim()
+      : null;
+  const memberIds = (input.memberIds ?? [])
+    .map((id) => String(id).trim())
+    .filter(Boolean);
+  const labels = (input.labels ?? [])
+    .map((t) => t.trim())
+    .filter(Boolean);
 
   const titles =
     input.milestoneTitles?.map((t) => t.trim()).filter(Boolean) ?? [];
@@ -510,6 +568,11 @@ export async function createCrmChildProject(
       typeof input.summary === "string" && input.summary.trim()
         ? input.summary.trim()
         : null,
+    deliveryStatus,
+    priority,
+    leadMemberId,
+    memberIds: memberIds.length ? memberIds : [],
+    labels: labels.length ? labels : [],
   };
 
   const { data: row, error } = await supabase
@@ -521,6 +584,7 @@ export async function createCrmChildProject(
       status: "active",
       plan_stage: plan,
       project_type: (parent.project_type as string | null) ?? null,
+      start_date,
       target_date,
       website: null,
       budget: null,

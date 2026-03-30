@@ -4,6 +4,26 @@ import type { MilestoneKey } from "@/lib/crm/product-milestones";
 /** Sprint row stored per project (same shape as MockSprint). */
 export type WorkspaceSprint = MockSprint;
 
+/** Custom task table columns (local workspace). */
+export type TaskCustomFieldType = "text" | "number" | "dropdown" | "labels";
+
+export interface WorkspaceTaskCustomFieldDef {
+  id: string;
+  label: string;
+  type: TaskCustomFieldType;
+  /** Options for dropdown (single) or labels (multi-tag suggestions). */
+  options?: string[];
+}
+
+/** Default order when cycling status via the row control (wraps). */
+export const DEFAULT_TASK_STATUS_CYCLE: TaskStatus[] = [
+  "not_started",
+  "action_started",
+  "in_progress",
+  "test_qa",
+  "completed",
+];
+
 export interface WorkspaceTaskComment {
   id: string;
   authorName: string;
@@ -50,6 +70,8 @@ export interface WorkspaceTask {
   /** Display-only times (HH:mm) paired with startDate/endDate */
   startTime?: string;
   endTime?: string;
+  /** Values for `ProjectWorkspace.taskCustomFields` rows, keyed by field id. */
+  customFieldValues?: Record<string, string | number | string[]>;
 }
 
 export type RequestStatus = "new" | "in_review" | "done";
@@ -92,6 +114,12 @@ export interface ProjectWorkspace {
   scopeSections: ScopeSection[];
   meetings: WorkspaceMeeting[];
   resources: WorkspaceResource[];
+  /** Extra task columns (text, number, dropdown, labels). */
+  taskCustomFields: WorkspaceTaskCustomFieldDef[];
+  /** Override built-in status display names in the task UI. */
+  taskStatusLabels?: Partial<Record<TaskStatus, string>>;
+  /** Cycle order for the status control (subset allowed; missing statuses appended). */
+  taskStatusCycleOrder?: TaskStatus[];
 }
 
 export function defaultProjectWorkspace(): ProjectWorkspace {
@@ -102,5 +130,6 @@ export function defaultProjectWorkspace(): ProjectWorkspace {
     scopeSections: [],
     meetings: [],
     resources: [],
+    taskCustomFields: [],
   };
 }

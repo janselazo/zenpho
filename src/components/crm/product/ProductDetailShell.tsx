@@ -12,8 +12,10 @@ import {
   type MockProject,
 } from "@/lib/crm/mock-data";
 import type { WorkspaceResource } from "@/lib/crm/project-workspace-types";
+import type { ChildDeliveryStatus } from "@/lib/crm/product-project-metadata";
 import { milestonesWithDefaults } from "@/lib/crm/product-project-metadata";
 import NewProductProjectModal from "@/components/crm/product/NewProductProjectModal";
+import ProductProjectsGroupedPanel from "@/components/crm/product/ProductProjectsGroupedPanel";
 import ProductMilestonesTab from "@/components/crm/product/ProductMilestonesTab";
 import ProductSprintsTab from "@/components/crm/product/ProductSprintsTab";
 import ProductTasksLinearTab from "@/components/crm/product/ProductTasksLinearTab";
@@ -34,6 +36,7 @@ export type ProductChildRow = {
   title: string;
   plan_stage: string | null;
   metadata: unknown;
+  target_date?: string | null;
 };
 
 type Props = {
@@ -68,6 +71,9 @@ export default function ProductDetailShell({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [modalOpen, setModalOpen] = useState(false);
+  const [newProjectStatusPreset, setNewProjectStatusPreset] = useState<
+    ChildDeliveryStatus | undefined
+  >(undefined);
 
   const tabParam = searchParams.get("tab");
   const activeTab = TABS.some((t) => t.id === tabParam)
@@ -229,7 +235,10 @@ export default function ProductDetailShell({
             </select>
             <button
               type="button"
-              onClick={() => setModalOpen(true)}
+              onClick={() => {
+                setNewProjectStatusPreset(undefined);
+                setModalOpen(true);
+              }}
               className="text-sm font-medium text-accent hover:underline"
             >
               + New project
@@ -241,106 +250,70 @@ export default function ProductDetailShell({
       <div className="flex-1 overflow-auto p-8" role="tabpanel">
         {activeTab === "projects" ? (
           <div className="space-y-6">
-            <div className="grid gap-6 lg:grid-cols-2">
-              <section className="rounded-2xl border border-border bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900/60">
-                <h2 className="text-sm font-semibold text-text-primary dark:text-zinc-100">
-                  Details
-                </h2>
-                <dl className="mt-4 space-y-2 text-sm">
+            <section className="max-w-lg rounded-2xl border border-border bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900/60">
+              <h2 className="text-sm font-semibold text-text-primary dark:text-zinc-100">
+                Details
+              </h2>
+              <dl className="mt-4 space-y-2 text-sm">
+                <div>
+                  <dt className="text-text-secondary dark:text-zinc-500">
+                    Target
+                  </dt>
+                  <dd className="font-medium text-text-primary dark:text-zinc-100">
+                    {product.expectedEndDate === "TBD"
+                      ? "TBD"
+                      : product.expectedEndDate}
+                  </dd>
+                </div>
+                {product.budget != null ? (
                   <div>
                     <dt className="text-text-secondary dark:text-zinc-500">
-                      Target
+                      Budget
                     </dt>
                     <dd className="font-medium text-text-primary dark:text-zinc-100">
-                      {product.expectedEndDate === "TBD"
-                        ? "TBD"
-                        : product.expectedEndDate}
+                      {new Intl.NumberFormat("en-US", {
+                        style: "currency",
+                        currency: "USD",
+                        maximumFractionDigits: 0,
+                      }).format(product.budget)}
                     </dd>
                   </div>
-                  {product.budget != null ? (
-                    <div>
-                      <dt className="text-text-secondary dark:text-zinc-500">
-                        Budget
-                      </dt>
-                      <dd className="font-medium text-text-primary dark:text-zinc-100">
-                        {new Intl.NumberFormat("en-US", {
-                          style: "currency",
-                          currency: "USD",
-                          maximumFractionDigits: 0,
-                        }).format(product.budget)}
-                      </dd>
-                    </div>
-                  ) : null}
-                  {product.website ? (
-                    <div>
-                      <dt className="text-text-secondary dark:text-zinc-500">
-                        Website
-                      </dt>
-                      <dd>
-                        <a
-                          href={
-                            product.website.startsWith("http")
-                              ? product.website
-                              : `https://${product.website}`
-                          }
-                          className="font-medium text-accent hover:underline"
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          {product.website}
-                        </a>
-                      </dd>
-                    </div>
-                  ) : null}
-                </dl>
-              </section>
+                ) : null}
+                {product.website ? (
+                  <div>
+                    <dt className="text-text-secondary dark:text-zinc-500">
+                      Website
+                    </dt>
+                    <dd>
+                      <a
+                        href={
+                          product.website.startsWith("http")
+                            ? product.website
+                            : `https://${product.website}`
+                        }
+                        className="font-medium text-accent hover:underline"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {product.website}
+                      </a>
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
+            </section>
 
-              <section className="rounded-2xl border border-border bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900/60">
-                <div className="flex items-center justify-between gap-2">
-                  <h2 className="text-sm font-semibold text-text-primary dark:text-zinc-100">
-                    Projects
-                  </h2>
-                  <button
-                    type="button"
-                    onClick={() => setModalOpen(true)}
-                    className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white dark:bg-blue-600"
-                  >
-                    New project
-                  </button>
-                </div>
-                <p className="mt-1 text-xs text-text-secondary dark:text-zinc-500">
-                  Delivery projects under this product (e.g. iOS build, API
-                  integration).
-                </p>
-                <ul className="mt-4 space-y-2">
-                  {childrenProjects.length === 0 ? (
-                    <li className="text-sm text-text-secondary">
-                      No projects yet. Create one to use milestones, sprints,
-                      tasks, and issues.
-                    </li>
-                  ) : (
-                    childrenProjects.map((c) => (
-                      <li key={c.id}>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setQuery({ tab: "tasks", project: c.id })
-                          }
-                          className="w-full rounded-xl border border-border px-4 py-3 text-left text-sm font-medium text-text-primary transition-colors hover:border-accent hover:text-accent dark:border-zinc-700 dark:text-zinc-100"
-                        >
-                          {c.title}
-                          {c.plan_stage ? (
-                            <span className="ml-2 text-xs font-normal text-text-secondary">
-                              · {c.plan_stage}
-                            </span>
-                          ) : null}
-                        </button>
-                      </li>
-                    ))
-                  )}
-                </ul>
-              </section>
-            </div>
+            <ProductProjectsGroupedPanel
+              teamId={product.teamId}
+              projects={childrenProjects}
+              onOpenProject={(id) =>
+                setQuery({ tab: "tasks", project: id })
+              }
+              onNewProject={(preset) => {
+                setNewProjectStatusPreset(preset);
+                setModalOpen(true);
+              }}
+            />
           </div>
         ) : null}
 
@@ -385,7 +358,13 @@ export default function ProductDetailShell({
           ) : (
             <ProductTasksLinearTab
               projectId={selectedProjectId}
+              teamId={product.teamId}
               milestones={milestoneList}
+              childProjects={childrenProjects.map((c) => ({
+                id: c.id,
+                title: c.title,
+              }))}
+              onCreatedOnProject={(id) => setQuery({ project: id })}
               sprintParam={sprintParam}
               onSprintFilterChange={(v) =>
                 setQuery({ sprint: v === "all" ? null : v })
@@ -414,10 +393,16 @@ export default function ProductDetailShell({
 
       <NewProductProjectModal
         productId={productId}
+        teamId={product.teamId}
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        initialDeliveryStatus={newProjectStatusPreset}
+        onClose={() => {
+          setModalOpen(false);
+          setNewProjectStatusPreset(undefined);
+        }}
         onCreated={(id) => {
           setModalOpen(false);
+          setNewProjectStatusPreset(undefined);
           router.refresh();
           setQuery({ tab: "milestones", project: id });
         }}

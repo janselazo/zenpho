@@ -52,7 +52,7 @@ export default async function ProductOverviewPage({
 
   const { data: children } = await supabase
     .from("project")
-    .select("id, title, plan_stage, metadata, created_at")
+    .select("id, title, plan_stage, metadata, target_date, created_at")
     .eq("parent_project_id", productId)
     .order("created_at", { ascending: true });
 
