@@ -108,7 +108,7 @@ export async function fetchDashboardFunnel(
 
   return [
     {
-      label: "Opportunities",
+      label: "Leads",
       count: leadsRes.count ?? 0,
       value: 0,
       color: "#3b82f6",

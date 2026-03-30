@@ -308,7 +308,7 @@ export default function NewProjectModal({
           <p className="mt-1.5 text-sm leading-relaxed text-text-secondary dark:text-zinc-400">
             {isEdit
               ? "Change client, status, team, or schedule. Sprint and task counts are unchanged here."
-              : "Link the project to a client, then name your build and set status and type. Target date is optional (TBD if skipped)."}
+              : "Link the project to a client, then name your build and set status and type."}
           </p>
 
           {dealPrefill?.missingClientNote ? (

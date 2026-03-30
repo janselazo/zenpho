@@ -206,8 +206,8 @@ export const LEAD_STAGE_LABELS: Record<LeadStage, string> = {
   discoverycall_completed: "Appointment Completed",
   proposal_sent: "Proposal Sent",
   negotiation: "Negotiation",
-  closed_won: "Closed Won",
-  closed_lost: "Closed Lost",
+  closed_won: "Won",
+  closed_lost: "Lost",
   nurture: "Nurture",
 };
 

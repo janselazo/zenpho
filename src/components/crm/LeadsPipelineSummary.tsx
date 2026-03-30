@@ -288,7 +288,7 @@ function SummaryCard({
       />
       <div className="relative flex items-start justify-between gap-1.5">
         <div className="flex min-w-0 flex-1 items-start gap-2">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-600 dark:bg-violet-950/80 dark:text-violet-300">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600 dark:bg-orange-950/80 dark:text-orange-300">
             {icon}
           </div>
           <div className="min-w-0 pt-0.5">
@@ -480,21 +480,27 @@ export default function LeadsPipelineSummary({
   }, [quarterPresets]);
 
   return (
-    <div className="mt-4 rounded-xl border border-border/80 bg-white p-4 shadow-sm dark:border-zinc-700/70 dark:bg-zinc-900/40 dark:shadow-none">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-lg font-bold tracking-tight text-text-primary dark:text-zinc-100">
-          Pipeline
-        </h2>
-        <div className="flex flex-col items-stretch gap-1.5 sm:flex-row sm:items-center">
+    <div className="mt-4 rounded-2xl border border-border/80 bg-white p-4 shadow-sm dark:border-zinc-700/70 dark:bg-zinc-900/40 dark:shadow-none dark:ring-1 dark:ring-white/[0.04]">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div className="min-w-0">
+          <h2 className="text-base font-bold tracking-tight text-text-primary sm:text-lg dark:text-zinc-100">
+            Pipeline summary
+          </h2>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-2">
           <button
             type="button"
             onClick={exportCsv}
-            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-white px-2.5 py-1.5 text-xs font-medium text-text-primary shadow-sm hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+            aria-label="Export leads as CSV for the selected period"
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-xs font-medium text-text-primary transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:hover:bg-zinc-800/80"
           >
-            <Download className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400" />
+            <Download
+              className="h-3.5 w-3.5 shrink-0 text-orange-600 dark:text-orange-400"
+              aria-hidden
+            />
             Export
           </button>
-          <div className="flex flex-col gap-0.5 sm:items-end">
+          <div className="flex min-w-0 flex-1 flex-col gap-1 sm:min-w-[11rem] sm:flex-initial">
             <div className="relative">
               <select
                 value={
@@ -503,7 +509,7 @@ export default function LeadsPipelineSummary({
                     : "this-quarter"
                 }
                 onChange={(e) => setRangeKey(e.target.value)}
-                className="w-full min-w-[9rem] appearance-none rounded-lg border border-border bg-white py-1.5 pl-2.5 pr-8 text-xs font-medium text-text-primary shadow-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 sm:w-auto"
+                className="w-full cursor-pointer appearance-none rounded-lg border border-border bg-white py-2 pl-3 pr-9 text-xs font-medium text-text-primary outline-none transition-colors hover:border-zinc-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-400/20 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:border-zinc-500 dark:focus:border-orange-500 dark:focus:ring-orange-500/25 sm:w-auto sm:min-w-[11rem]"
                 aria-label="Date range"
               >
                 {selectOptions.map((o) => (
@@ -512,15 +518,18 @@ export default function LeadsPipelineSummary({
                   </option>
                 ))}
               </select>
-              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
+              <ChevronDown
+                className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400 dark:text-zinc-500"
+                aria-hidden
+              />
             </div>
-            <span className="hidden text-right text-[10px] text-text-secondary dark:text-zinc-500 sm:block">
+            <p className="text-[10px] leading-tight text-text-secondary dark:text-zinc-500">
               {formatDashboardRangeLabel(range.from, range.to)}
-            </span>
+            </p>
           </div>
         </div>
       </div>
-      <p className="mt-1 text-[10px] leading-snug text-text-secondary dark:text-zinc-500">
+      <p className="mt-3 text-[10px] leading-snug text-text-secondary dark:text-zinc-500">
         Counts use leads created in the selected period and their current stage. Trends compare to the same period last year. Export uses this period and your search filter.
       </p>
       <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
@@ -561,9 +570,6 @@ export default function LeadsPipelineSummary({
           icon={<Building2 className="h-3.5 w-3.5" strokeWidth={2.25} />}
         />
       </div>
-      <p className="mt-2 text-[10px] leading-snug text-text-secondary dark:text-zinc-500">
-        Appointments = appointment scheduled or completed. Proposals = proposal sent or negotiation. Clients = closed won.
-      </p>
     </div>
   );
 }

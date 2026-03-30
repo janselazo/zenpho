@@ -8,6 +8,7 @@ import {
   Building2,
   Check,
   ChevronDown,
+  ExternalLink,
   FolderKanban,
   Handshake,
   ListTodo,
@@ -16,6 +17,7 @@ import {
   Search,
   Settings2,
   StickyNote,
+  Table2,
   Trash2,
   X,
 } from "lucide-react";
@@ -400,6 +402,9 @@ export default function LeadsView({
   const [notesLead, setNotesLead] = useState<Lead | null>(null);
   const [newProjectLeadId, setNewProjectLeadId] = useState<string | null>(null);
   const [quickTaskLead, setQuickTaskLead] = useState<Lead | null>(null);
+  const [pipelineEditMenuLead, setPipelineEditMenuLead] = useState<Lead | null>(
+    null
+  );
 
   function startEdit(lead: Lead) {
     setEditingId(lead.id);
@@ -409,11 +414,6 @@ export default function LeadsView({
   function cancelEdit() {
     setEditingId(null);
     setDraft(null);
-  }
-
-  function startEditFromPipeline(lead: Lead) {
-    setView("leads");
-    startEdit(lead);
   }
 
   const showLeadToolbar = view === "pipeline" || view === "leads";
@@ -568,7 +568,7 @@ export default function LeadsView({
             onCreateDeal={setCreateDealLead}
             onCreateProject={(lead) => setNewProjectLeadId(lead.id)}
             onQuickTask={setQuickTaskLead}
-            onEditFromPipeline={startEditFromPipeline}
+            onEditFromPipeline={setPipelineEditMenuLead}
             onDelete={handleDeleteLead}
           />
         ) : null}
@@ -627,6 +627,21 @@ export default function LeadsView({
         />
       ) : null}
       {modalOpen && <NewLeadModal onClose={() => setModalOpen(false)} />}
+      {pipelineEditMenuLead ? (
+        <PipelineLeadEditOptionsModal
+          lead={pipelineEditMenuLead}
+          onClose={() => setPipelineEditMenuLead(null)}
+          onEditInTable={(l) => {
+            setPipelineEditMenuLead(null);
+            setView("leads");
+            startEdit(l);
+          }}
+          onOpenFullPage={(l) => {
+            setPipelineEditMenuLead(null);
+            router.push(`/leads/${l.id}`);
+          }}
+        />
+      ) : null}
 
       <PipelineSettingsModal
         open={pipelineSettingsOpen}
@@ -1249,6 +1264,91 @@ function LeadsTable({
           })}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function PipelineLeadEditOptionsModal({
+  lead,
+  onClose,
+  onEditInTable,
+  onOpenFullPage,
+}: {
+  lead: Lead;
+  onClose: () => void;
+  onEditInTable: (lead: Lead) => void;
+  onOpenFullPage: (lead: Lead) => void;
+}) {
+  const label = lead.name?.trim() || lead.email?.trim() || "Lead";
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-4 backdrop-blur-sm sm:items-center"
+      onClick={onClose}
+      onKeyDown={(e) => e.key === "Escape" && onClose()}
+      role="presentation"
+    >
+      <div
+        className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-white shadow-xl dark:border-zinc-700 dark:bg-zinc-950"
+        role="dialog"
+        onClick={(e) => e.stopPropagation()}
+        aria-modal="true"
+        aria-labelledby="pipeline-edit-lead-title"
+      >
+        <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-4 dark:border-zinc-700">
+          <div className="min-w-0">
+            <h2
+              id="pipeline-edit-lead-title"
+              className="text-lg font-bold text-text-primary dark:text-zinc-50"
+            >
+              Edit lead
+            </h2>
+            <p className="mt-0.5 truncate text-sm text-text-secondary dark:text-zinc-400">
+              {label}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 rounded-lg p-1 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5" aria-hidden />
+          </button>
+        </div>
+        <div className="flex flex-col gap-2 p-4">
+          <button
+            type="button"
+            onClick={() => onEditInTable(lead)}
+            className="flex w-full items-center gap-3 rounded-xl border border-border bg-white px-4 py-3 text-left text-sm font-medium text-text-primary transition-colors hover:border-accent hover:bg-accent/5 dark:border-zinc-600 dark:bg-zinc-900 dark:hover:border-accent dark:hover:bg-accent/10"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent">
+              <Table2 className="h-5 w-5" aria-hidden />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-semibold">Edit in Leads table</span>
+              <span className="mt-0.5 block text-xs font-normal text-text-secondary">
+                Switch to the Leads tab and edit inline in the grid
+              </span>
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onOpenFullPage(lead)}
+            className="flex w-full items-center gap-3 rounded-xl border border-border bg-white px-4 py-3 text-left text-sm font-medium text-text-primary transition-colors hover:border-accent hover:bg-accent/5 dark:border-zinc-600 dark:bg-zinc-900 dark:hover:border-accent dark:hover:bg-accent/10"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+              <ExternalLink className="h-5 w-5" aria-hidden />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-semibold">Open full lead page</span>
+              <span className="mt-0.5 block text-xs font-normal text-text-secondary">
+                All fields, deal info, and save on a dedicated page
+              </span>
+            </span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

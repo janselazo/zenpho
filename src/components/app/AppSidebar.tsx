@@ -34,9 +34,9 @@ const opportunitiesNav: Array<{
   icon: LucideIcon;
 }> = [
   { href: "/leads", label: "Leads", icon: UsersRound },
-  { href: "/proposals", label: "Proposals", icon: FileText },
-  { href: "/conversations", label: "Conversations", icon: MessageSquare },
   { href: "/calendar", label: "Appointments", icon: Calendar },
+  { href: "/conversations", label: "Conversations", icon: MessageSquare },
+  { href: "/proposals", label: "Proposals", icon: FileText },
 ];
 
 const workNav = [

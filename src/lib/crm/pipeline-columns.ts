@@ -24,8 +24,8 @@ export const DEFAULT_LEAD_PIPELINE_COLUMNS: PipelineColumnDef[] = [
   { slug: "discoverycall_completed", label: "Appointment Completed", color: "#8b5cf6" },
   { slug: "proposal_sent", label: "Proposal Sent", color: "#a855f7" },
   { slug: "negotiation", label: "Negotiation", color: "#f59e0b" },
-  { slug: "closed_won", label: "Closed Won", color: "#10b981" },
-  { slug: "closed_lost", label: "Closed Lost", color: "#ef4444" },
+  { slug: "closed_won", label: "Won", color: "#10b981" },
+  { slug: "closed_lost", label: "Lost", color: "#ef4444" },
   { slug: "nurture", label: "Nurture", color: "#94a3b8" },
 ];
 

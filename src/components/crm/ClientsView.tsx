@@ -369,16 +369,6 @@ export default function ClientsView({
                       <>
                         <button
                           type="button"
-                          onClick={() => setProjectForClient(c)}
-                          disabled={editingId !== null}
-                          className="inline-flex items-center justify-center rounded-md p-1.5 text-violet-600 transition-colors hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-40 dark:text-violet-400 dark:hover:bg-violet-950/40"
-                          aria-label={`New project for ${deleteLabel}`}
-                          title="Create project"
-                        >
-                          <FolderKanban className="h-4 w-4 shrink-0" aria-hidden />
-                        </button>
-                        <button
-                          type="button"
                           onClick={() => setDealForLead(c)}
                           disabled={editingId !== null || !c.linkedLead}
                           title={
@@ -390,6 +380,16 @@ export default function ClientsView({
                           aria-label={`Create deal for ${deleteLabel}`}
                         >
                           <Handshake className="h-4 w-4 shrink-0" aria-hidden />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setProjectForClient(c)}
+                          disabled={editingId !== null}
+                          className="inline-flex items-center justify-center rounded-md p-1.5 text-violet-600 transition-colors hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-40 dark:text-violet-400 dark:hover:bg-violet-950/40"
+                          aria-label={`New project for ${deleteLabel}`}
+                          title="Create project"
+                        >
+                          <FolderKanban className="h-4 w-4 shrink-0" aria-hidden />
                         </button>
                         <button
                           type="button"
