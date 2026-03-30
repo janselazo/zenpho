@@ -24,18 +24,19 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import {
   ArrowDownUp,
   Calendar,
-  CheckCircle2,
   ChevronDown,
   Circle,
   CircleDot,
   Flag,
+  Hammer,
   LayoutGrid,
   List,
   ListFilter,
   Loader2,
   Pencil,
-  RotateCw,
+  Rocket,
   Search,
+  TestTube2,
   Trash2,
 } from "lucide-react";
 import KanbanBoard, { type KanbanColumn } from "@/components/crm/KanbanBoard";
@@ -51,11 +52,17 @@ import {
 type ViewMode = "kanban" | "table";
 type SortKey = "title-asc" | "title-desc" | "end-asc" | "end-desc";
 
-const planOrder: PlanStage[] = ["pipeline", "planning", "mvp", "growth"];
+const planOrder: PlanStage[] = [
+  "backlog",
+  "planning",
+  "building",
+  "testing",
+  "release",
+];
 
-/** Column glyphs aligned with board-style status columns (pending → done). */
+/** Column glyphs aligned with product workflow (backlog → release). */
 const planColumnIcon: Record<PlanStage, ReactNode> = {
-  pipeline: (
+  backlog: (
     <Circle
       className="h-4 w-4 shrink-0 text-zinc-400"
       strokeWidth={2}
@@ -69,15 +76,22 @@ const planColumnIcon: Record<PlanStage, ReactNode> = {
       aria-hidden
     />
   ),
-  mvp: (
-    <RotateCw
+  building: (
+    <Hammer
+      className="h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400"
+      strokeWidth={2}
+      aria-hidden
+    />
+  ),
+  testing: (
+    <TestTube2
       className="h-4 w-4 shrink-0 text-violet-600 dark:text-violet-400"
       strokeWidth={2}
       aria-hidden
     />
   ),
-  growth: (
-    <CheckCircle2
+  release: (
+    <Rocket
       className="h-4 w-4 shrink-0 text-emerald-500"
       strokeWidth={2}
       aria-hidden
@@ -126,12 +140,14 @@ function planTagStyles(plan: PlanStage) {
 
 function priorityFlagColor(plan: PlanStage) {
   switch (plan) {
-    case "pipeline":
-      return "text-red-500";
+    case "backlog":
+      return "text-zinc-400";
     case "planning":
       return "text-amber-500";
-    case "mvp":
+    case "building":
       return "text-sky-500";
+    case "testing":
+      return "text-violet-500";
     default:
       return "text-emerald-500";
   }

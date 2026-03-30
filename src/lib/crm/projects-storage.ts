@@ -1,5 +1,6 @@
 import type { MockProject } from "@/lib/crm/mock-data";
 import { projects as seedProjects } from "@/lib/crm/mock-data";
+import { parsePlanStage } from "@/lib/crm/map-project-row";
 
 export const CRM_PROJECTS_STORAGE_KEY = "crm_projects_v1";
 
@@ -16,6 +17,9 @@ export function normalizeStoredProject(row: MockProject): MockProject {
     ...row,
     clientId,
     clientName: row.clientName ?? null,
+    plan: parsePlanStage(
+      typeof row.plan === "string" ? row.plan : null
+    ),
   };
 }
 

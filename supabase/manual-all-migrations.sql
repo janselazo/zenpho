@@ -1045,3 +1045,29 @@ alter table public.issue
   add constraint issue_category_check check (
     category in ('feature_request', 'bug_report', 'customer_request')
   );
+
+-- ----- 20260430210000_product_plan_stage.sql -----
+alter table public.project drop constraint if exists project_plan_stage_check;
+
+update public.project
+set plan_stage = case plan_stage
+  when 'pipeline' then 'backlog'
+  when 'planning' then 'planning'
+  when 'mvp' then 'building'
+  when 'growth' then 'release'
+  else 'backlog'
+end;
+
+alter table public.project
+  alter column plan_stage set default 'backlog';
+
+alter table public.project
+  add constraint project_plan_stage_check check (
+    plan_stage in (
+      'backlog',
+      'planning',
+      'building',
+      'testing',
+      'release'
+    )
+  );

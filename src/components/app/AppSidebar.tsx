@@ -97,7 +97,7 @@ async function loadSidebarProductRoots(): Promise<MockProject[]> {
   return data.map((row) => ({
     id: row.id as string,
     title: ((row.title as string) ?? "").trim() || "Untitled",
-    plan: "pipeline" as PlanStage,
+    plan: "backlog" as PlanStage,
     teamId: "team-general",
     clientId: "",
     color: "#6366f1",

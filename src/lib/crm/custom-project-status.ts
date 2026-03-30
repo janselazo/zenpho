@@ -1,6 +1,7 @@
 import { contrastTextForBg, normalizeHexColor } from "@/lib/crm/child-delivery-status-ui";
 import {
   CHILD_DELIVERY_STATUSES,
+  LEGACY_CHILD_DELIVERY_SLUG_MAP,
   type ChildDeliveryStatus,
   resolveChildDeliveryGroup,
 } from "@/lib/crm/product-project-metadata";
@@ -50,6 +51,10 @@ export function resolveProjectsTabGroupId(
     if (typeof g === "string" && g.trim()) {
       const id = g.trim();
       if (BUILT_IN_TAB_GROUP_IDS.has(id)) return id;
+      const fromLegacy =
+        LEGACY_CHILD_DELIVERY_SLUG_MAP[id] ??
+        LEGACY_CHILD_DELIVERY_SLUG_MAP[id.toLowerCase()];
+      if (fromLegacy) return fromLegacy;
       if (validCustomIds.has(id)) return id;
     }
   }

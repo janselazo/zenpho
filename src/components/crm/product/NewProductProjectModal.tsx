@@ -18,6 +18,7 @@ import {
 } from "@/lib/crm/custom-project-status";
 import {
   CHILD_PROJECT_GROUP_ORDER,
+  LEGACY_CHILD_DELIVERY_SLUG_MAP,
   type ChildDeliveryStatus,
   type ChildProjectPriority,
 } from "@/lib/crm/product-project-metadata";
@@ -26,16 +27,17 @@ import { getMembersForTeam, teamMembers } from "@/lib/crm/mock-data";
 import {
   Calendar,
   Check,
-  CheckCircle2,
   Circle,
   CircleDashed,
+  Eye,
   Loader2,
+  Rocket,
   Tag,
+  TestTube2,
   User,
   UserPlus,
   Users,
   X,
-  XCircle,
 } from "lucide-react";
 
 const PRIORITIES: { id: ChildProjectPriority | ""; label: string }[] = [
@@ -105,17 +107,25 @@ function StatusGlyph({
           </svg>
         </span>
       );
-    case "completed":
+    case "in_review":
       return (
-        <CheckCircle2
+        <Eye
           className="h-3.5 w-3.5 shrink-0"
           style={{ color: accent }}
           aria-hidden
         />
       );
-    case "canceled":
+    case "testing":
       return (
-        <XCircle
+        <TestTube2
+          className="h-3.5 w-3.5 shrink-0"
+          style={{ color: accent }}
+          aria-hidden
+        />
+      );
+    case "production":
+      return (
+        <Rocket
           className="h-3.5 w-3.5 shrink-0"
           style={{ color: accent }}
           aria-hidden
@@ -169,7 +179,7 @@ export default function NewProductProjectModal({
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [description, setDescription] = useState("");
-  const [selectedGroupId, setSelectedGroupId] = useState<string>("completed");
+  const [selectedGroupId, setSelectedGroupId] = useState<string>("backlog");
   const [priority, setPriority] = useState<ChildProjectPriority | "">("");
   const [leadMemberId, setLeadMemberId] = useState("");
   const [memberIds, setMemberIds] = useState<string[]>([]);
@@ -225,8 +235,15 @@ export default function NewProductProjectModal({
         setSelectedGroupId(init);
         return;
       }
+      const leg =
+        LEGACY_CHILD_DELIVERY_SLUG_MAP[init] ??
+        LEGACY_CHILD_DELIVERY_SLUG_MAP[init.toLowerCase()];
+      if (leg) {
+        setSelectedGroupId(leg);
+        return;
+      }
     }
-    setSelectedGroupId("completed");
+    setSelectedGroupId("backlog");
   }, [open, initialProjectsTabGroupId, customProjectStatuses]);
 
   if (!open) return null;
@@ -235,7 +252,7 @@ export default function NewProductProjectModal({
     setTitle("");
     setSummary("");
     setDescription("");
-    setSelectedGroupId("completed");
+    setSelectedGroupId("backlog");
     setPriority("");
     setLeadMemberId("");
     setMemberIds([]);

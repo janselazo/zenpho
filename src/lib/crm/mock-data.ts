@@ -2,7 +2,16 @@
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-export type PlanStage = "pipeline" | "planning" | "mvp" | "growth";
+/** Root product Kanban columns; persisted as `project.plan_stage`. */
+export const PLAN_STAGE_ORDER = [
+  "backlog",
+  "planning",
+  "building",
+  "testing",
+  "release",
+] as const;
+
+export type PlanStage = (typeof PLAN_STAGE_ORDER)[number];
 export type TaskStatus =
   | "not_started"
   | "action_started"
@@ -176,17 +185,19 @@ export interface MockLead {
 // ── Data ───────────────────────────────────────────────────────────────────
 
 export const PLAN_COLORS: Record<PlanStage, string> = {
-  pipeline: "#ef4444",
+  backlog: "#71717a",
   planning: "#f59e0b",
-  mvp: "#3b82f6",
-  growth: "#10b981",
+  building: "#3b82f6",
+  testing: "#8b5cf6",
+  release: "#10b981",
 };
 
 export const PLAN_LABELS: Record<PlanStage, string> = {
-  pipeline: "Backlog",
-  planning: "Progress",
-  mvp: "Review",
-  growth: "Done",
+  backlog: "Backlog",
+  planning: "Planning",
+  building: "Building",
+  testing: "Testing",
+  release: "Release",
 };
 
 export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {

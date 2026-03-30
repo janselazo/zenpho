@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   getMembersForTeam,
   TASK_STATUS_COLORS,
@@ -41,12 +48,120 @@ import {
   Trash2,
   Type,
   User,
+  UserCircle,
   X,
 } from "lucide-react";
 
-function shortRef(taskId: string) {
-  const tail = taskId.replace(/^[^-]+-/, "").slice(0, 4) || taskId.slice(-4);
-  return `TSK-${tail.toUpperCase()}`;
+type AssigneeMemberRow = { id: string; name: string };
+
+function assigneeInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return (
+      parts[0].charAt(0) + parts[parts.length - 1].charAt(0)
+    ).toUpperCase();
+  }
+  const one = parts[0];
+  if (one && one.length >= 2) return one.slice(0, 2).toUpperCase();
+  return one?.charAt(0)?.toUpperCase() ?? "?";
+}
+
+function TaskAssigneeCell({
+  assigneeId,
+  members,
+  onAssign,
+}: {
+  assigneeId: string;
+  members: AssigneeMemberRow[];
+  onAssign: (id: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const assigned = assigneeId
+    ? members.find((m) => m.id === assigneeId)
+    : undefined;
+
+  useEffect(() => {
+    if (!open) return;
+    function onDoc(e: MouseEvent) {
+      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  return (
+    <div className="relative flex justify-center px-1" ref={wrapRef}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border transition-colors hover:bg-surface/80 dark:border-zinc-600 dark:hover:bg-zinc-800 ${
+          assigned ? "bg-accent/10 dark:bg-blue-500/15" : ""
+        }`}
+        title={
+          assigned
+            ? `${assigned.name} — click to change`
+            : "Unassigned — click to assign"
+        }
+        aria-label={
+          assigned
+            ? `Assignee ${assigned.name}, click to change`
+            : "Assign teammate"
+        }
+        aria-expanded={open}
+        aria-haspopup="listbox"
+      >
+        {assigned ? (
+          <span className="text-[11px] font-semibold text-text-primary dark:text-zinc-100">
+            {assigneeInitials(assigned.name)}
+          </span>
+        ) : (
+          <UserCircle
+            className="h-5 w-5 text-text-secondary dark:text-zinc-500"
+            aria-hidden
+          />
+        )}
+      </button>
+      {open ? (
+        <div
+          className="absolute right-0 top-full z-[60] mt-1 max-h-64 w-52 overflow-y-auto rounded-xl border border-border bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-950"
+          role="listbox"
+        >
+          <button
+            type="button"
+            role="option"
+            className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-text-primary hover:bg-surface/80 dark:text-zinc-100 dark:hover:bg-zinc-800"
+            onClick={() => {
+              onAssign(null);
+              setOpen(false);
+            }}
+          >
+            Unassigned
+            {!assigneeId ? (
+              <Check className="h-4 w-4 shrink-0 text-accent" aria-hidden />
+            ) : null}
+          </button>
+          {members.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              role="option"
+              className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-text-primary hover:bg-surface/80 dark:text-zinc-100 dark:hover:bg-zinc-800"
+              onClick={() => {
+                onAssign(m.id);
+                setOpen(false);
+              }}
+            >
+              <span className="min-w-0 truncate">{m.name}</span>
+              {assigneeId === m.id ? (
+                <Check className="h-4 w-4 shrink-0 text-accent" aria-hidden />
+              ) : null}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function statusDisplay(
@@ -206,6 +321,7 @@ export default function ProductTasksLinearTab({
   const [newDueDate, setNewDueDate] = useState(() => formatISODate(new Date()));
   const [newMilestoneId, setNewMilestoneId] = useState("");
   const [newTaskMenu, setNewTaskMenu] = useState<NewTaskMenu>(null);
+  const [newTaskModalOpen, setNewTaskModalOpen] = useState(false);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [addFieldOpen, setAddFieldOpen] = useState(false);
   const addFieldRef = useRef<HTMLDivElement>(null);
@@ -273,6 +389,26 @@ export default function ProductTasksLinearTab({
     return cur?.id ?? null;
   }, [sprintFilterMode, sprintParam, workspace.sprints]);
 
+  const resetNewTaskForm = useCallback(() => {
+    setNewTitle("");
+    setNewDescription("");
+    setNewTaskPriority("");
+    setNewAssigneeId("");
+    setNewTags([]);
+    setNewTagDraft("");
+    setNewDueDate(formatISODate(new Date()));
+    setNewMilestoneId("");
+    setNewTaskMenu(null);
+    setNewTargetProjectId(projectId);
+    setNewTaskStatus(cycleOrder[0] ?? "not_started");
+  }, [projectId, cycleOrder]);
+
+  const closeNewTaskModal = useCallback(() => {
+    setNewTaskModalOpen(false);
+    setNewTaskMenu(null);
+    resetNewTaskForm();
+  }, [resetNewTaskForm]);
+
   useEffect(() => {
     setNewTargetProjectId(projectId);
   }, [projectId]);
@@ -301,11 +437,20 @@ export default function ProductTasksLinearTab({
         setNewTaskMenu(null);
       }
     }
-    if (newTaskMenu) {
+    if (newTaskMenu && newTaskModalOpen) {
       document.addEventListener("mousedown", onDoc);
       return () => document.removeEventListener("mousedown", onDoc);
     }
-  }, [newTaskMenu]);
+  }, [newTaskMenu, newTaskModalOpen]);
+
+  useEffect(() => {
+    if (!newTaskModalOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") closeNewTaskModal();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [newTaskModalOpen, closeNewTaskModal]);
 
   if (!hydrated) {
     return (
@@ -364,17 +509,8 @@ export default function ProductTasksLinearTab({
       milestoneTags: newTags.length ? newTags : undefined,
     });
     if (target !== projectId) onCreatedOnProject?.(target);
-    setNewTitle("");
-    setNewDescription("");
-    setNewTaskPriority("");
-    setNewAssigneeId("");
-    setNewTags([]);
-    setNewTagDraft("");
-    setNewDueDate(formatISODate(new Date()));
-    setNewMilestoneId("");
-    setNewTaskMenu(null);
-    setNewTargetProjectId(projectId);
-    setNewTaskStatus(cycleOrder[0] ?? "not_started");
+    resetNewTaskForm();
+    setNewTaskModalOpen(false);
   }
 
   function toggleNewMenu(key: NewTaskMenu) {
@@ -384,7 +520,7 @@ export default function ProductTasksLinearTab({
   const pillClass =
     "inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-2.5 py-1.5 text-xs font-medium text-text-primary shadow-sm transition-colors hover:bg-surface/80 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800";
   const menuClass =
-    "absolute left-0 z-40 mt-1 max-h-72 min-w-[240px] overflow-y-auto rounded-xl border border-border bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-950";
+    "absolute left-0 z-[100] mt-1 max-h-72 min-w-[240px] overflow-y-auto rounded-xl border border-border bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-950";
 
   const selectedProjectTitle =
     childProjects.find((c) => c.id === newTargetProjectId)?.title ?? "Project";
@@ -507,40 +643,81 @@ export default function ProductTasksLinearTab({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <label className="flex flex-wrap items-center gap-2 text-sm text-text-secondary dark:text-zinc-400">
-          <span className="font-medium">Sprint</span>
-          <select
-            value={selectSprintValue}
-            onChange={(e) => onSprintFilterChange(e.target.value)}
-            className="min-w-[200px] rounded-lg border border-border bg-white px-3 py-2 text-sm text-text-primary dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
-          >
-            <option value="all">All tasks</option>
-            <option value="backlog">Backlog (no sprint)</option>
-            {workspace.sprints.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-                {s.isCurrent ? " (current)" : ""}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button
-          type="button"
-          onClick={() => setStatusModalOpen(true)}
-          className="rounded-lg border border-border px-3 py-2 text-sm font-medium dark:border-zinc-600"
+      <div className="grid w-full grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-[5.5rem_16rem_minmax(0,1fr)] sm:items-center">
+        <span
+          id="tasks-sprint-filter-label"
+          className="text-sm font-medium text-text-secondary dark:text-zinc-400"
         >
-          Edit statuses
-        </button>
+          Sprint
+        </span>
+        <select
+          id="tasks-sprint-filter"
+          aria-labelledby="tasks-sprint-filter-label"
+          value={selectSprintValue}
+          onChange={(e) => onSprintFilterChange(e.target.value)}
+          className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-text-primary dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+        >
+          <option value="all">All tasks</option>
+          <option value="backlog">Backlog (no sprint)</option>
+          {workspace.sprints.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+              {s.isCurrent ? " (current)" : ""}
+            </option>
+          ))}
+        </select>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setStatusModalOpen(true)}
+            className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-text-primary dark:border-zinc-600 dark:text-zinc-200"
+          >
+            Edit statuses
+          </button>
+          <button
+            type="button"
+            onClick={() => setNewTaskModalOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white dark:bg-blue-600"
+          >
+            <Plus className="h-4 w-4" aria-hidden />
+            New tasks
+          </button>
+        </div>
       </div>
 
-      <div
-        ref={newTaskComposerRef}
-        className="rounded-xl border border-border bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950"
-      >
-        <p className="text-xs font-medium text-text-secondary dark:text-zinc-500">
-          New task
-        </p>
+      {newTaskModalOpen ? (
+        <div
+          className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-black/40 p-4 py-10"
+          role="presentation"
+          onMouseDown={(ev) => {
+            if (ev.target === ev.currentTarget) closeNewTaskModal();
+          }}
+        >
+          <div
+            ref={newTaskComposerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="new-task-dialog-title"
+            className="w-full max-w-2xl rounded-2xl border border-border bg-white shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-border px-5 py-4 dark:border-zinc-800">
+              <h2
+                id="new-task-dialog-title"
+                className="text-base font-semibold text-text-primary dark:text-zinc-100"
+              >
+                New task
+              </h2>
+              <button
+                type="button"
+                onClick={closeNewTaskModal}
+                className="rounded-lg p-2 text-text-secondary hover:bg-surface dark:hover:bg-zinc-800"
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-5">
         <input
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
@@ -892,7 +1069,14 @@ export default function ProductTasksLinearTab({
           </div>
         </div>
 
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={closeNewTaskModal}
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-primary dark:border-zinc-600 dark:text-zinc-200"
+          >
+            Cancel
+          </button>
           <button
             type="button"
             onClick={submitNewTask}
@@ -902,23 +1086,27 @@ export default function ProductTasksLinearTab({
             Create task
           </button>
         </div>
-      </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="overflow-x-auto rounded-xl border border-border bg-white dark:border-zinc-800 dark:bg-zinc-950">
-        <table className="w-full min-w-[860px] border-collapse text-left text-sm">
+        <table className="w-full min-w-[760px] border-collapse text-left text-sm">
           <thead>
             <tr className="border-b border-border bg-surface/60 dark:border-zinc-800 dark:bg-zinc-900/80">
               <th className="w-10 px-2 py-3 text-xs font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
                 <span className="sr-only">Status</span>
               </th>
-              <th className="w-16 px-2 py-3 text-xs font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
-                ID
-              </th>
               <th className="min-w-[200px] px-3 py-3 text-xs font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
                 Title
               </th>
-              <th className="w-36 px-2 py-3 text-xs font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
-                Assignee
+              <th className="w-14 px-1 py-3 text-center text-xs font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+                <UserCircle
+                  className="mx-auto h-4 w-4 opacity-70 dark:opacity-60"
+                  aria-hidden
+                />
+                <span className="sr-only">Assignee</span>
               </th>
               <th className="w-32 px-2 py-3 text-xs font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
                 Due
@@ -1040,9 +1228,6 @@ export default function ProductTasksLinearTab({
                       </select>
                     </div>
                   </td>
-                  <td className="px-2 py-2 align-middle font-mono text-xs text-text-secondary dark:text-zinc-500">
-                    {shortRef(task.id)}
-                  </td>
                   <td className="max-w-xs px-3 py-2 align-middle">
                     <p className="font-medium text-text-primary dark:text-zinc-100">
                       {task.title}
@@ -1067,25 +1252,17 @@ export default function ProductTasksLinearTab({
                       </div>
                     ) : null}
                   </td>
-                  <td className="px-2 py-2 align-middle">
-                    <select
-                      value={assigneeVal}
-                      onChange={(e) => {
-                        const v = e.target.value || null;
+                  <td className="px-1 py-2 align-middle">
+                    <TaskAssigneeCell
+                      assigneeId={assigneeVal}
+                      members={assigneeOptions}
+                      onAssign={(id) =>
                         updateTask(task.id, {
-                          assigneeId: v,
-                          assigneeIds: v ? [v] : undefined,
-                        });
-                      }}
-                      className="w-full max-w-[9rem] rounded-lg border border-border bg-white px-2 py-1 text-xs dark:border-zinc-600 dark:bg-zinc-800"
-                    >
-                      <option value="">Unassigned</option>
-                      {assigneeOptions.map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.name}
-                        </option>
-                      ))}
-                    </select>
+                          assigneeId: id,
+                          assigneeIds: id ? [id] : undefined,
+                        })
+                      }
+                    />
                   </td>
                   <td className="px-2 py-2 align-middle">
                     <input

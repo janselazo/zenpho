@@ -1,4 +1,9 @@
-import type { MockProject, PlanStage } from "@/lib/crm/mock-data";
+import {
+  PLAN_LABELS,
+  PLAN_STAGE_ORDER,
+  type MockProject,
+  type PlanStage,
+} from "@/lib/crm/mock-data";
 
 /** Fields persisted to `public.project` from the CRM project modal. */
 export type CrmProjectPersistInput = {
@@ -27,14 +32,35 @@ export function crmPayloadFromMock(p: MockProject): CrmProjectPersistInput {
   };
 }
 
-const PLAN_STAGES: PlanStage[] = ["pipeline", "planning", "mvp", "growth"];
+/** Legacy `plan_stage` before five-column product workflow. */
+const LEGACY_PLAN_TO_STAGE: Record<string, PlanStage> = {
+  pipeline: "backlog",
+  mvp: "building",
+  growth: "release",
+};
 
-function parsePlanStage(v: string | null | undefined): PlanStage {
-  const s = (v ?? "pipeline").trim();
-  if ((PLAN_STAGES as readonly string[]).includes(s)) {
+export function parsePlanStage(v: string | null | undefined): PlanStage {
+  const s = (v ?? "backlog").trim().toLowerCase();
+  if ((PLAN_STAGE_ORDER as readonly string[]).includes(s)) {
     return s as PlanStage;
   }
-  return "pipeline";
+  const mapped = LEGACY_PLAN_TO_STAGE[s];
+  if (mapped) return mapped;
+  return "backlog";
+}
+
+const KNOWN_STORED_PLAN_SLUGS = new Set<string>([
+  ...PLAN_STAGE_ORDER,
+  "pipeline",
+  "mvp",
+  "growth",
+]);
+
+/** Label for a DB `plan_stage` slug, or null if not a known product plan stage. */
+export function labelForStoredPlanStage(raw: string | null | undefined): string | null {
+  const p = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+  if (!p || !KNOWN_STORED_PLAN_SLUGS.has(p)) return null;
+  return PLAN_LABELS[parsePlanStage(raw)];
 }
 
 export type ProjectRow = {

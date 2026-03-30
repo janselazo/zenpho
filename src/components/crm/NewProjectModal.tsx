@@ -11,6 +11,7 @@ import type { NewProjectDealPrefill } from "@/lib/crm/new-project-deal-prefill";
 import {
   LEAD_PROJECT_TYPE_OPTIONS,
   PLAN_LABELS,
+  PLAN_STAGE_ORDER,
   type MockProject,
   type PlanStage,
 } from "@/lib/crm/mock-data";
@@ -18,7 +19,7 @@ import { createProjectId } from "@/lib/crm/projects-storage";
 
 export type { NewProjectDealPrefill } from "@/lib/crm/new-project-deal-prefill";
 
-const planOrder: PlanStage[] = ["pipeline", "planning", "mvp", "growth"];
+const planOrder: PlanStage[] = [...PLAN_STAGE_ORDER];
 
 type ClientPickerRow = {
   id: string;
@@ -70,7 +71,7 @@ export default function NewProjectModal({
 }) {
   const teamMembers = useCrmTeamMembers();
   const [title, setTitle] = useState("");
-  const [plan, setPlan] = useState<PlanStage>("pipeline");
+  const [plan, setPlan] = useState<PlanStage>("backlog");
   const [teamMemberId, setTeamMemberId] = useState("");
   const [projectType, setProjectType] = useState<string>(
     LEAD_PROJECT_TYPE_OPTIONS[0]
@@ -114,7 +115,7 @@ export default function NewProjectModal({
       return;
     }
     if (dealPrefill) {
-      setPlan("pipeline");
+      setPlan("backlog");
       setTitle(dealPrefill.title);
       setBudget(dealPrefill.budget);
       setWebsite(dealPrefill.website);
@@ -126,7 +127,7 @@ export default function NewProjectModal({
       return;
     }
     if (lockClient) {
-      setPlan("pipeline");
+      setPlan("backlog");
       setTitle((lockedClientTitleHint ?? "").trim());
       setBudget("");
       setWebsite("");
@@ -135,7 +136,7 @@ export default function NewProjectModal({
       setClientId("");
       return;
     }
-    setPlan("pipeline");
+    setPlan("backlog");
     setTitle("");
     setBudget("");
     setWebsite("");

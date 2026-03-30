@@ -35,10 +35,11 @@ import type { WorkspaceResource } from "@/lib/crm/project-workspace-types";
 const MAX_CUSTOM_PROJECT_STATUSES = 24;
 
 const PLAN_SET = new Set<string>([
-  "pipeline",
+  "backlog",
   "planning",
-  "mvp",
-  "growth",
+  "building",
+  "testing",
+  "release",
 ]);
 
 function humanizeProjectDbError(message: string): string {
@@ -57,7 +58,7 @@ function humanizeProjectDbError(message: string): string {
   ) {
     return (
       "Project columns are not on this database yet. Apply " +
-      "`supabase/migrations` through `20260430200000_issue_category.sql` (or run `supabase db push`)."
+      "`supabase/migrations` through `20260430210000_product_plan_stage.sql` (or run `supabase db push`)."
     );
   }
   return message;
@@ -193,7 +194,7 @@ export async function createCrmProject(
       target_date: null,
       website: null,
       budget: null,
-      plan_stage: "pipeline",
+      plan_stage: "backlog",
       project_type: input.projectType?.trim() || null,
       metadata,
       parent_project_id: productId,
@@ -513,7 +514,7 @@ export async function createCrmPhase(
       title: t,
       description: null,
       status: "active",
-      plan_stage: "pipeline",
+      plan_stage: "backlog",
       project_type: (parent.project_type as string | null) ?? null,
       metadata,
       parent_project_id: pid,
@@ -540,8 +541,9 @@ const CHILD_PRIORITY_SET = new Set<string>([
 
 function inferDeliveryStatusFromPlanStage(plan: string): ChildDeliveryStatus {
   if (plan === "planning") return "planned";
-  if (plan === "mvp") return "in_progress";
-  if (plan === "growth") return "completed";
+  if (plan === "building" || plan === "mvp") return "in_progress";
+  if (plan === "testing") return "testing";
+  if (plan === "release" || plan === "growth") return "production";
   return "backlog";
 }
 
@@ -599,7 +601,7 @@ export async function createCrmChildProject(
       : {};
 
   let deliveryStatus: ChildDeliveryStatus = "backlog";
-  let plan = "pipeline";
+  let plan = "backlog";
   let projectsTabGroupId = "";
 
   const customList = parseCustomProjectStatuses(parentMeta);
@@ -613,7 +615,7 @@ export async function createCrmChildProject(
       projectsTabGroupId = reqGroup;
     } else if (customIds.has(reqGroup)) {
       deliveryStatus = "in_progress";
-      plan = "mvp";
+      plan = "building";
       projectsTabGroupId = reqGroup;
     }
   }
@@ -627,7 +629,7 @@ export async function createCrmChildProject(
       deliveryStatus = inferDeliveryStatusFromPlanStage(plan);
     } else {
       deliveryStatus = "backlog";
-      plan = "pipeline";
+      plan = "backlog";
     }
     projectsTabGroupId = deliveryStatus;
   }
@@ -805,7 +807,7 @@ export async function setCrmChildProjectTabGroup(
     plan = DELIVERY_STATUS_TO_PLAN_STAGE[deliveryStatus];
   } else if (customIds.has(gid)) {
     deliveryStatus = "in_progress";
-    plan = "mvp";
+    plan = "building";
   } else {
     return { error: "Invalid status column" };
   }

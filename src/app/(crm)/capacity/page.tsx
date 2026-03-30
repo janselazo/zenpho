@@ -34,7 +34,10 @@ export default function CapacityPage() {
         );
   const overallocated = teamMembers.filter((m) => m.utilization > 100).length;
   const activeProjectCount = projects.filter(
-    (p) => p.plan === "mvp" || p.plan === "growth"
+    (p) =>
+      p.plan === "building" ||
+      p.plan === "testing" ||
+      p.plan === "release"
   ).length;
 
   return (

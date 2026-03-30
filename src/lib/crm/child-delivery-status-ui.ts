@@ -24,8 +24,9 @@ export const DEFAULT_CHILD_DELIVERY_STATUS_COLORS: Record<
   backlog: "#52525b",
   planned: "#f59e0b",
   in_progress: "#7c3aed",
-  completed: "#059669",
-  canceled: "#71717a",
+  in_review: "#2563eb",
+  testing: "#a855f7",
+  production: "#059669",
 };
 
 function isRecord(v: unknown): v is Record<string, unknown> {

@@ -24,6 +24,7 @@ import {
   deals,
   PLAN_LABELS,
   PLAN_COLORS,
+  PLAN_STAGE_ORDER,
   DEAL_STAGE_LABELS,
   DEAL_STAGE_COLORS,
   LEAD_STAGE_LABELS,
@@ -108,7 +109,7 @@ function buildTaskBreakdown() {
 }
 
 function buildProjectsByStage() {
-  const stages: PlanStage[] = ["pipeline", "planning", "mvp", "growth"];
+  const stages: PlanStage[] = [...PLAN_STAGE_ORDER];
   return stages.map((s) => ({
     stage: PLAN_LABELS[s],
     count: projects.filter((p) => p.plan === s).length,

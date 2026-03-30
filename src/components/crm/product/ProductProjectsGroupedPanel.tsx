@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { setCrmChildProjectTabGroup } from "@/app/(crm)/actions/projects";
 import type { ProductChildRow } from "@/components/crm/product/ProductDetailShell";
 import { PriorityFlagIcon } from "@/components/crm/product/PriorityFlagIcon";
@@ -27,17 +34,18 @@ import {
 import { getMemberById, getMembersForTeam, teamMembers } from "@/lib/crm/mock-data";
 import {
   Calendar,
-  CheckCircle2,
   ChevronDown,
   ChevronRight,
   Circle,
   CircleDashed,
   Clock,
+  Eye,
   Layers,
   Pencil,
   Plus,
+  Rocket,
+  TestTube2,
   UserPlus,
-  XCircle,
 } from "lucide-react";
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -51,11 +59,12 @@ function parseLeadId(metadata: unknown): string | null {
 }
 
 const GROUP_ICON: Record<ChildDeliveryStatus, ReactNode> = {
-  in_progress: <Clock className="h-3.5 w-3.5" aria-hidden />,
-  planned: <Clock className="h-3.5 w-3.5" aria-hidden />,
   backlog: <Circle className="h-3.5 w-3.5" aria-hidden />,
-  completed: <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />,
-  canceled: <XCircle className="h-3.5 w-3.5" aria-hidden />,
+  planned: <Clock className="h-3.5 w-3.5" aria-hidden />,
+  in_progress: <Clock className="h-3.5 w-3.5" aria-hidden />,
+  in_review: <Eye className="h-3.5 w-3.5" aria-hidden />,
+  testing: <TestTube2 className="h-3.5 w-3.5" aria-hidden />,
+  production: <Rocket className="h-3.5 w-3.5" aria-hidden />,
 };
 
 function RowStatusDot({
@@ -104,16 +113,22 @@ function RowStatusDot({
           </span>
         </span>
       );
-    case "completed":
+    case "in_review":
       return (
         <span className="flex h-6 w-6 items-center justify-center" aria-hidden>
-          <CheckCircle2 className="h-4 w-4" style={{ color: accent }} />
+          <Eye className="h-4 w-4" style={{ color: accent }} />
         </span>
       );
-    case "canceled":
+    case "testing":
       return (
         <span className="flex h-6 w-6 items-center justify-center" aria-hidden>
-          <XCircle className="h-4 w-4" style={{ color: accent }} />
+          <TestTube2 className="h-4 w-4" style={{ color: accent }} />
+        </span>
+      );
+    case "production":
+      return (
+        <span className="flex h-6 w-6 items-center justify-center" aria-hidden>
+          <Rocket className="h-4 w-4" style={{ color: accent }} />
         </span>
       );
     default:
@@ -180,6 +195,8 @@ export default function ProductProjectsGroupedPanel({
     | { mode: "edit"; row: CustomProjectStatusRow }
     | null
   >(null);
+  const [columnMenuOpen, setColumnMenuOpen] = useState(false);
+  const columnMenuRef = useRef<HTMLDivElement>(null);
 
   const members = useMemo(() => {
     const t = getMembersForTeam(teamId);
@@ -265,6 +282,17 @@ export default function ProductProjectsGroupedPanel({
     customIdSet,
   ]);
 
+  useEffect(() => {
+    if (!columnMenuOpen) return;
+    function onDoc(e: MouseEvent) {
+      if (!columnMenuRef.current?.contains(e.target as Node)) {
+        setColumnMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [columnMenuOpen]);
+
   const cycleOrderIds = useMemo(() => groups.map((g) => g.id), [groups]);
 
   const cycleChildDeliveryStatus = useCallback(
@@ -340,14 +368,62 @@ export default function ProductProjectsGroupedPanel({
         <h2 className="text-sm font-semibold text-text-primary dark:text-zinc-100">
           Project Features
         </h2>
-        <button
-          type="button"
-          onClick={() => onNewProject(undefined)}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white dark:bg-blue-600"
-        >
-          <Plus className="h-3.5 w-3.5" aria-hidden />
-          Project
-        </button>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <div className="relative" ref={columnMenuRef}>
+            <button
+              type="button"
+              onClick={() => setColumnMenuOpen((o) => !o)}
+              aria-expanded={columnMenuOpen}
+              aria-haspopup="menu"
+              title="Edit status columns"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-secondary transition-colors hover:bg-surface/80 hover:text-text-primary dark:border-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+            >
+              <Pencil className="h-3.5 w-3.5" aria-hidden />
+              <span className="sr-only">Edit status columns</span>
+            </button>
+            {columnMenuOpen ? (
+              <div
+                role="menu"
+                className="absolute right-0 top-full z-[60] mt-1 min-w-[13rem] overflow-hidden rounded-xl border border-border bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-950"
+              >
+                <p className="border-b border-border px-3 py-2 text-xs text-text-secondary dark:border-zinc-800">
+                  Edit column…
+                </p>
+                {groups.map((g) => (
+                  <button
+                    key={g.id}
+                    role="menuitem"
+                    type="button"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-text-primary hover:bg-surface/80 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                    onClick={() => {
+                      setColumnMenuOpen(false);
+                      if (g.kind === "builtin" && g.builtinKey) {
+                        setEditingStatus(g.builtinKey);
+                      } else if (g.custom) {
+                        setCustomModal({ mode: "edit", row: g.custom });
+                      }
+                    }}
+                  >
+                    <span
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: g.presentation.color }}
+                      aria-hidden
+                    />
+                    <span className="min-w-0 truncate">{g.presentation.label}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            onClick={() => onNewProject(undefined)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white dark:bg-blue-600"
+          >
+            <Plus className="h-3.5 w-3.5" aria-hidden />
+            Project
+          </button>
+        </div>
       </div>
 
       <div className="divide-y divide-border dark:divide-zinc-800/90">
@@ -389,29 +465,6 @@ export default function ProductProjectsGroupedPanel({
                     {count}
                   </span>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (g.kind === "builtin" && g.builtinKey) {
-                      setEditingStatus(g.builtinKey);
-                    } else if (g.custom) {
-                      setCustomModal({ mode: "edit", row: g.custom });
-                    }
-                  }}
-                  className="shrink-0 rounded-lg p-1.5 text-text-secondary hover:bg-white hover:text-text-primary dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-                  aria-label={`Edit name and color for ${pres.label}`}
-                  title="Edit column"
-                >
-                  <Pencil className="h-3.5 w-3.5" aria-hidden />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onNewProject(g.id)}
-                  className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs font-medium text-text-secondary hover:bg-white dark:border-zinc-700 dark:hover:bg-zinc-800"
-                >
-                  <Plus className="h-3.5 w-3.5" aria-hidden />
-                  Add project
-                </button>
               </div>
 
               {!isCollapsed ? (
@@ -422,9 +475,7 @@ export default function ProductProjectsGroupedPanel({
                     <span>Assignee</span>
                     <span>Due date</span>
                     <span>Priority</span>
-                    <span className="text-center">
-                      <Plus className="mx-auto h-3.5 w-3.5" aria-hidden />
-                    </span>
+                    <span className="text-center" aria-hidden />
                   </div>
                   <ul className="divide-y divide-border dark:divide-zinc-800/80">
                     {count === 0 ? (

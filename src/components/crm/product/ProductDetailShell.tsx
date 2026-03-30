@@ -23,12 +23,14 @@ import ProductTasksLinearTab from "@/components/crm/product/ProductTasksLinearTa
 import ProductIssuesLinearTab from "@/components/crm/product/ProductIssuesLinearTab";
 import ProductOwnerSummaryField from "@/components/crm/product/ProductOwnerSummaryField";
 import ProductResourcesTab from "@/components/crm/product/ProductResourcesTab";
+import ProductRoadmapTab from "@/components/crm/product/ProductRoadmapTab";
 
 const TABS = [
-  { id: "projects", label: "Project Features" },
+  { id: "projects", label: "Project" },
   { id: "milestones", label: "Milestones" },
   { id: "tasks", label: "Tasks" },
   { id: "sprints", label: "Sprints" },
+  { id: "roadmap", label: "Roadmap" },
   { id: "issues", label: "Issues" },
   { id: "resources", label: "Resources" },
 ] as const;
@@ -149,6 +151,7 @@ export default function ProductDetailShell({
     activeTab === "milestones" ||
     activeTab === "sprints" ||
     activeTab === "tasks" ||
+    activeTab === "roadmap" ||
     activeTab === "issues";
 
   return (
@@ -234,17 +237,21 @@ export default function ProductDetailShell({
 
       {needsProject ? (
         <div className="border-b border-border bg-surface/40 px-8 py-3 dark:border-zinc-800 dark:bg-zinc-900/80">
-          <label className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="font-medium text-text-secondary dark:text-zinc-400">
+          <div className="grid w-full grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-[5.5rem_16rem_minmax(0,1fr)] sm:items-center">
+            <span
+              id="product-detail-project-label"
+              className="text-sm font-medium text-text-secondary dark:text-zinc-400"
+            >
               Project
             </span>
             <select
+              aria-labelledby="product-detail-project-label"
               value={selectedProjectId ?? ""}
               onChange={(e) => {
                 const v = e.target.value;
                 setQuery({ project: v || null, sprint: null });
               }}
-              className="min-w-[200px] rounded-lg border border-border bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800"
+              className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-text-primary dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
             >
               {childrenProjects.length === 0 ? (
                 <option value="">No projects yet</option>
@@ -256,17 +263,19 @@ export default function ProductDetailShell({
                 ))
               )}
             </select>
-            <button
-              type="button"
-              onClick={() => {
-                setNewProjectGroupPreset(undefined);
-                setModalOpen(true);
-              }}
-              className="text-sm font-medium text-accent hover:underline"
-            >
-              + New project
-            </button>
-          </label>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setNewProjectGroupPreset(undefined);
+                  setModalOpen(true);
+                }}
+                className="text-sm font-medium text-accent hover:underline"
+              >
+                + New project
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
 
@@ -319,6 +328,20 @@ export default function ProductDetailShell({
               onOpenBacklogTasks={() =>
                 setQuery({ tab: "tasks", sprint: "backlog" })
               }
+            />
+          )
+        ) : null}
+
+        {activeTab === "roadmap" ? (
+          !selectedProjectId ? (
+            <p className="text-sm text-text-secondary">
+              Add a project first, then pick it above.
+            </p>
+          ) : (
+            <ProductRoadmapTab
+              productId={productId}
+              projectId={selectedProjectId}
+              childrenProjects={childrenProjects}
             />
           )
         ) : null}
