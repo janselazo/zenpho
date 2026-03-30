@@ -111,25 +111,43 @@ function useDashboardChartTheme() {
     ? {
         grid: "#27272a",
         tick: "#a1a1aa",
+        snapshotGrid: "#3f3f46",
+        snapshotTick: "#71717a",
         tooltipBg: "#18181b",
         tooltipBorder: "#3f3f46",
         tooltipColor: "#e4e4e7",
         legendColor: "#a1a1aa",
         barPrimary: "#a1a1aa",
         barVolume: "#34d399",
+        barFinRev: "#38bdf8",
+        barFinExp: "#71717a",
         barProfit: "#60a5fa",
+        financeGrid: "#3f3f46",
+        financeTick: "#71717a",
+        financeBarRevenue: "#3b82f6",
+        financeBarExpense: "#52525b",
+        financeBarProfit: "#6366f1",
         refLine: "#3f3f46",
       }
     : {
         grid: "#e8ecf1",
         tick: "#5c6370",
+        snapshotGrid: "#e2e8f0",
+        snapshotTick: "#94a3b8",
         tooltipBg: "#ffffff",
         tooltipBorder: "#e8ecf1",
         tooltipColor: "#111827",
         legendColor: "#5c6370",
         barPrimary: "#18181b",
-        barVolume: "#059669",
+        barVolume: "#10b981",
+        barFinRev: "#0ea5e9",
+        barFinExp: "#94a3b8",
         barProfit: "#2563eb",
+        financeGrid: "#e5e7eb",
+        financeTick: "#9ca3af",
+        financeBarRevenue: "#93c5fd",
+        financeBarExpense: "#cbd5e1",
+        financeBarProfit: "#a5b4fc",
         refLine: "#e5e7eb",
       };
 }
@@ -142,6 +160,27 @@ function fmt(n: number) {
     currency: "USD",
     maximumFractionDigits: 0,
   }).format(n);
+}
+
+/** Evenly spaced X-axis ticks for the finance snapshot (template-style scale). */
+function financeXAxisTickValues(lo: number, hi: number): number[] {
+  const span = hi - lo;
+  if (!Number.isFinite(span) || span <= 0) return [lo, hi];
+  const n = 5;
+  return Array.from({ length: n }, (_, i) => lo + (span * i) / (n - 1));
+}
+
+function formatFinanceXAxisTick(v: number): string {
+  const abs = Math.abs(v);
+  if (abs >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}m`;
+  if (abs >= 1000) {
+    const k = v / 1000;
+    const half = Math.round(k * 2) / 2;
+    return half % 1 === 0 ? `$${half}k` : `$${half.toFixed(1)}k`;
+  }
+  const x = Math.round(v * 100) / 100;
+  if (Math.abs(x - Math.round(x)) < 0.001) return `$${Math.round(x)}`;
+  return `$${x.toFixed(1)}`;
 }
 
 function daysBetween(a: string, b: Date) {
@@ -164,6 +203,52 @@ const TASK_TYPE_ICONS: Record<ProspectingTaskType, React.ReactNode> = {
 function convRate(a: number, b: number) {
   if (a === 0) return "—";
   return `${Math.round((b / a) * 100)}%`;
+}
+
+/** Sloped top edge per column (y0 left %, y1 right %) for a wave-like funnel. */
+const FUNNEL_TOP_SLANT: [string, string][] = [
+  ["6%", "18%"],
+  ["14%", "26%"],
+  ["22%", "34%"],
+  ["30%", "42%"],
+  ["38%", "48%"],
+];
+
+const FUNNEL_BAR_BACKGROUNDS = [
+  "linear-gradient(to bottom, rgb(139 92 246 / 0.92), rgb(139 92 246 / 0.06))",
+  "linear-gradient(to bottom, rgb(14 165 233 / 0.9), rgb(14 165 233 / 0.06))",
+  "linear-gradient(to bottom, rgb(251 113 133 / 0.92), rgb(251 113 133 / 0.06))",
+  "linear-gradient(to bottom, rgb(251 191 36 / 0.9), rgb(251 191 36 / 0.06))",
+  "linear-gradient(to bottom, rgb(20 184 166 / 0.9), rgb(20 184 166 / 0.06))",
+];
+
+const FUNNEL_BAR_BACKGROUNDS_DARK = [
+  "linear-gradient(to bottom, rgb(167 139 250 / 0.55), rgb(167 139 250 / 0.08))",
+  "linear-gradient(to bottom, rgb(56 189 248 / 0.5), rgb(56 189 248 / 0.08))",
+  "linear-gradient(to bottom, rgb(251 113 133 / 0.5), rgb(251 113 133 / 0.08))",
+  "linear-gradient(to bottom, rgb(252 211 77 / 0.48), rgb(252 211 77 / 0.08))",
+  "linear-gradient(to bottom, rgb(45 212 191 / 0.5), rgb(45 212 191 / 0.08))",
+];
+
+function funnelBarHeightPct(
+  stage: DashboardFunnelStage,
+  maxCount: number,
+  maxRevenue: number
+): number {
+  const floor = 30;
+  const span = 70;
+  if (stage.label === "Revenue") {
+    const r =
+      maxRevenue <= 0 ? 0.28 : Math.min(1, stage.value / maxRevenue);
+    return floor + span * Math.max(0.22, r);
+  }
+  const c =
+    maxCount <= 0 ? 0.16 : Math.min(1, stage.count / maxCount);
+  return floor + span * Math.max(0.14, c);
+}
+
+function funnelDisplayValue(stage: DashboardFunnelStage): string {
+  return stage.label === "Revenue" ? fmt(stage.value) : String(stage.count);
 }
 
 // ── Active tasks for dashboard ──────────────────────────────────────────────
@@ -379,10 +464,15 @@ export default function DashboardView({
     profit,
     financeAxisMin < 0 ? -financeAxisMin * 0.05 : 0
   );
-  const financeDomain: [number, number] = [
-    financeAxisMin < 0 ? Math.floor(financeAxisMin * 1.08) : 0,
-    Math.ceil(financeAxisMax * 1.08),
-  ];
+  const financeDomainLo =
+    financeAxisMin < 0 ? Math.floor(financeAxisMin * 1.08) : 0;
+  const financeDomainHi = Math.ceil(financeAxisMax * 1.08);
+  const financeDomain: [number, number] = [financeDomainLo, financeDomainHi];
+
+  const financeXTicks = useMemo(
+    () => financeXAxisTickValues(financeDomainLo, financeDomainHi),
+    [financeDomainLo, financeDomainHi]
+  );
 
   return (
     <div className="space-y-6">
@@ -484,28 +574,35 @@ export default function DashboardView({
             {rangeLabel}
           </p>
         </div>
-        <div className="mt-6 grid gap-10 lg:grid-cols-2">
-          <div>
-            <p className="mb-3 text-xs font-medium text-text-secondary dark:text-zinc-400">
+        <div className="mt-6 grid gap-8 lg:grid-cols-2 lg:gap-10">
+          <div className="rounded-xl border border-border/70 bg-zinc-50/40 p-4 dark:border-zinc-800/80 dark:bg-zinc-950/35">
+            <p className="text-sm font-semibold tracking-tight text-text-primary dark:text-zinc-100">
               Volume
             </p>
-            <div className="h-[140px] w-full min-w-0">
+            <div className="mt-4 h-[148px] w-full min-w-0">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   layout="vertical"
                   data={volumeChartData}
-                  margin={{ top: 4, right: 48, left: 4, bottom: 4 }}
+                  margin={{ top: 6, right: 44, left: 0, bottom: 6 }}
+                  barCategoryGap="40%"
                 >
                   <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke={chartTheme.grid}
+                    strokeDasharray="4 6"
+                    stroke={chartTheme.snapshotGrid}
+                    strokeOpacity={0.65}
                     horizontal
                     vertical={false}
+                    syncWithTicks
                   />
                   <XAxis
                     type="number"
                     domain={[0, volumeAxisMax]}
-                    tick={{ fontSize: 11, fill: chartTheme.tick }}
+                    tick={{
+                      fontSize: 11,
+                      fill: chartTheme.snapshotTick,
+                      fontWeight: 500,
+                    }}
                     axisLine={false}
                     tickLine={false}
                     allowDecimals={false}
@@ -513,8 +610,12 @@ export default function DashboardView({
                   <YAxis
                     type="category"
                     dataKey="name"
-                    width={108}
-                    tick={{ fontSize: 11, fill: chartTheme.tick }}
+                    width={112}
+                    tick={{
+                      fontSize: 11,
+                      fill: chartTheme.snapshotTick,
+                      fontWeight: 500,
+                    }}
                     axisLine={false}
                     tickLine={false}
                   />
@@ -530,15 +631,16 @@ export default function DashboardView({
                   />
                   <Bar
                     dataKey="v"
-                    radius={[0, 6, 6, 0]}
-                    maxBarSize={22}
+                    radius={[0, 999, 999, 0]}
+                    maxBarSize={10}
                     fill={chartTheme.barVolume}
                   >
                     <LabelList
                       dataKey="display"
                       position="right"
+                      offset={10}
                       fill={chartTheme.tick}
-                      fontSize={12}
+                      fontSize={11}
                       fontWeight={600}
                     />
                   </Bar>
@@ -546,42 +648,57 @@ export default function DashboardView({
               </ResponsiveContainer>
             </div>
           </div>
-          <div>
-            <p className="mb-3 text-xs font-medium text-text-secondary dark:text-zinc-400">
-              Finance
-            </p>
-            <div className="h-[180px] w-full min-w-0">
+          <div className="rounded-xl border border-zinc-200/90 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
+            <div className="flex items-baseline justify-between gap-4">
+              <span className="text-sm font-medium text-text-secondary dark:text-zinc-400">
+                Finance
+              </span>
+              <span className="text-xs text-text-secondary/85 dark:text-zinc-500">
+                {rangeLabel}
+              </span>
+            </div>
+            <div className="mt-5 h-[200px] w-full min-w-0">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   layout="vertical"
                   data={financeChartData}
-                  margin={{ top: 4, right: 56, left: 4, bottom: 4 }}
+                  margin={{ top: 4, right: 16, left: 4, bottom: 22 }}
+                  barCategoryGap="42%"
                 >
                   <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke={chartTheme.grid}
+                    strokeDasharray="2 5"
+                    stroke={chartTheme.financeGrid}
+                    strokeOpacity={0.85}
                     horizontal
                     vertical={false}
+                    syncWithTicks
                   />
                   <XAxis
                     type="number"
                     domain={financeDomain}
-                    tick={{ fontSize: 11, fill: chartTheme.tick }}
+                    ticks={financeXTicks}
+                    tick={{
+                      fontSize: 11,
+                      fill: chartTheme.financeTick,
+                      fontWeight: 400,
+                    }}
+                    tickMargin={10}
                     axisLine={false}
                     tickLine={false}
-                    tickFormatter={(v) =>
-                      Math.abs(v) >= 1000
-                        ? `$${(v / 1000).toFixed(v % 1000 === 0 ? 0 : 1)}k`
-                        : `$${v}`
-                    }
+                    tickFormatter={formatFinanceXAxisTick}
                   />
                   <YAxis
                     type="category"
                     dataKey="name"
-                    width={88}
-                    tick={{ fontSize: 11, fill: chartTheme.tick }}
+                    width={108}
+                    tick={{
+                      fontSize: 12,
+                      fill: chartTheme.financeTick,
+                      fontWeight: 400,
+                    }}
                     axisLine={false}
                     tickLine={false}
+                    tickMargin={14}
                   />
                   <Tooltip
                     formatter={(value) => [fmt(Number(value ?? 0)), ""]}
@@ -600,24 +717,19 @@ export default function DashboardView({
                       strokeWidth={1}
                     />
                   ) : null}
-                  <Bar dataKey="v" radius={[0, 6, 6, 0]} maxBarSize={22}>
+                  <Bar dataKey="v" radius={[0, 999, 999, 0]} maxBarSize={9}>
                     {financeChartData.map((row) => (
                       <Cell
                         key={row.name}
                         fill={
                           row.profitRow
-                            ? chartTheme.barProfit
-                            : chartTheme.barPrimary
+                            ? chartTheme.financeBarProfit
+                            : row.name === "Revenue"
+                              ? chartTheme.financeBarRevenue
+                              : chartTheme.financeBarExpense
                         }
                       />
                     ))}
-                    <LabelList
-                      dataKey="display"
-                      position="right"
-                      fill={chartTheme.tick}
-                      fontSize={12}
-                      fontWeight={600}
-                    />
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -636,39 +748,110 @@ export default function DashboardView({
             {rangeLabel}
           </span>
         </div>
-        <div className="mt-5 flex flex-wrap items-center justify-center gap-y-4 sm:justify-between">
-          {funnel.map((stage, i) => (
-            <div key={stage.label} className="flex items-center gap-2">
-              <div className="flex flex-col items-center text-center">
-                <div
-                  className={`inline-flex min-h-[3.25rem] min-w-[5.25rem] items-center justify-center rounded-2xl px-4 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] ${stage.bg}`}
-                >
-                  <span
-                    className="text-[15px] font-bold tabular-nums leading-none tracking-tight sm:text-base"
-                    style={{ color: stage.color }}
-                  >
-                    {stage.label === "Revenue" ? fmt(stage.value) : stage.count}
-                  </span>
+        {(() => {
+          const funnelMaxCount = Math.max(
+            ...funnel
+              .filter((s) => s.label !== "Revenue")
+              .map((s) => s.count),
+            1
+          );
+          const rev = funnel.find((s) => s.label === "Revenue");
+          const funnelMaxRevenue = Math.max(rev?.value ?? 0, 1);
+          return (
+            <>
+              <div className="mt-5 rounded-xl border border-border/80 bg-white p-3 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-zinc-700/70 dark:bg-zinc-950/40 dark:shadow-none">
+                <div className="grid grid-cols-5 gap-2 sm:gap-2.5">
+                  {funnel.map((stage, i) => {
+                    const [y0, y1] = FUNNEL_TOP_SLANT[i] ?? ["10%", "20%"];
+                    const h = funnelBarHeightPct(
+                      stage,
+                      funnelMaxCount,
+                      funnelMaxRevenue
+                    );
+                    const prev = i > 0 ? funnel[i - 1] : null;
+                    const micro =
+                      prev &&
+                      i > 0 &&
+                      i < funnel.length &&
+                      stage.label !== "Revenue" &&
+                      prev.count > 0
+                        ? convRate(prev.count || 1, stage.count)
+                        : null;
+                    return (
+                      <div
+                        key={stage.label}
+                        className="flex min-h-[9.5rem] flex-col"
+                      >
+                        <div className="flex h-5 flex-none items-start justify-center">
+                          {micro && micro !== "—" ? (
+                            <span className="text-[10px] font-medium tabular-nums text-zinc-500 dark:text-zinc-400">
+                              {micro} ↓
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="flex min-h-[7rem] flex-1 flex-col justify-end">
+                          <div
+                            className="relative w-full"
+                            style={{
+                              height: `${h}%`,
+                              minHeight: "2.25rem",
+                              maxHeight: "100%",
+                            }}
+                          >
+                            <div
+                              className="absolute inset-0 rounded-b-md shadow-sm dark:hidden"
+                              style={{
+                                clipPath: `polygon(0 ${y0}, 100% ${y1}, 100% 100%, 0 100%)`,
+                                background:
+                                  FUNNEL_BAR_BACKGROUNDS[
+                                    i % FUNNEL_BAR_BACKGROUNDS.length
+                                  ],
+                              }}
+                            />
+                            <div
+                              className="absolute inset-0 hidden rounded-b-md shadow-sm dark:block dark:shadow-none"
+                              style={{
+                                clipPath: `polygon(0 ${y0}, 100% ${y1}, 100% 100%, 0 100%)`,
+                                background:
+                                  FUNNEL_BAR_BACKGROUNDS_DARK[
+                                    i % FUNNEL_BAR_BACKGROUNDS_DARK.length
+                                  ],
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-                <p className="mt-2 text-xs font-semibold leading-snug text-text-primary dark:text-zinc-200">
-                  {stage.label}
-                </p>
-                {i < funnel.length - 1 && stage.count > 0 && (
-                  <p className="text-[10px] text-text-secondary dark:text-zinc-500">
-                    {convRate(
-                      stage.count || 1,
-                      funnel[i + 1].count || funnel[i + 1].value
-                    )}{" "}
-                    of {stage.label.toLowerCase()}
-                  </p>
-                )}
               </div>
-              {i < funnel.length - 1 && (
-                <div className="mx-1 h-px w-6 bg-border dark:bg-zinc-700 lg:w-10" />
-              )}
-            </div>
-          ))}
-        </div>
+              <div className="mt-5 grid grid-cols-5 gap-2 sm:gap-2.5">
+                {funnel.map((stage, i) => (
+                  <div
+                    key={`${stage.label}-footer`}
+                    className="flex flex-col items-center text-center"
+                  >
+                    <p className="text-[11px] font-medium leading-tight text-text-secondary dark:text-zinc-500">
+                      {stage.label}
+                    </p>
+                    <p className="mt-1.5 text-lg font-bold tabular-nums leading-none tracking-tight text-text-primary dark:text-zinc-100 sm:text-xl">
+                      {funnelDisplayValue(stage)}
+                    </p>
+                    {i < funnel.length - 1 && stage.count > 0 ? (
+                      <p className="mt-2 text-[10px] leading-snug text-text-secondary dark:text-zinc-500">
+                        {convRate(
+                          stage.count || 1,
+                          funnel[i + 1].count || funnel[i + 1].value
+                        )}{" "}
+                        of {stage.label.toLowerCase()}
+                      </p>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </>
+          );
+        })()}
       </div>
 
       {/* Next Appointments + Tasks */}

@@ -14,6 +14,26 @@ import {
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>;
 
+/** Supabase returns schema-cache errors when `crm_settings` was never migrated. */
+function explainMissingCrmSettingsTable(message: string): string {
+  const m = message.toLowerCase();
+  const mentionsTable =
+    m.includes("crm_settings") || m.includes("crm settings");
+  const looksMissing =
+    mentionsTable &&
+    (m.includes("schema cache") ||
+      m.includes("could not find") ||
+      m.includes("does not exist") ||
+      (m.includes("relation") && m.includes("does not exist")));
+  if (!looksMissing) return message;
+  return (
+    "The pipeline settings table (crm_settings) is missing in your database. " +
+    "Apply repo migrations: run `npx supabase db push` from the project root, " +
+    "or open the Supabase SQL editor and run the file " +
+    "supabase/migrations/20260410120000_crm_pipeline_settings.sql, then try Save again."
+  );
+}
+
 async function leadStageSlugSet(supabase: SupabaseServer): Promise<Set<string>> {
   const { data, error } = await supabase
     .from("crm_settings")
@@ -810,7 +830,7 @@ export async function saveCrmPipelineSettings(input: {
     .eq("id", 1)
     .maybeSingle();
 
-  if (readErr) return { error: readErr.message };
+  if (readErr) return { error: explainMissingCrmSettingsTable(readErr.message) };
 
   let lead = mergeLeadPipelineFromDb(cur?.lead_pipeline);
   let deal = mergeDealPipelineFromDb(cur?.deal_pipeline);
@@ -836,7 +856,7 @@ export async function saveCrmPipelineSettings(input: {
     { onConflict: "id" }
   );
 
-  if (error) return { error: error.message };
+  if (error) return { error: explainMissingCrmSettingsTable(error.message) };
 
   revalidatePath("/leads");
   revalidatePath("/deals");

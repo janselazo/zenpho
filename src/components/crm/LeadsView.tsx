@@ -24,6 +24,7 @@ import CreateDealForLeadModal from "@/components/crm/CreateDealForLeadModal";
 import CrmNewProjectFromLeadModal from "@/components/crm/CrmNewProjectFromLeadModal";
 import CrmQuickTaskModal from "@/components/crm/CrmQuickTaskModal";
 import KanbanBoard, { type KanbanColumn } from "@/components/crm/KanbanBoard";
+import LeadsPipelineSummary from "@/components/crm/LeadsPipelineSummary";
 import PipelineSettingsModal from "@/components/crm/PipelineSettingsModal";
 import {
   leadStageLabelColor,
@@ -477,6 +478,12 @@ export default function LeadsView({
           Pipeline stages
         </button>
       </div>
+
+      <LeadsPipelineSummary
+        leads={leadsSnapshot}
+        leadPipeline={leadPipeline}
+        searchQuery={search}
+      />
 
       <div className="mt-6">
         {view === "table" ? (

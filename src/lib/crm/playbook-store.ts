@@ -2,6 +2,8 @@ import type { PlaybookCategory } from "@/lib/crm/mock-data";
 
 const STORAGE_KEY = "playbook-completions";
 const PLAYBOOK_STRUCTURE_KEY = "playbook-categories";
+/** Which playbook sections are collapsed (key = category id). Persisted across tab switches / remounts. */
+const PLAYBOOK_SECTIONS_COLLAPSED_KEY = "playbook-sections-collapsed";
 
 /** Fired after local structure save or successful remote upsert (see playbook-remote). */
 export const PLAYBOOK_STRUCTURE_CHANGED_EVENT = "crm-playbook-structure-changed";
@@ -113,6 +115,40 @@ export function saveCompletions(completions: Record<string, number>) {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify(serializeCompletionsForStorage(completions))
+    );
+  } catch {
+    // storage full or unavailable
+  }
+}
+
+/** Collapsed section ids (`true` = collapsed). Unknown keys default to expanded in the UI. */
+export function loadPlaybookSectionCollapsed(): Record<string, boolean> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(PLAYBOOK_SECTIONS_COLLAPSED_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object") return {};
+    const out: Record<string, boolean> = {};
+    for (const [k, v] of Object.entries(parsed)) {
+      if (typeof k === "string" && v === true) out[k] = true;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+export function savePlaybookSectionCollapsed(collapsed: Record<string, boolean>) {
+  if (typeof window === "undefined") return;
+  try {
+    const stripped: Record<string, boolean> = {};
+    for (const [k, v] of Object.entries(collapsed)) {
+      if (v) stripped[k] = true;
+    }
+    localStorage.setItem(
+      PLAYBOOK_SECTIONS_COLLAPSED_KEY,
+      JSON.stringify(stripped)
     );
   } catch {
     // storage full or unavailable

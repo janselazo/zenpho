@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -79,7 +79,9 @@ import {
   getCompletions,
   saveCompletions,
   loadPlaybookCategories,
+  loadPlaybookSectionCollapsed,
   savePlaybookCategories,
+  savePlaybookSectionCollapsed,
 } from "@/lib/crm/playbook-store";
 import {
   fetchUserProspectingPlaybook,
@@ -884,6 +886,7 @@ function PlaybookSectionDragPreview({
 function PlaybookTab() {
   const [completions, setCompletions] = useState<Record<string, number>>({});
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const collapsedHydrated = useRef(false);
   const [categories, setCategories] = useState<PlaybookCategory[]>(playbookCategories);
   const [playbookReady, setPlaybookReady] = useState(false);
   const [playbookUserId, setPlaybookUserId] = useState<string | null>(null);
@@ -908,6 +911,34 @@ function PlaybookTab() {
       activationConstraint: { distance: 6 },
     })
   );
+
+  useLayoutEffect(() => {
+    setCollapsed(loadPlaybookSectionCollapsed());
+    collapsedHydrated.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (!collapsedHydrated.current) return;
+    savePlaybookSectionCollapsed(collapsed);
+  }, [collapsed]);
+
+  useEffect(() => {
+    if (!playbookReady || !collapsedHydrated.current) return;
+    setCollapsed((prev) => {
+      const ids = new Set(categories.map((c) => c.id));
+      const next: Record<string, boolean> = {};
+      for (const id of ids) {
+        if (prev[id]) next[id] = true;
+      }
+      if (
+        Object.keys(prev).length === Object.keys(next).length &&
+        Object.keys(next).every((id) => prev[id] === next[id])
+      ) {
+        return prev;
+      }
+      return next;
+    });
+  }, [categories, playbookReady]);
 
   useEffect(() => {
     if (!iconPickerForCategoryId) return;
