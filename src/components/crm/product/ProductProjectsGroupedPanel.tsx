@@ -12,6 +12,7 @@ import { setCrmChildProjectTabGroup } from "@/app/(crm)/actions/projects";
 import type { ProductChildRow } from "@/components/crm/product/ProductDetailShell";
 import { PriorityFlagIcon } from "@/components/crm/product/PriorityFlagIcon";
 import ProductChildDeliveryStatusModal from "@/components/crm/product/ProductChildDeliveryStatusModal";
+import ProductChildProjectStatusMenu from "@/components/crm/product/ProductChildProjectStatusMenu";
 import ProductCustomProjectStatusModal from "@/components/crm/product/ProductCustomProjectStatusModal";
 import {
   resolveChildDeliveryPresentation,
@@ -186,7 +187,11 @@ export default function ProductProjectsGroupedPanel({
   onChildDeliveryChanged,
 }: Props) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const [cyclingId, setCyclingId] = useState<string | null>(null);
+  const [statusPicker, setStatusPicker] = useState<{
+    child: ProductChildRow;
+    anchor: HTMLElement;
+  } | null>(null);
+  const [statusApplying, setStatusApplying] = useState(false);
   const [editingStatus, setEditingStatus] = useState<ChildDeliveryStatus | null>(
     null
   );
@@ -293,29 +298,34 @@ export default function ProductProjectsGroupedPanel({
     return () => document.removeEventListener("mousedown", onDoc);
   }, [columnMenuOpen]);
 
-  const cycleOrderIds = useMemo(() => groups.map((g) => g.id), [groups]);
+  const statusMenuGroups = useMemo(
+    () =>
+      groups.map((g) => ({
+        id: g.id,
+        kind: g.kind,
+        builtinKey: g.builtinKey,
+        presentation: g.presentation,
+      })),
+    [groups]
+  );
 
-  const cycleChildDeliveryStatus = useCallback(
-    async (p: ProductChildRow) => {
-      const current = resolveProjectsTabGroupId(
-        p.metadata,
-        p.plan_stage,
-        customIdSet
+  const applyChildStatus = useCallback(
+    async (childId: string, tabGroupId: string) => {
+      setStatusApplying(true);
+      const res = await setCrmChildProjectTabGroup(
+        productId,
+        childId,
+        tabGroupId
       );
-      let idx = cycleOrderIds.indexOf(current);
-      if (idx < 0) idx = 0;
-      const next = cycleOrderIds[(idx + 1) % cycleOrderIds.length];
-      if (!next || next === current) return;
-      setCyclingId(p.id);
-      const res = await setCrmChildProjectTabGroup(productId, p.id, next);
-      setCyclingId(null);
+      setStatusApplying(false);
       if ("error" in res && res.error) {
         window.alert(res.error);
         return;
       }
+      setStatusPicker(null);
       onChildDeliveryChanged?.();
     },
-    [cycleOrderIds, customIdSet, productId, onChildDeliveryChanged]
+    [productId, onChildDeliveryChanged]
   );
 
   function formatDue(iso: string | null | undefined) {
@@ -499,15 +509,21 @@ export default function ProductProjectsGroupedPanel({
                             <div className="grid grid-cols-[2rem_minmax(0,1fr)_7rem_7rem_5.5rem_2rem] items-center gap-2 px-3 py-2.5 text-sm transition-colors hover:bg-surface/60 dark:hover:bg-zinc-900/80">
                               <button
                                 type="button"
-                                disabled={cyclingId === p.id}
                                 onClick={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
-                                  void cycleChildDeliveryStatus(p);
+                                  setStatusPicker({
+                                    child: p,
+                                    anchor: e.currentTarget,
+                                  });
                                 }}
-                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-secondary hover:bg-border/50 disabled:opacity-50 dark:hover:bg-zinc-800"
+                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-secondary hover:bg-border/50 dark:hover:bg-zinc-800"
                                 title="Change status"
                                 aria-label="Change project status"
+                                aria-haspopup="dialog"
+                                aria-expanded={
+                                  statusPicker?.child.id === p.id ? true : false
+                                }
                               >
                                 {rv.customDot ? (
                                   <CustomColumnDot accent={rv.accent} />
@@ -586,6 +602,27 @@ export default function ProductProjectsGroupedPanel({
           + New status
         </button>
       </div>
+
+      {statusPicker ? (
+        <ProductChildProjectStatusMenu
+          open
+          anchorEl={statusPicker.anchor}
+          groups={statusMenuGroups}
+          currentGroupId={resolveProjectsTabGroupId(
+            statusPicker.child.metadata,
+            statusPicker.child.plan_stage,
+            customIdSet
+          )}
+          applying={statusApplying}
+          onClose={() => {
+            if (statusApplying) return;
+            setStatusPicker(null);
+          }}
+          onSelect={(groupId) =>
+            void applyChildStatus(statusPicker.child.id, groupId)
+          }
+        />
+      ) : null}
 
       <ProductChildDeliveryStatusModal
         productId={productId}

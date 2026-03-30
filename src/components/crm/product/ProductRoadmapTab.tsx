@@ -316,12 +316,15 @@ export default function ProductRoadmapTab({
         sprint land in Unscheduled.
       </p>
 
-      <div className="flex overflow-hidden rounded-2xl border border-border bg-zinc-950 text-zinc-100 dark:border-zinc-700">
+      <div className="flex overflow-hidden rounded-2xl border border-border bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
         <div
-          className="shrink-0 border-r border-zinc-800 bg-zinc-900/90"
+          className="shrink-0 border-r border-border bg-surface/30 dark:border-zinc-700 dark:bg-zinc-900/80"
           style={{ width: LEFT_W }}
         >
-          <div style={{ height: HEADER_H }} className="border-b border-zinc-800" />
+          <div
+            style={{ height: HEADER_H }}
+            className="border-b border-border dark:border-zinc-800"
+          />
           {groups.map(({ group, features }) => {
             const gid =
               group.kind === "sprint"
@@ -340,7 +343,7 @@ export default function ProductRoadmapTab({
                 <button
                   type="button"
                   onClick={() => toggleGroup(gid)}
-                  className="flex w-full items-center gap-2 border-b border-zinc-800 px-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-400 hover:bg-zinc-800/50"
+                  className="flex w-full items-center gap-2 border-b border-border bg-surface/40 px-3 text-left text-xs font-semibold uppercase tracking-wide text-text-secondary hover:bg-surface/70 dark:border-zinc-800 dark:bg-zinc-800/40 dark:text-zinc-400 dark:hover:bg-zinc-800/70"
                   style={{ height: SPRINT_HEADER_H }}
                 >
                   {isCollapsed ? (
@@ -361,29 +364,32 @@ export default function ProductRoadmapTab({
                       return (
                         <div
                           key={child.id}
-                          className="flex items-center gap-2 border-b border-zinc-800/80 px-3"
+                          className="flex items-center gap-2 border-b border-border px-3 dark:border-zinc-800/80"
                           style={{ height: ROW_H }}
                         >
-                          <span className="h-2 w-2 shrink-0 rounded-full bg-violet-500" />
+                          <span
+                            className="h-2 w-2 shrink-0 rounded-full bg-accent"
+                            aria-hidden
+                          />
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium text-zinc-100">
+                            <p className="truncate text-sm font-medium text-text-primary dark:text-zinc-100">
                               {child.title}
                             </p>
                             {statusLabel ? (
-                              <p className="truncate text-[10px] text-zinc-500">
+                              <p className="truncate text-[10px] text-text-secondary dark:text-zinc-500">
                                 {statusLabel}
                               </p>
                             ) : null}
                           </div>
                           {m ? (
                             <span
-                              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-700 text-[9px] font-semibold text-zinc-200"
+                              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-border/80 text-[9px] font-semibold text-text-primary dark:bg-zinc-700 dark:text-zinc-100"
                               title={m.name}
                             >
                               {(m.avatarFallback ?? m.name).slice(0, 2)}
                             </span>
                           ) : (
-                            <span className="h-6 w-6 shrink-0 rounded-full bg-zinc-800" />
+                            <span className="h-6 w-6 shrink-0 rounded-full bg-border/50 dark:bg-zinc-800" />
                           )}
                         </div>
                       );
@@ -394,17 +400,17 @@ export default function ProductRoadmapTab({
           })}
         </div>
 
-        <div className="min-w-0 flex-1 overflow-x-auto bg-zinc-950">
+        <div className="min-w-0 flex-1 overflow-x-auto bg-white dark:bg-zinc-900">
           <div className="relative" style={{ width: timelineWidth }}>
             <div
-              className="sticky left-0 z-10 border-b border-zinc-800 bg-zinc-900/95"
+              className="sticky left-0 z-10 border-b border-border bg-white dark:border-zinc-800 dark:bg-zinc-900"
               style={{ height: HEADER_H }}
             >
-              <div className="flex h-5 border-b border-zinc-800/80">
+              <div className="flex h-5 border-b border-border dark:border-zinc-800">
                 {monthSpans.map((span) => (
                   <div
                     key={span.key}
-                    className="flex items-center justify-center border-r border-zinc-800/60 text-[10px] font-semibold text-zinc-500"
+                    className="flex items-center justify-center border-r border-border/60 text-[10px] font-semibold text-text-secondary dark:border-zinc-800 dark:text-zinc-500"
                     style={{ width: span.cols * DAY_WIDTH }}
                   >
                     {span.label}
@@ -419,10 +425,12 @@ export default function ProductRoadmapTab({
                       key={i}
                       style={{ width: DAY_WIDTH }}
                       className={`flex shrink-0 flex-col items-center justify-end pb-1 text-xs ${
-                        isToday ? "bg-violet-500/15" : ""
-                      } border-r border-dotted border-zinc-800/50`}
+                        isToday ? "bg-accent/10" : ""
+                      } border-r border-dotted border-border/50 dark:border-zinc-800/60`}
                     >
-                      <span className="font-medium text-zinc-300">{label}</span>
+                      <span className="font-medium text-text-primary dark:text-zinc-200">
+                        {label}
+                      </span>
                     </div>
                   );
                 })}
@@ -431,14 +439,14 @@ export default function ProductRoadmapTab({
 
             {todayOffset >= 0 && todayOffset < totalDays ? (
               <div
-                className="pointer-events-none absolute z-20 w-px bg-violet-500"
+                className="pointer-events-none absolute z-20 w-px bg-accent"
                 style={{
                   left: todayOffset * DAY_WIDTH + DAY_WIDTH / 2,
                   top: HEADER_H,
                   bottom: 0,
                 }}
               >
-                <span className="absolute -top-1 left-1/2 z-30 -translate-x-1/2 whitespace-nowrap rounded-full bg-violet-600 px-1.5 py-0.5 text-[9px] font-bold text-white shadow">
+                <span className="absolute -top-1 left-1/2 z-30 -translate-x-1/2 whitespace-nowrap rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold text-white shadow-sm">
                   {new Date().getDate()}
                 </span>
               </div>
@@ -456,7 +464,7 @@ export default function ProductRoadmapTab({
               return (
                 <div key={`t-${gid}`}>
                   <div
-                    className="border-b border-zinc-800 bg-zinc-900/40"
+                    className="border-b border-border bg-surface/40 dark:border-zinc-800 dark:bg-zinc-800/35"
                     style={{ height: SPRINT_HEADER_H, width: timelineWidth }}
                   />
                   {!isCollapsed
@@ -489,13 +497,13 @@ export default function ProductRoadmapTab({
                         return (
                           <div
                             key={child.id}
-                            className="relative border-b border-zinc-800/80"
+                            className="relative border-b border-border dark:border-zinc-800/80"
                             style={{ width: timelineWidth, height: ROW_H }}
                           >
                             {showBar ? (
                               <>
                                 <div
-                                  className="absolute top-2 h-7 rounded-md bg-zinc-800/90 ring-1 ring-zinc-700/80"
+                                  className="absolute top-2 h-7 rounded-md bg-border/70 ring-1 ring-border dark:bg-zinc-800 dark:ring-zinc-700"
                                   style={{
                                     left: barLeft + 3,
                                     width: barWidth,
@@ -513,8 +521,8 @@ export default function ProductRoadmapTab({
                                     dayIx * DAY_WIDTH + DAY_WIDTH / 2;
                                   const accent =
                                     idx === milestones.length - 1
-                                      ? "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.35)]"
-                                      : "bg-zinc-500";
+                                      ? "bg-amber-500 shadow-sm dark:bg-amber-400"
+                                      : "bg-text-secondary/70 dark:bg-zinc-500";
                                   const progress = milestoneTaskProgress(
                                     ms.id,
                                     tasksForProgress
@@ -524,7 +532,7 @@ export default function ProductRoadmapTab({
                                     <div key={ms.id}>
                                       <button
                                         type="button"
-                                        className={`absolute top-[17px] z-[15] h-2.5 w-2.5 -translate-x-1/2 rotate-45 border border-zinc-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 ${accent}`}
+                                        className={`absolute top-[17px] z-[15] h-2.5 w-2.5 -translate-x-1/2 rotate-45 border border-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-zinc-900 dark:focus-visible:ring-offset-zinc-900 ${accent}`}
                                         style={{ left: cx }}
                                         aria-label={`${ms.title}, ${ms.targetDate}`}
                                         onMouseEnter={(e) => {
@@ -551,7 +559,7 @@ export default function ProductRoadmapTab({
                                         onBlur={() => setHovered(null)}
                                       />
                                       <span
-                                        className="pointer-events-none absolute top-[34px] z-[14] max-w-[6.5rem] -translate-x-1/2 truncate text-center text-[9px] font-medium text-zinc-500"
+                                        className="pointer-events-none absolute top-[34px] z-[14] max-w-[6.5rem] -translate-x-1/2 truncate text-center text-[9px] font-medium text-text-secondary dark:text-zinc-500"
                                         style={{ left: cx }}
                                       >
                                         {ms.title}
@@ -561,7 +569,7 @@ export default function ProductRoadmapTab({
                                 })}
                               </>
                             ) : (
-                              <span className="absolute left-3 top-5 text-[10px] text-zinc-600">
+                              <span className="absolute left-3 top-5 text-[10px] text-text-secondary dark:text-zinc-500">
                                 Add milestone dates
                               </span>
                             )}
@@ -609,22 +617,28 @@ function MilestoneTip({
 
   return (
     <div
-      className="pointer-events-none fixed z-[100] max-w-[220px] -translate-x-1/2 rounded-xl border border-zinc-700 bg-zinc-900/98 px-3 py-2.5 text-zinc-100 shadow-2xl backdrop-blur-sm"
+      className="pointer-events-none fixed z-[100] max-w-[220px] -translate-x-1/2 rounded-xl border border-border bg-white px-3 py-2.5 text-text-primary shadow-lg dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
       style={{ left: tipX, top: tipY }}
     >
       <div className="flex items-start gap-2">
-        <span className="mt-0.5 h-2 w-2 shrink-0 rotate-45 bg-amber-400" />
+        <span className="mt-0.5 h-2 w-2 shrink-0 rotate-45 bg-amber-500 dark:bg-amber-400" />
         <div className="min-w-0 flex-1">
-          <p className="font-semibold leading-tight text-zinc-50">
+          <p className="font-semibold leading-tight text-text-primary dark:text-zinc-50">
             {milestone.title}
           </p>
           {progress != null ? (
-            <p className="mt-1 text-xs text-violet-300">{progress}% tasks done</p>
+            <p className="mt-1 text-xs text-accent dark:text-blue-300">
+              {progress}% tasks done
+            </p>
           ) : (
-            <p className="mt-1 text-xs text-zinc-500">No linked tasks</p>
+            <p className="mt-1 text-xs text-text-secondary dark:text-zinc-500">
+              No linked tasks
+            </p>
           )}
           {dateStr ? (
-            <p className="mt-1 text-xs text-zinc-400">{dateStr}</p>
+            <p className="mt-1 text-xs text-text-secondary dark:text-zinc-400">
+              {dateStr}
+            </p>
           ) : null}
         </div>
       </div>
