@@ -111,7 +111,6 @@ export async function createLead(formData: FormData) {
 
   if (error) return { error: error.message };
   revalidatePath("/leads");
-  revalidatePath("/deals");
   revalidatePath("/dashboard");
   return { ok: true };
 }
@@ -228,17 +227,15 @@ export async function updateLead(formData: FormData) {
     if (dealErr) return { error: dealErr.message };
   }
 
-  const linked = await ensureClientFromClosedDeal(
+  await ensureClientFromClosedDeal(
     supabase,
     id,
     dealStage,
     dealCompany || null
   );
-  if (linked) revalidatePath("/clients");
-
+  await ensureClientFromWonLeadStage(supabase, id);
   revalidatePath("/leads");
   revalidatePath(`/leads/${id}`);
-  revalidatePath("/deals");
   revalidatePath("/dashboard");
   return { ok: true };
 }
@@ -284,6 +281,7 @@ export async function updateLeadRow(formData: FormData) {
 
   if (error) return { error: error.message };
 
+  await ensureClientFromWonLeadStage(supabase, id);
   revalidatePath("/leads");
   revalidatePath(`/leads/${id}`);
   revalidatePath("/dashboard");
@@ -323,7 +321,7 @@ export async function updateClientRow(formData: FormData) {
 
   if (error) return { error: error.message };
 
-  revalidatePath("/clients");
+  revalidatePath("/leads");
   revalidatePath("/projects");
   revalidatePath("/dashboard");
   return { ok: true };
@@ -342,10 +340,8 @@ export async function deleteClient(id: string) {
   const { error } = await supabase.from("client").delete().eq("id", trimmed);
   if (error) return { error: error.message };
 
-  revalidatePath("/clients");
   revalidatePath("/projects");
   revalidatePath("/leads");
-  revalidatePath("/deals");
   revalidatePath("/dashboard");
   return { ok: true };
 }
@@ -398,6 +394,7 @@ export async function updateLeadStage(leadId: string, stage: string) {
 
   if (error) return { error: error.message };
 
+  await ensureClientFromWonLeadStage(supabase, id);
   revalidatePath("/leads");
   revalidatePath(`/leads/${id}`);
   revalidatePath("/dashboard");
@@ -409,24 +406,23 @@ function isClosedDealStage(stage: string) {
 }
 
 /**
- * First time a lead's deal reaches Won / Lost, copy lead → `client`
- * and set `lead.converted_client_id` (idempotent per lead).
+ * Create a `client` from a lead and set `converted_client_id` (idempotent if already linked).
  */
-async function ensureClientFromClosedDeal(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  leadId: string,
-  dealStage: string,
-  dealCompanyHint?: string | null
+async function insertClientFromLeadAndLink(
+  supabase: SupabaseServer,
+  lead: {
+    id: string;
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+    company: string | null;
+    notes: string | null;
+    converted_client_id: string | null;
+  },
+  conversionLine: string,
+  companyHint?: string | null
 ): Promise<boolean> {
-  if (!isClosedDealStage(dealStage)) return false;
-
-  const { data: lead, error: leadErr } = await supabase
-    .from("lead")
-    .select("id, name, email, phone, company, notes, converted_client_id")
-    .eq("id", leadId)
-    .maybeSingle();
-
-  if (leadErr || !lead || lead.converted_client_id) return false;
+  if (lead.converted_client_id) return false;
 
   const name =
     lead.name?.trim() ||
@@ -436,12 +432,9 @@ async function ensureClientFromClosedDeal(
 
   const company =
     lead.company?.trim() ||
-    (dealCompanyHint && String(dealCompanyHint).trim()) ||
+    (companyHint && String(companyHint).trim()) ||
     null;
 
-  const outcome = dealStage === "closed_won" ? "Won" : "Lost";
-  const stamp = new Date().toISOString().slice(0, 10);
-  const conversionLine = `[${stamp}] Deal ${outcome} — converted from lead.`;
   const notesBase = (lead.notes ?? "").trim();
   const notes = notesBase ? `${notesBase}\n${conversionLine}` : conversionLine;
 
@@ -462,9 +455,63 @@ async function ensureClientFromClosedDeal(
   const { error: updErr } = await supabase
     .from("lead")
     .update({ converted_client_id: client.id })
-    .eq("id", leadId);
+    .eq("id", lead.id);
 
   return !updErr;
+}
+
+/**
+ * First time a lead's deal reaches Won / Lost, copy lead → `client`
+ * and set `lead.converted_client_id` (idempotent per lead).
+ */
+async function ensureClientFromClosedDeal(
+  supabase: SupabaseServer,
+  leadId: string,
+  dealStage: string,
+  dealCompanyHint?: string | null
+): Promise<boolean> {
+  if (!isClosedDealStage(dealStage)) return false;
+
+  const { data: lead, error: leadErr } = await supabase
+    .from("lead")
+    .select("id, name, email, phone, company, notes, converted_client_id")
+    .eq("id", leadId)
+    .maybeSingle();
+
+  if (leadErr || !lead) return false;
+
+  const outcome = dealStage === "closed_won" ? "Won" : "Lost";
+  const stamp = new Date().toISOString().slice(0, 10);
+  const conversionLine = `[${stamp}] Deal ${outcome} — converted from lead.`;
+
+  return insertClientFromLeadAndLink(
+    supabase,
+    lead,
+    conversionLine,
+    dealCompanyHint
+  );
+}
+
+/**
+ * When `lead.stage` is `closed_won`, create client if not already converted
+ * (covers Kanban / table moves with no deal update in the same request).
+ */
+async function ensureClientFromWonLeadStage(
+  supabase: SupabaseServer,
+  leadId: string
+): Promise<boolean> {
+  const { data: lead, error: leadErr } = await supabase
+    .from("lead")
+    .select("id, name, email, phone, company, notes, converted_client_id, stage")
+    .eq("id", leadId)
+    .maybeSingle();
+
+  if (leadErr || !lead || lead.stage !== "closed_won") return false;
+
+  const stamp = new Date().toISOString().slice(0, 10);
+  const conversionLine = `[${stamp}] Lead marked Won — converted from lead.`;
+
+  return insertClientFromLeadAndLink(supabase, lead, conversionLine, null);
 }
 
 export async function updateDealRecord(input: {
@@ -507,16 +554,14 @@ export async function updateDealRecord(input: {
   if (dealErr) return { error: dealErr.message };
 
   if (updated?.lead_id) {
-    const linked = await ensureClientFromClosedDeal(
+    await ensureClientFromClosedDeal(
       supabase,
       updated.lead_id,
       input.stage,
       input.company
     );
-    if (linked) revalidatePath("/clients");
   }
 
-  revalidatePath("/deals");
   revalidatePath("/leads");
   if (updated?.lead_id) revalidatePath(`/leads/${updated.lead_id}`);
   revalidatePath("/dashboard");
@@ -551,15 +596,9 @@ export async function updateDealStage(dealId: string, stage: string) {
   if (error) return { error: error.message };
 
   if (updated?.lead_id) {
-    const linked = await ensureClientFromClosedDeal(
-      supabase,
-      updated.lead_id,
-      stage
-    );
-    if (linked) revalidatePath("/clients");
+    await ensureClientFromClosedDeal(supabase, updated.lead_id, stage);
   }
 
-  revalidatePath("/deals");
   revalidatePath("/leads");
   if (updated?.lead_id) revalidatePath(`/leads/${updated.lead_id}`);
   revalidatePath("/dashboard");
@@ -585,7 +624,6 @@ export async function deleteDealRecord(dealId: string) {
   const { error } = await supabase.from("deal").delete().eq("id", id);
   if (error) return { error: error.message };
 
-  revalidatePath("/deals");
   revalidatePath("/leads");
   if (row?.lead_id) revalidatePath(`/leads/${row.lead_id}`);
   revalidatePath("/dashboard");
@@ -638,15 +676,12 @@ export async function createDealRecord(input: {
 
   if (error) return { error: error.message };
 
-  const linked = await ensureClientFromClosedDeal(
+  await ensureClientFromClosedDeal(
     supabase,
     leadId,
     input.stage,
     input.company
   );
-  if (linked) revalidatePath("/clients");
-
-  revalidatePath("/deals");
   revalidatePath("/leads");
   revalidatePath(`/leads/${leadId}`);
   revalidatePath("/dashboard");
@@ -667,7 +702,6 @@ export async function deleteLead(id: string) {
   if (error) return { error: error.message };
 
   revalidatePath("/leads");
-  revalidatePath("/deals");
   revalidatePath("/dashboard");
   return { ok: true };
 }
@@ -750,7 +784,6 @@ export async function createLeadQuickTask(input: {
 
   revalidatePath("/leads");
   revalidatePath(`/leads/${leadId}`);
-  revalidatePath("/deals");
   revalidatePath("/dashboard");
   revalidatePath("/calendar");
   return { ok: true };
@@ -859,7 +892,6 @@ export async function saveCrmPipelineSettings(input: {
   if (error) return { error: explainMissingCrmSettingsTable(error.message) };
 
   revalidatePath("/leads");
-  revalidatePath("/deals");
   revalidatePath("/dashboard");
   return { ok: true };
 }
@@ -889,7 +921,6 @@ export async function reassignDealsFromStage(fromSlug: string, toSlug: string) {
 
   if (error) return { error: error.message };
 
-  revalidatePath("/deals");
   revalidatePath("/leads");
   revalidatePath("/dashboard");
   return { ok: true };
@@ -913,12 +944,24 @@ export async function reassignLeadsFromStage(fromSlug: string, toSlug: string) {
     return { error: "Target stage is not in the current lead pipeline" };
   }
 
+  const { data: toMove, error: selErr } = await supabase
+    .from("lead")
+    .select("id")
+    .eq("stage", from);
+
+  if (selErr) return { error: selErr.message };
+
   const { error } = await supabase.from("lead").update({ stage: to }).eq("stage", from);
 
   if (error) return { error: error.message };
 
+  if (to === "closed_won") {
+    for (const row of toMove ?? []) {
+      await ensureClientFromWonLeadStage(supabase, row.id);
+    }
+  }
+
   revalidatePath("/leads");
-  revalidatePath("/deals");
   revalidatePath("/dashboard");
   return { ok: true };
 }

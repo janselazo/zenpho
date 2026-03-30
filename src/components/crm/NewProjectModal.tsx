@@ -341,7 +341,7 @@ export default function NewProjectModal({
                 <p className="text-sm text-text-secondary">
                   No clients yet. Add one under{" "}
                   <Link
-                    href="/clients"
+                    href="/leads?section=clients"
                     className="font-medium text-accent hover:underline"
                   >
                     Clients

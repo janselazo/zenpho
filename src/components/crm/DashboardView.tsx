@@ -848,9 +848,6 @@ export default function DashboardView({
             <p className="text-sm font-semibold tracking-tight text-text-primary dark:text-zinc-100">
               Finance
             </p>
-            <p className="mt-0.5 text-xs text-text-secondary dark:text-zinc-500">
-              Won deals (closed won in range)
-            </p>
             <div className="mt-4 h-[148px] w-full min-w-0">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart

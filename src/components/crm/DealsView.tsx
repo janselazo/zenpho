@@ -20,10 +20,7 @@ import {
 } from "@/app/(crm)/actions/crm";
 import type { LeadDealPickerOption } from "@/lib/crm/fetch-leads-for-deal-picker";
 import { type MockDeal, type DealStage } from "@/lib/crm/mock-data";
-import {
-  dealStageLabelColor,
-  type PipelineColumnDef,
-} from "@/lib/crm/pipeline-columns";
+import { type PipelineColumnDef } from "@/lib/crm/pipeline-columns";
 
 function formatCurrency(n: number) {
   return new Intl.NumberFormat("en-US", {
@@ -379,7 +376,6 @@ function DealsTable({
             <th className="px-4 py-3 font-semibold text-text-secondary">Deal</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Company</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Budget</th>
-            <th className="px-4 py-3 font-semibold text-text-secondary">Stage</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Contact</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Expected Close</th>
             <th className="px-4 py-3 font-semibold text-text-secondary">Actions</th>
@@ -400,7 +396,6 @@ function DealsTable({
               <DealsTableRow
                 key={deal.id}
                 deal={deal}
-                dealPipeline={dealPipeline}
                 isEditing={isEditing}
                 draft={draft}
                 patchDraft={patchDraft}
@@ -422,7 +417,6 @@ function DealsTable({
 
 function DealsTableRow({
   deal,
-  dealPipeline,
   isEditing,
   draft,
   patchDraft,
@@ -435,7 +429,6 @@ function DealsTableRow({
   onDelete,
 }: {
   deal: MockDeal;
-  dealPipeline: PipelineColumnDef[];
   isEditing: boolean;
   draft: MockDeal | null;
   patchDraft: (patch: Partial<MockDeal>) => void;
@@ -503,45 +496,6 @@ function DealsTableRow({
         ) : (
           <span className="font-medium text-text-primary dark:text-zinc-100">
             {formatCurrency(deal.value)}
-          </span>
-        )}
-      </td>
-      <td className="min-w-[9.5rem] px-4 py-3 align-top">
-        {isEditing && draft ? (
-          <select
-            value={draft.stage}
-            onChange={(e) =>
-              patchDraft({ stage: e.target.value as DealStage })
-            }
-            className={tableCellInputClass}
-            aria-label="Stage"
-          >
-            {(dealPipeline.some((c) => c.slug === draft.stage)
-              ? dealPipeline
-              : [
-                  ...dealPipeline,
-                  {
-                    slug: draft.stage,
-                    label: `${draft.stage} (legacy)`,
-                    color: "#64748b",
-                  },
-                ]
-            ).map((s) => (
-              <option key={s.slug} value={s.slug}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 dark:bg-zinc-800 dark:text-zinc-200">
-            <span
-              className="h-1.5 w-1.5 rounded-full"
-              style={{
-                backgroundColor: dealStageLabelColor(deal.stage, dealPipeline)
-                  .color,
-              }}
-            />
-            {dealStageLabelColor(deal.stage, dealPipeline).label}
           </span>
         )}
       </td>

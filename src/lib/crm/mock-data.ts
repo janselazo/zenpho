@@ -202,8 +202,8 @@ export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
 export const LEAD_STAGE_LABELS: Record<LeadStage, string> = {
   new: "New Lead",
   contacted: "Contacted",
-  discoverycall_scheduled: "Discovery Call Scheduled",
-  discoverycall_completed: "Discovery Call Completed",
+  discoverycall_scheduled: "Appointment Scheduled",
+  discoverycall_completed: "Appointment Completed",
   proposal_sent: "Proposal Sent",
   negotiation: "Negotiation",
   closed_won: "Closed Won",

@@ -8,13 +8,11 @@ import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
   BookOpen,
-  Building2,
   Calendar,
   ChevronDown,
   FileBarChart,
   FileText,
   FolderKanban,
-  Handshake,
   LayoutDashboard,
   LogOut,
   MessageSquare,
@@ -36,14 +34,12 @@ const opportunitiesNav: Array<{
   icon: LucideIcon;
 }> = [
   { href: "/leads", label: "Leads", icon: UsersRound },
-  { href: "/deals", label: "Deals", icon: Handshake },
   { href: "/proposals", label: "Proposals", icon: FileText },
   { href: "/conversations", label: "Conversations", icon: MessageSquare },
   { href: "/calendar", label: "Appointments", icon: Calendar },
 ];
 
 const workNav = [
-  { href: "/clients", label: "Clients", icon: Building2 },
   { href: "/projects", label: "Projects", icon: FolderKanban },
   { href: "/time-tracking", label: "Time Tracking", icon: Timer },
 ];

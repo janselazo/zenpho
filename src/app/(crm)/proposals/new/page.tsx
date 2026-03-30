@@ -36,7 +36,7 @@ export default async function NewProposalPage() {
         {clients.length === 0 ? (
           <p className="mt-8 rounded-xl border border-border bg-white p-6 text-sm text-text-secondary dark:border-zinc-800 dark:bg-zinc-900/40 dark:text-zinc-400">
             No clients yet.{" "}
-            <Link href="/clients" className="text-accent underline">
+            <Link href="/leads?section=clients" className="text-accent underline">
               Add a client
             </Link>{" "}
             first.

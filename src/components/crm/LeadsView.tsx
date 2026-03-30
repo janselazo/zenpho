@@ -253,7 +253,7 @@ function leadQuickTaskContextLabel(lead: Lead): string {
   );
 }
 
-type LeadsSectionTab = "pipeline" | "leads" | "deals" | "clients";
+export type LeadsSectionTab = "pipeline" | "leads" | "deals" | "clients";
 
 const SECTION_TABS: { id: LeadsSectionTab; label: string }[] = [
   { id: "pipeline", label: "Pipeline" },
@@ -285,6 +285,7 @@ export default function LeadsView({
   dealLeadPickerOptions = [],
   clientsForTab = [],
   clientsTabLoadError = null,
+  initialSection,
 }: {
   leads: Lead[];
   leadPipelineColumns: PipelineColumnDef[];
@@ -293,11 +294,15 @@ export default function LeadsView({
   dealLeadPickerOptions?: LeadDealPickerOption[];
   clientsForTab?: ClientTableRow[];
   clientsTabLoadError?: { message: string } | null;
+  /** From `/leads?section=` (e.g. redirect from `/deals`). */
+  initialSection?: LeadsSectionTab;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
-  const [view, setView] = useState<LeadsSectionTab>("pipeline");
+  const [view, setView] = useState<LeadsSectionTab>(
+    initialSection ?? "pipeline"
+  );
   const [leadsSnapshot, setLeadsSnapshot] = useState(leads);
   const [leadPipeline, setLeadPipeline] =
     useState<PipelineColumnDef[]>(leadPipelineColumns);
@@ -310,6 +315,10 @@ export default function LeadsView({
   useEffect(() => {
     setLeadPipeline(leadPipelineColumns.map((c) => ({ ...c })));
   }, [leadPipelineColumns]);
+
+  useEffect(() => {
+    if (initialSection) setView(initialSection);
+  }, [initialSection]);
 
   const filtered = leadsSnapshot.filter((l) => {
     if (!search) return true;

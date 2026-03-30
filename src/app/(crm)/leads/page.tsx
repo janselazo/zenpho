@@ -8,7 +8,31 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-export default async function LeadsPage() {
+const LEADS_SECTIONS = ["pipeline", "leads", "deals", "clients"] as const;
+type LeadsSectionQuery = (typeof LEADS_SECTIONS)[number];
+
+function parseLeadsSection(
+  raw: string | string[] | undefined
+): LeadsSectionQuery | undefined {
+  const v = Array.isArray(raw) ? raw[0] : raw;
+  if (
+    v === "pipeline" ||
+    v === "leads" ||
+    v === "deals" ||
+    v === "clients"
+  ) {
+    return v;
+  }
+  return undefined;
+}
+
+export default async function LeadsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ section?: string | string[] }>;
+}) {
+  const sp = await searchParams;
+  const initialSection = parseLeadsSection(sp.section);
   if (!isSupabaseConfigured()) {
     return (
       <div className="p-8">
@@ -91,6 +115,7 @@ export default async function LeadsPage() {
           dealLeadPickerOptions={leadPickerOptions}
           clientsForTab={clientsForTab}
           clientsTabLoadError={clientsPack.error}
+          initialSection={initialSection}
         />
       )}
     </div>

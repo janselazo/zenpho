@@ -74,7 +74,7 @@ function stageSlug(
   return normalizeLeadStageForPipeline(rawStage, pipeline);
 }
 
-/** Discovery call scheduled or completed (not yet proposal). */
+/** Appointment scheduled / completed stages (not yet proposal). */
 function isAppointmentsBucket(
   rawStage: string | null,
   pipeline: PipelineColumnDef[]
@@ -84,7 +84,11 @@ function isAppointmentsBucket(
     return true;
   }
   const col = pipeline.find((c) => c.slug === s);
-  if (col && /discovery\s*call/i.test(col.label) && !/proposal/i.test(col.label)) {
+  if (
+    col &&
+    /(discovery\s*call|appointment\s+(scheduled|completed))/i.test(col.label) &&
+    !/proposal/i.test(col.label)
+  ) {
     return true;
   }
   return false;
@@ -558,7 +562,7 @@ export default function LeadsPipelineSummary({
         />
       </div>
       <p className="mt-2 text-[10px] leading-snug text-text-secondary dark:text-zinc-500">
-        Appointments = discovery call scheduled or completed. Proposals = proposal sent or negotiation. Clients = closed won.
+        Appointments = appointment scheduled or completed. Proposals = proposal sent or negotiation. Clients = closed won.
       </p>
     </div>
   );

@@ -20,8 +20,8 @@ export const DEFAULT_DEAL_PIPELINE_COLUMNS: PipelineColumnDef[] = [
 export const DEFAULT_LEAD_PIPELINE_COLUMNS: PipelineColumnDef[] = [
   { slug: "new", label: "New Lead", color: "#ea580c" },
   { slug: "contacted", label: "Contacted", color: "#3b82f6" },
-  { slug: "discoverycall_scheduled", label: "Discovery Call Scheduled", color: "#06b6d4" },
-  { slug: "discoverycall_completed", label: "Discovery Call Completed", color: "#8b5cf6" },
+  { slug: "discoverycall_scheduled", label: "Appointment Scheduled", color: "#06b6d4" },
+  { slug: "discoverycall_completed", label: "Appointment Completed", color: "#8b5cf6" },
   { slug: "proposal_sent", label: "Proposal Sent", color: "#a855f7" },
   { slug: "negotiation", label: "Negotiation", color: "#f59e0b" },
   { slug: "closed_won", label: "Closed Won", color: "#10b981" },
