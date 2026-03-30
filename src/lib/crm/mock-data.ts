@@ -26,7 +26,7 @@ export type LeadPipelineStage = (typeof LEAD_PIPELINE_STAGES)[number];
 export type LeadStage = LeadPipelineStage;
 
 export const LEAD_PIPELINE_COLUMN_COLORS: Record<LeadPipelineStage, string> = {
-  new: "#64748b",
+  new: "#ea580c",
   contacted: "#3b82f6",
   discoverycall_scheduled: "#06b6d4",
   discoverycall_completed: "#8b5cf6",
@@ -202,8 +202,8 @@ export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
 export const LEAD_STAGE_LABELS: Record<LeadStage, string> = {
   new: "New Lead",
   contacted: "Contacted",
-  discoverycall_scheduled: "DiscoveryCall Scheduled",
-  discoverycall_completed: "DiscoveryCall Completed",
+  discoverycall_scheduled: "Discovery Call Scheduled",
+  discoverycall_completed: "Discovery Call Completed",
   proposal_sent: "Proposal Sent",
   negotiation: "Negotiation",
   closed_won: "Closed Won",

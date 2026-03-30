@@ -6,9 +6,9 @@ import { LEAD_PROJECT_TYPE_OPTIONS } from "@/lib/crm/mock-data";
 import {
   mergeDealPipelineFromDb,
   mergeLeadPipelineFromDb,
-  parsePipelineColumnArray,
   ensureDealPipelineRequiredSlugs,
   ensureLeadPipelineRequiredSlugs,
+  validatePipelineColumnArrayForSave,
   type PipelineColumnDef,
 } from "@/lib/crm/pipeline-columns";
 
@@ -816,18 +816,14 @@ export async function saveCrmPipelineSettings(input: {
   let deal = mergeDealPipelineFromDb(cur?.deal_pipeline);
 
   if (input.leadPipeline) {
-    const p = parsePipelineColumnArray(input.leadPipeline);
-    if (!p || p.length === 0 || p.length > 20) {
-      return { error: "Invalid lead pipeline (1–20 stages)" };
-    }
-    lead = ensureLeadPipelineRequiredSlugs(p);
+    const v = validatePipelineColumnArrayForSave(input.leadPipeline);
+    if ("error" in v) return { error: v.error };
+    lead = ensureLeadPipelineRequiredSlugs(v.ok);
   }
   if (input.dealPipeline) {
-    const p = parsePipelineColumnArray(input.dealPipeline);
-    if (!p || p.length === 0 || p.length > 20) {
-      return { error: "Invalid deal pipeline (1–20 stages)" };
-    }
-    deal = ensureDealPipelineRequiredSlugs(p);
+    const v = validatePipelineColumnArrayForSave(input.dealPipeline);
+    if ("error" in v) return { error: v.error };
+    deal = ensureDealPipelineRequiredSlugs(v.ok);
   }
 
   const { error } = await supabase.from("crm_settings").upsert(

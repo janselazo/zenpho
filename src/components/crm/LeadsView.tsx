@@ -611,9 +611,12 @@ function LeadsPipelineBoard({
         return (
           <div className="flex flex-col rounded-xl border border-zinc-200/90 bg-white p-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:border-zinc-700 dark:bg-zinc-900">
             <div className="flex items-start justify-between gap-2">
-              <span className="min-w-0 truncate text-sm font-semibold text-text-primary dark:text-zinc-100">
+              <Link
+                href={`/leads/${lead.id}`}
+                className="min-w-0 truncate text-sm font-semibold text-accent hover:underline dark:text-blue-400"
+              >
                 {lead.name?.trim() || lead.email?.trim() || "Lead"}
-              </span>
+              </Link>
               <div
                 className="max-w-[58%] shrink-0"
                 onMouseDown={stopDragMouseDown}
@@ -677,19 +680,9 @@ function LeadsPipelineBoard({
                 disabled={editingId !== null}
                 className="inline-flex items-center justify-center rounded-md p-1.5 text-violet-600 transition-colors hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-40 dark:text-violet-400 dark:hover:bg-violet-950/40"
                 aria-label={`Create project for ${deleteLabel}`}
-                title="Create project from lead"
+                title="Create project"
               >
                 <FolderKanban className="h-4 w-4 shrink-0" aria-hidden />
-              </button>
-              <button
-                type="button"
-                onClick={() => onQuickTask(lead)}
-                disabled={editingId !== null}
-                title="Quick task"
-                className="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                aria-label={`Add task for ${deleteLabel}`}
-              >
-                <ListTodo className="h-4 w-4 shrink-0" aria-hidden />
               </button>
               <button
                 type="button"
@@ -710,6 +703,16 @@ function LeadsPipelineBoard({
                 aria-label={`View notes for ${deleteLabel}`}
               >
                 <StickyNote className="h-4 w-4 shrink-0" aria-hidden />
+              </button>
+              <button
+                type="button"
+                onClick={() => onQuickTask(lead)}
+                disabled={editingId !== null}
+                title="Quick task"
+                className="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                aria-label={`Add task for ${deleteLabel}`}
+              >
+                <ListTodo className="h-4 w-4 shrink-0" aria-hidden />
               </button>
               <button
                 type="button"
@@ -855,9 +858,12 @@ function LeadsTable({
                         />
                       </div>
                     ) : (
-                      <span className="min-w-0 font-medium text-text-primary">
+                      <Link
+                        href={`/leads/${lead.id}`}
+                        className="min-w-0 font-medium text-accent hover:underline dark:text-blue-400"
+                      >
                         {lead.name?.trim() || "—"}
-                      </span>
+                      </Link>
                     )}
                   </div>
                 </td>
@@ -929,7 +935,8 @@ function LeadsTable({
                     </PillSelect>
                   ) : (
                     <span
-                      className={`${neutralChipBase} items-center gap-1.5 text-zinc-700 dark:text-zinc-300`}
+                      className={`${neutralChipBase} items-center gap-1.5`}
+                      style={{ color: stageMeta.color }}
                     >
                       <span
                         className="h-2 w-2 shrink-0 rounded-full ring-2 ring-border dark:ring-zinc-600"
@@ -1081,19 +1088,9 @@ function LeadsTable({
                           disabled={editingId !== null}
                           className="inline-flex items-center justify-center rounded-md p-1.5 text-violet-600 transition-colors hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-40 dark:text-violet-400 dark:hover:bg-violet-950/40"
                           aria-label={`Create project for ${deleteLabel}`}
-                          title="Create project from lead"
+                          title="Create project"
                         >
                           <FolderKanban className="h-4 w-4 shrink-0" aria-hidden />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onQuickTask(lead)}
-                          disabled={editingId !== null}
-                          title="Quick task"
-                          className="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                          aria-label={`Add task for ${deleteLabel}`}
-                        >
-                          <ListTodo className="h-4 w-4 shrink-0" aria-hidden />
                         </button>
                         <button
                           type="button"
@@ -1114,6 +1111,16 @@ function LeadsTable({
                           aria-label={`View notes for ${deleteLabel}`}
                         >
                           <StickyNote className="h-4 w-4 shrink-0" aria-hidden />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onQuickTask(lead)}
+                          disabled={editingId !== null}
+                          title="Quick task"
+                          className="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                          aria-label={`Add task for ${deleteLabel}`}
+                        >
+                          <ListTodo className="h-4 w-4 shrink-0" aria-hidden />
                         </button>
                         <button
                           type="button"

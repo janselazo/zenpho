@@ -18,10 +18,10 @@ export const DEFAULT_DEAL_PIPELINE_COLUMNS: PipelineColumnDef[] = [
 ];
 
 export const DEFAULT_LEAD_PIPELINE_COLUMNS: PipelineColumnDef[] = [
-  { slug: "new", label: "New Lead", color: "#64748b" },
+  { slug: "new", label: "New Lead", color: "#ea580c" },
   { slug: "contacted", label: "Contacted", color: "#3b82f6" },
-  { slug: "discoverycall_scheduled", label: "DiscoveryCall Scheduled", color: "#06b6d4" },
-  { slug: "discoverycall_completed", label: "DiscoveryCall Completed", color: "#8b5cf6" },
+  { slug: "discoverycall_scheduled", label: "Discovery Call Scheduled", color: "#06b6d4" },
+  { slug: "discoverycall_completed", label: "Discovery Call Completed", color: "#8b5cf6" },
   { slug: "proposal_sent", label: "Proposal Sent", color: "#a855f7" },
   { slug: "negotiation", label: "Negotiation", color: "#f59e0b" },
   { slug: "closed_won", label: "Closed Won", color: "#10b981" },
@@ -31,13 +31,21 @@ export const DEFAULT_LEAD_PIPELINE_COLUMNS: PipelineColumnDef[] = [
 
 const SLUG_RE = /^[a-z][a-z0-9_]{0,63}$/;
 
-function isValidColor(c: string): boolean {
+/** Normalize #RGB / #RRGGBB to lowercase #rrggbb; invalid → null. */
+export function normalizePipelineHexColor(c: string): string | null {
   const s = c.trim();
-  if (!s.startsWith("#")) return false;
+  if (!s.startsWith("#")) return null;
   const hex = s.slice(1);
-  return (
-    (hex.length === 3 || hex.length === 6) && /^[0-9a-fA-F]+$/.test(hex)
-  );
+  if (!/^[0-9a-fA-F]+$/.test(hex)) return null;
+  if (hex.length === 3) {
+    return `#${hex
+      .split("")
+      .map((ch) => ch + ch)
+      .join("")
+      .toLowerCase()}`;
+  }
+  if (hex.length === 6) return `#${hex.toLowerCase()}`;
+  return null;
 }
 
 /** Parse DB jsonb; invalid → null. */
@@ -51,12 +59,61 @@ export function parsePipelineColumnArray(raw: unknown): PipelineColumnDef[] | nu
     const slug = String(o.slug ?? "").trim();
     const label = String(o.label ?? "").trim();
     const color = String(o.color ?? "").trim();
-    if (!SLUG_RE.test(slug) || !label || !isValidColor(color)) return null;
+    const norm = normalizePipelineHexColor(color);
+    if (!SLUG_RE.test(slug) || !label || !norm) return null;
     if (seen.has(slug)) return null;
     seen.add(slug);
-    out.push({ slug, label, color });
+    out.push({ slug, label, color: norm });
   }
   return out.length > 0 ? out : null;
+}
+
+/**
+ * Validate pipeline payload from the client before save (clear errors for debugging).
+ */
+export function validatePipelineColumnArrayForSave(raw: unknown):
+  | { ok: PipelineColumnDef[] }
+  | { error: string } {
+  if (!Array.isArray(raw)) {
+    return { error: "Invalid pipeline data." };
+  }
+  if (raw.length === 0 || raw.length > 20) {
+    return { error: "Pipeline must have 1–20 stages." };
+  }
+  const out: PipelineColumnDef[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < raw.length; i++) {
+    const row = raw[i];
+    if (!row || typeof row !== "object") {
+      return { error: `Stage ${i + 1}: missing or invalid data.` };
+    }
+    const o = row as Record<string, unknown>;
+    const slug = String(o.slug ?? "").trim();
+    const label = String(o.label ?? "").trim();
+    const norm = normalizePipelineHexColor(String(o.color ?? "").trim());
+    if (!slug) {
+      return { error: `Stage ${i + 1}: each stage needs a slug.` };
+    }
+    if (!SLUG_RE.test(slug)) {
+      return {
+        error: `Stage “${label || slug}”: slug “${slug}” is invalid. Use lowercase letters, numbers, and underscores only.`,
+      };
+    }
+    if (!label) {
+      return { error: `Stage “${slug}”: label cannot be empty.` };
+    }
+    if (!norm) {
+      return {
+        error: `Stage “${label}”: color must be a hex value like #RGB or #RRGGBB.`,
+      };
+    }
+    if (seen.has(slug)) {
+      return { error: `Duplicate stage slug “${slug}”.` };
+    }
+    seen.add(slug);
+    out.push({ slug, label, color: norm });
+  }
+  return { ok: out };
 }
 
 export function mergeDealPipelineFromDb(raw: unknown): PipelineColumnDef[] {

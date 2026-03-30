@@ -116,6 +116,7 @@ function useDashboardChartTheme() {
         tooltipColor: "#e4e4e7",
         legendColor: "#a1a1aa",
         barPrimary: "#a1a1aa",
+        barVolume: "#34d399",
         barProfit: "#60a5fa",
         refLine: "#3f3f46",
       }
@@ -127,6 +128,7 @@ function useDashboardChartTheme() {
         tooltipColor: "#111827",
         legendColor: "#5c6370",
         barPrimary: "#18181b",
+        barVolume: "#059669",
         barProfit: "#2563eb",
         refLine: "#e5e7eb",
       };
@@ -463,7 +465,7 @@ export default function DashboardView({
           <div className="flex items-center justify-end px-5 py-4 md:min-w-[10.5rem] md:flex-none md:py-5">
             <Link
               href="/prospecting/playbook"
-              className="group inline-flex items-center gap-1.5 text-sm font-semibold text-text-primary transition-colors hover:text-accent dark:text-zinc-100 dark:hover:text-blue-400"
+              className="group inline-flex items-center gap-1.5 text-sm font-semibold text-accent hover:text-accent dark:text-blue-400 dark:hover:text-blue-400"
             >
               Open Playbook
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
@@ -472,23 +474,14 @@ export default function DashboardView({
         </div>
       </section>
 
-      {/* KPIs */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <KpiCard label="Active clients" value={String(activeClients)} />
-        <KpiCard label="Active projects" value={String(activeProjects)} />
-        <KpiCard label="Revenue" value={fmt(revenueWeek)} />
-        <KpiCard label="Expenses" value={fmt(expensesWeek)} />
-        <KpiCard label="Profit" value={fmt(profit)} accent />
-      </div>
-
-      {/* KPI overview chart — same metrics as cards, horizontal bars */}
+      {/* Business snapshot — horizontal bar charts */}
       <div className={`${dashCard} p-5`}>
         <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
             Business snapshot
           </p>
           <p className="text-xs text-text-secondary dark:text-zinc-500">
-            Same figures as the KPI row · {rangeLabel}
+            {rangeLabel}
           </p>
         </div>
         <div className="mt-6 grid gap-10 lg:grid-cols-2">
@@ -539,7 +532,7 @@ export default function DashboardView({
                     dataKey="v"
                     radius={[0, 6, 6, 0]}
                     maxBarSize={22}
-                    fill={chartTheme.barPrimary}
+                    fill={chartTheme.barVolume}
                   >
                     <LabelList
                       dataKey="display"
@@ -890,27 +883,6 @@ export default function DashboardView({
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-// ── Shared ───────────────────────────────────────────────────────────────────
-
-function KpiCard({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
-  return (
-    <div
-      className={`${dashCard} p-5 ${accent ? "ring-1 ring-accent/20 dark:ring-blue-400/25" : ""}`}
-    >
-      <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary dark:text-zinc-500">
-        {label}
-      </p>
-      <p
-        className={`mt-3 text-2xl font-bold tabular-nums tracking-tight ${
-          accent ? "text-accent dark:text-blue-400" : "text-text-primary dark:text-zinc-50"
-        }`}
-      >
-        {value}
-      </p>
     </div>
   );
 }

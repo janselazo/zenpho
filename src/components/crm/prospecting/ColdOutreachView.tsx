@@ -3,7 +3,9 @@
 import { useState, useEffect, useMemo } from "react";
 import {
   DndContext,
+  DragOverlay,
   type DragEndEvent,
+  type DragStartEvent,
   PointerSensor,
   closestCenter,
   useSensor,
@@ -612,7 +614,7 @@ function PlaybookCategoryRow({
 
   const sortStyle = {
     transform: CSS.Transform.toString(transform),
-    transition,
+    transition: isDragging ? undefined : transition,
   };
 
   const iconPickerOpen = iconPickerForCategoryId === cat.id;
@@ -620,10 +622,11 @@ function PlaybookCategoryRow({
   return (
     <div
       ref={setNodeRef}
-      style={sortStyle}
-      className={`rounded-2xl border border-border bg-white shadow-sm ${
-        isDragging ? "z-10 opacity-90 shadow-md ring-2 ring-accent/20" : ""
-      }`}
+      style={{
+        ...sortStyle,
+        ...(isDragging ? { opacity: 0, pointerEvents: "none" as const } : {}),
+      }}
+      className="rounded-2xl border border-border bg-white shadow-sm"
     >
       <div className="group/sec flex items-center gap-2 px-5 py-4 sm:gap-3">
         <button
@@ -829,6 +832,55 @@ function PlaybookCategoryRow({
   );
 }
 
+function playbookCategoryPoints(
+  cat: PlaybookCategory,
+  completions: Record<string, number>
+) {
+  const catEarned = cat.activities.reduce((s, a) => {
+    const done = completions[a.id] ?? 0;
+    return s + (done >= a.target ? a.points : 0);
+  }, 0);
+  const catTotal = cat.activities.reduce((s, a) => s + a.points, 0);
+  return { catEarned, catTotal };
+}
+
+/** Drag preview only — avoids transform + full card compositing (ghosting) on the live row. */
+function PlaybookSectionDragPreview({
+  cat,
+  completions,
+}: {
+  cat: PlaybookCategory;
+  completions: Record<string, number>;
+}) {
+  const { catEarned, catTotal } = playbookCategoryPoints(cat, completions);
+  return (
+    <div className="flex w-[min(100vw-2rem,28rem)] cursor-grabbing items-center gap-3 rounded-2xl border border-border bg-white px-5 py-4 shadow-xl dark:border-zinc-700 dark:bg-zinc-900">
+      <GripVertical
+        className="h-4 w-4 shrink-0 text-text-secondary/70"
+        aria-hidden
+      />
+      <div
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white"
+        style={{ backgroundColor: cat.color }}
+      >
+        {renderPlaybookCategoryIcon(cat.icon) ?? (
+          <Circle className="h-4 w-4" aria-hidden />
+        )}
+      </div>
+      <ChevronDown
+        className="h-4 w-4 shrink-0 -rotate-90 text-text-secondary"
+        aria-hidden
+      />
+      <span className="min-w-0 flex-1 truncate text-sm font-semibold text-text-primary dark:text-zinc-100">
+        {cat.name}
+      </span>
+      <span className="shrink-0 text-xs tabular-nums text-text-secondary dark:text-zinc-400">
+        {catEarned}/{catTotal} pts
+      </span>
+    </div>
+  );
+}
+
 function PlaybookTab() {
   const [completions, setCompletions] = useState<Record<string, number>>({});
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -847,6 +899,9 @@ function PlaybookTab() {
   const [iconPickerForCategoryId, setIconPickerForCategoryId] = useState<
     string | null
   >(null);
+  const [activeSectionDragId, setActiveSectionDragId] = useState<string | null>(
+    null
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -874,7 +929,12 @@ function PlaybookTab() {
     };
   }, [iconPickerForCategoryId]);
 
+  function handleDragStart(event: DragStartEvent) {
+    setActiveSectionDragId(String(event.active.id));
+  }
+
   function handleDragEnd(event: DragEndEvent) {
+    setActiveSectionDragId(null);
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     setCategories((prev) => {
@@ -1121,6 +1181,11 @@ function PlaybookTab() {
     setCollapsed((prev) => ({ ...prev, [catId]: !prev[catId] }));
   }
 
+  const activeDragCategory = useMemo(() => {
+    if (!activeSectionDragId) return null;
+    return categories.find((c) => c.id === activeSectionDragId) ?? null;
+  }, [activeSectionDragId, categories]);
+
   return (
     <div>
       {/* KPI row */}
@@ -1169,18 +1234,19 @@ function PlaybookTab() {
           id="playbook-sections"
           sensors={sensors}
           collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
+          onDragCancel={() => setActiveSectionDragId(null)}
         >
           <SortableContext
             items={categories.map((c) => c.id)}
             strategy={verticalListSortingStrategy}
           >
             {categories.map((cat) => {
-              const catEarned = cat.activities.reduce((s, a) => {
-                const done = completions[a.id] ?? 0;
-                return s + (done >= a.target ? a.points : 0);
-              }, 0);
-              const catTotal = cat.activities.reduce((s, a) => s + a.points, 0);
+              const { catEarned, catTotal } = playbookCategoryPoints(
+                cat,
+                completions
+              );
               const isOpen = !collapsed[cat.id];
 
               return (
@@ -1233,6 +1299,14 @@ function PlaybookTab() {
               );
             })}
           </SortableContext>
+          <DragOverlay dropAnimation={null}>
+            {activeDragCategory ? (
+              <PlaybookSectionDragPreview
+                cat={activeDragCategory}
+                completions={completions}
+              />
+            ) : null}
+          </DragOverlay>
         </DndContext>
       </div>
 

@@ -22,6 +22,7 @@ import {
 
 const COLOR_PRESETS = [
   "#64748b",
+  "#ea580c",
   "#3b82f6",
   "#8b5cf6",
   "#f59e0b",
@@ -118,34 +119,49 @@ export default function PipelineSettingsModal({
     }
     setSaving(true);
     setError(null);
-    const res =
-      kind === "deal"
-        ? await reassignDealsFromStage(reassign.slug, reassignTarget)
-        : await reassignLeadsFromStage(reassign.slug, reassignTarget);
-    setSaving(false);
-    if ("error" in res && res.error) {
-      setError(res.error);
-      return;
+    try {
+      const res =
+        kind === "deal"
+          ? await reassignDealsFromStage(reassign.slug, reassignTarget)
+          : await reassignLeadsFromStage(reassign.slug, reassignTarget);
+      if ("error" in res && res.error) {
+        setError(res.error);
+        return;
+      }
+      setDraft((prev) => prev.filter((c) => c.slug !== reassign.slug));
+      setReassign(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong.");
+    } finally {
+      setSaving(false);
     }
-    setDraft((prev) => prev.filter((c) => c.slug !== reassign.slug));
-    setReassign(null);
   }
 
   async function handleSave() {
     setSaving(true);
     setError(null);
-    const res = await saveCrmPipelineSettings(
-      kind === "deal"
-        ? { dealPipeline: draft }
-        : { leadPipeline: draft }
-    );
-    setSaving(false);
-    if ("error" in res && res.error) {
-      setError(res.error);
-      return;
+    const payload = draft.map((c) => ({
+      slug: String(c.slug).trim(),
+      label: String(c.label).trim(),
+      color: String(c.color).trim(),
+    }));
+    try {
+      const res = await saveCrmPipelineSettings(
+        kind === "deal"
+          ? { dealPipeline: payload }
+          : { leadPipeline: payload }
+      );
+      if ("error" in res && res.error) {
+        setError(res.error);
+        return;
+      }
+      onSaved();
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong.");
+    } finally {
+      setSaving(false);
     }
-    onSaved();
-    onClose();
   }
 
   return (
@@ -296,30 +312,35 @@ export default function PipelineSettingsModal({
             Add stage
           </button>
 
-          {error && (
-            <p className="mt-3 text-sm text-red-600 dark:text-red-400">
-              {error}
-            </p>
-          )}
         </div>
 
-        <div className="flex justify-end gap-2 border-t border-border px-5 py-4 dark:border-zinc-700">
-          <button
-            type="button"
-            onClick={() => !saving && onClose()}
-            className="rounded-xl border border-border px-4 py-2 text-sm font-medium dark:border-zinc-600"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={() => void handleSave()}
-            disabled={saving}
-            className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-60"
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Save pipeline
-          </button>
+        <div className="shrink-0 border-t border-border px-5 py-4 dark:border-zinc-700">
+          {error ? (
+            <p
+              className="mb-3 text-sm text-red-600 dark:text-red-400"
+              role="alert"
+            >
+              {error}
+            </p>
+          ) : null}
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => !saving && onClose()}
+              className="rounded-xl border border-border px-4 py-2 text-sm font-medium dark:border-zinc-600"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={saving}
+              className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-60"
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Save pipeline
+            </button>
+          </div>
         </div>
       </div>
 

@@ -4,8 +4,6 @@ import { useEffect, useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Check,
-  FolderKanban,
-  ListTodo,
   Loader2,
   Pencil,
   Search,
@@ -13,16 +11,12 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import KanbanBoard, { type KanbanColumn } from "@/components/crm/KanbanBoard";
 import PipelineSettingsModal from "@/components/crm/PipelineSettingsModal";
 import CrmPopoverDateField from "@/components/crm/CrmPopoverDateField";
-import CrmNewProjectFromDealModal from "@/components/crm/CrmNewProjectFromDealModal";
-import CrmQuickTaskModal from "@/components/crm/CrmQuickTaskModal";
 import {
   createDealRecord,
   deleteDealRecord,
   updateDealRecord,
-  updateDealStage,
 } from "@/app/(crm)/actions/crm";
 import type { LeadDealPickerOption } from "@/lib/crm/fetch-leads-for-deal-picker";
 import { type MockDeal, type DealStage } from "@/lib/crm/mock-data";
@@ -30,8 +24,6 @@ import {
   dealStageLabelColor,
   type PipelineColumnDef,
 } from "@/lib/crm/pipeline-columns";
-
-type ViewMode = "table" | "pipeline";
 
 function formatCurrency(n: number) {
   return new Intl.NumberFormat("en-US", {
@@ -72,16 +64,6 @@ function dealAvatarClasses(dealId: string): string {
   return DEAL_AVATAR_CLASSES[Math.abs(h) % DEAL_AVATAR_CLASSES.length];
 }
 
-function dealQuickTaskContextLabel(deal: MockDeal): string {
-  return (
-    deal.contactName?.trim() ||
-    deal.contactEmail?.trim() ||
-    deal.title?.trim() ||
-    deal.company?.trim() ||
-    "this deal"
-  );
-}
-
 export default function DealsView({
   deals,
   persistDeals = false,
@@ -94,7 +76,6 @@ export default function DealsView({
   dealPipelineColumns: PipelineColumnDef[];
 }) {
   const router = useRouter();
-  const [view, setView] = useState<ViewMode>("table");
   const [search, setSearch] = useState("");
   const [localDeals, setLocalDeals] = useState<MockDeal[]>(deals);
   const [dealPipeline, setDealPipeline] =
@@ -103,10 +84,6 @@ export default function DealsView({
   const [modalOpen, setModalOpen] = useState(false);
   const [createDealOpen, setCreateDealOpen] = useState(false);
   const [editing, setEditing] = useState<MockDeal | null>(null);
-  const [quickTaskDeal, setQuickTaskDeal] = useState<MockDeal | null>(null);
-  const [newProjectDealId, setNewProjectDealId] = useState<string | null>(null);
-  const [pipelineDeleteId, setPipelineDeleteId] = useState<string | null>(null);
-
   useEffect(() => {
     setLocalDeals(deals);
   }, [deals]);
@@ -130,49 +107,7 @@ export default function DealsView({
     return acc;
   }, {});
 
-  const configuredSlugs = new Set(dealPipeline.map((c) => c.slug));
-  const orphanSlugs = [
-    ...new Set(
-      filtered.filter((d) => !configuredSlugs.has(d.stage)).map((d) => d.stage)
-    ),
-  ];
-
-  const kanbanColumns: KanbanColumn<MockDeal>[] = [
-    ...dealPipeline.map((col) => ({
-      id: col.slug,
-      label: col.label,
-      color: col.color,
-      items: filtered.filter((d) => d.stage === col.slug),
-    })),
-    ...orphanSlugs.map((slug) => {
-      const meta = dealStageLabelColor(slug, dealPipeline);
-      return {
-        id: slug,
-        label: `${meta.label} (legacy)`,
-        color: meta.color,
-        items: filtered.filter((d) => d.stage === slug),
-      };
-    }),
-  ];
-
   const totalValue = filtered.reduce((sum, d) => sum + d.value, 0);
-
-  async function handleMove(itemId: string, _from: string, to: string) {
-    if (persistDeals) {
-      const res = await updateDealStage(itemId, to);
-      if (res.error) {
-        alert(res.error);
-        return;
-      }
-      router.refresh();
-      return;
-    }
-    setLocalDeals((prev) =>
-      prev.map((d) =>
-        d.id === itemId ? { ...d, stage: to as DealStage } : d
-      )
-    );
-  }
 
   function handleLocalSave(updated: MockDeal) {
     setLocalDeals((prev) =>
@@ -256,24 +191,8 @@ export default function DealsView({
         </div>
       </div>
 
-      {/* View toggles + stats */}
-      <div className="mt-4 flex items-center gap-4">
-        <div className="inline-flex rounded-lg border border-border bg-surface/50 p-0.5">
-          {(["table", "pipeline"] as ViewMode[]).map((v) => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => setView(v)}
-              className={`rounded-md px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
-                view === v
-                  ? "bg-white text-text-primary shadow-sm"
-                  : "text-text-secondary hover:text-text-primary"
-              }`}
-            >
-              {v === "pipeline" ? "Pipeline" : "Table"}
-            </button>
-          ))}
-        </div>
+      {/* Stats + pipeline settings */}
+      <div className="mt-4 flex flex-wrap items-center gap-4">
         <span className="text-sm text-text-secondary">
           {filtered.length} deals · {formatCurrency(totalValue)} total
         </span>
@@ -289,154 +208,28 @@ export default function DealsView({
         )}
       </div>
 
-      {/* Content */}
       <div className="mt-6">
-        {view === "table" && (
-          <DealsTable
-            deals={filtered}
-            dealPipeline={dealPipeline}
-            lockContactFields={persistDeals}
-            persistDeals={persistDeals}
-            onCreateProject={(dealId) => setNewProjectDealId(dealId)}
-            onQuickTask={setQuickTaskDeal}
-            onSaveDeal={async (updated) => {
-              if (persistDeals) return handlePersistSave(updated);
-              handleLocalSave(updated);
-              return undefined;
-            }}
-            onDelete={(id) => {
-              if (
-                !confirm(
-                  "Delete this deal? This cannot be undone from here."
-                )
-              ) {
-                return;
-              }
-              handleDelete(id);
-            }}
-          />
-        )}
-        {view === "pipeline" && (
-          <KanbanBoard
-            columns={kanbanColumns}
-            onMove={handleMove}
-            emptyColumnLabel="No deals"
-            renderCard={(deal) => {
-              const stopDragMouseDown = (e: React.MouseEvent) => {
-                e.stopPropagation();
-              };
-              const taskLabel =
-                deal.title?.trim() || deal.company?.trim() || "this deal";
-              return (
-                <div className="flex flex-col rounded-xl border border-border bg-white shadow-sm transition-shadow hover:shadow-md">
-                  <button
-                    type="button"
-                    onClick={() => setEditing(deal)}
-                    className="w-full p-3 text-left"
-                  >
-                    <p className="text-sm font-medium text-text-primary">
-                      {deal.title}
-                    </p>
-                    <p className="mt-1 text-xs text-text-secondary">
-                      {deal.company}
-                    </p>
-                    <p className="mt-2 text-sm font-semibold text-text-primary">
-                      {formatCurrency(deal.value)}
-                    </p>
-                  </button>
-                  <div
-                    className="flex flex-wrap items-center gap-1 border-t border-border px-2 py-2 dark:border-zinc-700"
-                    onMouseDown={stopDragMouseDown}
-                  >
-                    {persistDeals ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => setNewProjectDealId(deal.id)}
-                          title="Create project from deal"
-                          className="inline-flex items-center justify-center rounded-md p-1.5 text-violet-600 transition-colors hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-950/40"
-                          aria-label={`Create project for ${taskLabel}`}
-                        >
-                          <FolderKanban
-                            className="h-4 w-4 shrink-0"
-                            aria-hidden
-                          />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setQuickTaskDeal(deal)}
-                          disabled={!deal.leadId}
-                          title={
-                            deal.leadId
-                              ? "Quick task"
-                              : "Quick tasks need a linked lead"
-                          }
-                          className="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                          aria-label={`Add task for ${taskLabel}`}
-                        >
-                          <ListTodo className="h-4 w-4 shrink-0" aria-hidden />
-                        </button>
-                      </>
-                    ) : null}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setEditing(deal);
-                      }}
-                      title="Edit deal"
-                      className="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                      aria-label={`Edit ${taskLabel}`}
-                    >
-                      <Pencil className="h-4 w-4 shrink-0" aria-hidden />
-                    </button>
-                    <button
-                      type="button"
-                      disabled={pipelineDeleteId === deal.id}
-                      title="Delete deal"
-                      className="inline-flex items-center justify-center rounded-md p-1.5 text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-950/40"
-                      aria-label={`Delete ${taskLabel}`}
-                      aria-busy={pipelineDeleteId === deal.id}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const label =
-                          deal.title?.trim() ||
-                          deal.company?.trim() ||
-                          "this deal";
-                        if (
-                          !confirm(
-                            `Delete deal “${label}”? This cannot be undone.`
-                          )
-                        ) {
-                          return;
-                        }
-                        void (async () => {
-                          setPipelineDeleteId(deal.id);
-                          try {
-                            await handleDelete(deal.id);
-                          } finally {
-                            setPipelineDeleteId(null);
-                          }
-                        })();
-                      }}
-                    >
-                      {pipelineDeleteId === deal.id ? (
-                        <Loader2
-                          className="h-4 w-4 shrink-0 animate-spin"
-                          aria-hidden
-                        />
-                      ) : (
-                        <Trash2 className="h-4 w-4 shrink-0" aria-hidden />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              );
-            }}
-          />
-        )}
+        <DealsTable
+          deals={filtered}
+          dealPipeline={dealPipeline}
+          lockContactFields={persistDeals}
+          persistDeals={persistDeals}
+          onSaveDeal={async (updated) => {
+            if (persistDeals) return handlePersistSave(updated);
+            handleLocalSave(updated);
+            return undefined;
+          }}
+          onDelete={(id) => {
+            if (
+              !confirm(
+                "Delete this deal? This cannot be undone from here."
+              )
+            ) {
+              return;
+            }
+            handleDelete(id);
+          }}
+        />
       </div>
 
       {modalOpen && (
@@ -474,22 +267,6 @@ export default function DealsView({
         />
       )}
 
-      {quickTaskDeal?.leadId ? (
-        <CrmQuickTaskModal
-          leadId={quickTaskDeal.leadId}
-          contextLabel={dealQuickTaskContextLabel(quickTaskDeal)}
-          resetKey={quickTaskDeal.id}
-          onClose={() => setQuickTaskDeal(null)}
-        />
-      ) : null}
-
-      {newProjectDealId ? (
-        <CrmNewProjectFromDealModal
-          dealId={newProjectDealId}
-          onClose={() => setNewProjectDealId(null)}
-        />
-      ) : null}
-
       {persistDeals && (
         <PipelineSettingsModal
           open={pipelineSettingsOpen}
@@ -515,8 +292,6 @@ function DealsTable({
   dealPipeline,
   lockContactFields,
   persistDeals,
-  onCreateProject,
-  onQuickTask,
   onSaveDeal,
   onDelete,
 }: {
@@ -524,8 +299,6 @@ function DealsTable({
   dealPipeline: PipelineColumnDef[];
   lockContactFields: boolean;
   persistDeals: boolean;
-  onCreateProject: (dealId: string) => void;
-  onQuickTask: (deal: MockDeal) => void;
   onSaveDeal: (updated: MockDeal) => Promise<string | undefined>;
   onDelete: (id: string) => void;
 }) {
@@ -623,13 +396,10 @@ function DealsTable({
                 patchDraft={patchDraft}
                 initials={initials}
                 lockContactFields={lockContactFields}
-                persistDeals={persistDeals}
                 saving={saving}
                 onStartEdit={() => startEdit(deal)}
                 onCancelEdit={cancelEdit}
                 onCommitEdit={() => void commitEdit()}
-                onQuickTask={() => onQuickTask(deal)}
-                onCreateProject={() => onCreateProject(deal.id)}
                 onDelete={() => onDelete(deal.id)}
               />
             );
@@ -648,13 +418,10 @@ function DealsTableRow({
   patchDraft,
   initials,
   lockContactFields,
-  persistDeals,
   saving,
   onStartEdit,
   onCancelEdit,
   onCommitEdit,
-  onQuickTask,
-  onCreateProject,
   onDelete,
 }: {
   deal: MockDeal;
@@ -664,13 +431,10 @@ function DealsTableRow({
   patchDraft: (patch: Partial<MockDeal>) => void;
   initials: string;
   lockContactFields: boolean;
-  persistDeals: boolean;
   saving: boolean;
   onStartEdit: () => void;
   onCancelEdit: () => void;
   onCommitEdit: () => void;
-  onQuickTask: () => void;
-  onCreateProject: () => void;
   onDelete: () => void;
 }) {
   const expectedCloseId = useId();
@@ -855,64 +619,9 @@ function DealsTableRow({
               >
                 <X className="h-4 w-4" aria-hidden />
               </button>
-              {persistDeals ? (
-                <button
-                  type="button"
-                  onClick={onCreateProject}
-                  disabled={saving}
-                  title="Create project from deal"
-                  className={`${iconActionClass} text-violet-600 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-950/40`}
-                  aria-label={`Create project for ${deal.title?.trim() || deal.company || "deal"}`}
-                >
-                  <FolderKanban className="h-4 w-4" aria-hidden />
-                </button>
-              ) : null}
-              {persistDeals ? (
-                <button
-                  type="button"
-                  onClick={onQuickTask}
-                  disabled={saving || !deal.leadId}
-                  title={
-                    deal.leadId
-                      ? "Quick task"
-                      : "Quick tasks need a linked lead"
-                  }
-                  className={`${iconActionClass} text-zinc-600 hover:bg-zinc-100 disabled:cursor-not-allowed dark:text-zinc-400 dark:hover:bg-zinc-800`}
-                  aria-label={`Add task for ${deal.title?.trim() || deal.company || "deal"}`}
-                >
-                  <ListTodo className="h-4 w-4" aria-hidden />
-                </button>
-              ) : null}
             </>
           ) : (
             <>
-              {persistDeals ? (
-                <button
-                  type="button"
-                  onClick={onCreateProject}
-                  title="Create project from deal"
-                  className={`${iconActionClass} text-violet-600 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-950/40`}
-                  aria-label={`Create project for ${deal.title?.trim() || deal.company || "deal"}`}
-                >
-                  <FolderKanban className="h-4 w-4" aria-hidden />
-                </button>
-              ) : null}
-              {persistDeals ? (
-                <button
-                  type="button"
-                  onClick={onQuickTask}
-                  disabled={!deal.leadId}
-                  title={
-                    deal.leadId
-                      ? "Quick task"
-                      : "Quick tasks need a linked lead"
-                  }
-                  className={`${iconActionClass} text-zinc-600 hover:bg-zinc-100 disabled:cursor-not-allowed dark:text-zinc-400 dark:hover:bg-zinc-800`}
-                  aria-label={`Add task for ${deal.title?.trim() || deal.company || "deal"}`}
-                >
-                  <ListTodo className="h-4 w-4" aria-hidden />
-                </button>
-              ) : null}
               <button
                 type="button"
                 onClick={onStartEdit}
