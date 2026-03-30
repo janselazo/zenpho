@@ -92,3 +92,24 @@ export function enumerateDays(from: string, to: string): string[] {
   }
   return out;
 }
+
+/**
+ * Same inclusive span as [from, to], shifted to end the day before `from`
+ * (for period-over-period comparisons on the dashboard).
+ */
+export function priorInclusiveRange(
+  from: string,
+  to: string
+): { from: string; to: string } {
+  const fromD = parseLocalYmd(from);
+  const toD = parseLocalYmd(to);
+  const spanDays = Math.max(
+    0,
+    Math.round((toD.getTime() - fromD.getTime()) / 86400000)
+  );
+  const prevTo = new Date(fromD);
+  prevTo.setDate(prevTo.getDate() - 1);
+  const prevFrom = new Date(prevTo);
+  prevFrom.setDate(prevFrom.getDate() - spanDays);
+  return { from: toLocalYmd(prevFrom), to: toLocalYmd(prevTo) };
+}

@@ -1,14 +1,19 @@
 import dynamic from "next/dynamic";
 import {
+  fetchClientsCreatedSeries,
   fetchDashboardFunnel,
   fetchDashboardKpis,
+  fetchDashboardRangeTotals,
   fetchLeadsAppointmentsSeries,
+  type ClientsCreatedPoint,
   type DashboardFunnelStage,
+  type DashboardRangeTotals,
   type LeadsAppointmentsPoint,
 } from "@/lib/crm/dashboard-data";
 import {
   formatDashboardRangeLabel,
   parseDashboardRangeQuery,
+  priorInclusiveRange,
 } from "@/lib/crm/dashboard-range";
 import type { DailyMoneyPoint } from "@/lib/crm/transaction-series";
 import { getMoneySeriesForRange } from "@/lib/crm/transaction-series";
@@ -21,6 +26,13 @@ const DashboardView = dynamic(() => import("@/components/crm/DashboardView"), {
     </div>
   ),
 });
+
+const emptyTotals: DashboardRangeTotals = {
+  leads: 0,
+  appointments: 0,
+  clients: 0,
+  revenue: 0,
+};
 
 const emptyFunnel: DashboardFunnelStage[] = [
   { label: "Opportunities", count: 0, value: 0, color: "#3b82f6", bg: "bg-blue-50 dark:bg-blue-500/12" },
@@ -65,13 +77,30 @@ export default async function DashboardPage({
   let chartData: DailyMoneyPoint[] = [];
   let funnel: DashboardFunnelStage[] = emptyFunnel;
   let leadsChartData: LeadsAppointmentsPoint[] = [];
+  let clientsChartData: ClientsCreatedPoint[] = [];
+  let businessTotalsCur: DashboardRangeTotals = emptyTotals;
+  let businessTotalsPrev: DashboardRangeTotals | null = null;
 
   try {
-    const [kpis, money, funnelRes, leadsRes] = await Promise.allSettled([
+    const prior = !isAllTime ? priorInclusiveRange(from, to) : null;
+    const [
+      kpis,
+      money,
+      funnelRes,
+      leadsRes,
+      clientsSeriesRes,
+      totalsCurRes,
+      totalsPrevRes,
+    ] = await Promise.allSettled([
       fetchDashboardKpis(from, to),
       getMoneySeriesForRange(from, to),
       fetchDashboardFunnel(from, to),
       fetchLeadsAppointmentsSeries(from, to),
+      fetchClientsCreatedSeries(from, to),
+      fetchDashboardRangeTotals(from, to),
+      prior
+        ? fetchDashboardRangeTotals(prior.from, prior.to)
+        : Promise.resolve(null),
     ]);
 
     if (kpis.status === "fulfilled") {
@@ -92,6 +121,18 @@ export default async function DashboardPage({
     }
     if (leadsRes.status === "fulfilled") {
       leadsChartData = leadsRes.value;
+    }
+    if (clientsSeriesRes.status === "fulfilled") {
+      clientsChartData = clientsSeriesRes.value;
+    }
+    if (totalsCurRes.status === "fulfilled") {
+      businessTotalsCur = totalsCurRes.value;
+    }
+    if (
+      totalsPrevRes.status === "fulfilled" &&
+      totalsPrevRes.value !== null
+    ) {
+      businessTotalsPrev = totalsPrevRes.value;
     }
   } catch {
     /* schema not applied yet */
@@ -119,6 +160,9 @@ export default async function DashboardPage({
         isAllTime={isAllTime}
         funnel={funnel}
         leadsChartData={leadsChartData}
+        clientsChartData={clientsChartData}
+        businessTotalsCur={businessTotalsCur}
+        businessTotalsPrev={businessTotalsPrev}
       />
     </div>
   );

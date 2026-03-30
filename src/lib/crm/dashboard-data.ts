@@ -15,6 +15,18 @@ export type LeadsAppointmentsPoint = {
   appointments: number;
 };
 
+export type ClientsCreatedPoint = {
+  label: string;
+  clients: number;
+};
+
+export type DashboardRangeTotals = {
+  leads: number;
+  appointments: number;
+  clients: number;
+  revenue: number;
+};
+
 function toLocalYmd(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -273,5 +285,135 @@ export async function fetchLeadsAppointmentsSeries(
       label: v.label,
       leads: v.leads,
       appointments: v.appointments,
+    }));
+}
+
+/** Aggregate counts for dashboard KPI strip (matches series totals for the same range). */
+export async function fetchDashboardRangeTotals(
+  from: string,
+  to: string
+): Promise<DashboardRangeTotals> {
+  const supabase = await createClient();
+  const rs = rangeStart(from);
+  const re = rangeEnd(to);
+
+  const [leadsRes, apptsRes, clientsRes, revenueRes] = await Promise.all([
+    supabase
+      .from("lead")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", rs)
+      .lte("created_at", re),
+    supabase
+      .from("appointment")
+      .select("*", { count: "exact", head: true })
+      .gte("starts_at", rs)
+      .lte("starts_at", re),
+    supabase
+      .from("client")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", rs)
+      .lte("created_at", re),
+    supabase
+      .from("transaction")
+      .select("amount")
+      .eq("type", "revenue")
+      .gte("date", from)
+      .lte("date", to),
+  ]);
+
+  const revenue =
+    revenueRes.data?.reduce((s, r) => s + Number(r.amount), 0) ?? 0;
+
+  return {
+    leads: leadsRes.count ?? 0,
+    appointments: apptsRes.count ?? 0,
+    clients: clientsRes.count ?? 0,
+    revenue,
+  };
+}
+
+/** Clients created per day/week/month — same bucketing as leads/appointments chart. */
+export async function fetchClientsCreatedSeries(
+  from: string,
+  to: string
+): Promise<ClientsCreatedPoint[]> {
+  const supabase = await createClient();
+  const days = enumerateDays(from, to);
+  if (days.length === 0) return [];
+
+  const rs = rangeStart(from);
+  const re = rangeEnd(to);
+
+  const { data } = await supabase
+    .from("client")
+    .select("created_at")
+    .gte("created_at", rs)
+    .lte("created_at", re);
+
+  const byDay: Record<string, number> = {};
+  for (const d of days) {
+    byDay[d] = 0;
+  }
+  for (const row of data ?? []) {
+    const k = dayKeyFromTimestamptz(row.created_at as string);
+    if (byDay[k] !== undefined) byDay[k] += 1;
+  }
+
+  if (days.length > 120) {
+    const byMonth: Record<string, number> = {};
+    for (const d of days) {
+      const ym = d.slice(0, 7);
+      byMonth[ym] = (byMonth[ym] ?? 0) + (byDay[d] ?? 0);
+    }
+    const monthKeys = [...new Set(days.map((d) => d.slice(0, 7)))].sort();
+    return monthKeys.map((ym) => ({
+      label: parseLocalYmd(`${ym}-01`).toLocaleDateString(undefined, {
+        month: "short",
+        year: "numeric",
+      }),
+      clients: byMonth[ym] ?? 0,
+    }));
+  }
+
+  const useWeekly = days.length > 31;
+  if (!useWeekly) {
+    return days.map((d) => {
+      const dt = new Date(d + "T12:00:00");
+      return {
+        label: dt.toLocaleDateString(undefined, {
+          month: "short",
+          day: "numeric",
+        }),
+        clients: byDay[d] ?? 0,
+      };
+    });
+  }
+
+  type WeekAcc = { clients: number; label: string; sort: number };
+  const byWeek = new Map<string, WeekAcc>();
+  let sort = 0;
+  for (const d of days) {
+    const sunday = startOfWeekSunday(parseLocalYmd(d));
+    const key = toLocalYmd(sunday);
+    let acc = byWeek.get(key);
+    if (!acc) {
+      acc = {
+        clients: 0,
+        label: sunday.toLocaleDateString(undefined, {
+          month: "short",
+          day: "numeric",
+        }),
+        sort: sort++,
+      };
+      byWeek.set(key, acc);
+    }
+    acc.clients += byDay[d] ?? 0;
+  }
+
+  return [...byWeek.entries()]
+    .sort((a, b) => a[1].sort - b[1].sort)
+    .map(([, v]) => ({
+      label: v.label,
+      clients: v.clients,
     }));
 }

@@ -1,8 +1,10 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
@@ -20,9 +22,13 @@ import {
   Clock,
   Zap,
   ArrowRight,
+  ChevronRight,
   Calendar,
+  Building2,
+  DollarSign,
   Phone,
   Mail,
+  Users,
   MessageSquare,
   CalendarCheck,
   MoreHorizontal,
@@ -38,7 +44,9 @@ import {
   type ProspectingTaskType,
 } from "@/lib/crm/mock-data";
 import type {
+  ClientsCreatedPoint,
   DashboardFunnelStage,
+  DashboardRangeTotals,
   LeadsAppointmentsPoint,
 } from "@/lib/crm/dashboard-data";
 import DashboardRangePicker from "@/components/crm/DashboardRangePicker";
@@ -214,20 +222,21 @@ const FUNNEL_TOP_SLANT: [string, string][] = [
   ["38%", "48%"],
 ];
 
-const FUNNEL_BAR_BACKGROUNDS = [
-  "linear-gradient(to bottom, rgb(139 92 246 / 0.92), rgb(139 92 246 / 0.06))",
-  "linear-gradient(to bottom, rgb(14 165 233 / 0.9), rgb(14 165 233 / 0.06))",
-  "linear-gradient(to bottom, rgb(251 113 133 / 0.92), rgb(251 113 133 / 0.06))",
-  "linear-gradient(to bottom, rgb(251 191 36 / 0.9), rgb(251 191 36 / 0.06))",
-  "linear-gradient(to bottom, rgb(20 184 166 / 0.9), rgb(20 184 166 / 0.06))",
+/** Light mode: saturated top → soft bottom (blue ramp left → right). */
+const FUNNEL_BLUE_GRADIENTS_LIGHT = [
+  "linear-gradient(to bottom, rgb(191 219 254 / 0.95), rgb(191 219 254 / 0.08))",
+  "linear-gradient(to bottom, rgb(147 197 253 / 0.95), rgb(147 197 253 / 0.1))",
+  "linear-gradient(to bottom, rgb(96 165 250 / 0.98), rgb(96 165 250 / 0.12))",
+  "linear-gradient(to bottom, rgb(59 130 246 / 0.98), rgb(59 130 246 / 0.14))",
+  "linear-gradient(to bottom, rgb(37 99 235 / 1), rgb(37 99 235 / 0.16))",
 ];
 
-const FUNNEL_BAR_BACKGROUNDS_DARK = [
-  "linear-gradient(to bottom, rgb(167 139 250 / 0.55), rgb(167 139 250 / 0.08))",
-  "linear-gradient(to bottom, rgb(56 189 248 / 0.5), rgb(56 189 248 / 0.08))",
-  "linear-gradient(to bottom, rgb(251 113 133 / 0.5), rgb(251 113 133 / 0.08))",
-  "linear-gradient(to bottom, rgb(252 211 77 / 0.48), rgb(252 211 77 / 0.08))",
-  "linear-gradient(to bottom, rgb(45 212 191 / 0.5), rgb(45 212 191 / 0.08))",
+const FUNNEL_BLUE_GRADIENTS_DARK = [
+  "linear-gradient(to bottom, rgb(147 197 253 / 0.45), rgb(147 197 253 / 0.06))",
+  "linear-gradient(to bottom, rgb(96 165 250 / 0.5), rgb(96 165 250 / 0.08))",
+  "linear-gradient(to bottom, rgb(59 130 246 / 0.55), rgb(59 130 246 / 0.1))",
+  "linear-gradient(to bottom, rgb(37 99 235 / 0.58), rgb(37 99 235 / 0.12))",
+  "linear-gradient(to bottom, rgb(29 78 216 / 0.6), rgb(29 78 216 / 0.14))",
 ];
 
 function funnelBarHeightPct(
@@ -247,8 +256,32 @@ function funnelBarHeightPct(
   return floor + span * Math.max(0.14, c);
 }
 
-function funnelDisplayValue(stage: DashboardFunnelStage): string {
-  return stage.label === "Revenue" ? fmt(stage.value) : String(stage.count);
+/** Compact metrics (e.g. 9.3K) for the top funnel row. */
+function funnelDisplayValueCompact(stage: DashboardFunnelStage): string {
+  if (stage.label === "Revenue") {
+    const v = stage.value;
+    if (!Number.isFinite(v)) return fmt(0);
+    const av = Math.abs(v);
+    if (av >= 1_000_000) {
+      const x = v / 1_000_000;
+      return `$${x % 1 === 0 ? x.toFixed(0) : x.toFixed(1)}M`;
+    }
+    if (av >= 1000) {
+      const x = v / 1000;
+      return `$${x % 1 === 0 ? x.toFixed(0) : x.toFixed(1)}k`;
+    }
+    return fmt(v);
+  }
+  const n = stage.count;
+  if (n >= 1_000_000) {
+    const x = n / 1_000_000;
+    return `${x % 1 === 0 ? x.toFixed(0) : x.toFixed(1)}M`;
+  }
+  if (n >= 1000) {
+    const x = n / 1000;
+    return `${x % 1 === 0 ? x.toFixed(0) : x.toFixed(1)}K`;
+  }
+  return String(n);
 }
 
 // ── Active tasks for dashboard ──────────────────────────────────────────────
@@ -286,6 +319,143 @@ function buildDealsHeatmap() {
   return { days, hours, data };
 }
 
+const businessOverviewCardShell =
+  "relative overflow-hidden rounded-xl border border-border/80 bg-white p-4 shadow-sm dark:border-zinc-700/70 dark:bg-zinc-900/50";
+
+function businessMetricPctChange(
+  cur: number,
+  prev: number
+): { pct: number; up: boolean } | null {
+  if (prev === 0 && cur === 0) return null;
+  if (prev === 0) return { pct: 100, up: cur > 0 };
+  const raw = ((cur - prev) / prev) * 100;
+  return {
+    pct: Math.round(Math.abs(raw) * 10) / 10,
+    up: raw >= 0,
+  };
+}
+
+function DashboardBusinessSparkline({
+  data,
+  positive,
+  chartId,
+}: {
+  data: { label: string; v: number }[];
+  positive: boolean;
+  chartId: string;
+}) {
+  const stroke = positive ? "#22c55e" : "#f472b6";
+  const fillId = `biz-spark-${chartId}`;
+  if (data.length === 0) {
+    return <div className="h-12 w-[4.5rem] shrink-0" />;
+  }
+  return (
+    <div className="relative h-12 w-[4.5rem] shrink-0">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart
+          data={data}
+          margin={{ top: 4, right: 0, left: 0, bottom: 0 }}
+        >
+          <defs>
+            <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={stroke} stopOpacity={0.45} />
+              <stop offset="100%" stopColor={stroke} stopOpacity={0.02} />
+            </linearGradient>
+          </defs>
+          <YAxis hide domain={[0, "dataMax"]} />
+          <Area
+            type="monotone"
+            dataKey="v"
+            stroke={stroke}
+            strokeWidth={1.75}
+            fill={`url(#${fillId})`}
+            isAnimationActive={false}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function BusinessOverviewCard({
+  title,
+  value,
+  sub,
+  trend,
+  spark,
+  icon,
+  chartId,
+}: {
+  title: string;
+  value: string;
+  sub: string;
+  trend: { pct: number; up: boolean } | null;
+  spark: { label: string; v: number }[];
+  icon: ReactNode;
+  chartId: string;
+}) {
+  const up = trend?.up ?? true;
+  const trendColor =
+    trend == null
+      ? "text-zinc-400"
+      : up
+        ? "text-emerald-600 dark:text-emerald-400"
+        : "text-pink-600 dark:text-pink-400";
+  const glow =
+    trend == null
+      ? "radial-gradient(circle, rgb(167 139 250 / 0.2) 0%, transparent 70%)"
+      : up
+        ? "radial-gradient(circle, rgb(34 197 94 / 0.22) 0%, transparent 70%)"
+        : "radial-gradient(circle, rgb(244 114 182 / 0.22) 0%, transparent 70%)";
+
+  return (
+    <div className={businessOverviewCardShell}>
+      <div
+        className="pointer-events-none absolute -bottom-6 -right-6 h-28 w-28 rounded-full blur-2xl dark:opacity-90"
+        style={{ background: glow }}
+        aria-hidden
+      />
+      <div className="relative flex items-start justify-between gap-2">
+        <div className="flex min-w-0 flex-1 items-start gap-2.5">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-blue-950/80 dark:text-blue-300">
+            {icon}
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-text-primary underline decoration-zinc-300 decoration-1 underline-offset-2 dark:text-zinc-100 dark:decoration-zinc-600">
+              {title}
+            </p>
+          </div>
+        </div>
+      </div>
+      <div className="relative mt-3 flex items-end justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="text-2xl font-bold tabular-nums tracking-tight text-text-primary dark:text-zinc-50">
+            {value}
+          </p>
+          <p className="mt-0.5 text-[11px] text-text-secondary dark:text-zinc-500">
+            {sub}
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          {trend ? (
+            <span className={`text-sm font-semibold tabular-nums ${trendColor}`}>
+              {trend.pct}%
+              {trend.up ? " ↑" : " ↓"}
+            </span>
+          ) : (
+            <span className="text-sm font-medium text-zinc-400">—</span>
+          )}
+          <DashboardBusinessSparkline
+            data={spark}
+            positive={trend?.up ?? true}
+            chartId={chartId}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Component ───────────────────────────────────────────────────────────────
 
 interface DashboardViewProps {
@@ -301,6 +471,9 @@ interface DashboardViewProps {
   isAllTime: boolean;
   funnel: DashboardFunnelStage[];
   leadsChartData: LeadsAppointmentsPoint[];
+  clientsChartData: ClientsCreatedPoint[];
+  businessTotalsCur: DashboardRangeTotals;
+  businessTotalsPrev: DashboardRangeTotals | null;
 }
 
 export default function DashboardView({
@@ -316,6 +489,9 @@ export default function DashboardView({
   isAllTime,
   funnel,
   leadsChartData,
+  clientsChartData,
+  businessTotalsCur,
+  businessTotalsPrev,
 }: DashboardViewProps) {
   const today = new Date();
   const range = { from: dateFrom, to: dateTo };
@@ -331,6 +507,74 @@ export default function DashboardView({
     [leadsChartData]
   );
 
+  const businessOverviewSubLabel =
+    isAllTime || !businessTotalsPrev
+      ? "In selected range"
+      : "vs prior period";
+
+  const businessOverviewRows = useMemo(() => {
+    const prev = businessTotalsPrev;
+    const leadsSpark = leadsChartData.map((r) => ({
+      label: r.label,
+      v: r.leads,
+    }));
+    const apptSpark = leadsChartData.map((r) => ({
+      label: r.label,
+      v: r.appointments,
+    }));
+    const clientsSpark = clientsChartData.map((r) => ({
+      label: r.label,
+      v: r.clients,
+    }));
+    const revenueSpark = chartData.map((r) => ({
+      label: r.label,
+      v: r.revenue,
+    }));
+    const cur = businessTotalsCur;
+    return [
+      {
+        chartId: "leads",
+        title: "Leads",
+        value: cur.leads.toLocaleString(),
+        trend: prev ? businessMetricPctChange(cur.leads, prev.leads) : null,
+        spark: leadsSpark,
+        icon: <Users className="h-4 w-4" strokeWidth={2.25} />,
+      },
+      {
+        chartId: "appts",
+        title: "Appointments",
+        value: cur.appointments.toLocaleString(),
+        trend: prev
+          ? businessMetricPctChange(cur.appointments, prev.appointments)
+          : null,
+        spark: apptSpark,
+        icon: <Calendar className="h-4 w-4" strokeWidth={2.25} />,
+      },
+      {
+        chartId: "clients",
+        title: "Clients",
+        value: cur.clients.toLocaleString(),
+        trend: prev ? businessMetricPctChange(cur.clients, prev.clients) : null,
+        spark: clientsSpark,
+        icon: <Building2 className="h-4 w-4" strokeWidth={2.25} />,
+      },
+      {
+        chartId: "revenue",
+        title: "Revenue",
+        value: fmt(cur.revenue),
+        trend: prev ? businessMetricPctChange(cur.revenue, prev.revenue) : null,
+        spark: revenueSpark,
+        icon: <DollarSign className="h-4 w-4" strokeWidth={2.25} />,
+      },
+    ];
+  }, [
+    businessTotalsCur,
+    businessTotalsPrev,
+    leadsChartData,
+    clientsChartData,
+    chartData,
+  ]);
+
   const chartTheme = useDashboardChartTheme();
   const [playbookCats, setPlaybookCats] = useState<PlaybookCategory[]>(
     playbookCategories
@@ -338,6 +582,23 @@ export default function DashboardView({
   const [playbookCompletions, setPlaybookCompletions] = useState<
     Record<string, number>
   >({});
+  const [funnelSelectedIdx, setFunnelSelectedIdx] = useState(2);
+
+  const funnelScale = useMemo(() => {
+    const funnelMaxCount = Math.max(
+      ...funnel.filter((s) => s.label !== "Revenue").map((s) => s.count),
+      1
+    );
+    const rev = funnel.find((s) => s.label === "Revenue");
+    const funnelMaxRevenue = Math.max(rev?.value ?? 0, 1);
+    return { funnelMaxCount, funnelMaxRevenue };
+  }, [funnel]);
+
+  useEffect(() => {
+    setFunnelSelectedIdx((i) =>
+      Math.min(Math.max(0, i), Math.max(0, funnel.length - 1))
+    );
+  }, [funnel.length]);
 
   useEffect(() => {
     async function syncPlaybookKpis() {
@@ -492,6 +753,29 @@ export default function DashboardView({
           isAllTime={isAllTime}
         />
       </div>
+
+      {/* Overview — Leads, Appointments, Clients, Revenue (matches pipeline KPI style) */}
+      <section className="space-y-2">
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
+          Overview
+        </p>
+        <div className={`${dashCard} p-4`}>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {businessOverviewRows.map((row) => (
+              <BusinessOverviewCard
+                key={row.chartId}
+                title={row.title}
+                value={row.value}
+                sub={businessOverviewSubLabel}
+                trend={row.trend}
+                spark={row.spark}
+                icon={row.icon}
+                chartId={row.chartId}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* Daily Playbook summary */}
       <section className="space-y-2">
@@ -738,7 +1022,7 @@ export default function DashboardView({
         </div>
       </div>
 
-      {/* Sales Funnel */}
+      {/* Sales Funnel — analytics-style metrics row + blue wave */}
       <div className={`${dashCard} p-5`}>
         <div className="flex items-center justify-between">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/60 dark:text-zinc-500">
@@ -748,110 +1032,130 @@ export default function DashboardView({
             {rangeLabel}
           </span>
         </div>
-        {(() => {
-          const funnelMaxCount = Math.max(
-            ...funnel
-              .filter((s) => s.label !== "Revenue")
-              .map((s) => s.count),
-            1
-          );
-          const rev = funnel.find((s) => s.label === "Revenue");
-          const funnelMaxRevenue = Math.max(rev?.value ?? 0, 1);
-          return (
-            <>
-              <div className="mt-5 rounded-xl border border-border/80 bg-white p-3 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-zinc-700/70 dark:bg-zinc-950/40 dark:shadow-none">
-                <div className="grid grid-cols-5 gap-2 sm:gap-2.5">
-                  {funnel.map((stage, i) => {
-                    const [y0, y1] = FUNNEL_TOP_SLANT[i] ?? ["10%", "20%"];
-                    const h = funnelBarHeightPct(
-                      stage,
-                      funnelMaxCount,
-                      funnelMaxRevenue
-                    );
-                    const prev = i > 0 ? funnel[i - 1] : null;
-                    const micro =
-                      prev &&
-                      i > 0 &&
-                      i < funnel.length &&
-                      stage.label !== "Revenue" &&
-                      prev.count > 0
-                        ? convRate(prev.count || 1, stage.count)
-                        : null;
-                    return (
-                      <div
-                        key={stage.label}
-                        className="flex min-h-[9.5rem] flex-col"
-                      >
-                        <div className="flex h-5 flex-none items-start justify-center">
-                          {micro && micro !== "—" ? (
-                            <span className="text-[10px] font-medium tabular-nums text-zinc-500 dark:text-zinc-400">
-                              {micro} ↓
-                            </span>
-                          ) : null}
-                        </div>
-                        <div className="flex min-h-[7rem] flex-1 flex-col justify-end">
-                          <div
-                            className="relative w-full"
-                            style={{
-                              height: `${h}%`,
-                              minHeight: "2.25rem",
-                              maxHeight: "100%",
-                            }}
-                          >
-                            <div
-                              className="absolute inset-0 rounded-b-md shadow-sm dark:hidden"
-                              style={{
-                                clipPath: `polygon(0 ${y0}, 100% ${y1}, 100% 100%, 0 100%)`,
-                                background:
-                                  FUNNEL_BAR_BACKGROUNDS[
-                                    i % FUNNEL_BAR_BACKGROUNDS.length
-                                  ],
-                              }}
-                            />
-                            <div
-                              className="absolute inset-0 hidden rounded-b-md shadow-sm dark:block dark:shadow-none"
-                              style={{
-                                clipPath: `polygon(0 ${y0}, 100% ${y1}, 100% 100%, 0 100%)`,
-                                background:
-                                  FUNNEL_BAR_BACKGROUNDS_DARK[
-                                    i % FUNNEL_BAR_BACKGROUNDS_DARK.length
-                                  ],
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-              <div className="mt-5 grid grid-cols-5 gap-2 sm:gap-2.5">
-                {funnel.map((stage, i) => (
-                  <div
-                    key={`${stage.label}-footer`}
-                    className="flex flex-col items-center text-center"
+
+        <div className="mt-5 rounded-xl border border-border/80 bg-white p-4 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-zinc-700/70 dark:bg-zinc-950/40 dark:shadow-none">
+          {/* Top: stage metrics (selectable highlight) */}
+          <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
+            {funnel.map((stage, i) => {
+              const selected = funnelSelectedIdx === i;
+              return (
+                <button
+                  key={`${stage.label}-metric`}
+                  type="button"
+                  onClick={() => setFunnelSelectedIdx(i)}
+                  className={`rounded-xl border px-1.5 py-3 text-center transition-all sm:px-2 sm:py-4 ${
+                    selected
+                      ? "border-blue-600 bg-[#2563eb] text-white shadow-md shadow-blue-600/20"
+                      : "border-border/60 bg-zinc-50/80 hover:border-blue-200 hover:bg-white dark:border-zinc-600 dark:bg-zinc-900/50 dark:hover:border-blue-500/40 dark:hover:bg-zinc-900"
+                  }`}
+                >
+                  <p
+                    className={`text-[10px] font-medium leading-tight sm:text-[11px] ${
+                      selected
+                        ? "text-white/90"
+                        : "text-text-secondary dark:text-zinc-500"
+                    }`}
                   >
-                    <p className="text-[11px] font-medium leading-tight text-text-secondary dark:text-zinc-500">
-                      {stage.label}
+                    {stage.label}
+                  </p>
+                  <p
+                    className={`mt-1.5 text-base font-bold tabular-nums leading-none tracking-tight sm:mt-2 sm:text-xl ${
+                      selected ? "text-white" : "text-text-primary dark:text-zinc-100"
+                    }`}
+                  >
+                    {funnelDisplayValueCompact(stage)}
+                  </p>
+                  {i < funnel.length - 1 && stage.count > 0 ? (
+                    <p
+                      className={`mt-2 text-[9px] leading-snug sm:text-[10px] ${
+                        selected
+                          ? "text-white/80"
+                          : "text-text-secondary dark:text-zinc-500"
+                      }`}
+                    >
+                      {convRate(
+                        stage.count || 1,
+                        funnel[i + 1].count || funnel[i + 1].value
+                      )}{" "}
+                      of {stage.label.toLowerCase()}
                     </p>
-                    <p className="mt-1.5 text-lg font-bold tabular-nums leading-none tracking-tight text-text-primary dark:text-zinc-100 sm:text-xl">
-                      {funnelDisplayValue(stage)}
-                    </p>
-                    {i < funnel.length - 1 && stage.count > 0 ? (
-                      <p className="mt-2 text-[10px] leading-snug text-text-secondary dark:text-zinc-500">
-                        {convRate(
-                          stage.count || 1,
-                          funnel[i + 1].count || funnel[i + 1].value
-                        )}{" "}
-                        of {stage.label.toLowerCase()}
-                      </p>
-                    ) : null}
+                  ) : (
+                    <span className="mt-2 block h-[14px] sm:h-4" aria-hidden />
+                  )}
+                  {selected ? (
+                    <Link
+                      href="/leads"
+                      className="mt-2 inline-flex items-center justify-center gap-0.5 text-[10px] font-semibold text-white/95 hover:text-white"
+                    >
+                      Pipeline
+                      <ChevronRight className="h-3 w-3 opacity-90" />
+                    </Link>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Bottom: tapered wave + blue envelope */}
+          <div className="relative mt-5 overflow-hidden rounded-2xl bg-gradient-to-b from-blue-100/50 via-blue-50/30 to-white dark:from-blue-950/35 dark:via-blue-950/20 dark:to-zinc-950/20">
+            <div
+              className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-blue-200/25 to-transparent dark:from-blue-400/10"
+              aria-hidden
+            />
+            <div className="relative grid grid-cols-5 gap-1 px-2 pb-3 pt-4 sm:gap-1.5 sm:px-3 sm:pb-4 sm:pt-5">
+              {funnel.map((stage, i) => {
+                const [y0, y1] = FUNNEL_TOP_SLANT[i] ?? ["10%", "20%"];
+                const h = funnelBarHeightPct(
+                  stage,
+                  funnelScale.funnelMaxCount,
+                  funnelScale.funnelMaxRevenue
+                );
+                const pipeLight =
+                  "inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -1px 0 rgba(30,64,175,0.14)";
+                const pipeDark =
+                  "inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.35)";
+                return (
+                  <div
+                    key={`${stage.label}-wave`}
+                    className="flex min-h-[6.5rem] flex-col justify-end sm:min-h-[7.5rem]"
+                  >
+                    <div
+                      className="relative w-full"
+                      style={{
+                        height: `${h}%`,
+                        minHeight: "2rem",
+                        maxHeight: "100%",
+                      }}
+                    >
+                      <div
+                        className="absolute inset-0 rounded-b-md dark:hidden"
+                        style={{
+                          clipPath: `polygon(0 ${y0}, 100% ${y1}, 100% 100%, 0 100%)`,
+                          background:
+                            FUNNEL_BLUE_GRADIENTS_LIGHT[
+                              i % FUNNEL_BLUE_GRADIENTS_LIGHT.length
+                            ],
+                          boxShadow: pipeLight,
+                        }}
+                      />
+                      <div
+                        className="absolute inset-0 hidden rounded-b-md dark:block"
+                        style={{
+                          clipPath: `polygon(0 ${y0}, 100% ${y1}, 100% 100%, 0 100%)`,
+                          background:
+                            FUNNEL_BLUE_GRADIENTS_DARK[
+                              i % FUNNEL_BLUE_GRADIENTS_DARK.length
+                            ],
+                          boxShadow: pipeDark,
+                        }}
+                      />
+                    </div>
                   </div>
-                ))}
-              </div>
-            </>
-          );
-        })()}
+                );
+              })}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Next Appointments + Tasks */}
