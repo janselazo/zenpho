@@ -1,13 +1,13 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { use } from "react";
-import { ProjectDetailClient } from "@/components/crm/project/ProjectDetailClient";
-
-export default function PhaseWorkspacePage({
+/** Legacy phase URLs now open the product hub with project + tab in the query string. */
+export default async function PhaseRedirectPage({
   params,
 }: {
   params: Promise<{ productId: string; phaseId: string }>;
 }) {
-  const { productId, phaseId } = use(params);
-  return <ProjectDetailClient productId={productId} phaseId={phaseId} />;
+  const { productId, phaseId } = await params;
+  redirect(
+    `/products/${productId}?project=${encodeURIComponent(phaseId)}&tab=tasks`
+  );
 }

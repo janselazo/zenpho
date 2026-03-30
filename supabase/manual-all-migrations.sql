@@ -1030,3 +1030,7 @@ create policy "saved_lead_magnet_delete_own"
   );
 
 grant select, insert, update, delete on public.saved_lead_magnet to authenticated;
+
+-- ----- 20260430180000_issue_workspace_task_id.sql -----
+alter table public.issue
+  add column if not exists workspace_task_id text;

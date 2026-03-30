@@ -45,6 +45,8 @@ export interface WorkspaceTask {
   /** Standard delivery ladder (see product-milestones). */
   milestoneKey?: MilestoneKey;
   milestoneTags?: string[];
+  /** Id from child project `metadata.milestones[]` when using product milestone list. */
+  productMilestoneId?: string | null;
   /** Display-only times (HH:mm) paired with startDate/endDate */
   startTime?: string;
   endTime?: string;

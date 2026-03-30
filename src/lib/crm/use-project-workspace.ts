@@ -142,6 +142,8 @@ export function useProjectWorkspace(projectId: string | undefined) {
       startDate?: string;
       endDate?: string;
       milestoneKey?: MilestoneKey;
+      productMilestoneId?: string | null;
+      description?: string;
     }): string | undefined => {
       if (!projectId) return undefined;
       const today = formatISODate(new Date());
@@ -160,6 +162,8 @@ export function useProjectWorkspace(projectId: string | undefined) {
         progress: 0,
         estimateHours: 1,
         milestoneKey: input.milestoneKey ?? "unassigned",
+        productMilestoneId: input.productMilestoneId ?? null,
+        description: input.description?.trim() || undefined,
       };
       mutate((w) => ({ ...w, tasks: [...w.tasks, task] }));
       return id;

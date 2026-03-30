@@ -9,6 +9,8 @@ import {
   type CrmProjectPersistInput,
 } from "@/lib/crm/map-project-row";
 import type { MockProject, PlanStage } from "@/lib/crm/mock-data";
+import type { ProductMilestoneMeta } from "@/lib/crm/product-project-metadata";
+import type { WorkspaceResource } from "@/lib/crm/project-workspace-types";
 
 const PLAN_SET = new Set<string>([
   "pipeline",
@@ -438,6 +440,202 @@ export async function createCrmPhase(
   return { ok: true, id };
 }
 
+export type CreateCrmChildProjectInput = {
+  title: string;
+  summary?: string | null;
+  description?: string | null;
+  plan_stage?: string | null;
+  target_date?: string | null;
+  /** Titles only; server assigns stable ids */
+  milestoneTitles?: string[];
+};
+
+/** Create a child project (delivery project) under a product with optional metadata milestones. */
+export async function createCrmChildProject(
+  productId: string,
+  input: CreateCrmChildProjectInput
+): Promise<{ ok: true; id: string } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const pid = productId.trim();
+  const title = input.title.trim();
+  if (!pid) return { error: "Missing product" };
+  if (!title) return { error: "Title is required" };
+
+  const { data: parent, error: pErr } = await supabase
+    .from("project")
+    .select("id, client_id, metadata, project_type")
+    .eq("id", pid)
+    .is("parent_project_id", null)
+    .maybeSingle();
+
+  if (pErr) return { error: humanizeProjectDbError(pErr.message) };
+  if (!parent) return { error: "Product not found" };
+
+  const parentMeta =
+    parent.metadata &&
+    typeof parent.metadata === "object" &&
+    !Array.isArray(parent.metadata)
+      ? (parent.metadata as Record<string, unknown>)
+      : {};
+
+  const plan =
+    input.plan_stage && PLAN_SET.has(input.plan_stage)
+      ? input.plan_stage
+      : "pipeline";
+  const target_date = parseTargetDate(input.target_date ?? undefined);
+
+  const titles =
+    input.milestoneTitles?.map((t) => t.trim()).filter(Boolean) ?? [];
+  const milestoneSeed =
+    titles.length > 0 ? titles : ["Design", "Development", "Testing"];
+  const milestones = milestoneSeed.map((t) => ({
+    id: crypto.randomUUID(),
+    title: t,
+    targetDate: null as string | null,
+  }));
+
+  const childMetadata: Record<string, unknown> = {
+    teamId:
+      typeof parentMeta.teamId === "string" && parentMeta.teamId.trim()
+        ? parentMeta.teamId.trim()
+        : "team-general",
+    teamName: parentMeta.teamName ?? null,
+    milestones,
+    summary:
+      typeof input.summary === "string" && input.summary.trim()
+        ? input.summary.trim()
+        : null,
+  };
+
+  const { data: row, error } = await supabase
+    .from("project")
+    .insert({
+      client_id: parent.client_id as string,
+      title,
+      description: input.description?.trim() || null,
+      status: "active",
+      plan_stage: plan,
+      project_type: (parent.project_type as string | null) ?? null,
+      target_date,
+      website: null,
+      budget: null,
+      metadata: childMetadata,
+      parent_project_id: pid,
+    })
+    .select("id")
+    .single();
+
+  if (error) return { error: humanizeProjectDbError(error.message) };
+  const id = row?.id as string | undefined;
+  if (!id) return { error: "Could not create project" };
+
+  revalidatePath(`/products/${pid}`);
+  revalidatePath("/products");
+  return { ok: true, id };
+}
+
+export async function updateCrmChildProjectMilestones(
+  productId: string,
+  childId: string,
+  milestones: ProductMilestoneMeta[]
+): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const pid = productId.trim();
+  const cid = childId.trim();
+  if (!pid || !cid) return { error: "Missing id" };
+
+  const { data: child, error: cErr } = await supabase
+    .from("project")
+    .select("id, metadata, parent_project_id")
+    .eq("id", cid)
+    .maybeSingle();
+
+  if (cErr) return { error: humanizeProjectDbError(cErr.message) };
+  if (!child || (child.parent_project_id as string | null) !== pid) {
+    return { error: "Project not found under this product" };
+  }
+
+  const meta =
+    child.metadata &&
+    typeof child.metadata === "object" &&
+    !Array.isArray(child.metadata)
+      ? ({ ...(child.metadata as Record<string, unknown>) } as Record<
+          string,
+          unknown
+        >)
+      : {};
+
+  meta.milestones = milestones.map((m) => ({
+    id: m.id,
+    title: m.title.trim(),
+    targetDate: m.targetDate ?? null,
+  }));
+
+  const { error } = await supabase
+    .from("project")
+    .update({ metadata: meta })
+    .eq("id", cid);
+
+  if (error) return { error: humanizeProjectDbError(error.message) };
+  revalidatePath(`/products/${pid}`);
+  return { ok: true };
+}
+
+export async function updateProductResources(
+  productId: string,
+  resources: WorkspaceResource[]
+): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const pid = productId.trim();
+  if (!pid) return { error: "Missing product" };
+
+  const { data: root, error: rErr } = await supabase
+    .from("project")
+    .select("id, metadata")
+    .eq("id", pid)
+    .is("parent_project_id", null)
+    .maybeSingle();
+
+  if (rErr) return { error: humanizeProjectDbError(rErr.message) };
+  if (!root) return { error: "Product not found" };
+
+  const meta =
+    root.metadata &&
+    typeof root.metadata === "object" &&
+    !Array.isArray(root.metadata)
+      ? ({ ...(root.metadata as Record<string, unknown>) } as Record<
+          string,
+          unknown
+        >)
+      : {};
+
+  meta.productResources = resources;
+
+  const { error } = await supabase
+    .from("project")
+    .update({ metadata: meta })
+    .eq("id", pid);
+
+  if (error) return { error: humanizeProjectDbError(error.message) };
+  revalidatePath(`/products/${pid}`);
+  return { ok: true };
+}
+
 export type IssueRow = {
   id: string;
   project_id: string;
@@ -446,6 +644,7 @@ export type IssueRow = {
   status: string;
   severity: string;
   related_task_id: string | null;
+  workspace_task_id: string | null;
   created_at: string;
 };
 
@@ -464,7 +663,7 @@ export async function listIssuesForPhase(
   const { data: rows, error } = await supabase
     .from("issue")
     .select(
-      "id, project_id, title, description, status, severity, related_task_id, created_at"
+      "id, project_id, title, description, status, severity, related_task_id, workspace_task_id, created_at"
     )
     .eq("project_id", id)
     .order("created_at", { ascending: false });
@@ -472,7 +671,14 @@ export async function listIssuesForPhase(
   if (error) {
     return { issues: [], error: humanizeProjectDbError(error.message) };
   }
-  return { issues: (rows ?? []) as IssueRow[], error: null };
+  const issues: IssueRow[] = (rows ?? []).map((r) => {
+    const row = r as IssueRow & { workspace_task_id?: string | null };
+    return {
+      ...row,
+      workspace_task_id: row.workspace_task_id ?? null,
+    };
+  });
+  return { issues, error: null };
 }
 
 export async function createCrmIssue(input: {
@@ -519,7 +725,13 @@ export async function createCrmIssue(input: {
 
 export async function updateCrmIssue(
   issueId: string,
-  patch: { status?: string; severity?: string; title?: string }
+  patch: {
+    status?: string;
+    severity?: string;
+    title?: string;
+    related_task_id?: string | null;
+    workspace_task_id?: string | null;
+  }
 ): Promise<{ ok: true } | { error: string }> {
   const supabase = await createClient();
   const {
@@ -530,7 +742,7 @@ export async function updateCrmIssue(
   const id = issueId.trim();
   if (!id) return { error: "Missing issue id" };
 
-  const updates: Record<string, string> = {};
+  const updates: Record<string, string | null> = {};
   if (patch.title !== undefined) {
     const t = patch.title.trim();
     if (!t) return { error: "Title required" };
@@ -548,6 +760,12 @@ export async function updateCrmIssue(
       return { error: "Invalid severity" };
     }
     updates.severity = sev;
+  }
+  if (patch.related_task_id !== undefined) {
+    updates.related_task_id = patch.related_task_id;
+  }
+  if (patch.workspace_task_id !== undefined) {
+    updates.workspace_task_id = patch.workspace_task_id;
   }
 
   if (Object.keys(updates).length === 0) return { ok: true };

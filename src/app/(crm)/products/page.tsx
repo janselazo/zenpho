@@ -687,7 +687,7 @@ function ProjectCard({
       <Link
         href={
           project.primaryPhaseId
-            ? `/products/${project.id}/phases/${project.primaryPhaseId}`
+            ? `/products/${project.id}?project=${project.primaryPhaseId}&tab=tasks`
             : `/products/${project.id}`
         }
         className="mt-0.5 block rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
@@ -783,7 +783,7 @@ function ProjectTable({
                   <Link
                     href={
                       p.primaryPhaseId
-                        ? `/products/${p.id}/phases/${p.primaryPhaseId}`
+                        ? `/products/${p.id}?project=${p.primaryPhaseId}&tab=tasks`
                         : `/products/${p.id}`
                     }
                     className="font-medium text-text-primary hover:text-accent"
