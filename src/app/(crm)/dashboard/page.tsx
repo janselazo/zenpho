@@ -1,6 +1,7 @@
 import dynamic from "next/dynamic";
 import {
   fetchClientsCreatedSeries,
+  DASHBOARD_FUNNEL_REVENUE_STAGE_LABEL,
   fetchDashboardFunnel,
   fetchDashboardKpis,
   fetchDashboardRangeTotals,
@@ -39,7 +40,13 @@ const emptyFunnel: DashboardFunnelStage[] = [
   { label: "Appointments", count: 0, value: 0, color: "#8b5cf6", bg: "bg-violet-50 dark:bg-violet-500/12" },
   { label: "Qualified", count: 0, value: 0, color: "#10b981", bg: "bg-emerald-50 dark:bg-emerald-500/12" },
   { label: "Deals Closed", count: 0, value: 0, color: "#f59e0b", bg: "bg-amber-50 dark:bg-amber-500/12" },
-  { label: "Revenue", count: 0, value: 0, color: "#10b981", bg: "bg-emerald-50 dark:bg-emerald-500/12" },
+  {
+    label: DASHBOARD_FUNNEL_REVENUE_STAGE_LABEL,
+    count: 0,
+    value: 0,
+    color: "#10b981",
+    bg: "bg-emerald-50 dark:bg-emerald-500/12",
+  },
 ];
 
 export default async function DashboardPage({
@@ -70,8 +77,6 @@ export default async function DashboardPage({
   let counts = {
     activeClients: 0,
     activeProjects: 0,
-    revenueWeek: 0,
-    expensesWeek: 0,
     errors: [] as unknown[],
   };
   let chartData: DailyMoneyPoint[] = [];
@@ -108,8 +113,6 @@ export default async function DashboardPage({
       counts = {
         activeClients: c.activeClients,
         activeProjects: c.activeProjects,
-        revenueWeek: c.revenueInRange,
-        expensesWeek: c.expensesInRange,
         errors: c.errors,
       };
     }
@@ -150,8 +153,10 @@ export default async function DashboardPage({
       <DashboardView
         activeClients={counts.activeClients}
         activeProjects={counts.activeProjects}
-        revenueWeek={counts.revenueWeek}
-        expensesWeek={counts.expensesWeek}
+        wonRevenue={
+          funnel.find((s) => s.label === DASHBOARD_FUNNEL_REVENUE_STAGE_LABEL)
+            ?.value ?? 0
+        }
         chartData={chartData}
         hasErrors={counts.errors.length > 0}
         dateFrom={from}

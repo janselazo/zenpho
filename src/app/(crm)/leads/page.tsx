@@ -1,7 +1,12 @@
 import LeadsView from "@/components/crm/LeadsView";
+import { fetchClientsForClientsView } from "@/lib/crm/fetch-clients-for-view";
+import { fetchDealsForDealsView } from "@/lib/crm/fetch-deals-for-view";
+import { fetchLeadsForDealPicker } from "@/lib/crm/fetch-leads-for-deal-picker";
 import { fetchCrmPipelineSettings } from "@/lib/crm/fetch-pipeline-settings";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
+
+export const dynamic = "force-dynamic";
 
 export default async function LeadsPage() {
   if (!isSupabaseConfigured()) {
@@ -14,13 +19,27 @@ export default async function LeadsPage() {
   }
 
   const supabase = await createClient();
-  const { data: leads, error } = await supabase
-    .from("lead")
-    .select(
-      "id, name, email, phone, company, stage, source, notes, project_type, created_at"
-    )
-    .order("created_at", { ascending: false })
-    .limit(200);
+  const [
+    leadsRes,
+    pipeline,
+    dealsForTab,
+    leadPickerOptions,
+    clientsPack,
+  ] = await Promise.all([
+    supabase
+      .from("lead")
+      .select(
+        "id, name, email, phone, company, stage, source, notes, project_type, created_at"
+      )
+      .order("created_at", { ascending: false })
+      .limit(200),
+    fetchCrmPipelineSettings(),
+    fetchDealsForDealsView(),
+    fetchLeadsForDealPicker(),
+    fetchClientsForClientsView(),
+  ]);
+
+  const { data: leads, error } = leadsRes;
 
   const leadRows = leads ?? [];
   const leadIds = leadRows.map((l) => l.id);
@@ -49,7 +68,7 @@ export default async function LeadsPage() {
     deal: dealByLeadId.get(l.id) ?? null,
   }));
 
-  const pipeline = await fetchCrmPipelineSettings();
+  const clientsForTab = clientsPack.error ? [] : clientsPack.rows;
 
   return (
     <div className="p-8">
@@ -68,6 +87,10 @@ export default async function LeadsPage() {
           leads={leadsWithDeals}
           leadPipelineColumns={pipeline.lead}
           dealPipelineColumns={pipeline.deal}
+          dealsForTab={dealsForTab}
+          dealLeadPickerOptions={leadPickerOptions}
+          clientsForTab={clientsForTab}
+          clientsTabLoadError={clientsPack.error}
         />
       )}
     </div>

@@ -27,6 +27,9 @@ export type DashboardRangeTotals = {
   revenue: number;
 };
 
+/** Funnel + snapshot Finance use this label for closed-won deal revenue in range. */
+export const DASHBOARD_FUNNEL_REVENUE_STAGE_LABEL = "Revenue" as const;
+
 function toLocalYmd(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -58,7 +61,7 @@ export async function fetchDashboardKpis(from: string, to: string) {
   const rs = rangeStart(from);
   const re = rangeEnd(to);
 
-  const [clients, projects, revenue, expenses] = await Promise.all([
+  const [clients, projects] = await Promise.all([
     supabase
       .from("client")
       .select("*", { count: "exact", head: true })
@@ -69,33 +72,12 @@ export async function fetchDashboardKpis(from: string, to: string) {
       .select("*", { count: "exact", head: true })
       .gte("created_at", rs)
       .lte("created_at", re),
-    supabase
-      .from("transaction")
-      .select("amount")
-      .eq("type", "revenue")
-      .gte("date", from)
-      .lte("date", to),
-    supabase
-      .from("transaction")
-      .select("amount")
-      .eq("type", "expense")
-      .gte("date", from)
-      .lte("date", to),
   ]);
-
-  const revSum =
-    revenue.data?.reduce((s, r) => s + Number(r.amount), 0) ?? 0;
-  const expSum =
-    expenses.data?.reduce((s, r) => s + Number(r.amount), 0) ?? 0;
 
   return {
     activeClients: clients.count ?? 0,
     activeProjects: projects.count ?? 0,
-    revenueInRange: revSum,
-    expensesInRange: expSum,
-    errors: [clients.error, projects.error, revenue.error, expenses.error].filter(
-      Boolean
-    ),
+    errors: [clients.error, projects.error].filter(Boolean),
   };
 }
 
@@ -176,7 +158,7 @@ export async function fetchDashboardFunnel(
       bg: "bg-amber-50 dark:bg-amber-500/12",
     },
     {
-      label: "Revenue",
+      label: DASHBOARD_FUNNEL_REVENUE_STAGE_LABEL,
       count: 0,
       value: revenue,
       color: "#10b981",

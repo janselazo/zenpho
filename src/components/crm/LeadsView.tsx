@@ -21,8 +21,10 @@ import {
 } from "lucide-react";
 import { LEAD_PROJECT_TYPE_OPTIONS } from "@/lib/crm/mock-data";
 import CreateDealForLeadModal from "@/components/crm/CreateDealForLeadModal";
+import ClientsView from "@/components/crm/ClientsView";
 import CrmNewProjectFromLeadModal from "@/components/crm/CrmNewProjectFromLeadModal";
 import CrmQuickTaskModal from "@/components/crm/CrmQuickTaskModal";
+import DealsView from "@/components/crm/DealsView";
 import KanbanBoard, { type KanbanColumn } from "@/components/crm/KanbanBoard";
 import LeadsPipelineSummary from "@/components/crm/LeadsPipelineSummary";
 import PipelineSettingsModal from "@/components/crm/PipelineSettingsModal";
@@ -38,6 +40,9 @@ import {
   updateLeadRow,
   updateLeadStage,
 } from "@/app/(crm)/actions/crm";
+import type { ClientTableRow } from "@/lib/crm/client-table-row";
+import type { LeadDealPickerOption } from "@/lib/crm/fetch-leads-for-deal-picker";
+import type { MockDeal } from "@/lib/crm/mock-data";
 
 export interface Lead {
   id: string;
@@ -248,21 +253,51 @@ function leadQuickTaskContextLabel(lead: Lead): string {
   );
 }
 
-type LeadsViewMode = "table" | "pipeline";
+type LeadsSectionTab = "pipeline" | "leads" | "deals" | "clients";
+
+const SECTION_TABS: { id: LeadsSectionTab; label: string }[] = [
+  { id: "pipeline", label: "Pipeline" },
+  { id: "leads", label: "Leads" },
+  { id: "deals", label: "Deals" },
+  { id: "clients", label: "Clients" },
+];
+
+function leadsSectionSubtitle(tab: LeadsSectionTab): string {
+  switch (tab) {
+    case "pipeline":
+      return "Drag cards between stages to update pipeline status. Project types reflect the work each contact is interested in.";
+    case "leads":
+      return "Track inbound inquiries and nurture them through qualification.";
+    case "deals":
+      return "Track deals from first touch to close.";
+    case "clients":
+      return "Companies and contacts you work with.";
+    default:
+      return "";
+  }
+}
 
 export default function LeadsView({
   leads,
   leadPipelineColumns,
   dealPipelineColumns,
+  dealsForTab = [],
+  dealLeadPickerOptions = [],
+  clientsForTab = [],
+  clientsTabLoadError = null,
 }: {
   leads: Lead[];
   leadPipelineColumns: PipelineColumnDef[];
   dealPipelineColumns: PipelineColumnDef[];
+  dealsForTab?: MockDeal[];
+  dealLeadPickerOptions?: LeadDealPickerOption[];
+  clientsForTab?: ClientTableRow[];
+  clientsTabLoadError?: { message: string } | null;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
-  const [view, setView] = useState<LeadsViewMode>("table");
+  const [view, setView] = useState<LeadsSectionTab>("pipeline");
   const [leadsSnapshot, setLeadsSnapshot] = useState(leads);
   const [leadPipeline, setLeadPipeline] =
     useState<PipelineColumnDef[]>(leadPipelineColumns);
@@ -368,9 +403,11 @@ export default function LeadsView({
   }
 
   function startEditFromPipeline(lead: Lead) {
-    setView("table");
+    setView("leads");
     startEdit(lead);
   }
+
+  const showLeadToolbar = view === "pipeline" || view === "leads";
 
   async function saveEdit(leadId: string) {
     if (!draft) return;
@@ -423,70 +460,76 @@ export default function LeadsView({
             Leads
           </h1>
           <p className="mt-1 text-sm text-text-secondary">
-            {view === "pipeline"
-              ? "Drag cards between stages to update pipeline status. Project types reflect the work each contact is interested in."
-              : "Track inbound inquiries and nurture them through qualification."}
+            {leadsSectionSubtitle(view)}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary/50" />
-            <input
-              type="text"
-              placeholder="Search…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-48 rounded-lg border border-border bg-white py-1.5 pl-8 pr-3 text-sm text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/15"
-            />
+        {showLeadToolbar ? (
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary/50" />
+              <input
+                type="text"
+                placeholder="Search…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-48 rounded-lg border border-border bg-white py-1.5 pl-8 pr-3 text-sm text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/15"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
+              className="shrink-0 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-accent-hover"
+            >
+              + Add lead
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => setModalOpen(true)}
-            className="shrink-0 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-accent-hover"
-          >
-            + Add lead
-          </button>
-        </div>
+        ) : null}
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-4">
         <div className="inline-flex rounded-lg border border-border bg-surface/50 p-0.5">
-          {(["table", "pipeline"] as LeadsViewMode[]).map((v) => (
+          {SECTION_TABS.map(({ id, label }) => (
             <button
-              key={v}
+              key={id}
               type="button"
-              onClick={() => setView(v)}
-              className={`rounded-md px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
-                view === v
+              onClick={() => setView(id)}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                view === id
                   ? "bg-white text-text-primary shadow-sm"
                   : "text-text-secondary hover:text-text-primary"
               }`}
             >
-              {v === "pipeline" ? "Pipeline" : "Table"}
+              {label}
             </button>
           ))}
         </div>
-        <span className="text-sm text-text-secondary">
-          {filtered.length} leads
-        </span>
-        <button
-          type="button"
-          onClick={() => setPipelineSettingsOpen(true)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:border-accent hover:text-accent dark:border-zinc-600"
-        >
-          <Settings2 className="h-3.5 w-3.5" />
-          Pipeline stages
-        </button>
+        {showLeadToolbar ? (
+          <>
+            <span className="text-sm text-text-secondary">
+              {filtered.length} leads
+            </span>
+            <button
+              type="button"
+              onClick={() => setPipelineSettingsOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:border-accent hover:text-accent dark:border-zinc-600"
+            >
+              <Settings2 className="h-3.5 w-3.5" />
+              Pipeline stages
+            </button>
+          </>
+        ) : null}
       </div>
 
-      <LeadsPipelineSummary
-        leads={leadsSnapshot}
-        leadPipeline={leadPipeline}
-        searchQuery={search}
-      />
+      {showLeadToolbar ? (
+        <LeadsPipelineSummary
+          leads={leadsSnapshot}
+          leadPipeline={leadPipeline}
+          searchQuery={search}
+        />
+      ) : null}
 
       <div className="mt-6">
-        {view === "table" ? (
+        {view === "leads" ? (
           <LeadsTable
             leads={filtered}
             leadPipeline={leadPipeline}
@@ -505,7 +548,8 @@ export default function LeadsView({
             onCreateProject={(lead) => setNewProjectLeadId(lead.id)}
             onQuickTask={setQuickTaskLead}
           />
-        ) : (
+        ) : null}
+        {view === "pipeline" ? (
           <LeadsPipelineBoard
             columns={pipelineColumns}
             onMove={handlePipelineMove}
@@ -518,7 +562,35 @@ export default function LeadsView({
             onEditFromPipeline={startEditFromPipeline}
             onDelete={handleDeleteLead}
           />
-        )}
+        ) : null}
+        {view === "deals" ? (
+          <DealsView
+            deals={dealsForTab}
+            persistDeals
+            leadPickerOptions={dealLeadPickerOptions}
+            dealPipelineColumns={dealPipelineColumns}
+            variant="embedded"
+          />
+        ) : null}
+        {view === "clients" ? (
+          <div>
+            {clientsTabLoadError ? (
+              <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100">
+                {clientsTabLoadError.message}. Apply{" "}
+                <code className="font-mono text-xs">supabase/migrations</code>.
+              </p>
+            ) : null}
+            <div className="mb-4">
+              <h2 className="heading-display text-xl font-bold text-text-primary">
+                Clients
+              </h2>
+              <p className="mt-1 text-sm text-text-secondary">
+                Companies and contacts you work with
+              </p>
+            </div>
+            <ClientsView clients={clientsForTab} embedded />
+          </div>
+        ) : null}
       </div>
 
       {createDealLead && (

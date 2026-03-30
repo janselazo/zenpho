@@ -69,12 +69,16 @@ export default function DealsView({
   persistDeals = false,
   leadPickerOptions = [],
   dealPipelineColumns,
+  variant = "page",
 }: {
   deals: MockDeal[];
   persistDeals?: boolean;
   leadPickerOptions?: LeadDealPickerOption[];
   dealPipelineColumns: PipelineColumnDef[];
+  /** `embedded`: nested under another page (e.g. Leads) — compact title. */
+  variant?: "page" | "embedded";
 }) {
+  const embedded = variant === "embedded";
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [localDeals, setLocalDeals] = useState<MockDeal[]>(deals);
@@ -153,9 +157,15 @@ export default function DealsView({
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="heading-display text-2xl font-bold text-text-primary">
-            Deals
-          </h1>
+          {embedded ? (
+            <h2 className="heading-display text-xl font-bold text-text-primary">
+              Deals
+            </h2>
+          ) : (
+            <h1 className="heading-display text-2xl font-bold text-text-primary">
+              Deals
+            </h1>
+          )}
           <p className="mt-1 text-sm text-text-secondary">
             Track deals from first touch to close
           </p>

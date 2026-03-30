@@ -14,27 +14,9 @@ import {
 import { deleteClient, updateClientRow } from "@/app/(crm)/actions/crm";
 import CreateDealForLeadModal from "@/components/crm/CreateDealForLeadModal";
 import CrmNewProjectForClientModal from "@/components/crm/CrmNewProjectForClientModal";
+import type { ClientTableRow } from "@/lib/crm/client-table-row";
 
-export type ClientTableRow = {
-  id: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  company: string | null;
-  notes: string | null;
-  created_at: string | null;
-  /** Most recent lead that converted to this client, if any */
-  linkedLead: {
-    id: string;
-    name: string | null;
-    email: string | null;
-    company: string | null;
-    /** Same `lead.source` as on the Leads table */
-    source: string | null;
-  } | null;
-  /** Latest non-empty deal title for the linked lead (by deal.updated_at) */
-  dealName: string | null;
-};
+export type { ClientTableRow };
 
 const neutralChipBase =
   "inline-flex rounded-full border border-border bg-white px-2.5 py-0.5 text-xs font-semibold dark:border-zinc-600 dark:bg-zinc-900/35";
@@ -95,7 +77,14 @@ function clientToDraft(c: ClientTableRow): ClientDraft {
   };
 }
 
-export default function ClientsView({ clients }: { clients: ClientTableRow[] }) {
+export default function ClientsView({
+  clients,
+  embedded = false,
+}: {
+  clients: ClientTableRow[];
+  /** When nested (e.g. Leads page tab), tighten vertical spacing. */
+  embedded?: boolean;
+}) {
   const router = useRouter();
   const [snapshot, setSnapshot] = useState(clients);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -162,7 +151,9 @@ export default function ClientsView({ clients }: { clients: ClientTableRow[] }) 
 
   if (snapshot.length === 0) {
     return (
-      <div className="mt-6 rounded-2xl border border-dashed border-border bg-white py-16 text-center text-sm text-text-secondary">
+      <div
+        className={`${embedded ? "mt-4" : "mt-6"} rounded-2xl border border-dashed border-border bg-white py-16 text-center text-sm text-text-secondary`}
+      >
         No clients yet. A client record is created when a deal for a lead reaches
         Won or Lost (once per lead).
       </div>
@@ -170,7 +161,9 @@ export default function ClientsView({ clients }: { clients: ClientTableRow[] }) 
   }
 
   return (
-    <div className="mt-6 overflow-x-auto rounded-2xl border border-border bg-white shadow-sm">
+    <div
+      className={`${embedded ? "mt-0" : "mt-6"} overflow-x-auto rounded-2xl border border-border bg-white shadow-sm`}
+    >
       <table className="w-full min-w-[72rem] text-left text-sm">
         <thead>
           <tr className="border-b border-border">

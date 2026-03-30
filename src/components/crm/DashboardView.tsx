@@ -11,7 +11,6 @@ import {
   Cell,
   LabelList,
   Legend,
-  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -22,7 +21,6 @@ import {
   Clock,
   Zap,
   ArrowRight,
-  ChevronRight,
   Calendar,
   Building2,
   DollarSign,
@@ -43,11 +41,12 @@ import {
   type ProspectingTask,
   type ProspectingTaskType,
 } from "@/lib/crm/mock-data";
-import type {
-  ClientsCreatedPoint,
-  DashboardFunnelStage,
-  DashboardRangeTotals,
-  LeadsAppointmentsPoint,
+import {
+  DASHBOARD_FUNNEL_REVENUE_STAGE_LABEL,
+  type ClientsCreatedPoint,
+  type DashboardFunnelStage,
+  type DashboardRangeTotals,
+  type LeadsAppointmentsPoint,
 } from "@/lib/crm/dashboard-data";
 import DashboardRangePicker from "@/components/crm/DashboardRangePicker";
 import {
@@ -127,15 +126,7 @@ function useDashboardChartTheme() {
         legendColor: "#a1a1aa",
         barPrimary: "#a1a1aa",
         barVolume: "#34d399",
-        barFinRev: "#38bdf8",
-        barFinExp: "#71717a",
-        barProfit: "#60a5fa",
-        financeGrid: "#3f3f46",
-        financeTick: "#71717a",
-        financeBarRevenue: "#3b82f6",
-        financeBarExpense: "#52525b",
-        financeBarProfit: "#6366f1",
-        refLine: "#3f3f46",
+        barVolumeProjects: "#60a5fa",
       }
     : {
         grid: "#e8ecf1",
@@ -148,15 +139,7 @@ function useDashboardChartTheme() {
         legendColor: "#5c6370",
         barPrimary: "#18181b",
         barVolume: "#10b981",
-        barFinRev: "#0ea5e9",
-        barFinExp: "#94a3b8",
-        barProfit: "#2563eb",
-        financeGrid: "#e5e7eb",
-        financeTick: "#9ca3af",
-        financeBarRevenue: "#93c5fd",
-        financeBarExpense: "#cbd5e1",
-        financeBarProfit: "#a5b4fc",
-        refLine: "#e5e7eb",
+        barVolumeProjects: "#3b82f6",
       };
 }
 
@@ -168,14 +151,6 @@ function fmt(n: number) {
     currency: "USD",
     maximumFractionDigits: 0,
   }).format(n);
-}
-
-/** Evenly spaced X-axis ticks for the finance snapshot (template-style scale). */
-function financeXAxisTickValues(lo: number, hi: number): number[] {
-  const span = hi - lo;
-  if (!Number.isFinite(span) || span <= 0) return [lo, hi];
-  const n = 5;
-  return Array.from({ length: n }, (_, i) => lo + (span * i) / (n - 1));
 }
 
 function formatFinanceXAxisTick(v: number): string {
@@ -208,35 +183,21 @@ const TASK_TYPE_ICONS: Record<ProspectingTaskType, React.ReactNode> = {
   other: <MoreHorizontal className="h-4 w-4" />,
 };
 
-function convRate(a: number, b: number) {
-  if (a === 0) return "—";
-  return `${Math.round((b / a) * 100)}%`;
-}
-
-/** Sloped top edge per column (y0 left %, y1 right %) for a wave-like funnel. */
-const FUNNEL_TOP_SLANT: [string, string][] = [
-  ["6%", "18%"],
-  ["14%", "26%"],
-  ["22%", "34%"],
-  ["30%", "42%"],
-  ["38%", "48%"],
+/** Per-column fills under funnel line: left = stronger periwinkle, right = lighter. */
+const FUNNEL_AREA_FILLS_LIGHT = [
+  "#dbeafe",
+  "#e8efff",
+  "#eef2ff",
+  "#f3f4ff",
+  "#f8f9ff",
 ];
 
-/** Light mode: saturated top → soft bottom (blue ramp left → right). */
-const FUNNEL_BLUE_GRADIENTS_LIGHT = [
-  "linear-gradient(to bottom, rgb(191 219 254 / 0.95), rgb(191 219 254 / 0.08))",
-  "linear-gradient(to bottom, rgb(147 197 253 / 0.95), rgb(147 197 253 / 0.1))",
-  "linear-gradient(to bottom, rgb(96 165 250 / 0.98), rgb(96 165 250 / 0.12))",
-  "linear-gradient(to bottom, rgb(59 130 246 / 0.98), rgb(59 130 246 / 0.14))",
-  "linear-gradient(to bottom, rgb(37 99 235 / 1), rgb(37 99 235 / 0.16))",
-];
-
-const FUNNEL_BLUE_GRADIENTS_DARK = [
-  "linear-gradient(to bottom, rgb(147 197 253 / 0.45), rgb(147 197 253 / 0.06))",
-  "linear-gradient(to bottom, rgb(96 165 250 / 0.5), rgb(96 165 250 / 0.08))",
-  "linear-gradient(to bottom, rgb(59 130 246 / 0.55), rgb(59 130 246 / 0.1))",
-  "linear-gradient(to bottom, rgb(37 99 235 / 0.58), rgb(37 99 235 / 0.12))",
-  "linear-gradient(to bottom, rgb(29 78 216 / 0.6), rgb(29 78 216 / 0.14))",
+const FUNNEL_AREA_FILLS_DARK = [
+  "rgb(30 58 138 / 0.45)",
+  "rgb(30 64 175 / 0.38)",
+  "rgb(37 99 235 / 0.32)",
+  "rgb(59 130 246 / 0.26)",
+  "rgb(96 165 250 / 0.2)",
 ];
 
 function funnelBarHeightPct(
@@ -246,7 +207,7 @@ function funnelBarHeightPct(
 ): number {
   const floor = 30;
   const span = 70;
-  if (stage.label === "Revenue") {
+  if (stage.label === DASHBOARD_FUNNEL_REVENUE_STAGE_LABEL) {
     const r =
       maxRevenue <= 0 ? 0.28 : Math.min(1, stage.value / maxRevenue);
     return floor + span * Math.max(0.22, r);
@@ -256,32 +217,88 @@ function funnelBarHeightPct(
   return floor + span * Math.max(0.14, c);
 }
 
-/** Compact metrics (e.g. 9.3K) for the top funnel row. */
-function funnelDisplayValueCompact(stage: DashboardFunnelStage): string {
-  if (stage.label === "Revenue") {
-    const v = stage.value;
-    if (!Number.isFinite(v)) return fmt(0);
-    const av = Math.abs(v);
-    if (av >= 1_000_000) {
-      const x = v / 1_000_000;
-      return `$${x % 1 === 0 ? x.toFixed(0) : x.toFixed(1)}M`;
-    }
-    if (av >= 1000) {
-      const x = v / 1000;
-      return `$${x % 1 === 0 ? x.toFixed(0) : x.toFixed(1)}k`;
-    }
-    return fmt(v);
+/** Full numbers for funnel metric row (matches dashboard reference). */
+function funnelMetricDisplayValue(stage: DashboardFunnelStage): string {
+  if (stage.label === DASHBOARD_FUNNEL_REVENUE_STAGE_LABEL)
+    return fmt(stage.value);
+  return stage.count.toLocaleString(undefined, { maximumFractionDigits: 0 });
+}
+
+/** Normalized height key 0–1 for drawing the funnel line (mixed counts + revenue). */
+function funnelStageNorm(
+  stage: DashboardFunnelStage,
+  maxCount: number,
+  maxRevenue: number
+): number {
+  const pct = funnelBarHeightPct(stage, maxCount, maxRevenue);
+  return Math.min(1, Math.max(0, (pct - 30) / 70));
+}
+
+function SalesFunnelAreaSvg({
+  funnel: stages,
+  maxCount,
+  maxRevenue,
+}: {
+  funnel: DashboardFunnelStage[];
+  maxCount: number;
+  maxRevenue: number;
+}) {
+  const n = stages.length;
+  const W = 500;
+  const H = 100;
+  const padT = 6;
+  const padB = 2;
+  const innerH = H - padT - padB;
+  const seg = W / n;
+
+  const yAt = (stage: DashboardFunnelStage) =>
+    padT + (1 - funnelStageNorm(stage, maxCount, maxRevenue)) * innerH;
+
+  const yTop: number[] = [];
+  for (let i = 0; i < n; i++) {
+    yTop.push(yAt(stages[i]!));
   }
-  const n = stage.count;
-  if (n >= 1_000_000) {
-    const x = n / 1_000_000;
-    return `${x % 1 === 0 ? x.toFixed(0) : x.toFixed(1)}M`;
-  }
-  if (n >= 1000) {
-    const x = n / 1000;
-    return `${x % 1 === 0 ? x.toFixed(0) : x.toFixed(1)}K`;
-  }
-  return String(n);
+  yTop.push(yTop[n - 1]!);
+
+  const lineD = yTop
+    .map((y, k) => `${k === 0 ? "M" : "L"} ${(k * seg).toFixed(2)} ${y.toFixed(2)}`)
+    .join(" ");
+
+  return (
+    <svg
+      className="h-[112px] w-full text-blue-600 dark:text-blue-400"
+      viewBox={`0 0 ${W} ${H}`}
+      preserveAspectRatio="none"
+      aria-hidden
+    >
+      {Array.from({ length: n }, (_, i) => {
+        const x0 = i * seg;
+        const x1 = (i + 1) * seg;
+        const ya = yTop[i]!;
+        const yb = yTop[i + 1]!;
+        return (
+          <g key={i}>
+            <polygon
+              points={`${x0},${ya} ${x1},${yb} ${x1},${H} ${x0},${H}`}
+              className="dark:hidden"
+              fill={FUNNEL_AREA_FILLS_LIGHT[i % FUNNEL_AREA_FILLS_LIGHT.length]}
+            />
+            <polygon
+              points={`${x0},${ya} ${x1},${yb} ${x1},${H} ${x0},${H}`}
+              className="hidden dark:block"
+              fill={FUNNEL_AREA_FILLS_DARK[i % FUNNEL_AREA_FILLS_DARK.length]}
+            />
+          </g>
+        );
+      })}
+      <path
+        d={lineD}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2.25}
+      />
+    </svg>
+  );
 }
 
 // ── Active tasks for dashboard ──────────────────────────────────────────────
@@ -461,8 +478,8 @@ function BusinessOverviewCard({
 interface DashboardViewProps {
   activeClients: number;
   activeProjects: number;
-  revenueWeek: number;
-  expensesWeek: number;
+  /** Sum of `deal.value` for deals marked closed_won in the selected range (see funnel Revenue). */
+  wonRevenue: number;
   chartData: DailyMoneyPoint[];
   hasErrors: boolean;
   dateFrom: string;
@@ -479,8 +496,7 @@ interface DashboardViewProps {
 export default function DashboardView({
   activeClients,
   activeProjects,
-  revenueWeek,
-  expensesWeek,
+  wonRevenue,
   chartData,
   hasErrors,
   dateFrom,
@@ -497,7 +513,6 @@ export default function DashboardView({
   const range = { from: dateFrom, to: dateTo };
   const activeTasks = getActiveTasks(today, range);
   const heatmap = buildDealsHeatmap();
-  const profit = revenueWeek - expensesWeek;
 
   const leadsBars = useMemo(
     () =>
@@ -582,23 +597,19 @@ export default function DashboardView({
   const [playbookCompletions, setPlaybookCompletions] = useState<
     Record<string, number>
   >({});
-  const [funnelSelectedIdx, setFunnelSelectedIdx] = useState(2);
-
   const funnelScale = useMemo(() => {
     const funnelMaxCount = Math.max(
-      ...funnel.filter((s) => s.label !== "Revenue").map((s) => s.count),
+      ...funnel
+        .filter((s) => s.label !== DASHBOARD_FUNNEL_REVENUE_STAGE_LABEL)
+        .map((s) => s.count),
       1
     );
-    const rev = funnel.find((s) => s.label === "Revenue");
+    const rev = funnel.find(
+      (s) => s.label === DASHBOARD_FUNNEL_REVENUE_STAGE_LABEL
+    );
     const funnelMaxRevenue = Math.max(rev?.value ?? 0, 1);
     return { funnelMaxCount, funnelMaxRevenue };
   }, [funnel]);
-
-  useEffect(() => {
-    setFunnelSelectedIdx((i) =>
-      Math.min(Math.max(0, i), Math.max(0, funnel.length - 1))
-    );
-  }, [funnel.length]);
 
   useEffect(() => {
     async function syncPlaybookKpis() {
@@ -692,24 +703,11 @@ export default function DashboardView({
     () => [
       {
         name: "Revenue",
-        v: revenueWeek,
-        display: fmt(revenueWeek),
-        profitRow: false,
-      },
-      {
-        name: "Expenses",
-        v: expensesWeek,
-        display: fmt(expensesWeek),
-        profitRow: false,
-      },
-      {
-        name: "Profit",
-        v: profit,
-        display: fmt(profit),
-        profitRow: true,
+        v: wonRevenue,
+        display: fmt(wonRevenue),
       },
     ],
-    [revenueWeek, expensesWeek, profit]
+    [wonRevenue]
   );
 
   const volumeAxisMax = Math.max(
@@ -717,22 +715,9 @@ export default function DashboardView({
     Math.ceil(Math.max(1, activeClients, activeProjects) * 1.2)
   );
 
-  const financeAxisMin = Math.min(0, profit);
   const financeAxisMax = Math.max(
-    1,
-    revenueWeek,
-    expensesWeek,
-    profit,
-    financeAxisMin < 0 ? -financeAxisMin * 0.05 : 0
-  );
-  const financeDomainLo =
-    financeAxisMin < 0 ? Math.floor(financeAxisMin * 1.08) : 0;
-  const financeDomainHi = Math.ceil(financeAxisMax * 1.08);
-  const financeDomain: [number, number] = [financeDomainLo, financeDomainHi];
-
-  const financeXTicks = useMemo(
-    () => financeXAxisTickValues(financeDomainLo, financeDomainHi),
-    [financeDomainLo, financeDomainHi]
+    1000,
+    Math.ceil(Math.max(wonRevenue, 0) * 1.2)
   );
 
   return (
@@ -861,6 +846,82 @@ export default function DashboardView({
         <div className="mt-6 grid gap-8 lg:grid-cols-2 lg:gap-10">
           <div className="rounded-xl border border-border/70 bg-zinc-50/40 p-4 dark:border-zinc-800/80 dark:bg-zinc-950/35">
             <p className="text-sm font-semibold tracking-tight text-text-primary dark:text-zinc-100">
+              Finance
+            </p>
+            <p className="mt-0.5 text-xs text-text-secondary dark:text-zinc-500">
+              Won deals (closed won in range)
+            </p>
+            <div className="mt-4 h-[148px] w-full min-w-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  layout="vertical"
+                  data={financeChartData}
+                  margin={{ top: 6, right: 44, left: 0, bottom: 6 }}
+                  barCategoryGap="40%"
+                >
+                  <CartesianGrid
+                    strokeDasharray="4 6"
+                    stroke={chartTheme.snapshotGrid}
+                    strokeOpacity={0.65}
+                    horizontal
+                    vertical={false}
+                    syncWithTicks
+                  />
+                  <XAxis
+                    type="number"
+                    domain={[0, financeAxisMax]}
+                    tick={{
+                      fontSize: 11,
+                      fill: chartTheme.snapshotTick,
+                      fontWeight: 500,
+                    }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={formatFinanceXAxisTick}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    width={112}
+                    tick={{
+                      fontSize: 11,
+                      fill: chartTheme.snapshotTick,
+                      fontWeight: 500,
+                    }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    formatter={(value) => [fmt(Number(value ?? 0)), "Revenue"]}
+                    contentStyle={{
+                      borderRadius: 12,
+                      border: `1px solid ${chartTheme.tooltipBorder}`,
+                      fontSize: 12,
+                      backgroundColor: chartTheme.tooltipBg,
+                      color: chartTheme.tooltipColor,
+                    }}
+                  />
+                  <Bar
+                    dataKey="v"
+                    radius={[0, 999, 999, 0]}
+                    maxBarSize={10}
+                    fill={chartTheme.barVolume}
+                  >
+                    <LabelList
+                      dataKey="display"
+                      position="right"
+                      offset={10}
+                      fill={chartTheme.tick}
+                      fontSize={11}
+                      fontWeight={600}
+                    />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          <div className="rounded-xl border border-border/70 bg-zinc-50/40 p-4 dark:border-zinc-800/80 dark:bg-zinc-950/35">
+            <p className="text-sm font-semibold tracking-tight text-text-primary dark:text-zinc-100">
               Volume
             </p>
             <div className="mt-4 h-[148px] w-full min-w-0">
@@ -919,6 +980,16 @@ export default function DashboardView({
                     maxBarSize={10}
                     fill={chartTheme.barVolume}
                   >
+                    {volumeChartData.map((row) => (
+                      <Cell
+                        key={row.name}
+                        fill={
+                          row.name === "Active projects"
+                            ? chartTheme.barVolumeProjects
+                            : chartTheme.barVolume
+                        }
+                      />
+                    ))}
                     <LabelList
                       dataKey="display"
                       position="right"
@@ -932,228 +1003,55 @@ export default function DashboardView({
               </ResponsiveContainer>
             </div>
           </div>
-          <div className="rounded-xl border border-zinc-200/90 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
-            <div className="flex items-baseline justify-between gap-4">
-              <span className="text-sm font-medium text-text-secondary dark:text-zinc-400">
-                Finance
-              </span>
-              <span className="text-xs text-text-secondary/85 dark:text-zinc-500">
-                {rangeLabel}
-              </span>
-            </div>
-            <div className="mt-5 h-[200px] w-full min-w-0">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  layout="vertical"
-                  data={financeChartData}
-                  margin={{ top: 4, right: 16, left: 4, bottom: 22 }}
-                  barCategoryGap="42%"
-                >
-                  <CartesianGrid
-                    strokeDasharray="2 5"
-                    stroke={chartTheme.financeGrid}
-                    strokeOpacity={0.85}
-                    horizontal
-                    vertical={false}
-                    syncWithTicks
-                  />
-                  <XAxis
-                    type="number"
-                    domain={financeDomain}
-                    ticks={financeXTicks}
-                    tick={{
-                      fontSize: 11,
-                      fill: chartTheme.financeTick,
-                      fontWeight: 400,
-                    }}
-                    tickMargin={10}
-                    axisLine={false}
-                    tickLine={false}
-                    tickFormatter={formatFinanceXAxisTick}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="name"
-                    width={108}
-                    tick={{
-                      fontSize: 12,
-                      fill: chartTheme.financeTick,
-                      fontWeight: 400,
-                    }}
-                    axisLine={false}
-                    tickLine={false}
-                    tickMargin={14}
-                  />
-                  <Tooltip
-                    formatter={(value) => [fmt(Number(value ?? 0)), ""]}
-                    contentStyle={{
-                      borderRadius: 12,
-                      border: `1px solid ${chartTheme.tooltipBorder}`,
-                      fontSize: 12,
-                      backgroundColor: chartTheme.tooltipBg,
-                      color: chartTheme.tooltipColor,
-                    }}
-                  />
-                  {financeAxisMin < 0 ? (
-                    <ReferenceLine
-                      x={0}
-                      stroke={chartTheme.refLine}
-                      strokeWidth={1}
-                    />
-                  ) : null}
-                  <Bar dataKey="v" radius={[0, 999, 999, 0]} maxBarSize={9}>
-                    {financeChartData.map((row) => (
-                      <Cell
-                        key={row.name}
-                        fill={
-                          row.profitRow
-                            ? chartTheme.financeBarProfit
-                            : row.name === "Revenue"
-                              ? chartTheme.financeBarRevenue
-                              : chartTheme.financeBarExpense
-                        }
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
         </div>
       </div>
 
-      {/* Sales Funnel — analytics-style metrics row + blue wave */}
+      {/* Sales Funnel — column metrics + single area chart (reference layout) */}
       <div className={`${dashCard} p-5`}>
-        <div className="flex items-center justify-between">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/60 dark:text-zinc-500">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-base font-bold tracking-tight text-text-primary dark:text-zinc-100">
             Sales Funnel
-          </p>
-          <span className="text-xs text-text-secondary dark:text-zinc-500">
-            {rangeLabel}
-          </span>
+          </h2>
+          <div className="flex items-center gap-2">
+            <span className="hidden text-xs text-text-secondary dark:text-zinc-500 sm:inline">
+              {rangeLabel}
+            </span>
+            <button
+              type="button"
+              className="rounded-lg p-1.5 text-text-secondary transition-colors hover:bg-zinc-100 hover:text-text-primary dark:text-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+              aria-label="More options"
+            >
+              <MoreHorizontal className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
-        <div className="mt-5 rounded-xl border border-border/80 bg-white p-4 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)] dark:border-zinc-700/70 dark:bg-zinc-950/40 dark:shadow-none">
-          {/* Top: stage metrics (selectable highlight) */}
-          <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
-            {funnel.map((stage, i) => {
-              const selected = funnelSelectedIdx === i;
-              return (
-                <button
-                  key={`${stage.label}-metric`}
-                  type="button"
-                  onClick={() => setFunnelSelectedIdx(i)}
-                  className={`rounded-xl border px-1.5 py-3 text-center transition-all sm:px-2 sm:py-4 ${
-                    selected
-                      ? "border-blue-600 bg-[#2563eb] text-white shadow-md shadow-blue-600/20"
-                      : "border-border/60 bg-zinc-50/80 hover:border-blue-200 hover:bg-white dark:border-zinc-600 dark:bg-zinc-900/50 dark:hover:border-blue-500/40 dark:hover:bg-zinc-900"
-                  }`}
-                >
-                  <p
-                    className={`text-[10px] font-medium leading-tight sm:text-[11px] ${
-                      selected
-                        ? "text-white/90"
-                        : "text-text-secondary dark:text-zinc-500"
-                    }`}
-                  >
-                    {stage.label}
-                  </p>
-                  <p
-                    className={`mt-1.5 text-base font-bold tabular-nums leading-none tracking-tight sm:mt-2 sm:text-xl ${
-                      selected ? "text-white" : "text-text-primary dark:text-zinc-100"
-                    }`}
-                  >
-                    {funnelDisplayValueCompact(stage)}
-                  </p>
-                  {i < funnel.length - 1 && stage.count > 0 ? (
-                    <p
-                      className={`mt-2 text-[9px] leading-snug sm:text-[10px] ${
-                        selected
-                          ? "text-white/80"
-                          : "text-text-secondary dark:text-zinc-500"
-                      }`}
-                    >
-                      {convRate(
-                        stage.count || 1,
-                        funnel[i + 1].count || funnel[i + 1].value
-                      )}{" "}
-                      of {stage.label.toLowerCase()}
-                    </p>
-                  ) : (
-                    <span className="mt-2 block h-[14px] sm:h-4" aria-hidden />
-                  )}
-                  {selected ? (
-                    <Link
-                      href="/leads"
-                      className="mt-2 inline-flex items-center justify-center gap-0.5 text-[10px] font-semibold text-white/95 hover:text-white"
-                    >
-                      Pipeline
-                      <ChevronRight className="h-3 w-3 opacity-90" />
-                    </Link>
-                  ) : null}
-                </button>
-              );
-            })}
+        <div className="mt-5 overflow-hidden rounded-xl border border-border/70 bg-white dark:border-zinc-700/70 dark:bg-zinc-950/40">
+          <div className="grid grid-cols-5 divide-x divide-border/70 dark:divide-zinc-700/80">
+            {funnel.map((stage) => (
+              <div
+                key={stage.label}
+                className="min-w-0 px-2 py-4 sm:px-3 sm:py-5"
+              >
+                <p className="text-xs font-medium text-text-secondary dark:text-zinc-500">
+                  {stage.label}
+                </p>
+                <p className="mt-1.5 text-xl font-bold tabular-nums leading-none text-text-primary dark:text-zinc-50 sm:text-2xl">
+                  {funnelMetricDisplayValue(stage)}
+                </p>
+              </div>
+            ))}
           </div>
-
-          {/* Bottom: tapered wave + blue envelope */}
-          <div className="relative mt-5 overflow-hidden rounded-2xl bg-gradient-to-b from-blue-100/50 via-blue-50/30 to-white dark:from-blue-950/35 dark:via-blue-950/20 dark:to-zinc-950/20">
+          <div className="relative border-t border-border/70 dark:border-zinc-700/80">
+            <SalesFunnelAreaSvg
+              funnel={funnel}
+              maxCount={funnelScale.funnelMaxCount}
+              maxRevenue={funnelScale.funnelMaxRevenue}
+            />
             <div
-              className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-blue-200/25 to-transparent dark:from-blue-400/10"
+              className="pointer-events-none absolute inset-0 grid grid-cols-5 divide-x divide-border/50 dark:divide-zinc-700/70"
               aria-hidden
             />
-            <div className="relative grid grid-cols-5 gap-1 px-2 pb-3 pt-4 sm:gap-1.5 sm:px-3 sm:pb-4 sm:pt-5">
-              {funnel.map((stage, i) => {
-                const [y0, y1] = FUNNEL_TOP_SLANT[i] ?? ["10%", "20%"];
-                const h = funnelBarHeightPct(
-                  stage,
-                  funnelScale.funnelMaxCount,
-                  funnelScale.funnelMaxRevenue
-                );
-                const pipeLight =
-                  "inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -1px 0 rgba(30,64,175,0.14)";
-                const pipeDark =
-                  "inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.35)";
-                return (
-                  <div
-                    key={`${stage.label}-wave`}
-                    className="flex min-h-[6.5rem] flex-col justify-end sm:min-h-[7.5rem]"
-                  >
-                    <div
-                      className="relative w-full"
-                      style={{
-                        height: `${h}%`,
-                        minHeight: "2rem",
-                        maxHeight: "100%",
-                      }}
-                    >
-                      <div
-                        className="absolute inset-0 rounded-b-md dark:hidden"
-                        style={{
-                          clipPath: `polygon(0 ${y0}, 100% ${y1}, 100% 100%, 0 100%)`,
-                          background:
-                            FUNNEL_BLUE_GRADIENTS_LIGHT[
-                              i % FUNNEL_BLUE_GRADIENTS_LIGHT.length
-                            ],
-                          boxShadow: pipeLight,
-                        }}
-                      />
-                      <div
-                        className="absolute inset-0 hidden rounded-b-md dark:block"
-                        style={{
-                          clipPath: `polygon(0 ${y0}, 100% ${y1}, 100% 100%, 0 100%)`,
-                          background:
-                            FUNNEL_BLUE_GRADIENTS_DARK[
-                              i % FUNNEL_BLUE_GRADIENTS_DARK.length
-                            ],
-                          boxShadow: pipeDark,
-                        }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
           </div>
         </div>
       </div>
