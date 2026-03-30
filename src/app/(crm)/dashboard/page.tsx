@@ -19,7 +19,10 @@ import {
   priorInclusiveRange,
 } from "@/lib/crm/dashboard-range";
 import type { DailyMoneyPoint } from "@/lib/crm/transaction-series";
-import { getMoneySeriesForRange } from "@/lib/crm/transaction-series";
+import {
+  getMoneySeriesForRange,
+  getProjectBudgetSeriesForRange,
+} from "@/lib/crm/transaction-series";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 const DashboardView = dynamic(() => import("@/components/crm/DashboardView"), {
@@ -82,6 +85,7 @@ export default async function DashboardPage({
     errors: [] as unknown[],
   };
   let chartData: DailyMoneyPoint[] = [];
+  let financeBookedSeries: { label: string; revenue: number }[] = [];
   let funnel: DashboardFunnelStage[] = emptyFunnel;
   let leadsChartData: LeadsAppointmentsPoint[] = [];
   let clientsChartData: ClientsCreatedPoint[] = [];
@@ -93,6 +97,7 @@ export default async function DashboardPage({
     const [
       kpis,
       money,
+      bookedSeriesRes,
       funnelRes,
       leadsRes,
       clientsSeriesRes,
@@ -101,6 +106,7 @@ export default async function DashboardPage({
     ] = await Promise.allSettled([
       fetchDashboardKpis(from, to),
       getMoneySeriesForRange(from, to),
+      getProjectBudgetSeriesForRange(from, to),
       fetchDashboardFunnel(from, to),
       fetchLeadsAppointmentsSeries(from, to),
       fetchClientsCreatedSeries(from, to),
@@ -120,6 +126,9 @@ export default async function DashboardPage({
     }
     if (money.status === "fulfilled") {
       chartData = money.value;
+    }
+    if (bookedSeriesRes.status === "fulfilled") {
+      financeBookedSeries = bookedSeriesRes.value;
     }
     if (funnelRes.status === "fulfilled") {
       funnel = funnelRes.value;
@@ -159,6 +168,7 @@ export default async function DashboardPage({
           funnel.find((s) => s.label === DASHBOARD_FUNNEL_REVENUE_STAGE_LABEL)
             ?.value ?? 0
         }
+        financeBookedSeries={financeBookedSeries}
         chartData={chartData}
         hasErrors={counts.errors.length > 0}
         dateFrom={from}

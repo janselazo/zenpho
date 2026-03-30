@@ -75,26 +75,21 @@ function startOfWeekSunday(d: Date): Date {
   return x;
 }
 
-/**
- * Revenue & expense per day or per week (if range > 45 days), inclusive `from`–`to`.
- */
-export async function getMoneySeriesForRange(
-  from: string,
-  to: string
-): Promise<DailyMoneyPoint[]> {
-  const supabase = await createClient();
+function dayKeyFromTimestamptz(iso: string): string {
+  return toLocalYmd(new Date(iso));
+}
+
+type RangeBucketPlan = {
+  bucketKeys: string[];
+  bucketLabel: Record<string, string>;
+  useMonthly: boolean;
+  useWeekly: boolean;
+};
+
+/** Daily / weekly / monthly buckets for dashboard charts (same span as `enumerateDays`). */
+function planRangeBuckets(from: string, to: string): RangeBucketPlan | null {
   const days = enumerateDays(from, to);
-  if (days.length === 0) return [];
-
-  const { data, error } = await supabase
-    .from("transaction")
-    .select("date, type, amount")
-    .gte("date", from)
-    .lte("date", to);
-
-  if (error) {
-    return [];
-  }
+  if (days.length === 0) return null;
 
   const useMonthly = days.length > 120;
   const useWeekly = !useMonthly && days.length > 45;
@@ -141,31 +136,104 @@ export async function getMoneySeriesForRange(
     }
   }
 
+  return { bucketKeys, bucketLabel, useMonthly, useWeekly };
+}
+
+function bucketForDayKey(
+  keyDay: string,
+  plan: RangeBucketPlan
+): string {
+  if (plan.useMonthly) return keyDay.slice(0, 7);
+  if (plan.useWeekly)
+    return toLocalYmd(startOfWeekSunday(parseLocalYmd(keyDay)));
+  return keyDay;
+}
+
+/**
+ * Revenue & expense per day or per week (if range > 45 days), inclusive `from`–`to`.
+ */
+export async function getMoneySeriesForRange(
+  from: string,
+  to: string
+): Promise<DailyMoneyPoint[]> {
+  const supabase = await createClient();
+  const plan = planRangeBuckets(from, to);
+  if (!plan) return [];
+
+  const { data, error } = await supabase
+    .from("transaction")
+    .select("date, type, amount")
+    .gte("date", from)
+    .lte("date", to);
+
+  if (error) {
+    return [];
+  }
+
   const sums: Record<string, { revenue: number; expense: number }> = {};
-  for (const k of bucketKeys) {
+  for (const k of plan.bucketKeys) {
     sums[k] = { revenue: 0, expense: 0 };
   }
 
   for (const row of data ?? []) {
     const keyDay = row.date as string;
     if (keyDay < from || keyDay > to) continue;
-    let bucket: string;
-    if (useMonthly) {
-      bucket = keyDay.slice(0, 7);
-    } else if (useWeekly) {
-      bucket = toLocalYmd(startOfWeekSunday(parseLocalYmd(keyDay)));
-    } else {
-      bucket = keyDay;
-    }
+    const bucket = bucketForDayKey(keyDay, plan);
     if (!sums[bucket]) continue;
     const n = Number(row.amount);
     if (row.type === "revenue") sums[bucket].revenue += n;
     else if (row.type === "expense") sums[bucket].expense += n;
   }
 
-  return bucketKeys.map((k) => ({
-    label: bucketLabel[k] ?? k,
+  return plan.bucketKeys.map((k) => ({
+    label: plan.bucketLabel[k] ?? k,
     revenue: sums[k].revenue,
     expense: sums[k].expense,
+  }));
+}
+
+/**
+ * Sum of project `budget` per bucket by `created_at` (matches funnel “booked” revenue semantics).
+ */
+export async function getProjectBudgetSeriesForRange(
+  from: string,
+  to: string
+): Promise<{ label: string; revenue: number }[]> {
+  const plan = planRangeBuckets(from, to);
+  if (!plan) return [];
+
+  const emptySeries = () =>
+    plan.bucketKeys.map((k) => ({
+      label: plan.bucketLabel[k] ?? k,
+      revenue: 0,
+    }));
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("project")
+    .select("created_at, budget")
+    .gte("created_at", `${from}T00:00:00.000Z`)
+    .lte("created_at", `${to}T23:59:59.999Z`);
+
+  if (error) {
+    return emptySeries();
+  }
+
+  const sums: Record<string, number> = {};
+  for (const k of plan.bucketKeys) {
+    sums[k] = 0;
+  }
+
+  for (const row of data ?? []) {
+    const keyDay = dayKeyFromTimestamptz(row.created_at as string);
+    if (keyDay < from || keyDay > to) continue;
+    const bucket = bucketForDayKey(keyDay, plan);
+    if (sums[bucket] === undefined) continue;
+    sums[bucket] += Number(row.budget ?? 0);
+  }
+
+  return plan.bucketKeys.map((k) => ({
+    label: plan.bucketLabel[k] ?? k,
+    revenue: sums[k],
   }));
 }

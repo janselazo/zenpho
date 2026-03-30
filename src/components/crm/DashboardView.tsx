@@ -11,6 +11,8 @@ import {
   Cell,
   LabelList,
   Legend,
+  Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -480,6 +482,8 @@ interface DashboardViewProps {
   activeProjects: number;
   /** Sum of new-project `budget` in range (matches funnel revenue column; from `fetchDashboardFunnel`). */
   wonRevenue: number;
+  /** Project budget booked per time bucket (same semantics as funnel revenue). */
+  financeBookedSeries: { label: string; revenue: number }[];
   chartData: DailyMoneyPoint[];
   hasErrors: boolean;
   dateFrom: string;
@@ -497,6 +501,7 @@ export default function DashboardView({
   activeClients,
   activeProjects,
   wonRevenue,
+  financeBookedSeries,
   chartData,
   hasErrors,
   dateFrom,
@@ -699,26 +704,19 @@ export default function DashboardView({
     [activeClients, activeProjects]
   );
 
-  const financeChartData = useMemo(
-    () => [
-      {
-        name: "Revenue",
-        v: wonRevenue,
-        display: fmt(wonRevenue),
-      },
-    ],
-    [wonRevenue]
-  );
-
   const volumeAxisMax = Math.max(
     5,
     Math.ceil(Math.max(1, activeClients, activeProjects) * 1.2)
   );
 
-  const financeAxisMax = Math.max(
-    1000,
-    Math.ceil(Math.max(wonRevenue, 0) * 1.2)
-  );
+  const financeAxisMax = useMemo(() => {
+    const peak = Math.max(
+      0,
+      wonRevenue,
+      ...financeBookedSeries.map((p) => p.revenue)
+    );
+    return Math.max(1000, Math.ceil(peak * 1.15));
+  }, [financeBookedSeries, wonRevenue]);
 
   return (
     <div className="space-y-6">
@@ -833,7 +831,7 @@ export default function DashboardView({
         </div>
       </section>
 
-      {/* Business snapshot — horizontal bar charts */}
+      {/* Business snapshot — Finance (line) + Volume (bars) */}
       <div className={`${dashCard} p-5`}>
         <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
@@ -850,25 +848,33 @@ export default function DashboardView({
             </p>
             <div className="mt-4 h-[148px] w-full min-w-0">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  layout="vertical"
-                  data={financeChartData}
-                  margin={{ top: 6, right: 44, left: 0, bottom: 6 }}
-                  barCategoryGap="40%"
+                <LineChart
+                  data={financeBookedSeries}
+                  margin={{ top: 4, right: 8, left: 0, bottom: 2 }}
                 >
                   <CartesianGrid
                     strokeDasharray="4 6"
                     stroke={chartTheme.snapshotGrid}
                     strokeOpacity={0.65}
-                    horizontal
                     vertical={false}
-                    syncWithTicks
                   />
                   <XAxis
-                    type="number"
-                    domain={[0, financeAxisMax]}
+                    dataKey="label"
                     tick={{
-                      fontSize: 11,
+                      fontSize: 10,
+                      fill: chartTheme.snapshotTick,
+                      fontWeight: 500,
+                    }}
+                    axisLine={false}
+                    tickLine={false}
+                    interval="preserveStartEnd"
+                    minTickGap={10}
+                  />
+                  <YAxis
+                    domain={[0, financeAxisMax]}
+                    width={44}
+                    tick={{
+                      fontSize: 10,
                       fill: chartTheme.snapshotTick,
                       fontWeight: 500,
                     }}
@@ -876,20 +882,11 @@ export default function DashboardView({
                     tickLine={false}
                     tickFormatter={formatFinanceXAxisTick}
                   />
-                  <YAxis
-                    type="category"
-                    dataKey="name"
-                    width={112}
-                    tick={{
-                      fontSize: 11,
-                      fill: chartTheme.snapshotTick,
-                      fontWeight: 500,
-                    }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
                   <Tooltip
-                    formatter={(value) => [fmt(Number(value ?? 0)), "Revenue"]}
+                    formatter={(value) => [
+                      fmt(Number(value ?? 0)),
+                      "Booked revenue",
+                    ]}
                     contentStyle={{
                       borderRadius: 12,
                       border: `1px solid ${chartTheme.tooltipBorder}`,
@@ -898,22 +895,17 @@ export default function DashboardView({
                       color: chartTheme.tooltipColor,
                     }}
                   />
-                  <Bar
-                    dataKey="v"
-                    radius={[0, 999, 999, 0]}
-                    maxBarSize={10}
-                    fill={chartTheme.barVolume}
-                  >
-                    <LabelList
-                      dataKey="display"
-                      position="right"
-                      offset={10}
-                      fill={chartTheme.tick}
-                      fontSize={11}
-                      fontWeight={600}
-                    />
-                  </Bar>
-                </BarChart>
+                  <Line
+                    type="monotone"
+                    dataKey="revenue"
+                    name="Booked revenue"
+                    stroke={chartTheme.barVolume}
+                    strokeWidth={2}
+                    dot={{ r: financeBookedSeries.length <= 24 ? 3 : 0 }}
+                    activeDot={{ r: 5 }}
+                    connectNulls
+                  />
+                </LineChart>
               </ResponsiveContainer>
             </div>
           </div>
