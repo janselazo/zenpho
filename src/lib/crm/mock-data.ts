@@ -69,6 +69,10 @@ export interface MockProject {
   clientId: string;
   /** Cached display label from the client row (name / company / email). */
   clientName?: string | null;
+  /** CRM `client.name` when loaded from DB (summary split). */
+  clientContactName?: string | null;
+  /** CRM `client.company` when loaded from DB (summary split). */
+  clientCompany?: string | null;
   /** Display name for the squad (free text); takes precedence over teamId lookup */
   teamName?: string | null;
   /** Root product: Team roster member id (localStorage) — main point of contact */
@@ -263,7 +267,8 @@ export function slugTeamTag(tag: string) {
   return s || "group";
 }
 
-function colorForTeamTagLabel(tag: string) {
+/** Stable HSL for tag / group chips (Team roster, avatars). */
+export function colorForTeamTagLabel(tag: string) {
   let h = 0;
   for (let i = 0; i < tag.length; i += 1) {
     h = tag.charCodeAt(i) + ((h << 5) - h);
@@ -346,6 +351,33 @@ export function projectClientDisplayLabel(p: MockProject): string {
   if (n) return n;
   if (p.clientId?.trim()) return "Client (refresh name)";
   return "—";
+}
+
+/** Client name + company for product summary (structured DB fields, else splits legacy `clientName`). */
+export function projectClientNameParts(p: MockProject): {
+  contact: string | null;
+  company: string | null;
+} {
+  if (
+    p.clientContactName !== undefined ||
+    p.clientCompany !== undefined
+  ) {
+    return {
+      contact: p.clientContactName?.trim() || null,
+      company: p.clientCompany?.trim() || null,
+    };
+  }
+  const n = p.clientName?.trim();
+  if (!n) return { contact: null, company: null };
+  const sep = " · ";
+  if (n.includes(sep)) {
+    const i = n.indexOf(sep);
+    return {
+      contact: n.slice(0, i).trim() || null,
+      company: n.slice(i + sep.length).trim() || null,
+    };
+  }
+  return { contact: n, company: null };
 }
 
 export function getMemberById(id: string) {

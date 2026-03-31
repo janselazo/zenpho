@@ -7,12 +7,9 @@ export type NicheId =
   | "tech_blockchain"
   | "tech_cybersecurity"
   | "tech_edutech"
-  | "ecom_pet_supplies"
-  | "ecom_home_goods"
-  | "ecom_apparel_accessories"
-  | "ecom_hobby_craft"
-  | "ecom_home_fitness"
-  | "ecom_beauty_personal_care"
+  | "ecom_shopify_stores"
+  | "ecom_amazon_stores"
+  | "ecom_shopify_apps"
   | "auto_dealerships_retail"
   | "auto_fleet_commercial"
   | "auto_parts_aftermarket"
@@ -69,9 +66,9 @@ export const INDUSTRIES: readonly Industry[] = [
 export const LEAD_MAGNET_NICHES: readonly NicheDefinition[] = [
   {
     id: "tech_vertical_ai_saas_agents",
-    label: "Vertical AI SaaS & Agents",
+    label: "SaaS & AI Agents",
     searchTerms:
-      "vertical AI SaaS AI agents B2B software PLG enterprise automation lead magnet",
+      "SaaS AI agents B2B software PLG enterprise automation lead magnet",
     industries: ["tech"],
   },
   {
@@ -103,78 +100,57 @@ export const LEAD_MAGNET_NICHES: readonly NicheDefinition[] = [
     industries: ["tech"],
   },
   {
-    id: "ecom_pet_supplies",
-    label: "Pet Supplies",
+    id: "ecom_shopify_stores",
+    label: "Shopify Stores",
     searchTerms:
-      "pet supplies DTC ecommerce pet food accessories subscription lead magnet",
+      "Shopify store DTC merchant conversion CRO email pop-up lead magnet calculator",
     industries: ["ecommerce"],
   },
   {
-    id: "ecom_home_goods",
-    label: "Home & Goods",
+    id: "ecom_amazon_stores",
+    label: "Amazon Stores",
     searchTerms:
-      "home goods decor furniture DTC ecommerce lead magnet calculator",
+      "Amazon seller FBA FBM brand registry PPC listing optimization lead magnet",
     industries: ["ecommerce"],
   },
   {
-    id: "ecom_apparel_accessories",
-    label: "Apparel & Accessories",
+    id: "ecom_shopify_apps",
+    label: "Shopify Apps",
     searchTerms:
-      "apparel fashion accessories DTC ecommerce clothing lead magnet",
-    industries: ["ecommerce"],
-  },
-  {
-    id: "ecom_hobby_craft",
-    label: "Hobby & Craft",
-    searchTerms:
-      "hobby craft maker supplies DTC ecommerce lead magnet",
-    industries: ["ecommerce"],
-  },
-  {
-    id: "ecom_home_fitness",
-    label: "Home Fitness",
-    searchTerms:
-      "home fitness equipment workout DTC ecommerce wellness lead magnet",
-    industries: ["ecommerce"],
-  },
-  {
-    id: "ecom_beauty_personal_care",
-    label: "Beauty & Personal Care",
-    searchTerms:
-      "beauty skincare personal care cosmetics DTC ecommerce lead magnet",
+      "Shopify app developer App Store merchant SaaS B2B lead magnet",
     industries: ["ecommerce"],
   },
   {
     id: "auto_dealerships_retail",
-    label: "Dealerships & retail",
+    label: "Dealerships",
     searchTerms:
       "car dealership new used vehicle retail showroom digital retail lead magnet",
     industries: ["automotive"],
   },
   {
     id: "auto_fleet_commercial",
-    label: "Fleet & commercial",
+    label: "Fleets",
     searchTerms:
       "commercial fleet vehicle management leasing telematics B2B lead magnet",
     industries: ["automotive"],
   },
   {
     id: "auto_parts_aftermarket",
-    label: "Parts & aftermarket",
+    label: "Accesories",
     searchTerms:
       "auto parts aftermarket wholesale distribution B2B lead magnet",
     industries: ["automotive"],
   },
   {
     id: "auto_service_repair",
-    label: "Service & repair",
+    label: "Service",
     searchTerms:
       "auto repair shop service center fixed ops scheduling B2B lead magnet",
     industries: ["automotive"],
   },
   {
     id: "auto_ev_charging",
-    label: "EV & charging",
+    label: "EV",
     searchTerms:
       "electric vehicle EV charging infrastructure dealership fleet B2B lead magnet",
     industries: ["automotive"],

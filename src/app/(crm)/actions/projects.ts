@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { resolveOrCreateClientForLead } from "@/app/(crm)/actions/crm";
 import { createClient } from "@/lib/supabase/server";
 import {
+  clientRowToProjectSlice,
   projectRowToMock,
   type ProjectRow,
   type CrmProjectPersistInput,
@@ -25,6 +26,8 @@ import {
   type ChildDeliveryStatusUiConfig,
   type ChildDeliveryStatusUiEntry,
 } from "@/lib/crm/child-delivery-status-ui";
+import { projectTypeSet } from "@/lib/crm/field-options";
+import { mergedFieldOptionsFromSupabase } from "@/lib/crm/merged-field-options-from-supabase";
 import {
   CUSTOM_PROJECT_STATUSES_KEY,
   parseCustomProjectStatuses,
@@ -41,6 +44,29 @@ const PLAN_SET = new Set<string>([
   "testing",
   "release",
 ]);
+
+function resolveProductTypeForCreate(
+  raw: string | null | undefined,
+  allowed: Set<string>
+): { projectType: string | null } | { error: string } {
+  const t = (raw ?? "").trim();
+  if (!t) return { projectType: null };
+  if (!allowed.has(t)) return { error: "Invalid project type." };
+  return { projectType: t };
+}
+
+function resolveProductTypeForUpdate(
+  raw: string | null | undefined,
+  allowed: Set<string>,
+  existing: string | null
+): { projectType: string | null } | { error: string } {
+  const t = (raw ?? "").trim();
+  if (!t) return { projectType: null };
+  if (allowed.has(t)) return { projectType: t };
+  const ex = existing?.trim() || "";
+  if (ex && t === ex) return { projectType: t };
+  return { error: "Invalid project type." };
+}
 
 function humanizeProjectDbError(message: string): string {
   const m = message.toLowerCase();
@@ -107,12 +133,9 @@ export async function listCrmProjectsForAgency(): Promise<{
     .select("id, name, email, company")
     .in("id", clientIds);
 
-  const labelFor = (cid: string) => {
+  const sliceFor = (cid: string) => {
     const c = clients?.find((x) => x.id === cid);
-    if (!c) return "Client";
-    const parts = [c.name?.trim(), c.company?.trim()].filter(Boolean) as string[];
-    if (parts.length) return parts.join(" · ");
-    return c.email?.trim() || "Client";
+    return clientRowToProjectSlice(c ?? undefined);
   };
 
   const productIds = (rows as ProjectRow[]).map((r) => r.id);
@@ -131,7 +154,7 @@ export async function listCrmProjectsForAgency(): Promise<{
   }
 
   const projects = (rows as ProjectRow[]).map((row) =>
-    projectRowToMock(row, labelFor(row.client_id), {
+    projectRowToMock(row, sliceFor(row.client_id), {
       primaryPhaseId: primaryPhaseByProduct.get(row.id) ?? null,
     })
   );
@@ -153,6 +176,13 @@ export async function createCrmProject(
   if (!title) return { error: "Title is required" };
   if (!PLAN_SET.has(input.plan)) return { error: "Invalid plan stage" };
 
+  const fieldOpts = await mergedFieldOptionsFromSupabase(supabase);
+  const ptRes = resolveProductTypeForCreate(
+    input.projectType,
+    projectTypeSet(fieldOpts)
+  );
+  if ("error" in ptRes) return { error: ptRes.error };
+
   const target_date = parseTargetDate(input.expectedEndDate);
   const metadata = {
     teamId: input.teamId.trim() || "team-general",
@@ -173,7 +203,7 @@ export async function createCrmProject(
           ? input.budget
           : null,
       plan_stage: input.plan,
-      project_type: input.projectType?.trim() || null,
+      project_type: ptRes.projectType,
       metadata,
       parent_project_id: null,
     })
@@ -195,7 +225,7 @@ export async function createCrmProject(
       website: null,
       budget: null,
       plan_stage: "backlog",
-      project_type: input.projectType?.trim() || null,
+      project_type: ptRes.projectType,
       metadata,
       parent_project_id: productId,
     })
@@ -263,7 +293,7 @@ export async function updateCrmProject(
 
   const { data: existing, error: exErr } = await supabase
     .from("project")
-    .select("parent_project_id, metadata")
+    .select("parent_project_id, metadata, project_type")
     .eq("id", id)
     .maybeSingle();
   if (exErr) return { error: humanizeProjectDbError(exErr.message) };
@@ -280,6 +310,15 @@ export async function updateCrmProject(
   const title = input.title.trim();
   if (!title) return { error: "Title is required" };
   if (!PLAN_SET.has(input.plan)) return { error: "Invalid plan stage" };
+
+  const fieldOpts = await mergedFieldOptionsFromSupabase(supabase);
+  const existingPt = (existing.project_type as string | null)?.trim() || null;
+  const ptRes = resolveProductTypeForUpdate(
+    input.projectType,
+    projectTypeSet(fieldOpts),
+    existingPt
+  );
+  if ("error" in ptRes) return { error: ptRes.error };
 
   const target_date = parseTargetDate(input.expectedEndDate);
   const prevMeta =
@@ -309,7 +348,7 @@ export async function updateCrmProject(
           ? input.budget
           : null,
       plan_stage: input.plan,
-      project_type: input.projectType?.trim() || null,
+      project_type: ptRes.projectType,
       metadata,
     })
     .eq("id", id);

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import LeadEditForm from "@/components/crm/LeadEditForm";
+import { fetchMergedCrmFieldOptions } from "@/lib/crm/fetch-crm-field-options";
 import { fetchCrmPipelineSettings } from "@/lib/crm/fetch-pipeline-settings";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
@@ -43,7 +44,10 @@ export default async function LeadDetailPage({ params }: Props) {
     clientProjects = rows ?? [];
   }
 
-  const pipeline = await fetchCrmPipelineSettings();
+  const [pipeline, fieldOptions] = await Promise.all([
+    fetchCrmPipelineSettings(),
+    fetchMergedCrmFieldOptions(),
+  ]);
 
   return (
     <div className="p-8">
@@ -72,6 +76,7 @@ export default async function LeadDetailPage({ params }: Props) {
             lead={lead}
             clientProjects={clientProjects}
             convertedClientId={cid}
+            fieldOptions={fieldOptions}
             leadPipelineColumns={pipeline.lead}
           />
         </Suspense>

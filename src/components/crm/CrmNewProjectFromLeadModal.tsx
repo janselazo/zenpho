@@ -15,12 +15,15 @@ import {
   CRM_SUPABASE_PROJECTS_CHANGED_EVENT,
 } from "@/lib/crm/projects-storage";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import type { MergedCrmFieldOptions } from "@/lib/crm/field-options";
 
 export default function CrmNewProjectFromLeadModal({
   leadId,
+  fieldOptions,
   onClose,
 }: {
   leadId: string;
+  fieldOptions: MergedCrmFieldOptions;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -32,7 +35,10 @@ export default function CrmNewProjectFromLeadModal({
     let cancelled = false;
     setLoading(true);
     setError(null);
-    void fetchLeadPrefillForNewProject(leadId).then((p) => {
+    void fetchLeadPrefillForNewProject(
+      leadId,
+      fieldOptions.leadProjectTypes
+    ).then((p) => {
       if (cancelled) return;
       if (!p) {
         setError("Could not load this lead.");
@@ -45,7 +51,7 @@ export default function CrmNewProjectFromLeadModal({
     return () => {
       cancelled = true;
     };
-  }, [leadId]);
+  }, [leadId, fieldOptions.leadProjectTypes]);
 
   async function handleAdd(project: MockProject) {
     if (isSupabaseConfigured()) {
@@ -134,6 +140,8 @@ export default function CrmNewProjectFromLeadModal({
       dealPrefill={prefill}
       lockedClientId={prefill.clientId}
       fromLeadId={leadId}
+      leadProjectTypeOptions={fieldOptions.leadProjectTypes}
+      planLabels={fieldOptions.productPlanLabels}
       onClose={onClose}
       onAdd={handleAdd}
     />

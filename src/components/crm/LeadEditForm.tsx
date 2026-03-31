@@ -4,10 +4,14 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { updateLeadRow } from "@/app/(crm)/actions/crm";
-import {
-  LEAD_CONTACT_CATEGORY_OPTIONS,
-  LEAD_PROJECT_TYPE_OPTIONS,
-} from "@/lib/crm/mock-data";
+import type { MergedCrmFieldOptions } from "@/lib/crm/field-options";
+
+function formatSourceOptionLabel(value: string) {
+  return value
+    .split(/[\s_-]+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+}
 import CrmNewProjectFromLeadModal from "@/components/crm/CrmNewProjectFromLeadModal";
 import TabBar from "@/components/crm/TabBar";
 import {
@@ -46,12 +50,14 @@ export default function LeadEditForm({
   lead,
   clientProjects,
   convertedClientId,
+  fieldOptions,
   leadPipelineColumns = DEFAULT_LEAD_PIPELINE_COLUMNS,
 }: {
   lead: Lead;
   /** Projects for `converted_client_id`, newest first */
   clientProjects: ClientProjectRow[];
   convertedClientId: string | null;
+  fieldOptions: MergedCrmFieldOptions;
   leadPipelineColumns?: PipelineColumnDef[];
 }) {
   const router = useRouter();
@@ -71,6 +77,18 @@ export default function LeadEditForm({
     }
     return list;
   })();
+
+  const currentSource = (lead.source ?? "").trim();
+  const sourceOrphan =
+    currentSource && !fieldOptions.leadSources.includes(currentSource);
+  const currentProjectType = (lead.project_type ?? "").trim();
+  const projectTypeOrphan =
+    currentProjectType &&
+    !fieldOptions.leadProjectTypes.includes(currentProjectType);
+  const currentContactCategory = (lead.contact_category ?? "").trim();
+  const contactCategoryOrphan =
+    currentContactCategory &&
+    !fieldOptions.leadContactCategories.includes(currentContactCategory);
 
   useEffect(() => {
     const tab = searchParams.get("tab");
@@ -171,12 +189,21 @@ export default function LeadEditForm({
                 <label className="mb-1 block text-xs font-medium text-text-secondary">
                   Source
                 </label>
-                <input
+                <select
                   name="source"
-                  type="text"
-                  defaultValue={lead.source ?? ""}
+                  defaultValue={currentSource}
                   className={inputClass}
-                />
+                >
+                  <option value="">Not set</option>
+                  {sourceOrphan ? (
+                    <option value={currentSource}>{currentSource}</option>
+                  ) : null}
+                  {fieldOptions.leadSources.map((o) => (
+                    <option key={o} value={o}>
+                      {formatSourceOptionLabel(o)}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-text-secondary">
@@ -184,11 +211,14 @@ export default function LeadEditForm({
                 </label>
                 <select
                   name="project_type"
-                  defaultValue={lead.project_type ?? ""}
+                  defaultValue={currentProjectType}
                   className={inputClass}
                 >
                   <option value="">Not set</option>
-                  {LEAD_PROJECT_TYPE_OPTIONS.map((opt) => (
+                  {projectTypeOrphan ? (
+                    <option value={currentProjectType}>{currentProjectType}</option>
+                  ) : null}
+                  {fieldOptions.leadProjectTypes.map((opt) => (
                     <option key={opt} value={opt}>
                       {opt}
                     </option>
@@ -221,11 +251,16 @@ export default function LeadEditForm({
                 </label>
                 <select
                   name="contact_category"
-                  defaultValue={lead.contact_category ?? ""}
+                  defaultValue={currentContactCategory}
                   className={inputClass}
                 >
                   <option value="">Not set</option>
-                  {LEAD_CONTACT_CATEGORY_OPTIONS.map((opt) => (
+                  {contactCategoryOrphan ? (
+                    <option value={currentContactCategory}>
+                      {currentContactCategory}
+                    </option>
+                  ) : null}
+                  {fieldOptions.leadContactCategories.map((opt) => (
                     <option key={opt} value={opt}>
                       {opt}
                     </option>
@@ -306,6 +341,7 @@ export default function LeadEditForm({
       {projectModalOpen ? (
         <CrmNewProjectFromLeadModal
           leadId={lead.id}
+          fieldOptions={fieldOptions}
           onClose={() => {
             setProjectModalOpen(false);
             router.refresh();

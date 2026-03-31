@@ -15,20 +15,17 @@ import {
   Pencil,
   Search,
   Settings2,
-  StickyNote,
   Table2,
   Tag,
   Trash2,
   X,
 } from "lucide-react";
-import {
-  LEAD_CONTACT_CATEGORY_OPTIONS,
-  LEAD_PROJECT_TYPE_OPTIONS,
-} from "@/lib/crm/mock-data";
+import type { MergedCrmFieldOptions } from "@/lib/crm/field-options";
 import ClientsView from "@/components/crm/ClientsView";
 import CrmNewProjectFromLeadModal from "@/components/crm/CrmNewProjectFromLeadModal";
 import CrmQuickTaskModal from "@/components/crm/CrmQuickTaskModal";
 import KanbanBoard, { type KanbanColumn } from "@/components/crm/KanbanBoard";
+import LeadNotesGlyphIcon from "@/components/crm/LeadNotesGlyphIcon";
 import LeadsPipelineSummary from "@/components/crm/LeadsPipelineSummary";
 import PipelineSettingsModal from "@/components/crm/PipelineSettingsModal";
 import {
@@ -108,16 +105,6 @@ function getContactCategoryTextClass(category: string) {
   );
 }
 
-/** Preset source values for inline edit (custom values still supported). */
-const LEAD_SOURCE_OPTIONS = [
-  "website",
-  "referral",
-  "linkedin",
-  "cold outreach",
-  "conference",
-  "facebook",
-] as const;
-
 const inlineInputClass =
   "w-full min-w-0 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-xs text-text-primary outline-none placeholder:text-zinc-400 focus:border-blue-400 focus:ring-1 focus:ring-blue-400/20 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500";
 
@@ -146,17 +133,24 @@ function joinName(first: string, last: string): string {
   return [first.trim(), last.trim()].filter(Boolean).join(" ");
 }
 
-function normalizeSourceForSelect(source: string): string {
+function normalizeSourceForSelect(
+  source: string,
+  leadSources: readonly string[]
+): string {
   const raw = source.trim();
   if (!raw) return "";
   const low = raw.toLowerCase();
-  for (const o of LEAD_SOURCE_OPTIONS) {
-    if (o === low) return o;
+  for (const o of leadSources) {
+    if (o.toLowerCase() === low) return o;
   }
   return raw;
 }
 
-function leadToDraft(lead: Lead, pipeline: PipelineColumnDef[]): LeadDraft {
+function leadToDraft(
+  lead: Lead,
+  pipeline: PipelineColumnDef[],
+  fieldOptions: MergedCrmFieldOptions
+): LeadDraft {
   const { first, last } = splitName(lead.name);
   return {
     nameFirst: first,
@@ -164,7 +158,7 @@ function leadToDraft(lead: Lead, pipeline: PipelineColumnDef[]): LeadDraft {
     email: lead.email ?? "",
     phone: lead.phone ?? "",
     company: lead.company ?? "",
-    source: normalizeSourceForSelect(lead.source ?? ""),
+    source: normalizeSourceForSelect(lead.source ?? "", fieldOptions.leadSources),
     stage: normalizeLeadStageForPipeline(lead.stage, pipeline),
     project_type: lead.project_type ?? "",
     contact_category: lead.contact_category ?? "",
@@ -172,9 +166,10 @@ function leadToDraft(lead: Lead, pipeline: PipelineColumnDef[]): LeadDraft {
   };
 }
 
-function sourceMatchesPreset(source: string) {
-  const t = source.trim().toLowerCase();
-  return LEAD_SOURCE_OPTIONS.some((o) => o === t);
+function sourceNotInConfiguredList(source: string, leadSources: readonly string[]) {
+  const t = source.trim();
+  if (!t) return false;
+  return !leadSources.includes(t);
 }
 
 function formatSourceOptionLabel(value: string) {
@@ -292,6 +287,7 @@ function leadsSectionSubtitle(tab: LeadsSectionTab): string {
 
 export default function LeadsView({
   leads,
+  fieldOptions,
   leadPipelineColumns,
   clientsForTab = [],
   clientsTabLoadError = null,
@@ -299,6 +295,7 @@ export default function LeadsView({
   highlightClientId,
 }: {
   leads: Lead[];
+  fieldOptions: MergedCrmFieldOptions;
   leadPipelineColumns: PipelineColumnDef[];
   clientsForTab?: ClientTableRow[];
   clientsTabLoadError?: { message: string } | null;
@@ -415,7 +412,7 @@ export default function LeadsView({
 
   function startEdit(lead: Lead) {
     setEditingId(lead.id);
-    setDraft(leadToDraft(lead, leadPipeline));
+    setDraft(leadToDraft(lead, leadPipeline, fieldOptions));
   }
 
   function cancelEdit() {
@@ -549,6 +546,7 @@ export default function LeadsView({
         {view === "leads" ? (
           <LeadsTable
             leads={filtered}
+            fieldOptions={fieldOptions}
             leadPipeline={leadPipeline}
             router={router}
             editingId={editingId}
@@ -609,6 +607,7 @@ export default function LeadsView({
       {newProjectLeadId ? (
         <CrmNewProjectFromLeadModal
           leadId={newProjectLeadId}
+          fieldOptions={fieldOptions}
           onClose={() => setNewProjectLeadId(null)}
         />
       ) : null}
@@ -620,7 +619,12 @@ export default function LeadsView({
           onClose={() => setQuickTaskLead(null)}
         />
       ) : null}
-      {modalOpen && <NewLeadModal onClose={() => setModalOpen(false)} />}
+      {modalOpen && (
+        <NewLeadModal
+          fieldOptions={fieldOptions}
+          onClose={() => setModalOpen(false)}
+        />
+      )}
       {pipelineEditMenuLead ? (
         <PipelineLeadEditOptionsModal
           lead={pipelineEditMenuLead}
@@ -653,6 +657,7 @@ type LeadsRouter = ReturnType<typeof useRouter>;
 
 type LeadsTableProps = {
   leads: Lead[];
+  fieldOptions: MergedCrmFieldOptions;
   leadPipeline: PipelineColumnDef[];
   router: LeadsRouter;
   editingId: string | null;
@@ -799,7 +804,7 @@ function LeadsPipelineBoard({
                 className="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800"
                 aria-label={`View notes for ${deleteLabel}`}
               >
-                <StickyNote className="h-4 w-4 shrink-0" aria-hidden />
+                <LeadNotesGlyphIcon className="h-4 w-4 shrink-0" />
               </button>
               <button
                 type="button"
@@ -851,6 +856,7 @@ function LeadsPipelineBoard({
 
 function LeadsTable({
   leads,
+  fieldOptions,
   leadPipeline,
   router,
   editingId,
@@ -1058,7 +1064,15 @@ function LeadsTable({
                         className={`${inlineInputClass} appearance-none pr-7`}
                       >
                         <option value="">Select service…</option>
-                        {LEAD_PROJECT_TYPE_OPTIONS.map((opt) => (
+                        {draft.project_type &&
+                          !fieldOptions.leadProjectTypes.includes(
+                            draft.project_type
+                          ) && (
+                          <option value={draft.project_type}>
+                            {draft.project_type}
+                          </option>
+                        )}
+                        {fieldOptions.leadProjectTypes.map((opt) => (
                           <option key={opt} value={opt}>
                             {opt}
                           </option>
@@ -1092,7 +1106,15 @@ function LeadsTable({
                         className={`${inlineInputClass} appearance-none pr-7`}
                       >
                         <option value="">Not set</option>
-                        {LEAD_CONTACT_CATEGORY_OPTIONS.map((opt) => (
+                        {draft.contact_category &&
+                          !fieldOptions.leadContactCategories.includes(
+                            draft.contact_category
+                          ) && (
+                          <option value={draft.contact_category}>
+                            {draft.contact_category}
+                          </option>
+                        )}
+                        {fieldOptions.leadContactCategories.map((opt) => (
                           <option key={opt} value={opt}>
                             {opt}
                           </option>
@@ -1159,10 +1181,14 @@ function LeadsTable({
                       textClassName="text-sky-800 dark:text-sky-300"
                     >
                       <option value="">—</option>
-                      {draft.source && !sourceMatchesPreset(draft.source) && (
+                      {draft.source &&
+                        sourceNotInConfiguredList(
+                          draft.source,
+                          fieldOptions.leadSources
+                        ) && (
                         <option value={draft.source}>{draft.source}</option>
                       )}
-                      {LEAD_SOURCE_OPTIONS.map((o) => (
+                      {fieldOptions.leadSources.map((o) => (
                         <option key={o} value={o}>
                           {formatSourceOptionLabel(o)}
                         </option>
@@ -1231,7 +1257,7 @@ function LeadsTable({
                           className="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800"
                           aria-label={`View notes for ${deleteLabel}`}
                         >
-                          <StickyNote className="h-4 w-4 shrink-0" aria-hidden />
+                          <LeadNotesGlyphIcon className="h-4 w-4 shrink-0" />
                         </button>
                         <button
                           type="button"
@@ -1486,7 +1512,13 @@ function LeadNotesModal({
   );
 }
 
-function NewLeadModal({ onClose }: { onClose: () => void }) {
+function NewLeadModal({
+  fieldOptions,
+  onClose,
+}: {
+  fieldOptions: MergedCrmFieldOptions;
+  onClose: () => void;
+}) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1576,7 +1608,7 @@ function NewLeadModal({ onClose }: { onClose: () => void }) {
               <option value="" disabled>
                 Select project type…
               </option>
-              {LEAD_PROJECT_TYPE_OPTIONS.map((opt) => (
+              {fieldOptions.leadProjectTypes.map((opt) => (
                 <option key={opt} value={opt}>
                   {opt}
                 </option>
@@ -1589,7 +1621,7 @@ function NewLeadModal({ onClose }: { onClose: () => void }) {
             </label>
             <select name="contact_category" defaultValue="" className={inputClass}>
               <option value="">Not set</option>
-              {LEAD_CONTACT_CATEGORY_OPTIONS.map((opt) => (
+              {fieldOptions.leadContactCategories.map((opt) => (
                 <option key={opt} value={opt}>
                   {opt}
                 </option>
@@ -1600,12 +1632,14 @@ function NewLeadModal({ onClose }: { onClose: () => void }) {
             <label className="mb-1 block text-sm font-medium text-text-primary">
               Source
             </label>
-            <input
-              name="source"
-              type="text"
-              placeholder="e.g. website, referral"
-              className={inputClass}
-            />
+            <select name="source" defaultValue="" className={inputClass}>
+              <option value="">Not set</option>
+              {fieldOptions.leadSources.map((o) => (
+                <option key={o} value={o}>
+                  {formatSourceOptionLabel(o)}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-text-primary">

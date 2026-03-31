@@ -54,6 +54,8 @@ export default function NewProjectModal({
   /** When set, submit uses create-from-lead path (client may be auto-created). */
   fromLeadId = null,
   editProject = null,
+  leadProjectTypeOptions = LEAD_PROJECT_TYPE_OPTIONS,
+  planLabels = PLAN_LABELS,
   onClose,
   onAdd,
   onUpdate,
@@ -65,6 +67,8 @@ export default function NewProjectModal({
   fromLeadId?: string | null;
   /** When set, modal edits this row (calls `onUpdate` instead of `onAdd`). */
   editProject?: MockProject | null;
+  leadProjectTypeOptions?: readonly string[];
+  planLabels?: Record<PlanStage, string>;
   onClose: () => void;
   onAdd: (p: MockProject) => void | Promise<void>;
   onUpdate?: (p: MockProject) => void | Promise<void>;
@@ -73,9 +77,8 @@ export default function NewProjectModal({
   const [title, setTitle] = useState("");
   const [plan, setPlan] = useState<PlanStage>("backlog");
   const [teamMemberId, setTeamMemberId] = useState("");
-  const [projectType, setProjectType] = useState<string>(
-    LEAD_PROJECT_TYPE_OPTIONS[0]
-  );
+  const defaultProjectType = leadProjectTypeOptions[0] ?? "Other";
+  const [projectType, setProjectType] = useState<string>(defaultProjectType);
   const [endDate, setEndDate] = useState("");
   const [budget, setBudget] = useState("");
   const [website, setWebsite] = useState("");
@@ -99,9 +102,7 @@ export default function NewProjectModal({
       setPlan(editProject.plan);
       const pt = editProject.projectType?.trim() ?? "";
       setProjectType(
-        pt && (LEAD_PROJECT_TYPE_OPTIONS as readonly string[]).includes(pt)
-          ? pt
-          : LEAD_PROJECT_TYPE_OPTIONS[0]
+        pt && leadProjectTypeOptions.includes(pt) ? pt : defaultProjectType
       );
       setEndDate(endDateInputValue(editProject));
       setBudget(
@@ -119,9 +120,10 @@ export default function NewProjectModal({
       setTitle(dealPrefill.title);
       setBudget(dealPrefill.budget);
       setWebsite(dealPrefill.website);
-      if (dealPrefill.projectType) {
-        setProjectType(dealPrefill.projectType);
-      }
+      const ptp = dealPrefill.projectType?.trim() ?? "";
+      setProjectType(
+        ptp && leadProjectTypeOptions.includes(ptp) ? ptp : defaultProjectType
+      );
       setEndDate("");
       setClientId("");
       return;
@@ -131,7 +133,7 @@ export default function NewProjectModal({
       setTitle((lockedClientTitleHint ?? "").trim());
       setBudget("");
       setWebsite("");
-      setProjectType(LEAD_PROJECT_TYPE_OPTIONS[0]);
+      setProjectType(defaultProjectType);
       setEndDate("");
       setClientId("");
       return;
@@ -140,10 +142,17 @@ export default function NewProjectModal({
     setTitle("");
     setBudget("");
     setWebsite("");
-    setProjectType(LEAD_PROJECT_TYPE_OPTIONS[0]);
+    setProjectType(defaultProjectType);
     setEndDate("");
     setClientId("");
-  }, [editProject, dealPrefill, lockClient, lockedClientTitleHint]);
+  }, [
+    editProject,
+    dealPrefill,
+    lockClient,
+    lockedClientTitleHint,
+    defaultProjectType,
+    leadProjectTypeOptions,
+  ]);
 
   useEffect(() => {
     if (editProject?.teamName?.trim() && teamMembers.length > 0) {
@@ -430,7 +439,7 @@ export default function NewProjectModal({
                   >
                     {planOrder.map((p) => (
                       <option key={p} value={p}>
-                        {PLAN_LABELS[p]}
+                        {planLabels[p]}
                       </option>
                     ))}
                   </select>
@@ -485,7 +494,7 @@ export default function NewProjectModal({
                   onChange={(e) => setProjectType(e.target.value)}
                   className={selectClass}
                 >
-                  {LEAD_PROJECT_TYPE_OPTIONS.map((opt) => (
+                  {leadProjectTypeOptions.map((opt) => (
                     <option key={opt} value={opt}>
                       {opt}
                     </option>

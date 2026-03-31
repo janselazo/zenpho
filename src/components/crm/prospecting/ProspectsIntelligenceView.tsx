@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   buildMarketIntelReport,
   type MarketIntelReport,
   type IntelSignals,
 } from "@/lib/crm/prospect-intel-report";
 import type { PlacesSearchPlace } from "@/lib/crm/places-types";
-import { LEAD_PROJECT_TYPE_OPTIONS } from "@/lib/crm/mock-data";
+import type { MergedCrmFieldOptions } from "@/lib/crm/field-options";
 import {
   researchProspectFromUrl,
   saveProspectIntelReportAction,
@@ -95,8 +95,14 @@ function formatReportAsNotes(report: MarketIntelReport, extra?: string) {
   return parts.join("\n");
 }
 
-export default function ProspectsIntelligenceView() {
+export default function ProspectsIntelligenceView({
+  fieldOptions,
+}: {
+  fieldOptions: MergedCrmFieldOptions;
+}) {
   const router = useRouter();
+  const defaultProjectType =
+    fieldOptions.leadProjectTypes[0] ?? "Other";
   const [textQuery, setTextQuery] = useState("");
   const [places, setPlaces] = useState<PlacesSearchPlace[]>([]);
   const [placesWarning, setPlacesWarning] = useState<string | null>(null);
@@ -117,7 +123,13 @@ export default function ProspectsIntelligenceView() {
     report: MarketIntelReport;
   } | null>(null);
 
-  const [projectType, setProjectType] = useState<string>(LEAD_PROJECT_TYPE_OPTIONS[0]);
+  const [projectType, setProjectType] = useState<string>(defaultProjectType);
+
+  useEffect(() => {
+    setProjectType((cur) =>
+      fieldOptions.leadProjectTypes.includes(cur) ? cur : defaultProjectType
+    );
+  }, [fieldOptions.leadProjectTypes, defaultProjectType]);
   const [leadName, setLeadName] = useState("");
   const [leadCompany, setLeadCompany] = useState("");
   const [leadEmail, setLeadEmail] = useState("");
@@ -475,7 +487,7 @@ export default function ProspectsIntelligenceView() {
                   onChange={(e) => setProjectType(e.target.value)}
                   className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
                 >
-                  {LEAD_PROJECT_TYPE_OPTIONS.map((opt) => (
+                  {fieldOptions.leadProjectTypes.map((opt) => (
                     <option key={opt} value={opt}>
                       {opt}
                     </option>

@@ -69,7 +69,7 @@ export default function ContactPage() {
                   Response time
                 </h3>
                 <p className="text-sm text-text-secondary">
-                  I typically respond within 24 hours on business days.
+                  We typically respond within 24 hours on business days.
                 </p>
               </div>
             </div>

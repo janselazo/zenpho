@@ -78,20 +78,25 @@ export default function ProductOwnerSummaryField({
 
   return (
     <div ref={containerRef} className="relative flex items-center gap-2">
-      <span className="font-medium text-text-primary dark:text-zinc-100">
-        {resolvedLabel ?? "Not assigned"}
-      </span>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         disabled={pending}
-        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border text-text-secondary transition-colors hover:border-accent hover:text-accent disabled:opacity-50 dark:border-zinc-600 dark:hover:border-accent"
-        aria-label={
-          resolvedLabel ? "Change point of contact" : "Assign point of contact"
-        }
         aria-expanded={open}
+        aria-haspopup="listbox"
+        aria-label={
+          resolvedLabel
+            ? `Owner: ${resolvedLabel}. Click to change`
+            : "Assign project owner"
+        }
+        className="group inline-flex max-w-full items-center gap-2 rounded-md py-0.5 text-left transition-colors hover:bg-surface/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 disabled:opacity-50 dark:hover:bg-zinc-800/60 dark:focus-visible:ring-offset-zinc-900"
       >
-        <UserCircle2 className="h-4 w-4" strokeWidth={1.75} aria-hidden />
+        <span className="min-w-0 truncate font-medium text-text-primary underline-offset-2 group-hover:underline dark:text-zinc-100">
+          {resolvedLabel ?? "Not assigned"}
+        </span>
+        <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border text-text-secondary transition-colors group-hover:border-accent group-hover:text-accent dark:border-zinc-600 dark:group-hover:border-accent">
+          <UserCircle2 className="h-4 w-4" strokeWidth={1.75} aria-hidden />
+        </span>
       </button>
       {open ? (
         <div

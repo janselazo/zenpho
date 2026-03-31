@@ -1,10 +1,15 @@
 import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { projectRowToMock, type ProjectRow } from "@/lib/crm/map-project-row";
+import {
+  clientRowToProjectSlice,
+  projectRowToMock,
+  type ProjectRow,
+} from "@/lib/crm/map-project-row";
 import { parseChildDeliveryStatusUi } from "@/lib/crm/child-delivery-status-ui";
 import { parseProductResources } from "@/lib/crm/product-project-metadata";
 import ProductDetailShell from "@/components/crm/product/ProductDetailShell";
+import { fetchMergedCrmFieldOptions } from "@/lib/crm/fetch-crm-field-options";
 
 export default async function ProductOverviewPage({
   params,
@@ -39,17 +44,10 @@ export default async function ProductOverviewPage({
     .eq("id", row.client_id)
     .maybeSingle();
 
-  function clientLabel(c: {
-    name?: string | null;
-    company?: string | null;
-    email?: string | null;
-  }) {
-    const parts = [c.name?.trim(), c.company?.trim()].filter(Boolean) as string[];
-    if (parts.length) return parts.join(" · ");
-    return c.email?.trim() || "Client";
-  }
-
-  const project = projectRowToMock(row as ProjectRow, clientLabel(client ?? {}));
+  const project = projectRowToMock(
+    row as ProjectRow,
+    clientRowToProjectSlice(client ?? undefined)
+  );
 
   const { data: children } = await supabase
     .from("project")
@@ -59,6 +57,7 @@ export default async function ProductOverviewPage({
 
   const initialProductResources = parseProductResources(row.metadata);
   const childDeliveryStatusUi = parseChildDeliveryStatusUi(row.metadata);
+  const fieldOptions = await fetchMergedCrmFieldOptions();
 
   return (
     <Suspense
@@ -71,6 +70,7 @@ export default async function ProductOverviewPage({
         initialProductResources={initialProductResources}
         childDeliveryStatusUi={childDeliveryStatusUi}
         productMetadata={row.metadata}
+        planLabels={fieldOptions.productPlanLabels}
       />
     </Suspense>
   );

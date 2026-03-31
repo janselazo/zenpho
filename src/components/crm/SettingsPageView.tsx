@@ -4,7 +4,10 @@ import { Suspense, useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { User, Plug, Upload, Trash2, KeyRound, Zap } from "lucide-react";
+import { User, Plug, Upload, Trash2, KeyRound, Zap, ListTree } from "lucide-react";
+import type { MergedCrmFieldOptions } from "@/lib/crm/field-options";
+import type { CrmPipelineSettings } from "@/lib/crm/fetch-pipeline-settings";
+import SettingsFieldsTab from "@/components/crm/SettingsFieldsTab";
 import {
   updateProfile,
   updatePassword,
@@ -23,10 +26,12 @@ export type SettingsInitial = {
   profileError: string | null;
 };
 
-const tabs = [
-  { id: "profile", label: "Profile", icon: User },
-  { id: "integrations", label: "Integrations", icon: Plug },
-] as const;
+export type SettingsCrmFieldsPack = {
+  fieldOptions: MergedCrmFieldOptions;
+  pipeline: CrmPipelineSettings;
+  leadStageCounts: Record<string, number>;
+  dealStageCounts: Record<string, number>;
+};
 
 const inputClass =
   "w-full rounded-xl border border-border bg-white px-3.5 py-2.5 text-sm text-text-primary shadow-sm outline-none transition-[box-shadow,border-color] placeholder:text-text-secondary/45 focus:border-accent focus:ring-2 focus:ring-accent/15";
@@ -57,17 +62,33 @@ function SettingsPageSkeleton() {
   );
 }
 
-function SettingsPageViewInner({ initial }: { initial: SettingsInitial }) {
+function SettingsPageViewInner({
+  initial,
+  crmFields,
+}: {
+  initial: SettingsInitial;
+  crmFields: SettingsCrmFieldsPack | null;
+}) {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<string>("profile");
 
+  const tabs = [
+    { id: "profile" as const, label: "Profile", icon: User },
+    ...(crmFields
+      ? [{ id: "fields" as const, label: "Fields", icon: ListTree }]
+      : []),
+    { id: "integrations" as const, label: "Integrations", icon: Plug },
+  ];
+
   useEffect(() => {
     const t = searchParams.get("tab");
-    setActiveTab(t === "integrations" ? "integrations" : "profile");
-  }, [searchParams]);
+    if (t === "integrations") setActiveTab("integrations");
+    else if (t === "fields" && crmFields) setActiveTab("fields");
+    else setActiveTab("profile");
+  }, [searchParams, crmFields]);
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className={crmFields ? "mx-auto max-w-4xl" : "mx-auto max-w-3xl"}>
       <h1 className="heading-display text-2xl font-bold text-text-primary dark:text-zinc-100">
         Settings
       </h1>
@@ -100,16 +121,30 @@ function SettingsPageViewInner({ initial }: { initial: SettingsInitial }) {
 
       <div className="mt-8">
         {activeTab === "profile" && <ProfileTab initial={initial} />}
+        {activeTab === "fields" && crmFields ? (
+          <SettingsFieldsTab
+            initialFieldOptions={crmFields.fieldOptions}
+            pipeline={crmFields.pipeline}
+            leadStageCounts={crmFields.leadStageCounts}
+            dealStageCounts={crmFields.dealStageCounts}
+          />
+        ) : null}
         {activeTab === "integrations" && <IntegrationsTab />}
       </div>
     </div>
   );
 }
 
-export default function SettingsPageView({ initial }: { initial: SettingsInitial }) {
+export default function SettingsPageView({
+  initial,
+  crmFields = null,
+}: {
+  initial: SettingsInitial;
+  crmFields?: SettingsCrmFieldsPack | null;
+}) {
   return (
     <Suspense fallback={<SettingsPageSkeleton />}>
-      <SettingsPageViewInner initial={initial} />
+      <SettingsPageViewInner initial={initial} crmFields={crmFields} />
     </Suspense>
   );
 }

@@ -1,5 +1,6 @@
 import LeadsView from "@/components/crm/LeadsView";
 import { fetchClientsForClientsView } from "@/lib/crm/fetch-clients-for-view";
+import { fetchMergedCrmFieldOptions } from "@/lib/crm/fetch-crm-field-options";
 import { fetchCrmPipelineSettings } from "@/lib/crm/fetch-pipeline-settings";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
@@ -53,7 +54,7 @@ export default async function LeadsPage({
   }
 
   const supabase = await createClient();
-  const [leadsRes, pipeline, clientsPack] = await Promise.all([
+  const [leadsRes, pipeline, clientsPack, fieldOptions] = await Promise.all([
     supabase
       .from("lead")
       .select(
@@ -63,6 +64,7 @@ export default async function LeadsPage({
       .limit(200),
     fetchCrmPipelineSettings(),
     fetchClientsForClientsView(),
+    fetchMergedCrmFieldOptions(),
   ]);
 
   const { data: leads, error } = leadsRes;
@@ -125,6 +127,7 @@ export default async function LeadsPage({
       ) : (
         <LeadsView
           leads={leadsForView}
+          fieldOptions={fieldOptions}
           leadPipelineColumns={pipeline.lead}
           clientsForTab={clientsForTab}
           clientsTabLoadError={clientsPack.error}

@@ -7,8 +7,9 @@ import TabBar from "@/components/crm/TabBar";
 import {
   PLAN_COLORS,
   PLAN_LABELS,
-  projectClientDisplayLabel,
+  projectClientNameParts,
   type MockProject,
+  type PlanStage,
 } from "@/lib/crm/mock-data";
 import { projectTypeBadgeClass } from "@/lib/crm/project-type-badge";
 import type { WorkspaceResource } from "@/lib/crm/project-workspace-types";
@@ -50,6 +51,7 @@ type Props = {
   initialProductResources: WorkspaceResource[];
   childDeliveryStatusUi: ChildDeliveryStatusUiConfig;
   productMetadata: unknown;
+  planLabels?: Record<PlanStage, string>;
 };
 
 function MetaField({
@@ -74,6 +76,7 @@ export default function ProductDetailShell({
   initialProductResources,
   childDeliveryStatusUi,
   productMetadata,
+  planLabels = PLAN_LABELS,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -184,7 +187,7 @@ export default function ProductDetailShell({
               className="rounded-full px-2.5 py-0.5 text-xs font-medium text-white"
               style={{ backgroundColor: PLAN_COLORS[product.plan] }}
             >
-              {PLAN_LABELS[product.plan]}
+              {planLabels[product.plan]}
             </span>
           </MetaField>
           {product.projectType ? (
@@ -196,20 +199,39 @@ export default function ProductDetailShell({
               </span>
             </MetaField>
           ) : null}
-          <MetaField label="Client">
-            {product.clientId?.trim() ? (
-              <Link
-                href={`/leads?section=clients&client=${encodeURIComponent(product.clientId.trim())}`}
-                className="rounded-sm font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
-              >
-                {projectClientDisplayLabel(product)}
-              </Link>
-            ) : (
-              <span className="font-medium text-text-primary dark:text-zinc-100">
-                {projectClientDisplayLabel(product)}
-              </span>
-            )}
-          </MetaField>
+          {(() => {
+            const { contact, company } = projectClientNameParts(product);
+            const clientHref = product.clientId?.trim()
+              ? `/leads?section=clients&client=${encodeURIComponent(product.clientId.trim())}`
+              : null;
+            const clientLinkClass =
+              "rounded-sm font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900";
+            const valueClass =
+              "font-medium text-text-primary dark:text-zinc-100";
+            const show = (v: string | null) => (v?.trim() ? v.trim() : "—");
+            return (
+              <>
+                <MetaField label="Client name">
+                  {clientHref ? (
+                    <Link href={clientHref} className={clientLinkClass}>
+                      {show(contact)}
+                    </Link>
+                  ) : (
+                    <span className={valueClass}>{show(contact)}</span>
+                  )}
+                </MetaField>
+                <MetaField label="Company name">
+                  {clientHref ? (
+                    <Link href={clientHref} className={clientLinkClass}>
+                      {show(company)}
+                    </Link>
+                  ) : (
+                    <span className={valueClass}>{show(company)}</span>
+                  )}
+                </MetaField>
+              </>
+            );
+          })()}
           <MetaField label="Owner">
             <ProductOwnerSummaryField
               productId={productId}

@@ -18,6 +18,7 @@ import {
 } from "@/lib/crm/prospecting-nav";
 import ColdOutreachView from "@/components/crm/prospecting/ColdOutreachView";
 import ProspectsIntelligenceView from "@/components/crm/prospecting/ProspectsIntelligenceView";
+import type { MergedCrmFieldOptions } from "@/lib/crm/field-options";
 import NetworkingEventsView from "@/components/crm/prospecting/NetworkingEventsView";
 import SocialMediaProspectingPlaceholder from "@/components/crm/prospecting/SocialMediaProspectingPlaceholder";
 import ComingSoonModule from "@/components/crm/prospecting/ComingSoonModule";
@@ -27,8 +28,10 @@ import ProspectingTabbedShell, {
 
 export default function ProspectingSectionClient({
   slug,
+  fieldOptions,
 }: {
   slug: ProspectingSectionSlug;
+  fieldOptions: MergedCrmFieldOptions;
 }) {
   const section = getProspectingSection(slug);
   if (!section) return null;
@@ -38,7 +41,7 @@ export default function ProspectingSectionClient({
   }
 
   if (slug === "prospects") {
-    return <ProspectsIntelligenceView />;
+    return <ProspectsIntelligenceView fieldOptions={fieldOptions} />;
   }
 
   if (slug === "networking") {

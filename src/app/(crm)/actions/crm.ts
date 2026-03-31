@@ -3,9 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import {
-  LEAD_CONTACT_CATEGORY_OPTIONS,
-  LEAD_PROJECT_TYPE_OPTIONS,
-} from "@/lib/crm/mock-data";
+  leadSourceSet,
+  projectTypeSet,
+  contactCategorySet,
+  validateFieldOptionsForSave,
+  type CrmFieldOptionsSaveInput,
+} from "@/lib/crm/field-options";
+import { mergedFieldOptionsFromSupabase } from "@/lib/crm/merged-field-options-from-supabase";
 import {
   mergeDealPipelineFromDb,
   mergeLeadPipelineFromDb,
@@ -69,19 +73,70 @@ async function dealStageSlugSet(supabase: SupabaseServer): Promise<Set<string>> 
   );
 }
 
-const PROJECT_TYPE_SET = new Set<string>(LEAD_PROJECT_TYPE_OPTIONS);
-const CONTACT_CATEGORY_SET = new Set<string>(LEAD_CONTACT_CATEGORY_OPTIONS);
-
-function parseProjectType(formData: FormData): string | null {
+function parseProjectTypeForCreate(
+  formData: FormData,
+  allowed: Set<string>
+): string | null {
   const raw = String(formData.get("project_type") ?? "").trim();
-  if (!raw || !PROJECT_TYPE_SET.has(raw)) return null;
+  if (!raw || !allowed.has(raw)) return null;
   return raw;
 }
 
-function parseContactCategory(formData: FormData): string | null {
+function parseProjectTypeForUpdate(
+  formData: FormData,
+  allowed: Set<string>,
+  existing: string | null
+): string | null {
+  const raw = String(formData.get("project_type") ?? "").trim();
+  if (!raw) return null;
+  if (allowed.has(raw)) return raw;
+  const ex = existing?.trim() || "";
+  if (ex && raw === ex) return raw;
+  return null;
+}
+
+function parseContactCategoryForCreate(
+  formData: FormData,
+  allowed: Set<string>
+): string | null {
   const raw = String(formData.get("contact_category") ?? "").trim();
-  if (!raw || !CONTACT_CATEGORY_SET.has(raw)) return null;
+  if (!raw || !allowed.has(raw)) return null;
   return raw;
+}
+
+function parseContactCategoryForUpdate(
+  formData: FormData,
+  allowed: Set<string>,
+  existing: string | null
+): string | null {
+  const raw = String(formData.get("contact_category") ?? "").trim();
+  if (!raw) return null;
+  if (allowed.has(raw)) return raw;
+  const ex = existing?.trim() || "";
+  if (ex && raw === ex) return raw;
+  return null;
+}
+
+function resolveLeadSourceForCreate(
+  raw: string,
+  allowed: Set<string>
+): { source: string | null } | { error: string } {
+  const t = raw.trim();
+  if (!t) return { source: null };
+  if (allowed.has(t)) return { source: t };
+  return { error: "Pick a source from the list." };
+}
+
+function resolveLeadSourceForUpdate(
+  raw: string,
+  allowed: Set<string>,
+  existingTrimmed: string | null
+): { source: string | null } | { error: string } {
+  const t = raw.trim();
+  if (!t) return { source: null };
+  if (allowed.has(t)) return { source: t };
+  if (existingTrimmed && t === existingTrimmed) return { source: t };
+  return { error: "Invalid source." };
 }
 
 export async function createLead(formData: FormData) {
@@ -91,14 +146,22 @@ export async function createLead(formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized" };
 
+  const fieldOpts = await mergedFieldOptionsFromSupabase(supabase);
+  const ptSet = projectTypeSet(fieldOpts);
+  const catSet = contactCategorySet(fieldOpts);
+  const srcSet = leadSourceSet(fieldOpts);
+
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
   const company = String(formData.get("company") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
-  const source = String(formData.get("source") ?? "").trim();
+  const sourceRaw = String(formData.get("source") ?? "");
   const notes = String(formData.get("notes") ?? "").trim();
-  const project_type = parseProjectType(formData);
-  const contact_category = parseContactCategory(formData);
+  const project_type = parseProjectTypeForCreate(formData, ptSet);
+  const contact_category = parseContactCategoryForCreate(formData, catSet);
+  const srcRes = resolveLeadSourceForCreate(sourceRaw, srcSet);
+  if ("error" in srcRes) return { error: srcRes.error };
+  const source = srcRes.source;
 
   if (!name && !email) {
     return { error: "Add at least a name or email." };
@@ -138,15 +201,54 @@ export async function updateLeadRow(formData: FormData) {
   const id = String(formData.get("id") ?? "").trim();
   if (!id) return { error: "Missing lead id" };
 
+  const fieldOpts = await mergedFieldOptionsFromSupabase(supabase);
+  const ptSet = projectTypeSet(fieldOpts);
+  const catSet = contactCategorySet(fieldOpts);
+  const srcSet = leadSourceSet(fieldOpts);
+
+  const { data: existingLead } = await supabase
+    .from("lead")
+    .select("source, project_type, contact_category")
+    .eq("id", id)
+    .maybeSingle();
+  const existingSource = (existingLead?.source as string | null)?.trim() || null;
+  const existingProjectType =
+    (existingLead?.project_type as string | null)?.trim() || null;
+  const existingContactCategory =
+    (existingLead?.contact_category as string | null)?.trim() || null;
+
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
   const company = String(formData.get("company") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
-  const source = String(formData.get("source") ?? "").trim();
+  const sourceRaw = String(formData.get("source") ?? "");
   const stage = String(formData.get("stage") ?? "new").trim();
   const notes = String(formData.get("notes") ?? "").trim();
-  const project_type = parseProjectType(formData);
-  const contact_category = parseContactCategory(formData);
+  const rawProjectType = String(formData.get("project_type") ?? "").trim();
+  const project_type = parseProjectTypeForUpdate(
+    formData,
+    ptSet,
+    existingProjectType
+  );
+  if (rawProjectType && project_type === null) {
+    return { error: "Invalid project type." };
+  }
+
+  const rawContactCategory = String(
+    formData.get("contact_category") ?? ""
+  ).trim();
+  const contact_category = parseContactCategoryForUpdate(
+    formData,
+    catSet,
+    existingContactCategory
+  );
+  if (rawContactCategory && contact_category === null) {
+    return { error: "Invalid contact category." };
+  }
+
+  const srcRes = resolveLeadSourceForUpdate(sourceRaw, srcSet, existingSource);
+  if ("error" in srcRes) return { error: srcRes.error };
+  const source = srcRes.source;
 
   const leadStages = await leadStageSlugSet(supabase);
   if (!leadStages.has(stage)) {
@@ -812,6 +914,45 @@ export async function deleteAppointment(id: string) {
   return { ok: true };
 }
 
+export async function saveCrmFieldOptions(input: CrmFieldOptionsSaveInput) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const normalized = validateFieldOptionsForSave(input);
+  if ("error" in normalized) return { error: normalized.error };
+
+  const { data: cur, error: readErr } = await supabase
+    .from("crm_settings")
+    .select("lead_pipeline, deal_pipeline")
+    .eq("id", 1)
+    .maybeSingle();
+
+  if (readErr) return { error: explainMissingCrmSettingsTable(readErr.message) };
+
+  const { error } = await supabase.from("crm_settings").upsert(
+    {
+      id: 1,
+      lead_pipeline: mergeLeadPipelineFromDb(cur?.lead_pipeline),
+      deal_pipeline: mergeDealPipelineFromDb(cur?.deal_pipeline),
+      crm_field_options: normalized,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "id" }
+  );
+
+  if (error) return { error: explainMissingCrmSettingsTable(error.message) };
+
+  revalidatePath("/settings");
+  revalidatePath("/leads");
+  revalidatePath("/products");
+  revalidatePath("/dashboard");
+  revalidatePath("/prospecting");
+  return { ok: true };
+}
+
 export async function saveCrmPipelineSettings(input: {
   leadPipeline?: PipelineColumnDef[];
   dealPipeline?: PipelineColumnDef[];
@@ -824,7 +965,7 @@ export async function saveCrmPipelineSettings(input: {
 
   const { data: cur, error: readErr } = await supabase
     .from("crm_settings")
-    .select("lead_pipeline, deal_pipeline")
+    .select("lead_pipeline, deal_pipeline, crm_field_options")
     .eq("id", 1)
     .maybeSingle();
 
@@ -844,11 +985,19 @@ export async function saveCrmPipelineSettings(input: {
     deal = ensureDealPipelineRequiredSlugs(v.ok);
   }
 
+  const fieldOpts =
+    cur &&
+    typeof (cur as { crm_field_options?: unknown }).crm_field_options !==
+      "undefined"
+      ? (cur as { crm_field_options: unknown }).crm_field_options
+      : {};
+
   const { error } = await supabase.from("crm_settings").upsert(
     {
       id: 1,
       lead_pipeline: lead,
       deal_pipeline: deal,
+      crm_field_options: fieldOpts,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "id" }
@@ -858,6 +1007,7 @@ export async function saveCrmPipelineSettings(input: {
 
   revalidatePath("/leads");
   revalidatePath("/dashboard");
+  revalidatePath("/settings");
   return { ok: true };
 }
 

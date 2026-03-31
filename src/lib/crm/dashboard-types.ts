@@ -29,6 +29,3 @@ export type DashboardRangeTotals = {
   clients: number;
   revenue: number;
 };
-
-/** Funnel + snapshot Finance use this label for closed-won deal revenue in range. */
-export const DASHBOARD_FUNNEL_REVENUE_STAGE_LABEL = "Revenue" as const;

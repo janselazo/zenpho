@@ -1,10 +1,18 @@
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { LEAD_PROJECT_TYPE_OPTIONS } from "@/lib/crm/mock-data";
+
+function allowedProjectTypeSet(
+  allowedProjectTypes?: readonly string[]
+): Set<string> {
+  if (allowedProjectTypes?.length) return new Set(allowedProjectTypes);
+  return new Set(LEAD_PROJECT_TYPE_OPTIONS);
+}
 import type { NewProjectDealPrefill } from "@/lib/crm/new-project-deal-prefill";
 
 export async function fetchDealPrefillForNewProject(
-  dealId: string
+  dealId: string,
+  allowedProjectTypes?: readonly string[]
 ): Promise<NewProjectDealPrefill | null> {
   if (!isSupabaseConfigured()) return null;
   const trimmed = dealId.trim();
@@ -34,8 +42,8 @@ export async function fetchDealPrefillForNewProject(
       : "";
   const website = String(deal.website ?? "").trim();
   const pt = lead?.project_type?.trim() || null;
-  const projectTypeValid =
-    !!pt && (LEAD_PROJECT_TYPE_OPTIONS as readonly string[]).includes(pt);
+  const allow = allowedProjectTypeSet(allowedProjectTypes);
+  const projectTypeValid = !!pt && allow.has(pt);
 
   return {
     clientId,

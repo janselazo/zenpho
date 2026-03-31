@@ -2,17 +2,20 @@ import Link from "next/link";
 import type { DevelopmentPricingOffering } from "@/lib/data";
 import { developmentPricingOfferings } from "@/lib/data";
 
-function SquareCheckIcon({ className }: { className?: string }) {
+/** Minimal list check — stroke only, no box (matches marketing reference). */
+function FeatureCheckIcon({ className }: { className?: string }) {
   return (
     <svg
       className={className}
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
-      strokeWidth={2.5}
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
       aria-hidden
     >
-      <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+      <path d="m4.5 12.75 6 6 9-13.5" />
     </svg>
   );
 }
@@ -26,17 +29,17 @@ function OfferingCard({ offering }: { offering: DevelopmentPricingOffering }) {
       id={`pricing-${offering.id}`}
       className={`relative flex h-full flex-col rounded-3xl border bg-white p-6 sm:p-7 ${
         featured
-          ? "z-10 border-accent-green/25 shadow-[0_20px_50px_-12px_rgba(5,150,105,0.22),0_0_0_1px_rgba(5,150,105,0.08)] sm:p-8"
+          ? "z-10 border-accent/25 shadow-[0_20px_50px_-12px_rgba(37,99,235,0.18),0_0_0_1px_rgba(37,99,235,0.08)] sm:p-8"
           : "border-border/90 shadow-soft"
       }`}
     >
       {featured ? (
         <>
           <div
-            className="pointer-events-none absolute -inset-px rounded-3xl bg-gradient-to-b from-accent-green/[0.07] via-transparent to-transparent"
+            className="pointer-events-none absolute -inset-px rounded-3xl bg-gradient-to-b from-accent/[0.07] via-transparent to-transparent"
             aria-hidden
           />
-          <span className="absolute -top-3 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full bg-accent-green px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-md">
+          <span className="absolute -top-3 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full bg-accent px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-md">
             Most popular
           </span>
         </>
@@ -62,14 +65,14 @@ function OfferingCard({ offering }: { offering: DevelopmentPricingOffering }) {
           {featured ? (
             <Link
               href="/booking"
-              className="flex w-full items-center justify-center rounded-full bg-accent-green px-6 py-3.5 text-sm font-semibold text-white shadow-md shadow-accent-green/25 transition-colors hover:bg-emerald-700"
+              className="flex w-full items-center justify-center rounded-full bg-accent px-6 py-3.5 text-sm font-semibold text-white shadow-md shadow-accent/25 transition-colors hover:bg-accent-hover"
             >
               Book a call
             </Link>
           ) : (
             <Link
               href="/booking"
-              className="flex w-full items-center justify-center rounded-full border border-border bg-white px-6 py-3.5 text-sm font-semibold text-text-primary transition-colors hover:border-accent-green/35 hover:bg-surface-light/80"
+              className="flex w-full items-center justify-center rounded-full border border-border bg-white px-6 py-3.5 text-sm font-semibold text-text-primary transition-colors hover:border-accent/35 hover:bg-surface-light/80"
             >
               Book a call
             </Link>
@@ -82,9 +85,7 @@ function OfferingCard({ offering }: { offering: DevelopmentPricingOffering }) {
         <ul className="mt-3 flex flex-1 flex-col gap-2.5">
           {offering.features.map((line) => (
             <li key={line} className="flex gap-3 text-sm leading-snug text-text-secondary">
-              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-accent-green text-white shadow-sm">
-                <SquareCheckIcon className="h-3 w-3" />
-              </span>
+              <FeatureCheckIcon className="mt-0.5 h-[1.125rem] w-[1.125rem] shrink-0 text-accent" />
               <span>{line}</span>
             </li>
           ))}

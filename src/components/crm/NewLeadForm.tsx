@@ -4,14 +4,25 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createLead } from "@/app/(crm)/actions/crm";
 import {
-  LEAD_CONTACT_CATEGORY_OPTIONS,
-  LEAD_PROJECT_TYPE_OPTIONS,
-} from "@/lib/crm/mock-data";
+  DEFAULT_MERGED_CRM_FIELD_OPTIONS,
+  type MergedCrmFieldOptions,
+} from "@/lib/crm/field-options";
+
+function formatSourceOptionLabel(value: string) {
+  return value
+    .split(/[\s_-]+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+}
 
 const inputClass =
   "w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/15";
 
-export default function NewLeadForm() {
+export default function NewLeadForm({
+  fieldOptions = DEFAULT_MERGED_CRM_FIELD_OPTIONS,
+}: {
+  fieldOptions?: MergedCrmFieldOptions;
+}) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -88,7 +99,7 @@ export default function NewLeadForm() {
             <option value="" disabled>
               Select project type…
             </option>
-            {LEAD_PROJECT_TYPE_OPTIONS.map((opt) => (
+            {fieldOptions.leadProjectTypes.map((opt) => (
               <option key={opt} value={opt}>
                 {opt}
               </option>
@@ -101,7 +112,7 @@ export default function NewLeadForm() {
           </label>
           <select name="contact_category" defaultValue="" className={inputClass}>
             <option value="">Not set</option>
-            {LEAD_CONTACT_CATEGORY_OPTIONS.map((opt) => (
+            {fieldOptions.leadContactCategories.map((opt) => (
               <option key={opt} value={opt}>
                 {opt}
               </option>
@@ -112,12 +123,14 @@ export default function NewLeadForm() {
           <label className="mb-1 block text-xs font-medium text-text-secondary">
             Source
           </label>
-          <input
-            name="source"
-            type="text"
-            placeholder="e.g. website, referral"
-            className={inputClass}
-          />
+          <select name="source" defaultValue="" className={inputClass}>
+            <option value="">Not set</option>
+            {fieldOptions.leadSources.map((o) => (
+              <option key={o} value={o}>
+                {formatSourceOptionLabel(o)}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="sm:col-span-2">
           <label className="mb-1 block text-xs font-medium text-text-secondary">

@@ -130,7 +130,7 @@ export default function CrmQuickTaskModal({
   const chipIdle =
     "border-zinc-200 bg-white text-zinc-800 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800";
   const chipActive =
-    "border-sky-400 bg-sky-50 text-sky-800 dark:border-sky-500 dark:bg-sky-950/40 dark:text-sky-200";
+    "border-accent bg-accent-soft text-text-primary dark:border-accent dark:bg-accent/20 dark:text-zinc-100";
 
   const fieldShell =
     "flex w-full min-w-0 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900";
@@ -184,7 +184,7 @@ export default function CrmQuickTaskModal({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g. Follow up on proposal or scope call"
-            className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-text-primary outline-none ring-sky-400/0 transition-[box-shadow,border-color] placeholder:text-zinc-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-400/20 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+            className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-text-primary outline-none transition-[box-shadow,border-color] placeholder:text-zinc-400 focus:border-accent focus:ring-2 focus:ring-accent/20 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
           />
 
           <div className="flex flex-wrap gap-2">
@@ -263,7 +263,7 @@ export default function CrmQuickTaskModal({
             <button
               type="submit"
               disabled={pending}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-sky-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-sky-600 disabled:opacity-60 dark:bg-sky-600 dark:hover:bg-sky-500"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-accent-hover disabled:opacity-60"
             >
               {pending ? (
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden />

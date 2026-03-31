@@ -1,6 +1,5 @@
 import { enumerateDays } from "@/lib/crm/dashboard-range";
 import {
-  DASHBOARD_FUNNEL_REVENUE_STAGE_LABEL,
   type ClientsCreatedPoint,
   type DashboardFunnelStage,
   type DashboardRangeTotals,
@@ -95,21 +94,16 @@ export async function fetchDashboardFunnel(
       ])
       .gte("created_at", rs)
       .lte("created_at", re),
-    /** Projects created in range — budget sums feed funnel “revenue” column (deal table deprecated). */
+    /** Root projects created in range (funnel “Projects” count). */
     supabase
       .from("project")
-      .select("budget")
+      .select("*", { count: "exact", head: true })
       .is("parent_project_id", null)
       .gte("created_at", rs)
       .lte("created_at", re),
   ]);
 
-  const projectRows = projectsRes.data ?? [];
-  const projectsCreatedCount = projectRows.length;
-  const revenue = projectRows.reduce(
-    (s, p) => s + Number(p.budget ?? 0),
-    0
-  );
+  const projectsCreatedCount = projectsRes.count ?? 0;
 
   return [
     {
@@ -139,13 +133,6 @@ export async function fetchDashboardFunnel(
       value: 0,
       color: "#f59e0b",
       bg: "bg-amber-50 dark:bg-amber-500/12",
-    },
-    {
-      label: DASHBOARD_FUNNEL_REVENUE_STAGE_LABEL,
-      count: 0,
-      value: revenue,
-      color: "#10b981",
-      bg: "bg-emerald-50 dark:bg-emerald-500/12",
     },
   ];
 }

@@ -24,7 +24,7 @@ function HexMark({ className }: { className?: string }) {
 export default function PricingHero() {
   return (
     <section className="relative overflow-hidden bg-[#f4f5f7] pb-12 pt-28 sm:pb-16 sm:pt-32">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(5,150,105,0.08),transparent)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(37,99,235,0.08),transparent)]" />
 
       <div className="relative z-10 mx-auto max-w-3xl px-6 text-center">
         <motion.div
@@ -33,7 +33,7 @@ export default function PricingHero() {
           transition={{ duration: 0.4 }}
           className="mb-6 flex items-center justify-center gap-2 text-sm font-medium text-text-secondary"
         >
-          <HexMark className="h-4 w-4 text-accent-green" />
+          <HexMark className="h-4 w-4 text-accent" />
           <span className="tracking-wide">Pricing</span>
         </motion.div>
 
@@ -44,7 +44,7 @@ export default function PricingHero() {
           className="text-balance text-3xl font-bold leading-[1.15] tracking-tight text-text-primary sm:text-4xl sm:leading-[1.12] lg:text-[2.75rem] lg:leading-[1.1]"
         >
           <span className="block">Simple, transparent pricing</span>
-          <span className="mt-1 block italic text-accent-green [font-family:var(--font-pricing-serif),Georgia,serif]">
+          <span className="mt-1 block italic text-accent [font-family:var(--font-pricing-serif),Georgia,serif]">
             for every build
           </span>
         </motion.h1>
@@ -65,7 +65,7 @@ export default function PricingHero() {
           transition={{ duration: 0.4, delay: 0.14 }}
           className="mt-8 flex flex-wrap items-center justify-center gap-3"
         >
-          <span className="inline-flex items-center rounded-full bg-accent-green px-3 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-sm">
+          <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-sm">
             No hidden fees
           </span>
           <span className="inline-flex items-center rounded-full border border-border bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wider text-text-secondary shadow-sm">

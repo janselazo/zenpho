@@ -22,7 +22,7 @@ export default function AppleIcon() {
             'ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif',
         }}
       >
-        J
+        Z
       </div>
     ),
     { ...size },

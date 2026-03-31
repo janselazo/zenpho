@@ -1,6 +1,10 @@
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
-import SettingsPageView from "@/components/crm/SettingsPageView";
+import SettingsPageView, {
+  type SettingsCrmFieldsPack,
+} from "@/components/crm/SettingsPageView";
+import { fetchCrmPipelineSettings } from "@/lib/crm/fetch-pipeline-settings";
+import { fetchMergedCrmFieldOptions } from "@/lib/crm/fetch-crm-field-options";
 
 export default async function SettingsPage() {
   const configured = isSupabaseConfigured();
@@ -33,6 +37,33 @@ export default async function SettingsPage() {
     }
   }
 
+  let crmFields: SettingsCrmFieldsPack | null = null;
+  if (configured) {
+    const supabase = await createClient();
+    const [pipeline, fieldOptions, leadsRes, dealsRes] = await Promise.all([
+      fetchCrmPipelineSettings(),
+      fetchMergedCrmFieldOptions(),
+      supabase.from("lead").select("stage"),
+      supabase.from("deal").select("stage"),
+    ]);
+    const leadStageCounts: Record<string, number> = {};
+    for (const row of leadsRes.data ?? []) {
+      const s = String((row as { stage?: string }).stage ?? "").trim() || "new";
+      leadStageCounts[s] = (leadStageCounts[s] ?? 0) + 1;
+    }
+    const dealStageCounts: Record<string, number> = {};
+    for (const row of dealsRes.data ?? []) {
+      const s = String((row as { stage?: string }).stage ?? "").trim() || "prospect";
+      dealStageCounts[s] = (dealStageCounts[s] ?? 0) + 1;
+    }
+    crmFields = {
+      fieldOptions,
+      pipeline,
+      leadStageCounts,
+      dealStageCounts,
+    };
+  }
+
   return (
     <div className="p-8">
       <SettingsPageView
@@ -45,6 +76,7 @@ export default async function SettingsPage() {
           avatarUrl,
           profileError,
         }}
+        crmFields={crmFields}
       />
     </div>
   );

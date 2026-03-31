@@ -7,7 +7,6 @@ import {
   fetchLeadsAppointmentsSeries,
 } from "@/lib/crm/dashboard-data";
 import {
-  DASHBOARD_FUNNEL_REVENUE_STAGE_LABEL,
   type ClientsCreatedPoint,
   type DashboardFunnelStage,
   type DashboardRangeTotals,
@@ -45,13 +44,6 @@ const emptyFunnel: DashboardFunnelStage[] = [
   { label: "Appointments", count: 0, value: 0, color: "#8b5cf6", bg: "bg-violet-50 dark:bg-violet-500/12" },
   { label: "Qualified", count: 0, value: 0, color: "#10b981", bg: "bg-emerald-50 dark:bg-emerald-500/12" },
   { label: "Projects", count: 0, value: 0, color: "#f59e0b", bg: "bg-amber-50 dark:bg-amber-500/12" },
-  {
-    label: DASHBOARD_FUNNEL_REVENUE_STAGE_LABEL,
-    count: 0,
-    value: 0,
-    color: "#10b981",
-    bg: "bg-emerald-50 dark:bg-emerald-500/12",
-  },
 ];
 
 export default async function DashboardPage({
@@ -152,6 +144,11 @@ export default async function DashboardPage({
     /* schema not applied yet */
   }
 
+  const wonRevenueFromBooked = financeBookedSeries.reduce(
+    (s, p) => s + p.revenue,
+    0
+  );
+
   return (
     <div className="space-y-6 p-8">
       {counts.errors.length > 0 && (
@@ -164,10 +161,7 @@ export default async function DashboardPage({
       <DashboardView
         activeClients={counts.activeClients}
         activeProjects={counts.activeProjects}
-        wonRevenue={
-          funnel.find((s) => s.label === DASHBOARD_FUNNEL_REVENUE_STAGE_LABEL)
-            ?.value ?? 0
-        }
+        wonRevenue={wonRevenueFromBooked}
         financeBookedSeries={financeBookedSeries}
         chartData={chartData}
         hasErrors={counts.errors.length > 0}

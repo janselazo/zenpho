@@ -63,6 +63,49 @@ export function labelForStoredPlanStage(raw: string | null | undefined): string 
   return PLAN_LABELS[parsePlanStage(raw)];
 }
 
+/** Resolved from `client` row for products (list + detail). */
+export type ProjectRowClientSlice = {
+  /** Combined label for kanban/table (`name · company` or email). */
+  label: string;
+  contactName: string | null;
+  company: string | null;
+};
+
+export function clientRowToProjectSlice(
+  c:
+    | {
+        name?: string | null;
+        email?: string | null;
+        company?: string | null;
+      }
+    | null
+    | undefined
+): ProjectRowClientSlice {
+  if (!c) {
+    return { label: "Client", contactName: null, company: null };
+  }
+  const contactName = c.name?.trim() || null;
+  const company = c.company?.trim() || null;
+  if (contactName && company) {
+    return {
+      label: `${contactName} · ${company}`,
+      contactName,
+      company,
+    };
+  }
+  if (contactName) {
+    return { label: contactName, contactName, company: null };
+  }
+  if (company) {
+    return { label: company, contactName: null, company };
+  }
+  const email = c.email?.trim() || null;
+  if (email) {
+    return { label: email, contactName: email, company: null };
+  }
+  return { label: "Client", contactName: null, company: null };
+}
+
 export type ProjectRow = {
   id: string;
   client_id: string;
@@ -81,7 +124,7 @@ export type ProjectRow = {
 
 export function projectRowToMock(
   row: ProjectRow,
-  clientLabel: string,
+  client: ProjectRowClientSlice,
   options?: { primaryPhaseId?: string | null }
 ): MockProject {
   const meta =
@@ -114,7 +157,9 @@ export function projectRowToMock(
     title: row.title?.trim() || "Untitled",
     plan: parsePlanStage(row.plan_stage),
     clientId: row.client_id,
-    clientName: clientLabel,
+    clientName: client.label,
+    clientContactName: client.contactName,
+    clientCompany: client.company,
     teamId,
     teamName,
     pointOfContactMemberId,

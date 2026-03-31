@@ -44,7 +44,6 @@ import {
   type ProspectingTaskType,
 } from "@/lib/crm/mock-data";
 import {
-  DASHBOARD_FUNNEL_REVENUE_STAGE_LABEL,
   type ClientsCreatedPoint,
   type DashboardFunnelStage,
   type DashboardRangeTotals,
@@ -191,7 +190,6 @@ const FUNNEL_AREA_FILLS_LIGHT = [
   "#e8efff",
   "#eef2ff",
   "#f3f4ff",
-  "#f8f9ff",
 ];
 
 const FUNNEL_AREA_FILLS_DARK = [
@@ -199,21 +197,11 @@ const FUNNEL_AREA_FILLS_DARK = [
   "rgb(30 64 175 / 0.38)",
   "rgb(37 99 235 / 0.32)",
   "rgb(59 130 246 / 0.26)",
-  "rgb(96 165 250 / 0.2)",
 ];
 
-function funnelBarHeightPct(
-  stage: DashboardFunnelStage,
-  maxCount: number,
-  maxRevenue: number
-): number {
+function funnelBarHeightPct(stage: DashboardFunnelStage, maxCount: number): number {
   const floor = 30;
   const span = 70;
-  if (stage.label === DASHBOARD_FUNNEL_REVENUE_STAGE_LABEL) {
-    const r =
-      maxRevenue <= 0 ? 0.28 : Math.min(1, stage.value / maxRevenue);
-    return floor + span * Math.max(0.22, r);
-  }
   const c =
     maxCount <= 0 ? 0.16 : Math.min(1, stage.count / maxCount);
   return floor + span * Math.max(0.14, c);
@@ -221,29 +209,21 @@ function funnelBarHeightPct(
 
 /** Full numbers for funnel metric row (matches dashboard reference). */
 function funnelMetricDisplayValue(stage: DashboardFunnelStage): string {
-  if (stage.label === DASHBOARD_FUNNEL_REVENUE_STAGE_LABEL)
-    return fmt(stage.value);
   return stage.count.toLocaleString(undefined, { maximumFractionDigits: 0 });
 }
 
-/** Normalized height key 0–1 for drawing the funnel line (mixed counts + revenue). */
-function funnelStageNorm(
-  stage: DashboardFunnelStage,
-  maxCount: number,
-  maxRevenue: number
-): number {
-  const pct = funnelBarHeightPct(stage, maxCount, maxRevenue);
+/** Normalized height key 0–1 for drawing the funnel line from stage counts. */
+function funnelStageNorm(stage: DashboardFunnelStage, maxCount: number): number {
+  const pct = funnelBarHeightPct(stage, maxCount);
   return Math.min(1, Math.max(0, (pct - 30) / 70));
 }
 
 function SalesFunnelAreaSvg({
   funnel: stages,
   maxCount,
-  maxRevenue,
 }: {
   funnel: DashboardFunnelStage[];
   maxCount: number;
-  maxRevenue: number;
 }) {
   const n = stages.length;
   const W = 500;
@@ -254,7 +234,7 @@ function SalesFunnelAreaSvg({
   const seg = W / n;
 
   const yAt = (stage: DashboardFunnelStage) =>
-    padT + (1 - funnelStageNorm(stage, maxCount, maxRevenue)) * innerH;
+    padT + (1 - funnelStageNorm(stage, maxCount)) * innerH;
 
   const yTop: number[] = [];
   for (let i = 0; i < n; i++) {
@@ -436,7 +416,7 @@ function BusinessOverviewCard({
       />
       <div className="relative flex items-start justify-between gap-2">
         <div className="flex min-w-0 flex-1 items-start gap-2.5">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600 dark:bg-orange-950/80 dark:text-orange-300">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center text-text-secondary dark:text-zinc-400">
             {icon}
           </div>
           <div className="min-w-0">
@@ -602,19 +582,10 @@ export default function DashboardView({
   const [playbookCompletions, setPlaybookCompletions] = useState<
     Record<string, number>
   >({});
-  const funnelScale = useMemo(() => {
-    const funnelMaxCount = Math.max(
-      ...funnel
-        .filter((s) => s.label !== DASHBOARD_FUNNEL_REVENUE_STAGE_LABEL)
-        .map((s) => s.count),
-      1
-    );
-    const rev = funnel.find(
-      (s) => s.label === DASHBOARD_FUNNEL_REVENUE_STAGE_LABEL
-    );
-    const funnelMaxRevenue = Math.max(rev?.value ?? 0, 1);
-    return { funnelMaxCount, funnelMaxRevenue };
-  }, [funnel]);
+  const funnelMaxCount = useMemo(
+    () => Math.max(...funnel.map((s) => s.count), 1),
+    [funnel]
+  );
 
   useEffect(() => {
     async function syncPlaybookKpis() {
@@ -1016,7 +987,7 @@ export default function DashboardView({
         </div>
 
         <div className="mt-5 overflow-hidden rounded-xl border border-border/70 bg-white dark:border-zinc-700/70 dark:bg-zinc-950/40">
-          <div className="grid grid-cols-5 divide-x divide-border/70 dark:divide-zinc-700/80">
+          <div className="grid grid-cols-4 divide-x divide-border/70 dark:divide-zinc-700/80">
             {funnel.map((stage) => (
               <div
                 key={stage.label}
@@ -1032,13 +1003,9 @@ export default function DashboardView({
             ))}
           </div>
           <div className="relative border-t border-border/70 dark:border-zinc-700/80">
-            <SalesFunnelAreaSvg
-              funnel={funnel}
-              maxCount={funnelScale.funnelMaxCount}
-              maxRevenue={funnelScale.funnelMaxRevenue}
-            />
+            <SalesFunnelAreaSvg funnel={funnel} maxCount={funnelMaxCount} />
             <div
-              className="pointer-events-none absolute inset-0 grid grid-cols-5 divide-x divide-border/50 dark:divide-zinc-700/70"
+              className="pointer-events-none absolute inset-0 grid grid-cols-4 divide-x divide-border/50 dark:divide-zinc-700/70"
               aria-hidden
             />
           </div>
