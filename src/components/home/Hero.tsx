@@ -31,7 +31,7 @@ export default function Hero() {
           initial={{ opacity: 1, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, delay: 0.06 }}
-          className="heading-display text-4xl font-bold leading-[1.15] tracking-tight text-text-primary sm:text-5xl sm:leading-[1.12] md:text-6xl md:leading-[1.1] lg:text-7xl lg:leading-[1.08]"
+          className="heading-display text-5xl font-bold leading-[1.1] tracking-tight text-text-primary sm:text-6xl sm:leading-[1.08] md:text-6xl md:leading-[1.1] lg:text-7xl lg:leading-[1.08]"
         >
           <span className="block">We build and scale</span>
           <span className="mt-0.5 block text-accent sm:mt-1">software products</span>
@@ -60,7 +60,7 @@ export default function Hero() {
             href="/pricing"
             variant="primary"
             size="lg"
-            className="min-h-11 flex-1 px-4 text-sm sm:flex-initial sm:px-8"
+            className="min-h-9 flex-1 !gap-1.5 !px-3 !py-2 !text-xs sm:min-h-11 sm:flex-initial sm:!gap-2.5 sm:!px-8 sm:!py-3.5 sm:!text-sm"
           >
             Agency
           </Button>
@@ -69,7 +69,7 @@ export default function Hero() {
             variant="dark"
             size="lg"
             showLiveDot
-            className="min-h-11 flex-1 px-4 text-sm sm:flex-initial sm:px-8"
+            className="min-h-9 flex-1 !gap-1.5 !px-3 !py-2 !text-xs sm:min-h-11 sm:flex-initial sm:!gap-2.5 sm:!px-8 sm:!py-3.5 sm:!text-sm"
           >
             Studio
           </Button>
