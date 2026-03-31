@@ -35,6 +35,7 @@ import {
   getMergedProjectsList,
   CRM_SUPABASE_PROJECTS_CHANGED_EVENT,
 } from "@/lib/crm/projects-storage";
+import { toolsNav } from "@/lib/crm/tools-nav";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 const opportunitiesNav: Array<{
@@ -147,6 +148,7 @@ export default function AppSidebar() {
   const [prospectingOpen, toggleProspecting] =
     useSidebarSectionOpen("prospecting");
   const [agencyOpen, toggleAgency] = useSidebarSectionOpen("agency");
+  const [toolsOpen, toggleTools] = useSidebarSectionOpen("tools");
   const [productsOpen, toggleProducts] = useSidebarSectionOpen("products");
   const [sidebarProducts, setSidebarProducts] = useState(() => seedProjects);
 
@@ -273,6 +275,24 @@ export default function AppSidebar() {
         <SidebarSection label="Agency" open={agencyOpen} onToggle={toggleAgency}>
           {agencyNav.map(({ href, label, icon: Icon }) => (
             <NavLink key={href} href={href} active={isActive(pathname, href)}>
+              <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+              {label}
+            </NavLink>
+          ))}
+        </SidebarSection>
+
+        {/* Tools — free utilities hub (nav grows as each tool ships) */}
+        <SidebarSection label="Tools" open={toolsOpen} onToggle={toggleTools}>
+          {toolsNav.map(({ href, label, icon: Icon }) => (
+            <NavLink
+              key={href}
+              href={href}
+              active={
+                href === "/tools"
+                  ? pathname === "/tools"
+                  : isActive(pathname, href)
+              }
+            >
               <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
               {label}
             </NavLink>
