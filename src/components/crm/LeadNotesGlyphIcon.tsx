@@ -1,6 +1,6 @@
 /**
- * Folded note outline (inherits `currentColor`) with orange ruled lines inside.
- * Used for lead Notes actions in the pipeline and table.
+ * Dog-eared document outline (inherits `currentColor`).
+ * Use with `text-accent-warm` on the parent for lead Notes actions.
  */
 export default function LeadNotesGlyphIcon({
   className,
@@ -16,22 +16,18 @@ export default function LeadNotesGlyphIcon({
       aria-hidden
     >
       <path
-        d="M15.5 3.25H6.75a2.75 2.75 0 0 0-2.75 2.75v12.5a2.75 2.75 0 0 0 2.75 2.75h12.5a2.75 2.75 0 0 0 2.75-2.75V9.5L15.5 3.25Z"
+        d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
         stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M15.5 3.25v5.5h5.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M8.5 11.5h7M8.5 14h7M8.5 16.5h5"
-        stroke="#f97316"
-        strokeWidth="1.35"
+        strokeWidth="2"
         strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M14 2v4a2 2 0 0 0 2 2h4"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );

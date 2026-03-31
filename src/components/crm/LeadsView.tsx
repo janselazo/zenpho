@@ -801,7 +801,7 @@ function LeadsPipelineBoard({
                 onClick={() => onNotes(lead)}
                 disabled={editingId !== null}
                 title="Notes"
-                className="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                className="inline-flex items-center justify-center rounded-md p-1.5 text-accent-warm transition-colors hover:bg-accent-warm/10 disabled:cursor-not-allowed disabled:opacity-40 dark:text-amber-400 dark:hover:bg-amber-950/35"
                 aria-label={`View notes for ${deleteLabel}`}
               >
                 <LeadNotesGlyphIcon className="h-4 w-4 shrink-0" />
@@ -1254,7 +1254,7 @@ function LeadsTable({
                           onClick={() => setNotesLead(lead)}
                           disabled={editingId !== null}
                           title="Notes"
-                          className="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                          className="inline-flex items-center justify-center rounded-md p-1.5 text-accent-warm transition-colors hover:bg-accent-warm/10 disabled:cursor-not-allowed disabled:opacity-40 dark:text-amber-400 dark:hover:bg-amber-950/35"
                           aria-label={`View notes for ${deleteLabel}`}
                         >
                           <LeadNotesGlyphIcon className="h-4 w-4 shrink-0" />

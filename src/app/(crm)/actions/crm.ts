@@ -24,6 +24,19 @@ type SupabaseServer = Awaited<ReturnType<typeof createClient>>;
 /** Supabase returns schema-cache errors when `crm_settings` was never migrated. */
 function explainMissingCrmSettingsTable(message: string): string {
   const m = message.toLowerCase();
+  if (
+    m.includes("crm_field_options") &&
+    (m.includes("schema cache") ||
+      m.includes("could not find") ||
+      m.includes("column") ||
+      m.includes("does not exist"))
+  ) {
+    return (
+      "The field options column (crm_field_options) is missing on crm_settings. " +
+      "In the Supabase SQL editor, run supabase/migrations/20260502120000_crm_field_options.sql, " +
+      "or from the repo root run `npx supabase db push` after `supabase link`, then try Save again."
+    );
+  }
   const mentionsTable =
     m.includes("crm_settings") || m.includes("crm settings");
   const looksMissing =
@@ -915,42 +928,53 @@ export async function deleteAppointment(id: string) {
 }
 
 export async function saveCrmFieldOptions(input: CrmFieldOptionsSaveInput) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "Unauthorized" };
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: "Unauthorized" };
 
-  const normalized = validateFieldOptionsForSave(input);
-  if ("error" in normalized) return { error: normalized.error };
+    const normalized = validateFieldOptionsForSave(input);
+    if ("error" in normalized) return { error: normalized.error };
 
-  const { data: cur, error: readErr } = await supabase
-    .from("crm_settings")
-    .select("lead_pipeline, deal_pipeline")
-    .eq("id", 1)
-    .maybeSingle();
+    const { data: cur, error: readErr } = await supabase
+      .from("crm_settings")
+      .select("lead_pipeline, deal_pipeline")
+      .eq("id", 1)
+      .maybeSingle();
 
-  if (readErr) return { error: explainMissingCrmSettingsTable(readErr.message) };
+    if (readErr)
+      return { error: explainMissingCrmSettingsTable(readErr.message) };
 
-  const { error } = await supabase.from("crm_settings").upsert(
-    {
-      id: 1,
-      lead_pipeline: mergeLeadPipelineFromDb(cur?.lead_pipeline),
-      deal_pipeline: mergeDealPipelineFromDb(cur?.deal_pipeline),
-      crm_field_options: normalized,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "id" }
-  );
+    const { error } = await supabase.from("crm_settings").upsert(
+      {
+        id: 1,
+        lead_pipeline: mergeLeadPipelineFromDb(cur?.lead_pipeline),
+        deal_pipeline: mergeDealPipelineFromDb(cur?.deal_pipeline),
+        crm_field_options: normalized,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "id" }
+    );
 
-  if (error) return { error: explainMissingCrmSettingsTable(error.message) };
+    if (error) return { error: explainMissingCrmSettingsTable(error.message) };
 
-  revalidatePath("/settings");
-  revalidatePath("/leads");
-  revalidatePath("/products");
-  revalidatePath("/dashboard");
-  revalidatePath("/prospecting");
-  return { ok: true };
+    revalidatePath("/settings");
+    revalidatePath("/leads");
+    revalidatePath("/products");
+    revalidatePath("/dashboard");
+    revalidatePath("/prospecting");
+    return { ok: true };
+  } catch (e) {
+    console.error("saveCrmFieldOptions:", e);
+    return {
+      error:
+        e instanceof Error
+          ? e.message
+          : "Something went wrong while saving field options.",
+    };
+  }
 }
 
 export async function saveCrmPipelineSettings(input: {

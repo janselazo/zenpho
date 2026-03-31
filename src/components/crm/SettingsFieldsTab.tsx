@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ListTree, Loader2, Pencil } from "lucide-react";
+import { ListTree, Loader2, Pencil, Trash2 } from "lucide-react";
 import { saveCrmFieldOptions } from "@/app/(crm)/actions/crm";
 import type { MergedCrmFieldOptions } from "@/lib/crm/field-options";
 import { PLAN_STAGE_ORDER, type PlanStage } from "@/lib/crm/mock-data";
@@ -75,9 +75,10 @@ function StringListEditor({
             <button
               type="button"
               onClick={() => remove(i)}
-              className="shrink-0 rounded-xl border border-border px-3 py-2 text-xs font-medium text-text-secondary hover:bg-surface dark:border-zinc-700 dark:hover:bg-zinc-800"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border text-text-secondary hover:bg-surface dark:border-zinc-700 dark:hover:bg-zinc-800"
+              aria-label={`Remove ${label} option ${i + 1}`}
             >
-              Remove
+              <Trash2 className="h-4 w-4" aria-hidden />
             </button>
           </li>
         ))}
@@ -122,7 +123,7 @@ export default function SettingsFieldsTab({
   const [dealModalOpen, setDealModalOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [savePending, setSavePending] = useState(false);
 
   useEffect(() => {
     setLeadProjectTypes([...initialFieldOptions.leadProjectTypes]);
@@ -131,23 +132,32 @@ export default function SettingsFieldsTab({
     setProductPlanLabels({ ...initialFieldOptions.productPlanLabels });
   }, [initialFieldOptions]);
 
-  function save() {
+  async function save() {
     setMessage(null);
     setError(null);
-    startTransition(async () => {
+    setSavePending(true);
+    try {
       const res = await saveCrmFieldOptions({
         leadProjectTypes,
         leadSources,
         leadContactCategories,
         productPlanLabels,
       });
-      if ("error" in res && res.error) {
+      if (res && typeof res === "object" && "error" in res && res.error) {
         setError(res.error);
         return;
       }
       setMessage("Saved field options.");
       router.refresh();
-    });
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Could not save field options. Check your connection and try again."
+      );
+    } finally {
+      setSavePending(false);
+    }
   }
 
   return (
@@ -161,11 +171,11 @@ export default function SettingsFieldsTab({
         </div>
         <button
           type="button"
-          disabled={pending}
-          onClick={() => save()}
+          disabled={savePending}
+          onClick={() => void save()}
           className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-60"
         >
-          {pending ? (
+          {savePending ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
           ) : null}
           Save fields

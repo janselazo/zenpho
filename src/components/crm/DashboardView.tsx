@@ -416,7 +416,7 @@ function BusinessOverviewCard({
       />
       <div className="relative flex items-start justify-between gap-2">
         <div className="flex min-w-0 flex-1 items-start gap-2.5">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center text-text-secondary dark:text-zinc-400">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center text-accent-warm dark:text-amber-400">
             {icon}
           </div>
           <div className="min-w-0">
