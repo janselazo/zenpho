@@ -1,6 +1,14 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import {
   DndContext,
   DragOverlay,
@@ -52,6 +60,7 @@ import {
   Video,
   TrendingUp,
   Sparkles,
+  Star,
 } from "lucide-react";
 import IconTabBar from "@/components/crm/prospecting/IconTabBar";
 import {
@@ -79,8 +88,11 @@ import {
   getCompletions,
   saveCompletions,
   loadPlaybookCategories,
+  loadPlaybookPriorityActivityIds,
   loadPlaybookSectionCollapsed,
+  prunePriorityActivityIds,
   savePlaybookCategories,
+  savePlaybookPriorityActivityIds,
   savePlaybookSectionCollapsed,
 } from "@/lib/crm/playbook-store";
 import {
@@ -109,6 +121,7 @@ const PLAYBOOK_CATEGORY_ICON_KEYS = [
   "sparkles",
   "target",
   "flame",
+  "star",
 ] as const;
 
 /** Preset tile colors for playbook section icons (stored on `PlaybookCategory.color`). */
@@ -166,9 +179,35 @@ function renderPlaybookCategoryIcon(key: string): React.ReactNode {
       return <Target className={cls} />;
     case "flame":
       return <Flame className={cls} />;
+    case "star":
+      return <Star className={cls} />;
     default:
       return null;
   }
+}
+
+/** Stable id for collapse state / aria; not stored in categories JSON. */
+const PLAYBOOK_PRIORITIES_SECTION_ID = "__playbook_priorities__";
+
+function findActivityById(
+  categories: PlaybookCategory[],
+  activityId: string
+): PlaybookActivity | null {
+  for (const c of categories) {
+    const a = c.activities.find((x) => x.id === activityId);
+    if (a) return a;
+  }
+  return null;
+}
+
+function activityOwnerCategoryId(
+  categories: PlaybookCategory[],
+  activityId: string
+): string | undefined {
+  for (const c of categories) {
+    if (c.activities.some((a) => a.id === activityId)) return c.id;
+  }
+  return undefined;
 }
 
 const TASK_TYPE_ICONS: Record<ProspectingTaskType, React.ReactNode> = {
@@ -576,12 +615,16 @@ function PlaybookCategoryRow({
   onToggleIconPicker,
   onPickSectionIcon,
   onPickSectionColor,
+  priorityIdSet,
+  onTogglePriorityActivity,
 }: {
   cat: PlaybookCategory;
   isOpen: boolean;
   catEarned: number;
   catTotal: number;
   completions: Record<string, number>;
+  priorityIdSet: Set<string>;
+  onTogglePriorityActivity: (activityId: string) => void;
   editingSectionId: string | null;
   sectionNameDraft: string;
   setSectionNameDraft: (v: string) => void;
@@ -592,7 +635,7 @@ function PlaybookCategoryRow({
   onToggleCollapse: (id: string) => void;
   editingActivity: string | null;
   editFields: PlaybookEditFields;
-  setEditFields: React.Dispatch<React.SetStateAction<PlaybookEditFields>>;
+  setEditFields: Dispatch<SetStateAction<PlaybookEditFields>>;
   onStartEditActivity: (a: PlaybookActivity) => void;
   onConfirmEditActivity: () => void;
   onCancelEditActivity: () => void;
@@ -620,6 +663,9 @@ function PlaybookCategoryRow({
   };
 
   const iconPickerOpen = iconPickerForCategoryId === cat.id;
+  const visibleActivities = cat.activities.filter(
+    (a) => !priorityIdSet.has(a.id)
+  );
 
   return (
     <div
@@ -802,7 +848,7 @@ function PlaybookCategoryRow({
 
       {isOpen && (
         <div className="border-t border-border">
-          {cat.activities.map((activity, activityIndex) => (
+          {visibleActivities.map((activity, activityIndex) => (
             <ActivityRow
               key={activity.id}
               activity={activity}
@@ -817,6 +863,8 @@ function PlaybookCategoryRow({
               onDelete={() => onDeleteActivity(cat.id, activity.id)}
               onIncrement={() => onIncrement(activity.id, activity.target)}
               onDecrement={() => onDecrement(activity.id)}
+              isPriority={false}
+              onTogglePriority={() => onTogglePriorityActivity(activity.id)}
             />
           ))}
           <div className="px-5 py-3">
@@ -834,15 +882,138 @@ function PlaybookCategoryRow({
   );
 }
 
+/** Pinned Priorities block above draggable sections (no section DnD / delete / add). */
+function PlaybookPinnedPrioritiesRow({
+  cat,
+  isOpen,
+  catEarned,
+  catTotal,
+  completions,
+  onToggleCollapse,
+  editingActivity,
+  editFields,
+  setEditFields,
+  onStartEditActivity,
+  onConfirmEditActivity,
+  onCancelEditActivity,
+  onDeleteActivity,
+  onIncrement,
+  onDecrement,
+  onTogglePriorityActivity,
+  ownerCategoryId,
+}: {
+  cat: PlaybookCategory;
+  isOpen: boolean;
+  catEarned: number;
+  catTotal: number;
+  completions: Record<string, number>;
+  onToggleCollapse: (id: string) => void;
+  editingActivity: string | null;
+  editFields: PlaybookEditFields;
+  setEditFields: Dispatch<SetStateAction<PlaybookEditFields>>;
+  onStartEditActivity: (a: PlaybookActivity) => void;
+  onConfirmEditActivity: () => void;
+  onCancelEditActivity: () => void;
+  onDeleteActivity: (catId: string, activityId: string) => void;
+  onIncrement: (activityId: string, target: number) => void;
+  onDecrement: (activityId: string) => void;
+  onTogglePriorityActivity: (activityId: string) => void;
+  ownerCategoryId: (activityId: string) => string | undefined;
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-white shadow-sm">
+      <div className="group/sec flex items-center gap-2 px-5 py-4 sm:gap-3">
+        <div
+          className="w-9 shrink-0"
+          aria-hidden
+        />
+        <div
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white"
+          style={{ backgroundColor: cat.color }}
+        >
+          {renderPlaybookCategoryIcon(cat.icon) ?? (
+            <Star className="h-4 w-4" />
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => onToggleCollapse(cat.id)}
+          aria-expanded={isOpen}
+          aria-label={isOpen ? "Collapse section" : "Expand section"}
+          className="flex shrink-0 items-center rounded-lg p-1 text-text-secondary transition-colors hover:bg-surface hover:text-text-primary"
+        >
+          <ChevronDown
+            className={`h-4 w-4 transition-transform ${
+              isOpen ? "" : "-rotate-90"
+            }`}
+          />
+        </button>
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <span className="truncate text-sm font-semibold text-text-primary">
+            {cat.name}
+          </span>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <div className="h-1.5 w-20 overflow-hidden rounded-full bg-gray-100">
+            <div
+              className="h-full rounded-full transition-all"
+              style={{
+                width: `${catTotal > 0 ? (catEarned / catTotal) * 100 : 0}%`,
+                backgroundColor: cat.color,
+              }}
+            />
+          </div>
+          <span className="text-xs tabular-nums text-text-secondary">
+            {catEarned}/{catTotal} pts
+          </span>
+        </div>
+        <div className="w-8 shrink-0" aria-hidden />
+      </div>
+
+      {isOpen && (
+        <div className="border-t border-border">
+          {cat.activities.map((activity, activityIndex) => (
+            <ActivityRow
+              key={activity.id}
+              activity={activity}
+              listIndex={activityIndex + 1}
+              completed={completions[activity.id] ?? 0}
+              isEditing={editingActivity === activity.id}
+              editFields={editFields}
+              onEditFieldsChange={setEditFields}
+              onStartEdit={() => onStartEditActivity(activity)}
+              onConfirmEdit={onConfirmEditActivity}
+              onCancelEdit={onCancelEditActivity}
+              onDelete={() => {
+                const cid = ownerCategoryId(activity.id);
+                if (cid) onDeleteActivity(cid, activity.id);
+              }}
+              onIncrement={() => onIncrement(activity.id, activity.target)}
+              onDecrement={() => onDecrement(activity.id)}
+              isPriority
+              onTogglePriority={() => onTogglePriorityActivity(activity.id)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function playbookCategoryPoints(
   cat: PlaybookCategory,
-  completions: Record<string, number>
+  completions: Record<string, number>,
+  excludeActivityIds?: Set<string>
 ) {
-  const catEarned = cat.activities.reduce((s, a) => {
+  const acts =
+    excludeActivityIds && excludeActivityIds.size > 0
+      ? cat.activities.filter((a) => !excludeActivityIds.has(a.id))
+      : cat.activities;
+  const catEarned = acts.reduce((s, a) => {
     const done = completions[a.id] ?? 0;
     return s + (done >= a.target ? a.points : 0);
   }, 0);
-  const catTotal = cat.activities.reduce((s, a) => s + a.points, 0);
+  const catTotal = acts.reduce((s, a) => s + a.points, 0);
   return { catEarned, catTotal };
 }
 
@@ -888,6 +1059,7 @@ function PlaybookTab() {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const collapsedHydrated = useRef(false);
   const [categories, setCategories] = useState<PlaybookCategory[]>(playbookCategories);
+  const [priorityActivityIds, setPriorityActivityIds] = useState<string[]>([]);
   const [playbookReady, setPlaybookReady] = useState(false);
   const [playbookUserId, setPlaybookUserId] = useState<string | null>(null);
   const [editingActivity, setEditingActivity] = useState<string | null>(null);
@@ -905,6 +1077,33 @@ function PlaybookTab() {
   const [activeSectionDragId, setActiveSectionDragId] = useState<string | null>(
     null
   );
+
+  const priorityIdSet = useMemo(
+    () => new Set(priorityActivityIds),
+    [priorityActivityIds]
+  );
+
+  const prioritiesCat = useMemo((): PlaybookCategory | null => {
+    const acts: PlaybookActivity[] = [];
+    for (const id of priorityActivityIds) {
+      const a = findActivityById(categories, id);
+      if (a) acts.push(a);
+    }
+    if (acts.length === 0) return null;
+    return {
+      id: PLAYBOOK_PRIORITIES_SECTION_ID,
+      name: "Priorities",
+      icon: "star",
+      color: "#f59e0b",
+      activities: acts,
+    };
+  }, [priorityActivityIds, categories]);
+
+  useEffect(() => {
+    setPriorityActivityIds((prev) =>
+      prunePriorityActivityIds(categories, prev)
+    );
+  }, [categories]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -925,7 +1124,10 @@ function PlaybookTab() {
   useEffect(() => {
     if (!playbookReady || !collapsedHydrated.current) return;
     setCollapsed((prev) => {
-      const ids = new Set(categories.map((c) => c.id));
+      const ids = new Set([
+        PLAYBOOK_PRIORITIES_SECTION_ID,
+        ...categories.map((c) => c.id),
+      ]);
       const next: Record<string, boolean> = {};
       for (const id of ids) {
         if (prev[id]) next[id] = true;
@@ -981,6 +1183,12 @@ function PlaybookTab() {
       const loaded = loadPlaybookCategories();
       if (loaded !== null) setCategories(loaded);
       setCompletions(getCompletions());
+      setPriorityActivityIds(
+        prunePriorityActivityIds(
+          loaded ?? [],
+          loadPlaybookPriorityActivityIds()
+        )
+      );
       setPlaybookUserId(null);
       setPlaybookReady(true);
       return;
@@ -994,6 +1202,12 @@ function PlaybookTab() {
       const loaded = loadPlaybookCategories();
       if (loaded !== null) setCategories(loaded);
       setCompletions(getCompletions());
+      setPriorityActivityIds(
+        prunePriorityActivityIds(
+          loaded ?? [],
+          loadPlaybookPriorityActivityIds()
+        )
+      );
       setPlaybookUserId(null);
       setPlaybookReady(true);
     }
@@ -1009,35 +1223,52 @@ function PlaybookTab() {
 
       if (!result.found) {
         if (hasLocalData) {
+          const lsPriority = loadPlaybookPriorityActivityIds();
           setCategories(lsCats);
           setCompletions(lsCompletions);
+          setPriorityActivityIds(
+            prunePriorityActivityIds(lsCats, lsPriority)
+          );
           await upsertUserProspectingPlaybook(
             supabase,
             user.id,
             lsCats,
-            lsCompletions
+            lsCompletions,
+            prunePriorityActivityIds(lsCats, lsPriority)
           );
         } else {
           setCategories([]);
           setCompletions({});
+          setPriorityActivityIds([]);
         }
       } else {
-        const { categories: dbCats, completions: dbComp } = result;
+        const { categories: dbCats, completions: dbComp, priorityActivityIds: dbPriority } = result;
         if (dbCats.length > 0) {
           setCategories(dbCats);
           setCompletions(dbComp);
+          setPriorityActivityIds(
+            prunePriorityActivityIds(dbCats, dbPriority)
+          );
         } else if (hasLocalData) {
+          const lsPriority = loadPlaybookPriorityActivityIds();
           setCategories(lsCats);
           setCompletions(lsCompletions);
+          setPriorityActivityIds(
+            prunePriorityActivityIds(lsCats, lsPriority)
+          );
           await upsertUserProspectingPlaybook(
             supabase,
             user.id,
             lsCats,
-            lsCompletions
+            lsCompletions,
+            prunePriorityActivityIds(lsCats, lsPriority)
           );
         } else {
           setCategories([]);
           setCompletions(dbComp);
+          setPriorityActivityIds(
+            prunePriorityActivityIds([], dbPriority)
+          );
         }
       }
 
@@ -1074,15 +1305,17 @@ function PlaybookTab() {
           supabase,
           playbookUserId,
           categories,
-          completions
+          completions,
+          priorityActivityIds
         );
       } else {
         savePlaybookCategories(categories);
         saveCompletions(completions);
+        savePlaybookPriorityActivityIds(priorityActivityIds);
       }
     }, 450);
     return () => window.clearTimeout(t);
-  }, [categories, completions, playbookReady, playbookUserId]);
+  }, [categories, completions, priorityActivityIds, playbookReady, playbookUserId]);
 
   function startEditActivity(a: PlaybookActivity) {
     setEditingSectionId(null);
@@ -1126,7 +1359,16 @@ function PlaybookTab() {
     setEditingActivity(null);
   }
 
+  function togglePriorityActivity(activityId: string) {
+    setPriorityActivityIds((prev) =>
+      prev.includes(activityId)
+        ? prev.filter((x) => x !== activityId)
+        : [activityId, ...prev]
+    );
+  }
+
   function deleteActivity(catId: string, activityId: string) {
+    setPriorityActivityIds((prev) => prev.filter((x) => x !== activityId));
     setCategories((prev) =>
       prev.map((c) =>
         c.id === catId
@@ -1161,6 +1403,13 @@ function PlaybookTab() {
 
   function deleteSection(catId: string) {
     if (editingSectionId === catId) setEditingSectionId(null);
+    const removedIds =
+      categories.find((c) => c.id === catId)?.activities.map((a) => a.id) ??
+      [];
+    if (removedIds.length > 0) {
+      const drop = new Set(removedIds);
+      setPriorityActivityIds((prev) => prev.filter((x) => !drop.has(x)));
+    }
     setCategories((prev) => prev.filter((c) => c.id !== catId));
   }
 
@@ -1261,6 +1510,31 @@ function PlaybookTab() {
 
       {/* Activity sections */}
       <div className="mt-6 space-y-4">
+        {prioritiesCat ? (
+          <PlaybookPinnedPrioritiesRow
+            cat={prioritiesCat}
+            isOpen={!collapsed[PLAYBOOK_PRIORITIES_SECTION_ID]}
+            catEarned={
+              playbookCategoryPoints(prioritiesCat, completions).catEarned
+            }
+            catTotal={
+              playbookCategoryPoints(prioritiesCat, completions).catTotal
+            }
+            completions={completions}
+            onToggleCollapse={toggleCollapse}
+            editingActivity={editingActivity}
+            editFields={editFields}
+            setEditFields={setEditFields}
+            onStartEditActivity={startEditActivity}
+            onConfirmEditActivity={confirmEditActivity}
+            onCancelEditActivity={() => setEditingActivity(null)}
+            onDeleteActivity={deleteActivity}
+            onIncrement={increment}
+            onDecrement={decrement}
+            onTogglePriorityActivity={togglePriorityActivity}
+            ownerCategoryId={(id) => activityOwnerCategoryId(categories, id)}
+          />
+        ) : null}
         <DndContext
           id="playbook-sections"
           sensors={sensors}
@@ -1276,7 +1550,8 @@ function PlaybookTab() {
             {categories.map((cat) => {
               const { catEarned, catTotal } = playbookCategoryPoints(
                 cat,
-                completions
+                completions,
+                priorityIdSet
               );
               const isOpen = !collapsed[cat.id];
 
@@ -1326,6 +1601,8 @@ function PlaybookTab() {
                       )
                     );
                   }}
+                  priorityIdSet={priorityIdSet}
+                  onTogglePriorityActivity={togglePriorityActivity}
                 />
               );
             })}
@@ -1421,6 +1698,8 @@ function ActivityRow({
   onDelete,
   onIncrement,
   onDecrement,
+  isPriority,
+  onTogglePriority,
 }: {
   activity: PlaybookActivity;
   /** 1-based position in the section (not the internal id — those can be long timestamps). */
@@ -1435,6 +1714,8 @@ function ActivityRow({
   onDelete: () => void;
   onIncrement: () => void;
   onDecrement: () => void;
+  isPriority: boolean;
+  onTogglePriority: () => void;
 }) {
   const isDone = completed >= activity.target;
   const capped = Math.min(completed, activity.target);
@@ -1518,6 +1799,25 @@ function ActivityRow({
         </p>
       </div>
       <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={onTogglePriority}
+          title={isPriority ? "Remove from priorities" : "Add to priorities"}
+          aria-label={
+            isPriority ? "Remove from priorities" : "Add to priorities"
+          }
+          className={`rounded p-1 transition-colors group-hover:text-text-secondary/40 ${
+            isPriority
+              ? "text-accent-warm group-hover:text-accent-warm"
+              : "text-text-secondary/0 group-hover:text-text-secondary/40"
+          }`}
+        >
+          <Star
+            className={`h-3.5 w-3.5 ${isPriority ? "fill-accent-warm text-accent-warm" : ""}`}
+            strokeWidth={2}
+            aria-hidden
+          />
+        </button>
         <button
           type="button"
           onClick={onStartEdit}

@@ -2,6 +2,8 @@ import type { PlaybookCategory } from "@/lib/crm/mock-data";
 
 const STORAGE_KEY = "playbook-completions";
 const PLAYBOOK_STRUCTURE_KEY = "playbook-categories";
+/** Ordered activity ids for the pinned Priorities section (references activities in categories). */
+const PLAYBOOK_PRIORITY_ACTIVITY_IDS_KEY = "playbook-priority-activity-ids";
 /** Which playbook sections are collapsed (key = category id). Persisted across tab switches / remounts. */
 const PLAYBOOK_SECTIONS_COLLAPSED_KEY = "playbook-sections-collapsed";
 
@@ -92,6 +94,68 @@ export function savePlaybookCategories(categories: PlaybookCategory[]) {
   try {
     localStorage.setItem(PLAYBOOK_STRUCTURE_KEY, JSON.stringify(categories));
     window.dispatchEvent(new Event(PLAYBOOK_STRUCTURE_CHANGED_EVENT));
+  } catch {
+    // storage full or unavailable
+  }
+}
+
+function collectActivityIds(categories: PlaybookCategory[]): Set<string> {
+  const ids = new Set<string>();
+  for (const c of categories) {
+    for (const a of c.activities) {
+      ids.add(a.id);
+    }
+  }
+  return ids;
+}
+
+/** Keep only ids that still exist in the current category tree. */
+export function prunePriorityActivityIds(
+  categories: PlaybookCategory[],
+  priorityActivityIds: string[]
+): string[] {
+  const valid = collectActivityIds(categories);
+  return priorityActivityIds.filter((id) => valid.has(id));
+}
+
+function parsePriorityActivityIdsJson(parsed: unknown): string[] | null {
+  if (!Array.isArray(parsed)) return null;
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const item of parsed) {
+    if (typeof item !== "string" || !item) continue;
+    if (seen.has(item)) continue;
+    seen.add(item);
+    out.push(item);
+  }
+  return out;
+}
+
+/** Normalize DB / JSON value to a string id list. */
+export function parsePriorityActivityIdsFromUnknown(raw: unknown): string[] {
+  return parsePriorityActivityIdsJson(raw) ?? [];
+}
+
+/** Load persisted Priorities ordering; `[]` if missing or invalid. */
+export function loadPlaybookPriorityActivityIds(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(PLAYBOOK_PRIORITY_ACTIVITY_IDS_KEY);
+    if (!raw) return [];
+    const parsed = parsePriorityActivityIdsJson(JSON.parse(raw) as unknown);
+    return parsed ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export function savePlaybookPriorityActivityIds(ids: string[]) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(
+      PLAYBOOK_PRIORITY_ACTIVITY_IDS_KEY,
+      JSON.stringify(ids)
+    );
   } catch {
     // storage full or unavailable
   }

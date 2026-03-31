@@ -336,6 +336,10 @@ create policy "user_prospecting_playbook_delete_own"
 
 grant select, insert, update, delete on public.user_prospecting_playbook to authenticated;
 
+-- ----- 20260503120000_user_prospecting_playbook_priority_ids.sql -----
+alter table public.user_prospecting_playbook
+  add column if not exists priority_activity_ids jsonb not null default '[]'::jsonb;
+
 -- ----- 20260328120000_conversations.sql -----
 create table public.conversation (
   id uuid primary key default gen_random_uuid(),

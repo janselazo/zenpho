@@ -4,17 +4,20 @@ import {
   PLAYBOOK_STRUCTURE_CHANGED_EVENT,
   parseCategoriesJson,
   parseCompletionsDocument,
+  parsePriorityActivityIdsFromUnknown,
   serializeCompletionsForStorage,
 } from "@/lib/crm/playbook-store";
 
 type PlaybookRow = {
   categories: unknown;
   completions: unknown;
+  priority_activity_ids?: unknown;
 };
 
 export type UserProspectingPlaybookSnapshot = {
   categories: PlaybookCategory[];
   completions: Record<string, number>;
+  priorityActivityIds: string[];
 };
 
 /** `found: false` = no row yet. `found: true` = row exists (may have empty categories). */
@@ -24,7 +27,7 @@ export async function fetchUserProspectingPlaybook(
 ): Promise<{ found: false } | ({ found: true } & UserProspectingPlaybookSnapshot)> {
   const { data, error } = await supabase
     .from("user_prospecting_playbook")
-    .select("categories, completions")
+    .select("categories, completions, priority_activity_ids")
     .eq("user_id", userId)
     .maybeSingle();
 
@@ -40,6 +43,9 @@ export async function fetchUserProspectingPlaybook(
     found: true,
     categories: parseCategoriesJson(row.categories) ?? [],
     completions: parseCompletionsDocument(row.completions),
+    priorityActivityIds: parsePriorityActivityIdsFromUnknown(
+      row.priority_activity_ids
+    ),
   };
 }
 
@@ -47,7 +53,8 @@ export async function upsertUserProspectingPlaybook(
   supabase: SupabaseClient,
   userId: string,
   categories: PlaybookCategory[],
-  completions: Record<string, number>
+  completions: Record<string, number>,
+  priorityActivityIds: string[]
 ): Promise<{ error: Error | null }> {
   const completionsDoc = serializeCompletionsForStorage(completions);
   const { error } = await supabase.from("user_prospecting_playbook").upsert(
@@ -55,6 +62,7 @@ export async function upsertUserProspectingPlaybook(
       user_id: userId,
       categories,
       completions: completionsDoc,
+      priority_activity_ids: priorityActivityIds,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "user_id" }
