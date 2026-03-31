@@ -498,7 +498,7 @@ export const servicePackages: ServicePackage[] = [
 
 export const experienceStats = [
   { value: "15+", label: "Projects shipped" },
-  { value: "9+", label: "Years building software" },
+  { value: "9+", label: "Years of experience" },
   { value: "10+", label: "Client teams" },
   { value: "1", label: "Live in-house product" },
 ];

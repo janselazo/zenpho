@@ -29,10 +29,10 @@ export default function Navbar() {
           scrolled ? "shadow-soft-lg" : "shadow-soft"
         }`}
       >
-        <nav className="flex items-center gap-2 rounded-full border border-white/80 bg-white/85 px-3 py-2.5 shadow-soft backdrop-blur-xl md:gap-3 md:px-4 md:py-2">
+        <nav className="flex items-center gap-1.5 rounded-full border border-white/80 bg-white/85 px-2.5 py-2 shadow-soft backdrop-blur-xl sm:gap-2 sm:px-3 sm:py-2.5 md:gap-3 md:px-4 md:py-2">
           <Link
             href="/"
-            className="group relative shrink-0 pl-1 md:pl-2"
+            className="group relative min-w-0 shrink-0 pl-0.5 sm:pl-1 md:pl-2"
             aria-label="Zenpho home"
           >
             <Image
@@ -40,7 +40,7 @@ export default function Navbar() {
               alt="Zenpho"
               width={132}
               height={36}
-              className="h-8 w-auto"
+              className="h-7 w-auto sm:h-8"
               priority
             />
           </Link>
@@ -64,9 +64,16 @@ export default function Navbar() {
             </ul>
           </div>
 
-          <div className="ml-auto flex shrink-0 items-center gap-2 md:gap-3">
-            <Button href="/booking" variant="primary" size="sm" className="!px-5">
-              Book a call
+          <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2 md:gap-3">
+            <Button
+              href="/booking"
+              variant="primary"
+              size="sm"
+              className="!px-3.5 sm:!px-5"
+              aria-label="Book a call"
+            >
+              <span className="sm:hidden">Book</span>
+              <span className="hidden sm:inline">Book a call</span>
             </Button>
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
@@ -99,6 +106,12 @@ export default function Navbar() {
         }`}
       >
         <div className="flex flex-col gap-0.5 p-3">
+          <Link
+            href="/booking"
+            className="rounded-xl bg-accent px-4 py-3 text-center text-sm font-semibold text-white shadow-sm"
+          >
+            Book a call
+          </Link>
           {headerNavLinks.map((link) => (
             <Link
               key={link.href}
