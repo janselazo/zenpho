@@ -6,12 +6,16 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  useCallback,
   type Dispatch,
+  type ReactNode,
   type SetStateAction,
 } from "react";
 import {
   DndContext,
   DragOverlay,
+  type DraggableAttributes,
+  type DraggableSyntheticListeners,
   type DragEndEvent,
   type DragStartEvent,
   PointerSensor,
@@ -617,6 +621,7 @@ function PlaybookCategoryRow({
   onPickSectionColor,
   priorityIdSet,
   onTogglePriorityActivity,
+  onReorderActivitiesInSection,
 }: {
   cat: PlaybookCategory;
   isOpen: boolean;
@@ -625,6 +630,11 @@ function PlaybookCategoryRow({
   completions: Record<string, number>;
   priorityIdSet: Set<string>;
   onTogglePriorityActivity: (activityId: string) => void;
+  onReorderActivitiesInSection: (
+    catId: string,
+    activeId: string,
+    overId: string
+  ) => void;
   editingSectionId: string | null;
   sectionNameDraft: string;
   setSectionNameDraft: (v: string) => void;
@@ -665,6 +675,12 @@ function PlaybookCategoryRow({
   const iconPickerOpen = iconPickerForCategoryId === cat.id;
   const visibleActivities = cat.activities.filter(
     (a) => !priorityIdSet.has(a.id)
+  );
+
+  const activitySensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 6 },
+    })
   );
 
   return (
@@ -848,25 +864,59 @@ function PlaybookCategoryRow({
 
       {isOpen && (
         <div className="border-t border-border">
-          {visibleActivities.map((activity, activityIndex) => (
-            <ActivityRow
-              key={activity.id}
-              activity={activity}
-              listIndex={activityIndex + 1}
-              completed={completions[activity.id] ?? 0}
-              isEditing={editingActivity === activity.id}
-              editFields={editFields}
-              onEditFieldsChange={setEditFields}
-              onStartEdit={() => onStartEditActivity(activity)}
-              onConfirmEdit={onConfirmEditActivity}
-              onCancelEdit={onCancelEditActivity}
-              onDelete={() => onDeleteActivity(cat.id, activity.id)}
-              onIncrement={() => onIncrement(activity.id, activity.target)}
-              onDecrement={() => onDecrement(activity.id)}
-              isPriority={false}
-              onTogglePriority={() => onTogglePriorityActivity(activity.id)}
-            />
-          ))}
+          <DndContext
+            id={`playbook-act-${cat.id}`}
+            sensors={activitySensors}
+            collisionDetection={closestCenter}
+            onDragEnd={(e) => {
+              const { active, over } = e;
+              if (!over || active.id === over.id) return;
+              onReorderActivitiesInSection(
+                cat.id,
+                String(active.id),
+                String(over.id)
+              );
+            }}
+          >
+            <SortableContext
+              items={visibleActivities.map((a) => a.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {visibleActivities.map((activity, activityIndex) => (
+                <SortablePlaybookActivityRow
+                  key={activity.id}
+                  sortableId={activity.id}
+                  sortableDisabled={editingActivity === activity.id}
+                >
+                  {(handle) => (
+                    <ActivityRow
+                      activity={activity}
+                      listIndex={activityIndex + 1}
+                      completed={completions[activity.id] ?? 0}
+                      isEditing={editingActivity === activity.id}
+                      editFields={editFields}
+                      onEditFieldsChange={setEditFields}
+                      onStartEdit={() => onStartEditActivity(activity)}
+                      onConfirmEdit={onConfirmEditActivity}
+                      onCancelEdit={onCancelEditActivity}
+                      onDelete={() => onDeleteActivity(cat.id, activity.id)}
+                      onIncrement={() =>
+                        onIncrement(activity.id, activity.target)
+                      }
+                      onDecrement={() => onDecrement(activity.id)}
+                      isPriority={false}
+                      onTogglePriority={() =>
+                        onTogglePriorityActivity(activity.id)
+                      }
+                      dragHandle={
+                        editingActivity === activity.id ? null : handle
+                      }
+                    />
+                  )}
+                </SortablePlaybookActivityRow>
+              ))}
+            </SortableContext>
+          </DndContext>
           <div className="px-5 py-3">
             <button
               type="button"
@@ -901,6 +951,7 @@ function PlaybookPinnedPrioritiesRow({
   onDecrement,
   onTogglePriorityActivity,
   ownerCategoryId,
+  onReorderPriorityActivities,
 }: {
   cat: PlaybookCategory;
   isOpen: boolean;
@@ -919,7 +970,14 @@ function PlaybookPinnedPrioritiesRow({
   onDecrement: (activityId: string) => void;
   onTogglePriorityActivity: (activityId: string) => void;
   ownerCategoryId: (activityId: string) => string | undefined;
+  onReorderPriorityActivities: (activeId: string, overId: string) => void;
 }) {
+  const priorityActivitySensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 6 },
+    })
+  );
+
   return (
     <div className="rounded-2xl border border-border bg-white shadow-sm">
       <div className="group/sec flex items-center gap-2 px-5 py-4 sm:gap-3">
@@ -972,28 +1030,61 @@ function PlaybookPinnedPrioritiesRow({
 
       {isOpen && (
         <div className="border-t border-border">
-          {cat.activities.map((activity, activityIndex) => (
-            <ActivityRow
-              key={activity.id}
-              activity={activity}
-              listIndex={activityIndex + 1}
-              completed={completions[activity.id] ?? 0}
-              isEditing={editingActivity === activity.id}
-              editFields={editFields}
-              onEditFieldsChange={setEditFields}
-              onStartEdit={() => onStartEditActivity(activity)}
-              onConfirmEdit={onConfirmEditActivity}
-              onCancelEdit={onCancelEditActivity}
-              onDelete={() => {
-                const cid = ownerCategoryId(activity.id);
-                if (cid) onDeleteActivity(cid, activity.id);
-              }}
-              onIncrement={() => onIncrement(activity.id, activity.target)}
-              onDecrement={() => onDecrement(activity.id)}
-              isPriority
-              onTogglePriority={() => onTogglePriorityActivity(activity.id)}
-            />
-          ))}
+          <DndContext
+            id="playbook-priority-activities"
+            sensors={priorityActivitySensors}
+            collisionDetection={closestCenter}
+            onDragEnd={(e) => {
+              const { active, over } = e;
+              if (!over || active.id === over.id) return;
+              onReorderPriorityActivities(
+                String(active.id),
+                String(over.id)
+              );
+            }}
+          >
+            <SortableContext
+              items={cat.activities.map((a) => a.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {cat.activities.map((activity, activityIndex) => (
+                <SortablePlaybookActivityRow
+                  key={activity.id}
+                  sortableId={activity.id}
+                  sortableDisabled={editingActivity === activity.id}
+                >
+                  {(handle) => (
+                    <ActivityRow
+                      activity={activity}
+                      listIndex={activityIndex + 1}
+                      completed={completions[activity.id] ?? 0}
+                      isEditing={editingActivity === activity.id}
+                      editFields={editFields}
+                      onEditFieldsChange={setEditFields}
+                      onStartEdit={() => onStartEditActivity(activity)}
+                      onConfirmEdit={onConfirmEditActivity}
+                      onCancelEdit={onCancelEditActivity}
+                      onDelete={() => {
+                        const cid = ownerCategoryId(activity.id);
+                        if (cid) onDeleteActivity(cid, activity.id);
+                      }}
+                      onIncrement={() =>
+                        onIncrement(activity.id, activity.target)
+                      }
+                      onDecrement={() => onDecrement(activity.id)}
+                      isPriority
+                      onTogglePriority={() =>
+                        onTogglePriorityActivity(activity.id)
+                      }
+                      dragHandle={
+                        editingActivity === activity.id ? null : handle
+                      }
+                    />
+                  )}
+                </SortablePlaybookActivityRow>
+              ))}
+            </SortableContext>
+          </DndContext>
         </div>
       )}
     </div>
@@ -1015,6 +1106,24 @@ function playbookCategoryPoints(
   }, 0);
   const catTotal = acts.reduce((s, a) => s + a.points, 0);
   return { catEarned, catTotal };
+}
+
+/** Reorder visible (non-priority) activities while keeping priority rows fixed in `activities`. */
+function reorderNonPriorityActivities(
+  activities: PlaybookActivity[],
+  priorityIdSet: Set<string>,
+  activeId: string,
+  overId: string
+): PlaybookActivity[] {
+  const nonPri = activities.filter((a) => !priorityIdSet.has(a.id));
+  const oldIdx = nonPri.findIndex((a) => a.id === activeId);
+  const newIdx = nonPri.findIndex((a) => a.id === overId);
+  if (oldIdx < 0 || newIdx < 0) return activities;
+  const reordered = arrayMove(nonPri, oldIdx, newIdx);
+  const q = [...reordered];
+  return activities.map((a) =>
+    priorityIdSet.has(a.id) ? a : (q.shift() as PlaybookActivity)
+  );
 }
 
 /** Drag preview only — avoids transform + full card compositing (ghosting) on the live row. */
@@ -1098,6 +1207,35 @@ function PlaybookTab() {
       activities: acts,
     };
   }, [priorityActivityIds, categories]);
+
+  const reorderActivitiesInSection = useCallback(
+    (catId: string, activeId: string, overId: string) => {
+      setCategories((prev) =>
+        prev.map((c) => {
+          if (c.id !== catId) return c;
+          return {
+            ...c,
+            activities: reorderNonPriorityActivities(
+              c.activities,
+              priorityIdSet,
+              activeId,
+              overId
+            ),
+          };
+        })
+      );
+    },
+    [priorityIdSet]
+  );
+
+  function reorderPriorityActivities(activeId: string, overId: string) {
+    setPriorityActivityIds((prev) => {
+      const oi = prev.indexOf(activeId);
+      const ni = prev.indexOf(overId);
+      if (oi < 0 || ni < 0) return prev;
+      return arrayMove(prev, oi, ni);
+    });
+  }
 
   useEffect(() => {
     setPriorityActivityIds((prev) =>
@@ -1533,6 +1671,7 @@ function PlaybookTab() {
             onDecrement={decrement}
             onTogglePriorityActivity={togglePriorityActivity}
             ownerCategoryId={(id) => activityOwnerCategoryId(categories, id)}
+            onReorderPriorityActivities={reorderPriorityActivities}
           />
         ) : null}
         <DndContext
@@ -1603,6 +1742,7 @@ function PlaybookTab() {
                   }}
                   priorityIdSet={priorityIdSet}
                   onTogglePriorityActivity={togglePriorityActivity}
+                  onReorderActivitiesInSection={reorderActivitiesInSection}
                 />
               );
             })}
@@ -1685,6 +1825,40 @@ function ActivityProgressRing({
   );
 }
 
+type PlaybookActivityDragHandle = {
+  attributes: DraggableAttributes;
+  listeners: DraggableSyntheticListeners;
+};
+
+function SortablePlaybookActivityRow({
+  sortableId,
+  sortableDisabled,
+  children,
+}: {
+  sortableId: string;
+  sortableDisabled: boolean;
+  children: (handle: PlaybookActivityDragHandle) => ReactNode;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: sortableId, disabled: sortableDisabled });
+  const sortStyle = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    ...(isDragging ? { opacity: 0.55 } : {}),
+  };
+  return (
+    <div ref={setNodeRef} style={sortStyle}>
+      {children({ attributes, listeners })}
+    </div>
+  );
+}
+
 function ActivityRow({
   activity,
   listIndex,
@@ -1700,6 +1874,7 @@ function ActivityRow({
   onDecrement,
   isPriority,
   onTogglePriority,
+  dragHandle,
 }: {
   activity: PlaybookActivity;
   /** 1-based position in the section (not the internal id — those can be long timestamps). */
@@ -1716,6 +1891,7 @@ function ActivityRow({
   onDecrement: () => void;
   isPriority: boolean;
   onTogglePriority: () => void;
+  dragHandle?: PlaybookActivityDragHandle | null;
 }) {
   const isDone = completed >= activity.target;
   const capped = Math.min(completed, activity.target);
@@ -1782,6 +1958,19 @@ function ActivityRow({
       role="listitem"
       aria-label={`Activity ${listIndex}: ${activity.title}, ${completed} of ${activity.target} done`}
     >
+      {dragHandle ? (
+        <button
+          type="button"
+          className="shrink-0 cursor-grab touch-none rounded-lg p-1 text-text-secondary/50 hover:bg-surface hover:text-text-secondary/80 active:cursor-grabbing"
+          aria-label="Reorder activity"
+          {...dragHandle.attributes}
+          {...dragHandle.listeners}
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+      ) : (
+        <div className="w-7 shrink-0" aria-hidden />
+      )}
       <ActivityProgressRing completed={completed} target={activity.target} />
       <div className="min-w-0 flex-1">
         <p
