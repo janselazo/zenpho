@@ -56,11 +56,11 @@ export default function Hero() {
           transition={{ duration: 0.5, delay: 0.24 }}
           className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4"
         >
-          <Button href="/booking" variant="primary" size="lg">
-            Book a call
+          <Button href="/pricing" variant="primary" size="lg">
+            Agency
           </Button>
-          <Button href="/pricing" variant="dark" size="lg" showLiveDot>
-            View Pricing
+          <Button href="/studio" variant="dark" size="lg" showLiveDot>
+            Studio
           </Button>
         </motion.div>
 
