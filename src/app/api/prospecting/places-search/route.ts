@@ -12,6 +12,8 @@ type GoogPlace = {
   types?: string[];
 };
 
+const MAX_QUERY_LEN = 280;
+
 function normalizePlace(p: GoogPlace): PlacesSearchPlace | null {
   const id = p.id ?? "";
   const name = p.displayName?.text?.trim() ?? "";
@@ -25,6 +27,57 @@ function normalizePlace(p: GoogPlace): PlacesSearchPlace | null {
       typeof p.userRatingCount === "number" ? p.userRatingCount : null,
     websiteUri: p.websiteUri ?? null,
     types: Array.isArray(p.types) ? p.types : [],
+  };
+}
+
+function looksLikeUsZip(s: string): boolean {
+  return /^\d{5}(-\d{4})?$/.test(s.trim());
+}
+
+type SearchBody = {
+  textQuery?: string;
+  category?: string;
+  city?: string;
+  zip?: string;
+  onlyNoWebsite?: boolean;
+};
+
+function resolveTextQuery(body: SearchBody): { ok: true; textQuery: string } | { ok: false; error: string } {
+  const legacy = String(body.textQuery ?? "").trim();
+  const category = String(body.category ?? "").trim();
+  const city = String(body.city ?? "").trim();
+  const zip = String(body.zip ?? "").trim();
+
+  const usesStructured = Boolean(category || city || zip);
+
+  if (usesStructured) {
+    if (!category) {
+      return { ok: false, error: "Enter a business category." };
+    }
+    if (!city && !zip) {
+      return { ok: false, error: "Enter a city or ZIP code (or both)." };
+    }
+    const location = [city, zip].filter(Boolean).join(" ");
+    let textQuery = `${category} in ${location}`.trim();
+    if (textQuery.length > MAX_QUERY_LEN) {
+      textQuery = textQuery.slice(0, MAX_QUERY_LEN);
+    }
+    return { ok: true, textQuery };
+  }
+
+  if (legacy) {
+    if (legacy.length > MAX_QUERY_LEN) {
+      return {
+        ok: false,
+        error: `Enter a search between 1 and ${MAX_QUERY_LEN} characters.`,
+      };
+    }
+    return { ok: true, textQuery: legacy };
+  }
+
+  return {
+    ok: false,
+    error: "Enter a business category and city or ZIP to search.",
   };
 }
 
@@ -47,20 +100,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Forbidden", places: [] }, { status: 403 });
   }
 
-  let body: { textQuery?: string };
+  let body: SearchBody;
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON", places: [] }, { status: 400 });
   }
 
-  const textQuery = String(body.textQuery ?? "").trim();
-  if (!textQuery || textQuery.length > 280) {
-    return NextResponse.json(
-      { error: "Enter a search between 1 and 280 characters.", places: [] },
-      { status: 400 }
-    );
+  const resolved = resolveTextQuery(body);
+  if (!resolved.ok) {
+    return NextResponse.json({ error: resolved.error, places: [] }, { status: 400 });
   }
+  const textQuery = resolved.textQuery;
+
+  const onlyNoWebsite = Boolean(body.onlyNoWebsite);
+  const zipTrimmed = String(body.zip ?? "").trim();
 
   const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim();
   if (!apiKey) {
@@ -74,6 +128,14 @@ export async function POST(req: Request) {
   const fieldMask =
     "places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.websiteUri,places.types";
 
+  const requestPayload: Record<string, unknown> = {
+    textQuery,
+    languageCode: "en",
+  };
+  if (looksLikeUsZip(zipTrimmed)) {
+    requestPayload.regionCode = "US";
+  }
+
   const res = await fetch("https://places.googleapis.com/v1/places:searchText", {
     method: "POST",
     headers: {
@@ -81,7 +143,7 @@ export async function POST(req: Request) {
       "X-Goog-Api-Key": apiKey,
       "X-Goog-FieldMask": fieldMask,
     },
-    body: JSON.stringify({ textQuery, languageCode: "en" }),
+    body: JSON.stringify(requestPayload),
   });
 
   if (!res.ok) {
@@ -94,9 +156,20 @@ export async function POST(req: Request) {
   }
 
   const data = (await res.json()) as { places?: GoogPlace[] };
-  const places = (data.places ?? [])
+  let places = (data.places ?? [])
     .map(normalizePlace)
     .filter((x): x is PlacesSearchPlace => x !== null);
 
-  return NextResponse.json({ places });
+  const totalBeforeFilter = places.length;
+  if (onlyNoWebsite) {
+    places = places.filter((p) => !p.websiteUri?.trim());
+  }
+  const droppedCount = onlyNoWebsite ? totalBeforeFilter - places.length : 0;
+
+  return NextResponse.json({
+    places,
+    filteredByNoWebsite: onlyNoWebsite,
+    totalBeforeFilter,
+    droppedCount,
+  });
 }
