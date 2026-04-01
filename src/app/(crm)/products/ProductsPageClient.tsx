@@ -10,6 +10,7 @@ import {
   colorForTeamTagLabel,
   getTeamById,
   PLAN_COLORS,
+  PLAN_STAGE_ORDER,
   type MockTeamMember,
   type PlanStage,
   type MockProject,
@@ -34,6 +35,7 @@ import {
   Flag,
   Hammer,
   LayoutGrid,
+  Layers,
   List,
   ListFilter,
   Loader2,
@@ -56,16 +58,8 @@ import {
 type ViewMode = "kanban" | "table";
 type SortKey = "title-asc" | "title-desc" | "end-asc" | "end-desc";
 
-const planOrder: PlanStage[] = [
-  "backlog",
-  "planning",
-  "building",
-  "testing",
-  "release",
-];
-
-/** Column glyphs aligned with product workflow (backlog → release). */
-const planColumnIcon: Record<PlanStage, ReactNode> = {
+/** Column glyphs for the five default stages; custom stages use a generic icon. */
+const BUILTIN_PLAN_ICONS: Record<PlanStage, ReactNode> = {
   backlog: (
     <Circle
       className="h-4 w-4 shrink-0 text-zinc-400"
@@ -103,6 +97,40 @@ const planColumnIcon: Record<PlanStage, ReactNode> = {
   ),
 };
 
+function planColumnIconFor(slug: string): ReactNode {
+  if ((PLAN_STAGE_ORDER as readonly string[]).includes(slug)) {
+    return BUILTIN_PLAN_ICONS[slug as PlanStage];
+  }
+  return (
+    <Layers
+      className="h-4 w-4 shrink-0 text-zinc-500 dark:text-zinc-400"
+      strokeWidth={2}
+      aria-hidden
+    />
+  );
+}
+
+const EXTRA_PLAN_HEX = [
+  "#6366f1",
+  "#8b5cf6",
+  "#ec4899",
+  "#f97316",
+  "#14b8a6",
+  "#0ea5e9",
+  "#84cc16",
+] as const;
+
+function planHexForSlug(slug: string): string {
+  if ((PLAN_STAGE_ORDER as readonly string[]).includes(slug)) {
+    return PLAN_COLORS[slug as PlanStage];
+  }
+  let h = 0;
+  for (let i = 0; i < slug.length; i++) {
+    h = (h * 31 + slug.charCodeAt(i)) >>> 0;
+  }
+  return EXTRA_PLAN_HEX[h % EXTRA_PLAN_HEX.length];
+}
+
 function projectRefId(id: string) {
   const tail = id.replace(/\D/g, "").slice(-4) || id.slice(0, 4);
   return `PRJ-${tail}`.toUpperCase();
@@ -133,8 +161,8 @@ function typeTagStyles(projectType: string | undefined) {
   return "bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200";
 }
 
-function planTagStyles(plan: PlanStage) {
-  const c = PLAN_COLORS[plan];
+function planTagStyles(plan: string) {
+  const c = planHexForSlug(plan);
   return {
     backgroundColor: `${c}18`,
     color: c,
@@ -142,7 +170,7 @@ function planTagStyles(plan: PlanStage) {
   };
 }
 
-function priorityFlagColor(plan: PlanStage) {
+function priorityFlagColor(plan: string) {
   switch (plan) {
     case "backlog":
       return "text-zinc-400";
@@ -152,8 +180,10 @@ function priorityFlagColor(plan: PlanStage) {
       return "text-sky-500";
     case "testing":
       return "text-violet-500";
-    default:
+    case "release":
       return "text-emerald-500";
+    default:
+      return "text-zinc-500";
   }
 }
 
@@ -162,6 +192,11 @@ function ProjectsPageContent({
 }: {
   fieldOptions: MergedCrmFieldOptions;
 }) {
+  const planOrder =
+    Array.isArray(fieldOptions.productPlanStageOrder) &&
+    fieldOptions.productPlanStageOrder.length > 0
+      ? fieldOptions.productPlanStageOrder
+      : [...PLAN_STAGE_ORDER];
   const planLabels = fieldOptions.productPlanLabels;
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -308,14 +343,14 @@ function ProjectsPageContent({
 
   const kanbanColumns: KanbanColumn<MockProject>[] = planOrder.map((plan) => ({
     id: plan,
-    label: planLabels[plan],
-    color: PLAN_COLORS[plan],
-    icon: planColumnIcon[plan],
+    label: planLabels[plan] ?? plan,
+    color: planHexForSlug(plan),
+    icon: planColumnIconFor(plan),
     items: sortedForBoard.filter((p) => p.plan === plan),
   }));
 
   async function handleMove(itemId: string, _from: string, to: string) {
-    const stage = to as PlanStage;
+    const stage = to;
     if (isSupabaseConfigured()) {
       const res = await updateCrmProjectPlanStage(itemId, stage);
       if ("error" in res) {
@@ -554,6 +589,7 @@ function ProjectsPageContent({
           dealPrefill={editProject ? null : dealPrefill}
           editProject={editProject}
           leadProjectTypeOptions={fieldOptions.leadProjectTypes}
+          planStageOrder={planOrder}
           planLabels={planLabels}
           onClose={() => {
             setModalOpen(false);
@@ -727,7 +763,7 @@ function ProjectCard({
   deleteBusy,
 }: {
   project: MockProject;
-  planLabels: Record<PlanStage, string>;
+  planLabels: Record<string, string>;
   /** Hide plan pill on kanban — column already encodes stage. */
   hidePlanTag?: boolean;
   onEdit: () => void;
@@ -810,7 +846,7 @@ function ProjectCard({
               className="inline-flex rounded-md border px-2 py-0.5 text-[11px] font-semibold leading-tight"
               style={planTagStyles(project.plan)}
             >
-              {planLabels[project.plan]}
+              {planLabels[project.plan] ?? project.plan}
             </span>
           ) : null}
           <span className="inline-flex rounded-md bg-zinc-100 px-2 py-0.5 text-[11px] font-semibold leading-tight text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
@@ -858,7 +894,7 @@ function ProjectTable({
   deletingId,
 }: {
   projects: MockProject[];
-  planLabels: Record<PlanStage, string>;
+  planLabels: Record<string, string>;
   onEdit: (p: MockProject) => void;
   onDelete: (p: MockProject) => void;
   deletingId: string | null;
@@ -910,9 +946,9 @@ function ProjectTable({
                 <td className="px-4 py-3">
                   <span
                     className="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium text-white"
-                    style={{ backgroundColor: PLAN_COLORS[p.plan] }}
+                    style={{ backgroundColor: planHexForSlug(p.plan) }}
                   >
-                    {planLabels[p.plan]}
+                    {planLabels[p.plan] ?? p.plan}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-text-secondary">{teamLabel}</td>

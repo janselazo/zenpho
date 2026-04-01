@@ -9,7 +9,6 @@ import {
   PLAN_LABELS,
   projectClientNameParts,
   type MockProject,
-  type PlanStage,
 } from "@/lib/crm/mock-data";
 import { projectTypeBadgeClass } from "@/lib/crm/project-type-badge";
 import type { WorkspaceResource } from "@/lib/crm/project-workspace-types";
@@ -51,7 +50,7 @@ type Props = {
   initialProductResources: WorkspaceResource[];
   childDeliveryStatusUi: ChildDeliveryStatusUiConfig;
   productMetadata: unknown;
-  planLabels?: Record<PlanStage, string>;
+  planLabels?: Record<string, string>;
 };
 
 function MetaField({
@@ -185,9 +184,13 @@ export default function ProductDetailShell({
           <MetaField label="Plan">
             <span
               className="rounded-full px-2.5 py-0.5 text-xs font-medium text-white"
-              style={{ backgroundColor: PLAN_COLORS[product.plan] }}
+              style={{
+                backgroundColor:
+                  (PLAN_COLORS as Record<string, string>)[product.plan] ??
+                  "#6366f1",
+              }}
             >
-              {planLabels[product.plan]}
+              {planLabels[product.plan] ?? product.plan}
             </span>
           </MetaField>
           {product.projectType ? (
@@ -364,6 +367,7 @@ export default function ProductDetailShell({
               productId={productId}
               projectId={selectedProjectId}
               childrenProjects={childrenProjects}
+              planLabelMap={planLabels}
             />
           )
         ) : null}

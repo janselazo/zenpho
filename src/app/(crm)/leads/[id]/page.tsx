@@ -48,6 +48,31 @@ export default async function LeadDetailPage({ params }: Props) {
     fetchMergedCrmFieldOptions(),
   ]);
 
+  const tagsRes = await supabase
+    .from("lead_tag")
+    .select("id, name, color")
+    .order("name");
+  const leadTagCatalog =
+    !tagsRes.error && tagsRes.data
+      ? tagsRes.data.map((t) => ({
+          id: t.id as string,
+          name: t.name as string,
+          color:
+            typeof t.color === "string" && t.color.trim()
+              ? t.color.trim()
+              : "#2563eb",
+        }))
+      : [];
+
+  const assignRes = await supabase
+    .from("lead_tag_assignment")
+    .select("tag_id")
+    .eq("lead_id", id);
+  const leadTagIds =
+    !assignRes.error && assignRes.data
+      ? assignRes.data.map((r) => r.tag_id as string)
+      : [];
+
   return (
     <div className="min-h-full bg-zinc-50/90 px-4 py-6 sm:px-8 sm:py-8 dark:bg-zinc-950">
       <Suspense
@@ -64,6 +89,8 @@ export default async function LeadDetailPage({ params }: Props) {
           convertedClientId={cid}
           fieldOptions={fieldOptions}
           leadPipelineColumns={pipeline.lead}
+          leadTagCatalog={leadTagCatalog}
+          leadTagIds={leadTagIds}
         />
       </Suspense>
     </div>

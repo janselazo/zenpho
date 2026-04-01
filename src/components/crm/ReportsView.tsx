@@ -31,7 +31,6 @@ import {
   LEAD_PIPELINE_STAGES,
   LEAD_PIPELINE_COLUMN_COLORS,
   parseLeadPipelineStage,
-  type PlanStage,
   type DealStage,
   type TaskStatus,
   TASK_STATUS_LABELS,
@@ -109,11 +108,30 @@ function buildTaskBreakdown() {
 }
 
 function buildProjectsByStage() {
-  const stages: PlanStage[] = [...PLAN_STAGE_ORDER];
-  return stages.map((s) => ({
-    stage: PLAN_LABELS[s],
+  const stageSet = new Set<string>([...PLAN_STAGE_ORDER]);
+  for (const p of projects) {
+    if (p.plan) stageSet.add(p.plan);
+  }
+  const built = [...PLAN_STAGE_ORDER];
+  const extras = [...stageSet].filter(
+    (s) => !(PLAN_STAGE_ORDER as readonly string[]).includes(s)
+  );
+  const stages = [...built, ...extras.sort()];
+  const labels = PLAN_LABELS as Record<string, string>;
+  const colors = PLAN_COLORS as Record<string, string>;
+  const extraColors = [
+    "#6366f1",
+    "#8b5cf6",
+    "#ec4899",
+    "#f97316",
+    "#14b8a6",
+  ];
+  return stages.map((s, i) => ({
+    stage:
+      labels[s] ??
+      s.replace(/_/g, " ").replace(/\b\w/g, (ch) => ch.toUpperCase()),
     count: projects.filter((p) => p.plan === s).length,
-    color: PLAN_COLORS[s],
+    color: colors[s] ?? extraColors[i % extraColors.length],
   }));
 }
 

@@ -2,6 +2,7 @@ import LeadsView from "@/components/crm/LeadsView";
 import { fetchClientsForClientsView } from "@/lib/crm/fetch-clients-for-view";
 import { fetchMergedCrmFieldOptions } from "@/lib/crm/fetch-crm-field-options";
 import { fetchCrmPipelineSettings } from "@/lib/crm/fetch-pipeline-settings";
+import type { LeadTagCatalogRow } from "@/lib/crm/lead-tag-catalog";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
@@ -70,6 +71,66 @@ export default async function LeadsPage({
   const { data: leads, error } = leadsRes;
 
   const leadRows = leads ?? [];
+
+  let leadTagCatalog: LeadTagCatalogRow[] = [];
+  const tagsRes = await supabase
+    .from("lead_tag")
+    .select("id, name, color")
+    .order("name");
+  const tagMetaById = new Map<
+    string,
+    { id: string; name: string; color: string }
+  >();
+  const tagsByLeadId = new Map<
+    string,
+    { id: string; name: string; color: string }[]
+  >();
+  const tagAssignmentCounts = new Map<string, number>();
+
+  if (!tagsRes.error && tagsRes.data) {
+    for (const t of tagsRes.data) {
+      const id = t.id as string;
+      tagMetaById.set(id, {
+        id,
+        name: t.name as string,
+        color:
+          typeof t.color === "string" && t.color.trim()
+            ? t.color.trim()
+            : "#2563eb",
+      });
+    }
+
+    const assignRes = await supabase
+      .from("lead_tag_assignment")
+      .select("lead_id, tag_id");
+    const assigns = assignRes.error ? [] : (assignRes.data ?? []);
+    const leadIdOnPage = new Set(leadRows.map((l) => l.id as string));
+
+    for (const a of assigns) {
+      const tid = a.tag_id as string;
+      tagAssignmentCounts.set(tid, (tagAssignmentCounts.get(tid) ?? 0) + 1);
+      const lid = a.lead_id as string;
+      if (!leadIdOnPage.has(lid)) continue;
+      const meta = tagMetaById.get(tid);
+      if (!meta) continue;
+      if (!tagsByLeadId.has(lid)) tagsByLeadId.set(lid, []);
+      tagsByLeadId.get(lid)!.push(meta);
+    }
+
+    for (const [, list] of tagsByLeadId) {
+      list.sort((x, y) => x.name.localeCompare(y.name));
+    }
+
+    leadTagCatalog = tagsRes.data.map((t) => ({
+      id: t.id as string,
+      name: t.name as string,
+      color:
+        typeof t.color === "string" && t.color.trim()
+          ? t.color.trim()
+          : "#2563eb",
+      leadCount: tagAssignmentCounts.get(t.id as string) ?? 0,
+    }));
+  }
   const clientIds = [
     ...new Set(
       leadRows
@@ -101,12 +162,14 @@ export default async function LeadsPage({
 
   const leadsForView = leadRows.map((l) => {
     const cid = (l.converted_client_id as string | null)?.trim() ?? null;
+    const lid = l.id as string;
     return {
       ...l,
       primaryProject:
         cid && primaryProjectByClientId.has(cid)
           ? primaryProjectByClientId.get(cid)!
           : null,
+      leadTags: tagsByLeadId.get(lid) ?? [],
     };
   });
 
@@ -129,6 +192,7 @@ export default async function LeadsPage({
           leads={leadsForView}
           fieldOptions={fieldOptions}
           leadPipelineColumns={pipeline.lead}
+          leadTagCatalog={leadTagCatalog}
           clientsForTab={clientsForTab}
           clientsTabLoadError={clientsPack.error}
           initialSection={initialSection}

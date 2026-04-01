@@ -63,7 +63,8 @@ export function parseLeadPipelineStage(
 export interface MockProject {
   id: string;
   title: string;
-  plan: PlanStage;
+  /** `project.plan_stage` slug (built-in or custom from Settings → Fields). */
+  plan: string;
   teamId: string;
   /** Supabase `client.id` — every project is tied to a client record. */
   clientId: string;

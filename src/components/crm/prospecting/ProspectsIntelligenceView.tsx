@@ -22,7 +22,7 @@ import {
   createLeadFromProspectIntelAction,
 } from "@/app/(crm)/actions/prospect-intel";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Building2, Globe } from "lucide-react";
+import { Building2, ChevronLeft, ChevronRight, Globe } from "lucide-react";
 import IconTabBar from "@/components/crm/prospecting/IconTabBar";
 import PlacesCategoryAutocomplete from "@/components/crm/prospecting/PlacesCategoryAutocomplete";
 import PlacesSearchResultsList from "@/components/crm/prospecting/PlacesSearchResultsList";
@@ -38,7 +38,7 @@ const cardClass =
 const SESSION_PLACE_REPORT_KEY = "zenpho:prospect-intel-place-v1";
 const SESSION_SCROLL_TO_REPORT_KEY = "zenpho:prospect-intel-scroll-v1";
 
-function IntelReportPanel({
+function IntelReportSummary({
   report,
   websiteCrawlEmails = [],
   onPickEmail,
@@ -48,70 +48,107 @@ function IntelReportPanel({
   onPickEmail?: (email: string) => void;
 }) {
   return (
-    <div className="space-y-6">
-      <div className="rounded-xl border border-border bg-surface/30 p-4 dark:border-zinc-700/80 dark:bg-zinc-900/40">
+    <div className="rounded-xl border border-border bg-surface/30 p-4 dark:border-zinc-700/80 dark:bg-zinc-900/40">
+      <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/60 dark:text-zinc-500">
+        Summary
+      </p>
+      <p className="mt-2 text-sm leading-relaxed text-text-primary dark:text-zinc-100">
+        {report.summary}
+      </p>
+      {websiteCrawlEmails.length > 0 ? (
+        <div className="mt-4 border-t border-border/70 pt-4 dark:border-zinc-700/60">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/60 dark:text-zinc-500">
+            Emails found on website
+          </p>
+          <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-text-primary dark:text-zinc-200">
+            {websiteCrawlEmails.map((email) =>
+              onPickEmail ? (
+                <li key={email}>
+                  <button
+                    type="button"
+                    className="text-left text-accent hover:underline dark:text-blue-400"
+                    onClick={() => onPickEmail(email)}
+                  >
+                    {email}
+                  </button>
+                </li>
+              ) : (
+                <li key={email}>{email}</li>
+              )
+            )}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+const HIGHLIGHT_SLIDES: {
+  label: string;
+  titleClass: string;
+  key: keyof Pick<MarketIntelReport, "software" | "aiAutomations" | "productGrowth">;
+}[] = [
+  {
+    key: "software",
+    label: "Software development",
+    titleClass:
+      "text-[11px] font-semibold uppercase tracking-widest text-blue-600/80 dark:text-blue-400",
+  },
+  {
+    key: "aiAutomations",
+    label: "AI automations",
+    titleClass:
+      "text-[11px] font-semibold uppercase tracking-widest text-violet-600/80 dark:text-violet-400",
+  },
+  {
+    key: "productGrowth",
+    label: "Product growth",
+    titleClass:
+      "text-[11px] font-semibold uppercase tracking-widest text-emerald-600/80 dark:text-emerald-400",
+  },
+];
+
+function IntelHighlightsCarousel({ report }: { report: MarketIntelReport }) {
+  const [index, setIndex] = useState(0);
+  const n = HIGHLIGHT_SLIDES.length;
+  const slide = HIGHLIGHT_SLIDES[index];
+  const items = report[slide.key];
+
+  return (
+    <div className="rounded-xl border border-border/80 p-4 dark:border-zinc-700/60">
+      <div className="flex items-center justify-between gap-2">
         <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/60 dark:text-zinc-500">
-          Summary
+          Highlights
         </p>
-        <p className="mt-2 text-sm leading-relaxed text-text-primary dark:text-zinc-100">
-          {report.summary}
-        </p>
-        {websiteCrawlEmails.length > 0 ? (
-          <div className="mt-4 border-t border-border/70 pt-4 dark:border-zinc-700/60">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/60 dark:text-zinc-500">
-              Emails found on website
-            </p>
-            <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-text-primary dark:text-zinc-200">
-              {websiteCrawlEmails.map((email) =>
-                onPickEmail ? (
-                  <li key={email}>
-                    <button
-                      type="button"
-                      className="text-left text-accent hover:underline dark:text-blue-400"
-                      onClick={() => onPickEmail(email)}
-                    >
-                      {email}
-                    </button>
-                  </li>
-                ) : (
-                  <li key={email}>{email}</li>
-                )
-              )}
-            </ul>
-          </div>
-        ) : null}
+        <span className="text-[11px] tabular-nums text-text-secondary/70 dark:text-zinc-500">
+          {index + 1} / {n}
+        </span>
       </div>
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-xl border border-border/80 p-4 dark:border-zinc-700/60">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-600/80 dark:text-blue-400">
-            Software development
-          </p>
-          <ul className="mt-3 list-inside list-disc space-y-2 text-sm text-text-secondary dark:text-zinc-400">
-            {report.software.map((x, i) => (
+      <div className="mt-3 flex items-stretch gap-2">
+        <button
+          type="button"
+          aria-label="Previous highlight"
+          onClick={() => setIndex((i) => (i - 1 + n) % n)}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-white text-text-secondary hover:bg-surface dark:border-zinc-600 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+        >
+          <ChevronLeft className="h-5 w-5" aria-hidden />
+        </button>
+        <div className="min-w-0 flex-1 rounded-lg border border-border/60 bg-surface/20 p-4 dark:border-zinc-700/50 dark:bg-zinc-900/30">
+          <p className={slide.titleClass}>{slide.label}</p>
+          <ul className="mt-3 min-h-[16rem] list-inside list-disc space-y-2 overflow-y-auto text-sm text-text-secondary dark:text-zinc-400">
+            {items.map((x, i) => (
               <li key={i}>{x}</li>
             ))}
           </ul>
         </div>
-        <div className="rounded-xl border border-border/80 p-4 dark:border-zinc-700/60">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-violet-600/80 dark:text-violet-400">
-            AI automations
-          </p>
-          <ul className="mt-3 list-inside list-disc space-y-2 text-sm text-text-secondary dark:text-zinc-400">
-            {report.aiAutomations.map((x, i) => (
-              <li key={i}>{x}</li>
-            ))}
-          </ul>
-        </div>
-        <div className="rounded-xl border border-border/80 p-4 dark:border-zinc-700/60">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-emerald-600/80 dark:text-emerald-400">
-            Product growth
-          </p>
-          <ul className="mt-3 list-inside list-disc space-y-2 text-sm text-text-secondary dark:text-zinc-400">
-            {report.productGrowth.map((x, i) => (
-              <li key={i}>{x}</li>
-            ))}
-          </ul>
-        </div>
+        <button
+          type="button"
+          aria-label="Next highlight"
+          onClick={() => setIndex((i) => (i + 1) % n)}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-white text-text-secondary hover:bg-surface dark:border-zinc-600 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+        >
+          <ChevronRight className="h-5 w-5" aria-hidden />
+        </button>
       </div>
     </div>
   );
@@ -681,6 +718,16 @@ function ProspectsIntelligenceViewInner({
             </div>
           </div>
 
+          {saveMessage ? (
+            <p className="text-xs text-text-secondary dark:text-zinc-400">{saveMessage}</p>
+          ) : null}
+
+          <IntelReportSummary
+            report={activeReport.report}
+            websiteCrawlEmails={websiteCrawlEmails}
+            onPickEmail={(email) => setLeadEmail((cur) => cur.trim() || email)}
+          />
+
           <ProspectIntelBusinessSnapshot
             businessLabel={
               activeReport.kind === "url"
@@ -703,141 +750,133 @@ function ProspectsIntelligenceViewInner({
             onPickPhone={(phone) => setLeadPhone((cur) => cur.trim() || phone)}
           />
 
-          <div className="border-t border-border pt-6 dark:border-zinc-800">
-            <IntelReportPanel
-              report={activeReport.report}
-              websiteCrawlEmails={websiteCrawlEmails}
-              onPickEmail={(email) => setLeadEmail((cur) => cur.trim() || email)}
-            />
+          <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+            <IntelHighlightsCarousel report={activeReport.report} />
+            <div className="rounded-xl border border-border/80 p-4 dark:border-zinc-700/60">
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
+                Add as Lead
+              </h3>
+              <p className="mt-1 text-xs text-text-secondary dark:text-zinc-500">
+                Project type is required for CRM Leads. Prefilled from research—you can edit
+                before saving.
+              </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-text-secondary">
+                    Name
+                  </label>
+                  <input
+                    value={leadName}
+                    onChange={(e) => setLeadName(e.target.value)}
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-text-secondary">
+                    Company
+                  </label>
+                  <input
+                    value={leadCompany}
+                    onChange={(e) => setLeadCompany(e.target.value)}
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-text-secondary">
+                    Email (optional)
+                  </label>
+                  <input
+                    type="email"
+                    value={leadEmail}
+                    onChange={(e) => setLeadEmail(e.target.value)}
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-text-secondary">
+                    Phone (optional)
+                  </label>
+                  <input
+                    type="tel"
+                    value={leadPhone}
+                    onChange={(e) => setLeadPhone(e.target.value)}
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-xs font-medium text-text-secondary">
+                    Project type
+                  </label>
+                  <select
+                    value={projectType}
+                    onChange={(e) => setProjectType(e.target.value)}
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  >
+                    {fieldOptions.leadProjectTypes.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-xs font-medium text-text-secondary">
+                    Notes (report + context)
+                  </label>
+                  <textarea
+                    value={leadNotes}
+                    onChange={(e) => setLeadNotes(e.target.value)}
+                    rows={10}
+                    className="min-h-[14rem] w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={leadPending || !leadName.trim()}
+                onClick={() => void submitLead()}
+                className="mt-4 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-50"
+              >
+                {leadPending ? "Creating…" : "Create Lead"}
+              </button>
+              {leadMessage ? (
+                <p className="mt-2 text-sm text-emerald-700 dark:text-emerald-400">
+                  {leadMessage}
+                </p>
+              ) : null}
+            </div>
           </div>
-          {saveMessage ? (
-            <p className="text-xs text-text-secondary dark:text-zinc-400">{saveMessage}</p>
-          ) : null}
 
           <ProspectIntelEnrichment
-            omitBusinessSnapshot
-            websiteUrl={
-              activeReport.kind === "url"
-                ? activeReport.urlMeta.url
-                : activeReport.place.websiteUri?.trim() || null
-            }
-            listingPhone={
-              activeReport.kind === "place"
-                ? activeReport.place.nationalPhoneNumber?.trim() ||
-                  activeReport.place.internationalPhoneNumber?.trim() ||
-                  null
-                : null
-            }
-            googleMapsUri={
-              activeReport.kind === "place" ? activeReport.place.googleMapsUri?.trim() || null : null
-            }
-            businessLabel={
-              activeReport.kind === "url"
-                ? activeReport.urlMeta.pageTitle?.slice(0, 200) || activeReport.urlMeta.url
-                : activeReport.place.name
-            }
-            addressLabel={
-              activeReport.kind === "place" ? activeReport.place.formattedAddress : null
-            }
-            homepageContactHints={activeReport.kind === "url" ? urlHomepageHints : null}
-            onPickEmail={(email) => setLeadEmail((cur) => cur.trim() || email)}
-            onPickPhone={(phone) => setLeadPhone((cur) => cur.trim() || phone)}
-            onWebsiteEmailsChange={setWebsiteCrawlEmails}
-          />
-
-          <div className="border-t border-border pt-6 dark:border-zinc-800">
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
-              Add as Lead
-            </h3>
-            <p className="mt-1 text-xs text-text-secondary dark:text-zinc-500">
-              Project type is required for CRM Leads. Prefilled from research—you can edit
-              before saving.
-            </p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div>
-                <label className="mb-1 block text-xs font-medium text-text-secondary">
-                  Name
-                </label>
-                <input
-                  value={leadName}
-                  onChange={(e) => setLeadName(e.target.value)}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-text-secondary">
-                  Company
-                </label>
-                <input
-                  value={leadCompany}
-                  onChange={(e) => setLeadCompany(e.target.value)}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-text-secondary">
-                  Email (optional)
-                </label>
-                <input
-                  type="email"
-                  value={leadEmail}
-                  onChange={(e) => setLeadEmail(e.target.value)}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-text-secondary">
-                  Phone (optional)
-                </label>
-                <input
-                  type="tel"
-                  value={leadPhone}
-                  onChange={(e) => setLeadPhone(e.target.value)}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="mb-1 block text-xs font-medium text-text-secondary">
-                  Project type
-                </label>
-                <select
-                  value={projectType}
-                  onChange={(e) => setProjectType(e.target.value)}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-                >
-                  {fieldOptions.leadProjectTypes.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="sm:col-span-2">
-                <label className="mb-1 block text-xs font-medium text-text-secondary">
-                  Notes (report + context)
-                </label>
-                <textarea
-                  value={leadNotes}
-                  onChange={(e) => setLeadNotes(e.target.value)}
-                  rows={6}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-                />
-              </div>
-            </div>
-            <button
-              type="button"
-              disabled={leadPending || !leadName.trim()}
-              onClick={() => void submitLead()}
-              className="mt-4 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-50"
-            >
-              {leadPending ? "Creating…" : "Create Lead"}
-            </button>
-            {leadMessage ? (
-              <p className="mt-2 text-sm text-emerald-700 dark:text-emerald-400">
-                {leadMessage}
-              </p>
-            ) : null}
-          </div>
+              omitBusinessSnapshot
+              websiteUrl={
+                activeReport.kind === "url"
+                  ? activeReport.urlMeta.url
+                  : activeReport.place.websiteUri?.trim() || null
+              }
+              listingPhone={
+                activeReport.kind === "place"
+                  ? activeReport.place.nationalPhoneNumber?.trim() ||
+                    activeReport.place.internationalPhoneNumber?.trim() ||
+                    null
+                  : null
+              }
+              googleMapsUri={
+                activeReport.kind === "place" ? activeReport.place.googleMapsUri?.trim() || null : null
+              }
+              businessLabel={
+                activeReport.kind === "url"
+                  ? activeReport.urlMeta.pageTitle?.slice(0, 200) || activeReport.urlMeta.url
+                  : activeReport.place.name
+              }
+              addressLabel={
+                activeReport.kind === "place" ? activeReport.place.formattedAddress : null
+              }
+              homepageContactHints={activeReport.kind === "url" ? urlHomepageHints : null}
+              onPickEmail={(email) => setLeadEmail((cur) => cur.trim() || email)}
+              onPickPhone={(phone) => setLeadPhone((cur) => cur.trim() || phone)}
+              onWebsiteEmailsChange={setWebsiteCrawlEmails}
+            />
         </div>
       ) : (
         <div className={`${cardClass} text-sm text-text-secondary dark:text-zinc-500`}>

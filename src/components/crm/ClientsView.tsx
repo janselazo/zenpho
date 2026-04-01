@@ -13,6 +13,7 @@ import {
 import { deleteClient, updateClientRow } from "@/app/(crm)/actions/crm";
 import CrmNewProjectForClientModal from "@/components/crm/CrmNewProjectForClientModal";
 import type { ClientTableRow } from "@/lib/crm/client-table-row";
+import type { MergedCrmFieldOptions } from "@/lib/crm/field-options";
 
 export type { ClientTableRow };
 
@@ -79,12 +80,14 @@ export default function ClientsView({
   clients,
   embedded = false,
   highlightClientId,
+  fieldOptions,
 }: {
   clients: ClientTableRow[];
   /** When nested (e.g. Leads page tab), tighten vertical spacing. */
   embedded?: boolean;
   /** If set and the client exists in the table, scroll to the row and briefly emphasize it. */
   highlightClientId?: string;
+  fieldOptions?: MergedCrmFieldOptions;
 }) {
   const router = useRouter();
   const [snapshot, setSnapshot] = useState(clients);
@@ -450,6 +453,7 @@ export default function ClientsView({
           clientId={projectForClient.id}
           clientName={projectForClient.name}
           company={projectForClient.company}
+          fieldOptions={fieldOptions}
           onClose={() => setProjectForClient(null)}
         />
       ) : null}

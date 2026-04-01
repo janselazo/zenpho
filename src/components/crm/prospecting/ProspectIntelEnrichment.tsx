@@ -70,6 +70,13 @@ export default function ProspectIntelEnrichment({
   const [hunterLoading, setHunterLoading] = useState(false);
   const [hunterError, setHunterError] = useState<string | null>(null);
 
+  type ScraperTool = "outscraper" | "apollo" | "hunter";
+  const [activeTool, setActiveTool] = useState<ScraperTool | null>(null);
+
+  const toggleScraper = useCallback((id: ScraperTool) => {
+    setActiveTool((cur) => (cur === id ? null : id));
+  }, []);
+
   useEffect(() => {
     setOutQuery([businessLabel, addressLabel].filter(Boolean).join(" ").trim());
   }, [businessLabel, addressLabel]);
@@ -163,6 +170,13 @@ export default function ProspectIntelEnrichment({
     <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${cls}`}>{label}</span>
   );
 
+  const scraperTabClass = (id: ScraperTool) =>
+    `inline-flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs font-medium transition-colors ${
+      activeTool === id
+        ? "border-accent bg-accent/10 text-text-primary dark:bg-blue-500/15 dark:text-zinc-100"
+        : "border-border bg-white text-text-secondary hover:bg-surface dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+    }`;
+
   return (
     <div className="space-y-6 border-t border-border pt-6 dark:border-zinc-800">
       {!omitBusinessSnapshot ? (
@@ -176,142 +190,175 @@ export default function ProspectIntelEnrichment({
       ) : null}
 
       <div>
-        <h3 className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
-          <span>Outscraper</span>
-          {badge("Maps export", "bg-zinc-500/15 text-zinc-700 dark:text-zinc-300")}
-        </h3>
-        <div className="mt-2 flex flex-wrap gap-2">
-          <input
-            value={outQuery}
-            onChange={(e) => setOutQuery(e.target.value)}
-            placeholder="Search query for Maps…"
-            className="min-w-[12rem] flex-1 rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-          />
-          <button
-            type="button"
-            disabled={outLoading || !outQuery.trim()}
-            onClick={runOutscraper}
-            className="rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-accent-hover disabled:opacity-50"
-          >
-            {outLoading ? "Loading…" : "Run Outscraper"}
-          </button>
-        </div>
-        {outError ? <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">{outError}</p> : null}
-        {outRows && outRows.length > 0 ? (
-          <ul className="mt-3 max-h-48 space-y-2 overflow-y-auto text-xs">
-            {outRows.map((row, i) => (
-              <li key={i} className="rounded border border-border/60 p-2 dark:border-zinc-700/50">
-                <span className="font-medium text-text-primary dark:text-zinc-200">{row.name}</span>
-                {row.address ? <p className="text-text-secondary dark:text-zinc-500">{row.address}</p> : null}
-                {row.phone ? <p className="font-mono text-text-secondary dark:text-zinc-400">{row.phone}</p> : null}
-                {row.site ? (
-                  <a href={row.site.startsWith("http") ? row.site : `https://${row.site}`} className="text-accent hover:underline" target="_blank" rel="noreferrer">
-                    {row.site}
-                  </a>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </div>
-
-      <div>
-        <h3 className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
-          <span>Apollo</span>
-          {badge("Decision makers", "bg-violet-500/15 text-violet-900 dark:text-violet-200")}
+        <h3 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
+          Scrapers
         </h3>
         <p className="mt-1 text-xs text-text-secondary dark:text-zinc-500">
-          Uses company domain{domain ? ` (${domain})` : ""}. Add <code className="rounded bg-surface px-1 font-mono dark:bg-zinc-800">APOLLO_API_KEY</code> in .env.local.
+          Open a tool to run Maps export, Apollo people search, or Hunter domain emails. Fields stay hidden until you choose one.
         </p>
-        <button
-          type="button"
-          disabled={apolloLoading || !domain}
-          onClick={runApollo}
-          className="mt-2 rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-surface disabled:opacity-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
-        >
-          {apolloLoading ? "Loading…" : "Load top people (Apollo)"}
-        </button>
-        {apolloError ? <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">{apolloError}</p> : null}
-        {apolloPeople && apolloPeople.length > 0 ? (
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full min-w-[28rem] border-collapse text-left text-xs">
-              <thead>
-                <tr className="border-b border-border dark:border-zinc-700">
-                  <th className="py-2 pr-2">Name</th>
-                  <th className="py-2 pr-2">Title</th>
-                  <th className="py-2 pr-2">Email</th>
-                  <th className="py-2 pr-2">Phone</th>
-                  <th className="py-2">LinkedIn</th>
-                </tr>
-              </thead>
-              <tbody>
-                {apolloPeople.map((p, i) => (
-                  <tr key={i} className="border-b border-border/60 dark:border-zinc-800">
-                    <td className="py-2 pr-2 font-medium text-text-primary dark:text-zinc-200">{p.name}</td>
-                    <td className="py-2 pr-2 text-text-secondary dark:text-zinc-400">{p.title ?? "—"}</td>
-                    <td className="py-2 pr-2">
-                      {p.email ? (
-                        <button type="button" className="text-accent hover:underline" onClick={() => onPickEmail?.(p.email!)}>
-                          {p.email}
-                        </button>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="py-2 pr-2 font-mono text-text-secondary dark:text-zinc-400">
-                      {p.phone ? (
-                        <button type="button" className="hover:underline" onClick={() => onPickPhone?.(p.phone!)}>
-                          {p.phone}
-                        </button>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="py-2">
-                      {p.linkedinUrl ? (
-                        <a href={p.linkedinUrl} target="_blank" rel="noreferrer" className="text-accent hover:underline">
-                          Profile
-                        </a>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                  </tr>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => toggleScraper("outscraper")}
+            className={scraperTabClass("outscraper")}
+            aria-expanded={activeTool === "outscraper"}
+          >
+            <span className="font-semibold text-text-primary dark:text-zinc-100">Outscraper</span>
+            {badge("Maps export", "bg-zinc-500/15 text-zinc-700 dark:text-zinc-300")}
+          </button>
+          <button
+            type="button"
+            onClick={() => toggleScraper("apollo")}
+            className={scraperTabClass("apollo")}
+            aria-expanded={activeTool === "apollo"}
+          >
+            <span className="font-semibold text-text-primary dark:text-zinc-100">Apollo</span>
+            {badge("Decision makers", "bg-violet-500/15 text-violet-900 dark:text-violet-200")}
+          </button>
+          <button
+            type="button"
+            onClick={() => toggleScraper("hunter")}
+            className={scraperTabClass("hunter")}
+            aria-expanded={activeTool === "hunter"}
+          >
+            <span className="font-semibold text-text-primary dark:text-zinc-100">Hunter.io</span>
+            {badge("Domain search", "bg-emerald-500/15 text-emerald-900 dark:text-emerald-200")}
+          </button>
+        </div>
+
+        {activeTool === "outscraper" ? (
+          <div className="mt-4 rounded-xl border border-border/80 p-4 dark:border-zinc-700/60">
+            <div className="mt-0 flex flex-wrap gap-2">
+              <input
+                value={outQuery}
+                onChange={(e) => setOutQuery(e.target.value)}
+                placeholder="Search query for Maps…"
+                className="min-w-[12rem] flex-1 rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              />
+              <button
+                type="button"
+                disabled={outLoading || !outQuery.trim()}
+                onClick={runOutscraper}
+                className="rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-accent-hover disabled:opacity-50"
+              >
+                {outLoading ? "Loading…" : "Run Outscraper"}
+              </button>
+            </div>
+            {outError ? <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">{outError}</p> : null}
+            {outRows && outRows.length > 0 ? (
+              <ul className="mt-3 max-h-48 space-y-2 overflow-y-auto text-xs">
+                {outRows.map((row, i) => (
+                  <li key={i} className="rounded border border-border/60 p-2 dark:border-zinc-700/50">
+                    <span className="font-medium text-text-primary dark:text-zinc-200">{row.name}</span>
+                    {row.address ? <p className="text-text-secondary dark:text-zinc-500">{row.address}</p> : null}
+                    {row.phone ? <p className="font-mono text-text-secondary dark:text-zinc-400">{row.phone}</p> : null}
+                    {row.site ? (
+                      <a href={row.site.startsWith("http") ? row.site : `https://${row.site}`} className="text-accent hover:underline" target="_blank" rel="noreferrer">
+                        {row.site}
+                      </a>
+                    ) : null}
+                  </li>
                 ))}
-              </tbody>
-            </table>
+              </ul>
+            ) : null}
           </div>
         ) : null}
-      </div>
 
-      <div>
-        <h3 className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
-          <span>Hunter.io</span>
-          {badge("Domain search", "bg-emerald-500/15 text-emerald-900 dark:text-emerald-200")}
-        </h3>
-        <button
-          type="button"
-          disabled={hunterLoading || !domain}
-          onClick={runHunter}
-          className="mt-2 rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-surface disabled:opacity-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
-        >
-          {hunterLoading ? "Loading…" : "Domain search (Hunter)"}
-        </button>
-        {hunterError ? <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">{hunterError}</p> : null}
-        {hunterEmails && hunterEmails.length > 0 ? (
-          <ul className="mt-3 space-y-1 text-xs">
-            {hunterEmails.map((h) => (
-              <li key={h.email}>
-                <button type="button" className="text-accent hover:underline" onClick={() => onPickEmail?.(h.email)}>
-                  {h.email}
-                </button>
-                {h.position ? <span className="ml-2 text-text-secondary dark:text-zinc-500">{h.position}</span> : null}
-                {h.confidence != null ? (
-                  <span className="ml-2 text-text-secondary dark:text-zinc-600">({h.confidence}%)</span>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+        {activeTool === "apollo" ? (
+          <div className="mt-4 rounded-xl border border-border/80 p-4 dark:border-zinc-700/60">
+            <p className="text-xs text-text-secondary dark:text-zinc-500">
+              Uses company domain{domain ? ` (${domain})` : ""}. Add{" "}
+              <code className="rounded bg-surface px-1 font-mono dark:bg-zinc-800">APOLLO_API_KEY</code> in .env.local.
+            </p>
+            <button
+              type="button"
+              disabled={apolloLoading || !domain}
+              onClick={runApollo}
+              className="mt-3 rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-surface disabled:opacity-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
+            >
+              {apolloLoading ? "Loading…" : "Load top people (Apollo)"}
+            </button>
+            {apolloError ? <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">{apolloError}</p> : null}
+            {apolloPeople && apolloPeople.length > 0 ? (
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full min-w-[28rem] border-collapse text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-border dark:border-zinc-700">
+                      <th className="py-2 pr-2">Name</th>
+                      <th className="py-2 pr-2">Title</th>
+                      <th className="py-2 pr-2">Email</th>
+                      <th className="py-2 pr-2">Phone</th>
+                      <th className="py-2">LinkedIn</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {apolloPeople.map((p, i) => (
+                      <tr key={i} className="border-b border-border/60 dark:border-zinc-800">
+                        <td className="py-2 pr-2 font-medium text-text-primary dark:text-zinc-200">{p.name}</td>
+                        <td className="py-2 pr-2 text-text-secondary dark:text-zinc-400">{p.title ?? "—"}</td>
+                        <td className="py-2 pr-2">
+                          {p.email ? (
+                            <button type="button" className="text-accent hover:underline" onClick={() => onPickEmail?.(p.email!)}>
+                              {p.email}
+                            </button>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td className="py-2 pr-2 font-mono text-text-secondary dark:text-zinc-400">
+                          {p.phone ? (
+                            <button type="button" className="hover:underline" onClick={() => onPickPhone?.(p.phone!)}>
+                              {p.phone}
+                            </button>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td className="py-2">
+                          {p.linkedinUrl ? (
+                            <a href={p.linkedinUrl} target="_blank" rel="noreferrer" className="text-accent hover:underline">
+                              Profile
+                            </a>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        {activeTool === "hunter" ? (
+          <div className="mt-4 rounded-xl border border-border/80 p-4 dark:border-zinc-700/60">
+            <button
+              type="button"
+              disabled={hunterLoading || !domain}
+              onClick={runHunter}
+              className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-surface disabled:opacity-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
+            >
+              {hunterLoading ? "Loading…" : "Domain search (Hunter)"}
+            </button>
+            {hunterError ? <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">{hunterError}</p> : null}
+            {hunterEmails && hunterEmails.length > 0 ? (
+              <ul className="mt-3 space-y-1 text-xs">
+                {hunterEmails.map((h) => (
+                  <li key={h.email}>
+                    <button type="button" className="text-accent hover:underline" onClick={() => onPickEmail?.(h.email)}>
+                      {h.email}
+                    </button>
+                    {h.position ? <span className="ml-2 text-text-secondary dark:text-zinc-500">{h.position}</span> : null}
+                    {h.confidence != null ? (
+                      <span className="ml-2 text-text-secondary dark:text-zinc-600">({h.confidence}%)</span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
         ) : null}
       </div>
     </div>

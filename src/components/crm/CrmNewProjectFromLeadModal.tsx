@@ -141,6 +141,7 @@ export default function CrmNewProjectFromLeadModal({
       lockedClientId={prefill.clientId}
       fromLeadId={leadId}
       leadProjectTypeOptions={fieldOptions.leadProjectTypes}
+      planStageOrder={fieldOptions.productPlanStageOrder}
       planLabels={fieldOptions.productPlanLabels}
       onClose={onClose}
       onAdd={handleAdd}

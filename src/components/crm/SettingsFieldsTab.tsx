@@ -2,10 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ListTree, Loader2, Pencil, Trash2 } from "lucide-react";
+import { ListTree, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { saveCrmFieldOptions } from "@/app/(crm)/actions/crm";
-import type { MergedCrmFieldOptions } from "@/lib/crm/field-options";
-import { PLAN_STAGE_ORDER, type PlanStage } from "@/lib/crm/mock-data";
+import {
+  MAX_PRODUCT_PLAN_STAGES,
+  PLAN_STAGE_SLUG_PATTERN,
+  type MergedCrmFieldOptions,
+} from "@/lib/crm/field-options";
+import { PLAN_STAGE_ORDER } from "@/lib/crm/mock-data";
 import type { CrmPipelineSettings } from "@/lib/crm/fetch-pipeline-settings";
 import PipelineSettingsModal from "@/components/crm/PipelineSettingsModal";
 
@@ -14,6 +18,8 @@ const inputClass =
 
 const sectionTitle =
   "text-sm font-bold text-text-primary dark:text-zinc-100";
+
+const BUILTIN_PLAN_SLUGS = new Set<string>(PLAN_STAGE_ORDER as readonly string[]);
 
 function formatSourceOptionLabel(value: string) {
   return value
@@ -115,9 +121,15 @@ export default function SettingsFieldsTab({
   const [leadContactCategories, setLeadContactCategories] = useState(() => [
     ...initialFieldOptions.leadContactCategories,
   ]);
-  const [productPlanLabels, setProductPlanLabels] = useState<
-    Record<PlanStage, string>
-  >(() => ({ ...initialFieldOptions.productPlanLabels }));
+  const [productPlanStageOrder, setProductPlanStageOrder] = useState(() => [
+    ...(Array.isArray(initialFieldOptions.productPlanStageOrder) &&
+    initialFieldOptions.productPlanStageOrder.length > 0
+      ? initialFieldOptions.productPlanStageOrder
+      : [...PLAN_STAGE_ORDER]),
+  ]);
+  const [productPlanLabels, setProductPlanLabels] = useState(() => ({
+    ...initialFieldOptions.productPlanLabels,
+  }));
 
   const [leadModalOpen, setLeadModalOpen] = useState(false);
   const [dealModalOpen, setDealModalOpen] = useState(false);
@@ -129,8 +141,46 @@ export default function SettingsFieldsTab({
     setLeadProjectTypes([...initialFieldOptions.leadProjectTypes]);
     setLeadSources([...initialFieldOptions.leadSources]);
     setLeadContactCategories([...initialFieldOptions.leadContactCategories]);
+    setProductPlanStageOrder([
+      ...(Array.isArray(initialFieldOptions.productPlanStageOrder) &&
+      initialFieldOptions.productPlanStageOrder.length > 0
+        ? initialFieldOptions.productPlanStageOrder
+        : [...PLAN_STAGE_ORDER]),
+    ]);
     setProductPlanLabels({ ...initialFieldOptions.productPlanLabels });
   }, [initialFieldOptions]);
+
+  function suggestExtraPlanSlug(): string {
+    for (let i = 1; i < 999; i++) {
+      const s = `stage_${i}`;
+      if (!productPlanStageOrder.includes(s)) return s;
+    }
+    return `stage_${Date.now()}`;
+  }
+
+  function addCustomPlanStage() {
+    if (productPlanStageOrder.length >= MAX_PRODUCT_PLAN_STAGES) return;
+    const slug = suggestExtraPlanSlug();
+    setProductPlanStageOrder((o) => [...o, slug]);
+    setProductPlanLabels((prev) => ({ ...prev, [slug]: "New stage" }));
+  }
+
+  function removeCustomPlanStage(slug: string) {
+    if (BUILTIN_PLAN_SLUGS.has(slug)) return;
+    if (
+      !confirm(
+        "Remove this plan column? Products using this stage will fall back to another column in the board until you change their stage."
+      )
+    ) {
+      return;
+    }
+    setProductPlanStageOrder((o) => o.filter((s) => s !== slug));
+    setProductPlanLabels((prev) => {
+      const next = { ...prev };
+      delete next[slug];
+      return next;
+    });
+  }
 
   async function save() {
     setMessage(null);
@@ -141,6 +191,7 @@ export default function SettingsFieldsTab({
         leadProjectTypes,
         leadSources,
         leadContactCategories,
+        productPlanStageOrder,
         productPlanLabels,
       });
       if (res && typeof res === "object" && "error" in res && res.error) {
@@ -248,8 +299,9 @@ export default function SettingsFieldsTab({
       <div className="rounded-2xl border border-border bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/40">
         <p className={sectionTitle}>Product plan labels</p>
         <p className="mt-1 text-xs text-text-secondary dark:text-zinc-500">
-          Column slugs stay fixed (backlog, planning, …). Only the visible
-          names change on boards and detail.
+          Default columns keep fixed slugs (backlog, planning, …). Rename how
+          they appear on the board. Add extra columns with an auto slug
+          (letters, numbers, underscores); only the label is shown in the UI.
         </p>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           {PLAN_STAGE_ORDER.map((slug) => (
@@ -270,6 +322,68 @@ export default function SettingsFieldsTab({
             </div>
           ))}
         </div>
+        <ul className="mt-6 space-y-3">
+          {productPlanStageOrder
+            .filter((slug) => !BUILTIN_PLAN_SLUGS.has(slug))
+            .map((slug) => (
+              <li
+                key={slug}
+                className="flex flex-col gap-2 rounded-xl border border-border p-3 dark:border-zinc-700 sm:flex-row sm:items-end"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="mb-1 text-xs font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+                    Slug
+                  </p>
+                  <p className="font-mono text-sm text-text-primary dark:text-zinc-200">
+                    {slug}
+                    {!PLAN_STAGE_SLUG_PATTERN.test(slug) ? (
+                      <span className="ml-2 text-xs font-sans text-amber-600 dark:text-amber-400">
+                        (invalid — remove and add again)
+                      </span>
+                    ) : null}
+                  </p>
+                </div>
+                <div className="min-w-0 flex-[2]">
+                  <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+                    Label
+                  </label>
+                  <input
+                    value={productPlanLabels[slug] ?? ""}
+                    onChange={(e) =>
+                      setProductPlanLabels((prev) => ({
+                        ...prev,
+                        [slug]: e.target.value,
+                      }))
+                    }
+                    className={inputClass}
+                    aria-label={`Label for plan stage ${slug}`}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeCustomPlanStage(slug)}
+                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border text-text-secondary hover:bg-surface dark:border-zinc-700 dark:hover:bg-zinc-800"
+                  aria-label={`Remove plan stage ${slug}`}
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden />
+                </button>
+              </li>
+            ))}
+        </ul>
+        <button
+          type="button"
+          onClick={addCustomPlanStage}
+          disabled={productPlanStageOrder.length >= MAX_PRODUCT_PLAN_STAGES}
+          className="mt-4 inline-flex items-center gap-2 rounded-xl border border-dashed border-border px-4 py-2 text-sm font-medium text-accent hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600"
+        >
+          <Plus className="h-4 w-4" aria-hidden />
+          Add plan column
+        </button>
+        {productPlanStageOrder.length >= MAX_PRODUCT_PLAN_STAGES ? (
+          <p className="mt-2 text-xs text-text-secondary dark:text-zinc-500">
+            Maximum {MAX_PRODUCT_PLAN_STAGES} plan columns.
+          </p>
+        ) : null}
       </div>
 
       <PipelineSettingsModal

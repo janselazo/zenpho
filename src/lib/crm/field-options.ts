@@ -21,12 +21,28 @@ export const LEAD_SOURCE_DEFAULT_OPTIONS = [
 export const MAX_FIELD_OPTION_LIST_ITEMS = 50;
 export const MAX_FIELD_OPTION_STRING_LEN = 80;
 
+/** Max plan columns (built-in five + custom). */
+export const MAX_PRODUCT_PLAN_STAGES = 15;
+
+/** Slug for custom plan stages (and keys in `productPlanLabels`). */
+export const PLAN_STAGE_SLUG_PATTERN = /^[a-z][a-z0-9_]{0,31}$/;
+
+function defaultLabelForPlanSlug(slug: string): string {
+  if ((PLAN_STAGE_ORDER as readonly string[]).includes(slug)) {
+    return PLAN_LABELS[slug as PlanStage];
+  }
+  return slug
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 /** Raw JSON from `crm_settings.crm_field_options`. */
 export type CrmFieldOptionsRaw = {
   leadProjectTypes?: unknown;
   leadSources?: unknown;
   leadContactCategories?: unknown;
   productPlanLabels?: unknown;
+  productPlanStageOrder?: unknown;
 };
 
 /** Normalized options merged with app defaults (safe for forms + validation). */
@@ -34,11 +50,30 @@ export type MergedCrmFieldOptions = {
   leadProjectTypes: string[];
   leadSources: string[];
   leadContactCategories: string[];
-  productPlanLabels: Record<PlanStage, string>;
+  /** Ordered `plan_stage` slugs: built-ins first, then custom stages from Settings. */
+  productPlanStageOrder: string[];
+  productPlanLabels: Record<string, string>;
 };
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+/** Supabase may return jsonb as object; some setups store a JSON string. */
+function coerceCrmFieldOptionsRow(raw: unknown): CrmFieldOptionsRaw {
+  if (raw == null) return {};
+  if (typeof raw === "string") {
+    const t = raw.trim();
+    if (!t) return {};
+    try {
+      const parsed: unknown = JSON.parse(t);
+      return isPlainObject(parsed) ? (parsed as CrmFieldOptionsRaw) : {};
+    } catch {
+      return {};
+    }
+  }
+  if (isPlainObject(raw)) return raw as CrmFieldOptionsRaw;
+  return {};
 }
 
 function normalizeStringList(
@@ -60,47 +95,115 @@ function normalizeStringList(
   return [...fallback];
 }
 
-function normalizeProductPlanLabels(raw: unknown): Partial<Record<PlanStage, string>> {
-  if (!isPlainObject(raw)) return {};
-  const out: Partial<Record<PlanStage, string>> = {};
-  for (const slug of PLAN_STAGE_ORDER) {
-    const v = raw[slug];
+function parseProductPlanLabelsRaw(raw: unknown): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!isPlainObject(raw)) return out;
+  for (const [k, v] of Object.entries(raw)) {
+    const key = k.trim().toLowerCase();
+    if (!key || !PLAN_STAGE_SLUG_PATTERN.test(key)) continue;
     if (typeof v !== "string") continue;
     const t = v.trim().slice(0, MAX_FIELD_OPTION_STRING_LEN);
-    if (t) out[slug] = t;
+    if (t) out[key] = t;
   }
   return out;
 }
 
-export function mergeProductPlanLabels(
-  partial: Partial<Record<PlanStage, string>> | null | undefined
-): Record<PlanStage, string> {
-  const base = { ...PLAN_LABELS };
-  if (!partial) return base;
-  for (const slug of PLAN_STAGE_ORDER) {
-    const v = partial[slug]?.trim();
-    if (v) base[slug] = v.slice(0, MAX_FIELD_OPTION_STRING_LEN);
+function normalizeProductPlanStageOrderFromDb(
+  raw: unknown,
+  labelKeys: Iterable<string>
+): string[] {
+  const built = [...PLAN_STAGE_ORDER];
+  const builtSet = new Set<string>(built);
+  if (Array.isArray(raw) && raw.length > 0) {
+    const out: string[] = [];
+    const seen = new Set<string>();
+    for (const item of raw) {
+      if (typeof item !== "string") continue;
+      const s = item.trim().toLowerCase();
+      if (!s || seen.has(s) || !PLAN_STAGE_SLUG_PATTERN.test(s)) continue;
+      seen.add(s);
+      out.push(s);
+    }
+    const hasAllBuilt = built.every((b) => seen.has(b));
+    if (hasAllBuilt && out.length >= built.length) return out;
   }
-  return base;
+  const partialLabels = new Set(labelKeys);
+  const fromLabels = [...partialLabels].filter((k) => !builtSet.has(k)).sort();
+  return [...built, ...fromLabels];
+}
+
+function finalizeProductPlanLabelsForOrder(
+  order: string[],
+  partial: Record<string, string>
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const slug of order) {
+    const raw = partial[slug];
+    const v =
+      typeof raw === "string"
+        ? raw.trim().slice(0, MAX_FIELD_OPTION_STRING_LEN)
+        : "";
+    out[slug] = v.length > 0 ? v : defaultLabelForPlanSlug(slug);
+  }
+  return out;
 }
 
 export function mergeFieldOptionsFromDb(
-  raw: CrmFieldOptionsRaw | null | undefined
+  raw: CrmFieldOptionsRaw | null | undefined | unknown
 ): MergedCrmFieldOptions {
-  const r = raw && isPlainObject(raw as object) ? (raw as CrmFieldOptionsRaw) : {};
-  const planPartial = normalizeProductPlanLabels(r.productPlanLabels);
-  return {
-    leadProjectTypes: normalizeStringList(
-      r.leadProjectTypes,
-      LEAD_PROJECT_TYPE_OPTIONS
-    ),
-    leadSources: normalizeStringList(r.leadSources, LEAD_SOURCE_DEFAULT_OPTIONS),
-    leadContactCategories: normalizeStringList(
-      r.leadContactCategories,
-      LEAD_CONTACT_CATEGORY_OPTIONS
-    ),
-    productPlanLabels: mergeProductPlanLabels(planPartial),
-  };
+  try {
+    const r =
+      raw === null || raw === undefined
+        ? {}
+        : coerceCrmFieldOptionsRow(raw);
+    const planPartial = parseProductPlanLabelsRaw(r.productPlanLabels);
+    const labelKeys = new Set(Object.keys(planPartial));
+    let productPlanStageOrder = normalizeProductPlanStageOrderFromDb(
+      r.productPlanStageOrder,
+      labelKeys
+    );
+    for (const k of Object.keys(planPartial)) {
+      if (!productPlanStageOrder.includes(k)) productPlanStageOrder.push(k);
+    }
+    if (productPlanStageOrder.length === 0) {
+      productPlanStageOrder = [...PLAN_STAGE_ORDER];
+    }
+    const productPlanLabels = finalizeProductPlanLabelsForOrder(
+      productPlanStageOrder,
+      planPartial
+    );
+    return {
+      leadProjectTypes: normalizeStringList(
+        r.leadProjectTypes,
+        LEAD_PROJECT_TYPE_OPTIONS
+      ),
+      leadSources: normalizeStringList(
+        r.leadSources,
+        LEAD_SOURCE_DEFAULT_OPTIONS
+      ),
+      leadContactCategories: normalizeStringList(
+        r.leadContactCategories,
+        LEAD_CONTACT_CATEGORY_OPTIONS
+      ),
+      productPlanStageOrder,
+      productPlanLabels,
+    };
+  } catch {
+    const fallbackOrder = [...PLAN_STAGE_ORDER];
+    return {
+      leadProjectTypes: normalizeStringList(
+        undefined,
+        LEAD_PROJECT_TYPE_OPTIONS
+      ),
+      leadSources: normalizeStringList(undefined, LEAD_SOURCE_DEFAULT_OPTIONS),
+      leadContactCategories: normalizeStringList(
+        undefined,
+        LEAD_CONTACT_CATEGORY_OPTIONS
+      ),
+      productPlanStageOrder: fallbackOrder,
+      productPlanLabels: finalizeProductPlanLabelsForOrder(fallbackOrder, {}),
+    };
+  }
 }
 
 /** Client-safe defaults when no DB row (e.g. demos). */
@@ -110,7 +213,9 @@ export type CrmFieldOptionsSaveInput = {
   leadProjectTypes: string[];
   leadSources: string[];
   leadContactCategories: string[];
-  productPlanLabels: Partial<Record<PlanStage, string>>;
+  /** Full ordered list of `plan_stage` slugs; must include every built-in stage exactly once. */
+  productPlanStageOrder: string[];
+  productPlanLabels: Record<string, string>;
 };
 
 function sanitizeListForSave(arr: unknown): string[] {
@@ -146,21 +251,61 @@ export function validateFieldOptionsForSave(
     return { error: "Add at least one contact category." };
   }
 
-  const productPlanLabels: Partial<Record<PlanStage, string>> = {};
-  const partial = input.productPlanLabels;
-  if (partial && isPlainObject(partial as object)) {
-    for (const slug of PLAN_STAGE_ORDER) {
-      const v = (partial as Record<string, unknown>)[slug];
-      if (typeof v !== "string") continue;
-      const t = v.trim().slice(0, MAX_FIELD_OPTION_STRING_LEN);
-      if (t) productPlanLabels[slug] = t;
+  const orderRaw = input.productPlanStageOrder;
+  if (!Array.isArray(orderRaw)) {
+    return { error: "Invalid product plan stage order." };
+  }
+  const productPlanStageOrder: string[] = [];
+  const seenSlugs = new Set<string>();
+  for (const item of orderRaw) {
+    if (typeof item !== "string") {
+      return { error: "Invalid product plan stage order." };
     }
+    const s = item.trim().toLowerCase();
+    if (!s || seenSlugs.has(s)) {
+      return { error: "Each plan stage must have a unique slug." };
+    }
+    if (!PLAN_STAGE_SLUG_PATTERN.test(s)) {
+      return {
+        error:
+          "Plan stage slugs must start with a letter and use only lowercase letters, numbers, and underscores.",
+      };
+    }
+    seenSlugs.add(s);
+    productPlanStageOrder.push(s);
+  }
+  for (const b of PLAN_STAGE_ORDER) {
+    if (!seenSlugs.has(b)) {
+      return { error: "Keep all default plan stages (backlog through release) in the list." };
+    }
+  }
+  if (productPlanStageOrder.length > MAX_PRODUCT_PLAN_STAGES) {
+    return {
+      error: `You can have at most ${MAX_PRODUCT_PLAN_STAGES} plan stages.`,
+    };
+  }
+
+  const partial = input.productPlanLabels;
+  const productPlanLabels: Record<string, string> = {};
+  if (!partial || !isPlainObject(partial)) {
+    return { error: "Invalid product plan labels." };
+  }
+  const partialRec = partial as Record<string, unknown>;
+  for (const slug of productPlanStageOrder) {
+    const v = partialRec[slug];
+    if (typeof v !== "string") {
+      productPlanLabels[slug] = defaultLabelForPlanSlug(slug);
+      continue;
+    }
+    const t = v.trim().slice(0, MAX_FIELD_OPTION_STRING_LEN);
+    productPlanLabels[slug] = t.length > 0 ? t : defaultLabelForPlanSlug(slug);
   }
 
   return {
     leadProjectTypes,
     leadSources,
     leadContactCategories,
+    productPlanStageOrder,
     productPlanLabels,
   };
 }
@@ -175,4 +320,12 @@ export function contactCategorySet(opts: MergedCrmFieldOptions): Set<string> {
 
 export function leadSourceSet(opts: MergedCrmFieldOptions): Set<string> {
   return new Set(opts.leadSources);
+}
+
+export function productPlanStageSet(opts: MergedCrmFieldOptions): Set<string> {
+  const order = opts.productPlanStageOrder;
+  if (!Array.isArray(order) || order.length === 0) {
+    return new Set(PLAN_STAGE_ORDER as readonly string[]);
+  }
+  return new Set(order);
 }

@@ -13,7 +13,9 @@ export async function mergedFieldOptionsFromSupabase(
     .eq("id", 1)
     .maybeSingle();
   if (error || !data) return mergeFieldOptionsFromDb(null);
-  return mergeFieldOptionsFromDb(
-    data.crm_field_options as Record<string, unknown> | null
-  );
+  try {
+    return mergeFieldOptionsFromDb(data.crm_field_options);
+  } catch {
+    return mergeFieldOptionsFromDb(null);
+  }
 }

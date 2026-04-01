@@ -138,13 +138,14 @@ export const CHILD_PROJECT_GROUP_ORDER: ChildDeliveryStatus[] = [
 
 export function childProjectStatusDisplay(
   metadata: unknown,
-  planStage: string | null | undefined
+  planStage: string | null | undefined,
+  planLabelMap?: Record<string, string>
 ): string {
   const d = parseChildDeliveryStatus(metadata);
   if (d) return CHILD_DELIVERY_STATUS_LABELS[d];
   const p = typeof planStage === "string" ? planStage.trim().toLowerCase() : "";
   if (p) {
-    const fromPlan = labelForStoredPlanStage(planStage);
+    const fromPlan = labelForStoredPlanStage(planStage, planLabelMap);
     if (fromPlan) return fromPlan;
     return p.replace(/_/g, " ").replace(/\b\w/g, (ch) => ch.toUpperCase());
   }

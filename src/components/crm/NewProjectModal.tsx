@@ -13,13 +13,10 @@ import {
   PLAN_LABELS,
   PLAN_STAGE_ORDER,
   type MockProject,
-  type PlanStage,
 } from "@/lib/crm/mock-data";
 import { createProjectId } from "@/lib/crm/projects-storage";
 
 export type { NewProjectDealPrefill } from "@/lib/crm/new-project-deal-prefill";
-
-const planOrder: PlanStage[] = [...PLAN_STAGE_ORDER];
 
 type ClientPickerRow = {
   id: string;
@@ -55,7 +52,8 @@ export default function NewProjectModal({
   fromLeadId = null,
   editProject = null,
   leadProjectTypeOptions = LEAD_PROJECT_TYPE_OPTIONS,
-  planLabels = PLAN_LABELS,
+  planStageOrder = PLAN_STAGE_ORDER,
+  planLabels = PLAN_LABELS as Record<string, string>,
   onClose,
   onAdd,
   onUpdate,
@@ -68,14 +66,16 @@ export default function NewProjectModal({
   /** When set, modal edits this row (calls `onUpdate` instead of `onAdd`). */
   editProject?: MockProject | null;
   leadProjectTypeOptions?: readonly string[];
-  planLabels?: Record<PlanStage, string>;
+  planStageOrder?: readonly string[];
+  planLabels?: Record<string, string>;
   onClose: () => void;
   onAdd: (p: MockProject) => void | Promise<void>;
   onUpdate?: (p: MockProject) => void | Promise<void>;
 }) {
   const teamMembers = useCrmTeamMembers();
   const [title, setTitle] = useState("");
-  const [plan, setPlan] = useState<PlanStage>("backlog");
+  const defaultPlanSlug = planStageOrder[0] ?? "backlog";
+  const [plan, setPlan] = useState<string>(defaultPlanSlug);
   const [teamMemberId, setTeamMemberId] = useState("");
   const defaultProjectType = leadProjectTypeOptions[0] ?? "Other";
   const [projectType, setProjectType] = useState<string>(defaultProjectType);
@@ -99,7 +99,11 @@ export default function NewProjectModal({
     appliedDealClientRef.current = false;
     if (editProject) {
       setTitle(editProject.title);
-      setPlan(editProject.plan);
+      setPlan(
+        planStageOrder.includes(editProject.plan)
+          ? editProject.plan
+          : defaultPlanSlug
+      );
       const pt = editProject.projectType?.trim() ?? "";
       setProjectType(
         pt && leadProjectTypeOptions.includes(pt) ? pt : defaultProjectType
@@ -116,7 +120,7 @@ export default function NewProjectModal({
       return;
     }
     if (dealPrefill) {
-      setPlan("backlog");
+      setPlan(defaultPlanSlug);
       setTitle(dealPrefill.title);
       setBudget(dealPrefill.budget);
       setWebsite(dealPrefill.website);
@@ -129,7 +133,7 @@ export default function NewProjectModal({
       return;
     }
     if (lockClient) {
-      setPlan("backlog");
+      setPlan(defaultPlanSlug);
       setTitle((lockedClientTitleHint ?? "").trim());
       setBudget("");
       setWebsite("");
@@ -138,7 +142,7 @@ export default function NewProjectModal({
       setClientId("");
       return;
     }
-    setPlan("backlog");
+    setPlan(defaultPlanSlug);
     setTitle("");
     setBudget("");
     setWebsite("");
@@ -152,6 +156,8 @@ export default function NewProjectModal({
     lockedClientTitleHint,
     defaultProjectType,
     leadProjectTypeOptions,
+    planStageOrder,
+    defaultPlanSlug,
   ]);
 
   useEffect(() => {
@@ -434,12 +440,12 @@ export default function NewProjectModal({
                   <select
                     id="np-status"
                     value={plan}
-                    onChange={(e) => setPlan(e.target.value as PlanStage)}
+                    onChange={(e) => setPlan(e.target.value)}
                     className={selectClass}
                   >
-                    {planOrder.map((p) => (
+                    {planStageOrder.map((p) => (
                       <option key={p} value={p}>
-                        {planLabels[p]}
+                        {planLabels[p] ?? p}
                       </option>
                     ))}
                   </select>

@@ -9,7 +9,7 @@ import {
   type ProjectRow,
   type CrmProjectPersistInput,
 } from "@/lib/crm/map-project-row";
-import type { MockProject, PlanStage } from "@/lib/crm/mock-data";
+import type { MockProject } from "@/lib/crm/mock-data";
 import {
   CHILD_DELIVERY_STATUSES,
   DELIVERY_STATUS_TO_PLAN_STAGE,
@@ -26,7 +26,7 @@ import {
   type ChildDeliveryStatusUiConfig,
   type ChildDeliveryStatusUiEntry,
 } from "@/lib/crm/child-delivery-status-ui";
-import { projectTypeSet } from "@/lib/crm/field-options";
+import { productPlanStageSet, projectTypeSet } from "@/lib/crm/field-options";
 import { mergedFieldOptionsFromSupabase } from "@/lib/crm/merged-field-options-from-supabase";
 import {
   CUSTOM_PROJECT_STATUSES_KEY,
@@ -36,14 +36,6 @@ import {
 import type { WorkspaceResource } from "@/lib/crm/project-workspace-types";
 
 const MAX_CUSTOM_PROJECT_STATUSES = 24;
-
-const PLAN_SET = new Set<string>([
-  "backlog",
-  "planning",
-  "building",
-  "testing",
-  "release",
-]);
 
 function resolveProductTypeForCreate(
   raw: string | null | undefined,
@@ -127,6 +119,8 @@ export async function listCrmProjectsForAgency(): Promise<{
   }
   if (!rows?.length) return { projects: [], error: null };
 
+  const fieldOpts = await mergedFieldOptionsFromSupabase(supabase);
+
   const clientIds = [...new Set(rows.map((r) => r.client_id as string))];
   const { data: clients } = await supabase
     .from("client")
@@ -156,6 +150,7 @@ export async function listCrmProjectsForAgency(): Promise<{
   const projects = (rows as ProjectRow[]).map((row) =>
     projectRowToMock(row, sliceFor(row.client_id), {
       primaryPhaseId: primaryPhaseByProduct.get(row.id) ?? null,
+      fieldOptions: fieldOpts,
     })
   );
   return { projects, error: null };
@@ -174,9 +169,12 @@ export async function createCrmProject(
   if (!clientId) return { error: "Select a client" };
   const title = input.title.trim();
   if (!title) return { error: "Title is required" };
-  if (!PLAN_SET.has(input.plan)) return { error: "Invalid plan stage" };
 
   const fieldOpts = await mergedFieldOptionsFromSupabase(supabase);
+  const planSlug = input.plan.trim().toLowerCase();
+  if (!productPlanStageSet(fieldOpts).has(planSlug)) {
+    return { error: "Invalid plan stage" };
+  }
   const ptRes = resolveProductTypeForCreate(
     input.projectType,
     projectTypeSet(fieldOpts)
@@ -202,7 +200,7 @@ export async function createCrmProject(
         input.budget != null && Number.isFinite(input.budget) && input.budget >= 0
           ? input.budget
           : null,
-      plan_stage: input.plan,
+      plan_stage: planSlug,
       project_type: ptRes.projectType,
       metadata,
       parent_project_id: null,
@@ -309,9 +307,12 @@ export async function updateCrmProject(
   if (!clientId) return { error: "Select a client" };
   const title = input.title.trim();
   if (!title) return { error: "Title is required" };
-  if (!PLAN_SET.has(input.plan)) return { error: "Invalid plan stage" };
 
   const fieldOpts = await mergedFieldOptionsFromSupabase(supabase);
+  const planSlug = input.plan.trim().toLowerCase();
+  if (!productPlanStageSet(fieldOpts).has(planSlug)) {
+    return { error: "Invalid plan stage" };
+  }
   const existingPt = (existing.project_type as string | null)?.trim() || null;
   const ptRes = resolveProductTypeForUpdate(
     input.projectType,
@@ -347,7 +348,7 @@ export async function updateCrmProject(
         input.budget != null && Number.isFinite(input.budget) && input.budget >= 0
           ? input.budget
           : null,
-      plan_stage: input.plan,
+      plan_stage: planSlug,
       project_type: ptRes.projectType,
       metadata,
     })
@@ -446,7 +447,7 @@ export async function deleteCrmProject(
 
 export async function updateCrmProjectPlanStage(
   projectId: string,
-  plan: PlanStage
+  plan: string
 ): Promise<{ ok: true } | { error: string }> {
   const supabase = await createClient();
   const {
@@ -456,7 +457,11 @@ export async function updateCrmProjectPlanStage(
 
   const id = projectId.trim();
   if (!id) return { error: "Missing project id" };
-  if (!PLAN_SET.has(plan)) return { error: "Invalid plan stage" };
+  const fieldOpts = await mergedFieldOptionsFromSupabase(supabase);
+  const planSlug = plan.trim().toLowerCase();
+  if (!productPlanStageSet(fieldOpts).has(planSlug)) {
+    return { error: "Invalid plan stage" };
+  }
 
   const { data: row, error: readErr } = await supabase
     .from("project")
@@ -471,7 +476,7 @@ export async function updateCrmProjectPlanStage(
 
   const { error } = await supabase
     .from("project")
-    .update({ plan_stage: plan })
+    .update({ plan_stage: planSlug })
     .eq("id", id);
 
   if (error) return { error: humanizeProjectDbError(error.message) };
@@ -579,11 +584,13 @@ const CHILD_PRIORITY_SET = new Set<string>([
 ]);
 
 function inferDeliveryStatusFromPlanStage(plan: string): ChildDeliveryStatus {
-  if (plan === "planning") return "planned";
-  if (plan === "building" || plan === "mvp") return "in_progress";
-  if (plan === "testing") return "testing";
-  if (plan === "release" || plan === "growth") return "production";
-  return "backlog";
+  const s = plan.trim().toLowerCase();
+  if (s === "planning") return "planned";
+  if (s === "building" || s === "mvp") return "in_progress";
+  if (s === "testing") return "testing";
+  if (s === "release" || s === "growth") return "production";
+  if (s === "backlog" || s === "pipeline") return "backlog";
+  return "in_progress";
 }
 
 export type CreateCrmChildProjectInput = {
@@ -621,6 +628,9 @@ export async function createCrmChildProject(
   const title = input.title.trim();
   if (!pid) return { error: "Missing product" };
   if (!title) return { error: "Title is required" };
+
+  const fieldOpts = await mergedFieldOptionsFromSupabase(supabase);
+  const productPlanAllowed = productPlanStageSet(fieldOpts);
 
   const { data: parent, error: pErr } = await supabase
     .from("project")
@@ -663,8 +673,11 @@ export async function createCrmChildProject(
     if (input.deliveryStatus && CHILD_DELIVERY_SET.has(input.deliveryStatus)) {
       deliveryStatus = input.deliveryStatus;
       plan = DELIVERY_STATUS_TO_PLAN_STAGE[deliveryStatus];
-    } else if (input.plan_stage && PLAN_SET.has(input.plan_stage)) {
-      plan = input.plan_stage;
+    } else if (
+      input.plan_stage &&
+      productPlanAllowed.has(input.plan_stage.trim().toLowerCase())
+    ) {
+      plan = input.plan_stage.trim().toLowerCase();
       deliveryStatus = inferDeliveryStatusFromPlanStage(plan);
     } else {
       deliveryStatus = "backlog";

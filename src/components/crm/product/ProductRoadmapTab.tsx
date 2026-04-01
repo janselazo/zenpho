@@ -122,12 +122,14 @@ type Props = {
   productId: string;
   projectId: string;
   childrenProjects: ChildRow[];
+  planLabelMap?: Record<string, string>;
 };
 
 export default function ProductRoadmapTab({
   productId,
   projectId,
   childrenProjects,
+  planLabelMap,
 }: Props) {
   const { workspace, hydrated } = useProjectWorkspace(projectId);
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
@@ -359,7 +361,8 @@ export default function ProductRoadmapTab({
                       const m = resolveMember(lead);
                       const statusLabel = childProjectStatusDisplay(
                         child.metadata,
-                        child.plan_stage
+                        child.plan_stage,
+                        planLabelMap
                       );
                       return (
                         <div

@@ -407,6 +407,185 @@ export async function updateLeadStage(leadId: string, stage: string) {
   return { ok: true };
 }
 
+/** Updates only `lead.project_type` (e.g. Leads table quick edit). */
+export async function updateLeadProjectType(
+  leadId: string,
+  projectTypeRaw: string
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const id = String(leadId ?? "").trim();
+  if (!id) return { error: "Missing lead id" };
+
+  const fieldOpts = await mergedFieldOptionsFromSupabase(supabase);
+  const ptSet = projectTypeSet(fieldOpts);
+
+  const { data: row } = await supabase
+    .from("lead")
+    .select("project_type")
+    .eq("id", id)
+    .maybeSingle();
+  const existing =
+    (row?.project_type as string | null)?.trim() || null;
+
+  const raw = String(projectTypeRaw ?? "").trim();
+  let project_type: string | null;
+  if (!raw) project_type = null;
+  else if (ptSet.has(raw)) project_type = raw;
+  else if (existing && raw === existing) project_type = raw;
+  else return { error: "Invalid project type." };
+
+  const { error } = await supabase
+    .from("lead")
+    .update({ project_type })
+    .eq("id", id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/leads");
+  revalidatePath(`/leads/${id}`);
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+/** Updates only `lead.source` (e.g. Leads table quick edit). */
+export async function updateLeadSourceField(leadId: string, sourceRaw: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const id = String(leadId ?? "").trim();
+  if (!id) return { error: "Missing lead id" };
+
+  const fieldOpts = await mergedFieldOptionsFromSupabase(supabase);
+  const srcSet = leadSourceSet(fieldOpts);
+
+  const { data: row } = await supabase
+    .from("lead")
+    .select("source")
+    .eq("id", id)
+    .maybeSingle();
+  const existing = (row?.source as string | null)?.trim() || null;
+
+  const srcRes = resolveLeadSourceForUpdate(sourceRaw, srcSet, existing);
+  if ("error" in srcRes) return { error: srcRes.error };
+  const source = srcRes.source;
+
+  const { error } = await supabase
+    .from("lead")
+    .update({ source })
+    .eq("id", id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/leads");
+  revalidatePath(`/leads/${id}`);
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+const LEAD_TAG_COLOR_HEX = /^#[0-9A-Fa-f]{6}$/;
+
+/** Create a lead tag (catalog entry). Assign tags on each lead’s detail page or via API. */
+export async function createLeadTag(nameRaw: string, colorRaw: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const name = String(nameRaw ?? "").trim();
+  if (!name) return { error: "Enter a tag name." };
+  if (name.length > 120) return { error: "Tag name is too long." };
+
+  const color = String(colorRaw ?? "").trim();
+  if (!LEAD_TAG_COLOR_HEX.test(color)) {
+    return { error: "Invalid color." };
+  }
+
+  const { error } = await supabase
+    .from("lead_tag")
+    .insert({ name, color });
+
+  if (error) {
+    if (error.code === "23505") {
+      return { error: "A tag with that name already exists." };
+    }
+    return { error: error.message };
+  }
+
+  revalidatePath("/leads");
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+/** Delete a tag and all lead assignments (cascade). */
+export async function deleteLeadTag(tagId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const id = String(tagId ?? "").trim();
+  if (!id) return { error: "Missing tag id" };
+
+  const { error } = await supabase.from("lead_tag").delete().eq("id", id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/leads");
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+/** Add or remove a single tag on a lead (for lead detail toggles). */
+export async function setLeadTagAssigned(
+  leadId: string,
+  tagId: string,
+  assigned: boolean
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const lid = String(leadId ?? "").trim();
+  const tid = String(tagId ?? "").trim();
+  if (!lid || !tid) return { error: "Missing lead or tag id" };
+
+  if (assigned) {
+    const { error } = await supabase
+      .from("lead_tag_assignment")
+      .insert({ lead_id: lid, tag_id: tid });
+    if (error) {
+      if (error.code === "23505") {
+        return { ok: true };
+      }
+      return { error: error.message };
+    }
+  } else {
+    const { error } = await supabase
+      .from("lead_tag_assignment")
+      .delete()
+      .eq("lead_id", lid)
+      .eq("tag_id", tid);
+    if (error) return { error: error.message };
+  }
+
+  revalidatePath("/leads");
+  revalidatePath(`/leads/${lid}`);
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
 function isClosedDealStage(stage: string) {
   return stage === "closed_won" || stage === "closed_lost";
 }

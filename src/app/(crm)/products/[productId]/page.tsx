@@ -44,9 +44,12 @@ export default async function ProductOverviewPage({
     .eq("id", row.client_id)
     .maybeSingle();
 
+  const fieldOptions = await fetchMergedCrmFieldOptions();
+
   const project = projectRowToMock(
     row as ProjectRow,
-    clientRowToProjectSlice(client ?? undefined)
+    clientRowToProjectSlice(client ?? undefined),
+    { fieldOptions }
   );
 
   const { data: children } = await supabase
@@ -57,8 +60,6 @@ export default async function ProductOverviewPage({
 
   const initialProductResources = parseProductResources(row.metadata);
   const childDeliveryStatusUi = parseChildDeliveryStatusUi(row.metadata);
-  const fieldOptions = await fetchMergedCrmFieldOptions();
-
   return (
     <Suspense
       fallback={<div className="p-8 text-sm text-text-secondary">Loading…</div>}

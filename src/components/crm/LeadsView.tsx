@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -14,6 +22,7 @@ import {
   ListTodo,
   Loader2,
   Pencil,
+  Plus,
   Search,
   Settings2,
   Table2,
@@ -26,6 +35,7 @@ import ClientsView from "@/components/crm/ClientsView";
 import CrmNewProjectFromLeadModal from "@/components/crm/CrmNewProjectFromLeadModal";
 import CrmQuickTaskModal from "@/components/crm/CrmQuickTaskModal";
 import KanbanBoard, { type KanbanColumn } from "@/components/crm/KanbanBoard";
+import ManageLeadTagsModal from "@/components/crm/ManageLeadTagsModal";
 import LeadNotesGlyphIcon from "@/components/crm/LeadNotesGlyphIcon";
 import LeadsPipelineSummary from "@/components/crm/LeadsPipelineSummary";
 import PipelineSettingsModal from "@/components/crm/PipelineSettingsModal";
@@ -38,11 +48,15 @@ import {
 import {
   createLead,
   deleteLead,
+  setLeadTagAssigned,
   updateLeadNotes,
+  updateLeadProjectType,
   updateLeadRow,
+  updateLeadSourceField,
   updateLeadStage,
 } from "@/app/(crm)/actions/crm";
 import type { ClientTableRow } from "@/lib/crm/client-table-row";
+import type { LeadTagCatalogRow } from "@/lib/crm/lead-tag-catalog";
 export interface Lead {
   id: string;
   name: string | null;
@@ -57,6 +71,8 @@ export interface Lead {
   created_at?: string | null;
   /** Latest project title for the lead’s converted client, if any */
   primaryProject?: { title: string | null } | null;
+  /** Tags assigned to this lead (from `lead_tag` / `lead_tag_assignment`) */
+  leadTags?: { id: string; name: string; color: string }[];
 }
 
 /** Shared chip shell: white / dark surface, no tinted fill. Text color applied per column. */
@@ -105,6 +121,130 @@ function hexToRgba(hex: string, alpha: number): string {
   const g = parseInt(h.slice(2, 4), 16);
   const b = parseInt(h.slice(4, 6), 16);
   return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function leadTagPillStyle(hex: string): CSSProperties {
+  const c = normalizePipelineHexColor(hex) ?? "#2563eb";
+  return {
+    backgroundColor: hexToRgba(c, 0.14),
+    borderColor: hexToRgba(c, 0.38),
+    color: c,
+  };
+}
+
+function LeadTableTagsCell({
+  lead,
+  catalog,
+  disabled,
+  pickerOpen,
+  onOpenPicker,
+  onClosePicker,
+  onAssign,
+  onRemove,
+  rowBusy,
+}: {
+  lead: Lead;
+  catalog: LeadTagCatalogRow[];
+  disabled: boolean;
+  pickerOpen: boolean;
+  onOpenPicker: () => void;
+  onClosePicker: () => void;
+  onAssign: (tagId: string) => void;
+  onRemove: (tagId: string) => void;
+  rowBusy: boolean;
+}) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const tags = lead.leadTags ?? [];
+  const assigned = new Set(tags.map((t) => t.id));
+  const available = catalog.filter((t) => !assigned.has(t.id));
+
+  useEffect(() => {
+    if (!pickerOpen) return;
+    function onDoc(e: MouseEvent) {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+        onClosePicker();
+      }
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [pickerOpen, onClosePicker]);
+
+  return (
+    <div ref={rootRef} className="relative flex min-w-[7rem] max-w-[14rem] flex-col gap-1.5">
+      <button
+        type="button"
+        disabled={disabled || rowBusy || catalog.length === 0}
+        onClick={() => (pickerOpen ? onClosePicker() : onOpenPicker())}
+        title={
+          catalog.length === 0
+            ? "Create tags from the Tags button first"
+            : "Add tag"
+        }
+        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-dashed border-zinc-300 text-zinc-500 transition hover:border-zinc-400 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-600 dark:hover:border-zinc-500 dark:hover:bg-zinc-800/80"
+        aria-expanded={pickerOpen}
+        aria-haspopup="listbox"
+        aria-label={`Add tag to ${lead.name?.trim() || lead.email || "lead"}`}
+      >
+        {rowBusy ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+        ) : (
+          <Plus className="h-3.5 w-3.5" aria-hidden />
+        )}
+      </button>
+      {tags.map((t) => (
+        <div
+          key={t.id}
+          className="inline-flex max-w-full items-center gap-0.5 rounded-full border px-2 py-0.5 text-xs font-semibold"
+          style={leadTagPillStyle(t.color)}
+        >
+          <span className="min-w-0 truncate">{t.name}</span>
+          <button
+            type="button"
+            disabled={disabled || rowBusy}
+            onClick={() => onRemove(t.id)}
+            className="shrink-0 rounded-full p-0.5 hover:bg-black/10 dark:hover:bg-white/15"
+            aria-label={`Remove tag ${t.name}`}
+          >
+            <X className="h-3 w-3" aria-hidden />
+          </button>
+        </div>
+      ))}
+      {pickerOpen && available.length > 0 ? (
+        <ul
+          className="absolute left-0 top-8 z-20 max-h-48 min-w-[10rem] overflow-auto rounded-xl border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-600 dark:bg-zinc-900"
+          role="listbox"
+        >
+          {available.map((t) => (
+            <li key={t.id} role="option">
+              <button
+                type="button"
+                disabled={rowBusy}
+                onClick={() => {
+                  onAssign(t.id);
+                  onClosePicker();
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800"
+              >
+                <span
+                  className="h-2 w-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: t.color }}
+                  aria-hidden
+                />
+                <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                  {t.name}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {pickerOpen && available.length === 0 && catalog.length > 0 ? (
+        <p className="absolute left-0 top-8 z-20 w-48 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-500 shadow-lg dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
+          All tags are already on this lead.
+        </p>
+      ) : null}
+    </div>
+  );
 }
 
 const projectTypeTextClasses: Record<string, string> = {
@@ -245,12 +385,14 @@ function PillSelect({
   dotColor,
   textClassName,
   children,
+  disabled,
 }: {
   value: string;
   onChange: (v: string) => void;
   dotColor: string;
   textClassName: string;
   children: React.ReactNode;
+  disabled?: boolean;
 }) {
   return (
     <div className="relative min-w-[7.5rem] max-w-[11rem]">
@@ -266,7 +408,8 @@ function PillSelect({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`w-full appearance-none rounded-full border-0 py-2 pl-7 pr-8 text-xs font-semibold outline-none ring-1 ring-zinc-200/80 focus:ring-2 focus:ring-blue-400/25 dark:ring-zinc-600 dark:focus:ring-blue-500/30 ${textClassName}`}
+        disabled={disabled}
+        className={`w-full appearance-none rounded-full border-0 py-2 pl-7 pr-8 text-xs font-semibold outline-none ring-1 ring-zinc-200/80 focus:ring-2 focus:ring-blue-400/25 disabled:cursor-not-allowed disabled:opacity-60 dark:ring-zinc-600 dark:focus:ring-blue-500/30 ${textClassName}`}
         style={{
           backgroundColor: hexToRgba(dotColor, 0.16),
           color: dotColor,
@@ -353,6 +496,7 @@ export default function LeadsView({
   leads,
   fieldOptions,
   leadPipelineColumns,
+  leadTagCatalog = [],
   clientsForTab = [],
   clientsTabLoadError = null,
   initialSection,
@@ -361,6 +505,8 @@ export default function LeadsView({
   leads: Lead[];
   fieldOptions: MergedCrmFieldOptions;
   leadPipelineColumns: PipelineColumnDef[];
+  /** Tag definitions + lead counts for Manage Tags (requires DB migration). */
+  leadTagCatalog?: LeadTagCatalogRow[];
   clientsForTab?: ClientTableRow[];
   clientsTabLoadError?: { message: string } | null;
   initialSection?: LeadsSectionTab;
@@ -380,6 +526,7 @@ export default function LeadsView({
   const [leadPipeline, setLeadPipeline] =
     useState<PipelineColumnDef[]>(leadPipelineColumns);
   const [pipelineSettingsOpen, setPipelineSettingsOpen] = useState(false);
+  const [manageTagsOpen, setManageTagsOpen] = useState(false);
 
   useEffect(() => {
     setLeadsSnapshot(leads);
@@ -403,7 +550,8 @@ export default function LeadsView({
       l.source?.toLowerCase().includes(q) ||
       l.project_type?.toLowerCase().includes(q) ||
       l.contact_category?.toLowerCase().includes(q) ||
-      (l.primaryProject?.title?.toLowerCase().includes(q) ?? false)
+      (l.primaryProject?.title?.toLowerCase().includes(q) ?? false) ||
+      (l.leadTags ?? []).some((t) => t.name.toLowerCase().includes(q))
     );
   });
 
@@ -477,6 +625,8 @@ export default function LeadsView({
   }
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [quickPatchLeadId, setQuickPatchLeadId] = useState<string | null>(null);
+  const [tagPickerLeadId, setTagPickerLeadId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<LeadDraft | null>(null);
   const [savePending, setSavePending] = useState(false);
@@ -488,6 +638,7 @@ export default function LeadsView({
   );
 
   function startEdit(lead: Lead) {
+    setTagPickerLeadId(null);
     setEditingId(lead.id);
     setDraft(leadToDraft(lead, leadPipeline, fieldOptions));
   }
@@ -541,6 +692,133 @@ export default function LeadsView({
       return;
     }
     router.refresh();
+  }
+
+  function handleQuickStageChange(lead: Lead, newStage: string) {
+    if (editingId) return;
+    const current = normalizeLeadStageForPipeline(lead.stage, leadPipeline);
+    if (newStage === current) return;
+    const previousStage = lead.stage;
+    setQuickPatchLeadId(lead.id);
+    setLeadsSnapshot((prev) =>
+      prev.map((l) => (l.id === lead.id ? { ...l, stage: newStage } : l))
+    );
+    void (async () => {
+      const res = await updateLeadStage(lead.id, newStage);
+      if ("error" in res && res.error) {
+        window.alert(res.error);
+        setLeadsSnapshot((prev) =>
+          prev.map((l) =>
+            l.id === lead.id ? { ...l, stage: previousStage } : l
+          )
+        );
+      } else {
+        router.refresh();
+      }
+      setQuickPatchLeadId(null);
+    })();
+  }
+
+  function handleQuickProjectTypeChange(lead: Lead, newValue: string) {
+    if (editingId) return;
+    const next = newValue.trim();
+    const cur = (lead.project_type ?? "").trim();
+    if (next === cur) return;
+    const previous = lead.project_type ?? null;
+    setQuickPatchLeadId(lead.id);
+    setLeadsSnapshot((prev) =>
+      prev.map((l) =>
+        l.id === lead.id ? { ...l, project_type: next || null } : l
+      )
+    );
+    void (async () => {
+      const res = await updateLeadProjectType(lead.id, newValue);
+      if ("error" in res && res.error) {
+        window.alert(res.error);
+        setLeadsSnapshot((prev) =>
+          prev.map((l) =>
+            l.id === lead.id ? { ...l, project_type: previous } : l
+          )
+        );
+      } else {
+        router.refresh();
+      }
+      setQuickPatchLeadId(null);
+    })();
+  }
+
+  function handleQuickSourceChange(lead: Lead, newValue: string) {
+    if (editingId) return;
+    const next = newValue.trim();
+    const cur = normalizeSourceForSelect(
+      lead.source ?? "",
+      fieldOptions.leadSources
+    );
+    if (next === cur) return;
+    const previous = lead.source ?? null;
+    setQuickPatchLeadId(lead.id);
+    setLeadsSnapshot((prev) =>
+      prev.map((l) =>
+        l.id === lead.id ? { ...l, source: next === "" ? null : next } : l
+      )
+    );
+    void (async () => {
+      const res = await updateLeadSourceField(lead.id, newValue);
+      if ("error" in res && res.error) {
+        window.alert(res.error);
+        setLeadsSnapshot((prev) =>
+          prev.map((l) =>
+            l.id === lead.id ? { ...l, source: previous } : l
+          )
+        );
+      } else {
+        router.refresh();
+      }
+      setQuickPatchLeadId(null);
+    })();
+  }
+
+  function handleLeadTagMutate(lead: Lead, tagId: string, assign: boolean) {
+    if (editingId) return;
+    const prevTags = lead.leadTags ?? [];
+    const catalogEntry = leadTagCatalog.find((t) => t.id === tagId);
+    if (assign && !catalogEntry) return;
+    setQuickPatchLeadId(lead.id);
+    setLeadsSnapshot((prev) =>
+      prev.map((l) => {
+        if (l.id !== lead.id) return l;
+        if (assign && catalogEntry) {
+          if ((l.leadTags ?? []).some((t) => t.id === tagId)) return l;
+          const next = [
+            ...(l.leadTags ?? []),
+            {
+              id: catalogEntry.id,
+              name: catalogEntry.name,
+              color: catalogEntry.color,
+            },
+          ].sort((a, b) => a.name.localeCompare(b.name));
+          return { ...l, leadTags: next };
+        }
+        return {
+          ...l,
+          leadTags: (l.leadTags ?? []).filter((t) => t.id !== tagId),
+        };
+      })
+    );
+    void (async () => {
+      const res = await setLeadTagAssigned(lead.id, tagId, assign);
+      if ("error" in res && res.error) {
+        window.alert(res.error);
+        setLeadsSnapshot((prev) =>
+          prev.map((l) =>
+            l.id === lead.id ? { ...l, leadTags: prevTags } : l
+          )
+        );
+      } else {
+        router.refresh();
+      }
+      setQuickPatchLeadId(null);
+    })();
   }
 
   return (
@@ -632,6 +910,7 @@ export default function LeadsView({
             setDraft={setDraft}
             savePending={savePending}
             deletingId={deletingId}
+            quickPatchLeadId={quickPatchLeadId}
             startEdit={startEdit}
             cancelEdit={cancelEdit}
             saveEdit={saveEdit}
@@ -639,6 +918,13 @@ export default function LeadsView({
             setNotesLead={setNotesLead}
             onCreateProject={(lead) => setNewProjectLeadId(lead.id)}
             onQuickTask={setQuickTaskLead}
+            onQuickStageChange={handleQuickStageChange}
+            onQuickProjectTypeChange={handleQuickProjectTypeChange}
+            onQuickSourceChange={handleQuickSourceChange}
+            leadTagCatalog={leadTagCatalog}
+            tagPickerLeadId={tagPickerLeadId}
+            setTagPickerLeadId={setTagPickerLeadId}
+            onLeadTagMutate={handleLeadTagMutate}
             chrome={{
               leadCount: filtered.length,
               search,
@@ -646,6 +932,7 @@ export default function LeadsView({
               sort: leadTableSort,
               onSortChange: setLeadTableSort,
               onAddLead: () => setModalOpen(true),
+              onOpenManageTags: () => setManageTagsOpen(true),
             }}
           />
         ) : null}
@@ -682,6 +969,7 @@ export default function LeadsView({
               clients={clientsForTab}
               embedded
               highlightClientId={highlightClientId}
+              fieldOptions={fieldOptions}
             />
           </div>
         ) : null}
@@ -735,6 +1023,13 @@ export default function LeadsView({
         stageCounts={leadStageCounts}
         onSaved={() => router.refresh()}
       />
+
+      <ManageLeadTagsModal
+        open={manageTagsOpen}
+        onClose={() => setManageTagsOpen(false)}
+        initialTags={leadTagCatalog}
+        onChanged={() => router.refresh()}
+      />
     </div>
   );
 }
@@ -746,6 +1041,7 @@ type LeadsTableChrome = {
   sort: "newest" | "oldest";
   onSortChange: (v: "newest" | "oldest") => void;
   onAddLead: () => void;
+  onOpenManageTags?: () => void;
 };
 
 type LeadsTableProps = {
@@ -757,6 +1053,7 @@ type LeadsTableProps = {
   setDraft: Dispatch<SetStateAction<LeadDraft | null>>;
   savePending: boolean;
   deletingId: string | null;
+  quickPatchLeadId: string | null;
   startEdit: (lead: Lead) => void;
   cancelEdit: () => void;
   saveEdit: (leadId: string) => Promise<void>;
@@ -764,6 +1061,13 @@ type LeadsTableProps = {
   setNotesLead: Dispatch<SetStateAction<Lead | null>>;
   onCreateProject: (lead: Lead) => void;
   onQuickTask: (lead: Lead) => void;
+  onQuickStageChange: (lead: Lead, stage: string) => void;
+  onQuickProjectTypeChange: (lead: Lead, projectType: string) => void;
+  onQuickSourceChange: (lead: Lead, source: string) => void;
+  leadTagCatalog: LeadTagCatalogRow[];
+  tagPickerLeadId: string | null;
+  setTagPickerLeadId: Dispatch<SetStateAction<string | null>>;
+  onLeadTagMutate: (lead: Lead, tagId: string, assign: boolean) => void;
   chrome?: LeadsTableChrome;
 };
 
@@ -956,6 +1260,7 @@ function LeadsTable({
   setDraft,
   savePending,
   deletingId,
+  quickPatchLeadId,
   startEdit,
   cancelEdit,
   saveEdit,
@@ -963,6 +1268,13 @@ function LeadsTable({
   setNotesLead,
   onCreateProject,
   onQuickTask,
+  onQuickStageChange,
+  onQuickProjectTypeChange,
+  onQuickSourceChange,
+  leadTagCatalog,
+  tagPickerLeadId,
+  setTagPickerLeadId,
+  onLeadTagMutate,
   chrome,
 }: LeadsTableProps) {
   const toolbar = chrome ? (
@@ -1007,8 +1319,9 @@ function LeadsTable({
         </div>
         <button
           type="button"
-          className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-dashed border-zinc-300 bg-white px-3 text-sm font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
-          title="Filter by tags (use search for now)"
+          onClick={() => chrome.onOpenManageTags?.()}
+          className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-dashed border-zinc-300 bg-white px-3 text-sm font-medium text-zinc-600 hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:bg-zinc-800"
+          title="Manage lead tags"
         >
           <Tag className="h-3.5 w-3.5" aria-hidden />
           Tags
@@ -1040,7 +1353,7 @@ function LeadsTable({
     <div className="overflow-hidden rounded-2xl border border-zinc-200/90 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
       {toolbar}
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[96rem] text-left text-sm">
+        <table className="w-full min-w-[104rem] text-left text-sm">
         <thead>
           <tr className="border-b border-zinc-100 bg-zinc-50/95 dark:border-zinc-800 dark:bg-zinc-800/40">
             <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
@@ -1066,6 +1379,9 @@ function LeadsTable({
             </th>
             <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
               Product
+            </th>
+            <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              Tags
             </th>
             <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
               Source
@@ -1095,6 +1411,8 @@ function LeadsTable({
               .slice(0, 2);
             const deleteLabel =
               lead.name?.trim() || lead.email?.trim() || "this lead";
+            const quickRowBusy = quickPatchLeadId === lead.id;
+            const quickSelectDisabled = Boolean(editingId) || quickRowBusy;
 
             return (
               <tr
@@ -1195,6 +1513,7 @@ function LeadsTable({
                         leadStageLabelColor(draft.stage, leadPipeline).color
                       }
                       textClassName="text-zinc-700 dark:text-zinc-300"
+                      disabled={savePending}
                     >
                       {(() => {
                         const opts = leadPipeline.map((c) => ({ ...c }));
@@ -1217,19 +1536,29 @@ function LeadsTable({
                       })()}
                     </PillSelect>
                   ) : (
-                    <span
-                      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold"
-                      style={{
-                        backgroundColor: hexToRgba(stageMeta.color, 0.14),
-                        color: stageMeta.color,
-                      }}
+                    <PillSelect
+                      value={stageKey}
+                      onChange={(v) => onQuickStageChange(lead, v)}
+                      dotColor={stageMeta.color}
+                      textClassName="text-zinc-700 dark:text-zinc-300"
+                      disabled={quickSelectDisabled}
                     >
-                      <span
-                        className="h-1.5 w-1.5 shrink-0 rounded-full ring-2 ring-white/90 dark:ring-zinc-900/90"
-                        style={{ backgroundColor: stageMeta.color }}
-                      />
-                      {leadStageLabel(lead.stage, leadPipeline)}
-                    </span>
+                      {(() => {
+                        const opts = leadPipeline.map((c) => ({ ...c }));
+                        if (!opts.some((c) => c.slug === stageKey)) {
+                          opts.unshift({
+                            slug: stageKey,
+                            label: stageMeta.label,
+                            color: stageMeta.color,
+                          });
+                        }
+                        return opts.map((c) => (
+                          <option key={c.slug} value={c.slug}>
+                            {c.label}
+                          </option>
+                        ));
+                      })()}
+                    </PillSelect>
                   )}
                 </td>
                 <td className="px-5 py-4 align-top">
@@ -1264,14 +1593,41 @@ function LeadsTable({
                         aria-hidden
                       />
                     </div>
-                  ) : lead.project_type?.trim() ? (
-                    <span
-                      className={`inline-flex max-w-full rounded-full px-3 py-1 text-xs font-semibold ${getProjectTypePillClass(lead.project_type)}`}
-                    >
-                      <span className="truncate">{lead.project_type}</span>
-                    </span>
                   ) : (
-                    <span className="text-zinc-400 dark:text-zinc-500">—</span>
+                    <div className="relative min-w-[7rem] max-w-[12rem]">
+                      <select
+                        value={lead.project_type ?? ""}
+                        onChange={(e) =>
+                          onQuickProjectTypeChange(lead, e.target.value)
+                        }
+                        disabled={quickSelectDisabled}
+                        aria-label={`Service for ${deleteLabel}`}
+                        className={`w-full appearance-none rounded-full border-0 py-2 pl-3 pr-8 text-xs font-semibold capitalize outline-none ring-1 ring-zinc-200/80 focus:ring-2 focus:ring-blue-400/25 disabled:cursor-not-allowed disabled:opacity-60 dark:ring-zinc-600 dark:focus:ring-blue-500/30 ${
+                          lead.project_type?.trim()
+                            ? getProjectTypePillClass(lead.project_type)
+                            : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+                        }`}
+                      >
+                        <option value="">Not set</option>
+                        {lead.project_type &&
+                          !fieldOptions.leadProjectTypes.includes(
+                            lead.project_type
+                          ) && (
+                          <option value={lead.project_type}>
+                            {lead.project_type}
+                          </option>
+                        )}
+                        {fieldOptions.leadProjectTypes.map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown
+                        className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400"
+                        aria-hidden
+                      />
+                    </div>
                   )}
                 </td>
                 <td className="px-5 py-4 align-top">
@@ -1356,6 +1712,43 @@ function LeadsTable({
                   )}
                 </td>
                 <td className="px-5 py-4 align-top">
+                  {isEditing ? (
+                    <div className="flex min-w-0 max-w-[14rem] flex-col gap-1">
+                      {(lead.leadTags ?? []).length === 0 ? (
+                        <span className="text-sm text-zinc-400 dark:text-zinc-500">
+                          —
+                        </span>
+                      ) : (
+                        (lead.leadTags ?? []).map((t) => (
+                          <span
+                            key={t.id}
+                            className="inline-flex max-w-full truncate rounded-full border px-2 py-0.5 text-xs font-semibold"
+                            style={leadTagPillStyle(t.color)}
+                          >
+                            {t.name}
+                          </span>
+                        ))
+                      )}
+                    </div>
+                  ) : (
+                    <LeadTableTagsCell
+                      lead={lead}
+                      catalog={leadTagCatalog}
+                      disabled={Boolean(editingId)}
+                      pickerOpen={tagPickerLeadId === lead.id}
+                      onOpenPicker={() => setTagPickerLeadId(lead.id)}
+                      onClosePicker={() => setTagPickerLeadId(null)}
+                      onAssign={(tagId) =>
+                        onLeadTagMutate(lead, tagId, true)
+                      }
+                      onRemove={(tagId) =>
+                        onLeadTagMutate(lead, tagId, false)
+                      }
+                      rowBusy={quickPatchLeadId === lead.id}
+                    />
+                  )}
+                </td>
+                <td className="px-5 py-4 align-top">
                     {isEditing && draft ? (
                     <PillSelect
                       value={draft.source}
@@ -1364,6 +1757,7 @@ function LeadsTable({
                       }
                       dotColor="#0ea5e9"
                       textClassName="text-sky-800 dark:text-sky-300"
+                      disabled={savePending}
                     >
                       <option value="">—</option>
                       {draft.source &&
@@ -1379,14 +1773,41 @@ function LeadsTable({
                         </option>
                       ))}
                     </PillSelect>
-                  ) : lead.source ? (
-                    <span
-                      className={`inline-flex max-w-full truncate rounded-full px-3 py-1 text-xs font-semibold capitalize ${getSourcePillClass(lead.source)}`}
-                    >
-                      {lead.source}
-                    </span>
                   ) : (
-                    <span className="text-zinc-400 dark:text-zinc-500">—</span>
+                    <div className="relative min-w-[6.5rem] max-w-[11rem]">
+                      <select
+                        value={normalizeSourceForSelect(
+                          lead.source ?? "",
+                          fieldOptions.leadSources
+                        )}
+                        onChange={(e) =>
+                          onQuickSourceChange(lead, e.target.value)
+                        }
+                        disabled={quickSelectDisabled}
+                        aria-label={`Source for ${deleteLabel}`}
+                        className={`w-full appearance-none rounded-full border-0 py-2 pl-3 pr-8 text-xs font-semibold capitalize outline-none ring-1 ring-zinc-200/80 focus:ring-2 focus:ring-blue-400/25 disabled:cursor-not-allowed disabled:opacity-60 dark:ring-zinc-600 dark:focus:ring-blue-500/30 ${getSourcePillClass(lead.source ?? "")}`}
+                      >
+                        <option value="">Not set</option>
+                        {lead.source &&
+                          sourceNotInConfiguredList(
+                            lead.source,
+                            fieldOptions.leadSources
+                          ) && (
+                          <option value={lead.source.trim()}>
+                            {lead.source}
+                          </option>
+                        )}
+                        {fieldOptions.leadSources.map((o) => (
+                          <option key={o} value={o}>
+                            {formatSourceOptionLabel(o)}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown
+                        className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400"
+                        aria-hidden
+                      />
+                    </div>
                   )}
                 </td>
                 <td className="px-5 py-4 align-top text-sm text-zinc-600 dark:text-zinc-400">
@@ -1395,13 +1816,18 @@ function LeadsTable({
                 <td className="px-5 py-4 align-top">
                   <div className="flex flex-wrap items-center gap-2">
                     {isEditing ? (
-                      <>
+                      <div
+                        role="group"
+                        aria-label="Save or discard edits"
+                        className="inline-flex items-center gap-2 rounded-full border border-zinc-200/90 bg-zinc-100/95 p-1 pl-1.5 pr-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] dark:border-zinc-600 dark:bg-zinc-800/95 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+                      >
                         <button
                           type="button"
                           disabled={savePending}
                           onClick={() => void saveEdit(lead.id)}
-                          className="inline-flex items-center justify-center rounded-md p-1.5 text-emerald-600 transition-colors hover:bg-emerald-50 disabled:opacity-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
+                          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white shadow-sm ring-1 ring-emerald-600/25 transition hover:bg-emerald-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:opacity-55 dark:bg-emerald-600 dark:ring-emerald-400/20 dark:hover:bg-emerald-500"
                           aria-label="Save changes"
+                          title="Save"
                         >
                           {savePending ? (
                             <Loader2
@@ -1409,19 +1835,28 @@ function LeadsTable({
                               aria-hidden
                             />
                           ) : (
-                            <Check className="h-4 w-4 shrink-0" aria-hidden />
+                            <Check
+                              className="h-4 w-4 shrink-0"
+                              aria-hidden
+                              strokeWidth={2.75}
+                            />
                           )}
                         </button>
                         <button
                           type="button"
                           disabled={savePending}
                           onClick={cancelEdit}
-                          className="inline-flex items-center justify-center rounded-md p-1.5 text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-950/40"
+                          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-500 text-white shadow-sm ring-1 ring-red-600/25 transition hover:bg-red-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500 disabled:opacity-55 dark:bg-red-600 dark:ring-red-400/20 dark:hover:bg-red-500"
                           aria-label="Discard changes"
+                          title="Discard"
                         >
-                          <X className="h-4 w-4 shrink-0" aria-hidden />
+                          <X
+                            className="h-4 w-4 shrink-0"
+                            aria-hidden
+                            strokeWidth={2.75}
+                          />
                         </button>
-                      </>
+                      </div>
                     ) : (
                       <>
                         <button

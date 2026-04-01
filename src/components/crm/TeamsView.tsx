@@ -372,10 +372,13 @@ export default function TeamsView({
           </div>
           <Link
             href="/capacity"
-            className={`${outlineControl} no-underline transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/80`}
+            className="inline-flex h-10 items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-100 px-3 text-sm font-medium text-indigo-950 shadow-sm no-underline transition-colors hover:bg-indigo-200/90 dark:border-indigo-800/80 dark:bg-indigo-950/55 dark:text-indigo-100 dark:hover:bg-indigo-900/70"
           >
-            <BarChart3 className="h-4 w-4 text-zinc-500" aria-hidden />
-            Capacity graph
+            <BarChart3
+              className="h-4 w-4 text-indigo-600 dark:text-indigo-300"
+              aria-hidden
+            />
+            Capacity
           </Link>
           <div ref={memberActionsRef} className="relative shrink-0">
             <button

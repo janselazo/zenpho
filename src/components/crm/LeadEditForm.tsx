@@ -9,15 +9,15 @@ import {
   ChevronDown,
   FolderKanban,
   Layers,
+  Loader2,
   Mail,
   Phone,
-  Plus,
   Sparkles,
   User,
   UserCircle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { updateLeadRow } from "@/app/(crm)/actions/crm";
+import { setLeadTagAssigned, updateLeadRow } from "@/app/(crm)/actions/crm";
 import type { MergedCrmFieldOptions } from "@/lib/crm/field-options";
 import CrmNewProjectFromLeadModal from "@/components/crm/CrmNewProjectFromLeadModal";
 import {
@@ -172,18 +172,98 @@ function PastelSelect({
   );
 }
 
+function LeadDetailTagsField({
+  leadId,
+  catalog,
+  initialIds,
+}: {
+  leadId: string;
+  catalog: { id: string; name: string; color: string }[];
+  initialIds: string[];
+}) {
+  const router = useRouter();
+  const idsKey = initialIds.slice().sort().join(",");
+  const [selected, setSelected] = useState(() => new Set(initialIds));
+  const [busy, setBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSelected(new Set(initialIds));
+  }, [idsKey]);
+
+  async function toggle(tagId: string) {
+    const on = !selected.has(tagId);
+    setBusy(tagId);
+    const res = await setLeadTagAssigned(leadId, tagId, on);
+    setBusy(null);
+    if ("error" in res && res.error) {
+      window.alert(res.error);
+      return;
+    }
+    setSelected((prev) => {
+      const n = new Set(prev);
+      if (on) n.add(tagId);
+      else n.delete(tagId);
+      return n;
+    });
+    router.refresh();
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {catalog.map((t) => {
+        const on = selected.has(t.id);
+        const isBusy = busy === t.id;
+        return (
+          <button
+            key={t.id}
+            type="button"
+            disabled={busy !== null}
+            onClick={() => void toggle(t.id)}
+            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition disabled:opacity-50 ${
+              on
+                ? "border-transparent text-white shadow-sm"
+                : "border-dashed border-zinc-300 bg-white text-zinc-700 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200"
+            }`}
+            style={on ? { backgroundColor: t.color } : undefined}
+          >
+            {isBusy ? (
+              <Loader2
+                className={`h-3 w-3 shrink-0 animate-spin ${on ? "text-white" : "text-zinc-500"}`}
+                aria-hidden
+              />
+            ) : (
+              <span
+                className="h-1.5 w-1.5 shrink-0 rounded-full"
+                style={{
+                  backgroundColor: on ? "#fff" : t.color,
+                }}
+                aria-hidden
+              />
+            )}
+            {t.name}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function LeadEditForm({
   lead,
   clientProjects,
   convertedClientId,
   fieldOptions,
   leadPipelineColumns = DEFAULT_LEAD_PIPELINE_COLUMNS,
+  leadTagCatalog = [],
+  leadTagIds = [],
 }: {
   lead: Lead;
   clientProjects: ClientProjectRow[];
   convertedClientId: string | null;
   fieldOptions: MergedCrmFieldOptions;
   leadPipelineColumns?: PipelineColumnDef[];
+  leadTagCatalog?: { id: string; name: string; color: string }[];
+  leadTagIds?: string[];
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -279,7 +359,7 @@ export default function LeadEditForm({
           ← All leads
         </Link>
 
-        <header className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <header className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-start">
           <div className="flex items-start gap-4">
             <div
               className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-sky-100 text-base font-bold text-blue-600 dark:bg-sky-950/60 dark:text-sky-300"
@@ -296,20 +376,6 @@ export default function LeadEditForm({
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab("contact");
-              requestAnimationFrame(() =>
-                document.getElementById("lead-contact-category")?.focus()
-              );
-            }}
-            className="inline-flex h-9 shrink-0 items-center gap-1.5 self-start rounded-full border border-dashed border-zinc-300 bg-white px-3 text-sm font-medium text-zinc-600 hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
-            title="Set ICP segment in Contact category"
-          >
-            <Plus className="h-3.5 w-3.5" aria-hidden />
-            Segment
-          </button>
         </header>
 
         <div
@@ -600,6 +666,30 @@ export default function LeadEditForm({
                       </select>
                     </div>
                   </div>
+                  {leadTagCatalog.length > 0 ? (
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                        Tags
+                      </p>
+                      <div className="mt-2">
+                        <LeadDetailTagsField
+                          leadId={lead.id}
+                          catalog={leadTagCatalog}
+                          initialIds={leadTagIds}
+                        />
+                      </div>
+                      <p className="mt-2 text-[11px] text-zinc-500 dark:text-zinc-400">
+                        Create or remove tag definitions from the{" "}
+                        <Link
+                          href="/leads?section=leads"
+                          className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+                        >
+                          Leads
+                        </Link>{" "}
+                        table (Tags).
+                      </p>
+                    </div>
+                  ) : null}
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                       Contact category

@@ -11,16 +11,19 @@ import {
   CRM_SUPABASE_PROJECTS_CHANGED_EVENT,
 } from "@/lib/crm/projects-storage";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import type { MergedCrmFieldOptions } from "@/lib/crm/field-options";
 
 export default function CrmNewProjectForClientModal({
   clientId,
   clientName,
   company,
+  fieldOptions,
   onClose,
 }: {
   clientId: string;
   clientName: string;
   company: string | null;
+  fieldOptions?: MergedCrmFieldOptions;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -51,6 +54,8 @@ export default function CrmNewProjectForClientModal({
       dealPrefill={null}
       lockedClientId={clientId}
       lockedClientTitleHint={titleHint}
+      planStageOrder={fieldOptions?.productPlanStageOrder}
+      planLabels={fieldOptions?.productPlanLabels}
       onClose={onClose}
       onAdd={handleAdd}
     />

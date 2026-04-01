@@ -1,3 +1,5 @@
+import type { MergedCrmFieldOptions } from "@/lib/crm/field-options";
+import { productPlanStageSet } from "@/lib/crm/field-options";
 import {
   PLAN_LABELS,
   PLAN_STAGE_ORDER,
@@ -9,7 +11,7 @@ import {
 export type CrmProjectPersistInput = {
   clientId: string;
   title: string;
-  plan: PlanStage;
+  plan: string;
   projectType: string | null;
   expectedEndDate: string;
   budget: number | null;
@@ -39,28 +41,42 @@ const LEGACY_PLAN_TO_STAGE: Record<string, PlanStage> = {
   growth: "release",
 };
 
-export function parsePlanStage(v: string | null | undefined): PlanStage {
-  const s = (v ?? "backlog").trim().toLowerCase();
-  if ((PLAN_STAGE_ORDER as readonly string[]).includes(s)) {
-    return s as PlanStage;
-  }
+export function parsePlanStage(
+  v: string | null | undefined,
+  opts?: { allowed: Set<string>; order?: readonly string[] }
+): string {
+  const builtOrder = PLAN_STAGE_ORDER as readonly string[];
+  const order =
+    opts?.order && opts.order.length > 0 ? opts.order : [...builtOrder];
+  const allowed =
+    opts?.allowed && opts.allowed.size > 0
+      ? opts.allowed
+      : new Set<string>(builtOrder);
+  const fallback =
+    order.find((slug) => allowed.has(slug)) ?? builtOrder[0] ?? "backlog";
+  const s = (v ?? "").trim().toLowerCase();
+  if (!s) return fallback;
+  if (allowed.has(s)) return s;
   const mapped = LEGACY_PLAN_TO_STAGE[s];
-  if (mapped) return mapped;
-  return "backlog";
+  if (mapped && allowed.has(mapped)) return mapped;
+  return fallback;
 }
 
-const KNOWN_STORED_PLAN_SLUGS = new Set<string>([
-  ...PLAN_STAGE_ORDER,
-  "pipeline",
-  "mvp",
-  "growth",
-]);
-
-/** Label for a DB `plan_stage` slug, or null if not a known product plan stage. */
-export function labelForStoredPlanStage(raw: string | null | undefined): string | null {
+/** Label for a DB `plan_stage` slug; uses Settings labels when `labelMap` is passed. */
+export function labelForStoredPlanStage(
+  raw: string | null | undefined,
+  labelMap?: Record<string, string>
+): string | null {
   const p = typeof raw === "string" ? raw.trim().toLowerCase() : "";
-  if (!p || !KNOWN_STORED_PLAN_SLUGS.has(p)) return null;
-  return PLAN_LABELS[parsePlanStage(raw)];
+  if (!p) return null;
+  const fromSettings = labelMap?.[p];
+  if (fromSettings) return fromSettings;
+  if ((PLAN_STAGE_ORDER as readonly string[]).includes(p)) {
+    return PLAN_LABELS[p as PlanStage];
+  }
+  const mapped = LEGACY_PLAN_TO_STAGE[p];
+  if (mapped) return PLAN_LABELS[mapped];
+  return p.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 /** Resolved from `client` row for products (list + detail). */
@@ -125,7 +141,10 @@ export type ProjectRow = {
 export function projectRowToMock(
   row: ProjectRow,
   client: ProjectRowClientSlice,
-  options?: { primaryPhaseId?: string | null }
+  options?: {
+    primaryPhaseId?: string | null;
+    fieldOptions?: MergedCrmFieldOptions;
+  }
 ): MockProject {
   const meta =
     row.metadata &&
@@ -152,10 +171,19 @@ export function projectRowToMock(
       ? meta.pointOfContactName.trim()
       : null;
   const td = row.target_date ? String(row.target_date).slice(0, 10) : "";
+  const fo = options?.fieldOptions;
+  const planAllowed = fo ? productPlanStageSet(fo) : undefined;
+  const planOrder = fo?.productPlanStageOrder;
   return {
     id: row.id,
     title: row.title?.trim() || "Untitled",
-    plan: parsePlanStage(row.plan_stage),
+    plan:
+      planAllowed && planOrder
+        ? parsePlanStage(row.plan_stage, {
+            allowed: planAllowed,
+            order: planOrder,
+          })
+        : parsePlanStage(row.plan_stage),
     clientId: row.client_id,
     clientName: client.label,
     clientContactName: client.contactName,
