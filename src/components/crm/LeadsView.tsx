@@ -9,6 +9,7 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -633,11 +634,26 @@ export default function LeadsView({
   const [notesLead, setNotesLead] = useState<Lead | null>(null);
   const [newProjectLeadId, setNewProjectLeadId] = useState<string | null>(null);
   const [quickTaskLead, setQuickTaskLead] = useState<Lead | null>(null);
-  const [pipelineEditMenuLead, setPipelineEditMenuLead] = useState<Lead | null>(
+  const [pipelineEditLeadId, setPipelineEditLeadId] = useState<string | null>(
     null
   );
 
+  const pipelineEditLead = useMemo(() => {
+    if (!pipelineEditLeadId) return null;
+    return leadsSnapshot.find((l) => l.id === pipelineEditLeadId) ?? null;
+  }, [pipelineEditLeadId, leadsSnapshot]);
+
+  useEffect(() => {
+    if (
+      pipelineEditLeadId &&
+      !leadsSnapshot.some((l) => l.id === pipelineEditLeadId)
+    ) {
+      setPipelineEditLeadId(null);
+    }
+  }, [pipelineEditLeadId, leadsSnapshot]);
+
   function startEdit(lead: Lead) {
+    setPipelineEditLeadId(null);
     setTagPickerLeadId(null);
     setEditingId(lead.id);
     setDraft(leadToDraft(lead, leadPipeline, fieldOptions));
@@ -861,7 +877,11 @@ export default function LeadsView({
             <button
               key={id}
               type="button"
-              onClick={() => setView(id)}
+              onClick={() => {
+                cancelEdit();
+                setPipelineEditLeadId(null);
+                setView(id);
+              }}
               className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                 view === id
                   ? "bg-white text-text-primary shadow-sm"
@@ -942,10 +962,14 @@ export default function LeadsView({
             onMove={handlePipelineMove}
             editingId={editingId}
             deletingId={deletingId}
+            pipelineModalOpenLeadId={pipelineEditLeadId}
             onNotes={setNotesLead}
             onCreateProject={(lead) => setNewProjectLeadId(lead.id)}
             onQuickTask={setQuickTaskLead}
-            onEditFromPipeline={setPipelineEditMenuLead}
+            onEditFromPipeline={(l) => {
+              cancelEdit();
+              setPipelineEditLeadId(l.id);
+            }}
             onDelete={handleDeleteLead}
           />
         ) : null}
@@ -999,18 +1023,22 @@ export default function LeadsView({
           onClose={() => setModalOpen(false)}
         />
       )}
-      {pipelineEditMenuLead ? (
-        <PipelineLeadEditOptionsModal
-          lead={pipelineEditMenuLead}
-          onClose={() => setPipelineEditMenuLead(null)}
-          onEditInTable={(l) => {
-            setPipelineEditMenuLead(null);
-            setView("leads");
-            startEdit(l);
-          }}
+      {pipelineEditLead ? (
+        <PipelineLeadEditModal
+          lead={pipelineEditLead}
+          fieldOptions={fieldOptions}
+          leadPipeline={leadPipeline}
+          leadTagCatalog={leadTagCatalog}
+          quickPatchLeadId={quickPatchLeadId}
+          onClose={() => setPipelineEditLeadId(null)}
           onOpenFullPage={(l) => {
-            setPipelineEditMenuLead(null);
+            setPipelineEditLeadId(null);
             router.push(`/leads/${l.id}`);
+          }}
+          onTagMutate={handleLeadTagMutate}
+          onSaved={() => {
+            setPipelineEditLeadId(null);
+            router.refresh();
           }}
         />
       ) : null}
@@ -1076,6 +1104,7 @@ function LeadsPipelineBoard({
   onMove,
   editingId,
   deletingId,
+  pipelineModalOpenLeadId,
   onNotes,
   onCreateProject,
   onQuickTask,
@@ -1086,6 +1115,8 @@ function LeadsPipelineBoard({
   onMove: (itemId: string, fromCol: string, toCol: string) => void;
   editingId: string | null;
   deletingId: string | null;
+  /** When set, other cards’ edit buttons stay disabled while the pipeline edit modal is open. */
+  pipelineModalOpenLeadId: string | null;
   onNotes: (lead: Lead) => void;
   onCreateProject: (lead: Lead) => void;
   onQuickTask: (lead: Lead) => void;
@@ -1186,7 +1217,13 @@ function LeadsPipelineBoard({
               <button
                 type="button"
                 onClick={() => onCreateProject(lead)}
-                disabled={editingId !== null}
+                disabled={
+                  editingId !== null ||
+                  Boolean(
+                    pipelineModalOpenLeadId &&
+                      pipelineModalOpenLeadId !== lead.id
+                  )
+                }
                 className="inline-flex items-center justify-center rounded-md p-1.5 text-violet-600 transition-colors hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-40 dark:text-violet-400 dark:hover:bg-violet-950/40"
                 aria-label={`Create project for ${deleteLabel}`}
                 title="Create project"
@@ -1196,7 +1233,13 @@ function LeadsPipelineBoard({
               <button
                 type="button"
                 onClick={() => onNotes(lead)}
-                disabled={editingId !== null}
+                disabled={
+                  editingId !== null ||
+                  Boolean(
+                    pipelineModalOpenLeadId &&
+                      pipelineModalOpenLeadId !== lead.id
+                  )
+                }
                 title="Notes"
                 className="inline-flex items-center justify-center rounded-md p-1.5 text-accent-warm transition-colors hover:bg-accent-warm/10 disabled:cursor-not-allowed disabled:opacity-40 dark:text-amber-400 dark:hover:bg-amber-950/35"
                 aria-label={`View notes for ${deleteLabel}`}
@@ -1206,7 +1249,13 @@ function LeadsPipelineBoard({
               <button
                 type="button"
                 onClick={() => onQuickTask(lead)}
-                disabled={editingId !== null}
+                disabled={
+                  editingId !== null ||
+                  Boolean(
+                    pipelineModalOpenLeadId &&
+                      pipelineModalOpenLeadId !== lead.id
+                  )
+                }
                 title="Quick task"
                 className="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800"
                 aria-label={`Add task for ${deleteLabel}`}
@@ -1215,11 +1264,19 @@ function LeadsPipelineBoard({
               </button>
               <button
                 type="button"
-                onClick={() => onEditFromPipeline(lead)}
-                disabled={Boolean(editingId && editingId !== lead.id)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onEditFromPipeline(lead);
+                }}
+                disabled={Boolean(
+                  (editingId && editingId !== lead.id) ||
+                    (pipelineModalOpenLeadId &&
+                      pipelineModalOpenLeadId !== lead.id)
+                )}
                 className="inline-flex items-center justify-center rounded-md p-1.5 text-accent transition-colors hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-40"
                 aria-label={`Edit ${deleteLabel}`}
-                title="Edit"
+                title="Edit lead"
               >
                 <Pencil className="h-4 w-4 shrink-0" aria-hidden />
               </button>
@@ -1227,7 +1284,11 @@ function LeadsPipelineBoard({
                 type="button"
                 disabled={
                   deletingId === lead.id ||
-                  Boolean(editingId && editingId !== lead.id)
+                  Boolean(
+                    (editingId && editingId !== lead.id) ||
+                      (pipelineModalOpenLeadId &&
+                        pipelineModalOpenLeadId !== lead.id)
+                  )
                 }
                 onClick={() => void onDelete(lead)}
                 aria-busy={deletingId === lead.id}
@@ -1933,34 +1994,96 @@ function LeadsTable({
   );
 }
 
-function PipelineLeadEditOptionsModal({
+const pipelineModalInputClass =
+  "w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/15 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100";
+
+function PipelineLeadEditModal({
   lead,
+  fieldOptions,
+  leadPipeline,
+  leadTagCatalog,
+  quickPatchLeadId,
   onClose,
-  onEditInTable,
   onOpenFullPage,
+  onTagMutate,
+  onSaved,
 }: {
   lead: Lead;
+  fieldOptions: MergedCrmFieldOptions;
+  leadPipeline: PipelineColumnDef[];
+  leadTagCatalog: LeadTagCatalogRow[];
+  quickPatchLeadId: string | null;
   onClose: () => void;
-  onEditInTable: (lead: Lead) => void;
   onOpenFullPage: (lead: Lead) => void;
+  onTagMutate: (lead: Lead, tagId: string, assign: boolean) => void;
+  onSaved: () => void;
 }) {
   const label = lead.name?.trim() || lead.email?.trim() || "Lead";
+  const [mounted, setMounted] = useState(false);
+  const [draft, setDraft] = useState<LeadDraft>(() =>
+    leadToDraft(lead, leadPipeline, fieldOptions)
+  );
+  const [savePending, setSavePending] = useState(false);
+  const [tagPickerOpen, setTagPickerOpen] = useState(false);
 
-  return (
+  const rowBusy = quickPatchLeadId === lead.id;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    setDraft(leadToDraft(lead, leadPipeline, fieldOptions));
+    setTagPickerOpen(false);
+    // Intentionally only when switching leads — not when `lead` object identity refreshes from the server.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- lead.id
+  }, [lead.id]);
+
+  useEffect(() => {
+    if (!mounted) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !savePending) onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [mounted, savePending, onClose]);
+
+  async function handleSave() {
+    setSavePending(true);
+    const fd = new FormData();
+    fd.set("id", lead.id);
+    fd.set("name", joinName(draft.nameFirst, draft.nameLast));
+    fd.set("email", draft.email);
+    fd.set("phone", draft.phone);
+    fd.set("company", draft.company);
+    fd.set("source", draft.source);
+    fd.set("stage", draft.stage);
+    fd.set("notes", draft.notes);
+    fd.set("project_type", draft.project_type);
+    fd.set("contact_category", draft.contact_category);
+    const res = await updateLeadRow(fd);
+    setSavePending(false);
+    if ("error" in res && res.error) {
+      window.alert(res.error);
+      return;
+    }
+    onSaved();
+  }
+
+  const modal = (
     <div
-      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-4 backdrop-blur-sm sm:items-center"
-      onClick={onClose}
-      onKeyDown={(e) => e.key === "Escape" && onClose()}
+      className="fixed inset-0 z-[200] flex items-end justify-center bg-black/40 p-4 backdrop-blur-sm sm:items-center"
+      onClick={() => !savePending && onClose()}
       role="presentation"
     >
       <div
-        className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-white shadow-xl dark:border-zinc-700 dark:bg-zinc-950"
+        className="flex max-h-[min(92vh,52rem)] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-xl dark:border-zinc-700 dark:bg-zinc-950"
         role="dialog"
         onClick={(e) => e.stopPropagation()}
         aria-modal="true"
         aria-labelledby="pipeline-edit-lead-title"
       >
-        <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-4 dark:border-zinc-700">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border px-5 py-4 dark:border-zinc-700">
           <div className="min-w-0">
             <h2
               id="pipeline-edit-lead-title"
@@ -1975,47 +2098,275 @@ function PipelineLeadEditOptionsModal({
           <button
             type="button"
             onClick={onClose}
-            className="shrink-0 rounded-lg p-1 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+            disabled={savePending}
+            className="shrink-0 rounded-lg p-1 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-800 disabled:opacity-50 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
             aria-label="Close"
           >
             <X className="h-5 w-5" aria-hidden />
           </button>
         </div>
-        <div className="flex flex-col gap-2 p-4">
-          <button
-            type="button"
-            onClick={() => onEditInTable(lead)}
-            className="flex w-full items-center gap-3 rounded-xl border border-border bg-white px-4 py-3 text-left text-sm font-medium text-text-primary transition-colors hover:border-accent hover:bg-accent/5 dark:border-zinc-600 dark:bg-zinc-900 dark:hover:border-accent dark:hover:bg-accent/10"
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent">
-              <Table2 className="h-5 w-5" aria-hidden />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block font-semibold">Edit in Leads table</span>
-              <span className="mt-0.5 block text-xs font-normal text-text-secondary">
-                Switch to the Leads tab and edit inline in the grid
-              </span>
-            </span>
-          </button>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                First name
+              </label>
+              <input
+                type="text"
+                value={draft.nameFirst}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, nameFirst: e.target.value }))
+                }
+                className={pipelineModalInputClass}
+                autoComplete="given-name"
+                disabled={savePending}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                Last name
+              </label>
+              <input
+                type="text"
+                value={draft.nameLast}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, nameLast: e.target.value }))
+                }
+                className={pipelineModalInputClass}
+                autoComplete="family-name"
+                disabled={savePending}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                Phone
+              </label>
+              <input
+                type="tel"
+                value={draft.phone}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, phone: e.target.value }))
+                }
+                className={pipelineModalInputClass}
+                disabled={savePending}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                Email
+              </label>
+              <input
+                type="email"
+                value={draft.email}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, email: e.target.value }))
+                }
+                className={pipelineModalInputClass}
+                disabled={savePending}
+              />
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-text-secondary">
+              Pipeline stage
+            </label>
+            <PillSelect
+              value={draft.stage}
+              onChange={(v) => setDraft((d) => ({ ...d, stage: v }))}
+              dotColor={leadStageLabelColor(draft.stage, leadPipeline).color}
+              textClassName="text-zinc-700 dark:text-zinc-300"
+              disabled={savePending}
+            >
+              {(() => {
+                const opts = leadPipeline.map((c) => ({ ...c }));
+                if (!opts.some((c) => c.slug === draft.stage)) {
+                  const m = leadStageLabelColor(draft.stage, leadPipeline);
+                  opts.unshift({
+                    slug: draft.stage,
+                    label: m.label,
+                    color: m.color,
+                  });
+                }
+                return opts.map((c) => (
+                  <option key={c.slug} value={c.slug}>
+                    {c.label}
+                  </option>
+                ));
+              })()}
+            </PillSelect>
+          </div>
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                Service / project type
+              </label>
+              <select
+                value={draft.project_type}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, project_type: e.target.value }))
+                }
+                className={pipelineModalInputClass}
+                disabled={savePending}
+              >
+                <option value="">Not set</option>
+                {draft.project_type &&
+                  !fieldOptions.leadProjectTypes.includes(draft.project_type) && (
+                    <option value={draft.project_type}>{draft.project_type}</option>
+                  )}
+                {fieldOptions.leadProjectTypes.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                Contact category
+              </label>
+              <select
+                value={draft.contact_category}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, contact_category: e.target.value }))
+                }
+                className={pipelineModalInputClass}
+                disabled={savePending}
+              >
+                <option value="">Not set</option>
+                {draft.contact_category &&
+                  !fieldOptions.leadContactCategories.includes(
+                    draft.contact_category
+                  ) && (
+                    <option value={draft.contact_category}>
+                      {draft.contact_category}
+                    </option>
+                  )}
+                {fieldOptions.leadContactCategories.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-text-secondary">
+              Company
+            </label>
+            <input
+              type="text"
+              value={draft.company}
+              onChange={(e) =>
+                setDraft((d) => ({ ...d, company: e.target.value }))
+              }
+              className={pipelineModalInputClass}
+              disabled={savePending}
+            />
+          </div>
+
+          <div className="mt-4">
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-text-secondary">
+              Source
+            </label>
+            <PillSelect
+              value={draft.source}
+              onChange={(v) => setDraft((d) => ({ ...d, source: v }))}
+              dotColor="#0ea5e9"
+              textClassName="text-sky-800 dark:text-sky-300"
+              disabled={savePending}
+            >
+              <option value="">Not set</option>
+              {draft.source &&
+                sourceNotInConfiguredList(draft.source, fieldOptions.leadSources) && (
+                  <option value={draft.source}>{draft.source}</option>
+                )}
+              {fieldOptions.leadSources.map((o) => (
+                <option key={o} value={o}>
+                  {formatSourceOptionLabel(o)}
+                </option>
+              ))}
+            </PillSelect>
+          </div>
+
+          <div className="mt-4">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-text-secondary">
+              Tags
+            </p>
+            <LeadTableTagsCell
+              lead={lead}
+              catalog={leadTagCatalog}
+              disabled={savePending}
+              pickerOpen={tagPickerOpen}
+              onOpenPicker={() => setTagPickerOpen(true)}
+              onClosePicker={() => setTagPickerOpen(false)}
+              onAssign={(tagId) => onTagMutate(lead, tagId, true)}
+              onRemove={(tagId) => onTagMutate(lead, tagId, false)}
+              rowBusy={rowBusy}
+            />
+          </div>
+
+          <div className="mt-4">
+            <label
+              htmlFor="pipeline-lead-notes"
+              className="mb-1 block text-xs font-semibold uppercase tracking-wide text-text-secondary"
+            >
+              Notes
+            </label>
+            <textarea
+              id="pipeline-lead-notes"
+              value={draft.notes}
+              onChange={(e) =>
+                setDraft((d) => ({ ...d, notes: e.target.value }))
+              }
+              rows={4}
+              disabled={savePending}
+              placeholder="Context, next steps, objections…"
+              className={`${pipelineModalInputClass} min-h-[6rem] resize-y`}
+            />
+          </div>
+
           <button
             type="button"
             onClick={() => onOpenFullPage(lead)}
-            className="flex w-full items-center gap-3 rounded-xl border border-border bg-white px-4 py-3 text-left text-sm font-medium text-text-primary transition-colors hover:border-accent hover:bg-accent/5 dark:border-zinc-600 dark:bg-zinc-900 dark:hover:border-accent dark:hover:bg-accent/10"
+            disabled={savePending}
+            className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border py-2.5 text-sm font-medium text-text-secondary transition-colors hover:border-accent/40 hover:bg-accent/5 hover:text-accent disabled:opacity-50 dark:border-zinc-600 dark:hover:bg-accent/10"
           >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
-              <ExternalLink className="h-5 w-5" aria-hidden />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block font-semibold">Open full lead page</span>
-              <span className="mt-0.5 block text-xs font-normal text-text-secondary">
-                All fields, projects, and save on a dedicated page
-              </span>
-            </span>
+            <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
+            Open full lead page (projects &amp; more)
+          </button>
+        </div>
+
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-border px-5 py-3 dark:border-zinc-700">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={savePending}
+            className="rounded-xl border border-border bg-white px-4 py-2 text-sm font-semibold text-text-primary hover:bg-surface disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={savePending}
+            onClick={() => void handleSave()}
+            className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-60"
+          >
+            {savePending ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : null}
+            Save changes
           </button>
         </div>
       </div>
     </div>
   );
+
+  if (!mounted) return null;
+  return createPortal(modal, document.body);
 }
 
 function LeadNotesModal({

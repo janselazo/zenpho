@@ -1,4 +1,6 @@
 export interface Service {
+  /** URL segment for `/services/[slug]` */
+  slug: string;
   title: string;
   description: string;
   details: string[];
@@ -124,24 +126,11 @@ export const developmentPricingOfferings: DevelopmentPricingOffering[] = [
       "Slack channel + post-launch support window",
     ],
   },
-  {
-    id: "mobile-games",
-    title: "Mobile Games",
-    subtitle: "Playable slices through polished mobile builds.",
-    priceAmount: "$9,000",
-    priceSuffix: "starting",
-    features: [
-      "Core loop and systems scoped to your genre",
-      "Touch-first UI, HUD, and performance tuning",
-      "2D or 3D pipeline for phones and tablets",
-      "Milestone delivery through store readiness",
-      "Slack channel + post-launch support window",
-    ],
-  },
 ];
 
 export const services: Service[] = [
   {
+    slug: "websites-ecommerce",
     title: "Websites & ecommerce",
     description:
       "Marketing sites and online stores that load fast, convert, and stay easy for your team to run without paging engineering for every change.",
@@ -153,6 +142,7 @@ export const services: Service[] = [
     icon: "store",
   },
   {
+    slug: "web-applications",
     title: "Web applications",
     description:
       "SaaS, dashboards, and internal tools — secure, maintainable, and ready to grow with real traffic and real users.",
@@ -164,6 +154,7 @@ export const services: Service[] = [
     icon: "code",
   },
   {
+    slug: "mobile-apps",
     title: "Mobile apps",
     description:
       "iOS and Android when the product belongs in someone’s pocket — including offline-first when the job doesn’t stop at the signal bar.",
@@ -175,6 +166,7 @@ export const services: Service[] = [
     icon: "rocket",
   },
   {
+    slug: "ai-in-your-product",
     title: "AI in your product",
     description:
       "Copilots, search, and assistive flows people actually adopt — grounded in your data with guardrails, not a keynote demo.",
@@ -186,6 +178,7 @@ export const services: Service[] = [
     icon: "brain",
   },
   {
+    slug: "automation-integrations",
     title: "Automation & integrations",
     description:
       "Connect CRMs, payments, data stores, and custom APIs so ops, sales, and support stop living in copy-paste and spreadsheets.",
@@ -195,17 +188,6 @@ export const services: Service[] = [
       "Payments, partner APIs, and internal tools wired end to end",
     ],
     icon: "zap",
-  },
-  {
-    title: "Mobile Games",
-    description:
-      "Playable prototypes through shippable slices on iOS and Android — core loops, touch UI, and builds tuned for mobile performance, with milestones you can playtest and ship.",
-    details: [
-      "2D or 3D pipeline scoped to your art direction and device targets",
-      "Milestone delivery: design, vertical slice, polish, and handoff",
-      "App Store / Play paths as scoped; bug-fix pass and integration support",
-    ],
-    icon: "gamepad",
   },
 ];
 
