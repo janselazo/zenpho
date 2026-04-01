@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   buildMarketIntelReport,
   type MarketIntelReport,
@@ -14,14 +21,20 @@ import {
   saveProspectIntelReportAction,
   createLeadFromProspectIntelAction,
 } from "@/app/(crm)/actions/prospect-intel";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Building2, Globe } from "lucide-react";
 import IconTabBar from "@/components/crm/prospecting/IconTabBar";
+import PlacesCategoryAutocomplete from "@/components/crm/prospecting/PlacesCategoryAutocomplete";
+import PlacesSearchResultsList from "@/components/crm/prospecting/PlacesSearchResultsList";
 import ProspectIntelEnrichment from "@/components/crm/prospecting/ProspectIntelEnrichment";
 import type { HomepageContactHints } from "@/app/(crm)/actions/prospect-intel";
 
 const cardClass =
   "rounded-2xl border border-border bg-white p-5 shadow-sm dark:border-zinc-800/70 dark:bg-zinc-900/60 dark:shadow-none";
+
+/** Session payload when navigating to the report via ?report=place */
+const SESSION_PLACE_REPORT_KEY = "zenpho:prospect-intel-place-v1";
+const SESSION_SCROLL_TO_REPORT_KEY = "zenpho:prospect-intel-scroll-v1";
 
 function IntelReportPanel({ report }: { report: MarketIntelReport }) {
   return (
@@ -105,12 +118,14 @@ function formatReportAsNotes(
   return lines.join("\n");
 }
 
-export default function ProspectsIntelligenceView({
+function ProspectsIntelligenceViewInner({
   fieldOptions,
 }: {
   fieldOptions: MergedCrmFieldOptions;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const prevReportSearchParam = useRef<string | null>(null);
   const defaultProjectType =
     fieldOptions.leadProjectTypes[0] ?? "Other";
   const [researchTab, setResearchTab] = useState<"discover" | "url">("discover");
@@ -189,6 +204,72 @@ export default function ProspectsIntelligenceView({
     },
     []
   );
+
+  const applyPlaceReport = useCallback(
+    (place: PlacesSearchPlace) => {
+      const signals = signalsFromPlace(place);
+      const report = buildMarketIntelReport(signals);
+      setPlaceReport({ place, report });
+      setUrlReport(null);
+      setUrlMeta(null);
+      setUrlHomepageHints(null);
+      syncLeadFormFromPlace(place, report);
+      setResearchTab("discover");
+    },
+    [syncLeadFormFromPlace]
+  );
+
+  useEffect(() => {
+    const cur = searchParams.get("report");
+    if (prevReportSearchParam.current === "place" && cur !== "place") {
+      sessionStorage.removeItem(SESSION_PLACE_REPORT_KEY);
+    }
+    prevReportSearchParam.current = cur;
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (searchParams.get("report") !== "place") return;
+    if (typeof window === "undefined") return;
+
+    const raw = sessionStorage.getItem(SESSION_PLACE_REPORT_KEY);
+    if (!raw) {
+      router.replace("/prospecting/prospects", { scroll: false });
+      return;
+    }
+
+    try {
+      const place = JSON.parse(raw) as PlacesSearchPlace;
+      if (!place?.id || !place?.name) {
+        sessionStorage.removeItem(SESSION_PLACE_REPORT_KEY);
+        router.replace("/prospecting/prospects", { scroll: false });
+        return;
+      }
+      try {
+        sessionStorage.setItem(SESSION_SCROLL_TO_REPORT_KEY, "1");
+      } catch {
+        /* private mode */
+      }
+      applyPlaceReport(place);
+    } catch {
+      sessionStorage.removeItem(SESSION_PLACE_REPORT_KEY);
+      router.replace("/prospecting/prospects", { scroll: false });
+      return;
+    }
+
+    router.replace("/prospecting/prospects", { scroll: false });
+  }, [searchParams, router, applyPlaceReport]);
+
+  useEffect(() => {
+    if (!activeReport) return;
+    if (typeof window === "undefined") return;
+    if (sessionStorage.getItem(SESSION_SCROLL_TO_REPORT_KEY) !== "1") return;
+    sessionStorage.removeItem(SESSION_SCROLL_TO_REPORT_KEY);
+    requestAnimationFrame(() => {
+      document
+        .getElementById("prospect-market-intel-report")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [activeReport]);
 
   async function runPlacesSearch() {
     setPlacesFormError(null);
@@ -280,15 +361,28 @@ export default function ProspectsIntelligenceView({
     }
   }
 
-  function viewPlaceReport(place: PlacesSearchPlace) {
-    const signals = signalsFromPlace(place);
-    const report = buildMarketIntelReport(signals);
-    setPlaceReport({ place, report });
-    setUrlReport(null);
-    setUrlMeta(null);
-    setUrlHomepageHints(null);
-    syncLeadFormFromPlace(place, report);
-  }
+  const viewPlaceReport = useCallback(
+    (place: PlacesSearchPlace) => {
+      try {
+        sessionStorage.setItem(SESSION_PLACE_REPORT_KEY, JSON.stringify(place));
+        sessionStorage.setItem(SESSION_SCROLL_TO_REPORT_KEY, "1");
+      } catch {
+        applyPlaceReport(place);
+        queueMicrotask(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              document
+                .getElementById("prospect-market-intel-report")
+                ?.scrollIntoView({ behavior: "smooth", block: "start" });
+            });
+          });
+        });
+        return;
+      }
+      router.push("/prospecting/prospects?report=place");
+    },
+    [router, applyPlaceReport]
+  );
 
   async function submitLead() {
     setLeadPending(true);
@@ -394,19 +488,11 @@ export default function ProspectsIntelligenceView({
               <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
                 Business category
               </label>
-              <input
-                type="text"
+              <PlacesCategoryAutocomplete
                 value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                list="prospect-places-category-suggestions"
-                placeholder="e.g. hair salon, gym, auto repair"
-                className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                onChange={setCategory}
+                suggestions={PLACES_TEXT_SEARCH_CATEGORY_SUGGESTIONS}
               />
-              <datalist id="prospect-places-category-suggestions">
-                {PLACES_TEXT_SEARCH_CATEGORY_SUGGESTIONS.map((s) => (
-                  <option key={s} value={s} />
-                ))}
-              </datalist>
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
@@ -417,7 +503,7 @@ export default function ProspectsIntelligenceView({
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
                 placeholder="e.g. Orlando FL"
-                className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="w-full rounded-full border border-border bg-white px-4 py-2.5 text-sm shadow-sm outline-none transition-[box-shadow,border-color] focus:border-accent focus:ring-2 focus:ring-accent/20 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-blue-500 dark:focus:ring-blue-500/20"
               />
             </div>
             <div>
@@ -429,7 +515,7 @@ export default function ProspectsIntelligenceView({
                 value={zip}
                 onChange={(e) => setZip(e.target.value)}
                 placeholder="e.g. 32801"
-                className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="w-full rounded-full border border-border bg-white px-4 py-2.5 text-sm shadow-sm outline-none transition-[box-shadow,border-color] focus:border-accent focus:ring-2 focus:ring-accent/20 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-blue-500 dark:focus:ring-blue-500/20"
               />
             </div>
           </div>
@@ -450,7 +536,7 @@ export default function ProspectsIntelligenceView({
               type="button"
               disabled={placesLoading}
               onClick={() => void runPlacesSearch()}
-              className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-50"
+              className="rounded-full bg-accent px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-accent-hover disabled:opacity-50"
             >
               {placesLoading ? "Searching…" : "Search"}
             </button>
@@ -479,73 +565,13 @@ export default function ProspectsIntelligenceView({
             </p>
           ) : null}
           {places.length > 0 ? (
-            <ul className="space-y-3">
-              {places.map((p) => (
-                <li
-                  key={p.id}
-                  className="flex flex-col gap-2 rounded-xl border border-border p-4 dark:border-zinc-700/80 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-medium text-text-primary dark:text-zinc-100">
-                        {p.name}
-                      </p>
-                      {!onlyNoWebsite ? (
-                        p.websiteUri?.trim() ? (
-                          <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-medium text-emerald-800 dark:text-emerald-300">
-                            Has website
-                          </span>
-                        ) : (
-                          <span className="rounded-full bg-zinc-500/15 px-2 py-0.5 text-[11px] font-medium text-text-secondary dark:text-zinc-400">
-                            No website
-                          </span>
-                        )
-                      ) : null}
-                    </div>
-                    <p className="text-xs text-text-secondary dark:text-zinc-500">
-                      {p.formattedAddress ?? "—"}
-                      {p.rating != null
-                        ? ` · ${p.rating}★ (${p.userRatingCount ?? 0} reviews)`
-                        : ""}
-                    </p>
-                    {p.nationalPhoneNumber || p.internationalPhoneNumber ? (
-                      <p className="mt-1 text-xs font-mono text-text-secondary dark:text-zinc-400">
-                        {p.nationalPhoneNumber || p.internationalPhoneNumber}
-                      </p>
-                    ) : null}
-                    {p.websiteUri ? (
-                      <a
-                        href={p.websiteUri}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-1 inline-block truncate text-xs text-accent hover:underline dark:text-blue-400"
-                      >
-                        {p.websiteUri}
-                      </a>
-                    ) : null}
-                    {p.googleMapsUri ? (
-                      <a
-                        href={p.googleMapsUri}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-1 block text-xs text-accent hover:underline dark:text-blue-400"
-                      >
-                        Google Maps listing
-                      </a>
-                    ) : null}
-                  </div>
-                  <div className="flex shrink-0 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => viewPlaceReport(p)}
-                      className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-surface dark:border-zinc-600 dark:hover:bg-zinc-800"
-                    >
-                      View report
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <PlacesSearchResultsList
+              places={places}
+              onlyNoWebsite={onlyNoWebsite}
+              highlightQuery={category}
+              onViewReport={viewPlaceReport}
+              totalCount={places.length}
+            />
           ) : null}
         </div>
 
@@ -589,7 +615,11 @@ export default function ProspectsIntelligenceView({
       </div>
 
       {activeReport ? (
-        <div className={`${cardClass} space-y-6`}>
+        <div
+          id="prospect-market-intel-report"
+          className={`${cardClass} scroll-mt-6 space-y-6`}
+          tabIndex={-1}
+        >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <h2 className="text-sm font-semibold text-text-primary dark:text-zinc-100">
               Market intelligence report
@@ -742,5 +772,23 @@ export default function ProspectsIntelligenceView({
         </div>
       )}
     </div>
+  );
+}
+
+export default function ProspectsIntelligenceView({
+  fieldOptions,
+}: {
+  fieldOptions: MergedCrmFieldOptions;
+}) {
+  return (
+    <Suspense
+      fallback={
+        <div className={`${cardClass} animate-pulse text-sm text-text-secondary dark:text-zinc-500`}>
+          Loading prospects…
+        </div>
+      }
+    >
+      <ProspectsIntelligenceViewInner fieldOptions={fieldOptions} />
+    </Suspense>
   );
 }
