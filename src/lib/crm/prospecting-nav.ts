@@ -49,7 +49,7 @@ export const PROSPECTING_SECTIONS: ProspectingSection[] = [
   },
   {
     slug: "prospects",
-    label: "Research",
+    label: "Prospects",
     href: "/prospecting/prospects",
     icon: UserSearch,
     description:

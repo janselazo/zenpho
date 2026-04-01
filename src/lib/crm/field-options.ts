@@ -14,7 +14,7 @@ export const LEAD_SOURCE_DEFAULT_OPTIONS = [
   "cold outreach",
   "conference",
   "facebook",
-  "Prospecting — Research",
+  "Prospecting — Prospects",
 ] as const;
 
 export const MAX_FIELD_OPTION_LIST_ITEMS = 50;
