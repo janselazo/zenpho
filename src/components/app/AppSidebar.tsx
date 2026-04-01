@@ -6,7 +6,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
 import {
-  BarChart3,
   BookOpen,
   Calendar,
   ChevronDown,
@@ -19,6 +18,7 @@ import {
   MessageSquare,
   Settings,
   Timer,
+  UserSearch,
   Users,
   UsersRound,
   Workflow,
@@ -26,23 +26,14 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { PROSPECTING_SECTIONS } from "@/lib/crm/prospecting-nav";
 import SoonBadge from "@/components/crm/prospecting/SoonBadge";
-import {
-  projects as seedProjects,
-  type MockProject,
-  type PlanStage,
-} from "@/lib/crm/mock-data";
-import {
-  getMergedProjectsList,
-  CRM_SUPABASE_PROJECTS_CHANGED_EVENT,
-} from "@/lib/crm/projects-storage";
 import { toolsNav } from "@/lib/crm/tools-nav";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 const opportunitiesNav: Array<{
   href: string;
   label: string;
   icon: LucideIcon;
 }> = [
+  { href: "/prospecting/prospects", label: "Prospects", icon: UserSearch },
   { href: "/leads", label: "Leads", icon: UsersRound },
   { href: "/calendar", label: "Appointments", icon: Calendar },
   { href: "/conversations", label: "Conversations", icon: MessageSquare },
@@ -56,7 +47,6 @@ const workNav = [
 
 const agencyNav = [
   { href: "/team", label: "Team", icon: Users },
-  { href: "/capacity", label: "Capacity", icon: BarChart3 },
   { href: "/automations", label: "Automations", icon: Workflow },
   { href: "/reports", label: "Reports", icon: FileBarChart },
   { href: "/docs", label: "Docs", icon: BookOpen },
@@ -64,49 +54,10 @@ const agencyNav = [
 ];
 
 const playbookSection = PROSPECTING_SECTIONS.find((s) => s.slug === "playbook");
-const prospectingSectionsWithoutPlaybook = playbookSection
-  ? PROSPECTING_SECTIONS.filter((s) => s.slug !== "playbook")
-  : PROSPECTING_SECTIONS;
+const prospectingSectionsWithoutPlaybook = PROSPECTING_SECTIONS.filter(
+  (s) => s.slug !== "playbook" && s.slug !== "prospects"
+);
 const PlaybookNavIcon = playbookSection?.icon;
-
-function sortSidebarProducts(list: MockProject[]): MockProject[] {
-  return [...list].sort((a, b) =>
-    a.title.localeCompare(b.title, undefined, { sensitivity: "base" })
-  );
-}
-
-async function loadSidebarProductRoots(): Promise<MockProject[]> {
-  if (!isSupabaseConfigured()) {
-    return sortSidebarProducts(getMergedProjectsList());
-  }
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return sortSidebarProducts(getMergedProjectsList());
-  }
-  const { data, error } = await supabase
-    .from("project")
-    .select("id, title")
-    .is("parent_project_id", null)
-    .order("title", { ascending: true })
-    .limit(75);
-  if (error || data === null) {
-    return sortSidebarProducts(getMergedProjectsList());
-  }
-  return data.map((row) => ({
-    id: row.id as string,
-    title: ((row.title as string) ?? "").trim() || "Untitled",
-    plan: "backlog" as PlanStage,
-    teamId: "team-general",
-    clientId: "",
-    color: "#6366f1",
-    expectedEndDate: "TBD",
-    sprintCount: 0,
-    taskCount: 0,
-  }));
-}
 
 const SIDEBAR_SECTION_STORAGE_PREFIX = "zenpho-sidebar-section-";
 
@@ -149,27 +100,6 @@ export default function AppSidebar() {
     useSidebarSectionOpen("prospecting");
   const [agencyOpen, toggleAgency] = useSidebarSectionOpen("agency");
   const [toolsOpen, toggleTools] = useSidebarSectionOpen("tools");
-  const [productsOpen, toggleProducts] = useSidebarSectionOpen("products");
-  const [sidebarProducts, setSidebarProducts] = useState(() => seedProjects);
-
-  useEffect(() => {
-    let cancelled = false;
-    const sync = () => {
-      void loadSidebarProductRoots().then((list) => {
-        if (!cancelled) setSidebarProducts(list);
-      });
-    };
-    sync();
-    window.addEventListener("crm-projects-changed", sync);
-    window.addEventListener("storage", sync);
-    window.addEventListener(CRM_SUPABASE_PROJECTS_CHANGED_EVENT, sync);
-    return () => {
-      cancelled = true;
-      window.removeEventListener("crm-projects-changed", sync);
-      window.removeEventListener("storage", sync);
-      window.removeEventListener(CRM_SUPABASE_PROJECTS_CHANGED_EVENT, sync);
-    };
-  }, []);
 
   async function signOut() {
     try {
@@ -295,30 +225,6 @@ export default function AppSidebar() {
             >
               <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
               {label}
-            </NavLink>
-          ))}
-        </SidebarSection>
-
-        {/* Product shortcuts (root rows from Supabase when configured) */}
-        <SidebarSection
-          label="Products"
-          open={productsOpen}
-          onToggle={toggleProducts}
-        >
-          {sidebarProducts.map((p) => (
-            <NavLink
-              key={p.id}
-              href={`/products/${p.id}`}
-              active={
-                pathname === `/products/${p.id}` ||
-                pathname.startsWith(`/products/${p.id}/`)
-              }
-            >
-              <span
-                className="h-2.5 w-2.5 shrink-0 rounded-full"
-                style={{ backgroundColor: p.color }}
-              />
-              <span className="truncate">{p.title}</span>
             </NavLink>
           ))}
         </SidebarSection>

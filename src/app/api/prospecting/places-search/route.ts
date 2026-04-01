@@ -40,6 +40,20 @@ function looksLikeUsZip(s: string): boolean {
   return /^\d{5}(-\d{4})?$/.test(s.trim());
 }
 
+function placeHasWebsite(p: PlacesSearchPlace): boolean {
+  return Boolean(p.websiteUri?.trim());
+}
+
+/** No-website listings first (stable within each group). */
+function sortPlacesNoWebsiteFirst(places: PlacesSearchPlace[]): PlacesSearchPlace[] {
+  return [...places].sort((a, b) => {
+    const wa = placeHasWebsite(a);
+    const wb = placeHasWebsite(b);
+    if (wa === wb) return 0;
+    return wa ? 1 : -1;
+  });
+}
+
 type SearchBody = {
   textQuery?: string;
   category?: string;
@@ -171,6 +185,8 @@ export async function POST(req: Request) {
     places = places.filter((p) => !p.websiteUri?.trim());
   }
   const droppedCount = onlyNoWebsite ? totalBeforeFilter - places.length : 0;
+
+  places = sortPlacesNoWebsiteFirst(places);
 
   return NextResponse.json({
     places,

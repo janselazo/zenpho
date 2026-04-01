@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import LeadEditForm from "@/components/crm/LeadEditForm";
@@ -50,37 +49,23 @@ export default async function LeadDetailPage({ params }: Props) {
   ]);
 
   return (
-    <div className="p-8">
-      <Link
-        href="/leads"
-        className="text-sm text-accent hover:underline"
+    <div className="min-h-full bg-zinc-50/90 px-4 py-6 sm:px-8 sm:py-8 dark:bg-zinc-950">
+      <Suspense
+        fallback={
+          <div className="mx-auto max-w-6xl">
+            <div className="h-10 w-32 animate-pulse rounded-lg bg-zinc-200 dark:bg-zinc-800" />
+            <div className="mt-8 h-48 animate-pulse rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900/60" />
+          </div>
+        }
       >
-        ← All leads
-      </Link>
-      <h1 className="mt-4 heading-display text-2xl font-bold text-text-primary">
-        {lead.name || lead.email || "Lead"}
-      </h1>
-      <p className="text-sm text-text-secondary">
-        Created{" "}
-        {lead.created_at
-          ? new Date(lead.created_at).toLocaleString()
-          : "—"}
-      </p>
-      <div className="mt-8 max-w-2xl">
-        <Suspense
-          fallback={
-            <div className="h-64 animate-pulse rounded-2xl border border-border bg-surface/60 dark:bg-zinc-800/40" />
-          }
-        >
-          <LeadEditForm
-            lead={lead}
-            clientProjects={clientProjects}
-            convertedClientId={cid}
-            fieldOptions={fieldOptions}
-            leadPipelineColumns={pipeline.lead}
-          />
-        </Suspense>
-      </div>
+        <LeadEditForm
+          lead={lead}
+          clientProjects={clientProjects}
+          convertedClientId={cid}
+          fieldOptions={fieldOptions}
+          leadPipelineColumns={pipeline.lead}
+        />
+      </Suspense>
     </div>
   );
 }

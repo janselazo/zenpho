@@ -14,6 +14,7 @@ export const LEAD_SOURCE_DEFAULT_OPTIONS = [
   "cold outreach",
   "conference",
   "facebook",
+  "instagram",
   "Prospecting — Prospects",
 ] as const;
 

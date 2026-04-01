@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  ArrowUpDown,
   Briefcase,
   Building2,
   Check,
@@ -31,6 +32,7 @@ import PipelineSettingsModal from "@/components/crm/PipelineSettingsModal";
 import {
   leadStageLabelColor,
   normalizeLeadStageForPipeline,
+  normalizePipelineHexColor,
   type PipelineColumnDef,
 } from "@/lib/crm/pipeline-columns";
 import {
@@ -77,12 +79,48 @@ function getSourceTextClass(source: string) {
   );
 }
 
+/** Soft filled pills for source column (reference-style CRM table). */
+const sourcePillClasses: Record<string, string> = {
+  website: "bg-sky-100 text-sky-900 dark:bg-sky-950/50 dark:text-sky-100",
+  referral: "bg-orange-100 text-orange-900 dark:bg-orange-950/45 dark:text-orange-100",
+  linkedin: "bg-blue-100 text-blue-900 dark:bg-blue-950/50 dark:text-blue-100",
+  "cold outreach": "bg-amber-100 text-amber-900 dark:bg-amber-950/45 dark:text-amber-100",
+  conference: "bg-violet-100 text-violet-900 dark:bg-violet-950/50 dark:text-violet-100",
+  facebook: "bg-purple-100 text-purple-900 dark:bg-purple-950/50 dark:text-purple-100",
+  direct: "bg-emerald-100 text-emerald-900 dark:bg-emerald-950/45 dark:text-emerald-100",
+  instagram: "bg-fuchsia-100 text-fuchsia-900 dark:bg-fuchsia-950/45 dark:text-fuchsia-100",
+};
+
+function getSourcePillClass(source: string) {
+  return (
+    sourcePillClasses[source.toLowerCase()] ??
+    "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"
+  );
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  const norm = normalizePipelineHexColor(hex);
+  const h = (norm ?? "#64748b").slice(1);
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 const projectTypeTextClasses: Record<string, string> = {
   "web app": "text-sky-700 dark:text-sky-400",
   "mobile app": "text-emerald-700 dark:text-emerald-400",
   website: "text-cyan-700 dark:text-cyan-400",
   "ecommerce store": "text-amber-800 dark:text-amber-400",
   other: "text-violet-700 dark:text-violet-400",
+};
+
+const projectTypePillClasses: Record<string, string> = {
+  "web app": "bg-sky-100 text-sky-900 dark:bg-sky-950/45 dark:text-sky-100",
+  "mobile app": "bg-emerald-100 text-emerald-900 dark:bg-emerald-950/45 dark:text-emerald-100",
+  website: "bg-cyan-100 text-cyan-900 dark:bg-cyan-950/45 dark:text-cyan-100",
+  "ecommerce store": "bg-amber-100 text-amber-900 dark:bg-amber-950/45 dark:text-amber-100",
+  other: "bg-violet-100 text-violet-900 dark:bg-violet-950/45 dark:text-violet-100",
 };
 
 function getProjectTypeTextClass(projectType: string) {
@@ -92,16 +130,38 @@ function getProjectTypeTextClass(projectType: string) {
   );
 }
 
+function getProjectTypePillClass(projectType: string) {
+  const key = projectType.trim().toLowerCase();
+  return (
+    projectTypePillClasses[key] ??
+    "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100"
+  );
+}
+
 const contactCategoryTextClasses: Record<string, string> = {
   "tech founder": "text-indigo-700 dark:text-indigo-400",
   "saas founder": "text-fuchsia-700 dark:text-fuchsia-400",
   "ecommerce owner": "text-rose-700 dark:text-rose-400",
 };
 
+const contactCategoryPillClasses: Record<string, string> = {
+  "tech founder": "bg-indigo-100 text-indigo-900 dark:bg-indigo-950/45 dark:text-indigo-100",
+  "saas founder": "bg-fuchsia-100 text-fuchsia-900 dark:bg-fuchsia-950/45 dark:text-fuchsia-100",
+  "ecommerce owner": "bg-rose-100 text-rose-900 dark:bg-rose-950/45 dark:text-rose-100",
+};
+
 function getContactCategoryTextClass(category: string) {
   const key = category.trim().toLowerCase();
   return (
     contactCategoryTextClasses[key] ?? "text-zinc-700 dark:text-zinc-300"
+  );
+}
+
+function getContactCategoryPillClass(category: string) {
+  const key = category.trim().toLowerCase();
+  return (
+    contactCategoryPillClasses[key] ??
+    "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"
   );
 }
 
@@ -206,7 +266,11 @@ function PillSelect({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`w-full appearance-none rounded-full border border-zinc-200/90 bg-white py-1.5 pl-7 pr-8 text-xs font-semibold outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/15 dark:border-zinc-600 dark:bg-zinc-900 ${textClassName}`}
+        className={`w-full appearance-none rounded-full border-0 py-2 pl-7 pr-8 text-xs font-semibold outline-none ring-1 ring-zinc-200/80 focus:ring-2 focus:ring-blue-400/25 dark:ring-zinc-600 dark:focus:ring-blue-500/30 ${textClassName}`}
+        style={{
+          backgroundColor: hexToRgba(dotColor, 0.16),
+          color: dotColor,
+        }}
       >
         {children}
       </select>
@@ -305,6 +369,9 @@ export default function LeadsView({
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const [leadTableSort, setLeadTableSort] = useState<"newest" | "oldest">(
+    "newest"
+  );
   const [modalOpen, setModalOpen] = useState(false);
   const [view, setView] = useState<LeadsSectionTab>(
     initialSection ?? "pipeline"
@@ -339,6 +406,16 @@ export default function LeadsView({
       (l.primaryProject?.title?.toLowerCase().includes(q) ?? false)
     );
   });
+
+  const sortedLeadsForTable = useMemo(() => {
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      const ta = new Date(a.created_at ?? 0).getTime();
+      const tb = new Date(b.created_at ?? 0).getTime();
+      return leadTableSort === "newest" ? tb - ta : ta - tb;
+    });
+    return arr;
+  }, [filtered, leadTableSort]);
 
   const leadStageCounts = leadsSnapshot.reduce<Record<string, number>>(
     (acc, l) => {
@@ -477,7 +554,7 @@ export default function LeadsView({
             {leadsSectionSubtitle(view)}
           </p>
         </div>
-        {showLeadToolbar ? (
+        {showLeadToolbar && view !== "leads" ? (
           <div className="flex items-center gap-2">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary/50" />
@@ -519,9 +596,11 @@ export default function LeadsView({
         </div>
         {showLeadToolbar ? (
           <>
-            <span className="text-sm text-text-secondary">
-              {filtered.length} leads
-            </span>
+            {view !== "leads" ? (
+              <span className="text-sm text-text-secondary">
+                {filtered.length} leads
+              </span>
+            ) : null}
             <button
               type="button"
               onClick={() => setPipelineSettingsOpen(true)}
@@ -545,10 +624,9 @@ export default function LeadsView({
       <div className="mt-6">
         {view === "leads" ? (
           <LeadsTable
-            leads={filtered}
+            leads={sortedLeadsForTable}
             fieldOptions={fieldOptions}
             leadPipeline={leadPipeline}
-            router={router}
             editingId={editingId}
             draft={draft}
             setDraft={setDraft}
@@ -561,6 +639,14 @@ export default function LeadsView({
             setNotesLead={setNotesLead}
             onCreateProject={(lead) => setNewProjectLeadId(lead.id)}
             onQuickTask={setQuickTaskLead}
+            chrome={{
+              leadCount: filtered.length,
+              search,
+              onSearchChange: setSearch,
+              sort: leadTableSort,
+              onSortChange: setLeadTableSort,
+              onAddLead: () => setModalOpen(true),
+            }}
           />
         ) : null}
         {view === "pipeline" ? (
@@ -653,13 +739,19 @@ export default function LeadsView({
   );
 }
 
-type LeadsRouter = ReturnType<typeof useRouter>;
+type LeadsTableChrome = {
+  leadCount: number;
+  search: string;
+  onSearchChange: (v: string) => void;
+  sort: "newest" | "oldest";
+  onSortChange: (v: "newest" | "oldest") => void;
+  onAddLead: () => void;
+};
 
 type LeadsTableProps = {
   leads: Lead[];
   fieldOptions: MergedCrmFieldOptions;
   leadPipeline: PipelineColumnDef[];
-  router: LeadsRouter;
   editingId: string | null;
   draft: LeadDraft | null;
   setDraft: Dispatch<SetStateAction<LeadDraft | null>>;
@@ -672,6 +764,7 @@ type LeadsTableProps = {
   setNotesLead: Dispatch<SetStateAction<Lead | null>>;
   onCreateProject: (lead: Lead) => void;
   onQuickTask: (lead: Lead) => void;
+  chrome?: LeadsTableChrome;
 };
 
 function LeadsPipelineBoard({
@@ -858,7 +951,6 @@ function LeadsTable({
   leads,
   fieldOptions,
   leadPipeline,
-  router,
   editingId,
   draft,
   setDraft,
@@ -871,34 +963,122 @@ function LeadsTable({
   setNotesLead,
   onCreateProject,
   onQuickTask,
+  chrome,
 }: LeadsTableProps) {
+  const toolbar = chrome ? (
+    <div className="flex flex-col gap-3 border-b border-zinc-100 bg-white px-4 py-3.5 dark:border-zinc-800 dark:bg-zinc-900 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="inline-flex items-center gap-2 rounded-lg bg-zinc-100 px-2.5 py-1.5 text-sm font-semibold text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50">
+          <Table2 className="h-4 w-4 text-zinc-500 dark:text-zinc-400" aria-hidden />
+          Table
+        </span>
+        <span className="text-sm text-zinc-500 dark:text-zinc-400">
+          {chrome.leadCount} leads
+        </span>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative">
+          <Search
+            className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
+            aria-hidden
+          />
+          <input
+            type="text"
+            placeholder="Search…"
+            value={chrome.search}
+            onChange={(e) => chrome.onSearchChange(e.target.value)}
+            className="h-9 w-full min-w-[10rem] rounded-lg border border-zinc-200 bg-zinc-50/80 py-1.5 pl-8 pr-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/15 dark:border-zinc-600 dark:bg-zinc-800/60 dark:text-zinc-100 sm:w-44"
+          />
+        </div>
+        <div className="relative flex h-9 items-center gap-1 rounded-lg border border-zinc-200 bg-white px-2 pr-7 dark:border-zinc-600 dark:bg-zinc-900">
+          <ArrowUpDown className="h-3.5 w-3.5 shrink-0 text-zinc-400" aria-hidden />
+          <select
+            value={chrome.sort}
+            onChange={(e) =>
+              chrome.onSortChange(e.target.value as "newest" | "oldest")
+            }
+            className="h-full min-w-[5.5rem] cursor-pointer appearance-none border-0 bg-transparent py-0 text-sm font-medium text-zinc-700 outline-none dark:text-zinc-200"
+            aria-label="Sort leads by date"
+          >
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
+        </div>
+        <button
+          type="button"
+          className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-dashed border-zinc-300 bg-white px-3 text-sm font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          title="Filter by tags (use search for now)"
+        >
+          <Tag className="h-3.5 w-3.5" aria-hidden />
+          Tags
+        </button>
+        <button
+          type="button"
+          onClick={chrome.onAddLead}
+          className="inline-flex h-9 items-center gap-1 rounded-lg bg-blue-600 px-3.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500"
+        >
+          + Add Lead
+          <ChevronDown className="h-4 w-4 opacity-90" aria-hidden />
+        </button>
+      </div>
+    </div>
+  ) : null;
+
   if (leads.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-border bg-white py-16 text-center text-sm text-text-secondary">
-        No leads found.
+      <div className="overflow-hidden rounded-2xl border border-zinc-200/90 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        {toolbar}
+        <div className="border-t border-dashed border-zinc-200 py-16 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+          No leads found.
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-border bg-white shadow-sm">
-      <table className="w-full min-w-[96rem] text-left text-sm">
+    <div className="overflow-hidden rounded-2xl border border-zinc-200/90 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      {toolbar}
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[96rem] text-left text-sm">
         <thead>
-          <tr className="border-b border-border">
-            <th className="px-4 py-3 font-semibold text-text-secondary">Name</th>
-            <th className="px-4 py-3 font-semibold text-text-secondary">Phone</th>
-            <th className="px-4 py-3 font-semibold text-text-secondary">Email</th>
-            <th className="px-4 py-3 font-semibold text-text-secondary">Status</th>
-            <th className="px-4 py-3 font-semibold text-text-secondary">Service</th>
-            <th className="px-4 py-3 font-semibold text-text-secondary">Category</th>
-            <th className="px-4 py-3 font-semibold text-text-secondary">Company</th>
-            <th className="px-4 py-3 font-semibold text-text-secondary">Product</th>
-            <th className="px-4 py-3 font-semibold text-text-secondary">Source</th>
-            <th className="px-4 py-3 font-semibold text-text-secondary">Date</th>
-            <th className="px-4 py-3 font-semibold text-text-secondary">Actions</th>
+          <tr className="border-b border-zinc-100 bg-zinc-50/95 dark:border-zinc-800 dark:bg-zinc-800/40">
+            <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              Name
+            </th>
+            <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              Phone
+            </th>
+            <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              Email
+            </th>
+            <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              Status
+            </th>
+            <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              Service
+            </th>
+            <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              Category
+            </th>
+            <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              Company
+            </th>
+            <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              Product
+            </th>
+            <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              Source
+            </th>
+            <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              Date
+            </th>
+            <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              Actions
+            </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-border">
+        <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
           {leads.map((lead) => {
             const stageKey = normalizeLeadStageForPipeline(
               lead.stage,
@@ -921,14 +1101,14 @@ function LeadsTable({
                 key={lead.id}
                 className={`transition-colors ${
                   isEditing
-                    ? "bg-sky-50/60 dark:bg-sky-950/25"
-                    : "hover:bg-surface/50"
+                    ? "bg-sky-50/70 dark:bg-sky-950/30"
+                    : "hover:bg-zinc-50/80 dark:hover:bg-zinc-800/35"
                 }`}
               >
-                <td className="px-4 py-3 align-top">
-                  <div className="flex items-center gap-2.5">
+                <td className="px-5 py-4 align-top">
+                  <div className="flex items-center gap-3">
                     <span
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E8F1FB] text-xs font-bold text-[#4086D6] dark:bg-sky-950/50 dark:text-sky-400"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky-100 text-xs font-bold text-blue-600 dark:bg-sky-950/55 dark:text-sky-300"
                       aria-hidden
                     >
                       {initials || "?"}
@@ -963,14 +1143,14 @@ function LeadsTable({
                     ) : (
                       <Link
                         href={`/leads/${lead.id}`}
-                        className="min-w-0 font-medium text-accent hover:underline dark:text-blue-400"
+                        className="min-w-0 font-medium text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
                       >
                         {lead.name?.trim() || "—"}
                       </Link>
                     )}
                   </div>
                 </td>
-                <td className="px-4 py-3 align-top">
+                <td className="px-5 py-4 align-top">
                   {isEditing ? (
                     <input
                       type="tel"
@@ -982,12 +1162,12 @@ function LeadsTable({
                       className={inlineInputClass}
                     />
                   ) : (
-                    <span className="text-text-secondary">
+                    <span className="text-zinc-600 dark:text-zinc-400">
                       {formatLeadPhone(lead.phone)}
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3 align-top">
+                <td className="px-5 py-4 align-top">
                   {isEditing ? (
                     <input
                       type="email"
@@ -999,12 +1179,12 @@ function LeadsTable({
                       className={inlineInputClass}
                     />
                   ) : (
-                    <span className="text-text-secondary">
+                    <span className="text-zinc-600 dark:text-zinc-400">
                       {lead.email ?? "—"}
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3 align-top">
+                <td className="px-5 py-4 align-top">
                   {isEditing && draft ? (
                     <PillSelect
                       value={draft.stage}
@@ -1038,20 +1218,21 @@ function LeadsTable({
                     </PillSelect>
                   ) : (
                     <span
-                      className={`${neutralChipBase} items-center gap-1.5`}
-                      style={{ color: stageMeta.color }}
+                      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold"
+                      style={{
+                        backgroundColor: hexToRgba(stageMeta.color, 0.14),
+                        color: stageMeta.color,
+                      }}
                     >
                       <span
-                        className="h-2 w-2 shrink-0 rounded-full ring-2 ring-border dark:ring-zinc-600"
-                        style={{
-                          backgroundColor: stageMeta.color,
-                        }}
+                        className="h-1.5 w-1.5 shrink-0 rounded-full ring-2 ring-white/90 dark:ring-zinc-900/90"
+                        style={{ backgroundColor: stageMeta.color }}
                       />
                       {leadStageLabel(lead.stage, leadPipeline)}
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3 align-top">
+                <td className="px-5 py-4 align-top">
                   {isEditing ? (
                     <div className="relative min-w-[7rem] max-w-[12rem]">
                       <select
@@ -1085,15 +1266,15 @@ function LeadsTable({
                     </div>
                   ) : lead.project_type?.trim() ? (
                     <span
-                      className={`${neutralChipBase} ${getProjectTypeTextClass(lead.project_type)}`}
+                      className={`inline-flex max-w-full rounded-full px-3 py-1 text-xs font-semibold ${getProjectTypePillClass(lead.project_type)}`}
                     >
-                      {lead.project_type}
+                      <span className="truncate">{lead.project_type}</span>
                     </span>
                   ) : (
-                    <span className="text-text-secondary">—</span>
+                    <span className="text-zinc-400 dark:text-zinc-500">—</span>
                   )}
                 </td>
-                <td className="px-4 py-3 align-top">
+                <td className="px-5 py-4 align-top">
                   {isEditing ? (
                     <div className="relative min-w-[7rem] max-w-[12rem]">
                       <select
@@ -1127,15 +1308,15 @@ function LeadsTable({
                     </div>
                   ) : lead.contact_category?.trim() ? (
                     <span
-                      className={`${neutralChipBase} ${getContactCategoryTextClass(lead.contact_category)}`}
+                      className={`inline-flex max-w-full rounded-full px-3 py-1 text-xs font-semibold ${getContactCategoryPillClass(lead.contact_category)}`}
                     >
-                      {lead.contact_category}
+                      <span className="truncate">{lead.contact_category}</span>
                     </span>
                   ) : (
-                    <span className="text-text-secondary">—</span>
+                    <span className="text-zinc-400 dark:text-zinc-500">—</span>
                   )}
                 </td>
-                <td className="px-4 py-3 align-top">
+                <td className="px-5 py-4 align-top">
                   {isEditing ? (
                     <input
                       type="text"
@@ -1149,28 +1330,32 @@ function LeadsTable({
                       className={inlineInputClass}
                     />
                   ) : lead.company?.trim() ? (
-                    <span
-                      className={`${neutralChipBase} font-medium text-amber-800 dark:text-amber-300`}
-                    >
-                      {lead.company}
+                    <span className="inline-flex max-w-full rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+                      <span className="truncate">{lead.company}</span>
                     </span>
                   ) : (
-                    <span className="text-text-secondary">—</span>
+                    <span className="text-zinc-400 dark:text-zinc-500">—</span>
                   )}
                 </td>
-                <td className="px-4 py-3 align-top">
+                <td className="px-5 py-4 align-top">
                   {lead.primaryProject ? (
                     <Link
                       href={`/leads/${lead.id}`}
-                      className="font-medium text-accent hover:underline dark:text-blue-400"
+                      className="inline-flex max-w-full min-w-0 items-center gap-1 font-medium text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400"
                     >
-                      {lead.primaryProject.title?.trim() || "Project"}
+                      <span className="min-w-0 truncate">
+                        {lead.primaryProject.title?.trim() || "Project"}
+                      </span>
+                      <ExternalLink
+                        className="h-3.5 w-3.5 shrink-0 text-zinc-400 dark:text-zinc-500"
+                        aria-hidden
+                      />
                     </Link>
                   ) : (
-                    <span className="text-text-secondary">—</span>
+                    <span className="text-zinc-400 dark:text-zinc-500">—</span>
                   )}
                 </td>
-                <td className="px-4 py-3 align-top">
+                <td className="px-5 py-4 align-top">
                     {isEditing && draft ? (
                     <PillSelect
                       value={draft.source}
@@ -1196,18 +1381,18 @@ function LeadsTable({
                     </PillSelect>
                   ) : lead.source ? (
                     <span
-                      className={`${neutralChipBase} font-medium capitalize ${getSourceTextClass(lead.source)}`}
+                      className={`inline-flex max-w-full truncate rounded-full px-3 py-1 text-xs font-semibold capitalize ${getSourcePillClass(lead.source)}`}
                     >
                       {lead.source}
                     </span>
                   ) : (
-                    <span className="text-text-secondary">—</span>
+                    <span className="text-zinc-400 dark:text-zinc-500">—</span>
                   )}
                 </td>
-                <td className="px-4 py-3 align-top text-text-secondary">
+                <td className="px-5 py-4 align-top text-sm text-zinc-600 dark:text-zinc-400">
                   {formatDate(lead.created_at)}
                 </td>
-                <td className="px-4 py-3 align-top">
+                <td className="px-5 py-4 align-top">
                   <div className="flex flex-wrap items-center gap-2">
                     {isEditing ? (
                       <>
@@ -1308,6 +1493,7 @@ function LeadsTable({
           })}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

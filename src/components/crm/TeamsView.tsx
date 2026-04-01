@@ -3,6 +3,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import {
+  BarChart3,
   Search,
   Mail,
   ChevronDown,
@@ -369,6 +370,13 @@ export default function TeamsView({
               ))}
             </select>
           </div>
+          <Link
+            href="/capacity"
+            className={`${outlineControl} no-underline transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/80`}
+          >
+            <BarChart3 className="h-4 w-4 text-zinc-500" aria-hidden />
+            Capacity graph
+          </Link>
           <div ref={memberActionsRef} className="relative shrink-0">
             <button
               type="button"

@@ -14,6 +14,7 @@ import type {
   ApolloPersonRow,
   HunterEmailRow,
 } from "@/lib/crm/prospect-enrichment-types";
+import ProspectIntelBusinessSnapshot from "@/components/crm/prospecting/ProspectIntelBusinessSnapshot";
 
 function domainFromUrl(u: string | null): string | null {
   if (!u?.trim()) return null;
@@ -34,6 +35,10 @@ type Props = {
   homepageContactHints: HomepageContactHints | null;
   onPickEmail?: (email: string) => void;
   onPickPhone?: (phone: string) => void;
+  /** When true, Business snapshot is not rendered (shown above IntelReportPanel by parent). */
+  omitBusinessSnapshot?: boolean;
+  /** Deep-crawl emails (deduped, ranked); empty when no website or after error. */
+  onWebsiteEmailsChange?: (emails: string[]) => void;
 };
 
 export default function ProspectIntelEnrichment({
@@ -45,6 +50,8 @@ export default function ProspectIntelEnrichment({
   homepageContactHints,
   onPickEmail,
   onPickPhone,
+  omitBusinessSnapshot = false,
+  onWebsiteEmailsChange,
 }: Props) {
   const [deep, setDeep] = useState<MergedWebsiteContacts | null>(null);
   const [deepLoading, setDeepLoading] = useState(false);
@@ -69,30 +76,40 @@ export default function ProspectIntelEnrichment({
 
   const pickEmailRef = useRef(onPickEmail);
   const pickPhoneRef = useRef(onPickPhone);
+  const websiteEmailsCbRef = useRef(onWebsiteEmailsChange);
   pickEmailRef.current = onPickEmail;
   pickPhoneRef.current = onPickPhone;
+  websiteEmailsCbRef.current = onWebsiteEmailsChange;
 
   useEffect(() => {
+    const notifyEmails = websiteEmailsCbRef.current;
     if (!websiteUrl?.trim()) {
       setDeep(null);
       setDeepError(null);
       setDeepLoading(false);
+      notifyEmails?.([]);
       return;
     }
+    notifyEmails?.([]);
     let cancelled = false;
+    setDeep(null);
     setDeepLoading(true);
     setDeepError(null);
     void enrichWebsiteContactsDeepAction(websiteUrl).then((r) => {
       if (cancelled) return;
       setDeepLoading(false);
+      const cb = websiteEmailsCbRef.current;
       if (r.ok) {
         setDeep(r.contacts);
+        cb?.(r.contacts.emailsRanked);
         const first = r.contacts.emailsRanked[0];
         if (first) pickEmailRef.current?.(first);
         const ph = r.contacts.phones[0];
         if (ph) pickPhoneRef.current?.(ph);
       } else {
+        setDeep(null);
         setDeepError(r.error);
+        cb?.([]);
       }
     });
     return () => {
@@ -148,124 +165,15 @@ export default function ProspectIntelEnrichment({
 
   return (
     <div className="space-y-6 border-t border-border pt-6 dark:border-zinc-800">
-      <div>
-        <h3 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
-          Business snapshot
-        </h3>
-        <div className="mt-3 rounded-xl border border-border bg-surface/40 p-4 dark:border-zinc-700/80 dark:bg-zinc-900/40">
-          <p className="font-medium text-text-primary dark:text-zinc-100">{businessLabel}</p>
-          {addressLabel ? (
-            <p className="mt-1 text-sm text-text-secondary dark:text-zinc-400">{addressLabel}</p>
-          ) : null}
-          <div className="mt-3 flex flex-wrap gap-2 text-xs">
-            {listingPhone ? (
-              <span className="text-text-secondary dark:text-zinc-400">
-                {badge("Google listing", "bg-blue-500/15 text-blue-800 dark:text-blue-300")} Phone: {" "}
-                <button
-                  type="button"
-                  className="font-mono text-accent hover:underline dark:text-blue-400"
-                  onClick={() => onPickPhone?.(listingPhone)}
-                >
-                  {listingPhone}
-                </button>
-              </span>
-            ) : (
-              <span className="text-text-secondary dark:text-zinc-500">No phone on Google listing.</span>
-            )}
-            {googleMapsUri ? (
-              <a
-                href={googleMapsUri}
-                target="_blank"
-                rel="noreferrer"
-                className="text-accent hover:underline dark:text-blue-400"
-              >
-                Open in Google Maps
-              </a>
-            ) : null}
-          </div>
-          <p className="mt-3 text-[11px] text-text-secondary dark:text-zinc-500">
-            Contact data may be incomplete or outdated. Verify before outreach; comply with applicable laws and
-            vendor terms (Google, Outscraper, Apollo, Hunter).
-          </p>
-        </div>
-      </div>
-
-      <div>
-        <h3 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
-          Website {"&"} contact pages
-        </h3>
-        {homepageContactHints &&
-        (homepageContactHints.emails.length > 0 ||
-          homepageContactHints.phones.length > 0 ||
-          homepageContactHints.founderName) ? (
-          <div className="mt-2 rounded-lg border border-border/80 p-3 text-xs dark:border-zinc-700/60">
-            <p className="mb-1 flex flex-wrap items-center gap-2 font-medium text-text-primary dark:text-zinc-300">
-              <span>Website (homepage)</span>
-              {badge("Quick parse", "bg-amber-500/15 text-amber-900 dark:text-amber-200")}
-            </p>
-            {homepageContactHints.founderName ? (
-              <p className="text-text-secondary dark:text-zinc-400">Name hint: {homepageContactHints.founderName}</p>
-            ) : null}
-            {homepageContactHints.emails.map((e) => (
-              <button
-                key={e}
-                type="button"
-                className="mr-2 mt-1 inline-block text-accent hover:underline dark:text-blue-400"
-                onClick={() => onPickEmail?.(e)}
-              >
-                {e}
-              </button>
-            ))}
-            {homepageContactHints.phones.map((ph) => (
-              <button
-                key={ph}
-                type="button"
-                className="mr-2 mt-1 inline-block font-mono text-text-secondary hover:underline dark:text-zinc-400"
-                onClick={() => onPickPhone?.(ph)}
-              >
-                {ph}
-              </button>
-            ))}
-          </div>
-        ) : null}
-        {websiteUrl ? (
-          <p className="mt-2 text-xs text-text-secondary dark:text-zinc-500">
-            {deepLoading
-              ? "Scanning homepage and linked contact pages…"
-              : deepError
-                ? deepError
-                : deep
-                  ? `Found ${deep.emailsRanked.length} email(s) across ${deep.byPage.length} page(s).`
-                  : null}
-          </p>
-        ) : (
-          <p className="mt-2 text-xs text-text-secondary dark:text-zinc-500">No website on listing — on-site crawl skipped.</p>
-        )}
-        {deep && deep.byPage.length > 0 ? (
-          <ul className="mt-3 space-y-2 text-xs">
-            {deep.byPage.map((pg) => (
-              <li key={pg.url} className="rounded-lg border border-border/60 p-2 dark:border-zinc-700/50">
-                <p className="flex flex-wrap items-center gap-2 font-mono text-[11px] text-text-secondary dark:text-zinc-500">
-                  <span>{pg.pageLabel}</span>
-                  {pg.pageLabel.includes("homepage") ? null : (
-                    <span className="font-sans">{badge("Contact page", "bg-teal-500/15 text-teal-900 dark:text-teal-200")}</span>
-                  )}
-                </p>
-                {pg.emails.map((e) => (
-                  <button
-                    key={e + pg.url}
-                    type="button"
-                    className="mr-2 mt-1 text-accent hover:underline dark:text-blue-400"
-                    onClick={() => onPickEmail?.(e)}
-                  >
-                    {e}
-                  </button>
-                ))}
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </div>
+      {!omitBusinessSnapshot ? (
+        <ProspectIntelBusinessSnapshot
+          businessLabel={businessLabel}
+          addressLabel={addressLabel}
+          listingPhone={listingPhone}
+          googleMapsUri={googleMapsUri}
+          onPickPhone={onPickPhone}
+        />
+      ) : null}
 
       <div>
         <h3 className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
@@ -283,7 +191,7 @@ export default function ProspectIntelEnrichment({
             type="button"
             disabled={outLoading || !outQuery.trim()}
             onClick={runOutscraper}
-            className="rounded-lg bg-zinc-800 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-700"
+            className="rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-accent-hover disabled:opacity-50"
           >
             {outLoading ? "Loading…" : "Run Outscraper"}
           </button>

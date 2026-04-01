@@ -27,6 +27,8 @@ import IconTabBar from "@/components/crm/prospecting/IconTabBar";
 import PlacesCategoryAutocomplete from "@/components/crm/prospecting/PlacesCategoryAutocomplete";
 import PlacesSearchResultsList from "@/components/crm/prospecting/PlacesSearchResultsList";
 import ProspectIntelEnrichment from "@/components/crm/prospecting/ProspectIntelEnrichment";
+import ProspectIntelBusinessSnapshot from "@/components/crm/prospecting/ProspectIntelBusinessSnapshot";
+import InstagramLeadFromBioPanel from "@/components/crm/prospecting/InstagramLeadFromBioPanel";
 import type { HomepageContactHints } from "@/app/(crm)/actions/prospect-intel";
 
 const cardClass =
@@ -36,7 +38,15 @@ const cardClass =
 const SESSION_PLACE_REPORT_KEY = "zenpho:prospect-intel-place-v1";
 const SESSION_SCROLL_TO_REPORT_KEY = "zenpho:prospect-intel-scroll-v1";
 
-function IntelReportPanel({ report }: { report: MarketIntelReport }) {
+function IntelReportPanel({
+  report,
+  websiteCrawlEmails = [],
+  onPickEmail,
+}: {
+  report: MarketIntelReport;
+  websiteCrawlEmails?: string[];
+  onPickEmail?: (email: string) => void;
+}) {
   return (
     <div className="space-y-6">
       <div className="rounded-xl border border-border bg-surface/30 p-4 dark:border-zinc-700/80 dark:bg-zinc-900/40">
@@ -46,6 +56,30 @@ function IntelReportPanel({ report }: { report: MarketIntelReport }) {
         <p className="mt-2 text-sm leading-relaxed text-text-primary dark:text-zinc-100">
           {report.summary}
         </p>
+        {websiteCrawlEmails.length > 0 ? (
+          <div className="mt-4 border-t border-border/70 pt-4 dark:border-zinc-700/60">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/60 dark:text-zinc-500">
+              Emails found on website
+            </p>
+            <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-text-primary dark:text-zinc-200">
+              {websiteCrawlEmails.map((email) =>
+                onPickEmail ? (
+                  <li key={email}>
+                    <button
+                      type="button"
+                      className="text-left text-accent hover:underline dark:text-blue-400"
+                      onClick={() => onPickEmail(email)}
+                    >
+                      {email}
+                    </button>
+                  </li>
+                ) : (
+                  <li key={email}>{email}</li>
+                )
+              )}
+            </ul>
+          </div>
+        ) : null}
       </div>
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-xl border border-border/80 p-4 dark:border-zinc-700/60">
@@ -176,6 +210,7 @@ function ProspectsIntelligenceViewInner({
 
   const [savePending, setSavePending] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [websiteCrawlEmails, setWebsiteCrawlEmails] = useState<string[]>([]);
 
   const activeReport = useMemo(() => {
     if (urlReport && urlMeta) {
@@ -269,6 +304,10 @@ function ProspectsIntelligenceViewInner({
         .getElementById("prospect-market-intel-report")
         ?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
+  }, [activeReport]);
+
+  useEffect(() => {
+    if (!activeReport) setWebsiteCrawlEmails([]);
   }, [activeReport]);
 
   async function runPlacesSearch() {
@@ -587,8 +626,9 @@ function ProspectsIntelligenceViewInner({
               Research from website URL
             </h2>
             <p className="mt-1 text-xs text-text-secondary dark:text-zinc-500">
-              Fetches the page safely (SSRF-limited), reads title and meta description, and
-              builds a heuristic opportunity report.
+              Two options: (1) Enter a business website URL—we fetch it safely (SSRF-limited), read title and
+              meta description, and build a heuristic opportunity report. (2) Use Instagram below with a pasted
+              bio to create a lead without calling Instagram.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -611,6 +651,11 @@ function ProspectsIntelligenceViewInner({
           {urlError ? (
             <p className="text-sm text-red-600 dark:text-red-400">{urlError}</p>
           ) : null}
+
+          <InstagramLeadFromBioPanel
+            fieldOptions={fieldOptions}
+            defaultProjectType={defaultProjectType}
+          />
         </div>
       </div>
 
@@ -635,12 +680,42 @@ function ProspectsIntelligenceViewInner({
               </button>
             </div>
           </div>
-          <IntelReportPanel report={activeReport.report} />
+
+          <ProspectIntelBusinessSnapshot
+            businessLabel={
+              activeReport.kind === "url"
+                ? activeReport.urlMeta.pageTitle?.slice(0, 200) || activeReport.urlMeta.url
+                : activeReport.place.name
+            }
+            addressLabel={
+              activeReport.kind === "place" ? activeReport.place.formattedAddress : null
+            }
+            listingPhone={
+              activeReport.kind === "place"
+                ? activeReport.place.nationalPhoneNumber?.trim() ||
+                  activeReport.place.internationalPhoneNumber?.trim() ||
+                  null
+                : null
+            }
+            googleMapsUri={
+              activeReport.kind === "place" ? activeReport.place.googleMapsUri?.trim() || null : null
+            }
+            onPickPhone={(phone) => setLeadPhone((cur) => cur.trim() || phone)}
+          />
+
+          <div className="border-t border-border pt-6 dark:border-zinc-800">
+            <IntelReportPanel
+              report={activeReport.report}
+              websiteCrawlEmails={websiteCrawlEmails}
+              onPickEmail={(email) => setLeadEmail((cur) => cur.trim() || email)}
+            />
+          </div>
           {saveMessage ? (
             <p className="text-xs text-text-secondary dark:text-zinc-400">{saveMessage}</p>
           ) : null}
 
           <ProspectIntelEnrichment
+            omitBusinessSnapshot
             websiteUrl={
               activeReport.kind === "url"
                 ? activeReport.urlMeta.url
@@ -667,6 +742,7 @@ function ProspectsIntelligenceViewInner({
             homepageContactHints={activeReport.kind === "url" ? urlHomepageHints : null}
             onPickEmail={(email) => setLeadEmail((cur) => cur.trim() || email)}
             onPickPhone={(phone) => setLeadPhone((cur) => cur.trim() || phone)}
+            onWebsiteEmailsChange={setWebsiteCrawlEmails}
           />
 
           <div className="border-t border-border pt-6 dark:border-zinc-800">

@@ -16,12 +16,47 @@ function junkDomain(dom: string): boolean {
   );
 }
 
+/** TLDs that are almost always static assets, not email hosts (e.g. flags@2x.png). */
+const ASSET_LIKE_TLD = new Set([
+  "png",
+  "jpg",
+  "jpeg",
+  "gif",
+  "webp",
+  "svg",
+  "ico",
+  "bmp",
+  "avif",
+  "heic",
+  "tif",
+  "tiff",
+  "css",
+  "js",
+  "mjs",
+  "cjs",
+  "map",
+  "woff",
+  "woff2",
+  "ttf",
+  "eot",
+]);
+
+function domainLooksLikeAssetFilename(dom: string): boolean {
+  const labels = dom.toLowerCase().split(".").filter(Boolean);
+  if (labels.length < 2) return false;
+  const tld = labels[labels.length - 1];
+  return ASSET_LIKE_TLD.has(tld);
+}
+
 export function isJunkEmail(raw: string): boolean {
   const e = raw.trim().toLowerCase();
   if (!e.includes("@")) return true;
-  const [local, dom] = e.split("@");
+  const at = e.lastIndexOf("@");
+  const local = e.slice(0, at);
+  const dom = e.slice(at + 1);
   if (!dom || JUNK_LOCAL.test(local)) return true;
   if (junkDomain(dom)) return true;
+  if (domainLooksLikeAssetFilename(dom)) return true;
   return false;
 }
 
