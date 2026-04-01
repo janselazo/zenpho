@@ -9,7 +9,23 @@ import {
   MAX_FETCH_BYTES,
   normalizeUrlForFetch,
 } from "@/lib/crm/safe-url-fetch";
+import {
+  discoverContactPageUrls,
+  extractPublicContactHints,
+  pageLabelFromUrl,
+  rankEmailsUnique,
+} from "@/lib/crm/prospect-contact-extract";
+import type {
+  ApolloPersonRow,
+  HunterEmailRow,
+  MergedWebsiteContacts,
+  OutscraperPlaceRow,
+  PageContactHints,
+} from "@/lib/crm/prospect-enrichment-types";
 import { createLead } from "@/app/(crm)/actions/crm";
+import { outscraperMapsSearch } from "@/lib/integrations/outscraper";
+import { apolloSearchDecisionMakers } from "@/lib/integrations/apollo";
+import { hunterDomainSearch } from "@/lib/integrations/hunter";
 
 async function requireAgencyStaff() {
   const supabase = await createClient();
@@ -29,6 +45,35 @@ async function requireAgencyStaff() {
   return { error: null, supabase, user };
 }
 
+async function fetchHtmlSafe(url: string): Promise<{ ok: true; html: string } | { ok: false; error: string }> {
+  const normalized = normalizeUrlForFetch(url);
+  if (!normalized) return { ok: false, error: "Invalid or blocked URL." };
+  let res: Response;
+  try {
+    res = await fetch(normalized, {
+      redirect: "follow",
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      headers: {
+        "User-Agent": "AgencyCRM-ProspectIntel/1.0",
+        Accept: "text/html,application/xhtml+xml",
+      },
+    });
+  } catch {
+    return { ok: false, error: "Fetch failed (timeout or network)." };
+  }
+  if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
+  const buf = await res.arrayBuffer();
+  const slice = buf.byteLength > MAX_FETCH_BYTES ? buf.slice(0, MAX_FETCH_BYTES) : buf;
+  const html = new TextDecoder("utf-8", { fatal: false }).decode(slice);
+  return { ok: true, html };
+}
+
+export type HomepageContactHints = {
+  emails: string[];
+  phones: string[];
+  founderName: string | null;
+};
+
 export type UrlResearchResult = {
   ok: true;
   url: string;
@@ -37,14 +82,12 @@ export type UrlResearchResult = {
   https: boolean;
   report: ReturnType<typeof buildMarketIntelReport>;
   signals: IntelSignals;
+  homepageContactHints: HomepageContactHints;
 };
 
 export async function researchProspectFromUrl(
   rawUrl: string
-): Promise<
-  | UrlResearchResult
-  | { ok: false; error: string }
-> {
+): Promise<UrlResearchResult | { ok: false; error: string }> {
   const auth = await requireAgencyStaff();
   if (auth.error) return { ok: false, error: auth.error };
 
@@ -75,6 +118,7 @@ export async function researchProspectFromUrl(
   const slice = buf.byteLength > MAX_FETCH_BYTES ? buf.slice(0, MAX_FETCH_BYTES) : buf;
   const html = new TextDecoder("utf-8", { fatal: false }).decode(slice);
   const { pageTitle, metaDescription } = extractPageSignals(html);
+  const hints = extractPublicContactHints(html);
 
   const urlObj = new URL(normalized);
   const https = urlObj.protocol === "https:";
@@ -100,7 +144,94 @@ export async function researchProspectFromUrl(
     https,
     report,
     signals,
+    homepageContactHints: hints,
   };
+}
+
+const MAX_CONTACT_PAGES = 5;
+
+export async function enrichWebsiteContactsDeepAction(
+  rawUrl: string
+): Promise<{ ok: true; contacts: MergedWebsiteContacts } | { ok: false; error: string }> {
+  const auth = await requireAgencyStaff();
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const root = normalizeUrlForFetch(rawUrl);
+  if (!root) return { ok: false, error: "Invalid or blocked URL." };
+
+  const first = await fetchHtmlSafe(root);
+  if (!first.ok) return { ok: false, error: first.error };
+
+  const byPage: PageContactHints[] = [];
+  const h0 = extractPublicContactHints(first.html);
+  byPage.push({
+    pageLabel: pageLabelFromUrl(root, root),
+    url: root,
+    emails: h0.emails,
+    phones: h0.phones,
+    founderName: h0.founderName,
+  });
+
+  const extra = discoverContactPageUrls(first.html, root, MAX_CONTACT_PAGES);
+  for (const u of extra) {
+    const pg = await fetchHtmlSafe(u);
+    if (!pg.ok) continue;
+    const hx = extractPublicContactHints(pg.html);
+    byPage.push({
+      pageLabel: pageLabelFromUrl(u, root),
+      url: u,
+      emails: hx.emails,
+      phones: hx.phones,
+      founderName: hx.founderName,
+    });
+  }
+
+  const allEmails = byPage.flatMap((p) => p.emails);
+  const allPhones = new Set<string>();
+  byPage.forEach((p) => p.phones.forEach((ph) => allPhones.add(ph)));
+  let founderName: string | null = null;
+  for (const p of byPage) {
+    if (p.founderName) {
+      founderName = p.founderName;
+      break;
+    }
+  }
+
+  return {
+    ok: true,
+    contacts: {
+      byPage,
+      emailsRanked: rankEmailsUnique(allEmails),
+      phones: [...allPhones],
+      founderName,
+    },
+  };
+}
+
+export async function outscraperProspectSearchAction(
+  query: string
+): Promise<{ ok: true; rows: OutscraperPlaceRow[] } | { ok: false; error: string }> {
+  const auth = await requireAgencyStaff();
+  if (auth.error) return { ok: false, error: auth.error };
+  return outscraperMapsSearch(query, 10);
+}
+
+export async function apolloProspectPeopleAction(
+  domain: string
+): Promise<{ ok: true; people: ApolloPersonRow[] } | { ok: false; error: string }> {
+  const auth = await requireAgencyStaff();
+  if (auth.error) return { ok: false, error: auth.error };
+  return apolloSearchDecisionMakers(domain, 5);
+}
+
+export async function hunterProspectDomainAction(
+  domain: string,
+  knownEmails: string[]
+): Promise<{ ok: true; emails: HunterEmailRow[] } | { ok: false; error: string }> {
+  const auth = await requireAgencyStaff();
+  if (auth.error) return { ok: false, error: auth.error };
+  const ex = new Set(knownEmails.map((e) => e.trim().toLowerCase()).filter(Boolean));
+  return hunterDomainSearch(domain, ex, 15);
 }
 
 export async function saveProspectIntelReportAction(payload: Record<string, unknown>) {

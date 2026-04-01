@@ -10,6 +10,9 @@ type GoogPlace = {
   userRatingCount?: number;
   websiteUri?: string;
   types?: string[];
+  nationalPhoneNumber?: string;
+  internationalPhoneNumber?: string;
+  googleMapsUri?: string;
 };
 
 const MAX_QUERY_LEN = 280;
@@ -27,6 +30,9 @@ function normalizePlace(p: GoogPlace): PlacesSearchPlace | null {
       typeof p.userRatingCount === "number" ? p.userRatingCount : null,
     websiteUri: p.websiteUri ?? null,
     types: Array.isArray(p.types) ? p.types : [],
+    nationalPhoneNumber: p.nationalPhoneNumber?.trim() || null,
+    internationalPhoneNumber: p.internationalPhoneNumber?.trim() || null,
+    googleMapsUri: p.googleMapsUri?.trim() || null,
   };
 }
 
@@ -126,7 +132,7 @@ export async function POST(req: Request) {
   }
 
   const fieldMask =
-    "places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.websiteUri,places.types";
+    "places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.websiteUri,places.types,places.nationalPhoneNumber,places.internationalPhoneNumber,places.googleMapsUri";
 
   const requestPayload: Record<string, unknown> = {
     textQuery,

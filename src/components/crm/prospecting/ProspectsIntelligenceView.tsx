@@ -7,6 +7,7 @@ import {
   type IntelSignals,
 } from "@/lib/crm/prospect-intel-report";
 import type { PlacesSearchPlace } from "@/lib/crm/places-types";
+import { PLACES_TEXT_SEARCH_CATEGORY_SUGGESTIONS } from "@/lib/crm/places-text-search-category-suggestions";
 import type { MergedCrmFieldOptions } from "@/lib/crm/field-options";
 import {
   researchProspectFromUrl,
@@ -16,47 +17,49 @@ import {
 import { useRouter } from "next/navigation";
 import { Building2, Globe } from "lucide-react";
 import IconTabBar from "@/components/crm/prospecting/IconTabBar";
+import ProspectIntelEnrichment from "@/components/crm/prospecting/ProspectIntelEnrichment";
+import type { HomepageContactHints } from "@/app/(crm)/actions/prospect-intel";
 
 const cardClass =
   "rounded-2xl border border-border bg-white p-5 shadow-sm dark:border-zinc-800/70 dark:bg-zinc-900/60 dark:shadow-none";
 
-function ReportPanel({ report }: { report: MarketIntelReport }) {
+function IntelReportPanel({ report }: { report: MarketIntelReport }) {
   return (
-    <div className="space-y-4">
-      <div>
+    <div className="space-y-6">
+      <div className="rounded-xl border border-border bg-surface/30 p-4 dark:border-zinc-700/80 dark:bg-zinc-900/40">
         <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/60 dark:text-zinc-500">
           Summary
         </p>
-        <p className="mt-2 text-sm leading-relaxed text-text-primary dark:text-zinc-200">
+        <p className="mt-2 text-sm leading-relaxed text-text-primary dark:text-zinc-100">
           {report.summary}
         </p>
       </div>
       <div className="grid gap-4 md:grid-cols-3">
-        <div>
+        <div className="rounded-xl border border-border/80 p-4 dark:border-zinc-700/60">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-600/80 dark:text-blue-400">
             Software development
           </p>
-          <ul className="mt-2 list-inside list-disc space-y-1.5 text-sm text-text-secondary dark:text-zinc-400">
+          <ul className="mt-3 list-inside list-disc space-y-2 text-sm text-text-secondary dark:text-zinc-400">
             {report.software.map((x, i) => (
               <li key={i}>{x}</li>
             ))}
           </ul>
         </div>
-        <div>
+        <div className="rounded-xl border border-border/80 p-4 dark:border-zinc-700/60">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-violet-600/80 dark:text-violet-400">
             AI automations
           </p>
-          <ul className="mt-2 list-inside list-disc space-y-1.5 text-sm text-text-secondary dark:text-zinc-400">
+          <ul className="mt-3 list-inside list-disc space-y-2 text-sm text-text-secondary dark:text-zinc-400">
             {report.aiAutomations.map((x, i) => (
               <li key={i}>{x}</li>
             ))}
           </ul>
         </div>
-        <div>
+        <div className="rounded-xl border border-border/80 p-4 dark:border-zinc-700/60">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-emerald-600/80 dark:text-emerald-400">
             Product growth
           </p>
-          <ul className="mt-2 list-inside list-disc space-y-1.5 text-sm text-text-secondary dark:text-zinc-400">
+          <ul className="mt-3 list-inside list-disc space-y-2 text-sm text-text-secondary dark:text-zinc-400">
             {report.productGrowth.map((x, i) => (
               <li key={i}>{x}</li>
             ))}
@@ -83,18 +86,23 @@ function signalsFromPlace(place: PlacesSearchPlace): IntelSignals {
   };
 }
 
-function formatReportAsNotes(report: MarketIntelReport, extra?: string) {
-  const parts = [
-    extra,
-    "## Software",
-    ...report.software.map((s) => `- ${s}`),
-    "## AI automations",
-    ...report.aiAutomations.map((s) => `- ${s}`),
-    "## Product growth",
-    ...report.productGrowth.map((s) => `- ${s}`),
-    report.summary,
-  ].filter(Boolean);
-  return parts.join("\n");
+function formatReportAsNotes(
+  report: MarketIntelReport,
+  extra?: string,
+  contactBlock?: string
+) {
+  const lines: string[] = [];
+  if (extra?.trim()) {
+    lines.push(extra.trim(), "");
+  }
+  lines.push("Software", ...report.software.map((s) => `- ${s}`), "");
+  lines.push("AI automations", ...report.aiAutomations.map((s) => `- ${s}`), "");
+  lines.push("Product growth", ...report.productGrowth.map((s) => `- ${s}`), "");
+  lines.push("Summary", report.summary);
+  if (contactBlock?.trim()) {
+    lines.push("", "Contact signals", contactBlock.trim());
+  }
+  return lines.join("\n");
 }
 
 export default function ProspectsIntelligenceView({
@@ -129,6 +137,7 @@ export default function ProspectsIntelligenceView({
     pageTitle: string | null;
     metaDescription: string | null;
   } | null>(null);
+  const [urlHomepageHints, setUrlHomepageHints] = useState<HomepageContactHints | null>(null);
 
   const [placeReport, setPlaceReport] = useState<{
     place: PlacesSearchPlace;
@@ -167,12 +176,16 @@ export default function ProspectsIntelligenceView({
     (place: PlacesSearchPlace, report: MarketIntelReport) => {
       setLeadName(place.name);
       setLeadCompany(place.name);
-      setLeadNotes(
-        formatReportAsNotes(
-          report,
-          [place.formattedAddress, place.websiteUri].filter(Boolean).join("\n")
-        )
-      );
+      const listingPhone =
+        place.nationalPhoneNumber?.trim() || place.internationalPhoneNumber?.trim() || "";
+      setLeadPhone(listingPhone);
+      setLeadEmail("");
+      const extra = [place.formattedAddress, place.websiteUri].filter(Boolean).join("\n");
+      const contactLines: string[] = [];
+      if (listingPhone) contactLines.push(`Google listing phone: ${listingPhone}`);
+      const maps = place.googleMapsUri?.trim();
+      if (maps) contactLines.push(`Google Maps: ${maps}`);
+      setLeadNotes(formatReportAsNotes(report, extra, contactLines.join("\n") || undefined));
     },
     []
   );
@@ -230,6 +243,7 @@ export default function ProspectsIntelligenceView({
     setUrlError(null);
     setUrlReport(null);
     setUrlMeta(null);
+    setUrlHomepageHints(null);
     setPlaceReport(null);
     try {
       const result = await researchProspectFromUrl(urlInput);
@@ -243,6 +257,7 @@ export default function ProspectsIntelligenceView({
         pageTitle: result.pageTitle,
         metaDescription: result.metaDescription,
       });
+      setUrlHomepageHints(result.homepageContactHints);
       const domain = (() => {
         try {
           return new URL(result.url).hostname.replace(/^www\./, "");
@@ -252,7 +267,14 @@ export default function ProspectsIntelligenceView({
       })();
       setLeadName(result.pageTitle?.slice(0, 120) || domain);
       setLeadCompany(domain);
-      setLeadNotes(formatReportAsNotes(result.report, result.url));
+      const h = result.homepageContactHints;
+      const contactLines: string[] = [];
+      if (h.founderName) contactLines.push(`Name hint (homepage): ${h.founderName}`);
+      if (h.emails.length) contactLines.push(`Emails (homepage): ${h.emails.join(", ")}`);
+      if (h.phones.length) contactLines.push(`Phones (homepage): ${h.phones.join(", ")}`);
+      setLeadNotes(formatReportAsNotes(result.report, result.url, contactLines.join("\n") || undefined));
+      setLeadEmail(h.emails[0] ?? "");
+      setLeadPhone(h.phones[0] ?? "");
     } finally {
       setUrlLoading(false);
     }
@@ -264,6 +286,7 @@ export default function ProspectsIntelligenceView({
     setPlaceReport({ place, report });
     setUrlReport(null);
     setUrlMeta(null);
+    setUrlHomepageHints(null);
     syncLeadFormFromPlace(place, report);
   }
 
@@ -375,9 +398,15 @@ export default function ProspectsIntelligenceView({
                 type="text"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
+                list="prospect-places-category-suggestions"
                 placeholder="e.g. hair salon, gym, auto repair"
                 className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
               />
+              <datalist id="prospect-places-category-suggestions">
+                {PLACES_TEXT_SEARCH_CATEGORY_SUGGESTIONS.map((s) => (
+                  <option key={s} value={s} />
+                ))}
+              </datalist>
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
@@ -479,6 +508,11 @@ export default function ProspectsIntelligenceView({
                         ? ` · ${p.rating}★ (${p.userRatingCount ?? 0} reviews)`
                         : ""}
                     </p>
+                    {p.nationalPhoneNumber || p.internationalPhoneNumber ? (
+                      <p className="mt-1 text-xs font-mono text-text-secondary dark:text-zinc-400">
+                        {p.nationalPhoneNumber || p.internationalPhoneNumber}
+                      </p>
+                    ) : null}
                     {p.websiteUri ? (
                       <a
                         href={p.websiteUri}
@@ -487,6 +521,16 @@ export default function ProspectsIntelligenceView({
                         className="mt-1 inline-block truncate text-xs text-accent hover:underline dark:text-blue-400"
                       >
                         {p.websiteUri}
+                      </a>
+                    ) : null}
+                    {p.googleMapsUri ? (
+                      <a
+                        href={p.googleMapsUri}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-1 block text-xs text-accent hover:underline dark:text-blue-400"
+                      >
+                        Google Maps listing
                       </a>
                     ) : null}
                   </div>
@@ -561,10 +605,39 @@ export default function ProspectsIntelligenceView({
               </button>
             </div>
           </div>
-          <ReportPanel report={activeReport.report} />
+          <IntelReportPanel report={activeReport.report} />
           {saveMessage ? (
             <p className="text-xs text-text-secondary dark:text-zinc-400">{saveMessage}</p>
           ) : null}
+
+          <ProspectIntelEnrichment
+            websiteUrl={
+              activeReport.kind === "url"
+                ? activeReport.urlMeta.url
+                : activeReport.place.websiteUri?.trim() || null
+            }
+            listingPhone={
+              activeReport.kind === "place"
+                ? activeReport.place.nationalPhoneNumber?.trim() ||
+                  activeReport.place.internationalPhoneNumber?.trim() ||
+                  null
+                : null
+            }
+            googleMapsUri={
+              activeReport.kind === "place" ? activeReport.place.googleMapsUri?.trim() || null : null
+            }
+            businessLabel={
+              activeReport.kind === "url"
+                ? activeReport.urlMeta.pageTitle?.slice(0, 200) || activeReport.urlMeta.url
+                : activeReport.place.name
+            }
+            addressLabel={
+              activeReport.kind === "place" ? activeReport.place.formattedAddress : null
+            }
+            homepageContactHints={activeReport.kind === "url" ? urlHomepageHints : null}
+            onPickEmail={(email) => setLeadEmail((cur) => cur.trim() || email)}
+            onPickPhone={(phone) => setLeadPhone((cur) => cur.trim() || phone)}
+          />
 
           <div className="border-t border-border pt-6 dark:border-zinc-800">
             <h3 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">

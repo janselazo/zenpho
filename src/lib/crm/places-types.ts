@@ -8,4 +8,7 @@ export type PlacesSearchPlace = {
   userRatingCount: number | null;
   websiteUri: string | null;
   types: string[];
+  nationalPhoneNumber: string | null;
+  internationalPhoneNumber: string | null;
+  googleMapsUri: string | null;
 };
