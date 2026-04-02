@@ -16,6 +16,10 @@ type Props = {
   listingPhone: string | null;
   googleMapsUri: string | null;
   onPickPhone?: (phone: string) => void;
+  /** When true, this row came from URL research—Places phone/Maps are not in scope. */
+  researchFromUrl?: boolean;
+  /** Shown for URL research (canonical fetched URL). */
+  fetchedPageUrl?: string | null;
 };
 
 export default function ProspectIntelBusinessSnapshot({
@@ -24,19 +28,40 @@ export default function ProspectIntelBusinessSnapshot({
   listingPhone,
   googleMapsUri,
   onPickPhone,
+  researchFromUrl = false,
+  fetchedPageUrl,
 }: Props) {
   return (
-    <div>
-      <h3 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
+    <div className="flex h-full min-w-0 flex-col sm:min-h-0">
+      <h3 className="shrink-0 text-xs font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
         Business snapshot
       </h3>
-      <div className="mt-3 rounded-xl border border-border bg-surface/40 p-4 dark:border-zinc-700/80 dark:bg-zinc-900/40">
+      <div className="mt-3 flex min-h-0 flex-1 flex-col rounded-xl border border-border bg-surface/40 p-4 dark:border-zinc-700/80 dark:bg-zinc-900/40">
         <p className="font-medium text-text-primary dark:text-zinc-100">{businessLabel}</p>
         {addressLabel ? (
           <p className="mt-1 text-sm text-text-secondary dark:text-zinc-400">{addressLabel}</p>
         ) : null}
-        <div className="mt-3 flex flex-wrap gap-2 text-xs">
-          {listingPhone ? (
+        {fetchedPageUrl?.trim() ? (
+          <p className="mt-2 text-xs text-text-secondary dark:text-zinc-400">
+            Fetched page:{" "}
+            <a
+              href={fetchedPageUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="break-all text-accent hover:underline dark:text-blue-400"
+            >
+              {fetchedPageUrl}
+            </a>
+          </p>
+        ) : null}
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs">
+          {researchFromUrl ? (
+            <span className="text-text-secondary dark:text-zinc-500">
+              {badge("URL research", "bg-zinc-500/15 text-zinc-700 dark:text-zinc-300")}
+              Google Places phone and Maps are available when you open a report from{" "}
+              <span className="font-medium text-text-primary dark:text-zinc-200">Discover businesses</span>.
+            </span>
+          ) : listingPhone ? (
             <span className="text-text-secondary dark:text-zinc-400">
               {badge("Google listing", "bg-blue-500/15 text-blue-800 dark:text-blue-300")} Phone:{" "}
               <button
@@ -50,7 +75,7 @@ export default function ProspectIntelBusinessSnapshot({
           ) : (
             <span className="text-text-secondary dark:text-zinc-500">No phone on Google listing.</span>
           )}
-          {googleMapsUri ? (
+          {!researchFromUrl && googleMapsUri ? (
             <a
               href={googleMapsUri}
               target="_blank"
@@ -61,7 +86,7 @@ export default function ProspectIntelBusinessSnapshot({
             </a>
           ) : null}
         </div>
-        <p className="mt-3 text-[11px] text-text-secondary dark:text-zinc-500">
+        <p className="mt-auto pt-3 text-[11px] text-text-secondary dark:text-zinc-500">
           Contact data may be incomplete or outdated. Verify before outreach; comply with applicable laws and
           vendor terms (Google, Outscraper, Apollo, Hunter).
         </p>

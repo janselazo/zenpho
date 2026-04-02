@@ -895,9 +895,9 @@ export default function LeadsView({
         {showLeadToolbar ? (
           <>
             {view !== "leads" ? (
-              <span className="text-sm text-text-secondary">
-                {filtered.length} leads
-              </span>
+            <span className="text-sm text-text-secondary">
+              {filtered.length} leads
+            </span>
             ) : null}
             <button
               type="button"
@@ -1404,7 +1404,7 @@ function LeadsTable({
       <div className="overflow-hidden rounded-2xl border border-zinc-200/90 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         {toolbar}
         <div className="border-t border-dashed border-zinc-200 py-16 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-          No leads found.
+        No leads found.
         </div>
       </div>
     );
@@ -1675,7 +1675,7 @@ function LeadsTable({
                             lead.project_type
                           ) && (
                           <option value={lead.project_type}>
-                            {lead.project_type}
+                      {lead.project_type}
                           </option>
                         )}
                         {fieldOptions.leadProjectTypes.map((opt) => (
@@ -1761,7 +1761,7 @@ function LeadsTable({
                       className="inline-flex max-w-full min-w-0 items-center gap-1 font-medium text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400"
                     >
                       <span className="min-w-0 truncate">
-                        {lead.primaryProject.title?.trim() || "Project"}
+                      {lead.primaryProject.title?.trim() || "Project"}
                       </span>
                       <ExternalLink
                         className="h-3.5 w-3.5 shrink-0 text-zinc-400 dark:text-zinc-500"
@@ -1855,7 +1855,7 @@ function LeadsTable({
                             fieldOptions.leadSources
                           ) && (
                           <option value={lead.source.trim()}>
-                            {lead.source}
+                      {lead.source}
                           </option>
                         )}
                         {fieldOptions.leadSources.map((o) => (

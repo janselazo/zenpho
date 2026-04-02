@@ -16,6 +16,12 @@ import type {
 } from "@/lib/crm/prospect-enrichment-types";
 import ProspectIntelBusinessSnapshot from "@/components/crm/prospecting/ProspectIntelBusinessSnapshot";
 
+export type ProspectWebsiteDeepStatus = {
+  loading: boolean;
+  contacts: MergedWebsiteContacts | null;
+  error: string | null;
+};
+
 function domainFromUrl(u: string | null): string | null {
   if (!u?.trim()) return null;
   try {
@@ -39,6 +45,8 @@ type Props = {
   omitBusinessSnapshot?: boolean;
   /** Deep-crawl emails (deduped, ranked); empty when no website or after error. */
   onWebsiteEmailsChange?: (emails: string[]) => void;
+  /** Full merged contacts + loading/error for the public-site fetch (server-side safe HTML only). */
+  onWebsiteDeepStatusChange?: (status: ProspectWebsiteDeepStatus) => void;
 };
 
 export default function ProspectIntelEnrichment({
@@ -52,6 +60,7 @@ export default function ProspectIntelEnrichment({
   onPickPhone,
   omitBusinessSnapshot = false,
   onWebsiteEmailsChange,
+  onWebsiteDeepStatusChange,
 }: Props) {
   const [deep, setDeep] = useState<MergedWebsiteContacts | null>(null);
   const [deepLoading, setDeepLoading] = useState(false);
@@ -84,20 +93,25 @@ export default function ProspectIntelEnrichment({
   const pickEmailRef = useRef(onPickEmail);
   const pickPhoneRef = useRef(onPickPhone);
   const websiteEmailsCbRef = useRef(onWebsiteEmailsChange);
+  const websiteDeepStatusCbRef = useRef(onWebsiteDeepStatusChange);
   pickEmailRef.current = onPickEmail;
   pickPhoneRef.current = onPickPhone;
   websiteEmailsCbRef.current = onWebsiteEmailsChange;
+  websiteDeepStatusCbRef.current = onWebsiteDeepStatusChange;
 
   useEffect(() => {
     const notifyEmails = websiteEmailsCbRef.current;
+    const notifyDeep = websiteDeepStatusCbRef.current;
     if (!websiteUrl?.trim()) {
       setDeep(null);
       setDeepError(null);
       setDeepLoading(false);
       notifyEmails?.([]);
+      notifyDeep?.({ loading: false, contacts: null, error: null });
       return;
     }
     notifyEmails?.([]);
+    notifyDeep?.({ loading: true, contacts: null, error: null });
     let cancelled = false;
     setDeep(null);
     setDeepLoading(true);
@@ -109,6 +123,11 @@ export default function ProspectIntelEnrichment({
       if (r.ok) {
         setDeep(r.contacts);
         cb?.(r.contacts.emailsRanked);
+        websiteDeepStatusCbRef.current?.({
+          loading: false,
+          contacts: r.contacts,
+          error: null,
+        });
         const first = r.contacts.emailsRanked[0];
         if (first) pickEmailRef.current?.(first);
         const ph = r.contacts.phones[0];
@@ -117,6 +136,11 @@ export default function ProspectIntelEnrichment({
         setDeep(null);
         setDeepError(r.error);
         cb?.([]);
+        websiteDeepStatusCbRef.current?.({
+          loading: false,
+          contacts: null,
+          error: r.error,
+        });
       }
     });
     return () => {
@@ -178,7 +202,7 @@ export default function ProspectIntelEnrichment({
     }`;
 
   return (
-    <div className="space-y-6 border-t border-border pt-6 dark:border-zinc-800">
+    <div className="space-y-6">
       {!omitBusinessSnapshot ? (
         <ProspectIntelBusinessSnapshot
           businessLabel={businessLabel}

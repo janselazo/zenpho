@@ -22,7 +22,7 @@ import type {
   OutscraperPlaceRow,
   PageContactHints,
 } from "@/lib/crm/prospect-enrichment-types";
-import { createLead } from "@/app/(crm)/actions/crm";
+import { assignProspectTagToLead, createLead } from "@/app/(crm)/actions/crm";
 import { outscraperMapsSearch } from "@/lib/integrations/outscraper";
 import { apolloSearchDecisionMakers } from "@/lib/integrations/apollo";
 import { hunterDomainSearch } from "@/lib/integrations/hunter";
@@ -291,5 +291,14 @@ export async function createLeadFromProspectIntelAction(input: {
   fd.set("notes", notes);
   fd.set("project_type", input.project_type.trim());
 
-  return createLead(fd);
+  const res = await createLead(fd);
+  if ("error" in res && res.error) return res;
+  if ("id" in res && typeof res.id === "string") {
+    const tagRes = await assignProspectTagToLead(res.id);
+    if (tagRes && "error" in tagRes) {
+      console.error("assignProspectTagToLead:", tagRes.error);
+    }
+  }
+  revalidatePath("/prospecting/prospects");
+  return res;
 }

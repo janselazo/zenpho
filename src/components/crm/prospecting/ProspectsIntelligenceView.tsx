@@ -7,6 +7,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactNode,
 } from "react";
 import {
   buildMarketIntelReport,
@@ -26,10 +27,13 @@ import { Building2, ChevronLeft, ChevronRight, Globe } from "lucide-react";
 import IconTabBar from "@/components/crm/prospecting/IconTabBar";
 import PlacesCategoryAutocomplete from "@/components/crm/prospecting/PlacesCategoryAutocomplete";
 import PlacesSearchResultsList from "@/components/crm/prospecting/PlacesSearchResultsList";
-import ProspectIntelEnrichment from "@/components/crm/prospecting/ProspectIntelEnrichment";
+import ProspectIntelEnrichment, {
+  type ProspectWebsiteDeepStatus,
+} from "@/components/crm/prospecting/ProspectIntelEnrichment";
 import ProspectIntelBusinessSnapshot from "@/components/crm/prospecting/ProspectIntelBusinessSnapshot";
 import InstagramLeadFromBioPanel from "@/components/crm/prospecting/InstagramLeadFromBioPanel";
 import type { HomepageContactHints } from "@/app/(crm)/actions/prospect-intel";
+import { formatReportAsPlainNotes } from "@/lib/crm/prospect-intel-notes-format";
 
 const cardClass =
   "rounded-2xl border border-border bg-white p-5 shadow-sm dark:border-zinc-800/70 dark:bg-zinc-900/60 dark:shadow-none";
@@ -38,47 +42,288 @@ const cardClass =
 const SESSION_PLACE_REPORT_KEY = "zenpho:prospect-intel-place-v1";
 const SESSION_SCROLL_TO_REPORT_KEY = "zenpho:prospect-intel-scroll-v1";
 
-function IntelReportSummary({
-  report,
-  websiteCrawlEmails = [],
-  onPickEmail,
-}: {
-  report: MarketIntelReport;
-  websiteCrawlEmails?: string[];
-  onPickEmail?: (email: string) => void;
-}) {
+function IntelReportSummary({ report }: { report: MarketIntelReport }) {
   return (
-    <div className="rounded-xl border border-border bg-surface/30 p-4 dark:border-zinc-700/80 dark:bg-zinc-900/40">
+    <div className="h-full rounded-xl border border-border bg-surface/30 p-4 dark:border-zinc-700/80 dark:bg-zinc-900/40 sm:flex sm:min-h-0 sm:flex-col">
       <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/60 dark:text-zinc-500">
         Summary
       </p>
-      <p className="mt-2 text-sm leading-relaxed text-text-primary dark:text-zinc-100">
+      <p className="mt-2 flex-1 text-sm leading-relaxed text-text-primary dark:text-zinc-100">
         {report.summary}
       </p>
-      {websiteCrawlEmails.length > 0 ? (
-        <div className="mt-4 border-t border-border/70 pt-4 dark:border-zinc-700/60">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/60 dark:text-zinc-500">
-            Emails found on website
+    </div>
+  );
+}
+
+function ReportSection({
+  step,
+  title,
+  children,
+}: {
+  step: string;
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="border-t border-border/80 pt-6 first:border-t-0 first:pt-0 dark:border-zinc-800">
+      <div className="mb-4 flex flex-wrap items-baseline gap-2">
+        <span className="font-mono text-[10px] font-semibold tabular-nums text-text-secondary/50 dark:text-zinc-500">
+          {step}
+        </span>
+        <h3 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
+          {title}
+        </h3>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function IntelContactHintsPanel({
+  reportKind,
+  place,
+  fetchedUrl,
+  homepageHints,
+  websiteDeep,
+  websiteCrawlEmails,
+  onPickEmail,
+  onPickPhone,
+}: {
+  reportKind: "url" | "place";
+  place: PlacesSearchPlace | null;
+  fetchedUrl: string | null;
+  homepageHints: HomepageContactHints | null;
+  websiteDeep: ProspectWebsiteDeepStatus;
+  websiteCrawlEmails: string[];
+  onPickEmail: (email: string) => void;
+  onPickPhone: (phone: string) => void;
+}) {
+  const listingWebsite =
+    reportKind === "place" ? place?.websiteUri?.trim() || null : null;
+  const publicSiteTarget =
+    reportKind === "url" ? fetchedUrl : listingWebsite;
+  const hasPublicFetchTarget = Boolean(publicSiteTarget?.trim());
+
+  const deepEmails = websiteDeep.contacts?.emailsRanked ?? [];
+  const emailsDisplay =
+    deepEmails.length > 0 ? deepEmails : websiteCrawlEmails;
+  const phonesFromDeep = websiteDeep.contacts?.phones ?? [];
+  const founderDeep = websiteDeep.contacts?.founderName?.trim() || null;
+  const founderHomepage = homepageHints?.founderName?.trim() || null;
+  const phonesHomepage = homepageHints?.phones ?? [];
+  const emailsHomepage = homepageHints?.emails ?? [];
+
+  const founderDisplay = founderDeep || founderHomepage;
+  const phonesDisplay =
+    phonesFromDeep.length > 0 ? phonesFromDeep : phonesHomepage;
+  const showHomepagePass =
+    reportKind === "url" &&
+    (emailsHomepage.length > 0 || phonesHomepage.length > 0 || founderHomepage);
+
+  const hasWebsiteDerivedContent =
+    Boolean(founderDisplay) ||
+    emailsDisplay.length > 0 ||
+    phonesDisplay.length > 0 ||
+    showHomepagePass;
+
+  return (
+    <div className="rounded-xl border border-border/80 bg-white p-4 dark:border-zinc-700/60 dark:bg-zinc-900/40">
+      <p className="text-[11px] text-text-secondary dark:text-zinc-500">
+        Listing data comes from Google Places where applicable. Email, phone, and name hints below are only
+        shown when a public website URL was fetched server-side (HTML parse)—not from Google for owner
+        identity.
+      </p>
+
+      {reportKind === "place" && place ? (
+        <div className="mt-4 rounded-lg border border-border/60 bg-surface/30 p-3 dark:border-zinc-700/50 dark:bg-zinc-900/30">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
+            Google listing (Places API)
           </p>
-          <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-text-primary dark:text-zinc-200">
-            {websiteCrawlEmails.map((email) =>
-              onPickEmail ? (
-                <li key={email}>
-                  <button
-                    type="button"
-                    className="text-left text-accent hover:underline dark:text-blue-400"
-                    onClick={() => onPickEmail(email)}
-                  >
-                    {email}
-                  </button>
-                </li>
+          <ul className="mt-2 space-y-1.5 text-sm text-text-primary dark:text-zinc-200">
+            <li>
+              <span className="text-text-secondary dark:text-zinc-500">Phone: </span>
+              {place.nationalPhoneNumber?.trim() ||
+              place.internationalPhoneNumber?.trim() ? (
+                <button
+                  type="button"
+                  className="font-mono text-accent hover:underline dark:text-blue-400"
+                  onClick={() =>
+                    onPickPhone(
+                      place.nationalPhoneNumber?.trim() ||
+                        place.internationalPhoneNumber?.trim() ||
+                        ""
+                    )
+                  }
+                >
+                  {place.nationalPhoneNumber?.trim() ||
+                    place.internationalPhoneNumber?.trim()}
+                </button>
               ) : (
-                <li key={email}>{email}</li>
-              )
-            )}
+                <span className="text-text-secondary dark:text-zinc-500">Not provided</span>
+              )}
+            </li>
+            <li>
+              <span className="text-text-secondary dark:text-zinc-500">Google Maps: </span>
+              {place.googleMapsUri?.trim() ? (
+                <a
+                  href={place.googleMapsUri.trim()}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-accent hover:underline dark:text-blue-400"
+                >
+                  Open link
+                </a>
+              ) : (
+                <span className="text-text-secondary dark:text-zinc-500">Not provided</span>
+              )}
+            </li>
+            <li>
+              <span className="text-text-secondary dark:text-zinc-500">Website on listing: </span>
+              {listingWebsite ? (
+                <a
+                  href={listingWebsite}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="break-all text-accent hover:underline dark:text-blue-400"
+                >
+                  {listingWebsite}
+                </a>
+              ) : (
+                <span className="text-text-secondary dark:text-zinc-500">None</span>
+              )}
+            </li>
           </ul>
         </div>
       ) : null}
+
+      {hasPublicFetchTarget ? (
+        <div className="mt-4 rounded-lg border border-border/60 bg-surface/20 p-3 dark:border-zinc-700/50 dark:bg-zinc-900/25">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
+            Public website (fetched HTML)
+          </p>
+          <p className="mt-1 break-all font-mono text-[11px] text-text-secondary dark:text-zinc-500">
+            {publicSiteTarget}
+          </p>
+          {websiteDeep.loading ? (
+            <p className="mt-2 text-xs text-text-secondary dark:text-zinc-500">Scanning site…</p>
+          ) : null}
+          {websiteDeep.error ? (
+            <p className="mt-2 text-xs text-amber-800 dark:text-amber-200/90" role="alert">
+              {websiteDeep.error}
+            </p>
+          ) : null}
+
+          {showHomepagePass ? (
+            <div className="mt-3 border-t border-border/50 pt-3 dark:border-zinc-700/50">
+              <p className="text-[10px] font-medium uppercase tracking-wide text-text-secondary/60 dark:text-zinc-500">
+                First page pass
+              </p>
+              {founderHomepage ? (
+                <p className="mt-1 text-sm text-text-primary dark:text-zinc-100">
+                  Name hint:{" "}
+                  <span className="font-medium">{founderHomepage}</span>
+                </p>
+              ) : null}
+              {emailsHomepage.length > 0 ? (
+                <ul className="mt-2 space-y-1 text-sm">
+                  {emailsHomepage.map((email) => (
+                    <li key={email}>
+                      <button
+                        type="button"
+                        className="text-accent hover:underline dark:text-blue-400"
+                        onClick={() => onPickEmail(email)}
+                      >
+                        {email}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {phonesHomepage.length > 0 ? (
+                <ul className="mt-2 space-y-1 text-sm">
+                  {phonesHomepage.map((phone) => (
+                    <li key={phone}>
+                      <button
+                        type="button"
+                        className="font-mono text-accent hover:underline dark:text-blue-400"
+                        onClick={() => onPickPhone(phone)}
+                      >
+                        {phone}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          ) : null}
+
+          {(hasWebsiteDerivedContent && !showHomepagePass) ||
+          (hasWebsiteDerivedContent && showHomepagePass && (emailsDisplay.length > 0 || phonesDisplay.length > 0 || founderDeep)) ? (
+            <div
+              className={
+                showHomepagePass
+                  ? "mt-3 border-t border-border/50 pt-3 dark:border-zinc-700/50"
+                  : "mt-2"
+              }
+            >
+              {showHomepagePass ? (
+                <p className="text-[10px] font-medium uppercase tracking-wide text-text-secondary/60 dark:text-zinc-500">
+                  Multi-page merge
+                </p>
+              ) : null}
+              {founderDeep ? (
+                <p className="mt-1 text-sm text-text-primary dark:text-zinc-100">
+                  Name hint (crawl): <span className="font-medium">{founderDeep}</span>
+                </p>
+              ) : null}
+              {emailsDisplay.length > 0 ? (
+                <ul className="mt-2 space-y-1 text-sm">
+                  {emailsDisplay.map((email) => (
+                    <li key={email}>
+                      <button
+                        type="button"
+                        className="text-accent hover:underline dark:text-blue-400"
+                        onClick={() => onPickEmail(email)}
+                      >
+                        {email}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : !websiteDeep.loading && !websiteDeep.error ? (
+                <p className="mt-2 text-xs text-text-secondary dark:text-zinc-500">
+                  No emails detected on scanned pages.
+                </p>
+              ) : null}
+              {phonesDisplay.length > 0 ? (
+                <ul className="mt-2 space-y-1 text-sm">
+                  {phonesDisplay.map((phone) => (
+                    <li key={phone}>
+                      <button
+                        type="button"
+                        className="font-mono text-accent hover:underline dark:text-blue-400"
+                        onClick={() => onPickPhone(phone)}
+                      >
+                        {phone}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          ) : !websiteDeep.loading && !websiteDeep.error && reportKind === "url" ? (
+            <p className="mt-2 text-xs text-text-secondary dark:text-zinc-500">
+              No contact hints extracted from the homepage HTML.
+            </p>
+          ) : null}
+        </div>
+      ) : (
+        <p className="mt-4 text-xs text-text-secondary dark:text-zinc-500">
+          {reportKind === "place"
+            ? "No website on this listing—public-page contact hints are unavailable unless you add a URL and research it."
+            : null}
+        </p>
+      )}
     </div>
   );
 }
@@ -170,24 +415,11 @@ function signalsFromPlace(place: PlacesSearchPlace): IntelSignals {
   };
 }
 
-function formatReportAsNotes(
-  report: MarketIntelReport,
-  extra?: string,
-  contactBlock?: string
-) {
-  const lines: string[] = [];
-  if (extra?.trim()) {
-    lines.push(extra.trim(), "");
-  }
-  lines.push("Software", ...report.software.map((s) => `- ${s}`), "");
-  lines.push("AI automations", ...report.aiAutomations.map((s) => `- ${s}`), "");
-  lines.push("Product growth", ...report.productGrowth.map((s) => `- ${s}`), "");
-  lines.push("Summary", report.summary);
-  if (contactBlock?.trim()) {
-    lines.push("", "Contact signals", contactBlock.trim());
-  }
-  return lines.join("\n");
-}
+const INITIAL_WEBSITE_DEEP: ProspectWebsiteDeepStatus = {
+  loading: false,
+  contacts: null,
+  error: null,
+};
 
 function ProspectsIntelligenceViewInner({
   fieldOptions,
@@ -248,6 +480,8 @@ function ProspectsIntelligenceViewInner({
   const [savePending, setSavePending] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [websiteCrawlEmails, setWebsiteCrawlEmails] = useState<string[]>([]);
+  const [websiteDeepStatus, setWebsiteDeepStatus] =
+    useState<ProspectWebsiteDeepStatus>(INITIAL_WEBSITE_DEEP);
 
   const activeReport = useMemo(() => {
     if (urlReport && urlMeta) {
@@ -272,7 +506,9 @@ function ProspectsIntelligenceViewInner({
       if (listingPhone) contactLines.push(`Google listing phone: ${listingPhone}`);
       const maps = place.googleMapsUri?.trim();
       if (maps) contactLines.push(`Google Maps: ${maps}`);
-      setLeadNotes(formatReportAsNotes(report, extra, contactLines.join("\n") || undefined));
+      setLeadNotes(
+        formatReportAsPlainNotes(report, extra || undefined, contactLines.join("\n") || undefined)
+      );
     },
     []
   );
@@ -344,7 +580,10 @@ function ProspectsIntelligenceViewInner({
   }, [activeReport]);
 
   useEffect(() => {
-    if (!activeReport) setWebsiteCrawlEmails([]);
+    if (!activeReport) {
+      setWebsiteCrawlEmails([]);
+      setWebsiteDeepStatus(INITIAL_WEBSITE_DEEP);
+    }
   }, [activeReport]);
 
   async function runPlacesSearch() {
@@ -429,7 +668,13 @@ function ProspectsIntelligenceViewInner({
       if (h.founderName) contactLines.push(`Name hint (homepage): ${h.founderName}`);
       if (h.emails.length) contactLines.push(`Emails (homepage): ${h.emails.join(", ")}`);
       if (h.phones.length) contactLines.push(`Phones (homepage): ${h.phones.join(", ")}`);
-      setLeadNotes(formatReportAsNotes(result.report, result.url, contactLines.join("\n") || undefined));
+      setLeadNotes(
+        formatReportAsPlainNotes(
+          result.report,
+          result.url,
+          contactLines.join("\n") || undefined
+        )
+      );
       setLeadEmail(h.emails[0] ?? "");
       setLeadPhone(h.phones[0] ?? "");
     } finally {
@@ -625,29 +870,12 @@ function ProspectsIntelligenceViewInner({
           ) : null}
           {placesSearchMeta?.filteredByNoWebsite &&
           placesSearchMeta.totalBeforeFilter > 0 &&
-          places.length > 0 ? (
-            <p className="text-xs text-text-secondary dark:text-zinc-500">
-              Showing {places.length} of {placesSearchMeta.totalBeforeFilter} without a
-              website ({placesSearchMeta.droppedCount} with a link hidden).
-            </p>
-          ) : null}
-          {placesSearchMeta?.filteredByNoWebsite &&
-          placesSearchMeta.totalBeforeFilter > 0 &&
           places.length === 0 &&
           !placesWarning ? (
             <p className="text-sm text-text-secondary dark:text-zinc-400">
               No results without a website link in this batch—try a broader category or
               area.
             </p>
-          ) : null}
-          {places.length > 0 ? (
-            <PlacesSearchResultsList
-              places={places}
-              onlyNoWebsite={onlyNoWebsite}
-              highlightQuery={category}
-              onViewReport={viewPlaceReport}
-              totalCount={places.length}
-            />
           ) : null}
         </div>
 
@@ -694,18 +922,43 @@ function ProspectsIntelligenceViewInner({
             defaultProjectType={defaultProjectType}
           />
         </div>
+
+        {places.length > 0 ? (
+          <div className="space-y-3 border-t border-border pt-4 dark:border-zinc-800">
+            {placesSearchMeta?.filteredByNoWebsite &&
+            placesSearchMeta.totalBeforeFilter > 0 ? (
+              <p className="text-xs text-text-secondary dark:text-zinc-500">
+                Showing {places.length} of {placesSearchMeta.totalBeforeFilter} without a
+                website ({placesSearchMeta.droppedCount} with a link hidden).
+              </p>
+            ) : null}
+            <PlacesSearchResultsList
+              places={places}
+              onlyNoWebsite={onlyNoWebsite}
+              highlightQuery={category}
+              onViewReport={viewPlaceReport}
+              totalCount={places.length}
+            />
+          </div>
+        ) : null}
       </div>
 
       {activeReport ? (
         <div
           id="prospect-market-intel-report"
-          className={`${cardClass} scroll-mt-6 space-y-6`}
+          className={`${cardClass} scroll-mt-6 space-y-0`}
           tabIndex={-1}
         >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <h2 className="text-sm font-semibold text-text-primary dark:text-zinc-100">
-              Market intelligence report
-            </h2>
+            <div>
+              <h2 className="text-sm font-semibold text-text-primary dark:text-zinc-100">
+                Market intelligence report
+              </h2>
+              <p className="mt-1 max-w-2xl text-[11px] text-text-secondary dark:text-zinc-500">
+                Overview first, then listing and website contacts, highlights, and lead capture. Notes use plain
+                sections (not markdown lists).
+              </p>
+            </div>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
@@ -719,43 +972,66 @@ function ProspectsIntelligenceViewInner({
           </div>
 
           {saveMessage ? (
-            <p className="text-xs text-text-secondary dark:text-zinc-400">{saveMessage}</p>
+            <p className="mt-3 text-xs text-text-secondary dark:text-zinc-400">{saveMessage}</p>
           ) : null}
 
-          <IntelReportSummary
-            report={activeReport.report}
-            websiteCrawlEmails={websiteCrawlEmails}
-            onPickEmail={(email) => setLeadEmail((cur) => cur.trim() || email)}
-          />
+          <ReportSection step="01" title="Overview">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:items-stretch sm:gap-6">
+              <div className="min-w-0 sm:flex sm:flex-col">
+                <IntelReportSummary report={activeReport.report} />
+              </div>
+              <div className="min-w-0 sm:flex sm:flex-col">
+                <ProspectIntelBusinessSnapshot
+                  businessLabel={
+                    activeReport.kind === "url"
+                      ? activeReport.urlMeta.pageTitle?.slice(0, 200) || activeReport.urlMeta.url
+                      : activeReport.place.name
+                  }
+                  addressLabel={
+                    activeReport.kind === "place" ? activeReport.place.formattedAddress : null
+                  }
+                  listingPhone={
+                    activeReport.kind === "place"
+                      ? activeReport.place.nationalPhoneNumber?.trim() ||
+                        activeReport.place.internationalPhoneNumber?.trim() ||
+                        null
+                      : null
+                  }
+                  googleMapsUri={
+                    activeReport.kind === "place"
+                      ? activeReport.place.googleMapsUri?.trim() || null
+                      : null
+                  }
+                  researchFromUrl={activeReport.kind === "url"}
+                  fetchedPageUrl={
+                    activeReport.kind === "url" ? activeReport.urlMeta.url : null
+                  }
+                  onPickPhone={(phone) => setLeadPhone((cur) => cur.trim() || phone)}
+                />
+              </div>
+            </div>
+          </ReportSection>
 
-          <ProspectIntelBusinessSnapshot
-            businessLabel={
-              activeReport.kind === "url"
-                ? activeReport.urlMeta.pageTitle?.slice(0, 200) || activeReport.urlMeta.url
-                : activeReport.place.name
-            }
-            addressLabel={
-              activeReport.kind === "place" ? activeReport.place.formattedAddress : null
-            }
-            listingPhone={
-              activeReport.kind === "place"
-                ? activeReport.place.nationalPhoneNumber?.trim() ||
-                  activeReport.place.internationalPhoneNumber?.trim() ||
-                  null
-                : null
-            }
-            googleMapsUri={
-              activeReport.kind === "place" ? activeReport.place.googleMapsUri?.trim() || null : null
-            }
-            onPickPhone={(phone) => setLeadPhone((cur) => cur.trim() || phone)}
-          />
+          <ReportSection step="02" title="Contacts & hints">
+            <IntelContactHintsPanel
+              reportKind={activeReport.kind}
+              place={activeReport.kind === "place" ? activeReport.place : null}
+              fetchedUrl={activeReport.kind === "url" ? activeReport.urlMeta.url : null}
+              homepageHints={activeReport.kind === "url" ? urlHomepageHints : null}
+              websiteDeep={websiteDeepStatus}
+              websiteCrawlEmails={websiteCrawlEmails}
+              onPickEmail={(email) => setLeadEmail((cur) => cur.trim() || email)}
+              onPickPhone={(phone) => setLeadPhone((cur) => cur.trim() || phone)}
+            />
+          </ReportSection>
 
-          <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
-            <IntelHighlightsCarousel report={activeReport.report} />
-            <div className="rounded-xl border border-border/80 p-4 dark:border-zinc-700/60">
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
-                Add as Lead
-              </h3>
+          <ReportSection step="03" title="Highlights & lead">
+            <div className="grid gap-6 sm:grid-cols-2 sm:items-start">
+              <IntelHighlightsCarousel report={activeReport.report} />
+              <div className="rounded-xl border border-border/80 p-4 dark:border-zinc-700/60">
+                <h3 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
+                  Add as Lead
+                </h3>
               <p className="mt-1 text-xs text-text-secondary dark:text-zinc-500">
                 Project type is required for CRM Leads. Prefilled from research—you can edit
                 before saving.
@@ -821,13 +1097,16 @@ function ProspectsIntelligenceViewInner({
                 </div>
                 <div className="sm:col-span-2">
                   <label className="mb-1 block text-xs font-medium text-text-secondary">
-                    Notes (report + context)
+                    Notes (plain structured text)
                   </label>
+                  <p className="mb-1 text-[11px] text-text-secondary dark:text-zinc-500">
+                    Prefilled with labeled sections and • bullets—not markdown.
+                  </p>
                   <textarea
                     value={leadNotes}
                     onChange={(e) => setLeadNotes(e.target.value)}
                     rows={10}
-                    className="min-h-[14rem] w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                    className="min-h-[14rem] w-full rounded-lg border border-border px-3 py-2 font-mono text-sm dark:border-zinc-700 dark:bg-zinc-900"
                   />
                 </div>
               </div>
@@ -845,8 +1124,10 @@ function ProspectsIntelligenceViewInner({
                 </p>
               ) : null}
             </div>
-          </div>
+            </div>
+          </ReportSection>
 
+          <ReportSection step="04" title="Enrichment tools">
           <ProspectIntelEnrichment
               omitBusinessSnapshot
               websiteUrl={
@@ -876,7 +1157,9 @@ function ProspectsIntelligenceViewInner({
               onPickEmail={(email) => setLeadEmail((cur) => cur.trim() || email)}
               onPickPhone={(phone) => setLeadPhone((cur) => cur.trim() || phone)}
               onWebsiteEmailsChange={setWebsiteCrawlEmails}
+              onWebsiteDeepStatusChange={setWebsiteDeepStatus}
             />
+          </ReportSection>
         </div>
       ) : (
         <div className={`${cardClass} text-sm text-text-secondary dark:text-zinc-500`}>

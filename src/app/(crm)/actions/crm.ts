@@ -184,23 +184,30 @@ export async function createLead(formData: FormData) {
     return { error: "Please select a project type." };
   }
 
-  const { error } = await supabase.from("lead").insert({
-    name: name || null,
-    email: email || null,
-    company: company || null,
-    phone: phone || null,
-    source: source || null,
-    notes: notes || null,
-    project_type,
-    contact_category,
-    stage: "new",
-    owner_id: user.id,
-  });
+  const { data: created, error } = await supabase
+    .from("lead")
+    .insert({
+      name: name || null,
+      email: email || null,
+      company: company || null,
+      phone: phone || null,
+      source: source || null,
+      notes: notes || null,
+      project_type,
+      contact_category,
+      stage: "new",
+      owner_id: user.id,
+    })
+    .select("id")
+    .single();
 
   if (error) return { error: error.message };
+  const id = created?.id as string | undefined;
+  if (!id) return { error: "Lead created but id missing." };
+
   revalidatePath("/leads");
   revalidatePath("/dashboard");
-  return { ok: true };
+  return { ok: true as const, id };
 }
 
 /** Lead fields only (e.g. table inline edit and lead detail contact tab). */
@@ -584,6 +591,60 @@ export async function setLeadTagAssigned(
   revalidatePath(`/leads/${lid}`);
   revalidatePath("/dashboard");
   return { ok: true };
+}
+
+/** Catalog name for leads sourced from Prospecting (intel, Instagram panel, etc.). */
+const PROSPECT_LEAD_TAG_NAME = "Prospect";
+const PROSPECT_LEAD_TAG_COLOR = "#6366f1";
+
+async function ensureProspectLeadTagId(
+  supabase: SupabaseServer
+): Promise<{ id: string } | { error: string }> {
+  const { data: existing, error: selErr } = await supabase
+    .from("lead_tag")
+    .select("id")
+    .ilike("name", PROSPECT_LEAD_TAG_NAME)
+    .maybeSingle();
+
+  if (selErr) return { error: selErr.message };
+  if (existing?.id) return { id: existing.id as string };
+
+  const { data: inserted, error: insErr } = await supabase
+    .from("lead_tag")
+    .insert({ name: PROSPECT_LEAD_TAG_NAME, color: PROSPECT_LEAD_TAG_COLOR })
+    .select("id")
+    .single();
+
+  if (insErr) {
+    if (insErr.code === "23505") {
+      const { data: again } = await supabase
+        .from("lead_tag")
+        .select("id")
+        .ilike("name", PROSPECT_LEAD_TAG_NAME)
+        .maybeSingle();
+      if (again?.id) return { id: again.id as string };
+    }
+    return { error: insErr.message };
+  }
+  if (!inserted?.id) return { error: "Could not create Prospect tag." };
+  return { id: inserted.id as string };
+}
+
+/** Assign the Prospect catalog tag (create tag row if missing). Best-effort for prospecting flows. */
+export async function assignProspectTagToLead(leadId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const lid = String(leadId ?? "").trim();
+  if (!lid) return { error: "Missing lead id" };
+
+  const tag = await ensureProspectLeadTagId(supabase);
+  if ("error" in tag) return tag;
+
+  return setLeadTagAssigned(lid, tag.id, true);
 }
 
 function isClosedDealStage(stage: string) {

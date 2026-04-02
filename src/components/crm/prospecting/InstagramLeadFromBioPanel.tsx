@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { createLead } from "@/app/(crm)/actions/crm";
+import { assignProspectTagToLead, createLead } from "@/app/(crm)/actions/crm";
 import type { MergedCrmFieldOptions } from "@/lib/crm/field-options";
 import {
   buildInstagramLeadNotes,
@@ -123,6 +123,12 @@ export default function InstagramLeadFromBioPanel({
     if ("error" in res && res.error) {
       setSubmitError(res.error);
       return;
+    }
+    if ("id" in res && typeof res.id === "string") {
+      const tagRes = await assignProspectTagToLead(res.id);
+      if (tagRes && "error" in tagRes) {
+        console.error("assignProspectTagToLead:", tagRes.error);
+      }
     }
     setMessage("Lead created.");
     router.refresh();
