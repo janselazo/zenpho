@@ -151,6 +151,9 @@ export async function POST(req: Request) {
   const requestPayload: Record<string, unknown> = {
     textQuery,
     languageCode: "en",
+    // Window installers, HVAC, mobile locksmiths, etc. are often "service area" listings
+    // with no public storefront; Places omits them unless this flag is set.
+    includePureServiceAreaBusinesses: true,
   };
   if (looksLikeUsZip(zipTrimmed)) {
     requestPayload.regionCode = "US";

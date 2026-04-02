@@ -49,6 +49,7 @@ const RAW = [
   "florist",
   "funeral home",
   "furniture store",
+  "glazier",
   "gas station",
   "gift shop",
   "golf course",
@@ -121,6 +122,10 @@ const RAW = [
   "used car dealer",
   "veterinarian",
   "wine bar",
+  "window installer",
+  "window replacement",
+  "window service",
+  "window service provider",
   "yoga studio",
 ] as const;
 

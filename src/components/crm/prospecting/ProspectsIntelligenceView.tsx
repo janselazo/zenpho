@@ -800,8 +800,8 @@ function ProspectsIntelligenceViewInner({
               <code className="rounded bg-surface px-1 font-mono text-[11px] dark:bg-zinc-800">
                 GOOGLE_PLACES_API_KEY
               </code>{" "}
-              on the server. Website status comes from the listing field in the API response
-              (rarely it may be omitted even if a site exists).
+              on the server. Service-area businesses (e.g. installers, HVAC, mobile trades) are included in
+              results. Website status comes from the listing field (sometimes omitted even if a site exists).
             </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -850,7 +850,10 @@ function ProspectsIntelligenceViewInner({
               onChange={(e) => setOnlyNoWebsite(e.target.checked)}
               className="mt-0.5 rounded border-border"
             />
-            <span>Only show listings with no website URL</span>
+            <span>
+              Only show listings with no website URL — most contractors and installers have a site, so this
+              often hides every result. Uncheck to see them.
+            </span>
           </label>
           <div className="flex flex-wrap gap-2">
             <button
@@ -872,9 +875,10 @@ function ProspectsIntelligenceViewInner({
           placesSearchMeta.totalBeforeFilter > 0 &&
           places.length === 0 &&
           !placesWarning ? (
-            <p className="text-sm text-text-secondary dark:text-zinc-400">
-              No results without a website link in this batch—try a broader category or
-              area.
+            <p className="text-sm text-amber-800 dark:text-amber-200/90" role="status">
+              Google returned {placesSearchMeta.totalBeforeFilter} listing
+              {placesSearchMeta.totalBeforeFilter === 1 ? "" : "s"}, but all had a website URL and were hidden.
+              Uncheck &quot;Only show listings with no website&quot; above, or try a broader area.
             </p>
           ) : null}
         </div>
