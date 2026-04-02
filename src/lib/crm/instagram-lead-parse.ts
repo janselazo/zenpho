@@ -1,6 +1,5 @@
 /**
- * Parse Instagram profile URLs and contact signals from pasted bio text (plain text).
- * No network calls — user-supplied content only.
+ * Parse Instagram profile URLs and contact signals from plain bio text (e.g. server-fetched HTML parse).
  */
 
 import { isJunkEmail, rankEmailsUnique } from "@/lib/crm/prospect-contact-extract";
@@ -175,13 +174,17 @@ export function buildInstagramLeadNotes(input: {
   handle: string;
   bio: string;
   signals: InstagramContactSignals;
+  /** Default manual — set to "fetched" when bio came from server-side HTML parse. */
+  bioSource?: "manual" | "fetched";
 }): string {
   const lines: string[] = [];
   lines.push(`Instagram: ${input.profileUrl}`, `Handle: @${input.handle}`, "");
   if (input.signals.website) {
     lines.push(`Website: ${input.signals.website}`, "");
   }
-  lines.push("Bio (pasted)", input.bio.trim() || "(empty)", "");
+  const bioHeading =
+    input.bioSource === "fetched" ? "Bio (fetched from public profile HTML)" : "Bio (pasted)";
+  lines.push(bioHeading, input.bio.trim() || "(empty)", "");
   if (input.signals.emails.length) {
     lines.push("Emails detected", ...input.signals.emails.map((e) => `- ${e}`), "");
   }

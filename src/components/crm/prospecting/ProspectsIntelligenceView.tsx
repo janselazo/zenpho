@@ -88,6 +88,7 @@ function IntelContactHintsPanel({
   websiteCrawlEmails,
   onPickEmail,
   onPickPhone,
+  embedded = false,
 }: {
   reportKind: "url" | "place";
   place: PlacesSearchPlace | null;
@@ -97,6 +98,8 @@ function IntelContactHintsPanel({
   websiteCrawlEmails: string[];
   onPickEmail: (email: string) => void;
   onPickPhone: (phone: string) => void;
+  /** Nested under Business snapshot (no outer card shell). */
+  embedded?: boolean;
 }) {
   const listingWebsite =
     reportKind === "place" ? place?.websiteUri?.trim() || null : null;
@@ -126,8 +129,17 @@ function IntelContactHintsPanel({
     phonesDisplay.length > 0 ||
     showHomepagePass;
 
+  const shell = embedded
+    ? "mt-4 space-y-4 border-t border-border/70 pt-4 dark:border-zinc-700/55"
+    : "rounded-xl border border-border/80 bg-white p-4 dark:border-zinc-700/60 dark:bg-zinc-900/40";
+
   return (
-    <div className="rounded-xl border border-border/80 bg-white p-4 dark:border-zinc-700/60 dark:bg-zinc-900/40">
+    <div className={shell}>
+      {embedded ? (
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/60 dark:text-zinc-500">
+          Contacts &amp; hints
+        </p>
+      ) : null}
       <p className="text-[11px] text-text-secondary dark:text-zinc-500">
         Listing data comes from Google Places where applicable. Email, phone, and name hints below are only
         shown when a public website URL was fetched server-side (HTML parse)—not from Google for owner
@@ -959,8 +971,8 @@ function ProspectsIntelligenceViewInner({
                 Market intelligence report
               </h2>
               <p className="mt-1 max-w-2xl text-[11px] text-text-secondary dark:text-zinc-500">
-                Overview first, then listing and website contacts, highlights, and lead capture. Notes use plain
-                sections (not markdown lists).
+                Overview starts with business snapshot and contact hints, then summary. After that: lead capture,
+                highlights, and enrichment tools. Notes use plain sections (not markdown lists).
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -982,56 +994,60 @@ function ProspectsIntelligenceViewInner({
           <ReportSection step="01" title="Overview">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:items-stretch sm:gap-6">
               <div className="min-w-0 sm:flex sm:flex-col">
-                <IntelReportSummary report={activeReport.report} />
+                <div className="flex h-full min-w-0 flex-col rounded-xl border border-border bg-surface/30 p-4 dark:border-zinc-700/80 dark:bg-zinc-900/40 sm:min-h-0">
+                  <ProspectIntelBusinessSnapshot
+                    embedded
+                    businessLabel={
+                      activeReport.kind === "url"
+                        ? activeReport.urlMeta.pageTitle?.slice(0, 200) || activeReport.urlMeta.url
+                        : activeReport.place.name
+                    }
+                    addressLabel={
+                      activeReport.kind === "place" ? activeReport.place.formattedAddress : null
+                    }
+                    listingPhone={
+                      activeReport.kind === "place"
+                        ? activeReport.place.nationalPhoneNumber?.trim() ||
+                          activeReport.place.internationalPhoneNumber?.trim() ||
+                          null
+                        : null
+                    }
+                    googleMapsUri={
+                      activeReport.kind === "place"
+                        ? activeReport.place.googleMapsUri?.trim() || null
+                        : null
+                    }
+                    researchFromUrl={activeReport.kind === "url"}
+                    fetchedPageUrl={
+                      activeReport.kind === "url" ? activeReport.urlMeta.url : null
+                    }
+                    onPickPhone={(phone) => setLeadPhone((cur) => cur.trim() || phone)}
+                  />
+                  <IntelContactHintsPanel
+                    embedded
+                    reportKind={activeReport.kind}
+                    place={activeReport.kind === "place" ? activeReport.place : null}
+                    fetchedUrl={activeReport.kind === "url" ? activeReport.urlMeta.url : null}
+                    homepageHints={activeReport.kind === "url" ? urlHomepageHints : null}
+                    websiteDeep={websiteDeepStatus}
+                    websiteCrawlEmails={websiteCrawlEmails}
+                    onPickEmail={(email) => setLeadEmail((cur) => cur.trim() || email)}
+                    onPickPhone={(phone) => setLeadPhone((cur) => cur.trim() || phone)}
+                  />
+                  <p className="mt-4 border-t border-border/50 pt-3 text-[11px] text-text-secondary dark:text-zinc-500">
+                    Contact data may be incomplete or outdated. Verify before outreach; comply with applicable
+                    laws and vendor terms (Google, Outscraper, Apollo, Hunter).
+                  </p>
+                </div>
               </div>
               <div className="min-w-0 sm:flex sm:flex-col">
-                <ProspectIntelBusinessSnapshot
-                  businessLabel={
-                    activeReport.kind === "url"
-                      ? activeReport.urlMeta.pageTitle?.slice(0, 200) || activeReport.urlMeta.url
-                      : activeReport.place.name
-                  }
-                  addressLabel={
-                    activeReport.kind === "place" ? activeReport.place.formattedAddress : null
-                  }
-                  listingPhone={
-                    activeReport.kind === "place"
-                      ? activeReport.place.nationalPhoneNumber?.trim() ||
-                        activeReport.place.internationalPhoneNumber?.trim() ||
-                        null
-                      : null
-                  }
-                  googleMapsUri={
-                    activeReport.kind === "place"
-                      ? activeReport.place.googleMapsUri?.trim() || null
-                      : null
-                  }
-                  researchFromUrl={activeReport.kind === "url"}
-                  fetchedPageUrl={
-                    activeReport.kind === "url" ? activeReport.urlMeta.url : null
-                  }
-                  onPickPhone={(phone) => setLeadPhone((cur) => cur.trim() || phone)}
-                />
+                <IntelReportSummary report={activeReport.report} />
               </div>
             </div>
           </ReportSection>
 
-          <ReportSection step="02" title="Contacts & hints">
-            <IntelContactHintsPanel
-              reportKind={activeReport.kind}
-              place={activeReport.kind === "place" ? activeReport.place : null}
-              fetchedUrl={activeReport.kind === "url" ? activeReport.urlMeta.url : null}
-              homepageHints={activeReport.kind === "url" ? urlHomepageHints : null}
-              websiteDeep={websiteDeepStatus}
-              websiteCrawlEmails={websiteCrawlEmails}
-              onPickEmail={(email) => setLeadEmail((cur) => cur.trim() || email)}
-              onPickPhone={(phone) => setLeadPhone((cur) => cur.trim() || phone)}
-            />
-          </ReportSection>
-
-          <ReportSection step="03" title="Highlights & lead">
+          <ReportSection step="02" title="Lead & highlights">
             <div className="grid gap-6 sm:grid-cols-2 sm:items-start">
-              <IntelHighlightsCarousel report={activeReport.report} />
               <div className="rounded-xl border border-border/80 p-4 dark:border-zinc-700/60">
                 <h3 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
                   Add as Lead
@@ -1128,10 +1144,11 @@ function ProspectsIntelligenceViewInner({
                 </p>
               ) : null}
             </div>
+              <IntelHighlightsCarousel report={activeReport.report} />
             </div>
           </ReportSection>
 
-          <ReportSection step="04" title="Enrichment tools">
+          <ReportSection step="03" title="Enrichment tools">
           <ProspectIntelEnrichment
               omitBusinessSnapshot
               websiteUrl={

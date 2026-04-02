@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { assignProspectTagToLead, createLead } from "@/app/(crm)/actions/crm";
+import { fetchInstagramBioFromUrlAction } from "@/app/(crm)/actions/prospect-intel";
 import type { MergedCrmFieldOptions } from "@/lib/crm/field-options";
 import {
   buildInstagramLeadNotes,
@@ -26,8 +27,8 @@ export default function InstagramLeadFromBioPanel({
 }: Props) {
   const router = useRouter();
   const [igUrl, setIgUrl] = useState("");
-  const [bioText, setBioText] = useState("");
   const [parseError, setParseError] = useState<string | null>(null);
+  const [bioFetchLoading, setBioFetchLoading] = useState(false);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -53,7 +54,50 @@ export default function InstagramLeadFromBioPanel({
     );
   }, [fieldOptions.leadProjectTypes, defaultProjectType]);
 
-  const applyExtract = useCallback(() => {
+  const runExtractWithBio = useCallback(
+    (bio: string) => {
+      const parsed = parseInstagramProfileUrl(igUrl);
+      if (!parsed.ok) {
+        setParseError(parsed.error);
+        setProfileMeta(null);
+        setSignals(null);
+        return;
+      }
+      const trimmed = bio.trim();
+      if (!trimmed) {
+        setParseError("No bio text to parse.");
+        setProfileMeta(null);
+        setSignals(null);
+        return;
+      }
+
+      const sig = extractContactSignalsFromPlainText(trimmed);
+      setSignals(sig);
+      setProfileMeta({ handle: parsed.handle, profileUrl: parsed.profileUrl });
+
+      const display = suggestedDisplayName(parsed.handle, trimmed);
+      setName(display);
+      setCompany(display.startsWith("@") ? "" : display);
+      setEmail(sig.emails[0] ?? "");
+      setPhone(sig.phones[0] ?? "");
+      setNotes(
+        buildInstagramLeadNotes({
+          profileUrl: parsed.profileUrl,
+          handle: parsed.handle,
+          bio: trimmed,
+          signals: sig,
+          bioSource: "fetched",
+        })
+      );
+
+      if (defaultInstagramSource && fieldOptions.leadSources.includes(defaultInstagramSource)) {
+        setSource(defaultInstagramSource);
+      }
+    },
+    [igUrl, defaultInstagramSource, fieldOptions.leadSources]
+  );
+
+  const applyExtract = useCallback(async () => {
     setParseError(null);
     const parsed = parseInstagramProfileUrl(igUrl);
     if (!parsed.ok) {
@@ -62,36 +106,21 @@ export default function InstagramLeadFromBioPanel({
       setSignals(null);
       return;
     }
-    const bio = bioText.trim();
-    if (!bio) {
-      setParseError("Paste the profile bio or visible text to extract contacts.");
-      setProfileMeta(null);
-      setSignals(null);
-      return;
+
+    setBioFetchLoading(true);
+    try {
+      const fetched = await fetchInstagramBioFromUrlAction(igUrl);
+      if (!fetched.ok) {
+        setParseError(fetched.error);
+        setProfileMeta(null);
+        setSignals(null);
+        return;
+      }
+      runExtractWithBio(fetched.bioText);
+    } finally {
+      setBioFetchLoading(false);
     }
-
-    const sig = extractContactSignalsFromPlainText(bio);
-    setSignals(sig);
-    setProfileMeta({ handle: parsed.handle, profileUrl: parsed.profileUrl });
-
-    const display = suggestedDisplayName(parsed.handle, bio);
-    setName(display);
-    setCompany(display.startsWith("@") ? "" : display);
-    setEmail(sig.emails[0] ?? "");
-    setPhone(sig.phones[0] ?? "");
-    setNotes(
-      buildInstagramLeadNotes({
-        profileUrl: parsed.profileUrl,
-        handle: parsed.handle,
-        bio,
-        signals: sig,
-      })
-    );
-
-    if (defaultInstagramSource && fieldOptions.leadSources.includes(defaultInstagramSource)) {
-      setSource(defaultInstagramSource);
-    }
-  }, [igUrl, bioText, defaultInstagramSource, fieldOptions.leadSources]);
+  }, [igUrl, runExtractWithBio]);
 
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -137,11 +166,13 @@ export default function InstagramLeadFromBioPanel({
   return (
     <div className="mt-6 border-t border-border pt-6 dark:border-zinc-800">
       <h2 className="text-sm font-semibold text-text-primary dark:text-zinc-100">
-        Instagram profile (paste bio)
+        Instagram profile
       </h2>
       <p className="mt-1 text-xs text-text-secondary dark:text-zinc-500">
-        Paste an Instagram profile link or @handle and the bio text you copied. Nothing is fetched from
-        Instagram—parsing is local. Verify details before outreach.
+        Enter a profile URL or @handle, then{" "}
+        <span className="font-medium text-text-primary dark:text-zinc-300">Extract &amp; preview</span>. We fetch
+        the public profile HTML on the server and parse name, bio, and contact hints. Meta often blocks this—if it
+        fails, fill name, email, and phone in the preview below yourself.
       </p>
 
       <div className="mt-4 space-y-3">
@@ -158,24 +189,13 @@ export default function InstagramLeadFromBioPanel({
             autoComplete="off"
           />
         </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
-            Bio / profile text (paste)
-          </label>
-          <textarea
-            value={bioText}
-            onChange={(e) => setBioText(e.target.value)}
-            placeholder="Paste the profile name line, bio, email, phone, and links as shown on Instagram…"
-            rows={5}
-            className={inputClass}
-          />
-        </div>
         <button
           type="button"
-          onClick={applyExtract}
-          className="rounded-xl border border-border bg-white px-4 py-2 text-sm font-semibold text-text-primary hover:bg-surface dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+          disabled={bioFetchLoading}
+          onClick={() => void applyExtract()}
+          className="rounded-xl border border-border bg-white px-4 py-2 text-sm font-semibold text-text-primary hover:bg-surface disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
         >
-          Extract &amp; preview
+          {bioFetchLoading ? "Fetching bio…" : "Extract &amp; preview"}
         </button>
         {parseError ? (
           <p className="text-sm text-red-600 dark:text-red-400" role="alert">

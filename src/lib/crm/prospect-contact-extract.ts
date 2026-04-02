@@ -11,8 +11,8 @@ function junkDomain(dom: string): boolean {
     d.endsWith("wixpress.com") ||
     d.endsWith("cloudflare.com") ||
     d === "google.com" ||
-    d === "facebook.com" ||
-    d === "gmail.com"
+    d === "facebook.com"
+    // Intentionally not blocking gmail.com / yahoo.com / etc. — many SMBs list personal email in footers.
   );
 }
 
@@ -213,7 +213,14 @@ export function discoverContactPageUrls(html: string, baseUrl: string, max = 5):
 
 function emailRankScore(email: string): number {
   const local = email.split("@")[0] || "";
+  const dom = email.slice(email.lastIndexOf("@") + 1).toLowerCase();
   if (/^(contact|info|hello|office|sales|support|admin|team)\b/i.test(local)) return 100;
+  if (
+    /^(gmail|googlemail|yahoo|ymail|hotmail|outlook|live|msn|icloud|me|aol)\.com$/i.test(dom) ||
+    /^protonmail\.com$/i.test(dom)
+  ) {
+    return 5;
+  }
   return 10;
 }
 

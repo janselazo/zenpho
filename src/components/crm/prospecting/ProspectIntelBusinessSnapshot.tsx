@@ -20,6 +20,10 @@ type Props = {
   researchFromUrl?: boolean;
   /** Shown for URL research (canonical fetched URL). */
   fetchedPageUrl?: string | null;
+  /**
+   * When true, render without outer card chrome (parent provides border). Omit footer disclaimer—parent adds one.
+   */
+  embedded?: boolean;
 };
 
 export default function ProspectIntelBusinessSnapshot({
@@ -30,9 +34,14 @@ export default function ProspectIntelBusinessSnapshot({
   onPickPhone,
   researchFromUrl = false,
   fetchedPageUrl,
+  embedded = false,
 }: Props) {
+  const shell = embedded
+    ? "min-w-0 sm:flex sm:min-h-0 sm:flex-col"
+    : "h-full min-w-0 rounded-xl border border-border bg-surface/30 p-4 dark:border-zinc-700/80 dark:bg-zinc-900/40 sm:flex sm:min-h-0 sm:flex-col";
+
   return (
-    <div className="h-full min-w-0 rounded-xl border border-border bg-surface/30 p-4 dark:border-zinc-700/80 dark:bg-zinc-900/40 sm:flex sm:min-h-0 sm:flex-col">
+    <div className={shell}>
       <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/60 dark:text-zinc-500">
         Business snapshot
       </p>
@@ -86,10 +95,12 @@ export default function ProspectIntelBusinessSnapshot({
             </a>
           ) : null}
         </div>
-        <p className="mt-auto pt-3 text-[11px] text-text-secondary dark:text-zinc-500">
-          Contact data may be incomplete or outdated. Verify before outreach; comply with applicable laws and
-          vendor terms (Google, Outscraper, Apollo, Hunter).
-        </p>
+        {embedded ? null : (
+          <p className="mt-auto pt-3 text-[11px] text-text-secondary dark:text-zinc-500">
+            Contact data may be incomplete or outdated. Verify before outreach; comply with applicable laws and
+            vendor terms (Google, Outscraper, Apollo, Hunter).
+          </p>
+        )}
       </div>
     </div>
   );
