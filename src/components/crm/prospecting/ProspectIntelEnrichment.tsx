@@ -291,8 +291,11 @@ export default function ProspectIntelEnrichment({
         {activeTool === "apollo" ? (
           <div className="mt-4 rounded-xl border border-border/80 p-4 dark:border-zinc-700/60">
             <p className="text-xs text-text-secondary dark:text-zinc-500">
-              Uses company domain{domain ? ` (${domain})` : ""}. Add{" "}
-              <code className="rounded bg-surface px-1 font-mono dark:bg-zinc-800">APOLLO_API_KEY</code> in .env.local.
+              Uses company domain{domain ? ` (${domain})` : ""} with Apollo&apos;s People API Search. Use a
+              master{" "}
+              <code className="rounded bg-surface px-1 font-mono dark:bg-zinc-800">APOLLO_API_KEY</code> in
+              .env.local. This API returns names and titles (often obfuscated last names); it does not return
+              email or phone—use Hunter or your Apollo workflow for contact details.
             </p>
             <button
               type="button"
