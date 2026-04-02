@@ -32,11 +32,11 @@ export default function ProspectIntelBusinessSnapshot({
   fetchedPageUrl,
 }: Props) {
   return (
-    <div className="flex h-full min-w-0 flex-col sm:min-h-0">
-      <h3 className="shrink-0 text-xs font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
+    <div className="h-full min-w-0 rounded-xl border border-border bg-surface/30 p-4 dark:border-zinc-700/80 dark:bg-zinc-900/40 sm:flex sm:min-h-0 sm:flex-col">
+      <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/60 dark:text-zinc-500">
         Business snapshot
-      </h3>
-      <div className="mt-3 flex min-h-0 flex-1 flex-col rounded-xl border border-border bg-surface/40 p-4 dark:border-zinc-700/80 dark:bg-zinc-900/40">
+      </p>
+      <div className="mt-2 flex min-h-0 flex-1 flex-col">
         <p className="font-medium text-text-primary dark:text-zinc-100">{businessLabel}</p>
         {addressLabel ? (
           <p className="mt-1 text-sm text-text-secondary dark:text-zinc-400">{addressLabel}</p>

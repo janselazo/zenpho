@@ -67,10 +67,10 @@ function ReportSection({
   return (
     <section className="border-t border-border/80 pt-6 first:border-t-0 first:pt-0 dark:border-zinc-800">
       <div className="mb-4 flex flex-wrap items-baseline gap-2">
-        <span className="font-mono text-[10px] font-semibold tabular-nums text-text-secondary/50 dark:text-zinc-500">
+        <span className="font-mono text-[10px] font-semibold tabular-nums text-text-secondary/80 dark:text-zinc-400">
           {step}
         </span>
-        <h3 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
+        <h3 className="text-xs font-semibold uppercase tracking-widest text-text-secondary dark:text-zinc-300">
           {title}
         </h3>
       </div>
