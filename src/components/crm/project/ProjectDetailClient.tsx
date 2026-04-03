@@ -8,8 +8,10 @@ import {
   projectTeamDisplayName,
   PLAN_COLORS,
   PLAN_LABELS,
+  PLAN_STAGE_ORDER,
   TASK_STATUS_LABELS,
   TASK_STATUS_COLORS,
+  type PlanStage,
   type TaskStatus,
   type MockProject,
 } from "@/lib/crm/mock-data";
@@ -18,6 +20,7 @@ import {
   CRM_SUPABASE_PROJECTS_CHANGED_EVENT,
 } from "@/lib/crm/projects-storage";
 import {
+  clientRowToProjectSlice,
   projectRowToMock,
   type ProjectRow,
 } from "@/lib/crm/map-project-row";
@@ -125,16 +128,6 @@ export function ProjectDetailClient({
   } = useProjectWorkspace(phaseId);
 
   useEffect(() => {
-    function clientLabel(c: {
-      name?: string | null;
-      company?: string | null;
-      email?: string | null;
-    }) {
-      const parts = [c.name?.trim(), c.company?.trim()].filter(Boolean) as string[];
-      if (parts.length) return parts.join(" · ");
-      return c.email?.trim() || "Client";
-    }
-
     let cancelled = false;
 
     async function load(opts?: { showSpinner?: boolean }) {
@@ -207,9 +200,8 @@ export function ProjectDetailClient({
 
       if (cancelled) return;
 
-      setProject(
-        projectRowToMock(row as ProjectRow, clientLabel(client ?? {}))
-      );
+      const clientSlice = clientRowToProjectSlice(client ?? undefined);
+      setProject(projectRowToMock(row as ProjectRow, clientSlice));
     }
 
     void load({ showSpinner: true });
@@ -259,6 +251,11 @@ export function ProjectDetailClient({
   }
 
   const teamLabel = projectTeamDisplayName(project);
+  const planStageKey: PlanStage = (PLAN_STAGE_ORDER as readonly string[]).includes(
+    project.plan
+  )
+    ? (project.plan as PlanStage)
+    : "backlog";
   const sprints = workspace.sprints;
   const currentSprint = sprints.find((s) => s.isCurrent) ?? sprints[0];
   const sprintsInMilestone = currentSprint
@@ -553,9 +550,9 @@ export function ProjectDetailClient({
           <MetaField label="Plan">
             <span
               className="rounded-full px-2.5 py-0.5 text-xs font-medium text-white"
-              style={{ backgroundColor: PLAN_COLORS[project.plan] }}
+              style={{ backgroundColor: PLAN_COLORS[planStageKey] }}
             >
-              {PLAN_LABELS[project.plan]}
+              {PLAN_LABELS[planStageKey]}
             </span>
           </MetaField>
           {project.projectType ? (
