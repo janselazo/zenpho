@@ -155,7 +155,7 @@ export default function PlacesCategoryAutocomplete({
                         {s}
                       </span>
                       <span className="mt-0.5 block text-xs text-text-secondary dark:text-zinc-400">
-                        Use with city or ZIP to search Google Places
+                        Optional city narrows Text Search results
                       </span>
                     </span>
                   </button>

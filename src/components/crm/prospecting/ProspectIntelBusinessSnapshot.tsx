@@ -20,6 +20,16 @@ function badge(label: string, cls: string) {
   );
 }
 
+function googleBusinessStatusLabel(status: string): string {
+  const map: Record<string, string> = {
+    OPERATIONAL: "Active on Google Maps",
+    CLOSED_TEMPORARILY: "Temporarily closed",
+    CLOSED_PERMANENTLY: "Permanently closed",
+    FUTURE_OPENING: "Opening soon",
+  };
+  return map[status] ?? status.replace(/_/g, " ").toLowerCase();
+}
+
 type Props = {
   businessLabel: string;
   addressLabel: string | null;
@@ -34,6 +44,8 @@ type Props = {
   listingWebsiteUri?: string | null;
   /** Rule-based GTM insight (no separate “Summary” heading). */
   insightSummary?: string | null;
+  /** Google Places business lifecycle when available (e.g. OPERATIONAL). */
+  googleBusinessStatus?: string | null;
   /** When true, render without outer card chrome (parent provides border). */
   embedded?: boolean;
 };
@@ -48,6 +60,7 @@ export default function ProspectIntelBusinessSnapshot({
   fetchedPageUrl,
   listingWebsiteUri = null,
   insightSummary = null,
+  googleBusinessStatus = null,
   embedded = false,
 }: Props) {
   const shell = embedded
@@ -63,6 +76,19 @@ export default function ProspectIntelBusinessSnapshot({
         <p className="font-medium text-text-primary dark:text-zinc-100">{businessLabel}</p>
         {addressLabel ? (
           <p className="mt-1 text-sm text-text-secondary dark:text-zinc-400">{addressLabel}</p>
+        ) : null}
+        {!researchFromUrl && googleBusinessStatus?.trim() ? (
+          <p className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+            {badge(
+              googleBusinessStatus === "OPERATIONAL" ? "Active listing" : "Google status",
+              googleBusinessStatus === "OPERATIONAL"
+                ? "bg-emerald-500/15 text-emerald-900 dark:text-emerald-300"
+                : "bg-amber-500/15 text-amber-950 dark:text-amber-200"
+            )}
+            <span className="text-text-secondary dark:text-zinc-400">
+              {googleBusinessStatusLabel(googleBusinessStatus)}
+            </span>
+          </p>
         ) : null}
         {embedded && listingWebsiteUri?.trim() ? (
           <p className="mt-2 text-sm">
@@ -95,7 +121,7 @@ export default function ProspectIntelBusinessSnapshot({
             <span className="text-text-secondary dark:text-zinc-500">
               {badge("URL research", "bg-zinc-500/15 text-zinc-700 dark:text-zinc-300")}
               Google Places phone and Maps are available when you open a report from{" "}
-              <span className="font-medium text-text-primary dark:text-zinc-200">Discover businesses</span>.
+              <span className="font-medium text-text-primary dark:text-zinc-200">Local Business</span>.
             </span>
           ) : listingPhone ? (
             <span className="text-text-secondary dark:text-zinc-400">

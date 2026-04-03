@@ -1,44 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { PlacesSearchPlace } from "@/lib/crm/places-types";
-
-type GoogPlace = {
-  id?: string;
-  displayName?: { text?: string };
-  formattedAddress?: string;
-  rating?: number;
-  userRatingCount?: number;
-  websiteUri?: string;
-  types?: string[];
-  nationalPhoneNumber?: string;
-  internationalPhoneNumber?: string;
-  googleMapsUri?: string;
-};
+import {
+  normalizePlacesApiPlace,
+  PLACES_TEXT_SEARCH_FIELD_MASK,
+  type GoogPlaceJson,
+} from "@/lib/crm/places-google-shared";
 
 const MAX_QUERY_LEN = 280;
-
-function normalizePlace(p: GoogPlace): PlacesSearchPlace | null {
-  const id = p.id ?? "";
-  const name = p.displayName?.text?.trim() ?? "";
-  if (!id || !name) return null;
-  return {
-    id,
-    name,
-    formattedAddress: p.formattedAddress ?? null,
-    rating: typeof p.rating === "number" ? p.rating : null,
-    userRatingCount:
-      typeof p.userRatingCount === "number" ? p.userRatingCount : null,
-    websiteUri: p.websiteUri ?? null,
-    types: Array.isArray(p.types) ? p.types : [],
-    nationalPhoneNumber: p.nationalPhoneNumber?.trim() || null,
-    internationalPhoneNumber: p.internationalPhoneNumber?.trim() || null,
-    googleMapsUri: p.googleMapsUri?.trim() || null,
-  };
-}
-
-function looksLikeUsZip(s: string): boolean {
-  return /^\d{5}(-\d{4})?$/.test(s.trim());
-}
 
 function placeHasWebsite(p: PlacesSearchPlace): boolean {
   return Boolean(p.websiteUri?.trim());
@@ -60,7 +29,6 @@ type SearchBody = {
   businessName?: string;
   category?: string;
   city?: string;
-  zip?: string;
 };
 
 function resolveTextQuery(body: SearchBody): { ok: true; textQuery: string } | { ok: false; error: string } {
@@ -68,22 +36,20 @@ function resolveTextQuery(body: SearchBody): { ok: true; textQuery: string } | {
   const businessName = String(body.businessName ?? "").trim();
   const category = String(body.category ?? "").trim();
   const city = String(body.city ?? "").trim();
-  const zip = String(body.zip ?? "").trim();
 
-  const usesStructured = Boolean(businessName || category || city || zip);
+  const usesStructured = Boolean(businessName || category || city);
 
   if (usesStructured) {
     if (!category && !businessName) {
       return { ok: false, error: "Enter a business category and/or business name." };
     }
-    if (!city && !zip) {
-      return { ok: false, error: "Enter a city or ZIP code (or both)." };
-    }
-    const location = [city, zip].filter(Boolean).join(" ");
     const subject = [businessName, category].filter(Boolean).join(" ").trim();
-    let textQuery = `${subject} in ${location}`.trim();
+    let textQuery = city ? `${subject} in ${city}`.trim() : subject;
     if (textQuery.length > MAX_QUERY_LEN) {
       textQuery = textQuery.slice(0, MAX_QUERY_LEN);
+    }
+    if (!textQuery) {
+      return { ok: false, error: "Enter a business category and/or business name." };
     }
     return { ok: true, textQuery };
   }
@@ -100,7 +66,7 @@ function resolveTextQuery(body: SearchBody): { ok: true; textQuery: string } | {
 
   return {
     ok: false,
-    error: "Enter a business category and/or name, plus city or ZIP, to search.",
+    error: "Enter a business category and/or name to search (city is optional).",
   };
 }
 
@@ -136,8 +102,6 @@ export async function POST(req: Request) {
   }
   const textQuery = resolved.textQuery;
 
-  const zipTrimmed = String(body.zip ?? "").trim();
-
   const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim();
   if (!apiKey) {
     return NextResponse.json({
@@ -147,17 +111,12 @@ export async function POST(req: Request) {
     });
   }
 
-  const fieldMask =
-    "places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.websiteUri,places.types,places.nationalPhoneNumber,places.internationalPhoneNumber,places.googleMapsUri";
-
   const requestPayload: Record<string, unknown> = {
     textQuery,
     languageCode: "en",
-    // Window installers, HVAC, mobile locksmiths, etc. are often "service area" listings
-    // with no public storefront; Places omits them unless this flag is set.
     includePureServiceAreaBusinesses: true,
   };
-  if (looksLikeUsZip(zipTrimmed)) {
+  if (!String(body.city ?? "").trim()) {
     requestPayload.regionCode = "US";
   }
 
@@ -166,7 +125,7 @@ export async function POST(req: Request) {
     headers: {
       "Content-Type": "application/json",
       "X-Goog-Api-Key": apiKey,
-      "X-Goog-FieldMask": fieldMask,
+      "X-Goog-FieldMask": PLACES_TEXT_SEARCH_FIELD_MASK,
     },
     body: JSON.stringify(requestPayload),
   });
@@ -180,14 +139,13 @@ export async function POST(req: Request) {
     });
   }
 
-  const data = (await res.json()) as { places?: GoogPlace[] };
+  const data = (await res.json()) as { places?: GoogPlaceJson[] };
   let places = (data.places ?? [])
-    .map(normalizePlace)
+    .map(normalizePlacesApiPlace)
     .filter((x): x is PlacesSearchPlace => x !== null);
 
   places = sortPlacesNoWebsiteFirst(places);
 
-  /** Full Text Search results; “no website only” is applied in the client when the checkbox is on. */
   return NextResponse.json({
     places,
   });

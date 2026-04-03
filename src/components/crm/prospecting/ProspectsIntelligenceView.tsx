@@ -23,8 +23,8 @@ import {
   createLeadFromProspectIntelAction,
 } from "@/app/(crm)/actions/prospect-intel";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Building2, ChevronLeft, ChevronRight, Globe } from "lucide-react";
-import IconTabBar from "@/components/crm/prospecting/IconTabBar";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import PlacesBusinessAutocomplete from "@/components/crm/prospecting/PlacesBusinessAutocomplete";
 import PlacesCategoryAutocomplete from "@/components/crm/prospecting/PlacesCategoryAutocomplete";
 import PlacesSearchResultsList from "@/components/crm/prospecting/PlacesSearchResultsList";
 import ProspectIntelEnrichment, {
@@ -58,6 +58,17 @@ function primaryPlaceTypes(types: string[]): string {
   return s || "—";
 }
 
+function googleListingStatusGlance(status: string | null | undefined): string | null {
+  if (!status?.trim()) return null;
+  const map: Record<string, string> = {
+    OPERATIONAL: "Active on Google",
+    CLOSED_TEMPORARILY: "Temporarily closed",
+    CLOSED_PERMANENTLY: "Permanently closed",
+    FUTURE_OPENING: "Opening soon",
+  };
+  return map[status] ?? status.replace(/_/g, " ").toLowerCase();
+}
+
 function buildIntelGlanceFacts(
   ar:
     | {
@@ -69,6 +80,10 @@ function buildIntelGlanceFacts(
   if (ar.kind === "place") {
     const p = ar.place;
     const out: IntelGlanceFact[] = [];
+    const listingSt = googleListingStatusGlance(p.businessStatus);
+    if (listingSt) {
+      out.push({ label: "Google listing status", value: listingSt });
+    }
     if (p.rating != null && p.userRatingCount != null) {
       out.push({
         label: "Google rating",
@@ -606,11 +621,9 @@ function ProspectsIntelligenceViewInner({
   const prevReportSearchParam = useRef<string | null>(null);
   const defaultProjectType =
     fieldOptions.leadProjectTypes[0] ?? "Other";
-  const [researchTab, setResearchTab] = useState<"discover" | "url">("discover");
   const [businessName, setBusinessName] = useState("");
   const [category, setCategory] = useState("");
   const [city, setCity] = useState("");
-  const [zip, setZip] = useState("");
   const [onlyNoWebsite, setOnlyNoWebsite] = useState(false);
   const [places, setPlaces] = useState<PlacesSearchPlace[]>([]);
   const [placesWarning, setPlacesWarning] = useState<string | null>(null);
@@ -698,16 +711,36 @@ function ProspectsIntelligenceViewInner({
 
   const applyPlaceReport = useCallback(
     (place: PlacesSearchPlace) => {
-      const signals = signalsFromPlace(place);
+      const normalized: PlacesSearchPlace = {
+        ...place,
+        businessStatus: place.businessStatus ?? null,
+      };
+      const signals = signalsFromPlace(normalized);
       const report = buildMarketIntelReport(signals);
-      setPlaceReport({ place, report });
+      setPlaceReport({ place: normalized, report });
       setUrlReport(null);
       setUrlMeta(null);
       setUrlHomepageHints(null);
-      syncLeadFormFromPlace(place, report);
-      setResearchTab("discover");
+      syncLeadFormFromPlace(normalized, report);
     },
     [syncLeadFormFromPlace]
+  );
+
+  const onPlacesAutocompleteResolved = useCallback(
+    (place: PlacesSearchPlace) => {
+      applyPlaceReport(place);
+      setPlaces([place]);
+      setPlacesFormError(null);
+      setPlacesWarning(null);
+      queueMicrotask(() => {
+        requestAnimationFrame(() => {
+          document
+            .getElementById("prospect-market-intel-report")
+            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      });
+    },
+    [applyPlaceReport]
   );
 
   useEffect(() => {
@@ -729,7 +762,11 @@ function ProspectsIntelligenceViewInner({
     }
 
     try {
-      const place = JSON.parse(raw) as PlacesSearchPlace;
+      const parsed = JSON.parse(raw) as PlacesSearchPlace;
+      const place: PlacesSearchPlace = {
+        ...parsed,
+        businessStatus: parsed.businessStatus ?? null,
+      };
       if (!place?.id || !place?.name) {
         sessionStorage.removeItem(SESSION_PLACE_REPORT_KEY);
         router.replace("/prospecting/prospects", { scroll: false });
@@ -774,13 +811,8 @@ function ProspectsIntelligenceViewInner({
     const nameTrim = businessName.trim();
     const cat = category.trim();
     const cityTrim = city.trim();
-    const zipTrim = zip.trim();
     if (!cat && !nameTrim) {
       setPlacesFormError("Enter a business category and/or business name.");
-      return;
-    }
-    if (!cityTrim && !zipTrim) {
-      setPlacesFormError("Enter a city or ZIP code (or both).");
       return;
     }
 
@@ -794,8 +826,7 @@ function ProspectsIntelligenceViewInner({
         body: JSON.stringify({
           businessName: nameTrim || undefined,
           category: cat,
-          city: cityTrim,
-          zip: zipTrim,
+          city: cityTrim || undefined,
         }),
       });
       const data = await res.json();
@@ -952,34 +983,18 @@ function ProspectsIntelligenceViewInner({
       </div>
 
       <div className={`${cardClass} space-y-4`}>
-        <IconTabBar
-          tabs={[
-            { id: "discover", label: "Discover businesses", icon: Building2 },
-            { id: "url", label: "Research from website URL", icon: Globe },
-          ]}
-          activeTab={researchTab}
-          onTabChange={(id) => setResearchTab(id as "discover" | "url")}
-          ariaLabel="Prospects tools"
-        />
-
-        <div
-          id="discover-panel"
-          role="tabpanel"
-          aria-labelledby="discover-tab"
-          hidden={researchTab !== "discover"}
-          className="space-y-4"
-        >
+        <div id="local-business-panel" className="space-y-4">
           <div>
             <h2 className="text-sm font-semibold text-text-primary dark:text-zinc-100">
-              Discover businesses (Google Places)
+              Local Business (Google Places)
             </h2>
             <p className="mt-1 text-xs text-text-secondary dark:text-zinc-500">
-              Uses the Places API (Text Search), not HTML scraping. Requires{" "}
+              Business names use Google Places Autocomplete; bulk discovery still uses Text Search. Requires{" "}
               <code className="rounded bg-surface px-1 font-mono text-[11px] dark:bg-zinc-800">
                 GOOGLE_PLACES_API_KEY
               </code>{" "}
-              on the server. Service-area businesses (e.g. installers, HVAC, mobile trades) are included in
-              results. Website status comes from the listing field (sometimes omitted even if a site exists).
+              on the server. Pick a suggestion to open the report. Service-area businesses are included.
+              Website on the listing is sometimes omitted even if a site exists.
             </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -987,12 +1002,12 @@ function ProspectsIntelligenceViewInner({
               <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
                 Business name
               </label>
-              <input
-                type="text"
+              <PlacesBusinessAutocomplete
                 value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
-                placeholder="e.g. Doral Acura (optional—narrows results)"
-                className="w-full rounded-full border border-border bg-white px-4 py-2.5 text-sm shadow-sm outline-none transition-[box-shadow,border-color] focus:border-accent focus:ring-2 focus:ring-accent/20 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-blue-500 dark:focus:ring-blue-500/20"
+                onChange={setBusinessName}
+                cityHint={city}
+                disabled={placesLoading}
+                onPlaceResolved={onPlacesAutocompleteResolved}
               />
             </div>
             <div className="sm:col-span-2">
@@ -1005,33 +1020,22 @@ function ProspectsIntelligenceViewInner({
                 suggestions={PLACES_TEXT_SEARCH_CATEGORY_SUGGESTIONS}
               />
             </div>
-            <div>
+            <div className="sm:col-span-2">
               <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
-                City / area
+                City / area <span className="font-normal">(optional)</span>
               </label>
               <input
                 type="text"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                placeholder="e.g. Orlando FL"
-                className="w-full rounded-full border border-border bg-white px-4 py-2.5 text-sm shadow-sm outline-none transition-[box-shadow,border-color] focus:border-accent focus:ring-2 focus:ring-accent/20 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-blue-500 dark:focus:ring-blue-500/20"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
-                ZIP code
-              </label>
-              <input
-                type="text"
-                value={zip}
-                onChange={(e) => setZip(e.target.value)}
-                placeholder="e.g. 32801"
+                placeholder="Narrows Text Search and business autocomplete (e.g. Orlando FL)"
                 className="w-full rounded-full border border-border bg-white px-4 py-2.5 text-sm shadow-sm outline-none transition-[box-shadow,border-color] focus:border-accent focus:ring-2 focus:ring-accent/20 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-blue-500 dark:focus:ring-blue-500/20"
               />
             </div>
           </div>
           <p className="text-xs text-text-secondary dark:text-zinc-500">
-            Enter a category, a business name, or both—plus at least one of city or ZIP (you can use both).
+            Type a business name and choose a Google suggestion to jump straight to the report, or enter a
+            category (and optional name / city) and run Text Search for a list.
           </p>
           <label className="flex cursor-pointer items-start gap-2 text-sm text-text-primary dark:text-zinc-200">
             <input
@@ -1073,12 +1077,29 @@ function ProspectsIntelligenceViewInner({
           ) : null}
         </div>
 
+        {places.length > 0 ? (
+          <div className="space-y-3 border-t border-border pt-4 dark:border-zinc-800">
+            {onlyNoWebsite && placesDisplayed.length > 0 && places.length > placesDisplayed.length ? (
+              <p className="text-xs text-text-secondary dark:text-zinc-500">
+                Showing {placesDisplayed.length} of {places.length} without a website URL on the listing (
+                {places.length - placesDisplayed.length} with a site hidden).
+              </p>
+            ) : null}
+            {placesDisplayed.length > 0 ? (
+              <PlacesSearchResultsList
+                places={placesDisplayed}
+                onlyNoWebsite={onlyNoWebsite}
+                searchResultCount={places.length}
+                highlightQuery={[businessName, category].filter(Boolean).join(" ").trim()}
+                onViewReport={viewPlaceReport}
+              />
+            ) : null}
+          </div>
+        ) : null}
+
         <div
-          id="url-panel"
-          role="tabpanel"
-          aria-labelledby="url-tab"
-          hidden={researchTab !== "url"}
-          className="space-y-4"
+          id="url-research-panel"
+          className="space-y-4 border-t border-border pt-6 dark:border-zinc-800"
         >
           <div>
             <h2 className="text-sm font-semibold text-text-primary dark:text-zinc-100">
@@ -1110,26 +1131,6 @@ function ProspectsIntelligenceViewInner({
             <p className="text-sm text-red-600 dark:text-red-400">{urlError}</p>
           ) : null}
         </div>
-
-        {places.length > 0 ? (
-          <div className="space-y-3 border-t border-border pt-4 dark:border-zinc-800">
-            {onlyNoWebsite && placesDisplayed.length > 0 && places.length > placesDisplayed.length ? (
-              <p className="text-xs text-text-secondary dark:text-zinc-500">
-                Showing {placesDisplayed.length} of {places.length} without a website URL on the listing (
-                {places.length - placesDisplayed.length} with a site hidden).
-              </p>
-            ) : null}
-            {placesDisplayed.length > 0 ? (
-              <PlacesSearchResultsList
-                places={placesDisplayed}
-                onlyNoWebsite={onlyNoWebsite}
-                searchResultCount={places.length}
-                highlightQuery={[businessName, category].filter(Boolean).join(" ").trim()}
-                onViewReport={viewPlaceReport}
-              />
-            ) : null}
-          </div>
-        ) : null}
       </div>
 
       {activeReport ? (
@@ -1172,6 +1173,11 @@ function ProspectsIntelligenceViewInner({
                   <ProspectIntelBusinessSnapshot
                     embedded
                     insightSummary={activeReport.report.summary}
+                    googleBusinessStatus={
+                      activeReport.kind === "place"
+                        ? activeReport.place.businessStatus?.trim() || null
+                        : null
+                    }
                     listingWebsiteUri={
                       activeReport.kind === "place"
                         ? activeReport.place.websiteUri?.trim() || null
@@ -1362,10 +1368,10 @@ function ProspectsIntelligenceViewInner({
         </div>
       ) : (
         <div className={`${cardClass} text-sm text-text-secondary dark:text-zinc-500`}>
-          Open <strong className="text-text-primary dark:text-zinc-300">Discover businesses</strong>{" "}
-          to search Places, or <strong className="text-text-primary dark:text-zinc-300">Research from website URL</strong>{" "}
-          for a URL report. Then click <strong className="text-text-primary dark:text-zinc-300">View report</strong> or finish
-          URL research to generate a report and add a Lead.
+          Use <strong className="text-text-primary dark:text-zinc-300">Local Business</strong> (pick a
+          suggestion or run Text Search and open <strong className="text-text-primary dark:text-zinc-300">View report</strong>
+          ), or <strong className="text-text-primary dark:text-zinc-300">Research from website URL</strong> below it, to
+          generate a report and add a Lead.
         </div>
       )}
     </div>

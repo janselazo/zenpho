@@ -11,4 +11,6 @@ export type PlacesSearchPlace = {
   nationalPhoneNumber: string | null;
   internationalPhoneNumber: string | null;
   googleMapsUri: string | null;
+  /** Google listing lifecycle, e.g. OPERATIONAL, CLOSED_PERMANENTLY (Place Details / Text Search when requested). */
+  businessStatus: string | null;
 };
