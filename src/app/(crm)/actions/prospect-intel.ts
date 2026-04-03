@@ -26,6 +26,9 @@ import { assignProspectTagToLead, createLead } from "@/app/(crm)/actions/crm";
 import { outscraperMapsSearch } from "@/lib/integrations/outscraper";
 import { apolloSearchDecisionMakers, apolloEnrichPeopleById } from "@/lib/integrations/apollo";
 import { hunterDomainSearch } from "@/lib/integrations/hunter";
+import type { PlacesSearchPlace } from "@/lib/crm/places-types";
+import { signalsFromPlace } from "@/lib/crm/prospect-intel-place-signals";
+import { formatReportAsPlainNotes } from "@/lib/crm/prospect-intel-notes-format";
 
 async function requireAgencyStaff() {
   const supabase = await createClient();
@@ -272,6 +275,45 @@ export async function saveProspectIntelReportAction(payload: Record<string, unkn
 
   revalidatePath("/prospecting/prospects");
   return { ok: true as const, id: data.id as string };
+}
+
+/** Create a CRM lead from a Google Places row (same notes/tag path as the full Prospects form). */
+export async function createLeadFromPlacesListingAction(
+  place: PlacesSearchPlace,
+  project_type: string
+) {
+  const auth = await requireAgencyStaff();
+  if (auth.error) return { error: auth.error };
+
+  const normalized: PlacesSearchPlace = {
+    ...place,
+    businessStatus: place.businessStatus ?? null,
+  };
+  const report = buildMarketIntelReport(signalsFromPlace(normalized));
+  const listingPhone =
+    normalized.nationalPhoneNumber?.trim() ||
+    normalized.internationalPhoneNumber?.trim() ||
+    "";
+  const contactLines: string[] = [];
+  if (listingPhone) contactLines.push(`Google listing phone: ${listingPhone}`);
+  const maps = normalized.googleMapsUri?.trim();
+  if (maps) contactLines.push(`Google Maps: ${maps}`);
+  const extra = [normalized.formattedAddress, normalized.websiteUri].filter(Boolean).join("\n");
+  const notes = formatReportAsPlainNotes(
+    report,
+    extra || undefined,
+    contactLines.join("\n") || undefined
+  );
+
+  return createLeadFromProspectIntelAction({
+    name: normalized.name.trim() || "Unknown",
+    company: normalized.name.trim() || undefined,
+    phone: listingPhone || undefined,
+    email: undefined,
+    website: normalized.websiteUri?.trim() || undefined,
+    notes,
+    project_type,
+  });
 }
 
 export async function createLeadFromProspectIntelAction(input: {

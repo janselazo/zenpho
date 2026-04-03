@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState, type ReactNode } from "react";
-import { Building2, ExternalLink } from "lucide-react";
+import { Building2, ExternalLink, FileBarChart, Loader2, UserPlus } from "lucide-react";
 import type { PlacesSearchPlace } from "@/lib/crm/places-types";
 import {
   googleFaviconUrl,
@@ -70,7 +70,13 @@ type Props = {
   searchResultCount?: number;
   highlightQuery: string;
   onViewReport: (place: PlacesSearchPlace) => void;
+  /** Current project type for quick Create lead (must match CRM field options). */
+  projectType: string;
+  onQuickCreateLead: (place: PlacesSearchPlace) => Promise<void>;
 };
+
+const iconActionClass =
+  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-white text-text-primary shadow-sm transition-colors hover:bg-surface disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700";
 
 export default function PlacesSearchResultsList({
   places,
@@ -78,7 +84,10 @@ export default function PlacesSearchResultsList({
   searchResultCount,
   highlightQuery,
   onViewReport,
+  projectType,
+  onQuickCreateLead,
 }: Props) {
+  const [creatingId, setCreatingId] = useState<string | null>(null);
   const fullCount = searchResultCount ?? places.length;
   const hiddenWithSite =
     onlyNoWebsite && fullCount > places.length ? fullCount - places.length : 0;
@@ -175,13 +184,34 @@ export default function PlacesSearchResultsList({
                     ) : null}
                   </div>
                 </div>
-                <div className="flex shrink-0 flex-col justify-center gap-2">
+                <div className="flex shrink-0 items-center justify-center gap-1.5">
                   <button
                     type="button"
-                    onClick={() => onViewReport(p)}
-                    className="rounded-full border border-border bg-white px-4 py-2 text-xs font-semibold text-text-primary shadow-sm hover:bg-surface dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
+                    title="Create lead"
+                    aria-label="Create lead from this listing"
+                    disabled={!projectType.trim() || creatingId === p.id}
+                    className={iconActionClass}
+                    onClick={() => {
+                      setCreatingId(p.id);
+                      void onQuickCreateLead(p).finally(() => {
+                        setCreatingId(null);
+                      });
+                    }}
                   >
-                    View report
+                    {creatingId === p.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                    ) : (
+                      <UserPlus className="h-4 w-4" aria-hidden />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    title="View market intelligence report"
+                    aria-label="View market intelligence report"
+                    className={iconActionClass}
+                    onClick={() => onViewReport(p)}
+                  >
+                    <FileBarChart className="h-4 w-4" aria-hidden />
                   </button>
                 </div>
               </div>

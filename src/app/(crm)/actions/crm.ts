@@ -595,7 +595,8 @@ export async function setLeadTagAssigned(
 
 /** Catalog name for leads sourced from Prospecting (intel, etc.). */
 const PROSPECT_LEAD_TAG_NAME = "Prospect";
-const PROSPECT_LEAD_TAG_COLOR = "#6366f1";
+/** Light sky blue for new tag rows only; existing `lead_tag` rows are not updated on read. */
+const PROSPECT_LEAD_TAG_COLOR = "#7dd3fc";
 
 async function ensureProspectLeadTagId(
   supabase: SupabaseServer

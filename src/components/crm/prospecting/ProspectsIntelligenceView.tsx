@@ -12,8 +12,8 @@ import {
 import {
   buildMarketIntelReport,
   type MarketIntelReport,
-  type IntelSignals,
 } from "@/lib/crm/prospect-intel-report";
+import { signalsFromPlace } from "@/lib/crm/prospect-intel-place-signals";
 import type { PlacesSearchPlace } from "@/lib/crm/places-types";
 import { PLACES_TEXT_SEARCH_CATEGORY_SUGGESTIONS } from "@/lib/crm/places-text-search-category-suggestions";
 import type { MergedCrmFieldOptions } from "@/lib/crm/field-options";
@@ -21,6 +21,7 @@ import {
   researchProspectFromUrl,
   saveProspectIntelReportAction,
   createLeadFromProspectIntelAction,
+  createLeadFromPlacesListingAction,
 } from "@/app/(crm)/actions/prospect-intel";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -598,22 +599,6 @@ function IntelHighlightsCarousel({
   );
 }
 
-function signalsFromPlace(place: PlacesSearchPlace): IntelSignals {
-  const uri = place.websiteUri?.trim() || null;
-  return {
-    name: place.name,
-    hasWebsite: Boolean(uri),
-    websiteUrl: uri,
-    https: uri ? uri.startsWith("https:") : undefined,
-    pageTitle: null,
-    metaDescription: null,
-    rating: place.rating,
-    reviewCount: place.userRatingCount,
-    placeTypes: place.types,
-    formattedAddress: place.formattedAddress,
-  };
-}
-
 const INITIAL_WEBSITE_DEEP: ProspectWebsiteDeepStatus = {
   loading: false,
   contacts: null,
@@ -638,6 +623,7 @@ function ProspectsIntelligenceViewInner({
   const [placesWarning, setPlacesWarning] = useState<string | null>(null);
   const [placesLoading, setPlacesLoading] = useState(false);
   const [placesFormError, setPlacesFormError] = useState<string | null>(null);
+  const [quickPlacesLeadMessage, setQuickPlacesLeadMessage] = useState<string | null>(null);
 
   /** Checkbox filters client-side so toggling works without re-running Text Search. */
   const placesDisplayed = useMemo(
@@ -827,6 +813,7 @@ function ProspectsIntelligenceViewInner({
 
     setPlacesLoading(true);
     setPlacesWarning(null);
+    setQuickPlacesLeadMessage(null);
     setPlaces([]);
     try {
       const res = await fetch("/api/prospecting/places-search", {
@@ -899,6 +886,20 @@ function ProspectsIntelligenceViewInner({
       setUrlLoading(false);
     }
   }
+
+  const handleQuickCreateFromPlace = useCallback(
+    async (place: PlacesSearchPlace) => {
+      setQuickPlacesLeadMessage(null);
+      const res = await createLeadFromPlacesListingAction(place, projectType);
+      if ("error" in res && res.error) {
+        setQuickPlacesLeadMessage(res.error);
+        return;
+      }
+      setQuickPlacesLeadMessage("Lead created with Prospect tag. You can find it under Leads.");
+      router.refresh();
+    },
+    [projectType, router]
+  );
 
   const viewPlaceReport = useCallback(
     (place: PlacesSearchPlace) => {
@@ -1094,6 +1095,18 @@ function ProspectsIntelligenceViewInner({
                 {places.length - placesDisplayed.length} with a site hidden).
               </p>
             ) : null}
+            {quickPlacesLeadMessage ? (
+              <p
+                className={`text-sm ${
+                  quickPlacesLeadMessage.startsWith("Lead created")
+                    ? "text-emerald-700 dark:text-emerald-400"
+                    : "text-red-600 dark:text-red-400"
+                }`}
+                role="status"
+              >
+                {quickPlacesLeadMessage}
+              </p>
+            ) : null}
             {placesDisplayed.length > 0 ? (
               <PlacesSearchResultsList
                 places={placesDisplayed}
@@ -1101,6 +1114,8 @@ function ProspectsIntelligenceViewInner({
                 searchResultCount={places.length}
                 highlightQuery={[businessName, category].filter(Boolean).join(" ").trim()}
                 onViewReport={viewPlaceReport}
+                projectType={projectType}
+                onQuickCreateLead={handleQuickCreateFromPlace}
               />
             ) : null}
           </div>

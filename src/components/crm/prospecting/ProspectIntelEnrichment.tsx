@@ -257,7 +257,8 @@ export default function ProspectIntelEnrichment({
           Scrapers
         </h3>
         <p className="mt-1 text-xs text-text-secondary dark:text-zinc-500">
-          Open a tool to run Maps export, Apollo people search, or Hunter domain emails. Fields stay hidden until you choose one.
+          Open a tool to run Maps export, Apollo people search, or Hunter domain emails. Results stay hidden until you
+          choose one.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <button
@@ -276,7 +277,7 @@ export default function ProspectIntelEnrichment({
             aria-expanded={activeTool === "apollo"}
           >
             <span className="font-semibold text-text-primary dark:text-zinc-100">Apollo</span>
-            {badge("Decision makers", "bg-violet-500/15 text-violet-900 dark:text-violet-200")}
+            {badge("People search", "bg-violet-500/15 text-violet-900 dark:text-violet-200")}
           </button>
           <button
             type="button"
@@ -330,15 +331,15 @@ export default function ProspectIntelEnrichment({
         {activeTool === "apollo" ? (
           <div className="mt-4 rounded-xl border border-border/80 p-4 dark:border-zinc-700/60">
             <p className="text-xs text-text-secondary dark:text-zinc-500">
-              Uses company domain{domain ? ` (${domain})` : ""} with Apollo People Search, then{" "}
-              <strong className="font-medium text-text-primary dark:text-zinc-300">People Enrichment</strong>{" "}
-              (<code className="rounded bg-surface px-1 font-mono dark:bg-zinc-800">/people/match</code> with{" "}
+              Uses company domain ({domain?.trim() || "barkforcuts.com"}) with Apollo People Search, then People
+              Enrichment (
+              <code className="rounded bg-surface px-1 font-mono dark:bg-zinc-800">/people/match</code> with{" "}
               <code className="rounded bg-surface px-1 font-mono dark:bg-zinc-800">reveal_personal_emails</code>
-              ) to load work email, LinkedIn, and any phone Apollo returns on the enriched record. Requires a
-              master{" "}
+              ) to load work email, LinkedIn, and any phone Apollo returns on the enriched record. Requires a master{" "}
               <code className="rounded bg-surface px-1 font-mono dark:bg-zinc-800">APOLLO_API_KEY</code> in{" "}
-              .env.local and consumes Apollo credits. Mobile direct-dial often needs a webhook in Apollo—we do
-              not call that path here; use Hunter for more domain emails if needed.
+              <code className="rounded bg-surface px-1 font-mono dark:bg-zinc-800">.env.local</code> and consumes Apollo
+              credits. Mobile direct-dial often needs a webhook in Apollo—we do not call that path here; use Hunter for
+              more domain emails if needed.
             </p>
             <button
               type="button"
