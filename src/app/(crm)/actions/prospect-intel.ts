@@ -24,12 +24,8 @@ import type {
 } from "@/lib/crm/prospect-enrichment-types";
 import { assignProspectTagToLead, createLead } from "@/app/(crm)/actions/crm";
 import { outscraperMapsSearch } from "@/lib/integrations/outscraper";
-import { apolloSearchDecisionMakers } from "@/lib/integrations/apollo";
+import { apolloSearchDecisionMakers, apolloEnrichPeopleById } from "@/lib/integrations/apollo";
 import { hunterDomainSearch } from "@/lib/integrations/hunter";
-import {
-  fetchInstagramPublicProfileBio,
-  type InstagramFetchBioResult,
-} from "@/lib/crm/instagram-profile-fetch";
 
 async function requireAgencyStaff() {
   const supabase = await createClient();
@@ -228,6 +224,16 @@ export async function apolloProspectPeopleAction(
   return apolloSearchDecisionMakers(domain, 5);
 }
 
+/** People Enrichment after search — email / LinkedIn / phone when Apollo returns them (uses credits). */
+export async function apolloEnrichProspectPeopleAction(
+  domain: string,
+  personIds: string[]
+): ReturnType<typeof apolloEnrichPeopleById> {
+  const auth = await requireAgencyStaff();
+  if (auth.error) return { ok: false, error: auth.error };
+  return apolloEnrichPeopleById(domain, personIds);
+}
+
 export async function hunterProspectDomainAction(
   domain: string,
   knownEmails: string[]
@@ -236,13 +242,6 @@ export async function hunterProspectDomainAction(
   if (auth.error) return { ok: false, error: auth.error };
   const ex = new Set(knownEmails.map((e) => e.trim().toLowerCase()).filter(Boolean));
   return hunterDomainSearch(domain, ex, 15);
-}
-
-/** Tries to load public bio + name from Instagram HTML (may fail when Meta blocks server requests). */
-export async function fetchInstagramBioFromUrlAction(raw: string): Promise<InstagramFetchBioResult> {
-  const auth = await requireAgencyStaff();
-  if (auth.error) return { ok: false, error: auth.error };
-  return fetchInstagramPublicProfileBio(raw);
 }
 
 export async function saveProspectIntelReportAction(payload: Record<string, unknown>) {

@@ -5,6 +5,7 @@ import {
   enrichWebsiteContactsDeepAction,
   outscraperProspectSearchAction,
   apolloProspectPeopleAction,
+  apolloEnrichProspectPeopleAction,
   hunterProspectDomainAction,
   type HomepageContactHints,
 } from "@/app/(crm)/actions/prospect-intel";
@@ -74,6 +75,8 @@ export default function ProspectIntelEnrichment({
   const [apolloPeople, setApolloPeople] = useState<ApolloPersonRow[] | null>(null);
   const [apolloLoading, setApolloLoading] = useState(false);
   const [apolloError, setApolloError] = useState<string | null>(null);
+  const [apolloEnrichLoading, setApolloEnrichLoading] = useState(false);
+  const [apolloEnrichError, setApolloEnrichError] = useState<string | null>(null);
 
   const [hunterEmails, setHunterEmails] = useState<HunterEmailRow[] | null>(null);
   const [hunterLoading, setHunterLoading] = useState(false);
@@ -162,16 +165,52 @@ export default function ProspectIntelEnrichment({
     });
   }, [outQuery]);
 
+  const mergeApolloEnrichment = useCallback(
+    (
+      rows: ApolloPersonRow[],
+      byId: Record<string, { email: string | null; phone: string | null; linkedinUrl: string | null }>
+    ): ApolloPersonRow[] =>
+      rows.map((row) => {
+        const id = row.apolloPersonId;
+        if (!id) return row;
+        const e = byId[id];
+        if (!e) return row;
+        return {
+          ...row,
+          email: row.email ?? e.email,
+          phone: row.phone ?? e.phone,
+          linkedinUrl: row.linkedinUrl ?? e.linkedinUrl,
+        };
+      }),
+    []
+  );
+
   const runApollo = useCallback(() => {
     if (!domain) return;
     setApolloLoading(true);
     setApolloError(null);
+    setApolloEnrichError(null);
     void apolloProspectPeopleAction(domain).then((r) => {
       setApolloLoading(false);
-      if (r.ok) setApolloPeople(r.people);
-      else setApolloError(r.error);
+      if (!r.ok) {
+        setApolloError(r.error);
+        return;
+      }
+      const base = r.people;
+      setApolloPeople(base);
+      const ids = base.map((p) => p.apolloPersonId).filter((x): x is string => Boolean(x));
+      if (ids.length === 0) return;
+      setApolloEnrichLoading(true);
+      void apolloEnrichProspectPeopleAction(domain, ids).then((er) => {
+        setApolloEnrichLoading(false);
+        if (!er.ok) {
+          setApolloEnrichError(er.error);
+          return;
+        }
+        setApolloPeople(mergeApolloEnrichment(base, er.byId));
+      });
     });
-  }, [domain]);
+  }, [domain, mergeApolloEnrichment]);
 
   const runHunter = useCallback(() => {
     if (!domain) return;
@@ -291,21 +330,37 @@ export default function ProspectIntelEnrichment({
         {activeTool === "apollo" ? (
           <div className="mt-4 rounded-xl border border-border/80 p-4 dark:border-zinc-700/60">
             <p className="text-xs text-text-secondary dark:text-zinc-500">
-              Uses company domain{domain ? ` (${domain})` : ""} with Apollo&apos;s People API Search. Use a
+              Uses company domain{domain ? ` (${domain})` : ""} with Apollo People Search, then{" "}
+              <strong className="font-medium text-text-primary dark:text-zinc-300">People Enrichment</strong>{" "}
+              (<code className="rounded bg-surface px-1 font-mono dark:bg-zinc-800">/people/match</code> with{" "}
+              <code className="rounded bg-surface px-1 font-mono dark:bg-zinc-800">reveal_personal_emails</code>
+              ) to load work email, LinkedIn, and any phone Apollo returns on the enriched record. Requires a
               master{" "}
-              <code className="rounded bg-surface px-1 font-mono dark:bg-zinc-800">APOLLO_API_KEY</code> in
-              .env.local. This API returns names and titles (often obfuscated last names); it does not return
-              email or phone—use Hunter or your Apollo workflow for contact details.
+              <code className="rounded bg-surface px-1 font-mono dark:bg-zinc-800">APOLLO_API_KEY</code> in{" "}
+              .env.local and consumes Apollo credits. Mobile direct-dial often needs a webhook in Apollo—we do
+              not call that path here; use Hunter for more domain emails if needed.
             </p>
             <button
               type="button"
-              disabled={apolloLoading || !domain}
+              disabled={apolloLoading || apolloEnrichLoading || !domain}
               onClick={runApollo}
               className="mt-3 rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-surface disabled:opacity-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
             >
-              {apolloLoading ? "Loading…" : "Load top people (Apollo)"}
+              {apolloLoading
+                ? "Searching…"
+                : apolloEnrichLoading
+                  ? "Enriching contacts…"
+                  : "Load top people (Apollo)"}
             </button>
+            {apolloEnrichLoading ? (
+              <p className="mt-2 text-xs text-text-secondary dark:text-zinc-500">
+                Fetching emails, LinkedIn, and phone from Apollo enrichment…
+              </p>
+            ) : null}
             {apolloError ? <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">{apolloError}</p> : null}
+            {apolloEnrichError ? (
+              <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">{apolloEnrichError}</p>
+            ) : null}
             {apolloPeople && apolloPeople.length > 0 ? (
               <div className="mt-3 overflow-x-auto">
                 <table className="w-full min-w-[28rem] border-collapse text-left text-xs">
@@ -320,7 +375,7 @@ export default function ProspectIntelEnrichment({
                   </thead>
                   <tbody>
                     {apolloPeople.map((p, i) => (
-                      <tr key={i} className="border-b border-border/60 dark:border-zinc-800">
+                      <tr key={p.apolloPersonId ?? `apollo-${i}`} className="border-b border-border/60 dark:border-zinc-800">
                         <td className="py-2 pr-2 font-medium text-text-primary dark:text-zinc-200">{p.name}</td>
                         <td className="py-2 pr-2 text-text-secondary dark:text-zinc-400">{p.title ?? "—"}</td>
                         <td className="py-2 pr-2">

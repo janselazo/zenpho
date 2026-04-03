@@ -56,29 +56,32 @@ function sortPlacesNoWebsiteFirst(places: PlacesSearchPlace[]): PlacesSearchPlac
 
 type SearchBody = {
   textQuery?: string;
+  /** Optional: narrows Text Search to a specific business name (combined with category when both set). */
+  businessName?: string;
   category?: string;
   city?: string;
   zip?: string;
-  onlyNoWebsite?: boolean;
 };
 
 function resolveTextQuery(body: SearchBody): { ok: true; textQuery: string } | { ok: false; error: string } {
   const legacy = String(body.textQuery ?? "").trim();
+  const businessName = String(body.businessName ?? "").trim();
   const category = String(body.category ?? "").trim();
   const city = String(body.city ?? "").trim();
   const zip = String(body.zip ?? "").trim();
 
-  const usesStructured = Boolean(category || city || zip);
+  const usesStructured = Boolean(businessName || category || city || zip);
 
   if (usesStructured) {
-    if (!category) {
-      return { ok: false, error: "Enter a business category." };
+    if (!category && !businessName) {
+      return { ok: false, error: "Enter a business category and/or business name." };
     }
     if (!city && !zip) {
       return { ok: false, error: "Enter a city or ZIP code (or both)." };
     }
     const location = [city, zip].filter(Boolean).join(" ");
-    let textQuery = `${category} in ${location}`.trim();
+    const subject = [businessName, category].filter(Boolean).join(" ").trim();
+    let textQuery = `${subject} in ${location}`.trim();
     if (textQuery.length > MAX_QUERY_LEN) {
       textQuery = textQuery.slice(0, MAX_QUERY_LEN);
     }
@@ -97,7 +100,7 @@ function resolveTextQuery(body: SearchBody): { ok: true; textQuery: string } | {
 
   return {
     ok: false,
-    error: "Enter a business category and city or ZIP to search.",
+    error: "Enter a business category and/or name, plus city or ZIP, to search.",
   };
 }
 
@@ -133,7 +136,6 @@ export async function POST(req: Request) {
   }
   const textQuery = resolved.textQuery;
 
-  const onlyNoWebsite = Boolean(body.onlyNoWebsite);
   const zipTrimmed = String(body.zip ?? "").trim();
 
   const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim();
@@ -183,18 +185,10 @@ export async function POST(req: Request) {
     .map(normalizePlace)
     .filter((x): x is PlacesSearchPlace => x !== null);
 
-  const totalBeforeFilter = places.length;
-  if (onlyNoWebsite) {
-    places = places.filter((p) => !p.websiteUri?.trim());
-  }
-  const droppedCount = onlyNoWebsite ? totalBeforeFilter - places.length : 0;
-
   places = sortPlacesNoWebsiteFirst(places);
 
+  /** Full Text Search results; “no website only” is applied in the client when the checkbox is on. */
   return NextResponse.json({
     places,
-    filteredByNoWebsite: onlyNoWebsite,
-    totalBeforeFilter,
-    droppedCount,
   });
 }

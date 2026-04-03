@@ -593,7 +593,7 @@ export async function setLeadTagAssigned(
   return { ok: true };
 }
 
-/** Catalog name for leads sourced from Prospecting (intel, Instagram panel, etc.). */
+/** Catalog name for leads sourced from Prospecting (intel, etc.). */
 const PROSPECT_LEAD_TAG_NAME = "Prospect";
 const PROSPECT_LEAD_TAG_COLOR = "#6366f1";
 

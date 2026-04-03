@@ -23,6 +23,8 @@ export type OutscraperPlaceRow = {
 };
 
 export type ApolloPersonRow = {
+  /** Apollo person id from People Search — used for `/people/match` enrichment. */
+  apolloPersonId: string | null;
   name: string;
   email: string | null;
   phone: string | null;

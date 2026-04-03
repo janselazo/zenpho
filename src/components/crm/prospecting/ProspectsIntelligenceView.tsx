@@ -31,7 +31,6 @@ import ProspectIntelEnrichment, {
   type ProspectWebsiteDeepStatus,
 } from "@/components/crm/prospecting/ProspectIntelEnrichment";
 import ProspectIntelBusinessSnapshot from "@/components/crm/prospecting/ProspectIntelBusinessSnapshot";
-import InstagramLeadFromBioPanel from "@/components/crm/prospecting/InstagramLeadFromBioPanel";
 import type { HomepageContactHints } from "@/app/(crm)/actions/prospect-intel";
 import { formatReportAsPlainNotes } from "@/lib/crm/prospect-intel-notes-format";
 
@@ -42,17 +41,90 @@ const cardClass =
 const SESSION_PLACE_REPORT_KEY = "zenpho:prospect-intel-place-v1";
 const SESSION_SCROLL_TO_REPORT_KEY = "zenpho:prospect-intel-scroll-v1";
 
-function IntelReportSummary({ report }: { report: MarketIntelReport }) {
-  return (
-    <div className="h-full rounded-xl border border-border bg-surface/30 p-4 dark:border-zinc-700/80 dark:bg-zinc-900/40 sm:flex sm:min-h-0 sm:flex-col">
-      <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/60 dark:text-zinc-500">
-        Summary
-      </p>
-      <p className="mt-2 flex-1 text-sm leading-relaxed text-text-primary dark:text-zinc-100">
-        {report.summary}
-      </p>
-    </div>
-  );
+type IntelGlanceFact = { label: string; value: string };
+
+function humanizePlaceType(t: string): string {
+  return t
+    .split("_")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+function primaryPlaceTypes(types: string[]): string {
+  const skip = new Set(["point_of_interest", "establishment", "geocode"]);
+  const picked = types.filter((t) => !skip.has(t));
+  const s = picked.slice(0, 3).map(humanizePlaceType).join(" · ");
+  return s || "—";
+}
+
+function buildIntelGlanceFacts(
+  ar:
+    | {
+        kind: "url";
+        urlMeta: { url: string; pageTitle: string | null; metaDescription: string | null };
+      }
+    | { kind: "place"; place: PlacesSearchPlace }
+): IntelGlanceFact[] {
+  if (ar.kind === "place") {
+    const p = ar.place;
+    const out: IntelGlanceFact[] = [];
+    if (p.rating != null && p.userRatingCount != null) {
+      out.push({
+        label: "Google rating",
+        value: `${p.rating.toFixed(1)} ★ (${p.userRatingCount} reviews)`,
+      });
+    } else if (p.rating != null) {
+      out.push({ label: "Google rating", value: `${p.rating.toFixed(1)} ★` });
+    } else if (p.userRatingCount != null) {
+      out.push({ label: "Reviews", value: String(p.userRatingCount) });
+    }
+    if (p.types.length > 0) {
+      out.push({ label: "Categories", value: primaryPlaceTypes(p.types) });
+    }
+    const w = p.websiteUri?.trim();
+    if (w) {
+      try {
+        const u = new URL(/^https?:\/\//i.test(w) ? w : `https://${w}`);
+        out.push({
+          label: "Listing site",
+          value: u.protocol === "https:" ? "HTTPS link on listing" : "HTTP link on listing",
+        });
+      } catch {
+        out.push({ label: "Listing site", value: "Link present" });
+      }
+    } else {
+      out.push({ label: "Listing site", value: "Not on Google listing" });
+    }
+    return out;
+  }
+  const m = ar.urlMeta;
+  const url = m.url;
+  let https = false;
+  try {
+    https = new URL(/^https?:\/\//i.test(url) ? url : `https://${url}`).protocol === "https:";
+  } catch {
+    /* ignore */
+  }
+  const out: IntelGlanceFact[] = [
+    { label: "Fetched URL", value: https ? "HTTPS" : "HTTP" },
+  ];
+  const title = m.pageTitle?.trim();
+  if (title) {
+    const short = title.length > 72 ? `${title.slice(0, 70)}…` : title;
+    out.push({ label: "Page title", value: short });
+  }
+  const desc = m.metaDescription?.trim();
+  if (desc) {
+    out.push({
+      label: "Meta description",
+      value:
+        desc.length < 80 ? `${desc.length} chars (thin)` : `${desc.length} chars`,
+    });
+  } else {
+    out.push({ label: "Meta description", value: "Missing" });
+  }
+  return out;
 }
 
 function ReportSection({
@@ -77,6 +149,34 @@ function ReportSection({
       {children}
     </section>
   );
+}
+
+function urlsMatchForDedupe(a: string | null | undefined, b: string | null | undefined): boolean {
+  const x = (a ?? "").trim();
+  const y = (b ?? "").trim();
+  if (!x || !y) return false;
+  if (x === y) return true;
+  try {
+    const ux = new URL(/^https?:\/\//i.test(x) ? x : `https://${x}`);
+    const uy = new URL(/^https?:\/\//i.test(y) ? y : `https://${y}`);
+    const px = ux.pathname.replace(/\/$/, "") || "/";
+    const py = uy.pathname.replace(/\/$/, "") || "/";
+    return ux.origin === uy.origin && px === py;
+  } catch {
+    return false;
+  }
+}
+
+function digitsCore(s: string): string {
+  return s.replace(/\D/g, "");
+}
+
+/** True when the two strings are the same phone (last 10 US digits). */
+function phonesMatchListing(listing: string | null | undefined, candidate: string): boolean {
+  const a = digitsCore(listing ?? "");
+  const b = digitsCore(candidate);
+  if (a.length < 10 || b.length < 10) return false;
+  return a.slice(-10) === b.slice(-10);
 }
 
 function IntelContactHintsPanel({
@@ -129,24 +229,45 @@ function IntelContactHintsPanel({
     phonesDisplay.length > 0 ||
     showHomepagePass;
 
+  const hidePlacesListingBlock = embedded && reportKind === "place" && place;
+  const duplicateListingUrl =
+    Boolean(listingWebsite?.trim()) &&
+    Boolean(publicSiteTarget?.trim()) &&
+    urlsMatchForDedupe(listingWebsite, publicSiteTarget);
+
+  const listingPhoneRaw =
+    reportKind === "place"
+      ? place?.nationalPhoneNumber?.trim() || place?.internationalPhoneNumber?.trim() || null
+      : null;
+
+  const extraPhones = (phones: string[]) =>
+    embedded && listingPhoneRaw
+      ? phones.filter((p) => !phonesMatchListing(listingPhoneRaw, p))
+      : phones;
+
+  const phonesHomepageExtra = extraPhones(phonesHomepage);
+  const phonesDisplayExtra = extraPhones(phonesDisplay);
+
   const shell = embedded
-    ? "mt-4 space-y-4 border-t border-border/70 pt-4 dark:border-zinc-700/55"
+    ? "mt-4 space-y-3 border-t border-border/70 pt-4 dark:border-zinc-700/55"
     : "rounded-xl border border-border/80 bg-white p-4 dark:border-zinc-700/60 dark:bg-zinc-900/40";
 
   return (
     <div className={shell}>
       {embedded ? (
         <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/60 dark:text-zinc-500">
-          Contacts &amp; hints
+          Website scan
         </p>
       ) : null}
-      <p className="text-[11px] text-text-secondary dark:text-zinc-500">
-        Listing data comes from Google Places where applicable. Email, phone, and name hints below are only
-        shown when a public website URL was fetched server-side (HTML parse)—not from Google for owner
-        identity.
-      </p>
+      {!embedded ? (
+        <p className="text-[11px] text-text-secondary dark:text-zinc-500">
+          Listing data comes from Google Places where applicable. Email, phone, and name hints below are only
+          shown when a public website URL was fetched server-side (HTML parse)—not from Google for owner
+          identity.
+        </p>
+      ) : null}
 
-      {reportKind === "place" && place ? (
+      {reportKind === "place" && place && !hidePlacesListingBlock ? (
         <div className="mt-4 rounded-lg border border-border/60 bg-surface/30 p-3 dark:border-zinc-700/50 dark:bg-zinc-900/30">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
             Google listing (Places API)
@@ -209,13 +330,21 @@ function IntelContactHintsPanel({
       ) : null}
 
       {hasPublicFetchTarget ? (
-        <div className="mt-4 rounded-lg border border-border/60 bg-surface/20 p-3 dark:border-zinc-700/50 dark:bg-zinc-900/25">
+        <div
+          className={
+            hidePlacesListingBlock
+              ? "mt-0 rounded-lg border border-border/60 bg-surface/20 p-3 dark:border-zinc-700/50 dark:bg-zinc-900/25"
+              : "mt-4 rounded-lg border border-border/60 bg-surface/20 p-3 dark:border-zinc-700/50 dark:bg-zinc-900/25"
+          }
+        >
           <p className="text-[10px] font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
-            Public website (fetched HTML)
+            {embedded ? "HTML parse" : "Public website (fetched HTML)"}
           </p>
-          <p className="mt-1 break-all font-mono text-[11px] text-text-secondary dark:text-zinc-500">
-            {publicSiteTarget}
-          </p>
+          {!(embedded && duplicateListingUrl) ? (
+            <p className="mt-1 break-all font-mono text-[11px] text-text-secondary dark:text-zinc-500">
+              {publicSiteTarget}
+            </p>
+          ) : null}
           {websiteDeep.loading ? (
             <p className="mt-2 text-xs text-text-secondary dark:text-zinc-500">Scanning site…</p>
           ) : null}
@@ -227,9 +356,11 @@ function IntelContactHintsPanel({
 
           {showHomepagePass ? (
             <div className="mt-3 border-t border-border/50 pt-3 dark:border-zinc-700/50">
-              <p className="text-[10px] font-medium uppercase tracking-wide text-text-secondary/60 dark:text-zinc-500">
-                First page pass
-              </p>
+              {!embedded ? (
+                <p className="text-[10px] font-medium uppercase tracking-wide text-text-secondary/60 dark:text-zinc-500">
+                  First page pass
+                </p>
+              ) : null}
               {founderHomepage ? (
                 <p className="mt-1 text-sm text-text-primary dark:text-zinc-100">
                   Name hint:{" "}
@@ -251,9 +382,9 @@ function IntelContactHintsPanel({
                   ))}
                 </ul>
               ) : null}
-              {phonesHomepage.length > 0 ? (
+              {phonesHomepageExtra.length > 0 ? (
                 <ul className="mt-2 space-y-1 text-sm">
-                  {phonesHomepage.map((phone) => (
+                  {phonesHomepageExtra.map((phone) => (
                     <li key={phone}>
                       <button
                         type="button"
@@ -278,7 +409,7 @@ function IntelContactHintsPanel({
                   : "mt-2"
               }
             >
-              {showHomepagePass ? (
+              {showHomepagePass && !embedded ? (
                 <p className="text-[10px] font-medium uppercase tracking-wide text-text-secondary/60 dark:text-zinc-500">
                   Multi-page merge
                 </p>
@@ -304,12 +435,12 @@ function IntelContactHintsPanel({
                 </ul>
               ) : !websiteDeep.loading && !websiteDeep.error ? (
                 <p className="mt-2 text-xs text-text-secondary dark:text-zinc-500">
-                  No emails detected on scanned pages.
+                  {embedded ? "No emails in HTML scan." : "No emails detected on scanned pages."}
                 </p>
               ) : null}
-              {phonesDisplay.length > 0 ? (
+              {phonesDisplayExtra.length > 0 ? (
                 <ul className="mt-2 space-y-1 text-sm">
-                  {phonesDisplay.map((phone) => (
+                  {phonesDisplayExtra.map((phone) => (
                     <li key={phone}>
                       <button
                         type="button"
@@ -332,7 +463,9 @@ function IntelContactHintsPanel({
       ) : (
         <p className="mt-4 text-xs text-text-secondary dark:text-zinc-500">
           {reportKind === "place"
-            ? "No website on this listing—public-page contact hints are unavailable unless you add a URL and research it."
+            ? embedded
+              ? "No website on this listing—HTML scan unavailable."
+              : "No website on this listing—public-page contact hints are unavailable unless you add a URL and research it."
             : null}
         </p>
       )}
@@ -365,14 +498,20 @@ const HIGHLIGHT_SLIDES: {
   },
 ];
 
-function IntelHighlightsCarousel({ report }: { report: MarketIntelReport }) {
+function IntelHighlightsCarousel({
+  report,
+  glanceFacts,
+}: {
+  report: MarketIntelReport;
+  glanceFacts: IntelGlanceFact[];
+}) {
   const [index, setIndex] = useState(0);
   const n = HIGHLIGHT_SLIDES.length;
   const slide = HIGHLIGHT_SLIDES[index];
   const items = report[slide.key];
 
   return (
-    <div className="rounded-xl border border-border/80 p-4 dark:border-zinc-700/60">
+    <div className="flex h-full min-h-0 flex-col rounded-xl border border-border/80 p-4 dark:border-zinc-700/60">
       <div className="flex items-center justify-between gap-2">
         <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/60 dark:text-zinc-500">
           Highlights
@@ -381,7 +520,26 @@ function IntelHighlightsCarousel({ report }: { report: MarketIntelReport }) {
           {index + 1} / {n}
         </span>
       </div>
-      <div className="mt-3 flex items-stretch gap-2">
+      {glanceFacts.length > 0 ? (
+        <div className="mt-3 rounded-lg border border-border/50 bg-surface/25 p-3 dark:border-zinc-700/40 dark:bg-zinc-900/35">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-text-secondary/55 dark:text-zinc-500">
+            Signals at a glance
+          </p>
+          <dl className="mt-2 grid gap-2 sm:grid-cols-2">
+            {glanceFacts.map((f) => (
+              <div key={f.label} className="min-w-0">
+                <dt className="text-[10px] font-medium uppercase tracking-wide text-text-secondary/60 dark:text-zinc-500">
+                  {f.label}
+                </dt>
+                <dd className="mt-0.5 text-xs leading-snug text-text-primary dark:text-zinc-200">
+                  {f.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      ) : null}
+      <div className="mt-3 flex min-h-0 flex-1 items-stretch gap-2">
         <button
           type="button"
           aria-label="Previous highlight"
@@ -390,9 +548,14 @@ function IntelHighlightsCarousel({ report }: { report: MarketIntelReport }) {
         >
           <ChevronLeft className="h-5 w-5" aria-hidden />
         </button>
-        <div className="min-w-0 flex-1 rounded-lg border border-border/60 bg-surface/20 p-4 dark:border-zinc-700/50 dark:bg-zinc-900/30">
-          <p className={slide.titleClass}>{slide.label}</p>
-          <ul className="mt-3 min-h-[16rem] list-inside list-disc space-y-2 overflow-y-auto text-sm text-text-secondary dark:text-zinc-400">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col rounded-lg border border-border/60 bg-surface/20 p-4 dark:border-zinc-700/50 dark:bg-zinc-900/30">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
+            <p className={slide.titleClass}>{slide.label}</p>
+            <span className="text-[10px] tabular-nums text-text-secondary/55 dark:text-zinc-500">
+              {items.length} idea{items.length === 1 ? "" : "s"}
+            </span>
+          </div>
+          <ul className="mt-3 min-h-[12rem] flex-1 list-inside list-disc space-y-2 overflow-y-auto text-sm text-text-secondary dark:text-zinc-400">
             {items.map((x, i) => (
               <li key={i}>{x}</li>
             ))}
@@ -444,6 +607,7 @@ function ProspectsIntelligenceViewInner({
   const defaultProjectType =
     fieldOptions.leadProjectTypes[0] ?? "Other";
   const [researchTab, setResearchTab] = useState<"discover" | "url">("discover");
+  const [businessName, setBusinessName] = useState("");
   const [category, setCategory] = useState("");
   const [city, setCity] = useState("");
   const [zip, setZip] = useState("");
@@ -452,11 +616,13 @@ function ProspectsIntelligenceViewInner({
   const [placesWarning, setPlacesWarning] = useState<string | null>(null);
   const [placesLoading, setPlacesLoading] = useState(false);
   const [placesFormError, setPlacesFormError] = useState<string | null>(null);
-  const [placesSearchMeta, setPlacesSearchMeta] = useState<{
-    filteredByNoWebsite: boolean;
-    totalBeforeFilter: number;
-    droppedCount: number;
-  } | null>(null);
+
+  /** Checkbox filters client-side so toggling works without re-running Text Search. */
+  const placesDisplayed = useMemo(
+    () =>
+      onlyNoWebsite ? places.filter((p) => !p.websiteUri?.trim()) : places,
+    [places, onlyNoWebsite]
+  );
 
   const [urlInput, setUrlInput] = useState("");
   const [urlLoading, setUrlLoading] = useState(false);
@@ -504,6 +670,11 @@ function ProspectsIntelligenceViewInner({
     }
     return null;
   }, [urlReport, urlMeta, placeReport]);
+
+  const intelGlanceFacts = useMemo(
+    () => (activeReport ? buildIntelGlanceFacts(activeReport) : []),
+    [activeReport]
+  );
 
   const syncLeadFormFromPlace = useCallback(
     (place: PlacesSearchPlace, report: MarketIntelReport) => {
@@ -600,11 +771,12 @@ function ProspectsIntelligenceViewInner({
 
   async function runPlacesSearch() {
     setPlacesFormError(null);
+    const nameTrim = businessName.trim();
     const cat = category.trim();
     const cityTrim = city.trim();
     const zipTrim = zip.trim();
-    if (!cat) {
-      setPlacesFormError("Enter a business category.");
+    if (!cat && !nameTrim) {
+      setPlacesFormError("Enter a business category and/or business name.");
       return;
     }
     if (!cityTrim && !zipTrim) {
@@ -615,16 +787,15 @@ function ProspectsIntelligenceViewInner({
     setPlacesLoading(true);
     setPlacesWarning(null);
     setPlaces([]);
-    setPlacesSearchMeta(null);
     try {
       const res = await fetch("/api/prospecting/places-search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          businessName: nameTrim || undefined,
           category: cat,
           city: cityTrim,
           zip: zipTrim,
-          onlyNoWebsite,
         }),
       });
       const data = await res.json();
@@ -634,11 +805,6 @@ function ProspectsIntelligenceViewInner({
       }
       setPlaces(data.places ?? []);
       if (data.warning) setPlacesWarning(data.warning);
-      setPlacesSearchMeta({
-        filteredByNoWebsite: Boolean(data.filteredByNoWebsite),
-        totalBeforeFilter: Number(data.totalBeforeFilter) || 0,
-        droppedCount: Number(data.droppedCount) || 0,
-      });
     } catch {
       setPlacesWarning("Network error.");
     } finally {
@@ -819,6 +985,18 @@ function ProspectsIntelligenceViewInner({
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
+                Business name
+              </label>
+              <input
+                type="text"
+                value={businessName}
+                onChange={(e) => setBusinessName(e.target.value)}
+                placeholder="e.g. Doral Acura (optional—narrows results)"
+                className="w-full rounded-full border border-border bg-white px-4 py-2.5 text-sm shadow-sm outline-none transition-[box-shadow,border-color] focus:border-accent focus:ring-2 focus:ring-accent/20 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-blue-500 dark:focus:ring-blue-500/20"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
                 Business category
               </label>
               <PlacesCategoryAutocomplete
@@ -853,7 +1031,7 @@ function ProspectsIntelligenceViewInner({
             </div>
           </div>
           <p className="text-xs text-text-secondary dark:text-zinc-500">
-            Enter at least one of city or ZIP (you can use both).
+            Enter a category, a business name, or both—plus at least one of city or ZIP (you can use both).
           </p>
           <label className="flex cursor-pointer items-start gap-2 text-sm text-text-primary dark:text-zinc-200">
             <input
@@ -883,14 +1061,14 @@ function ProspectsIntelligenceViewInner({
           {placesWarning ? (
             <p className="text-sm text-amber-800 dark:text-amber-200">{placesWarning}</p>
           ) : null}
-          {placesSearchMeta?.filteredByNoWebsite &&
-          placesSearchMeta.totalBeforeFilter > 0 &&
-          places.length === 0 &&
+          {places.length > 0 &&
+          placesDisplayed.length === 0 &&
+          onlyNoWebsite &&
           !placesWarning ? (
             <p className="text-sm text-amber-800 dark:text-amber-200/90" role="status">
-              Google returned {placesSearchMeta.totalBeforeFilter} listing
-              {placesSearchMeta.totalBeforeFilter === 1 ? "" : "s"}, but all had a website URL and were hidden.
-              Uncheck &quot;Only show listings with no website&quot; above, or try a broader area.
+              All {places.length} listing{places.length === 1 ? "" : "s"} include a website URL on Google, so
+              nothing matches this filter. Uncheck &quot;Only show listings with no website&quot; to see them,
+              or try a broader search.
             </p>
           ) : null}
         </div>
@@ -907,9 +1085,8 @@ function ProspectsIntelligenceViewInner({
               Research from website URL
             </h2>
             <p className="mt-1 text-xs text-text-secondary dark:text-zinc-500">
-              Two options: (1) Enter a business website URL—we fetch it safely (SSRF-limited), read title and
-              meta description, and build a heuristic opportunity report. (2) Use Instagram below with a pasted
-              bio to create a lead without calling Instagram.
+              Enter a business website URL—we fetch it safely (SSRF-limited), read title and meta description,
+              and build a heuristic opportunity report.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -932,29 +1109,25 @@ function ProspectsIntelligenceViewInner({
           {urlError ? (
             <p className="text-sm text-red-600 dark:text-red-400">{urlError}</p>
           ) : null}
-
-          <InstagramLeadFromBioPanel
-            fieldOptions={fieldOptions}
-            defaultProjectType={defaultProjectType}
-          />
         </div>
 
         {places.length > 0 ? (
           <div className="space-y-3 border-t border-border pt-4 dark:border-zinc-800">
-            {placesSearchMeta?.filteredByNoWebsite &&
-            placesSearchMeta.totalBeforeFilter > 0 ? (
+            {onlyNoWebsite && placesDisplayed.length > 0 && places.length > placesDisplayed.length ? (
               <p className="text-xs text-text-secondary dark:text-zinc-500">
-                Showing {places.length} of {placesSearchMeta.totalBeforeFilter} without a
-                website ({placesSearchMeta.droppedCount} with a link hidden).
+                Showing {placesDisplayed.length} of {places.length} without a website URL on the listing (
+                {places.length - placesDisplayed.length} with a site hidden).
               </p>
             ) : null}
-            <PlacesSearchResultsList
-              places={places}
-              onlyNoWebsite={onlyNoWebsite}
-              highlightQuery={category}
-              onViewReport={viewPlaceReport}
-              totalCount={places.length}
-            />
+            {placesDisplayed.length > 0 ? (
+              <PlacesSearchResultsList
+                places={placesDisplayed}
+                onlyNoWebsite={onlyNoWebsite}
+                searchResultCount={places.length}
+                highlightQuery={[businessName, category].filter(Boolean).join(" ").trim()}
+                onViewReport={viewPlaceReport}
+              />
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -971,8 +1144,9 @@ function ProspectsIntelligenceViewInner({
                 Market intelligence report
               </h2>
               <p className="mt-1 max-w-2xl text-[11px] text-text-secondary dark:text-zinc-500">
-                Overview starts with business snapshot and contact hints, then summary. After that: lead capture,
-                highlights, and enrichment tools. Notes use plain sections (not markdown lists).
+                Overview: business snapshot with GTM insight and website scan; highlights use live signals plus
+                software / AI / growth angles. Then add a lead and run enrichment tools. Notes use plain sections
+                (not markdown lists).
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -997,6 +1171,12 @@ function ProspectsIntelligenceViewInner({
                 <div className="flex h-full min-w-0 flex-col rounded-xl border border-border bg-surface/30 p-4 dark:border-zinc-700/80 dark:bg-zinc-900/40 sm:min-h-0">
                   <ProspectIntelBusinessSnapshot
                     embedded
+                    insightSummary={activeReport.report.summary}
+                    listingWebsiteUri={
+                      activeReport.kind === "place"
+                        ? activeReport.place.websiteUri?.trim() || null
+                        : null
+                    }
                     businessLabel={
                       activeReport.kind === "url"
                         ? activeReport.urlMeta.pageTitle?.slice(0, 200) || activeReport.urlMeta.url
@@ -1034,20 +1214,19 @@ function ProspectsIntelligenceViewInner({
                     onPickEmail={(email) => setLeadEmail((cur) => cur.trim() || email)}
                     onPickPhone={(phone) => setLeadPhone((cur) => cur.trim() || phone)}
                   />
-                  <p className="mt-4 border-t border-border/50 pt-3 text-[11px] text-text-secondary dark:text-zinc-500">
-                    Contact data may be incomplete or outdated. Verify before outreach; comply with applicable
-                    laws and vendor terms (Google, Outscraper, Apollo, Hunter).
-                  </p>
                 </div>
               </div>
               <div className="min-w-0 sm:flex sm:flex-col">
-                <IntelReportSummary report={activeReport.report} />
+                <IntelHighlightsCarousel
+                  report={activeReport.report}
+                  glanceFacts={intelGlanceFacts}
+                />
               </div>
             </div>
           </ReportSection>
 
-          <ReportSection step="02" title="Lead & highlights">
-            <div className="grid gap-6 sm:grid-cols-2 sm:items-start">
+          <ReportSection step="02" title="Lead">
+            <div className="max-w-3xl">
               <div className="rounded-xl border border-border/80 p-4 dark:border-zinc-700/60">
                 <h3 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
                   Add as Lead
@@ -1144,7 +1323,6 @@ function ProspectsIntelligenceViewInner({
                 </p>
               ) : null}
             </div>
-              <IntelHighlightsCarousel report={activeReport.report} />
             </div>
           </ReportSection>
 

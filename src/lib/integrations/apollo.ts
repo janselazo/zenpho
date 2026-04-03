@@ -2,8 +2,12 @@ import type { ApolloPersonRow } from "@/lib/crm/prospect-enrichment-types";
 
 const APOLLO_PEOPLE_SEARCH_URL =
   "https://api.apollo.io/api/v1/mixed_people/api_search";
+const APOLLO_PEOPLE_MATCH_URL = "https://api.apollo.io/api/v1/people/match";
 
 function pickPhone(p: Record<string, unknown>): string | null {
+  if (typeof p.sanitized_phone === "string" && p.sanitized_phone.trim()) {
+    return p.sanitized_phone.trim();
+  }
   const pn = p.phone_numbers;
   if (Array.isArray(pn) && pn.length) {
     const first = pn[0];
@@ -52,8 +56,8 @@ function buildPeopleSearchUrl(domain: string, perPage: number): string {
 /**
  * People at organization by domain. Requires APOLLO_API_KEY (Apollo “master” API key for this endpoint).
  *
- * Uses People API Search (`mixed_people/api_search`). Does not return raw emails or phone numbers;
- * Apollo expects separate enrichment calls for contact details.
+ * Uses People API Search (`mixed_people/api_search`). Names/titles often have redacted contact fields;
+ * follow with `apolloEnrichPeopleById` (`/people/match` + `reveal_personal_emails`) for email, LinkedIn, and phone when Apollo returns them.
  *
  * @see https://docs.apollo.io/reference/people-api-search
  */
@@ -115,6 +119,12 @@ export async function apolloSearchDecisionMakers(
 
   const raw = json.people ?? [];
   const people: ApolloPersonRow[] = raw.slice(0, limit).map((p) => {
+    const apolloPersonId =
+      typeof p.id === "string" && p.id.trim()
+        ? p.id.trim()
+        : typeof p.person_id === "string" && p.person_id.trim()
+          ? p.person_id.trim()
+          : null;
     const name = displayName(p);
     const email =
       typeof p.email === "string" && p.email.includes("@") ? p.email : null;
@@ -126,6 +136,7 @@ export async function apolloSearchDecisionMakers(
           : null;
     const title = typeof p.title === "string" ? p.title : null;
     return {
+      apolloPersonId,
       name,
       email,
       phone: pickPhone(p),
@@ -136,4 +147,137 @@ export async function apolloSearchDecisionMakers(
   });
 
   return { ok: true, people };
+}
+
+export type ApolloEnrichmentById = {
+  email: string | null;
+  phone: string | null;
+  linkedinUrl: string | null;
+};
+
+function firstEmailFromContactEmails(obj: Record<string, unknown>): string | null {
+  const arr = obj.contact_emails;
+  if (!Array.isArray(arr) || !arr.length) return null;
+  const first = arr[0];
+  if (!first || typeof first !== "object") return null;
+  const e = (first as { email?: string }).email;
+  return typeof e === "string" && e.includes("@") ? e.trim() : null;
+}
+
+function enrichmentFromMatchJson(json: Record<string, unknown>): ApolloEnrichmentById {
+  const person = json.person;
+  if (!person || typeof person !== "object") {
+    return { email: null, phone: null, linkedinUrl: null };
+  }
+  const p = person as Record<string, unknown>;
+  const contact =
+    p.contact && typeof p.contact === "object" ? (p.contact as Record<string, unknown>) : null;
+
+  let email: string | null =
+    typeof p.email === "string" && p.email.includes("@") ? p.email.trim() : null;
+  if (!email && contact) {
+    if (typeof contact.email === "string" && contact.email.includes("@")) {
+      email = contact.email.trim();
+    } else {
+      email = firstEmailFromContactEmails(contact);
+    }
+  }
+
+  let linkedinUrl: string | null =
+    typeof p.linkedin_url === "string"
+      ? p.linkedin_url
+      : typeof p.linkedin === "string"
+        ? p.linkedin
+        : null;
+  if (!linkedinUrl && contact) {
+    linkedinUrl =
+      typeof contact.linkedin_url === "string"
+        ? contact.linkedin_url
+        : typeof contact.linkedin === "string"
+          ? contact.linkedin
+          : null;
+  }
+
+  let phone = pickPhone(p);
+  if (!phone && contact) {
+    phone = pickPhone(contact);
+  }
+
+  return { email, phone, linkedinUrl };
+}
+
+/**
+ * People Enrichment (`/people/match`) per Apollo id — reveals work email (and phone when present on the
+ * enriched record). Uses `reveal_personal_emails=true` (consumes credits per Apollo pricing). Mobile
+ * direct-dial via `reveal_phone_number` requires a webhook in Apollo’s API and is not used here.
+ *
+ * @see https://docs.apollo.io/reference/people-enrichment
+ */
+export async function apolloEnrichPeopleById(
+  domain: string,
+  personIds: string[]
+): Promise<
+  { ok: true; byId: Record<string, ApolloEnrichmentById> } | { ok: false; error: string }
+> {
+  const key = process.env.APOLLO_API_KEY?.trim();
+  if (!key) {
+    return { ok: false, error: "Set APOLLO_API_KEY in .env.local to use Apollo." };
+  }
+  const dom = domain.trim().replace(/^www\./i, "");
+  if (!dom || !dom.includes(".")) {
+    return { ok: false, error: "Valid company domain required (e.g. example.com)." };
+  }
+
+  const unique = [...new Set(personIds.map((x) => x.trim()).filter(Boolean))];
+  if (unique.length === 0) {
+    return { ok: true, byId: {} };
+  }
+
+  const byId: Record<string, ApolloEnrichmentById> = {};
+  let lastHttpError: string | null = null;
+
+  for (const id of unique) {
+    const params = new URLSearchParams();
+    params.set("id", id);
+    params.set("domain", dom);
+    params.set("reveal_personal_emails", "true");
+
+    let res: Response;
+    try {
+      res = await fetch(`${APOLLO_PEOPLE_MATCH_URL}?${params.toString()}`, {
+        method: "POST",
+        headers: {
+          "Cache-Control": "no-cache",
+          "Content-Type": "application/json",
+          "x-api-key": key,
+        },
+        body: "{}",
+        signal: AbortSignal.timeout(45_000),
+      });
+    } catch (e) {
+      return {
+        ok: false,
+        error: e instanceof Error ? e.message : "Apollo enrichment request failed.",
+      };
+    }
+
+    const text = await res.text();
+    if (!res.ok) {
+      lastHttpError = `Apollo enrich HTTP ${res.status}: ${text.slice(0, 200)}`;
+      continue;
+    }
+
+    try {
+      const json = JSON.parse(text) as Record<string, unknown>;
+      byId[id] = enrichmentFromMatchJson(json);
+    } catch {
+      lastHttpError = "Apollo enrichment returned invalid JSON.";
+    }
+  }
+
+  if (Object.keys(byId).length === 0 && lastHttpError) {
+    return { ok: false, error: lastHttpError };
+  }
+
+  return { ok: true, byId };
 }

@@ -30,6 +30,115 @@ function nonEmpty(s: string | null | undefined): boolean {
 const typesHaystack = (placeTypes: string[] | null | undefined): string =>
   (placeTypes ?? []).join(" ").toLowerCase();
 
+function humanizePlaceType(t: string): string {
+  return t
+    .split("_")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+/** Primary Google categories for outreach copy (drops generic types). */
+function formatPrimaryCategories(placeTypes: string[] | null | undefined): string | null {
+  const skip = new Set(["point_of_interest", "establishment", "geocode"]);
+  const picked = (placeTypes ?? []).filter((t) => !skip.has(t));
+  const s = picked.slice(0, 4).map(humanizePlaceType).join(" · ");
+  return s || null;
+}
+
+function hostnameOnly(raw: string): string | null {
+  try {
+    const u = new URL(/^https?:/i.test(raw) ? raw : `https://${raw}`);
+    const h = u.hostname.replace(/^www\./i, "");
+    return h || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Prepend highly specific lines so Highlights lead with this business, not only playbooks. */
+function injectObservedContext(
+  signals: IntelSignals,
+  software: string[],
+  aiAutomations: string[],
+  productGrowth: string[]
+) {
+  const name = signals.name?.trim() || "This business";
+
+  function prependUnique(arr: string[], line: string) {
+    const t = line.trim();
+    if (!t || arr.includes(t)) return;
+    arr.unshift(t);
+  }
+
+  const primary = formatPrimaryCategories(signals.placeTypes);
+  if (primary) {
+    prependUnique(
+      software,
+      `Google categories for ${name}: ${primary}. Scope site, bookings, and ops tooling around how buyers compare in that segment.`
+    );
+  }
+
+  if (signals.rating != null || (signals.reviewCount != null && signals.reviewCount > 0)) {
+    const parts: string[] = [];
+    if (signals.rating != null) parts.push(`${signals.rating.toFixed(1)}★`);
+    if (signals.reviewCount != null) parts.push(`${signals.reviewCount} Google reviews`);
+    prependUnique(
+      productGrowth,
+      `${name} shows ${parts.join(", ")} — review velocity, referrals, and reputation response are credible growth levers to propose.`
+    );
+  }
+
+  if (signals.formattedAddress?.trim()) {
+    const a = signals.formattedAddress.trim();
+    const short = a.length > 90 ? `${a.slice(0, 88)}…` : a;
+    prependUnique(
+      productGrowth,
+      `Listed address: ${short} — tie local SEO, landing pages, and paid geo to this service area.`
+    );
+  }
+
+  if (!signals.hasWebsite) {
+    prependUnique(
+      aiAutomations,
+      `${name} has no website on the Google listing — a single high-trust landing + chat or SMS capture is the fastest wedge to prove ROI before broader automation.`
+    );
+  } else {
+    const host = signals.websiteUrl ? hostnameOnly(signals.websiteUrl) : null;
+    const scheme =
+      signals.https === false ? "http" : signals.https === true ? "https" : null;
+    const tail = [host, scheme].filter(Boolean).join(" · ");
+    prependUnique(
+      software,
+      tail
+        ? `Their public URL today (${tail}) — prioritize fixes and CTAs on that path before pitching net-new properties.`
+        : `${name} has a site linked from Google — anchor improvements to that live funnel first.`
+    );
+  }
+
+  if (nonEmpty(signals.pageTitle)) {
+    const pt = signals.pageTitle!.trim();
+    const clip = pt.length > 110 ? `${pt.slice(0, 108)}…` : pt;
+    prependUnique(
+      software,
+      `Homepage title observed: “${clip}” — echo this positioning in proposed UX and outbound.`
+    );
+  }
+
+  if (nonEmpty(signals.metaDescription)) {
+    const md = signals.metaDescription!.trim();
+    const clip = md.length > 100 ? `${md.slice(0, 98)}…` : md;
+    prependUnique(
+      productGrowth,
+      `Meta description (${md.length} chars): “${clip}” — sharpen outcome + locale if CTR from search is a goal.`
+    );
+  }
+}
+
+function isAutomotive(types: string): boolean {
+  return /car_dealer|car_repair|car_wash|gas_station/.test(types);
+}
+
 /** Broad local / high-touch businesses (Google Places type substrings). */
 function isLocalService(types: string): boolean {
   return /restaurant|cafe|meal_takeaway|bakery|food|store|gym|spa|salon|hair_care|beauty|plumber|electrician|roofing|contractor|dentist|doctor|physician|health|lawyer|attorney|real_estate|car_repair|car_dealer|lodging|travel_agency|pharmacy|veterinary/.test(
@@ -258,6 +367,21 @@ export function buildMarketIntelReport(signals: IntelSignals): MarketIntelReport
     );
   }
 
+  if (isAutomotive(types)) {
+    pushAi(
+      aiAutomations,
+      "Inventory-aware assistant (make/model trims in stock) + service booking handoff — answers “do you have this?” and routes test-drive vs service intent without burning BDC time."
+    );
+    pushGrowth(
+      productGrowth,
+      "Fixed-ops lead magnet: service specials, recall checks, or maintenance intervals by mileage — balances floor traffic with repeat repair revenue."
+    );
+    pushSoft(
+      software,
+      "Mobile trade-in / appraisal request + SMS follow-up — meets shoppers comparing dealers before they visit the lot."
+    );
+  }
+
   if (isLocalService(types) && !isRestaurant(types) && !isRetail(types)) {
     pushAi(
       aiAutomations,
@@ -269,8 +393,10 @@ export function buildMarketIntelReport(signals: IntelSignals): MarketIntelReport
     );
   }
 
+  injectObservedContext(signals, software, aiAutomations, productGrowth);
+
   ensureMinimum(software, DEFAULT_SOFTWARE, 2, 7);
-  ensureMinimum(aiAutomations, DEFAULT_AI_GTM, 4, 10);
+  ensureMinimum(aiAutomations, DEFAULT_AI_GTM, 2, 10);
   ensureMinimum(productGrowth, DEFAULT_GROWTH, 2, 7);
 
   const name = signals.name?.trim() || "This business";

@@ -1,5 +1,15 @@
 "use client";
 
+function listingSiteLabel(raw: string): string {
+  try {
+    const u = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+    const host = u.hostname.replace(/^www\./i, "");
+    return host || raw;
+  } catch {
+    return raw.length > 56 ? `${raw.slice(0, 54)}…` : raw;
+  }
+}
+
 function badge(label: string, cls: string) {
   return (
     <span
@@ -20,9 +30,11 @@ type Props = {
   researchFromUrl?: boolean;
   /** Shown for URL research (canonical fetched URL). */
   fetchedPageUrl?: string | null;
-  /**
-   * When true, render without outer card chrome (parent provides border). Omit footer disclaimer—parent adds one.
-   */
+  /** Google Places listing website (shown in embedded overview next to phone/maps). */
+  listingWebsiteUri?: string | null;
+  /** Rule-based GTM insight (no separate “Summary” heading). */
+  insightSummary?: string | null;
+  /** When true, render without outer card chrome (parent provides border). */
   embedded?: boolean;
 };
 
@@ -34,6 +46,8 @@ export default function ProspectIntelBusinessSnapshot({
   onPickPhone,
   researchFromUrl = false,
   fetchedPageUrl,
+  listingWebsiteUri = null,
+  insightSummary = null,
   embedded = false,
 }: Props) {
   const shell = embedded
@@ -49,6 +63,19 @@ export default function ProspectIntelBusinessSnapshot({
         <p className="font-medium text-text-primary dark:text-zinc-100">{businessLabel}</p>
         {addressLabel ? (
           <p className="mt-1 text-sm text-text-secondary dark:text-zinc-400">{addressLabel}</p>
+        ) : null}
+        {embedded && listingWebsiteUri?.trim() ? (
+          <p className="mt-2 text-sm">
+            <span className="text-text-secondary dark:text-zinc-500">Website </span>
+            <a
+              href={listingWebsiteUri.trim()}
+              target="_blank"
+              rel="noreferrer"
+              className="break-all font-medium text-accent hover:underline dark:text-blue-400"
+            >
+              {listingSiteLabel(listingWebsiteUri.trim())}
+            </a>
+          </p>
         ) : null}
         {fetchedPageUrl?.trim() ? (
           <p className="mt-2 text-xs text-text-secondary dark:text-zinc-400">
@@ -95,6 +122,13 @@ export default function ProspectIntelBusinessSnapshot({
             </a>
           ) : null}
         </div>
+        {insightSummary?.trim() ? (
+          <div className="mt-4 border-t border-border/60 pt-4 dark:border-zinc-700/60">
+            <p className="text-sm leading-relaxed text-text-primary dark:text-zinc-100">
+              {insightSummary.trim()}
+            </p>
+          </div>
+        ) : null}
         {embedded ? null : (
           <p className="mt-auto pt-3 text-[11px] text-text-secondary dark:text-zinc-500">
             Contact data may be incomplete or outdated. Verify before outreach; comply with applicable laws and

@@ -66,19 +66,22 @@ function PlaceLogo({
 type Props = {
   places: PlacesSearchPlace[];
   onlyNoWebsite: boolean;
+  /** Total rows from Text Search before client-side “no website” filter (defaults to `places.length`). */
+  searchResultCount?: number;
   highlightQuery: string;
   onViewReport: (place: PlacesSearchPlace) => void;
-  totalCount?: number;
 };
 
 export default function PlacesSearchResultsList({
   places,
   onlyNoWebsite,
+  searchResultCount,
   highlightQuery,
   onViewReport,
-  totalCount,
 }: Props) {
-  const count = totalCount ?? places.length;
+  const fullCount = searchResultCount ?? places.length;
+  const hiddenWithSite =
+    onlyNoWebsite && fullCount > places.length ? fullCount - places.length : 0;
 
   if (places.length === 0) return null;
 
@@ -90,8 +93,12 @@ export default function PlacesSearchResultsList({
             Google Maps results
           </p>
           <p className="text-xs text-text-secondary dark:text-zinc-400">
-            {count} listing{count === 1 ? "" : "s"}
-            {onlyNoWebsite ? " · filtered: no website URL" : ""}
+            {places.length} listing{places.length === 1 ? "" : "s"}
+            {onlyNoWebsite
+              ? hiddenWithSite > 0
+                ? ` · ${hiddenWithSite} with a website hidden`
+                : " · no website on listing"
+              : ""}
           </p>
         </div>
         <span className="rounded-full bg-surface px-3 py-1 text-[11px] font-medium text-text-secondary dark:bg-zinc-800 dark:text-zinc-300">
@@ -135,17 +142,15 @@ export default function PlacesSearchResultsList({
                     </p>
                   )}
                   <div className="mt-2 flex flex-wrap items-center gap-2">
-                    {!onlyNoWebsite ? (
-                      website ? (
-                        <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800 dark:text-emerald-300">
-                          Has website
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-zinc-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-text-secondary dark:text-zinc-400">
-                          No website
-                        </span>
-                      )
-                    ) : null}
+                    {website ? (
+                      <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800 dark:text-emerald-300">
+                        Has website
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-zinc-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-text-secondary dark:text-zinc-400">
+                        No website
+                      </span>
+                    )}
                     {website ? (
                       <a
                         href={website}
