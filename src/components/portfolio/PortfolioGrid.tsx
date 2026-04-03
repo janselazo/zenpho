@@ -13,7 +13,6 @@ const categoryFilters: { id: ProjectCategory | "all"; label: string }[] = [
   { id: "mobile-app", label: "Mobile App" },
   { id: "web-app", label: "Web App" },
   { id: "website", label: "Website" },
-  { id: "ecommerce-store", label: "Ecommerce Store" },
 ];
 
 export default function PortfolioGrid() {

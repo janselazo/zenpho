@@ -23,8 +23,7 @@ export default function ServicesGrid() {
           <p>
             Whether you&apos;re starting from scratch or scaling an existing
             product, we handle the full development process from strategy to
-            launch. No long timelines, no unnecessary complexity — just a reliable
-            team that turns your idea into a fully functional software product.
+            launch.
           </p>
         }
       />
@@ -51,6 +50,11 @@ export default function ServicesGrid() {
                 <h3 className="text-lg font-semibold text-text-primary group-hover:text-accent">
                   {service.title}
                 </h3>
+                {service.subtitle ? (
+                  <p className="mt-1 text-sm font-medium text-text-secondary/90">
+                    {service.subtitle}
+                  </p>
+                ) : null}
                 <p className="mt-2 text-sm text-text-secondary">
                   {service.description}
                 </p>

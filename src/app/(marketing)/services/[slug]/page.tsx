@@ -72,7 +72,14 @@ export default async function ServiceDetailPage({ params }: Props) {
           <h1 className="heading-display text-3xl font-bold tracking-tight text-text-primary text-balance sm:text-4xl lg:text-5xl">
             {service.title}
           </h1>
-          <p className="mt-5 text-base leading-relaxed text-text-secondary sm:text-lg">
+          {service.subtitle ? (
+            <p className="mt-3 text-base font-medium text-text-secondary sm:text-lg">
+              {service.subtitle}
+            </p>
+          ) : null}
+          <p
+            className={`text-base leading-relaxed text-text-secondary sm:text-lg ${service.subtitle ? "mt-4" : "mt-5"}`}
+          >
             {service.description}
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">

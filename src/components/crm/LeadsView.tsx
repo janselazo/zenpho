@@ -283,12 +283,14 @@ const contactCategoryTextClasses: Record<string, string> = {
   "tech founder": "text-indigo-700 dark:text-indigo-400",
   "saas founder": "text-fuchsia-700 dark:text-fuchsia-400",
   "ecommerce owner": "text-rose-700 dark:text-rose-400",
+  "retail / dtc founder": "text-rose-700 dark:text-rose-400",
 };
 
 const contactCategoryPillClasses: Record<string, string> = {
   "tech founder": "bg-indigo-100 text-indigo-900 dark:bg-indigo-950/45 dark:text-indigo-100",
   "saas founder": "bg-fuchsia-100 text-fuchsia-900 dark:bg-fuchsia-950/45 dark:text-fuchsia-100",
   "ecommerce owner": "bg-rose-100 text-rose-900 dark:bg-rose-950/45 dark:text-rose-100",
+  "retail / dtc founder": "bg-rose-100 text-rose-900 dark:bg-rose-950/45 dark:text-rose-100",
 };
 
 function getContactCategoryTextClass(category: string) {

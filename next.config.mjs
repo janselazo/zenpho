@@ -23,6 +23,11 @@ const nextConfig = {
       { source: "/portfolio", destination: "/case-studies", permanent: true },
       { source: "/agency", destination: "/services", permanent: true },
       { source: "/methodology", destination: "/about", permanent: true },
+      {
+        source: "/services/websites-ecommerce",
+        destination: "/services/websites",
+        permanent: true,
+      },
     ];
   },
 };

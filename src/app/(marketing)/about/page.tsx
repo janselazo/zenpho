@@ -7,7 +7,7 @@ import Button from "@/components/ui/Button";
 export const metadata: Metadata = {
   title: "About",
   description:
-    "Meet the Zenpho founder, then how the studio splits Agency client work and in-house Studio products. Web, mobile, websites, ecommerce — first version in two weeks. Miami, FL.",
+    "Meet the Zenpho founder, then how the studio splits Agency client work and in-house Studio products. Web, mobile, and marketing sites — first version in two weeks. Miami, FL.",
 };
 
 const highlights = [
@@ -70,7 +70,7 @@ export default function AboutPage() {
               most agencies build what you ask for; we build what you need to
               win
             </span>
-            — web apps, mobile apps, websites, and ecommerce, with growth and
+            — web apps, mobile apps, and marketing sites, with growth and
             retention in the room from day one.
           </p>
           <p className="mt-6 text-base leading-relaxed text-text-secondary">
@@ -106,7 +106,7 @@ export default function AboutPage() {
         <Card className="border-border/80 bg-white p-8 shadow-soft sm:p-10">
           <p className="text-base leading-relaxed text-text-secondary">
             <span className="font-medium text-text-primary">Zenpho Agency</span>{" "}
-            is where most of our calendar lives: SaaS, ecommerce, marketing sites,
+            is where most of our calendar lives: SaaS, marketing sites,
             dashboards, and internal tools for teams that need focused execution.
             We own the full path — scope, design, build, and handoff — so you
             can run what we ship without friction.

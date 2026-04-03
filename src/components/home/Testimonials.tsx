@@ -22,17 +22,10 @@ const testimonials: Testimonial[] = [
   },
   {
     quote:
-      "They built our ecommerce store end to end — catalog, checkout, fulfillment — and now we run daily operations without needing a developer. The speed of delivery and attention to detail were exceptional.",
+      "They built our online ordering flow end to end — catalog, checkout, fulfillment — and now we run daily operations without needing a developer. The speed of delivery and attention to detail were exceptional.",
     name: "Andrea Guzmán",
     title: "Founder",
     company: "TQMuch",
-  },
-  {
-    quote:
-      "Our store stays fast under traffic spikes and the team can merchandise without touching code. The whole build was focused, efficient, and the final product looks and performs exactly as promised.",
-    name: "James Parker",
-    title: "Owner",
-    company: "USRallyStripes",
   },
 ];
 

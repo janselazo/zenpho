@@ -2,6 +2,8 @@ export interface Service {
   /** URL segment for `/services/[slug]` */
   slug: string;
   title: string;
+  /** Optional line under the title (e.g. services grid + detail hero). */
+  subtitle?: string;
   description: string;
   details: string[];
   icon: string;
@@ -44,8 +46,7 @@ export interface FeaturedProject {
 export type ProjectCategory =
   | "mobile-app"
   | "web-app"
-  | "website"
-  | "ecommerce-store";
+  | "website";
 
 export interface PortfolioProject {
   title: string;
@@ -130,13 +131,14 @@ export const developmentPricingOfferings: DevelopmentPricingOffering[] = [
 
 export const services: Service[] = [
   {
-    slug: "websites-ecommerce",
-    title: "Websites & ecommerce",
+    slug: "websites",
+    title: "Custom websites for tech & software companies",
+    subtitle: "Tailored to the technology and software industry",
     description:
-      "Marketing sites and online stores that load fast, convert, and stay easy for your team to run without paging engineering for every change.",
+      "Marketing sites built for software and technology companies — clear product story, credible proof, and conversion paths for technical and commercial buyers, without waiting on engineering for every edit.",
     details: [
-      "Responsive sites, landing systems, and brand storytelling",
-      "Catalog, checkout, payments, and fulfillment-friendly workflows",
+      "Product-led storytelling: features, integrations, security, and ROI in plain language",
+      "Lead capture tuned to B2B SaaS and dev tools — demos, trials, docs-adjacent pages",
       "SEO-conscious structure and analytics you can act on",
     ],
     icon: "store",
@@ -208,7 +210,7 @@ export const processSteps: ProcessStep[] = [
     number: "03",
     title: "Build",
     description:
-      "Our team develops your fully functional web app, mobile app, or e-commerce platform — fast, clean, and built to scale.",
+      "Our team develops your fully functional web app, mobile app, or marketing site — fast, clean, and built to scale.",
   },
   {
     number: "04",
@@ -280,31 +282,11 @@ export const portfolioProjects: PortfolioProject[] = [
     client: "TQMuch",
     title: "Nationwide Food Delivery Store",
     description:
-      "Built a mobile-first ecommerce store with a full product catalog, temperature-controlled shipping, and automated fulfillment — so the team focuses on the food, not the orders.",
-    tags: ["Ecommerce", "Food & Beverage", "DTC"],
+      "Built a mobile-first ordering experience with a full product catalog, temperature-controlled shipping, and automated fulfillment — so the team focuses on the food, not the orders.",
+    tags: ["DTC", "Food & Beverage", "Catalog"],
     type: "agency",
-    category: "ecommerce-store",
+    category: "website",
     result: "Live commerce",
-  },
-  {
-    client: "Craveclean",
-    title: "Ecommerce Store & Catalog Operations",
-    description:
-      "Built a full online store with clean product pages, optimized checkout, and a self-managed catalog — so the team runs the brand day to day without waiting on developers.",
-    tags: ["Ecommerce", "Store", "Checkout"],
-    type: "agency",
-    category: "ecommerce-store",
-    result: "Live commerce",
-  },
-  {
-    client: "USRallyStripes",
-    title: "Automotive Ecommerce Storefront",
-    description:
-      "Built a performance-focused store for automotive kits, accessories, and seasonal drops — with mobile checkout and easy merchandising that stays fast under traffic spikes.",
-    tags: ["Ecommerce", "Automotive", "Performance"],
-    type: "agency",
-    category: "ecommerce-store",
-    result: "Store live",
   },
   {
     client: "SoldTools",
@@ -342,28 +324,10 @@ export const featuredProjects: FeaturedProject[] = [
     client: "TQMuch",
     title: "Nationwide Food Delivery Store",
     description:
-      "Built a mobile-first ecommerce store with a full product catalog, temperature-controlled shipping, and automated fulfillment — so the team focuses on the food, not the orders.",
-    tags: ["Ecommerce", "Food & Beverage", "DTC"],
+      "Built a mobile-first ordering experience with a full product catalog, temperature-controlled shipping, and automated fulfillment — so the team focuses on the food, not the orders.",
+    tags: ["DTC", "Food & Beverage", "Catalog"],
     type: "agency",
     result: "Live commerce",
-  },
-  {
-    client: "Craveclean",
-    title: "Ecommerce Store & Catalog Operations",
-    description:
-      "Built a full online store with clean product pages, optimized checkout, and a self-managed catalog — so the team runs the brand day to day without waiting on developers.",
-    tags: ["Ecommerce", "Store", "Checkout"],
-    type: "agency",
-    result: "Live commerce",
-  },
-  {
-    client: "USRallyStripes",
-    title: "Automotive Ecommerce Storefront",
-    description:
-      "Built a performance-focused store for automotive kits, accessories, and seasonal drops — with mobile checkout and easy merchandising that stays fast under traffic spikes.",
-    tags: ["Ecommerce", "Automotive", "Performance"],
-    type: "agency",
-    result: "Store live",
   },
   {
     client: "SoldTools",
@@ -540,7 +504,7 @@ Nine years in, that's the lesson I keep re-learning.`,
     date: "2026-02-18",
     readTime: "7 min read",
     category: "AI & Software",
-    content: `I'm not an AI researcher. I don't have 20+ agent deployments under my belt. I'm a software engineer who's been building web apps, SaaS platforms, and ecommerce stores for nine years — and I'm now figuring out where AI genuinely helps in that work.
+    content: `I'm not an AI researcher. I don't have 20+ agent deployments under my belt. I'm a software engineer who's been building web apps, SaaS platforms, and customer-facing products for nine years — and I'm now figuring out where AI genuinely helps in that work.
 
 I'm writing this because most AI content online falls into two camps: breathless hype from people selling AI services, or deep technical content from ML engineers. There's not much written for builders like me — people who ship products and want to know where AI fits in honestly.
 
@@ -702,7 +666,7 @@ export const resourceItems: ResourceItem[] = [
   {
     title: "Case studies",
     description:
-      "Selected client builds in production — SaaS platforms, ecommerce stores, and dashboards.",
+      "Selected client builds in production — SaaS platforms, marketing sites, and dashboards.",
     href: "/case-studies",
     tag: "Work",
   },

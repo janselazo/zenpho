@@ -19,7 +19,7 @@ const cards = [
     badgeClass: "bg-accent text-white",
     title: "Custom Software Development",
     titleAccent: "",
-    body: "We design and build web apps, mobile apps, and e-commerce platforms tailored to your business — fast, scalable, and ready to grow with you.",
+    body: "We design and build web apps, mobile apps, and marketing sites tailored to your business — fast, scalable, and ready to grow with you.",
     href: "/services",
     cta: "Explore services",
     initial: "C",

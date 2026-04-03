@@ -3,7 +3,7 @@ import SectionHeading from "@/components/ui/SectionHeading";
 const faqs = [
   {
     q: "What exactly do you build?",
-    a: "We build custom web apps, mobile apps, and e-commerce platforms — from simple MVPs to fully functional software products ready to scale.",
+    a: "We build custom web apps, mobile apps, and marketing sites — from simple MVPs to fully functional software products ready to scale.",
   },
   {
     q: "How long does it take to build my product?",

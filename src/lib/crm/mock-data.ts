@@ -238,7 +238,6 @@ export const LEAD_PROJECT_TYPE_OPTIONS = [
   "Web App",
   "Mobile App",
   "Website",
-  "Ecommerce Store",
   "Other",
 ] as const;
 
@@ -248,7 +247,7 @@ export type LeadProjectType = (typeof LEAD_PROJECT_TYPE_OPTIONS)[number];
 export const LEAD_CONTACT_CATEGORY_OPTIONS = [
   "Tech Founder",
   "SaaS Founder",
-  "Ecommerce Owner",
+  "Retail / DTC Founder",
 ] as const;
 
 export type LeadContactCategory =

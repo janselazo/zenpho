@@ -359,7 +359,7 @@ export function buildMarketIntelReport(signals: IntelSignals): MarketIntelReport
   } else if (isRetail(types)) {
     pushAi(
       aiAutomations,
-      "Store assistant: hours, parking, inventory FAQs (“Do you carry X?”), and promotions — bridge online discovery to in-store visit or BOPIS if they add ecommerce later."
+      "Store assistant: hours, parking, inventory FAQs (“Do you carry X?”), and promotions — bridge online discovery to in-store visit or BOPIS if they add online selling later."
     );
     pushGrowth(
       productGrowth,

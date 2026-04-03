@@ -17,31 +17,31 @@ export type ServiceDetailBody = {
 };
 
 const bySlug: Record<string, ServiceDetailBody> = {
-  "websites-ecommerce": {
+  websites: {
     metaDescription:
-      "Marketing sites and ecommerce from Zenpho: fast storefronts, SEO-ready structure, checkout and fulfillment workflows, and a CMS your team can run without engineering for every edit.",
+      "Custom websites for technology and software companies from Zenpho: product-led story, credible proof, SEO-ready structure, and a CMS your team can run without engineering for every edit.",
     intro: [
-      "Your site should earn its keep: clear story, fast loads, and paths that turn visitors into leads or buyers. We build marketing sites and online stores as systems — not one-off pages — so you can launch campaigns, add products, and tune copy without a ticket queue.",
-      "Ecommerce work is scoped around how you actually operate: catalog structure, payments, taxes and shipping as needed, and handoffs to fulfillment or your ops stack. We stay opinionated about performance and analytics so you can see what to improve next.",
+      "In software, your site has to do more than look good — it has to explain a product, earn trust with technical buyers, and still speak to commercial stakeholders. We build marketing sites as systems — not one-off pages — so you can launch campaigns, tune messaging, and ship new sections without a ticket queue.",
+      "Scope follows how tech companies actually sell: hero and pillar pages, proof and case studies, pricing and FAQs, security and compliance callouts when they matter, plus forms and integrations to your stack. We stay opinionated about performance and analytics so you can see what to improve next.",
     ],
     sections: [
       {
-        title: "Marketing & storytelling",
+        title: "Product & industry storytelling",
         paragraphs: [
-          "Landing systems, pillar pages, and component-based layouts let you reuse patterns while keeping each page on-message. We align typography, spacing, and motion with your brand so the experience feels intentional on every breakpoint.",
+          "Landing systems, pillar pages, and component-based layouts let you reuse patterns while keeping each page on-message. We align typography, spacing, and motion with your brand so the experience feels intentional on every breakpoint — especially when you’re explaining something complex.",
         ],
         bullets: [
           "Responsive layouts and accessible defaults (focus, contrast, semantics)",
-          "Editorial patterns: case studies, team, pricing, FAQs, legal",
+          "Patterns that fit B2B SaaS and dev tools: features, integrations, changelog-adjacent updates",
           "Optional headless or traditional CMS — chosen for who will maintain content",
         ],
       },
       {
-        title: "Storefronts & checkout",
+        title: "Lead capture & trust",
         bullets: [
-          "Product catalog, variants, and collections structured for growth",
-          "Checkout, payments, and basic account flows with clear error states",
-          "Integrations toward shipping, tax, ERP, or 3PL when your scope needs them",
+          "Forms, scheduling embeds, and clear CTAs with validation and success states",
+          "Social proof, logos, metrics, and security/compliance cues that match how you sell",
+          "Lightweight personalization or gated content when your funnel needs it",
         ],
       },
       {
@@ -55,7 +55,7 @@ const bySlug: Record<string, ServiceDetailBody> = {
       {
         title: "How we deliver",
         paragraphs: [
-          "You get a first working slice quickly, then weekly visible progress — same rhythm as our web app work, tuned for marketing and commerce milestones (launch, campaign, seasonal push).",
+          "You get a first working slice quickly, then weekly visible progress — same rhythm as our web app work, tuned for marketing milestones (launch, campaign, narrative refresh).",
         ],
         bullets: [
           "Staging previews and a short handoff so your team owns day-two edits",
@@ -64,9 +64,9 @@ const bySlug: Record<string, ServiceDetailBody> = {
       },
     ],
     idealFor: [
-      "Teams outgrowing a template but not ready to hire a full web department",
-      "Founders who need storefront + brand site in one coherent system",
-      "Marketing-led orgs that want speed without sacrificing SEO or quality",
+      "Software startup founders outgrowing a template but not ready to hire a full web department",
+      "Teams who need a credible site that matches a technical product and sales motion",
+      "Founders who want speed without sacrificing SEO, clarity, or quality",
     ],
   },
   "web-applications": {

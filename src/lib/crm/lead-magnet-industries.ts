@@ -53,7 +53,7 @@ export const INDUSTRIES: readonly Industry[] = [
   },
   {
     id: "ecommerce",
-    label: "Ecommerce",
+    label: "Retail & DTC",
     synonyms: ["DTC", "retail", "Shopify", "online store"],
   },
   {

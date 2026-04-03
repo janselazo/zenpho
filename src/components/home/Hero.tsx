@@ -8,9 +8,7 @@ import { experienceStats } from "@/lib/data";
 const clients = [
   "Taptok",
   "Apex Inspection Pro",
-  "Craveclean",
   "TQMuch",
-  "USRallyStripes",
 ];
 
 export default function Hero() {

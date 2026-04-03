@@ -62,7 +62,6 @@ export default function ContactForm() {
           {[
             { value: "web-app", label: "Web App" },
             { value: "mobile-app", label: "Mobile App" },
-            { value: "ecommerce", label: "Ecommerce Store" },
             { value: "website", label: "Website" },
             { value: "other", label: "Other" },
           ].map((type) => (
