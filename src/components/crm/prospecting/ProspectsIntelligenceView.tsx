@@ -146,13 +146,22 @@ function ReportSection({
   step,
   title,
   children,
+  noTopRule = false,
+  className = "",
 }: {
   step: string;
   title: string;
   children: ReactNode;
+  /** When true, skip the default top border/padding (e.g. inside a grouped layout). */
+  noTopRule?: boolean;
+  className?: string;
 }) {
+  const rule =
+    "border-t border-border/80 pt-6 first:border-t-0 first:pt-0 dark:border-zinc-800";
   return (
-    <section className="border-t border-border/80 pt-6 first:border-t-0 first:pt-0 dark:border-zinc-800">
+    <section
+      className={`${noTopRule ? "" : `${rule} `}${className}`.trim()}
+    >
       <div className="mb-4 flex flex-wrap items-baseline gap-2">
         <span className="font-mono text-[10px] font-semibold tabular-nums text-text-secondary/80 dark:text-zinc-400">
           {step}
@@ -1231,8 +1240,10 @@ function ProspectsIntelligenceViewInner({
             </div>
           </ReportSection>
 
-          <ReportSection step="02" title="Lead">
-            <div className="max-w-3xl">
+          <div className="border-t border-border/80 pt-6 dark:border-zinc-800">
+            <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
+              <ReportSection step="02" title="Lead" noTopRule className="min-w-0">
+            <div className="min-w-0">
               <div className="rounded-xl border border-border/80 p-4 dark:border-zinc-700/60">
                 <h3 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
                   Add as Lead
@@ -1332,39 +1343,48 @@ function ProspectsIntelligenceViewInner({
             </div>
           </ReportSection>
 
-          <ReportSection step="03" title="Enrichment tools">
-          <ProspectIntelEnrichment
-              omitBusinessSnapshot
-              websiteUrl={
-                activeReport.kind === "url"
-                  ? activeReport.urlMeta.url
-                  : activeReport.place.websiteUri?.trim() || null
-              }
-              listingPhone={
-                activeReport.kind === "place"
-                  ? activeReport.place.nationalPhoneNumber?.trim() ||
-                    activeReport.place.internationalPhoneNumber?.trim() ||
-                    null
-                  : null
-              }
-              googleMapsUri={
-                activeReport.kind === "place" ? activeReport.place.googleMapsUri?.trim() || null : null
-              }
-              businessLabel={
-                activeReport.kind === "url"
-                  ? activeReport.urlMeta.pageTitle?.slice(0, 200) || activeReport.urlMeta.url
-                  : activeReport.place.name
-              }
-              addressLabel={
-                activeReport.kind === "place" ? activeReport.place.formattedAddress : null
-              }
-              homepageContactHints={activeReport.kind === "url" ? urlHomepageHints : null}
-              onPickEmail={(email) => setLeadEmail((cur) => cur.trim() || email)}
-              onPickPhone={(phone) => setLeadPhone((cur) => cur.trim() || phone)}
-              onWebsiteEmailsChange={setWebsiteCrawlEmails}
-              onWebsiteDeepStatusChange={setWebsiteDeepStatus}
-            />
-          </ReportSection>
+              <ReportSection
+                step="03"
+                title="Enrichment tools"
+                noTopRule
+                className="min-w-0 border-t border-border/80 pt-8 dark:border-zinc-800 lg:border-t-0 lg:pt-0"
+              >
+                <ProspectIntelEnrichment
+                  omitBusinessSnapshot
+                  websiteUrl={
+                    activeReport.kind === "url"
+                      ? activeReport.urlMeta.url
+                      : activeReport.place.websiteUri?.trim() || null
+                  }
+                  listingPhone={
+                    activeReport.kind === "place"
+                      ? activeReport.place.nationalPhoneNumber?.trim() ||
+                        activeReport.place.internationalPhoneNumber?.trim() ||
+                        null
+                      : null
+                  }
+                  googleMapsUri={
+                    activeReport.kind === "place"
+                      ? activeReport.place.googleMapsUri?.trim() || null
+                      : null
+                  }
+                  businessLabel={
+                    activeReport.kind === "url"
+                      ? activeReport.urlMeta.pageTitle?.slice(0, 200) || activeReport.urlMeta.url
+                      : activeReport.place.name
+                  }
+                  addressLabel={
+                    activeReport.kind === "place" ? activeReport.place.formattedAddress : null
+                  }
+                  homepageContactHints={activeReport.kind === "url" ? urlHomepageHints : null}
+                  onPickEmail={(email) => setLeadEmail((cur) => cur.trim() || email)}
+                  onPickPhone={(phone) => setLeadPhone((cur) => cur.trim() || phone)}
+                  onWebsiteEmailsChange={setWebsiteCrawlEmails}
+                  onWebsiteDeepStatusChange={setWebsiteDeepStatus}
+                />
+              </ReportSection>
+            </div>
+          </div>
         </div>
       ) : (
         <div className={`${cardClass} text-sm text-text-secondary dark:text-zinc-500`}>
