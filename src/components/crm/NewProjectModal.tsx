@@ -77,7 +77,7 @@ export default function NewProjectModal({
   const defaultPlanSlug = planStageOrder[0] ?? "backlog";
   const [plan, setPlan] = useState<string>(defaultPlanSlug);
   const [teamMemberId, setTeamMemberId] = useState("");
-  const defaultProjectType = leadProjectTypeOptions[0] ?? "Other";
+  const defaultProjectType = leadProjectTypeOptions[0] ?? "MVP Dev";
   const [projectType, setProjectType] = useState<string>(defaultProjectType);
   const [endDate, setEndDate] = useState("");
   const [budget, setBudget] = useState("");

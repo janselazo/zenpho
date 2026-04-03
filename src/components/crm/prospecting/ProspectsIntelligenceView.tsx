@@ -617,7 +617,7 @@ function ProspectsIntelligenceViewInner({
   const searchParams = useSearchParams();
   const prevReportSearchParam = useRef<string | null>(null);
   const defaultProjectType =
-    fieldOptions.leadProjectTypes[0] ?? "Other";
+    fieldOptions.leadProjectTypes[0] ?? "MVP Dev";
   const [businessName, setBusinessName] = useState("");
   const [category, setCategory] = useState("");
   const [city, setCity] = useState("");
@@ -1169,16 +1169,16 @@ function ProspectsIntelligenceViewInner({
         ariaLabel="Prospects"
         tabs={[
           {
-            id: "local-business",
-            label: "Local Business",
-            icon: Building2,
-            body: localBusinessTabBody,
-          },
-          {
             id: "tech-startups",
             label: "Tech Startups",
             icon: Rocket,
             body: <PlaceholderPanel text="Coming soon." />,
+          },
+          {
+            id: "local-business",
+            label: "Local Business",
+            icon: Building2,
+            body: localBusinessTabBody,
           },
         ]}
       />

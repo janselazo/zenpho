@@ -15,7 +15,7 @@ export const LEAD_SOURCE_DEFAULT_OPTIONS = [
   "conference",
   "facebook",
   "instagram",
-  "Prospecting — Prospects",
+  "Prospects",
 ] as const;
 
 export const MAX_FIELD_OPTION_LIST_ITEMS = 50;

@@ -339,7 +339,7 @@ export async function createLeadFromProspectIntelAction(input: {
   if (input.company?.trim()) fd.set("company", input.company.trim());
   if (input.email?.trim()) fd.set("email", input.email.trim());
   if (input.phone?.trim()) fd.set("phone", input.phone.trim());
-  fd.set("source", "Prospecting — Prospects");
+  fd.set("source", "Prospects");
   fd.set("notes", notes);
   fd.set("project_type", input.project_type.trim());
 

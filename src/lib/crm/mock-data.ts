@@ -235,10 +235,10 @@ export const LEAD_STAGE_LABELS: Record<LeadStage, string> = {
 
 /** Lead "Project type" dropdown (stored as-display on `lead.project_type`) */
 export const LEAD_PROJECT_TYPE_OPTIONS = [
+  "MVP Dev",
   "Web App",
   "Mobile App",
   "Website",
-  "Other",
 ] as const;
 
 export type LeadProjectType = (typeof LEAD_PROJECT_TYPE_OPTIONS)[number];
