@@ -1,0 +1,28 @@
+---
+description: Google Stitch MCP — create UI projects and screens in Stitch from Cursor when the user asks for Stitch designs or text-to-UI.
+alwaysApply: false
+---
+
+# Google Stitch MCP (Cursor)
+
+## Connect (one-time)
+
+1. **Cursor** → **Settings** → **Tools & MCP** → **New MCP Server**.
+2. Use the **HTTP** Stitch endpoint from Google’s docs (e.g. `https://stitch.googleapis.com/mcp`).
+3. Add header **`X-Goog-Api-Key`** with a **Google API key** that has **Stitch API** enabled (do **not** commit keys; keep in Cursor only or env substitution if supported).
+4. Save; wait until **stitch** shows **connected** (green). Restart Cursor if tools don’t appear.
+
+Optional: mirror the same block in this repo’s [`.cursor/mcp.json`](.cursor/mcp.json) only if your team shares config **without** secrets (e.g. env var placeholders)—never commit raw keys.
+
+## What you can do from chat
+
+When Stitch is connected, ask the agent to use **Stitch MCP tools** (e.g. “create a Stitch project and generate a landing page for …”). Typical flow:
+
+1. **`create_project`** — optional `title`. Returns `name` like `projects/{numericId}`.
+2. **`generate_screen_from_text`** — required: `projectId` = **numeric id only** (no `projects/` prefix), `prompt` (full spec), optional `deviceType` (`DESKTOP`, `MOBILE`, `TABLET`, `AGNOSTIC`). Generation can take **several minutes**; **do not retry** the same call immediately (per API guidance). If the call errors with a connection issue, generation may still finish—use **`get_screen`** / **`list_screens`** later.
+3. **`list_projects`**, **`get_project`**, **`list_screens`**, **`get_screen`** — inspect state and assets.
+4. **`edit_screens`**, **`generate_variants`**, design-system tools — iterate once a project exists.
+
+## Zenpho vs Stitch
+
+- **This repo** is the Next.js app; **Stitch** is where generated UI/designs live. There is no automatic sync—export or hand-off from Stitch into code as needed.

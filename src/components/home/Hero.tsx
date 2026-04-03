@@ -45,7 +45,7 @@ export default function Hero() {
         >
           We turn your{" "}
           <span className="font-semibold text-emerald-500">idea</span> into a
-          ready-to-launch software product in{" "}
+          working software product in{" "}
           <span className="font-semibold text-accent">2 weeks</span> — fast,
           affordable, and built to grow.
         </motion.p>
