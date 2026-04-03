@@ -7,7 +7,7 @@ import CTASection from "@/components/home/CTASection";
 export const metadata: Metadata = {
   title: "Services",
   description:
-    "Custom web apps, mobile apps, websites, AI, and integrations — designed, built, and launched fast for founders and businesses. AI Product Studio.",
+    "Custom MVPs, web apps, mobile apps, AI, and integrations — designed, built, and launched fast for founders and businesses. AI Product Studio.",
 };
 
 export default function ServicesPage() {

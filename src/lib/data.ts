@@ -85,16 +85,17 @@ export interface DevelopmentPricingOffering {
 /** Development offerings in ascending price order for the pricing grid. */
 export const developmentPricingOfferings: DevelopmentPricingOffering[] = [
   {
-    id: "websites",
-    title: "Websites",
-    subtitle: "Startup sites, landing pages, and content your team can update.",
-    priceAmount: "$1,000",
+    id: "mvp-development",
+    title: "MVP Development",
+    subtitle:
+      "A shippable first version you can put in front of users — scoped tight, built fast, ready to learn from.",
+    priceAmount: "$2,500",
     priceSuffix: "starting",
     features: [
-      "Responsive layouts and performance-minded delivery",
-      "UI/UX aligned to your brand",
-      "SEO setup and analytics hooks",
-      "Optional CMS for ongoing edits",
+      "Discovery and scope locked to one clear MVP slice — no kitchen-sink specs",
+      "Core user flows implemented end to end (web or simple mobile, as scoped)",
+      "Production-minded foundations: auth, data, and deploy as the build needs",
+      "Weekly demos, staging previews, and a short handoff so you can iterate",
       "Slack channel + post-launch support window",
     ],
   },
@@ -131,17 +132,17 @@ export const developmentPricingOfferings: DevelopmentPricingOffering[] = [
 
 export const services: Service[] = [
   {
-    slug: "websites",
-    title: "Custom websites",
-    subtitle: "Tailored to the technology and software industry",
+    slug: "mvp-development",
+    title: "MVP Development",
+    subtitle: "Ship something real in weeks, not months",
     description:
-      "Marketing sites built for software and technology companies — clear product story, credible proof, and conversion paths for technical and commercial buyers, without waiting on engineering for every edit.",
+      "We scope and build the smallest version of your product that still delivers real value — so you can validate with users, unblock fundraising, and learn what to build next without burning six months on a deck.",
     details: [
-      "Product-led storytelling: features, integrations, security, and ROI in plain language",
-      "Lead capture tuned to B2B SaaS and dev tools — demos, trials, docs-adjacent pages",
-      "SEO-conscious structure and analytics you can act on",
+      "Ruthless scope: one primary job-to-be-done, clear success criteria, explicit out-of-scope list",
+      "End-to-end flows your first users can actually complete — not mockups or a brittle demo",
+      "Instrumentation and deploy included so you can measure and ship follow-on iterations",
     ],
-    icon: "store",
+    icon: "zap",
   },
   {
     slug: "web-applications",
@@ -210,7 +211,7 @@ export const processSteps: ProcessStep[] = [
     number: "03",
     title: "Build",
     description:
-      "Our team develops your fully functional web app, mobile app, or marketing site — fast, clean, and built to scale.",
+      "Our team develops your fully functional web app, mobile app, or MVP — fast, clean, and built to scale.",
   },
   {
     number: "04",
@@ -666,7 +667,7 @@ export const resourceItems: ResourceItem[] = [
   {
     title: "Case studies",
     description:
-      "Selected client builds in production — SaaS platforms, marketing sites, and dashboards.",
+      "Selected client builds in production — SaaS platforms, MVPs, and dashboards.",
     href: "/case-studies",
     tag: "Work",
   },

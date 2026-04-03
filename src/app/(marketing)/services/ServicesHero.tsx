@@ -36,7 +36,7 @@ export default function ServicesHero() {
           transition={{ duration: 0.45, delay: 0.14 }}
           className="mx-auto mt-8 max-w-2xl text-base font-medium leading-relaxed text-text-primary/80 sm:mt-9 sm:text-lg"
         >
-          Custom web apps, mobile apps, marketing sites, and AI-powered
+          Custom MVPs, web apps, mobile apps, and AI-powered
           products — designed, built, and launched for founders and businesses
           ready to move.
         </motion.p>

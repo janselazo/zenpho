@@ -25,7 +25,12 @@ const nextConfig = {
       { source: "/methodology", destination: "/about", permanent: true },
       {
         source: "/services/websites-ecommerce",
-        destination: "/services/websites",
+        destination: "/services/mvp-development",
+        permanent: true,
+      },
+      {
+        source: "/services/websites",
+        destination: "/services/mvp-development",
         permanent: true,
       },
     ];

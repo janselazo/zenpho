@@ -17,56 +17,56 @@ export type ServiceDetailBody = {
 };
 
 const bySlug: Record<string, ServiceDetailBody> = {
-  websites: {
+  "mvp-development": {
     metaDescription:
-      "Custom websites from Zenpho: product-led story, credible proof, SEO-ready structure, and a CMS your team can run without engineering for every edit.",
+      "MVP development from Zenpho: a shippable first version in weeks — tight scope, core flows end to end, deploy and analytics, starting at $2,500.",
     intro: [
-      "In software, your site has to do more than look good — it has to explain a product, earn trust with technical buyers, and still speak to commercial stakeholders. We build marketing sites as systems — not one-off pages — so you can launch campaigns, tune messaging, and ship new sections without a ticket queue.",
-      "Scope follows how tech companies actually sell: hero and pillar pages, proof and case studies, pricing and FAQs, security and compliance callouts when they matter, plus forms and integrations to your stack. We stay opinionated about performance and analytics so you can see what to improve next.",
+      "Most MVPs fail before code ships because the scope tries to be a full product. We start from the outcome: what must be true after launch for this to be a win? That becomes a single vertical slice — the smallest build that still lets real users do something meaningful.",
+      "You get working software on a predictable rhythm: a first slice quickly, then weekly demos until the agreed MVP is live. We document what’s in, what’s out, and what comes next so you’re not guessing when it’s time to raise, sell, or hire.",
     ],
     sections: [
       {
-        title: "Product & industry storytelling",
+        title: "Scope that can ship",
         paragraphs: [
-          "Landing systems, pillar pages, and component-based layouts let you reuse patterns while keeping each page on-message. We align typography, spacing, and motion with your brand so the experience feels intentional on every breakpoint — especially when you’re explaining something complex.",
+          "Together we define one primary user, one critical journey, and the minimum data and permissions that journey needs. Everything else goes on a visible backlog — not in the first milestone.",
         ],
         bullets: [
-          "Responsive layouts and accessible defaults (focus, contrast, semantics)",
-          "Patterns that fit B2B SaaS and dev tools: features, integrations, changelog-adjacent updates",
-          "Optional headless or traditional CMS — chosen for who will maintain content",
-        ],
-      },
-      {
-        title: "Lead capture & trust",
-        bullets: [
-          "Forms, scheduling embeds, and clear CTAs with validation and success states",
-          "Social proof, logos, metrics, and security/compliance cues that match how you sell",
-          "Lightweight personalization or gated content when your funnel needs it",
+          "Problem framing, success metrics, and explicit out-of-scope list",
+          "Wire-level clarity before build so surprises show up early, not in week six",
+          "Tradeoffs named up front: speed vs. polish, build vs. buy for third parties",
         ],
       },
       {
-        title: "Discovery & conversion",
+        title: "Build & quality bar",
         bullets: [
-          "SEO-conscious IA, metadata, and structured data where it helps",
-          "Analytics and event hooks you can act on (not vanity dashboards)",
-          "A/B-friendly modules when you want to iterate on key pages",
+          "Web-first or scoped mobile — chosen for how your users actually onboard",
+          "Auth, roles, and data models only as deep as this slice requires",
+          "Sensible error states, empty states, and deploy you can point stakeholders at",
+        ],
+      },
+      {
+        title: "Launch & learn",
+        bullets: [
+          "Staging and production deploy with a short go-live checklist",
+          "Basic analytics or event hooks so you can see where people drop off",
+          "Handoff notes and extension points for the next phase — no black box",
         ],
       },
       {
         title: "How we deliver",
         paragraphs: [
-          "You get a first working slice quickly, then weekly visible progress — same rhythm as our web app work, tuned for marketing milestones (launch, campaign, narrative refresh).",
+          "Same engagement model as our larger builds: visible progress every week, async updates in Slack, and room for a small number of scope adjustments when we learn something important — without turning the MVP into a rewrite.",
         ],
         bullets: [
-          "Staging previews and a short handoff so your team owns day-two edits",
-          "Performance budgets and image strategy baked in, not bolted on later",
+          "Fixed-scope MVP pricing starts at $2,500; exact quote after a short discovery call",
+          "Post-launch support window included; follow-on sprints when you’re ready",
         ],
       },
     ],
     idealFor: [
-      "Software startup founders outgrowing a template but not ready to hire a full web department",
-      "Teams who need a credible site that matches a technical product and sales motion",
-      "Founders who want speed without sacrificing SEO, clarity, or quality",
+      "Founders who need something real in users’ hands before the next funding or sales push",
+      "Teams replacing spreadsheets or manual workflows with a first productized version",
+      "Builders who want speed without pretending a prototype is production-ready",
     ],
   },
   "web-applications": {

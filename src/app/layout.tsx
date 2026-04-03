@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     template: "%s | Zenpho",
   },
   description:
-    "AI software development agency: websites, web apps, mobile apps, automation, and integrations — starting points from $1,000. Studio for in-house products.",
+    "AI software development agency: MVP development, web apps, mobile apps, automation, and integrations — starting points from $2,500. Studio for in-house products.",
   openGraph: {
     title: "Zenpho — AI Software Development Agency & Studio",
     description:

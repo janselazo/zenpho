@@ -24,7 +24,10 @@ import {
   createLeadFromPlacesListingAction,
 } from "@/app/(crm)/actions/prospect-intel";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Building2, ChevronLeft, ChevronRight, Rocket } from "lucide-react";
+import ProspectingTabbedShell, {
+  PlaceholderPanel,
+} from "@/components/crm/prospecting/ProspectingTabbedShell";
 import PlacesBusinessAutocomplete from "@/components/crm/prospecting/PlacesBusinessAutocomplete";
 import PlacesCategoryAutocomplete from "@/components/crm/prospecting/PlacesCategoryAutocomplete";
 import PlacesSearchResultsList from "@/components/crm/prospecting/PlacesSearchResultsList";
@@ -978,26 +981,16 @@ function ProspectsIntelligenceViewInner({
     setSaveMessage("Report saved.");
   }
 
-  return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="heading-display text-2xl font-bold text-text-primary dark:text-zinc-100">
-          Prospects
-        </h1>
-        <p className="mt-1 max-w-3xl text-sm text-text-secondary dark:text-zinc-400">
-          Find and qualify outbound targets with Google Places (official API) and quick website
-          signals—then turn the best fits into CRM{" "}
-          <strong className="font-medium text-text-primary dark:text-zinc-200">Leads</strong>.
-          This module is separate from pipeline Leads: use it for market intelligence first.
-        </p>
-      </div>
+  const prospectsDescription =
+    "Find and qualify outbound targets with Google Places (official API) and quick website signals—then turn the best fits into CRM Leads. This module is separate from pipeline Leads: use it for market intelligence first.";
 
-      <div className={`${cardClass} space-y-4`}>
-        <div id="local-business-panel" className="space-y-4">
-          <div>
-            <h2 className="text-sm font-semibold text-text-primary dark:text-zinc-100">
-              Local Business (Google Places)
-            </h2>
+  const localBusinessTabBody = (
+    <div className={`${cardClass} space-y-4`}>
+      <div id="local-business-panel" className="space-y-4">
+        <div>
+          <h2 className="text-sm font-semibold text-text-primary dark:text-zinc-100">
+            Local Business
+          </h2>
             <p className="mt-1 text-xs text-text-secondary dark:text-zinc-500">
               Business names use Google Places Autocomplete; bulk discovery still uses Text Search. Requires{" "}
               <code className="rounded bg-surface px-1 font-mono text-[11px] dark:bg-zinc-800">
@@ -1155,7 +1148,40 @@ function ProspectsIntelligenceViewInner({
             <p className="text-sm text-red-600 dark:text-red-400">{urlError}</p>
           ) : null}
         </div>
+
+        {!activeReport ? (
+          <div className="border-t border-border pt-4 text-sm text-text-secondary dark:border-zinc-800 dark:text-zinc-500">
+            Use <strong className="text-text-primary dark:text-zinc-300">Local Business</strong> (pick a
+            suggestion or run Text Search and open{" "}
+            <strong className="text-text-primary dark:text-zinc-300">View report</strong>
+            ), or <strong className="text-text-primary dark:text-zinc-300">Research from website URL</strong>{" "}
+            above, to generate a report and add a Lead.
+          </div>
+        ) : null}
       </div>
+  );
+
+  return (
+    <div className="space-y-8">
+      <ProspectingTabbedShell
+        title="Prospects"
+        description={prospectsDescription}
+        ariaLabel="Prospects"
+        tabs={[
+          {
+            id: "local-business",
+            label: "Local Business",
+            icon: Building2,
+            body: localBusinessTabBody,
+          },
+          {
+            id: "tech-startups",
+            label: "Tech Startups",
+            icon: Rocket,
+            body: <PlaceholderPanel text="Coming soon." />,
+          },
+        ]}
+      />
 
       {activeReport ? (
         <div
@@ -1401,14 +1427,7 @@ function ProspectsIntelligenceViewInner({
             </div>
           </div>
         </div>
-      ) : (
-        <div className={`${cardClass} text-sm text-text-secondary dark:text-zinc-500`}>
-          Use <strong className="text-text-primary dark:text-zinc-300">Local Business</strong> (pick a
-          suggestion or run Text Search and open <strong className="text-text-primary dark:text-zinc-300">View report</strong>
-          ), or <strong className="text-text-primary dark:text-zinc-300">Research from website URL</strong> below it, to
-          generate a report and add a Lead.
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }
