@@ -19,7 +19,7 @@ export type ServiceDetailBody = {
 const bySlug: Record<string, ServiceDetailBody> = {
   websites: {
     metaDescription:
-      "Custom websites for technology and software companies from Zenpho: product-led story, credible proof, SEO-ready structure, and a CMS your team can run without engineering for every edit.",
+      "Custom websites from Zenpho: product-led story, credible proof, SEO-ready structure, and a CMS your team can run without engineering for every edit.",
     intro: [
       "In software, your site has to do more than look good — it has to explain a product, earn trust with technical buyers, and still speak to commercial stakeholders. We build marketing sites as systems — not one-off pages — so you can launch campaigns, tune messaging, and ship new sections without a ticket queue.",
       "Scope follows how tech companies actually sell: hero and pillar pages, proof and case studies, pricing and FAQs, security and compliance callouts when they matter, plus forms and integrations to your stack. We stay opinionated about performance and analytics so you can see what to improve next.",

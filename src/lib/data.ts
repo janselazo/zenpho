@@ -87,7 +87,7 @@ export const developmentPricingOfferings: DevelopmentPricingOffering[] = [
   {
     id: "websites",
     title: "Websites",
-    subtitle: "Marketing sites, landing pages, and content your team can update.",
+    subtitle: "Startup sites, landing pages, and content your team can update.",
     priceAmount: "$1,000",
     priceSuffix: "starting",
     features: [
@@ -116,7 +116,7 @@ export const developmentPricingOfferings: DevelopmentPricingOffering[] = [
   {
     id: "mobile-apps",
     title: "Mobile Apps",
-    subtitle: "iOS, Android, or both — store-ready when you are.",
+    subtitle: "iOS, Android, or both",
     priceAmount: "$7,000",
     priceSuffix: "starting",
     features: [
@@ -132,7 +132,7 @@ export const developmentPricingOfferings: DevelopmentPricingOffering[] = [
 export const services: Service[] = [
   {
     slug: "websites",
-    title: "Custom websites for tech & software companies",
+    title: "Custom websites",
     subtitle: "Tailored to the technology and software industry",
     description:
       "Marketing sites built for software and technology companies — clear product story, credible proof, and conversion paths for technical and commercial buyers, without waiting on engineering for every edit.",
