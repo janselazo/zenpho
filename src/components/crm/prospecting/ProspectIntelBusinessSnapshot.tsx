@@ -1,7 +1,8 @@
 "use client";
 
+import type { ReactNode } from "react";
 import type { ProspectSocialUrls } from "@/lib/crm/prospect-enrichment-types";
-import { Facebook, Instagram, Linkedin, Mail, Twitter } from "lucide-react";
+import { Facebook, Globe, Instagram, Linkedin, Mail } from "lucide-react";
 
 function listingSiteLabel(raw: string): string {
   try {
@@ -33,6 +34,14 @@ function googleBusinessStatusLabel(status: string): string {
   return map[status] ?? status.replace(/_/g, " ").toLowerCase();
 }
 
+function TikTokGlyph({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden fill="currentColor">
+      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
+    </svg>
+  );
+}
+
 type Props = {
   businessLabel: string;
   addressLabel: string | null;
@@ -61,94 +70,172 @@ type Props = {
 const channelBtnClass =
   "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border/80 text-text-primary transition hover:border-accent/50 hover:bg-surface dark:border-zinc-600 dark:hover:border-blue-500/40 dark:hover:bg-zinc-800/80";
 
-function ReachOutChannels({
+const channelDisabledClass =
+  "inline-flex h-9 w-9 shrink-0 cursor-not-allowed items-center justify-center rounded-lg border border-dashed border-border/50 bg-surface/40 text-text-secondary/35 dark:border-zinc-700/50 dark:bg-zinc-900/30 dark:text-zinc-600";
+
+/**
+ * Fixed order: Website, Email, LinkedIn, Instagram, Facebook, TikTok.
+ * Website + phone come from Google listing when available; email and socials from fetched HTML.
+ */
+function ContactChannelStrip({
+  websiteUrl,
   contactEmail,
   socialUrls,
   onPickEmail,
 }: {
-  contactEmail?: string | null;
-  socialUrls?: ProspectSocialUrls | null;
+  websiteUrl: string | null;
+  contactEmail: string | null;
+  socialUrls: ProspectSocialUrls | null;
   onPickEmail?: (email: string) => void;
 }) {
   const s = socialUrls;
   const email = contactEmail?.trim() || null;
-  const has =
-    email ||
-    s?.facebook ||
-    s?.instagram ||
-    s?.linkedin ||
-    s?.twitter;
-  if (!has) return null;
+  const web = websiteUrl?.trim() || null;
+
+  const item = (
+    key: string,
+    label: string,
+    active: boolean,
+    node: ReactNode,
+    title: string
+  ) => (
+    <div key={key} className="flex flex-col items-center gap-1">
+      {active ? node : <span className={channelDisabledClass} title={title}>{node}</span>}
+      <span className="max-w-[4.5rem] truncate text-center text-[9px] font-medium uppercase tracking-wide text-text-secondary/70 dark:text-zinc-500">
+        {label}
+      </span>
+    </div>
+  );
 
   return (
     <div className="mt-3 flex flex-col gap-2">
       <p className="text-[10px] font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
-        Reach out
+        Contact channels
       </p>
-      <div className="flex flex-wrap items-center gap-2">
-        {email ? (
-          <a
-            href={`mailto:${encodeURIComponent(email)}`}
-            className={channelBtnClass}
-            title={email}
-            aria-label={`Email ${email}`}
-            onClick={() => onPickEmail?.(email)}
-          >
-            <Mail className="h-4 w-4 text-accent dark:text-blue-400" aria-hidden />
-          </a>
-        ) : null}
-        {s?.facebook ? (
-          <a
-            href={s.facebook}
-            target="_blank"
-            rel="noreferrer"
-            className={channelBtnClass}
-            title="Facebook"
-            aria-label="Open Facebook profile"
-          >
-            <Facebook className="h-4 w-4 text-[#1877F2]" aria-hidden />
-          </a>
-        ) : null}
-        {s?.instagram ? (
-          <a
-            href={s.instagram}
-            target="_blank"
-            rel="noreferrer"
-            className={channelBtnClass}
-            title="Instagram"
-            aria-label="Open Instagram profile"
-          >
-            <Instagram className="h-4 w-4 text-pink-600 dark:text-pink-400" aria-hidden />
-          </a>
-        ) : null}
-        {s?.linkedin ? (
-          <a
-            href={s.linkedin}
-            target="_blank"
-            rel="noreferrer"
-            className={channelBtnClass}
-            title="LinkedIn"
-            aria-label="Open LinkedIn"
-          >
-            <Linkedin className="h-4 w-4 text-[#0A66C2]" aria-hidden />
-          </a>
-        ) : null}
-        {s?.twitter ? (
-          <a
-            href={s.twitter}
-            target="_blank"
-            rel="noreferrer"
-            className={channelBtnClass}
-            title="X / Twitter"
-            aria-label="Open X or Twitter profile"
-          >
-            <Twitter className="h-4 w-4 text-text-primary dark:text-zinc-200" aria-hidden />
-          </a>
-        ) : null}
+      <div className="flex flex-wrap justify-between gap-3 sm:justify-start sm:gap-4">
+        {item(
+          "web",
+          "Website",
+          Boolean(web),
+          web ? (
+            <a
+              href={web}
+              target="_blank"
+              rel="noreferrer"
+              className={channelBtnClass}
+              title={listingSiteLabel(web)}
+              aria-label="Open website"
+            >
+              <Globe className="h-4 w-4 text-accent dark:text-blue-400" aria-hidden />
+            </a>
+          ) : (
+            <Globe className="h-4 w-4" aria-hidden />
+          ),
+          "No website on Google listing (add a URL and research to scan)"
+        )}
+        {item(
+          "email",
+          "Email",
+          Boolean(email),
+          email ? (
+            <a
+              href={`mailto:${encodeURIComponent(email)}`}
+              className={channelBtnClass}
+              title={email}
+              aria-label={`Email ${email}`}
+              onClick={() => onPickEmail?.(email)}
+            >
+              <Mail className="h-4 w-4 text-accent dark:text-blue-400" aria-hidden />
+            </a>
+          ) : (
+            <Mail className="h-4 w-4" aria-hidden />
+          ),
+          "Not found on scanned public pages yet"
+        )}
+        {item(
+          "linkedin",
+          "LinkedIn",
+          Boolean(s?.linkedin?.trim()),
+          s?.linkedin ? (
+            <a
+              href={s.linkedin}
+              target="_blank"
+              rel="noreferrer"
+              className={channelBtnClass}
+              title="LinkedIn"
+              aria-label="Open LinkedIn"
+            >
+              <Linkedin className="h-4 w-4 text-[#0A66C2]" aria-hidden />
+            </a>
+          ) : (
+            <Linkedin className="h-4 w-4" aria-hidden />
+          ),
+          "Not linked from scanned pages"
+        )}
+        {item(
+          "instagram",
+          "Instagram",
+          Boolean(s?.instagram?.trim()),
+          s?.instagram ? (
+            <a
+              href={s.instagram}
+              target="_blank"
+              rel="noreferrer"
+              className={channelBtnClass}
+              title="Instagram"
+              aria-label="Open Instagram"
+            >
+              <Instagram className="h-4 w-4 text-pink-600 dark:text-pink-400" aria-hidden />
+            </a>
+          ) : (
+            <Instagram className="h-4 w-4" aria-hidden />
+          ),
+          "Not linked from scanned pages"
+        )}
+        {item(
+          "facebook",
+          "Facebook",
+          Boolean(s?.facebook?.trim()),
+          s?.facebook ? (
+            <a
+              href={s.facebook}
+              target="_blank"
+              rel="noreferrer"
+              className={channelBtnClass}
+              title="Facebook"
+              aria-label="Open Facebook"
+            >
+              <Facebook className="h-4 w-4 text-[#1877F2]" aria-hidden />
+            </a>
+          ) : (
+            <Facebook className="h-4 w-4" aria-hidden />
+          ),
+          "Not linked from scanned pages"
+        )}
+        {item(
+          "tiktok",
+          "TikTok",
+          Boolean(s?.tiktok?.trim()),
+          s?.tiktok ? (
+            <a
+              href={s.tiktok}
+              target="_blank"
+              rel="noreferrer"
+              className={channelBtnClass}
+              title="TikTok"
+              aria-label="Open TikTok"
+            >
+              <TikTokGlyph className="h-4 w-4 text-text-primary dark:text-zinc-100" />
+            </a>
+          ) : (
+            <TikTokGlyph className="h-4 w-4" />
+          ),
+          "Not linked from scanned pages"
+        )}
       </div>
-      <p className="text-[10px] text-text-secondary/90 dark:text-zinc-500">
-        Icons use links found on fetched public pages (homepage and contact-style paths). Google&apos;s listing API
-        here does not include social profile fields.
+      <p className="text-[10px] leading-snug text-text-secondary/90 dark:text-zinc-500">
+        Website and listing phone come from Google Business Profile when you open a local listing. Email and social
+        icons fill in after we fetch and parse the public site (not returned by the Places fields used here).
       </p>
     </div>
   );
@@ -174,6 +261,11 @@ export default function ProspectIntelBusinessSnapshot({
     ? "min-w-0 sm:flex sm:min-h-0 sm:flex-col"
     : "h-full min-w-0 rounded-xl border border-border bg-surface/30 p-4 dark:border-zinc-700/80 dark:bg-zinc-900/40 sm:flex sm:min-h-0 sm:flex-col";
 
+  const primaryWebsiteUrl =
+    (listingWebsiteUri?.trim() && listingWebsiteUri.trim()) ||
+    (researchFromUrl && fetchedPageUrl?.trim() ? fetchedPageUrl.trim() : null) ||
+    null;
+
   return (
     <div className={shell}>
       <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/60 dark:text-zinc-500">
@@ -195,19 +287,6 @@ export default function ProspectIntelBusinessSnapshot({
             <span className="text-text-secondary dark:text-zinc-400">
               {googleBusinessStatusLabel(googleBusinessStatus)}
             </span>
-          </p>
-        ) : null}
-        {embedded && listingWebsiteUri?.trim() ? (
-          <p className="mt-2 text-sm">
-            <span className="text-text-secondary dark:text-zinc-500">Website </span>
-            <a
-              href={listingWebsiteUri.trim()}
-              target="_blank"
-              rel="noreferrer"
-              className="break-all font-medium text-accent hover:underline dark:text-blue-400"
-            >
-              {listingSiteLabel(listingWebsiteUri.trim())}
-            </a>
           </p>
         ) : null}
         {fetchedPageUrl?.trim() ? (
@@ -255,7 +334,8 @@ export default function ProspectIntelBusinessSnapshot({
             </a>
           ) : null}
         </div>
-        <ReachOutChannels
+        <ContactChannelStrip
+          websiteUrl={primaryWebsiteUrl}
           contactEmail={contactEmail}
           socialUrls={socialUrls}
           onPickEmail={onPickEmail}

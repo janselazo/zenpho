@@ -226,6 +226,98 @@ function ensureMinimum(
   }
 }
 
+function clipSummaryText(s: string, max: number): string {
+  const t = s.trim();
+  if (t.length <= max) return t;
+  return `${t.slice(0, Math.max(0, max - 1))}…`;
+}
+
+/**
+ * Plain-language snapshot for the Business snapshot card: what they do (categories / homepage),
+ * reputation, and web presence — not generic agency jargon.
+ */
+function buildInsightSummary(signals: IntelSignals): string {
+  const name = signals.name?.trim() || "This business";
+  const primary = formatPrimaryCategories(signals.placeTypes);
+  const addr = signals.formattedAddress?.trim();
+  const loc = addr ? clipSummaryText(addr, 100) : null;
+  const fromPlaceListing = Boolean(
+    (signals.placeTypes && signals.placeTypes.length > 0) ||
+      signals.rating != null ||
+      signals.reviewCount != null ||
+      nonEmpty(signals.formattedAddress)
+  );
+
+  const sentences: string[] = [];
+
+  if (primary) {
+    sentences.push(
+      `${name} shows on Google as ${primary}${loc ? `, located at ${loc}` : ""}.`
+    );
+  } else if (signals.placeTypes && signals.placeTypes.length > 0) {
+    sentences.push(
+      `${name} has a Google Business listing${loc ? ` (${loc})` : ""}; categories on Maps are generic, so confirm services on a call or site visit.`
+    );
+  } else if (signals.hasWebsite && (nonEmpty(signals.pageTitle) || nonEmpty(signals.metaDescription))) {
+    const host = signals.websiteUrl ? hostnameOnly(signals.websiteUrl) : null;
+    const title = signals.pageTitle?.trim();
+    if (title) {
+      sentences.push(
+        `${clipSummaryText(title, 120)}${host ? ` (${host})` : ""} — that title is how the business frames itself on its homepage.`
+      );
+    }
+    const md = signals.metaDescription?.trim();
+    if (md && md.length >= 24) {
+      sentences.push(`From the site’s meta description: ${clipSummaryText(md, 240)}`);
+    }
+    if (sentences.length === 0) {
+      sentences.push(
+        host
+          ? `This prospect’s public site is ${host}; scan key pages for services, audience, and proof.`
+          : `Use their public website to infer what they sell and who they serve.`
+      );
+    }
+  } else {
+    sentences.push(`${name} is a prospect you’re researching; add a listing or URL to sharpen this summary.`);
+  }
+
+  if (signals.rating != null && signals.reviewCount != null) {
+    sentences.push(
+      `On Google they show ${signals.rating.toFixed(1)}★ from ${signals.reviewCount} reviews.`
+    );
+  } else if (signals.rating != null) {
+    sentences.push(`Google lists an average rating of ${signals.rating.toFixed(1)}★.`);
+  } else if (signals.reviewCount != null && signals.reviewCount > 0) {
+    sentences.push(`The Maps listing has ${signals.reviewCount} reviews.`);
+  }
+
+  if (fromPlaceListing) {
+    if (!signals.hasWebsite) {
+      sentences.push(
+        "There’s no website on the Google listing, so most customers likely find them through Maps, phone, and referrals."
+      );
+    } else if (signals.https === false) {
+      sentences.push(
+        "A site is linked from Maps but still loads over HTTP — moving to HTTPS helps trust, SEO, and any forms you add."
+      );
+    } else {
+      sentences.push(
+        "The listing links to a live site; anchor your pitch in the services, hours, and proof already published there."
+      );
+    }
+  } else if (signals.hasWebsite && signals.https === false) {
+    sentences.push(
+      "The homepage is not served over HTTPS yet — fix that before pitching chat, lead capture, or payments."
+    );
+  }
+
+  sentences.push(
+    "Agency angle: make the real offer obvious online (what they do, for whom, how to book or buy), then layer simple capture and follow-up so search traffic converts."
+  );
+
+  return sentences.join(" ");
+}
+
 export function buildMarketIntelReport(signals: IntelSignals): MarketIntelReport {
   const software: string[] = [];
   const aiAutomations: string[] = [];
@@ -399,8 +491,7 @@ export function buildMarketIntelReport(signals: IntelSignals): MarketIntelReport
   ensureMinimum(aiAutomations, DEFAULT_AI_GTM, 2, 10);
   ensureMinimum(productGrowth, DEFAULT_GROWTH, 2, 7);
 
-  const name = signals.name?.trim() || "This business";
-  const summary = `${name}: lead with a tangible wedge (on-site chat, niche lead magnet, or speed-to-lead automation), back it with a credible web surface and integrations so leads don’t leak, then instrument conversions and iterate offers — frame every touch as measurable GTM, not generic “AI.”`;
+  const summary = buildInsightSummary(signals);
 
   return { software, aiAutomations, productGrowth, summary };
 }

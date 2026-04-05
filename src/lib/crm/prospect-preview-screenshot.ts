@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { fetchMicrolinkScreenshotUrl } from "@/lib/crm/microlink-screenshot";
 import { prospectPreviewPageUrl } from "@/lib/crm/prospect-preview-public-url";
 
 async function markScreenshotFailed(previewId: string, admin: ReturnType<typeof createAdminClient>) {
@@ -24,25 +25,7 @@ export async function captureProspectPreviewScreenshot(previewId: string): Promi
   }
 
   const pageUrl = prospectPreviewPageUrl(previewId);
-  const apiKey = process.env.MICROLINK_API_KEY?.trim();
-  const micBase = apiKey ? "https://pro.microlink.io" : "https://api.microlink.io";
-  const micUrl = `${micBase}/?url=${encodeURIComponent(pageUrl)}&screenshot=true&meta=false`;
-
-  const headers: HeadersInit = {};
-  if (apiKey) {
-    headers["x-api-key"] = apiKey;
-  }
-
-  let remoteImageUrl: string | null = null;
-  try {
-    const res = await fetch(micUrl, { headers, signal: AbortSignal.timeout(60_000) });
-    const json = (await res.json()) as {
-      data?: { screenshot?: { url?: string } };
-    };
-    remoteImageUrl = json?.data?.screenshot?.url?.trim() || null;
-  } catch {
-    remoteImageUrl = null;
-  }
+  const remoteImageUrl = await fetchMicrolinkScreenshotUrl(pageUrl);
 
   if (!remoteImageUrl) {
     await markScreenshotFailed(previewId, admin);

@@ -58,10 +58,15 @@ export type ProspectPreviewOutreachSnapshot = {
   screenshotUrl: string | null;
 };
 
+export type ProspectPreviewGenerateOptions = {
+  colorVibe?: string;
+  servicesLine?: string;
+};
+
 type Props = {
   canGenerate: boolean;
   /** Async so the button can show immediate loading until the server action finishes. */
-  onGenerate: () => Promise<void>;
+  onGenerate: (opts?: ProspectPreviewGenerateOptions) => Promise<void>;
   generatePending: boolean;
   generateError: string | null;
   preview: ProspectPreviewOutreachSnapshot | null;
@@ -96,6 +101,8 @@ export default function ProspectPreviewOutreachBlock({
   const [copyMsg, setCopyMsg] = useState<string | null>(null);
   /** True from click until onGenerate settles — parent loading can lag one frame. */
   const [generateClickPending, setGenerateClickPending] = useState(false);
+  const [servicesOverride, setServicesOverride] = useState("");
+  const [colorVibeOverride, setColorVibeOverride] = useState("");
 
   useEffect(() => {
     setSmsTemplate(readLs(LS_SMS, DEFAULT_SMS));
@@ -248,9 +255,33 @@ export default function ProspectPreviewOutreachBlock({
       {!preview ? (
         <div className="mt-3 space-y-2">
           <p className="text-xs text-text-secondary dark:text-zinc-400">
-            Generate a one-page HTML preview (OpenAI), host a public link, then share by SMS, email, or
-            social handoff.
+            Claude builds a full HTML/CSS page from this prospect; we host it, show a live iframe preview,
+            capture a thumbnail, then you can share by SMS, email, or social handoff.
           </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <label className="block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+                Services (optional — overrides inferred categories)
+              </label>
+              <input
+                value={servicesOverride}
+                onChange={(e) => setServicesOverride(e.target.value)}
+                placeholder="e.g. Full-service pet grooming, nail trims, de-shedding"
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+                Color and mood (optional — default from env)
+              </label>
+              <input
+                value={colorVibeOverride}
+                onChange={(e) => setColorVibeOverride(e.target.value)}
+                placeholder="e.g. Soft teal and cream, friendly and spotless"
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              />
+            </div>
+          </div>
           <button
             type="button"
             disabled={!canGenerate || generatePending || generateClickPending}
@@ -259,7 +290,12 @@ export default function ProspectPreviewOutreachBlock({
               setGenerateClickPending(true);
               void (async () => {
                 try {
-                  await onGenerate();
+                  const o: ProspectPreviewGenerateOptions = {};
+                  if (servicesOverride.trim()) o.servicesLine = servicesOverride.trim();
+                  if (colorVibeOverride.trim()) o.colorVibe = colorVibeOverride.trim();
+                  await onGenerate(
+                    Object.keys(o).length > 0 ? o : undefined
+                  );
                 } finally {
                   setGenerateClickPending(false);
                 }
@@ -300,6 +336,18 @@ export default function ProspectPreviewOutreachBlock({
               <Copy className="h-3.5 w-3.5" aria-hidden />
               Copy link
             </button>
+          </div>
+
+          <div>
+            <p className="text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+              Live preview
+            </p>
+            <iframe
+              title={`Site preview for ${preview.businessName}`}
+              src={preview.previewUrl}
+              className="mt-2 h-[22rem] w-full max-w-2xl rounded-lg border border-border bg-white dark:border-zinc-700 dark:bg-zinc-950"
+              sandbox="allow-same-origin"
+            />
           </div>
 
           <div className="rounded-lg border border-dashed border-border/80 p-3 dark:border-zinc-700">

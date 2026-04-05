@@ -251,7 +251,8 @@ function stripSocialTracking(u: URL): string {
   if (
     host.endsWith("instagram.com") ||
     host.endsWith("facebook.com") ||
-    host === "fb.com"
+    host === "fb.com" ||
+    host.endsWith("tiktok.com")
   ) {
     copy.search = "";
   }
@@ -265,6 +266,7 @@ export function mergeProspectSocialUrls(...parts: ProspectSocialUrls[]): Prospec
     if (!out.instagram && p.instagram) out.instagram = p.instagram;
     if (!out.linkedin && p.linkedin) out.linkedin = p.linkedin;
     if (!out.twitter && p.twitter) out.twitter = p.twitter;
+    if (!out.tiktok && p.tiktok) out.tiktok = p.tiktok;
   }
   return out;
 }
@@ -367,6 +369,24 @@ export function extractProspectSocialUrls(html: string, pageBaseUrl: string): Pr
       }
       if (parts.length >= 1 && /^[a-z0-9_]+$/i.test(parts[0] ?? "")) {
         out.twitter = stripSocialTracking(u);
+      }
+    }
+
+    if (
+      !out.tiktok &&
+      (host === "tiktok.com" ||
+        host === "www.tiktok.com" ||
+        host === "vm.tiktok.com" ||
+        host === "m.tiktok.com")
+    ) {
+      const parts = u.pathname.split("/").filter(Boolean);
+      const seg = (parts[0] ?? "").toLowerCase();
+      if (["video", "discover", "tag", "music", "legal", "foryou"].includes(seg)) continue;
+      if (seg.startsWith("@")) {
+        const handle = seg.slice(1);
+        if (/^[a-z0-9._]+$/i.test(handle)) {
+          out.tiktok = stripSocialTracking(u);
+        }
       }
     }
   }

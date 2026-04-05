@@ -1,19 +1,33 @@
-import OpenAI from "openai";
-import { buildProspectPreviewDocument, sanitizeProspectPreviewBodyHtml } from "@/lib/crm/prospect-preview-sanitize";
+import {
+  buildProspectPreviewDocument,
+  sanitizeProspectPreviewBodyHtml,
+  sanitizeProspectPreviewFullDocumentHtml,
+} from "@/lib/crm/prospect-preview-sanitize";
 
 export type ProspectPreviewGenerateInput = {
   businessName: string;
+  /** Full formatted address when known (e.g. Google listing). */
   businessAddress: string | null;
+  /** City or region for local flavor (derived or explicit). */
+  city: string | null;
+  /** What they offer — categories, vertical, or homepage positioning. */
+  services: string;
+  /** Mood / palette direction for the concept page. */
+  colorVibe: string;
   primaryCategory: string | null;
   websiteUrl: string | null;
   listingPhone: string | null;
 };
 
-type LlmJson = { bodyHtml?: string };
+const ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages";
+const DEFAULT_MODEL = "claude-sonnet-4-20250514";
 
-function parseJsonContent(raw: string): LlmJson | null {
-  const t = raw.trim();
-  if (!t) return null;
+type LlmJson = { fullHtml?: string; bodyHtml?: string };
+
+function parseJsonFromModelText(raw: string): LlmJson | null {
+  let t = raw.trim();
+  const fence = /^```(?:json)?\s*([\s\S]*?)```$/m.exec(t);
+  if (fence) t = fence[1].trim();
   try {
     return JSON.parse(t) as LlmJson;
   } catch {
@@ -30,63 +44,126 @@ function parseJsonContent(raw: string): LlmJson | null {
   }
 }
 
+function isFullDocumentHtml(s: string): boolean {
+  const x = s.trim().toLowerCase();
+  return x.startsWith("<!doctype") || x.startsWith("<html");
+}
+
 /**
- * Calls OpenAI to produce a single-page HTML body (fragment). Returns full HTML document.
+ * Calls Anthropic Messages API to produce a complete HTML page (with &lt;style&gt; allowed in &lt;head&gt;).
+ * Uses fetch only — no OpenAI / Anthropic SDK.
  */
 export async function generateProspectPreviewDocument(
   input: ProspectPreviewGenerateInput
 ): Promise<{ ok: true; html: string } | { ok: false; error: string }> {
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
   if (!apiKey) {
-    return { ok: false, error: "OPENAI_API_KEY is not configured." };
+    return {
+      ok: false,
+      error: "ANTHROPIC_API_KEY is not configured.",
+    };
   }
 
   const model =
-    process.env.OPENAI_PROSPECT_PREVIEW_MODEL?.trim() || "gpt-4o-mini";
+    process.env.ANTHROPIC_PROSPECT_PREVIEW_MODEL?.trim() || DEFAULT_MODEL;
 
   const lines = [
     `Business name: ${input.businessName}`,
-    input.businessAddress ? `Address: ${input.businessAddress}` : null,
-    input.primaryCategory ? `Category: ${input.primaryCategory}` : null,
-    input.websiteUrl ? `Website: ${input.websiteUrl}` : null,
-    input.listingPhone ? `Phone on listing: ${input.listingPhone}` : null,
+    `Services / focus: ${input.services}`,
+    input.city ? `City / area: ${input.city}` : null,
+    input.businessAddress ? `Full address: ${input.businessAddress}` : null,
+    input.primaryCategory ? `Primary Google category: ${input.primaryCategory}` : null,
+    input.websiteUrl ? `Existing website (reference only): ${input.websiteUrl}` : null,
+    input.listingPhone ? `Phone on listing (optional to echo in CTA): ${input.listingPhone}` : null,
+    `Color & mood direction: ${input.colorVibe}`,
   ].filter(Boolean);
 
   const userPrompt = `${lines.join("\n")}
 
-Design a single modern landing-page style HTML **fragment** (content for inside <body> only) that this agency could show a local business owner as a **concept preview** of an improved homepage. Use only **inline styles** on elements (no <style>, no external CSS, no script). Use semantic tags. Keep it concise: hero, 2–3 benefit bullets, simple CTA. Do not include real phone numbers or emails unless they appear in the inputs above. Use placeholder business name from inputs.
+You are generating a **single conceptual landing page** an agency might show a local business owner — not their real production site.
 
-Respond with **only** a JSON object: {"bodyHtml": "<div>...</div>"} — no markdown fences.`;
+Return **only** a JSON object with one key \`fullHtml\` whose value is a **complete HTML5 document string**:
+- Include \`<!DOCTYPE html>\`, \`<html lang="en">\`, \`<head>\` and \`<body>\`.
+- Put layout and typography CSS in a \`<style>\` block in \`<head>\` (no external stylesheets, no @import).
+- No JavaScript, no forms that submit, no iframes, no external tracking.
+- Use semantic HTML. One hero, clear value props, one primary CTA (e.g. “Book” / “Get a quote” — placeholder #).
+- Respect the color/mood direction; keep contrast accessible.
+- Do not invent phone numbers or emails except you may repeat the listing phone above if provided.
 
-  const openai = new OpenAI({ apiKey });
+Output format: {"fullHtml": "<!DOCTYPE html>..."} with properly escaped JSON (no markdown fences).`;
+
+  const system = `You output only valid JSON with a single string field fullHtml containing a full HTML document. No markdown, no commentary.`;
 
   try {
-    const completion = await openai.chat.completions.create({
-      model,
-      temperature: 0.7,
-      max_tokens: 4096,
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "system",
-          content:
-            "You output only valid JSON with a single string field bodyHtml containing safe HTML body fragment.",
-        },
-        { role: "user", content: userPrompt },
-      ],
+    const res = await fetch(ANTHROPIC_MESSAGES_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 16384,
+        system,
+        messages: [{ role: "user", content: userPrompt }],
+      }),
     });
-    const raw = completion.choices[0]?.message?.content?.trim() ?? "";
-    const parsed = parseJsonContent(raw);
-    const body = typeof parsed?.bodyHtml === "string" ? parsed.bodyHtml : null;
-    if (!body?.trim()) {
-      return { ok: false, error: "Model returned no bodyHtml." };
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      return {
+        ok: false,
+        error: `Anthropic API error (${res.status}): ${errText.slice(0, 400) || res.statusText}`,
+      };
     }
+
+    const data = (await res.json()) as {
+      content?: Array<{ type: string; text?: string }>;
+      error?: { message?: string };
+    };
+
+    if (data.error?.message) {
+      return { ok: false, error: data.error.message };
+    }
+
+    const block = data.content?.find((c) => c.type === "text");
+    const raw = block?.text?.trim() ?? "";
+    if (!raw) {
+      return { ok: false, error: "Anthropic returned an empty response." };
+    }
+
+    const parsed = parseJsonFromModelText(raw);
+    let fullHtml =
+      typeof parsed?.fullHtml === "string" ? parsed.fullHtml.trim() : "";
+    if (!fullHtml && typeof parsed?.bodyHtml === "string") {
+      const body = parsed.bodyHtml.trim();
+      if (body) {
+        try {
+          const sanitizedBody = sanitizeProspectPreviewBodyHtml(body);
+          fullHtml = buildProspectPreviewDocument(sanitizedBody);
+        } catch (e) {
+          console.error("[prospectPreview] body fallback sanitize failed", e);
+        }
+      }
+    }
+
+    if (!fullHtml) {
+      return {
+        ok: false,
+        error: "Model returned no fullHtml (or invalid JSON).",
+      };
+    }
+
     let html: string;
     try {
-      const sanitizedBody = sanitizeProspectPreviewBodyHtml(body);
-      html = buildProspectPreviewDocument(sanitizedBody);
+      html = isFullDocumentHtml(fullHtml)
+        ? sanitizeProspectPreviewFullDocumentHtml(fullHtml)
+        : buildProspectPreviewDocument(
+            sanitizeProspectPreviewBodyHtml(fullHtml),
+          );
     } catch (e) {
-      console.error("[prospectPreview] sanitize/build failed", e);
+      console.error("[prospectPreview] sanitize full document failed", e);
       return {
         ok: false,
         error:
@@ -95,9 +172,11 @@ Respond with **only** a JSON object: {"bodyHtml": "<div>...</div>"} — no markd
             : "Preview sanitization failed.",
       };
     }
+
     return { ok: true, html };
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "OpenAI request failed.";
+    const msg =
+      e instanceof Error ? e.message : "Anthropic request failed unexpectedly.";
     return { ok: false, error: msg };
   }
 }

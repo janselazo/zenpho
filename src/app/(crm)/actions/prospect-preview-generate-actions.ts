@@ -8,11 +8,74 @@ import { primaryPlaceTypeLabel } from "@/lib/crm/places-search-ui";
 import { requireAgencyStaff } from "@/app/(crm)/actions/prospect-preview-agency";
 
 export type GenerateProspectPreviewPayload =
-  | { kind: "place"; place: PlacesSearchPlace }
-  | { kind: "url"; url: string; pageTitle: string | null };
+  | {
+      kind: "place";
+      place: PlacesSearchPlace;
+      /** Palette / mood, e.g. "warm earth tones, spa-like". */
+      colorVibe?: string;
+      /** Override inferred services line from Google types. */
+      servicesLine?: string;
+    }
+  | {
+      kind: "url";
+      url: string;
+      pageTitle: string | null;
+      colorVibe?: string;
+      servicesLine?: string;
+    };
 
 function safeTrim(s: unknown): string {
   return typeof s === "string" ? s.trim() : "";
+}
+
+function humanizePlaceTypeToken(t: string): string {
+  return t
+    .split("_")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+function buildPreviewServicesLine(
+  types: string[],
+  primaryCategory: string | null,
+  urlPageTitle: string | null
+): string {
+  const skip = new Set(["point_of_interest", "establishment", "geocode"]);
+  const picked = types
+    .filter((t) => !skip.has(t))
+    .slice(0, 6)
+    .map(humanizePlaceTypeToken);
+  const prim = primaryCategory?.trim() || "";
+  if (prim && !picked.some((p) => p.toLowerCase() === prim.toLowerCase())) {
+    const line = [prim, ...picked].filter(Boolean).join(" · ");
+    return line || prim;
+  }
+  if (picked.length) return picked.join(" · ");
+  if (prim) return prim;
+  if (urlPageTitle?.trim()) {
+    return `Web presence: ${urlPageTitle.trim().slice(0, 140)}`;
+  }
+  return "Local / web services";
+}
+
+function extractCityFromAddress(address: string | null | undefined): string | null {
+  if (!address?.trim()) return null;
+  const parts = address
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (parts.length >= 2) {
+    return parts[parts.length - 2] ?? null;
+  }
+  return null;
+}
+
+function defaultPreviewColorVibe(): string {
+  return (
+    process.env.PROSPECT_PREVIEW_COLOR_VIBE?.trim() ||
+    "Fresh, professional, trustworthy — light neutral background, one confident accent suited to a local service business, strong typography hierarchy."
+  );
 }
 
 function normalizePlaceForPreview(place: PlacesSearchPlace) {
@@ -98,14 +161,23 @@ async function runGenerateProspectPreview(
     return { ok: false as const, error: "Missing website URL for preview." };
   }
 
+  const colorVibe = safeTrim(payload.colorVibe) || defaultPreviewColorVibe();
+
   const input =
     payload.kind === "place"
       ? (() => {
           const p = normalizePlaceForPreview(payload.place);
+          const primaryCategory = primaryPlaceTypeLabel(p.types);
+          const servicesLine =
+            safeTrim(payload.servicesLine) ||
+            buildPreviewServicesLine(p.types, primaryCategory, null);
           return {
             businessName: p.name.trim() || "Business",
             businessAddress: p.formattedAddress,
-            primaryCategory: primaryPlaceTypeLabel(p.types),
+            city: extractCityFromAddress(p.formattedAddress),
+            services: servicesLine,
+            colorVibe,
+            primaryCategory,
             websiteUrl: p.websiteUri,
             listingPhone: p.nationalPhoneNumber || p.internationalPhoneNumber || null,
             placeGoogleId: p.id,
@@ -124,9 +196,15 @@ async function runGenerateProspectPreview(
             typeof payload.pageTitle === "string"
               ? payload.pageTitle.trim().slice(0, 200)
               : "";
+          const servicesLine =
+            safeTrim(payload.servicesLine) ||
+            buildPreviewServicesLine([], null, title || host);
           return {
             businessName: title || host || "Website preview",
             businessAddress: null as string | null,
+            city: null as string | null,
+            services: servicesLine,
+            colorVibe,
             primaryCategory: null as string | null,
             websiteUrl: url,
             listingPhone: null as string | null,
@@ -134,10 +212,13 @@ async function runGenerateProspectPreview(
           };
         })();
 
-  console.log("[prospectPreview] generate: calling LLM", { businessName: input.businessName });
+  console.log("[prospectPreview] generate: calling Claude", { businessName: input.businessName });
   const gen = await generateProspectPreviewDocument({
     businessName: input.businessName,
     businessAddress: input.businessAddress,
+    city: input.city,
+    services: input.services,
+    colorVibe: input.colorVibe,
     primaryCategory: input.primaryCategory,
     websiteUrl: input.websiteUrl,
     listingPhone: input.listingPhone,

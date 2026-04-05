@@ -6,6 +6,7 @@ export type ProspectSocialUrls = {
   instagram: string | null;
   linkedin: string | null;
   twitter: string | null;
+  tiktok: string | null;
 };
 
 export const EMPTY_PROSPECT_SOCIAL_URLS: ProspectSocialUrls = {
@@ -13,6 +14,7 @@ export const EMPTY_PROSPECT_SOCIAL_URLS: ProspectSocialUrls = {
   instagram: null,
   linkedin: null,
   twitter: null,
+  tiktok: null,
 };
 
 export type PageContactHints = {

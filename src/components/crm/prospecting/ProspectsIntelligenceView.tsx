@@ -258,6 +258,32 @@ function phonesMatchListing(listing: string | null | undefined, candidate: strin
   return a.slice(-10) === b.slice(-10);
 }
 
+function WebsiteScanLiveSnapshot({ siteUrl }: { siteUrl: string }) {
+  const [failed, setFailed] = useState(false);
+  const src = `/api/prospecting/website-snapshot?url=${encodeURIComponent(siteUrl)}`;
+  return (
+    <div className="mt-3">
+      <p className="text-[10px] font-medium uppercase tracking-wide text-text-secondary/60 dark:text-zinc-500">
+        Live page snapshot
+      </p>
+      {failed ? (
+        <p className="mt-2 text-[11px] text-text-secondary dark:text-zinc-500">
+          Preview unavailable (Microlink limits, blocked page, or add MICROLINK_API_KEY for production).
+        </p>
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element -- proxied Microlink screenshot
+        <img
+          src={src}
+          alt={`Screenshot of ${siteUrl}`}
+          className="mt-2 max-h-44 w-full max-w-md rounded-lg border border-border bg-zinc-100 object-cover object-top dark:border-zinc-700 dark:bg-zinc-900"
+          loading="lazy"
+          onError={() => setFailed(true)}
+        />
+      )}
+    </div>
+  );
+}
+
 function IntelContactHintsPanel({
   reportKind,
   place,
@@ -423,6 +449,9 @@ function IntelContactHintsPanel({
             <p className="mt-1 break-all font-mono text-[11px] text-text-secondary dark:text-zinc-500">
               {publicSiteTarget}
             </p>
+          ) : null}
+          {publicSiteTarget?.trim() ? (
+            <WebsiteScanLiveSnapshot siteUrl={publicSiteTarget.trim()} />
           ) : null}
           {websiteDeep.loading ? (
             <p className="mt-2 text-xs text-text-secondary dark:text-zinc-500">Scanning site…</p>
@@ -818,7 +847,7 @@ function ProspectsIntelligenceViewInner({
             : "Preview generation failed. Check the browser console and server logs.";
         const msg =
           raw.includes("Server Components render") || raw.includes("digest")
-            ? "Preview request failed on the server (production hides details). Set OPENAI_API_KEY, run the prospect_preview migration, and check your deployment logs for the error digest."
+            ? "Preview request failed on the server (production hides details). Set ANTHROPIC_API_KEY, run the prospect_preview migration, and check your deployment logs for the error digest."
             : raw;
         setPreviewGenError(msg);
       } finally {
@@ -828,23 +857,31 @@ function ProspectsIntelligenceViewInner({
     [],
   );
 
-  const handleGenerateActiveReportPreview = useCallback(async () => {
-    if (!activeReport || !outreachPreviewKey) {
-      setPreviewGenError(
-        "No report is active. Open a Places listing or research a URL first, then try again.",
-      );
-      return;
-    }
-    const payload =
-      activeReport.kind === "place"
-        ? ({ kind: "place" as const, place: activeReport.place } as const)
-        : ({
-            kind: "url" as const,
-            url: activeReport.urlMeta.url,
-            pageTitle: activeReport.urlMeta.pageTitle,
-          } as const);
-    await handleGeneratePreviewForKey(outreachPreviewKey, payload);
-  }, [activeReport, outreachPreviewKey, handleGeneratePreviewForKey]);
+  const handleGenerateActiveReportPreview = useCallback(
+    async (opts?: { colorVibe?: string; servicesLine?: string }) => {
+      if (!activeReport || !outreachPreviewKey) {
+        setPreviewGenError(
+          "No report is active. Open a Places listing or research a URL first, then try again.",
+        );
+        return;
+      }
+      const payload =
+        activeReport.kind === "place"
+          ? ({
+              kind: "place" as const,
+              place: activeReport.place,
+              ...opts,
+            } as const)
+          : ({
+              kind: "url" as const,
+              url: activeReport.urlMeta.url,
+              pageTitle: activeReport.urlMeta.pageTitle,
+              ...opts,
+            } as const);
+      await handleGeneratePreviewForKey(outreachPreviewKey, payload);
+    },
+    [activeReport, outreachPreviewKey, handleGeneratePreviewForKey],
+  );
 
   const handleGeneratePreviewFromPlacesRow = useCallback(
     (place: PlacesSearchPlace) => {
