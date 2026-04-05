@@ -4,7 +4,8 @@ import DOMPurify from "isomorphic-dompurify";
  * Sanitize LLM-produced body markup for a one-page site preview (inline styles; no scripts).
  */
 export function sanitizeProspectPreviewBodyHtml(html: string): string {
-  const dirty = html.trim() || "<p>Preview</p>";
+  const dirty =
+    (typeof html === "string" ? html : "").trim() || "<p>Preview</p>";
   return DOMPurify.sanitize(dirty, {
     ALLOWED_TAGS: [
       "div",

@@ -33,40 +33,122 @@ export type GenerateProspectPreviewPayload =
   | { kind: "place"; place: PlacesSearchPlace }
   | { kind: "url"; url: string; pageTitle: string | null };
 
-export async function generateProspectPreviewAction(payload: GenerateProspectPreviewPayload) {
+function safeTrim(s: unknown): string {
+  return typeof s === "string" ? s.trim() : "";
+}
+
+function normalizePlaceForPreview(place: PlacesSearchPlace) {
+  const name = safeTrim(place.name) || "Business";
+  const types = Array.isArray(place.types)
+    ? place.types.filter((t): t is string => typeof t === "string")
+    : [];
+  return {
+    id: safeTrim(place.id) || "unknown",
+    name,
+    formattedAddress:
+      place.formattedAddress == null
+        ? null
+        : typeof place.formattedAddress === "string"
+          ? place.formattedAddress.trim() || null
+          : null,
+    websiteUri:
+      place.websiteUri == null
+        ? null
+        : typeof place.websiteUri === "string"
+          ? place.websiteUri.trim() || null
+          : null,
+    types,
+    nationalPhoneNumber:
+      place.nationalPhoneNumber == null
+        ? null
+        : typeof place.nationalPhoneNumber === "string"
+          ? place.nationalPhoneNumber.trim() || null
+          : null,
+    internationalPhoneNumber:
+      place.internationalPhoneNumber == null
+        ? null
+        : typeof place.internationalPhoneNumber === "string"
+          ? place.internationalPhoneNumber.trim() || null
+          : null,
+    googleMapsUri:
+      place.googleMapsUri == null
+        ? null
+        : typeof place.googleMapsUri === "string"
+          ? place.googleMapsUri.trim() || null
+          : null,
+    businessStatus:
+      place.businessStatus == null
+        ? null
+        : typeof place.businessStatus === "string"
+          ? place.businessStatus.trim() || null
+          : null,
+    rating: typeof place.rating === "number" ? place.rating : null,
+    userRatingCount:
+      typeof place.userRatingCount === "number" ? place.userRatingCount : null,
+  };
+}
+
+export async function generateProspectPreviewAction(
+  payload: GenerateProspectPreviewPayload,
+): Promise<
+  | { ok: true; previewId: string; previewUrl: string; businessName: string; screenshotStatus: string; screenshotUrl: string | null }
+  | { ok: false; error: string }
+> {
+  try {
+    return await runGenerateProspectPreview(payload);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Preview generation failed unexpectedly.";
+    console.error("[generateProspectPreviewAction]", e);
+    return { ok: false as const, error: msg };
+  }
+}
+
+async function runGenerateProspectPreview(
+  payload: GenerateProspectPreviewPayload,
+): Promise<
+  | { ok: true; previewId: string; previewUrl: string; businessName: string; screenshotStatus: string; screenshotUrl: string | null }
+  | { ok: false; error: string }
+> {
   const auth = await requireAgencyStaff();
   if (auth.error || !auth.user || !auth.supabase) {
     return { ok: false as const, error: auth.error ?? "Unauthorized" };
   }
 
+  if (payload.kind === "url" && !safeTrim(payload.url)) {
+    return { ok: false as const, error: "Missing website URL for preview." };
+  }
+
   const input =
     payload.kind === "place"
-      ? {
-          businessName: payload.place.name.trim() || "Business",
-          businessAddress: payload.place.formattedAddress?.trim() || null,
-          primaryCategory: primaryPlaceTypeLabel(payload.place.types),
-          websiteUrl: payload.place.websiteUri?.trim() || null,
-          listingPhone:
-            payload.place.nationalPhoneNumber?.trim() ||
-            payload.place.internationalPhoneNumber?.trim() ||
-            null,
-          placeGoogleId: payload.place.id,
-        }
+      ? (() => {
+          const p = normalizePlaceForPreview(payload.place);
+          return {
+            businessName: p.name.trim() || "Business",
+            businessAddress: p.formattedAddress,
+            primaryCategory: primaryPlaceTypeLabel(p.types),
+            websiteUrl: p.websiteUri,
+            listingPhone: p.nationalPhoneNumber || p.internationalPhoneNumber || null,
+            placeGoogleId: p.id,
+          };
+        })()
       : (() => {
+          const url = safeTrim(payload.url);
           let host = "";
           try {
-            host = new URL(
-              /^https?:\/\//i.test(payload.url) ? payload.url : `https://${payload.url}`,
-            ).hostname.replace(/^www\./i, "");
+            host = new URL(/^https?:\/\//i.test(url) ? url : `https://${url}`)
+              .hostname.replace(/^www\./i, "");
           } catch {
             host = "";
           }
+          const title =
+            typeof payload.pageTitle === "string"
+              ? payload.pageTitle.trim().slice(0, 200)
+              : "";
           return {
-            businessName:
-              payload.pageTitle?.trim()?.slice(0, 200) || host || "Website preview",
+            businessName: title || host || "Website preview",
             businessAddress: null as string | null,
             primaryCategory: null as string | null,
-            websiteUrl: payload.url.trim(),
+            websiteUrl: url,
             listingPhone: null as string | null,
             placeGoogleId: null as string | null,
           };
@@ -109,7 +191,13 @@ export async function generateProspectPreviewAction(payload: GenerateProspectPre
     return { ok: false as const, error: error.message };
   }
 
-  const id = row.id as string;
+  const id = row?.id as string | undefined;
+  if (!id) {
+    return {
+      ok: false as const,
+      error: "Could not save preview (database returned no id).",
+    };
+  }
   void captureProspectPreviewScreenshot(id).catch(() => {
     /* logged in screenshot helper path */
   });

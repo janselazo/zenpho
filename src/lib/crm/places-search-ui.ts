@@ -25,9 +25,12 @@ export function googleFaviconUrl(hostname: string, size = 64): string {
   return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(hostname)}&sz=${size}`;
 }
 
-export function primaryPlaceTypeLabel(types: string[] | undefined): string {
-  if (!types?.length) return "Business";
-  const t = types.find((x) => x && !GENERIC_PLACE_TYPES.has(x));
+export function primaryPlaceTypeLabel(types: string[] | undefined | unknown): string {
+  const list = Array.isArray(types)
+    ? types.filter((x): x is string => typeof x === "string")
+    : [];
+  if (!list.length) return "Business";
+  const t = list.find((x) => x && !GENERIC_PLACE_TYPES.has(x));
   if (!t) return "Business";
   return t
     .replace(/_/g, " ")
