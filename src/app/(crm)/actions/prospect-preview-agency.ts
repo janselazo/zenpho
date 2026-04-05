@@ -1,6 +1,17 @@
 import { createClient } from "@/lib/supabase/server";
+import {
+  getSupabasePublicEnv,
+  SUPABASE_ENV_SETUP_MESSAGE,
+} from "@/lib/supabase/config";
 
 export async function requireAgencyStaff() {
+  if (!getSupabasePublicEnv()) {
+    return {
+      error: SUPABASE_ENV_SETUP_MESSAGE,
+      supabase: null,
+      user: null,
+    };
+  }
   const supabase = await createClient();
   const {
     data: { user },

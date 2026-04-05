@@ -54,6 +54,50 @@ const SESSION_SCROLL_TO_REPORT_KEY = "zenpho:prospect-intel-scroll-v1";
 
 type IntelGlanceFact = { label: string; value: string };
 
+type IntelHighlightSignalTag = { key: string; label: string; active: boolean };
+
+/** Stars below this count as a weak listing (when Google returns a rating). */
+const HIGHLIGHT_LOW_RATING_THRESHOLD = 4;
+/** Fewer reviews than this count as low social proof (when Google returns a count). */
+const HIGHLIGHT_LOW_REVIEWS_THRESHOLD = 25;
+
+/**
+ * Opportunity tags for Google listings. “No claimed profile” uses a thin-profile heuristic:
+ * no owner website on the listing and/or no phone on the listing (Places API does not expose GBP verification).
+ */
+function buildIntelHighlightSignalTags(
+  ar:
+    | { kind: "url"; urlMeta: { url: string } }
+    | { kind: "place"; place: PlacesSearchPlace }
+    | null
+): IntelHighlightSignalTag[] {
+  const labels: { key: string; label: string }[] = [
+    { key: "no_website", label: "No Website" },
+    { key: "no_claimed_profile", label: "No Claimed Profile" },
+    { key: "low_reviews", label: "Low Reviews" },
+    { key: "low_rating", label: "Low Rating" },
+  ];
+  if (!ar || ar.kind !== "place") {
+    return labels.map((l) => ({ ...l, active: false }));
+  }
+  const p = ar.place;
+  const noWebsite = !p.websiteUri?.trim();
+  const noPhone =
+    !p.nationalPhoneNumber?.trim() && !p.internationalPhoneNumber?.trim();
+  const noClaimedProfile = noWebsite || noPhone;
+  const lowReviews =
+    p.userRatingCount != null && p.userRatingCount < HIGHLIGHT_LOW_REVIEWS_THRESHOLD;
+  const lowRating =
+    p.rating != null && p.rating < HIGHLIGHT_LOW_RATING_THRESHOLD;
+  const byKey: Record<string, boolean> = {
+    no_website: noWebsite,
+    no_claimed_profile: noClaimedProfile,
+    low_reviews: lowReviews,
+    low_rating: lowRating,
+  };
+  return labels.map((l) => ({ ...l, active: byKey[l.key] ?? false }));
+}
+
 function humanizePlaceType(t: string): string {
   return t
     .split("_")
@@ -536,9 +580,11 @@ const HIGHLIGHT_SLIDES: {
 function IntelHighlightsCarousel({
   report,
   glanceFacts,
+  signalTags,
 }: {
   report: MarketIntelReport;
   glanceFacts: IntelGlanceFact[];
+  signalTags: IntelHighlightSignalTag[];
 }) {
   const [index, setIndex] = useState(0);
   const n = HIGHLIGHT_SLIDES.length;
@@ -555,25 +601,46 @@ function IntelHighlightsCarousel({
           {index + 1} / {n}
         </span>
       </div>
-      {glanceFacts.length > 0 ? (
-        <div className="mt-3 rounded-lg border border-border/50 bg-surface/25 p-3 dark:border-zinc-700/40 dark:bg-zinc-900/35">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-text-secondary/55 dark:text-zinc-500">
-            Signals at a glance
-          </p>
-          <dl className="mt-2 grid gap-2 sm:grid-cols-2">
-            {glanceFacts.map((f) => (
-              <div key={f.label} className="min-w-0">
-                <dt className="text-[10px] font-medium uppercase tracking-wide text-text-secondary/60 dark:text-zinc-500">
-                  {f.label}
-                </dt>
-                <dd className="mt-0.5 text-xs leading-snug text-text-primary dark:text-zinc-200">
-                  {f.value}
-                </dd>
-              </div>
-            ))}
-          </dl>
+      <div className="mt-3 rounded-lg border border-border/50 bg-surface/25 p-3 dark:border-zinc-700/40 dark:bg-zinc-900/35">
+        {glanceFacts.length > 0 ? (
+          <>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-text-secondary/55 dark:text-zinc-500">
+              Signals at a glance
+            </p>
+            <dl className="mt-2 grid gap-2 sm:grid-cols-2">
+              {glanceFacts.map((f) => (
+                <div key={f.label} className="min-w-0">
+                  <dt className="text-[10px] font-medium uppercase tracking-wide text-text-secondary/60 dark:text-zinc-500">
+                    {f.label}
+                  </dt>
+                  <dd className="mt-0.5 text-xs leading-snug text-text-primary dark:text-zinc-200">
+                    {f.value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </>
+        ) : null}
+        <div
+          className={`flex flex-wrap gap-1.5 ${glanceFacts.length > 0 ? "mt-3 border-t border-border/40 pt-3 dark:border-zinc-700/40" : ""}`}
+          role="list"
+          aria-label="Listing signal tags"
+        >
+          {signalTags.map((t) => (
+            <span
+              key={t.key}
+              role="listitem"
+              className={
+                t.active
+                  ? "rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-950 dark:border-amber-500/35 dark:bg-amber-500/15 dark:text-amber-100"
+                  : "rounded-full border border-border/50 bg-white/60 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-text-secondary/35 dark:border-zinc-700/50 dark:bg-zinc-950/20 dark:text-zinc-600"
+              }
+            >
+              {t.label}
+            </span>
+          ))}
         </div>
-      ) : null}
+      </div>
       <div className="mt-3 flex min-h-0 flex-1 items-stretch gap-2">
         <button
           type="button"
@@ -789,6 +856,18 @@ function ProspectsIntelligenceViewInner({
 
   const intelGlanceFacts = useMemo(
     () => (activeReport ? buildIntelGlanceFacts(activeReport) : []),
+    [activeReport]
+  );
+
+  const intelHighlightSignalTags = useMemo(
+    () =>
+      buildIntelHighlightSignalTags(
+        activeReport
+          ? activeReport.kind === "place"
+            ? { kind: "place", place: activeReport.place }
+            : { kind: "url", urlMeta: { url: activeReport.urlMeta.url } }
+          : null
+      ),
     [activeReport]
   );
 
@@ -1446,6 +1525,7 @@ function ProspectsIntelligenceViewInner({
                 <IntelHighlightsCarousel
                   report={activeReport.report}
                   glanceFacts={intelGlanceFacts}
+                  signalTags={intelHighlightSignalTags}
                 />
               </div>
             </div>
