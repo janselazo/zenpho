@@ -847,7 +847,7 @@ function ProspectsIntelligenceViewInner({
             : "Preview generation failed. Check the browser console and server logs.";
         const msg =
           raw.includes("Server Components render") || raw.includes("digest")
-            ? "Preview request failed on the server (production hides details). Set ANTHROPIC_API_KEY, run the prospect_preview migration, and check your deployment logs for the error digest."
+            ? "Preview request failed on the server (production hides details). Set ANTHROPIC_API_KEY or OPENAI_API_KEY, run the prospect_preview migration, and check your deployment logs for the error digest."
             : raw;
         setPreviewGenError(msg);
       } finally {

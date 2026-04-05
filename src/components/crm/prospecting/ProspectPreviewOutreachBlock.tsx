@@ -255,8 +255,8 @@ export default function ProspectPreviewOutreachBlock({
       {!preview ? (
         <div className="mt-3 space-y-2">
           <p className="text-xs text-text-secondary dark:text-zinc-400">
-            Claude builds a full HTML/CSS page from this prospect; we host it, show a live iframe preview,
-            capture a thumbnail, then you can share by SMS, email, or social handoff.
+            An LLM (Claude if ANTHROPIC_API_KEY is set, otherwise OpenAI) builds a full HTML/CSS page; we host it,
+            show a live iframe preview, capture a thumbnail, then you can share by SMS, email, or social handoff.
           </p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             <div className="sm:col-span-2">

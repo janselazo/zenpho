@@ -1,3 +1,4 @@
+import OpenAI from "openai";
 import {
   buildProspectPreviewDocument,
   sanitizeProspectPreviewBodyHtml,
@@ -20,7 +21,8 @@ export type ProspectPreviewGenerateInput = {
 };
 
 const ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages";
-const DEFAULT_MODEL = "claude-sonnet-4-20250514";
+const DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-20250514";
+const DEFAULT_OPENAI_PREVIEW_MODEL = "gpt-4o-mini";
 
 type LlmJson = { fullHtml?: string; bodyHtml?: string };
 
@@ -49,24 +51,10 @@ function isFullDocumentHtml(s: string): boolean {
   return x.startsWith("<!doctype") || x.startsWith("<html");
 }
 
-/**
- * Calls Anthropic Messages API to produce a complete HTML page (with &lt;style&gt; allowed in &lt;head&gt;).
- * Uses fetch only — no OpenAI / Anthropic SDK.
- */
-export async function generateProspectPreviewDocument(
-  input: ProspectPreviewGenerateInput
-): Promise<{ ok: true; html: string } | { ok: false; error: string }> {
-  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-  if (!apiKey) {
-    return {
-      ok: false,
-      error: "ANTHROPIC_API_KEY is not configured.",
-    };
-  }
-
-  const model =
-    process.env.ANTHROPIC_PROSPECT_PREVIEW_MODEL?.trim() || DEFAULT_MODEL;
-
+function buildPreviewPrompts(input: ProspectPreviewGenerateInput): {
+  userPrompt: string;
+  system: string;
+} {
   const lines = [
     `Business name: ${input.businessName}`,
     `Services / focus: ${input.services}`,
@@ -92,7 +80,73 @@ Return **only** a JSON object with one key \`fullHtml\` whose value is a **compl
 
 Output format: {"fullHtml": "<!DOCTYPE html>..."} with properly escaped JSON (no markdown fences).`;
 
-  const system = `You output only valid JSON with a single string field fullHtml containing a full HTML document. No markdown, no commentary.`;
+  const system =
+    "You output only valid JSON with a single string field fullHtml containing a full HTML document. No markdown, no commentary.";
+
+  return { userPrompt, system };
+}
+
+async function finalizeFromModelText(
+  raw: string,
+  providerLabel: string
+): Promise<{ ok: true; html: string } | { ok: false; error: string }> {
+  if (!raw.trim()) {
+    return { ok: false, error: `${providerLabel} returned an empty response.` };
+  }
+
+  const parsed = parseJsonFromModelText(raw);
+  let fullHtml =
+    typeof parsed?.fullHtml === "string" ? parsed.fullHtml.trim() : "";
+  if (!fullHtml && typeof parsed?.bodyHtml === "string") {
+    const body = parsed.bodyHtml.trim();
+    if (body) {
+      try {
+        const sanitizedBody = sanitizeProspectPreviewBodyHtml(body);
+        fullHtml = buildProspectPreviewDocument(sanitizedBody);
+      } catch (e) {
+        console.error("[prospectPreview] body fallback sanitize failed", e);
+      }
+    }
+  }
+
+  if (!fullHtml) {
+    return {
+      ok: false,
+      error: "Model returned no fullHtml (or invalid JSON).",
+    };
+  }
+
+  try {
+    const html = isFullDocumentHtml(fullHtml)
+      ? sanitizeProspectPreviewFullDocumentHtml(fullHtml)
+      : buildProspectPreviewDocument(
+          sanitizeProspectPreviewBodyHtml(fullHtml),
+        );
+    return { ok: true, html };
+  } catch (e) {
+    console.error("[prospectPreview] sanitize full document failed", e);
+    return {
+      ok: false,
+      error:
+        e instanceof Error
+          ? `Preview sanitization failed: ${e.message}`
+          : "Preview sanitization failed.",
+    };
+  }
+}
+
+async function generateWithAnthropic(
+  input: ProspectPreviewGenerateInput
+): Promise<{ ok: true; html: string } | { ok: false; error: string }> {
+  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
+  if (!apiKey) {
+    return { ok: false, error: "ANTHROPIC_API_KEY is not configured." };
+  }
+
+  const model =
+    process.env.ANTHROPIC_PROSPECT_PREVIEW_MODEL?.trim() ||
+    DEFAULT_ANTHROPIC_MODEL;
+  const { userPrompt, system } = buildPreviewPrompts(input);
 
   try {
     const res = await fetch(ANTHROPIC_MESSAGES_URL, {
@@ -129,54 +183,77 @@ Output format: {"fullHtml": "<!DOCTYPE html>..."} with properly escaped JSON (no
 
     const block = data.content?.find((c) => c.type === "text");
     const raw = block?.text?.trim() ?? "";
-    if (!raw) {
-      return { ok: false, error: "Anthropic returned an empty response." };
-    }
-
-    const parsed = parseJsonFromModelText(raw);
-    let fullHtml =
-      typeof parsed?.fullHtml === "string" ? parsed.fullHtml.trim() : "";
-    if (!fullHtml && typeof parsed?.bodyHtml === "string") {
-      const body = parsed.bodyHtml.trim();
-      if (body) {
-        try {
-          const sanitizedBody = sanitizeProspectPreviewBodyHtml(body);
-          fullHtml = buildProspectPreviewDocument(sanitizedBody);
-        } catch (e) {
-          console.error("[prospectPreview] body fallback sanitize failed", e);
-        }
-      }
-    }
-
-    if (!fullHtml) {
-      return {
-        ok: false,
-        error: "Model returned no fullHtml (or invalid JSON).",
-      };
-    }
-
-    let html: string;
-    try {
-      html = isFullDocumentHtml(fullHtml)
-        ? sanitizeProspectPreviewFullDocumentHtml(fullHtml)
-        : buildProspectPreviewDocument(
-            sanitizeProspectPreviewBodyHtml(fullHtml),
-          );
-    } catch (e) {
-      console.error("[prospectPreview] sanitize full document failed", e);
-      return {
-        ok: false,
-        error:
-          e instanceof Error
-            ? `Preview sanitization failed: ${e.message}`
-            : "Preview sanitization failed.",
-      };
-    }
-
-    return { ok: true, html };
+    return finalizeFromModelText(raw, "Anthropic");
   } catch (e) {
     const msg =
       e instanceof Error ? e.message : "Anthropic request failed unexpectedly.";
     return { ok: false, error: msg };
   }
+}
+
+async function generateWithOpenAI(
+  input: ProspectPreviewGenerateInput
+): Promise<{ ok: true; html: string } | { ok: false; error: string }> {
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  if (!apiKey) {
+    return { ok: false, error: "OPENAI_API_KEY is not configured." };
+  }
+
+  const model =
+    process.env.OPENAI_PROSPECT_PREVIEW_MODEL?.trim() ||
+    DEFAULT_OPENAI_PREVIEW_MODEL;
+  const { userPrompt, system } = buildPreviewPrompts(input);
+  const openai = new OpenAI({ apiKey });
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model,
+      temperature: 0.7,
+      max_tokens: 16384,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: userPrompt },
+      ],
+    });
+    const raw = completion.choices[0]?.message?.content?.trim() ?? "";
+    return finalizeFromModelText(raw, "OpenAI");
+  } catch (e) {
+    const msg =
+      e instanceof Error ? e.message : "OpenAI request failed unexpectedly.";
+    return { ok: false, error: msg };
+  }
+}
+
+/**
+ * Produces a full HTML page (with optional &lt;style&gt; in &lt;head&gt;) for the hosted preview + screenshot flow.
+ *
+ * Provider order: **Anthropic** if `ANTHROPIC_API_KEY` is set, otherwise **OpenAI** if `OPENAI_API_KEY` is set.
+ * (There is no server HTTP API for Cursor Composer in production; use OpenAI when Anthropic is not configured.)
+ */
+export async function generateProspectPreviewDocument(
+  input: ProspectPreviewGenerateInput
+): Promise<{ ok: true; html: string } | { ok: false; error: string }> {
+  const preferAnthropic = Boolean(process.env.ANTHROPIC_API_KEY?.trim());
+
+  if (preferAnthropic) {
+    const r = await generateWithAnthropic(input);
+    if (r.ok) return r;
+    const openaiFallback = process.env.OPENAI_API_KEY?.trim();
+    if (openaiFallback) {
+      console.warn("[prospectPreview] Anthropic failed, falling back to OpenAI:", r.error);
+      return generateWithOpenAI(input);
+    }
+    return r;
+  }
+
+  if (process.env.OPENAI_API_KEY?.trim()) {
+    return generateWithOpenAI(input);
+  }
+
+  return {
+    ok: false,
+    error:
+      "No LLM configured for preview. Set ANTHROPIC_API_KEY and/or OPENAI_API_KEY (e.g. in Vercel env).",
+  };
 }
