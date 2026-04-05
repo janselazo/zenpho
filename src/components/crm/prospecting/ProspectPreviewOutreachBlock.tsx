@@ -60,7 +60,8 @@ export type ProspectPreviewOutreachSnapshot = {
 
 type Props = {
   canGenerate: boolean;
-  onGenerate: () => void;
+  /** Async so the button can show immediate loading until the server action finishes. */
+  onGenerate: () => Promise<void>;
   generatePending: boolean;
   generateError: string | null;
   preview: ProspectPreviewOutreachSnapshot | null;
@@ -93,6 +94,8 @@ export default function ProspectPreviewOutreachBlock({
   const [emailBusy, setEmailBusy] = useState(false);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
   const [copyMsg, setCopyMsg] = useState<string | null>(null);
+  /** True from click until onGenerate settles — parent loading can lag one frame. */
+  const [generateClickPending, setGenerateClickPending] = useState(false);
 
   useEffect(() => {
     setSmsTemplate(readLs(LS_SMS, DEFAULT_SMS));
@@ -250,16 +253,26 @@ export default function ProspectPreviewOutreachBlock({
           </p>
           <button
             type="button"
-            disabled={!canGenerate || generatePending}
-            onClick={() => onGenerate()}
+            disabled={!canGenerate || generatePending || generateClickPending}
+            onClick={() => {
+              if (!canGenerate) return;
+              setGenerateClickPending(true);
+              void (async () => {
+                try {
+                  await onGenerate();
+                } finally {
+                  setGenerateClickPending(false);
+                }
+              })();
+            }}
             className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-accent-hover disabled:opacity-50"
           >
-            {generatePending ? (
+            {generatePending || generateClickPending ? (
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
             ) : (
               <Sparkles className="h-4 w-4" aria-hidden />
             )}
-            {generatePending ? "Generating…" : "Generate website preview"}
+            {generatePending || generateClickPending ? "Generating…" : "Generate website preview"}
           </button>
           {generateError ? (
             <p className="text-xs text-red-600 dark:text-red-400" role="alert">
@@ -327,7 +340,7 @@ export default function ProspectPreviewOutreachBlock({
 
           <div className="space-y-2">
             <label className="block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
-              SMS template ({"{{previewUrl}}"} {"{{businessName}}"} {"{{yourName}}"})
+              Message template — SMS and social copy ({"{{previewUrl}}"} {"{{businessName}}"} {"{{yourName}}"})
             </label>
             <textarea
               value={smsTemplate}

@@ -744,6 +744,12 @@ function ProspectsIntelligenceViewInner({
             screenshotUrl: r.screenshotUrl,
           },
         }));
+      } catch (e) {
+        const msg =
+          e instanceof Error
+            ? e.message
+            : "Preview generation failed. Check the browser console and server logs.";
+        setPreviewGenError(msg);
       } finally {
         setPreviewGenLoadingKey(null);
       }
@@ -751,8 +757,13 @@ function ProspectsIntelligenceViewInner({
     [],
   );
 
-  const handleGenerateActiveReportPreview = useCallback(() => {
-    if (!activeReport || !outreachPreviewKey) return;
+  const handleGenerateActiveReportPreview = useCallback(async () => {
+    if (!activeReport || !outreachPreviewKey) {
+      setPreviewGenError(
+        "No report is active. Open a Places listing or research a URL first, then try again.",
+      );
+      return;
+    }
     const payload =
       activeReport.kind === "place"
         ? ({ kind: "place" as const, place: activeReport.place } as const)
@@ -761,7 +772,7 @@ function ProspectsIntelligenceViewInner({
             url: activeReport.urlMeta.url,
             pageTitle: activeReport.urlMeta.pageTitle,
           } as const);
-    void handleGeneratePreviewForKey(outreachPreviewKey, payload);
+    await handleGeneratePreviewForKey(outreachPreviewKey, payload);
   }, [activeReport, outreachPreviewKey, handleGeneratePreviewForKey]);
 
   const handleGeneratePreviewFromPlacesRow = useCallback(

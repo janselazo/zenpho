@@ -279,10 +279,36 @@ export async function sendProspectPreviewEmailAction(input: {
   const img = shot?.screenshot_url?.trim();
   const hasImg = shot?.screenshot_status === "ready" && img?.startsWith("https://");
 
+  let previewImageHtml = "";
+  let attachments:
+    | { filename: string; content: Buffer; contentType?: string; contentId?: string }[]
+    | undefined;
+
+  if (hasImg && img) {
+    try {
+      const imgRes = await fetch(img, { signal: AbortSignal.timeout(25_000) });
+      if (imgRes.ok) {
+        const buf = Buffer.from(await imgRes.arrayBuffer());
+        const ct = (imgRes.headers.get("content-type") ?? "").toLowerCase();
+        const isJpeg = ct.includes("jpeg") || ct.includes("jpg");
+        const filename = isJpeg ? "preview.jpg" : "preview.png";
+        const contentType = isJpeg ? "image/jpeg" : "image/png";
+        const contentId = "prospect_preview_img";
+        attachments = [{ filename, content: buf, contentType, contentId }];
+        previewImageHtml = `<p><img src="cid:${contentId}" alt="Site preview" style="max-width:100%;height:auto;border-radius:8px;" /></p>`;
+      }
+    } catch {
+      previewImageHtml = "";
+    }
+  }
+  if (!previewImageHtml && hasImg && img) {
+    previewImageHtml = `<p><img src="${img}" alt="Preview" style="max-width:100%;height:auto;border-radius:8px;" /></p>`;
+  }
+
   const htmlBody = `
 <p>${textBody.replace(/\n/g, "<br/>")}</p>
 <p><a href="${previewUrl}">Open preview</a></p>
-${hasImg ? `<p><img src="${img}" alt="Preview" style="max-width:100%;height:auto;border-radius:8px;" /></p>` : ""}
+${previewImageHtml}
 `.trim();
 
   const resend = new Resend(apiKey);
@@ -292,6 +318,7 @@ ${hasImg ? `<p><img src="${img}" alt="Preview" style="max-width:100%;height:auto
     subject: subj,
     html: htmlBody,
     text: `${textBody}\n\n${previewUrl}`,
+    ...(attachments?.length ? { attachments } : {}),
   });
 
   if (error) {

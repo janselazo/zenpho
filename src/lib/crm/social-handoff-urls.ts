@@ -1,5 +1,6 @@
 /**
  * MVP handoff links for Messenger / Instagram (open + paste message in product UI).
+ * Phase 2: server-sent DMs need Meta Messenger Platform / Instagram Messaging API or Twilio Conversations—not URL handoff alone.
  */
 
 export function messengerHandoffUrlFromFacebook(facebookUrl: string): string | null {
