@@ -10,10 +10,12 @@ import {
   type HomepageContactHints,
 } from "@/app/(crm)/actions/prospect-intel";
 import type {
-  MergedWebsiteContacts,
-  OutscraperPlaceRow,
+  ApolloEnrichmentById,
+  ApolloPersonEnrichDescriptor,
   ApolloPersonRow,
   HunterEmailRow,
+  MergedWebsiteContacts,
+  OutscraperPlaceRow,
 } from "@/lib/crm/prospect-enrichment-types";
 import ProspectIntelBusinessSnapshot from "@/components/crm/prospecting/ProspectIntelBusinessSnapshot";
 
@@ -31,6 +33,29 @@ function domainFromUrl(u: string | null): string | null {
   } catch {
     return null;
   }
+}
+
+function linkedInLinkLabel(url: string): string {
+  try {
+    const u = new URL(url);
+    const parts = u.pathname.split("/").filter(Boolean);
+    const last = parts[parts.length - 1];
+    if (last && last.length <= 44) return decodeURIComponent(last);
+  } catch {
+    /* ignore */
+  }
+  return "Profile";
+}
+
+function apolloLocationLabel(p: ApolloPersonRow): string {
+  const bits = [p.personCity, p.personState, p.personCountry].filter(Boolean);
+  return bits.length ? bits.join(", ") : "—";
+}
+
+function apolloEmailOnFileLabel(hasEmail: boolean | null | undefined): string {
+  if (hasEmail === true) return "Yes";
+  if (hasEmail === false) return "No";
+  return "—";
 }
 
 type Props = {
@@ -166,10 +191,7 @@ export default function ProspectIntelEnrichment({
   }, [outQuery]);
 
   const mergeApolloEnrichment = useCallback(
-    (
-      rows: ApolloPersonRow[],
-      byId: Record<string, { email: string | null; phone: string | null; linkedinUrl: string | null }>
-    ): ApolloPersonRow[] =>
+    (rows: ApolloPersonRow[], byId: Record<string, ApolloEnrichmentById>): ApolloPersonRow[] =>
       rows.map((row) => {
         const id = row.apolloPersonId;
         if (!id) return row;
@@ -180,6 +202,8 @@ export default function ProspectIntelEnrichment({
           email: row.email ?? e.email,
           phone: row.phone ?? e.phone,
           linkedinUrl: row.linkedinUrl ?? e.linkedinUrl,
+          emailStatus: e.emailStatus ?? row.emailStatus ?? null,
+          headline: e.headline ?? row.headline ?? null,
         };
       }),
     []
@@ -198,10 +222,19 @@ export default function ProspectIntelEnrichment({
       }
       const base = r.people;
       setApolloPeople(base);
-      const ids = base.map((p) => p.apolloPersonId).filter((x): x is string => Boolean(x));
-      if (ids.length === 0) return;
+      const descriptors: ApolloPersonEnrichDescriptor[] = [];
+      for (const p of base) {
+        const id = p.apolloPersonId;
+        if (!id) continue;
+        descriptors.push({
+          id,
+          firstName: p.firstName,
+          organizationName: p.organizationName,
+        });
+      }
+      if (descriptors.length === 0) return;
       setApolloEnrichLoading(true);
-      void apolloEnrichProspectPeopleAction(domain, ids).then((er) => {
+      void apolloEnrichProspectPeopleAction(domain, descriptors).then((er) => {
         setApolloEnrichLoading(false);
         if (!er.ok) {
           setApolloEnrichError(er.error);
@@ -335,11 +368,12 @@ export default function ProspectIntelEnrichment({
               Enrichment (
               <code className="rounded bg-surface px-1 font-mono dark:bg-zinc-800">/people/match</code> with{" "}
               <code className="rounded bg-surface px-1 font-mono dark:bg-zinc-800">reveal_personal_emails</code>
-              ) to load work email, LinkedIn, and any phone Apollo returns on the enriched record. Requires a master{" "}
+              ) to load work email, LinkedIn, and work phones when Apollo includes them on the enriched record. Search
+              never returns email or phone—it only shows flags (e.g. email on file, direct-dial hints). Requires a master{" "}
               <code className="rounded bg-surface px-1 font-mono dark:bg-zinc-800">APOLLO_API_KEY</code> in{" "}
               <code className="rounded bg-surface px-1 font-mono dark:bg-zinc-800">.env.local</code> and consumes Apollo
-              credits. Mobile direct-dial often needs a webhook in Apollo—we do not call that path here; use Hunter for
-              more domain emails if needed.
+              credits. Full mobile/direct-dial reveal often needs Apollo webhook settings; use Hunter for more domain
+              emails if needed.
             </p>
             <button
               type="button"
@@ -364,11 +398,14 @@ export default function ProspectIntelEnrichment({
             ) : null}
             {apolloPeople && apolloPeople.length > 0 ? (
               <div className="mt-3 overflow-x-auto">
-                <table className="w-full min-w-[28rem] border-collapse text-left text-xs">
+                <table className="w-full min-w-[44rem] border-collapse text-left text-xs">
                   <thead>
                     <tr className="border-b border-border dark:border-zinc-700">
                       <th className="py-2 pr-2">Name</th>
                       <th className="py-2 pr-2">Title</th>
+                      <th className="py-2 pr-2">Company</th>
+                      <th className="py-2 pr-2">Apollo</th>
+                      <th className="py-2 pr-2">Location</th>
                       <th className="py-2 pr-2">Email</th>
                       <th className="py-2 pr-2">Phone</th>
                       <th className="py-2">LinkedIn</th>
@@ -378,12 +415,45 @@ export default function ProspectIntelEnrichment({
                     {apolloPeople.map((p, i) => (
                       <tr key={p.apolloPersonId ?? `apollo-${i}`} className="border-b border-border/60 dark:border-zinc-800">
                         <td className="py-2 pr-2 font-medium text-text-primary dark:text-zinc-200">{p.name}</td>
-                        <td className="py-2 pr-2 text-text-secondary dark:text-zinc-400">{p.title ?? "—"}</td>
+                        <td className="py-2 pr-2 text-text-secondary dark:text-zinc-400">
+                          <div className="max-w-[14rem]">
+                            <div>{p.title ?? "—"}</div>
+                            {p.headline ? (
+                              <div className="mt-0.5 text-[10px] leading-snug text-text-secondary/85 dark:text-zinc-500">
+                                {p.headline}
+                              </div>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td className="py-2 pr-2 text-text-secondary dark:text-zinc-400">
+                          {p.organizationName ?? "—"}
+                        </td>
+                        <td className="py-2 pr-2 align-top text-[10px] leading-snug text-text-secondary dark:text-zinc-500">
+                          <div>Email on file: {apolloEmailOnFileLabel(p.hasEmail)}</div>
+                          <div
+                            className="mt-0.5 max-w-[11rem] truncate"
+                            title={p.hasDirectPhone ?? undefined}
+                          >
+                            Direct dial: {p.hasDirectPhone?.trim() ? p.hasDirectPhone : "—"}
+                          </div>
+                        </td>
+                        <td className="py-2 pr-2 text-text-secondary dark:text-zinc-400">{apolloLocationLabel(p)}</td>
                         <td className="py-2 pr-2">
                           {p.email ? (
-                            <button type="button" className="text-accent hover:underline" onClick={() => onPickEmail?.(p.email!)}>
+                            <button
+                              type="button"
+                              className="text-accent hover:underline"
+                              onClick={() => onPickEmail?.(p.email!)}
+                            >
                               {p.email}
                             </button>
+                          ) : p.emailStatus ? (
+                            <span
+                              className="text-text-secondary dark:text-zinc-500"
+                              title={`Apollo email status: ${p.emailStatus}`}
+                            >
+                              {p.emailStatus}
+                            </span>
                           ) : (
                             "—"
                           )}
@@ -399,8 +469,15 @@ export default function ProspectIntelEnrichment({
                         </td>
                         <td className="py-2">
                           {p.linkedinUrl ? (
-                            <a href={p.linkedinUrl} target="_blank" rel="noreferrer" className="text-accent hover:underline">
-                              Profile
+                            <a
+                              href={p.linkedinUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-block max-w-[10rem] truncate align-bottom text-accent hover:underline"
+                              title={p.linkedinUrl}
+                              aria-label={`LinkedIn profile: ${p.linkedinUrl}`}
+                            >
+                              {linkedInLinkLabel(p.linkedinUrl)}
                             </a>
                           ) : (
                             "—"

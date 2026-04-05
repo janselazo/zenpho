@@ -16,6 +16,7 @@ import {
   rankEmailsUnique,
 } from "@/lib/crm/prospect-contact-extract";
 import type {
+  ApolloPersonEnrichDescriptor,
   ApolloPersonRow,
   HunterEmailRow,
   MergedWebsiteContacts,
@@ -230,11 +231,11 @@ export async function apolloProspectPeopleAction(
 /** People Enrichment after search — email / LinkedIn / phone when Apollo returns them (uses credits). */
 export async function apolloEnrichProspectPeopleAction(
   domain: string,
-  personIds: string[]
+  people: ApolloPersonEnrichDescriptor[]
 ): ReturnType<typeof apolloEnrichPeopleById> {
   const auth = await requireAgencyStaff();
   if (auth.error) return { ok: false, error: auth.error };
-  return apolloEnrichPeopleById(domain, personIds);
+  return apolloEnrichPeopleById(domain, people);
 }
 
 export async function hunterProspectDomainAction(

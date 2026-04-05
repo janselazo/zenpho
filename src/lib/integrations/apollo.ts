@@ -1,8 +1,24 @@
-import type { ApolloPersonRow } from "@/lib/crm/prospect-enrichment-types";
+import type {
+  ApolloEnrichmentById,
+  ApolloPersonEnrichDescriptor,
+  ApolloPersonRow,
+} from "@/lib/crm/prospect-enrichment-types";
 
 const APOLLO_PEOPLE_SEARCH_URL =
   "https://api.apollo.io/api/v1/mixed_people/api_search";
 const APOLLO_PEOPLE_MATCH_URL = "https://api.apollo.io/api/v1/people/match";
+
+function pickPhoneFromEntry(entry: unknown): string | null {
+  if (typeof entry === "string" && entry.trim()) return entry.trim();
+  if (!entry || typeof entry !== "object") return null;
+  const o = entry as Record<string, unknown>;
+  const sp = typeof o.sanitized_phone === "string" ? o.sanitized_phone.trim() : "";
+  if (sp) return sp;
+  const sn = typeof o.sanitized_number === "string" ? o.sanitized_number.trim() : "";
+  if (sn) return sn;
+  const raw = typeof o.raw_number === "string" ? o.raw_number.trim() : "";
+  return raw || null;
+}
 
 function pickPhone(p: Record<string, unknown>): string | null {
   if (typeof p.sanitized_phone === "string" && p.sanitized_phone.trim()) {
@@ -10,14 +26,20 @@ function pickPhone(p: Record<string, unknown>): string | null {
   }
   const pn = p.phone_numbers;
   if (Array.isArray(pn) && pn.length) {
-    const first = pn[0];
-    if (typeof first === "string") return first;
-    if (first && typeof first === "object" && "raw_number" in first) {
-      return String((first as { raw_number?: string }).raw_number ?? "") || null;
+    for (const entry of pn) {
+      const got = pickPhoneFromEntry(entry);
+      if (got) return got;
     }
   }
   if (typeof p.phone === "string" && p.phone.trim()) return p.phone.trim();
   return null;
+}
+
+function orgNameFromPerson(p: Record<string, unknown>): string | null {
+  const org = p.organization;
+  if (!org || typeof org !== "object") return null;
+  const n = (org as { name?: string }).name;
+  return typeof n === "string" && n.trim() ? n.trim() : null;
 }
 
 function displayName(p: Record<string, unknown>): string {
@@ -126,6 +148,8 @@ export async function apolloSearchDecisionMakers(
           ? p.person_id.trim()
           : null;
     const name = displayName(p);
+    const firstName =
+      typeof p.first_name === "string" && p.first_name.trim() ? p.first_name.trim() : null;
     const email =
       typeof p.email === "string" && p.email.includes("@") ? p.email : null;
     const linkedinUrl =
@@ -135,9 +159,30 @@ export async function apolloSearchDecisionMakers(
           ? p.linkedin
           : null;
     const title = typeof p.title === "string" ? p.title : null;
+    const hasEmail = typeof p.has_email === "boolean" ? p.has_email : null;
+    const hasDirectPhone =
+      typeof p.has_direct_phone === "string" && p.has_direct_phone.trim()
+        ? p.has_direct_phone.trim()
+        : null;
+    const lastRefreshedAt =
+      typeof p.last_refreshed_at === "string" && p.last_refreshed_at.trim()
+        ? p.last_refreshed_at.trim()
+        : null;
+    const personCity = typeof p.city === "string" && p.city.trim() ? p.city.trim() : null;
+    const personState = typeof p.state === "string" && p.state.trim() ? p.state.trim() : null;
+    const personCountry =
+      typeof p.country === "string" && p.country.trim() ? p.country.trim() : null;
     return {
       apolloPersonId,
       name,
+      firstName,
+      organizationName: orgNameFromPerson(p),
+      hasEmail,
+      hasDirectPhone,
+      lastRefreshedAt,
+      personCity,
+      personState,
+      personCountry,
       email,
       phone: pickPhone(p),
       linkedinUrl,
@@ -149,25 +194,40 @@ export async function apolloSearchDecisionMakers(
   return { ok: true, people };
 }
 
-export type ApolloEnrichmentById = {
-  email: string | null;
-  phone: string | null;
-  linkedinUrl: string | null;
-};
-
-function firstEmailFromContactEmails(obj: Record<string, unknown>): string | null {
-  const arr = obj.contact_emails;
-  if (!Array.isArray(arr) || !arr.length) return null;
-  const first = arr[0];
-  if (!first || typeof first !== "object") return null;
-  const e = (first as { email?: string }).email;
-  return typeof e === "string" && e.includes("@") ? e.trim() : null;
+function bestEmailFromContactEmails(
+  ...objs: (Record<string, unknown> | null | undefined)[]
+): string | null {
+  type Cand = { email: string; verified: boolean };
+  const cands: Cand[] = [];
+  for (const obj of objs) {
+    if (!obj) continue;
+    const arr = obj.contact_emails;
+    if (!Array.isArray(arr)) continue;
+    for (const item of arr) {
+      if (!item || typeof item !== "object") continue;
+      const o = item as { email?: string; email_status?: string };
+      const e = o.email;
+      if (typeof e !== "string" || !e.includes("@")) continue;
+      const st = typeof o.email_status === "string" ? o.email_status.toLowerCase() : "";
+      cands.push({ email: e.trim(), verified: st === "verified" });
+    }
+  }
+  const verified = cands.find((c) => c.verified);
+  if (verified) return verified.email;
+  return cands[0]?.email ?? null;
 }
 
 function enrichmentFromMatchJson(json: Record<string, unknown>): ApolloEnrichmentById {
+  const empty: ApolloEnrichmentById = {
+    email: null,
+    phone: null,
+    linkedinUrl: null,
+    emailStatus: null,
+    headline: null,
+  };
   const person = json.person;
   if (!person || typeof person !== "object") {
-    return { email: null, phone: null, linkedinUrl: null };
+    return empty;
   }
   const p = person as Record<string, unknown>;
   const contact =
@@ -179,8 +239,10 @@ function enrichmentFromMatchJson(json: Record<string, unknown>): ApolloEnrichmen
     if (typeof contact.email === "string" && contact.email.includes("@")) {
       email = contact.email.trim();
     } else {
-      email = firstEmailFromContactEmails(contact);
+      email = bestEmailFromContactEmails(p, contact);
     }
+  } else if (!email) {
+    email = bestEmailFromContactEmails(p);
   }
 
   let linkedinUrl: string | null =
@@ -203,7 +265,21 @@ function enrichmentFromMatchJson(json: Record<string, unknown>): ApolloEnrichmen
     phone = pickPhone(contact);
   }
 
-  return { email, phone, linkedinUrl };
+  let emailStatus: string | null = null;
+  if (typeof p.email_status === "string" && p.email_status.trim()) {
+    emailStatus = p.email_status.trim();
+  } else if (contact && typeof contact.email_status === "string" && contact.email_status.trim()) {
+    emailStatus = contact.email_status.trim();
+  }
+
+  const headline =
+    typeof p.headline === "string" && p.headline.trim()
+      ? p.headline.trim()
+      : contact && typeof contact.headline === "string" && contact.headline.trim()
+        ? contact.headline.trim()
+        : null;
+
+  return { email, phone, linkedinUrl, emailStatus, headline };
 }
 
 /**
@@ -215,7 +291,7 @@ function enrichmentFromMatchJson(json: Record<string, unknown>): ApolloEnrichmen
  */
 export async function apolloEnrichPeopleById(
   domain: string,
-  personIds: string[]
+  people: ApolloPersonEnrichDescriptor[]
 ): Promise<
   { ok: true; byId: Record<string, ApolloEnrichmentById> } | { ok: false; error: string }
 > {
@@ -228,19 +304,28 @@ export async function apolloEnrichPeopleById(
     return { ok: false, error: "Valid company domain required (e.g. example.com)." };
   }
 
-  const unique = [...new Set(personIds.map((x) => x.trim()).filter(Boolean))];
-  if (unique.length === 0) {
+  const deduped = new Map<string, ApolloPersonEnrichDescriptor>();
+  for (const row of people) {
+    const id = row.id.trim();
+    if (!id || deduped.has(id)) continue;
+    deduped.set(id, row);
+  }
+  if (deduped.size === 0) {
     return { ok: true, byId: {} };
   }
 
   const byId: Record<string, ApolloEnrichmentById> = {};
   let lastHttpError: string | null = null;
 
-  for (const id of unique) {
+  for (const [id, desc] of deduped) {
     const params = new URLSearchParams();
     params.set("id", id);
     params.set("domain", dom);
     params.set("reveal_personal_emails", "true");
+    const fn = desc.firstName?.trim();
+    if (fn) params.set("first_name", fn);
+    const org = desc.organizationName?.trim();
+    if (org) params.set("organization_name", org);
 
     let res: Response;
     try {
