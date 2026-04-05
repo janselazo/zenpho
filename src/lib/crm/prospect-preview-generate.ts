@@ -81,8 +81,20 @@ Respond with **only** a JSON object: {"bodyHtml": "<div>...</div>"} — no markd
     if (!body?.trim()) {
       return { ok: false, error: "Model returned no bodyHtml." };
     }
-    const sanitizedBody = sanitizeProspectPreviewBodyHtml(body);
-    const html = buildProspectPreviewDocument(sanitizedBody);
+    let html: string;
+    try {
+      const sanitizedBody = sanitizeProspectPreviewBodyHtml(body);
+      html = buildProspectPreviewDocument(sanitizedBody);
+    } catch (e) {
+      console.error("[prospectPreview] sanitize/build failed", e);
+      return {
+        ok: false,
+        error:
+          e instanceof Error
+            ? `Preview sanitization failed: ${e.message}`
+            : "Preview sanitization failed.",
+      };
+    }
     return { ok: true, html };
   } catch (e) {
     const msg = e instanceof Error ? e.message : "OpenAI request failed.";

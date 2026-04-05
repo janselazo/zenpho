@@ -23,7 +23,7 @@ import {
   createLeadFromProspectIntelAction,
   createLeadFromPlacesListingAction,
 } from "@/app/(crm)/actions/prospect-intel";
-import { generateProspectPreviewAction } from "@/app/(crm)/actions/prospect-preview";
+import { generateProspectPreviewAction } from "@/app/(crm)/actions/prospect-preview-generate-actions";
 import ProspectPreviewOutreachBlock, {
   type ProspectPreviewOutreachSnapshot,
 } from "@/components/crm/prospecting/ProspectPreviewOutreachBlock";

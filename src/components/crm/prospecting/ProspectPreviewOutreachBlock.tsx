@@ -10,8 +10,8 @@ import {
   Send,
   Sparkles,
 } from "lucide-react";
+import { getProspectPreviewStatusAction } from "@/app/(crm)/actions/prospect-preview-generate-actions";
 import {
-  getProspectPreviewStatusAction,
   sendProspectPreviewEmailAction,
   sendProspectPreviewSmsAction,
 } from "@/app/(crm)/actions/prospect-preview";
