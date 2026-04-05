@@ -11,7 +11,9 @@ import {
 } from "@/lib/crm/safe-url-fetch";
 import {
   discoverContactPageUrls,
+  extractProspectSocialUrls,
   extractPublicContactHints,
+  mergeProspectSocialUrls,
   pageLabelFromUrl,
   rankEmailsUnique,
 } from "@/lib/crm/prospect-contact-extract";
@@ -22,12 +24,14 @@ import type {
   MergedWebsiteContacts,
   OutscraperPlaceRow,
   PageContactHints,
+  ProspectSocialUrls,
 } from "@/lib/crm/prospect-enrichment-types";
 import { assignProspectTagToLead, createLead } from "@/app/(crm)/actions/crm";
 import { outscraperMapsSearch } from "@/lib/integrations/outscraper";
 import { apolloSearchDecisionMakers, apolloEnrichPeopleById } from "@/lib/integrations/apollo";
 import { hunterDomainSearch } from "@/lib/integrations/hunter";
 import type { PlacesSearchPlace } from "@/lib/crm/places-types";
+import { primaryPlaceTypeLabel } from "@/lib/crm/places-search-ui";
 import { signalsFromPlace } from "@/lib/crm/prospect-intel-place-signals";
 import { formatReportAsPlainNotes } from "@/lib/crm/prospect-intel-notes-format";
 
@@ -76,6 +80,7 @@ export type HomepageContactHints = {
   emails: string[];
   phones: string[];
   founderName: string | null;
+  socialUrls: ProspectSocialUrls;
 };
 
 export type UrlResearchResult = {
@@ -123,6 +128,7 @@ export async function researchProspectFromUrl(
   const html = new TextDecoder("utf-8", { fatal: false }).decode(slice);
   const { pageTitle, metaDescription } = extractPageSignals(html);
   const hints = extractPublicContactHints(html);
+  const socialUrls = extractProspectSocialUrls(html, normalized);
 
   const urlObj = new URL(normalized);
   const https = urlObj.protocol === "https:";
@@ -148,7 +154,7 @@ export async function researchProspectFromUrl(
     https,
     report,
     signals,
-    homepageContactHints: hints,
+    homepageContactHints: { ...hints, socialUrls },
   };
 }
 
@@ -168,6 +174,7 @@ export async function enrichWebsiteContactsDeepAction(
 
   const byPage: PageContactHints[] = [];
   const h0 = extractPublicContactHints(first.html);
+  let socialUrls = extractProspectSocialUrls(first.html, root);
   byPage.push({
     pageLabel: pageLabelFromUrl(root, root),
     url: root,
@@ -181,6 +188,7 @@ export async function enrichWebsiteContactsDeepAction(
     const pg = await fetchHtmlSafe(u);
     if (!pg.ok) continue;
     const hx = extractPublicContactHints(pg.html);
+    socialUrls = mergeProspectSocialUrls(socialUrls, extractProspectSocialUrls(pg.html, u));
     byPage.push({
       pageLabel: pageLabelFromUrl(u, root),
       url: u,
@@ -208,6 +216,7 @@ export async function enrichWebsiteContactsDeepAction(
       emailsRanked: rankEmailsUnique(allEmails),
       phones: [...allPhones],
       founderName,
+      socialUrls,
     },
   };
 }
@@ -314,6 +323,9 @@ export async function createLeadFromPlacesListingAction(
     website: normalized.websiteUri?.trim() || undefined,
     notes,
     project_type,
+    google_business_category: primaryPlaceTypeLabel(normalized.types),
+    google_place_types:
+      normalized.types.length > 0 ? [...normalized.types] : undefined,
   });
 }
 
@@ -323,8 +335,12 @@ export async function createLeadFromProspectIntelAction(input: {
   email?: string;
   phone?: string;
   website?: string;
+  facebook?: string;
+  instagram?: string;
   notes: string;
   project_type: string;
+  google_business_category?: string;
+  google_place_types?: string[];
 }) {
   const auth = await requireAgencyStaff();
   if (auth.error) return { error: auth.error };
@@ -340,6 +356,14 @@ export async function createLeadFromProspectIntelAction(input: {
   if (input.company?.trim()) fd.set("company", input.company.trim());
   if (input.email?.trim()) fd.set("email", input.email.trim());
   if (input.phone?.trim()) fd.set("phone", input.phone.trim());
+  if (input.facebook?.trim()) fd.set("facebook", input.facebook.trim());
+  if (input.instagram?.trim()) fd.set("instagram", input.instagram.trim());
+  if (input.google_business_category?.trim()) {
+    fd.set("google_business_category", input.google_business_category.trim());
+  }
+  if (input.google_place_types?.length) {
+    fd.set("google_place_types_json", JSON.stringify(input.google_place_types));
+  }
   fd.set("source", "Prospects");
   fd.set("notes", notes);
   fd.set("project_type", input.project_type.trim());

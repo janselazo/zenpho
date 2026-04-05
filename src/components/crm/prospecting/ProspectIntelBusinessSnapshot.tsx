@@ -1,5 +1,8 @@
 "use client";
 
+import type { ProspectSocialUrls } from "@/lib/crm/prospect-enrichment-types";
+import { Facebook, Instagram, Linkedin, Mail, Twitter } from "lucide-react";
+
 function listingSiteLabel(raw: string): string {
   try {
     const u = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
@@ -48,7 +51,108 @@ type Props = {
   googleBusinessStatus?: string | null;
   /** When true, render without outer card chrome (parent provides border). */
   embedded?: boolean;
+  /** Best public email from website scan / homepage (mailto + prefills lead form on click). */
+  contactEmail?: string | null;
+  /** Social profile URLs from crawled site (Google listing rarely exposes these via API). */
+  socialUrls?: ProspectSocialUrls | null;
+  onPickEmail?: (email: string) => void;
 };
+
+const channelBtnClass =
+  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border/80 text-text-primary transition hover:border-accent/50 hover:bg-surface dark:border-zinc-600 dark:hover:border-blue-500/40 dark:hover:bg-zinc-800/80";
+
+function ReachOutChannels({
+  contactEmail,
+  socialUrls,
+  onPickEmail,
+}: {
+  contactEmail?: string | null;
+  socialUrls?: ProspectSocialUrls | null;
+  onPickEmail?: (email: string) => void;
+}) {
+  const s = socialUrls;
+  const email = contactEmail?.trim() || null;
+  const has =
+    email ||
+    s?.facebook ||
+    s?.instagram ||
+    s?.linkedin ||
+    s?.twitter;
+  if (!has) return null;
+
+  return (
+    <div className="mt-3 flex flex-col gap-2">
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
+        Reach out
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        {email ? (
+          <a
+            href={`mailto:${encodeURIComponent(email)}`}
+            className={channelBtnClass}
+            title={email}
+            aria-label={`Email ${email}`}
+            onClick={() => onPickEmail?.(email)}
+          >
+            <Mail className="h-4 w-4 text-accent dark:text-blue-400" aria-hidden />
+          </a>
+        ) : null}
+        {s?.facebook ? (
+          <a
+            href={s.facebook}
+            target="_blank"
+            rel="noreferrer"
+            className={channelBtnClass}
+            title="Facebook"
+            aria-label="Open Facebook profile"
+          >
+            <Facebook className="h-4 w-4 text-[#1877F2]" aria-hidden />
+          </a>
+        ) : null}
+        {s?.instagram ? (
+          <a
+            href={s.instagram}
+            target="_blank"
+            rel="noreferrer"
+            className={channelBtnClass}
+            title="Instagram"
+            aria-label="Open Instagram profile"
+          >
+            <Instagram className="h-4 w-4 text-pink-600 dark:text-pink-400" aria-hidden />
+          </a>
+        ) : null}
+        {s?.linkedin ? (
+          <a
+            href={s.linkedin}
+            target="_blank"
+            rel="noreferrer"
+            className={channelBtnClass}
+            title="LinkedIn"
+            aria-label="Open LinkedIn"
+          >
+            <Linkedin className="h-4 w-4 text-[#0A66C2]" aria-hidden />
+          </a>
+        ) : null}
+        {s?.twitter ? (
+          <a
+            href={s.twitter}
+            target="_blank"
+            rel="noreferrer"
+            className={channelBtnClass}
+            title="X / Twitter"
+            aria-label="Open X or Twitter profile"
+          >
+            <Twitter className="h-4 w-4 text-text-primary dark:text-zinc-200" aria-hidden />
+          </a>
+        ) : null}
+      </div>
+      <p className="text-[10px] text-text-secondary/90 dark:text-zinc-500">
+        Icons use links found on fetched public pages (homepage and contact-style paths). Google&apos;s listing API
+        here does not include social profile fields.
+      </p>
+    </div>
+  );
+}
 
 export default function ProspectIntelBusinessSnapshot({
   businessLabel,
@@ -62,6 +166,9 @@ export default function ProspectIntelBusinessSnapshot({
   insightSummary = null,
   googleBusinessStatus = null,
   embedded = false,
+  contactEmail = null,
+  socialUrls = null,
+  onPickEmail,
 }: Props) {
   const shell = embedded
     ? "min-w-0 sm:flex sm:min-h-0 sm:flex-col"
@@ -148,6 +255,11 @@ export default function ProspectIntelBusinessSnapshot({
             </a>
           ) : null}
         </div>
+        <ReachOutChannels
+          contactEmail={contactEmail}
+          socialUrls={socialUrls}
+          onPickEmail={onPickEmail}
+        />
         {insightSummary?.trim() ? (
           <div className="mt-4 border-t border-border/60 pt-4 dark:border-zinc-700/60">
             <p className="text-sm leading-relaxed text-text-primary dark:text-zinc-100">

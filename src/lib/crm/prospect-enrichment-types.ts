@@ -1,5 +1,20 @@
 /** Shared shapes for prospect website + vendor enrichment (client + server). */
 
+/** Profile URLs discovered from public website HTML (href resolution). */
+export type ProspectSocialUrls = {
+  facebook: string | null;
+  instagram: string | null;
+  linkedin: string | null;
+  twitter: string | null;
+};
+
+export const EMPTY_PROSPECT_SOCIAL_URLS: ProspectSocialUrls = {
+  facebook: null,
+  instagram: null,
+  linkedin: null,
+  twitter: null,
+};
+
 export type PageContactHints = {
   pageLabel: string;
   url: string;
@@ -13,6 +28,8 @@ export type MergedWebsiteContacts = {
   emailsRanked: string[];
   phones: string[];
   founderName: string | null;
+  /** Best-effort profile links merged across crawled pages. */
+  socialUrls: ProspectSocialUrls;
 };
 
 export type OutscraperPlaceRow = {

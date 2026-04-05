@@ -2,6 +2,9 @@
  * Parse public contact signals from HTML (mailto, tel, JSON-LD). Used for prospect enrichment.
  */
 
+import type { ProspectSocialUrls } from "@/lib/crm/prospect-enrichment-types";
+import { EMPTY_PROSPECT_SOCIAL_URLS } from "@/lib/crm/prospect-enrichment-types";
+
 const JUNK_LOCAL = /^no-?reply|^donotreply|^mailer-daemon|^postmaster|^bounce/i;
 
 function junkDomain(dom: string): boolean {
@@ -239,4 +242,134 @@ export function pageLabelFromUrl(url: string, home: string): string {
   } catch {
     return url;
   }
+}
+
+function stripSocialTracking(u: URL): string {
+  const copy = new URL(u.toString());
+  copy.hash = "";
+  const host = copy.hostname.replace(/^www\./i, "").toLowerCase();
+  if (
+    host.endsWith("instagram.com") ||
+    host.endsWith("facebook.com") ||
+    host === "fb.com"
+  ) {
+    copy.search = "";
+  }
+  return copy.toString();
+}
+
+export function mergeProspectSocialUrls(...parts: ProspectSocialUrls[]): ProspectSocialUrls {
+  const out: ProspectSocialUrls = { ...EMPTY_PROSPECT_SOCIAL_URLS };
+  for (const p of parts) {
+    if (!out.facebook && p.facebook) out.facebook = p.facebook;
+    if (!out.instagram && p.instagram) out.instagram = p.instagram;
+    if (!out.linkedin && p.linkedin) out.linkedin = p.linkedin;
+    if (!out.twitter && p.twitter) out.twitter = p.twitter;
+  }
+  return out;
+}
+
+/**
+ * Resolve anchor hrefs and pick one profile-style URL per network (best-effort).
+ */
+export function extractProspectSocialUrls(html: string, pageBaseUrl: string): ProspectSocialUrls {
+  const out: ProspectSocialUrls = { ...EMPTY_PROSPECT_SOCIAL_URLS };
+  let base: URL;
+  try {
+    base = new URL(pageBaseUrl);
+  } catch {
+    return out;
+  }
+
+  const hrefRe = /href\s*=\s*["']([^"'#]*?)["']/gi;
+  let m: RegExpExecArray | null;
+  while ((m = hrefRe.exec(html)) !== null) {
+    let raw = m[1].trim();
+    if (!raw || /^javascript:/i.test(raw)) continue;
+    try {
+      raw = decodeURIComponent(raw);
+    } catch {
+      /* ignore */
+    }
+    let u: URL;
+    try {
+      u = new URL(raw, base);
+    } catch {
+      continue;
+    }
+    if (u.protocol !== "http:" && u.protocol !== "https:") continue;
+    const host = u.hostname.replace(/^www\./i, "").toLowerCase();
+
+    if (
+      !out.facebook &&
+      (host === "facebook.com" ||
+        host === "fb.com" ||
+        host === "m.facebook.com" ||
+        host === "l.facebook.com")
+    ) {
+      const seg = u.pathname.split("/").filter(Boolean)[0]?.toLowerCase() ?? "";
+      const skip = new Set([
+        "sharer",
+        "dialog",
+        "plugins",
+        "share.php",
+        "login",
+        "groups",
+        "events",
+        "marketplace",
+        "watch",
+        "gaming",
+        "reel",
+        "reels",
+        "stories",
+        "ads",
+        "business",
+        "policy",
+        "help",
+        "privacy",
+      ]);
+      if (seg && !skip.has(seg) && u.pathname.replace(/\/$/, "").length > 1) {
+        out.facebook = stripSocialTracking(u);
+      }
+    }
+
+    if (
+      !out.instagram &&
+      (host === "instagram.com" || host === "m.instagram.com" || host === "l.instagram.com")
+    ) {
+      const parts = u.pathname.split("/").filter(Boolean);
+      const first = parts[0]?.toLowerCase() ?? "";
+      if (["p", "reel", "reels", "stories", "tv", "explore", "accounts"].includes(first)) continue;
+      if (parts.length >= 1 && /^[a-z0-9._]+$/i.test(parts[0] ?? "")) {
+        out.instagram = stripSocialTracking(u);
+      }
+    }
+
+    if (!out.linkedin && host === "linkedin.com") {
+      const p = u.pathname.toLowerCase();
+      if (p.includes("/in/") || p.includes("/company/") || p.includes("/school/")) {
+        out.linkedin = stripSocialTracking(u);
+      }
+    }
+
+    if (
+      !out.twitter &&
+      (host === "twitter.com" || host === "x.com" || host === "mobile.twitter.com")
+    ) {
+      const parts = u.pathname.split("/").filter(Boolean);
+      const first = parts[0]?.toLowerCase() ?? "";
+      if (
+        ["intent", "share", "i", "home", "search", "hashtag", "settings", "login", "signup"].includes(
+          first
+        )
+      ) {
+        continue;
+      }
+      if (parts.length >= 1 && /^[a-z0-9_]+$/i.test(parts[0] ?? "")) {
+        out.twitter = stripSocialTracking(u);
+      }
+    }
+  }
+
+  return out;
 }

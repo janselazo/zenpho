@@ -23,7 +23,12 @@ import {
   createLeadFromProspectIntelAction,
   createLeadFromPlacesListingAction,
 } from "@/app/(crm)/actions/prospect-intel";
+import { generateProspectPreviewAction } from "@/app/(crm)/actions/prospect-preview";
+import ProspectPreviewOutreachBlock, {
+  type ProspectPreviewOutreachSnapshot,
+} from "@/components/crm/prospecting/ProspectPreviewOutreachBlock";
 import { useRouter, useSearchParams } from "next/navigation";
+import { primaryPlaceTypeLabel } from "@/lib/crm/places-search-ui";
 import { Building2, ChevronLeft, ChevronRight, Rocket } from "lucide-react";
 import ProspectingTabbedShell, {
   PlaceholderPanel,
@@ -37,6 +42,8 @@ import ProspectIntelEnrichment, {
 import ProspectIntelBusinessSnapshot from "@/components/crm/prospecting/ProspectIntelBusinessSnapshot";
 import type { HomepageContactHints } from "@/app/(crm)/actions/prospect-intel";
 import { formatReportAsPlainNotes } from "@/lib/crm/prospect-intel-notes-format";
+import { mergeProspectSocialUrls } from "@/lib/crm/prospect-contact-extract";
+import { EMPTY_PROSPECT_SOCIAL_URLS } from "@/lib/crm/prospect-enrichment-types";
 
 const cardClass =
   "rounded-2xl border border-border bg-white p-5 shadow-sm dark:border-zinc-800/70 dark:bg-zinc-900/60 dark:shadow-none";
@@ -662,6 +669,10 @@ function ProspectsIntelligenceViewInner({
   const [leadCompany, setLeadCompany] = useState("");
   const [leadEmail, setLeadEmail] = useState("");
   const [leadPhone, setLeadPhone] = useState("");
+  const [leadFacebook, setLeadFacebook] = useState("");
+  const [leadInstagram, setLeadInstagram] = useState("");
+  const [leadGoogleBusinessCategory, setLeadGoogleBusinessCategory] = useState("");
+  const [leadGooglePlaceTypesJson, setLeadGooglePlaceTypesJson] = useState("[]");
   const [leadNotes, setLeadNotes] = useState("");
   const [leadPending, setLeadPending] = useState(false);
   const [leadMessage, setLeadMessage] = useState<string | null>(null);
@@ -671,6 +682,14 @@ function ProspectsIntelligenceViewInner({
   const [websiteCrawlEmails, setWebsiteCrawlEmails] = useState<string[]>([]);
   const [websiteDeepStatus, setWebsiteDeepStatus] =
     useState<ProspectWebsiteDeepStatus>(INITIAL_WEBSITE_DEEP);
+
+  const [previewMap, setPreviewMap] = useState<
+    Record<string, ProspectPreviewOutreachSnapshot>
+  >({});
+  const [previewGenLoadingKey, setPreviewGenLoadingKey] = useState<string | null>(
+    null,
+  );
+  const [previewGenError, setPreviewGenError] = useState<string | null>(null);
 
   const activeReport = useMemo(() => {
     if (urlReport && urlMeta) {
@@ -682,10 +701,115 @@ function ProspectsIntelligenceViewInner({
     return null;
   }, [urlReport, urlMeta, placeReport]);
 
+  const outreachPreviewKey = useMemo(() => {
+    if (!activeReport) return "";
+    return activeReport.kind === "place"
+      ? `place:${activeReport.place.id}`
+      : `url:${activeReport.urlMeta.url}`;
+  }, [activeReport]);
+
+  useEffect(() => {
+    setPreviewGenError(null);
+  }, [outreachPreviewKey]);
+
+  const smsOutreachPrefill = useMemo(() => {
+    const lead = leadPhone.trim();
+    if (activeReport?.kind === "place") {
+      const listing =
+        activeReport.place.nationalPhoneNumber?.trim() ||
+        activeReport.place.internationalPhoneNumber?.trim() ||
+        "";
+      return lead || listing;
+    }
+    return lead;
+  }, [activeReport, leadPhone]);
+
+  const handleGeneratePreviewForKey = useCallback(
+    async (key: string, payload: Parameters<typeof generateProspectPreviewAction>[0]) => {
+      setPreviewGenLoadingKey(key);
+      setPreviewGenError(null);
+      try {
+        const r = await generateProspectPreviewAction(payload);
+        if (!r.ok) {
+          setPreviewGenError(r.error);
+          return;
+        }
+        setPreviewMap((m) => ({
+          ...m,
+          [key]: {
+            previewId: r.previewId,
+            previewUrl: r.previewUrl,
+            businessName: r.businessName,
+            screenshotStatus: r.screenshotStatus,
+            screenshotUrl: r.screenshotUrl,
+          },
+        }));
+      } finally {
+        setPreviewGenLoadingKey(null);
+      }
+    },
+    [],
+  );
+
+  const handleGenerateActiveReportPreview = useCallback(() => {
+    if (!activeReport || !outreachPreviewKey) return;
+    const payload =
+      activeReport.kind === "place"
+        ? ({ kind: "place" as const, place: activeReport.place } as const)
+        : ({
+            kind: "url" as const,
+            url: activeReport.urlMeta.url,
+            pageTitle: activeReport.urlMeta.pageTitle,
+          } as const);
+    void handleGeneratePreviewForKey(outreachPreviewKey, payload);
+  }, [activeReport, outreachPreviewKey, handleGeneratePreviewForKey]);
+
+  const handleGeneratePreviewFromPlacesRow = useCallback(
+    (place: PlacesSearchPlace) => {
+      const key = `place:${place.id}`;
+      void handleGeneratePreviewForKey(key, { kind: "place", place });
+    },
+    [handleGeneratePreviewForKey],
+  );
+
   const intelGlanceFacts = useMemo(
     () => (activeReport ? buildIntelGlanceFacts(activeReport) : []),
     [activeReport]
   );
+
+  const snapshotSocialUrls = useMemo(() => {
+    const deep = websiteDeepStatus.contacts?.socialUrls;
+    if (activeReport?.kind === "url" && urlHomepageHints) {
+      return mergeProspectSocialUrls(
+        urlHomepageHints.socialUrls,
+        deep ?? EMPTY_PROSPECT_SOCIAL_URLS
+      );
+    }
+    return deep ?? EMPTY_PROSPECT_SOCIAL_URLS;
+  }, [activeReport?.kind, urlHomepageHints, websiteDeepStatus.contacts?.socialUrls]);
+
+  const snapshotContactEmail = useMemo(() => {
+    const ranked = websiteDeepStatus.contacts?.emailsRanked;
+    if (ranked && ranked.length > 0) return ranked[0] ?? null;
+    if (websiteCrawlEmails.length > 0) return websiteCrawlEmails[0] ?? null;
+    if (activeReport?.kind === "url" && urlHomepageHints?.emails?.length)
+      return urlHomepageHints.emails[0] ?? null;
+    return null;
+  }, [
+    activeReport?.kind,
+    urlHomepageHints?.emails,
+    websiteCrawlEmails,
+    websiteDeepStatus.contacts?.emailsRanked,
+  ]);
+
+  useEffect(() => {
+    const s = websiteDeepStatus.contacts?.socialUrls;
+    if (!s) return;
+    if (s.facebook)
+      setLeadFacebook((cur) => (cur.trim() ? cur : s.facebook ?? ""));
+    if (s.instagram)
+      setLeadInstagram((cur) => (cur.trim() ? cur : s.instagram ?? ""));
+  }, [websiteDeepStatus.contacts?.socialUrls]);
 
   const syncLeadFormFromPlace = useCallback(
     (place: PlacesSearchPlace, report: MarketIntelReport) => {
@@ -695,6 +819,10 @@ function ProspectsIntelligenceViewInner({
         place.nationalPhoneNumber?.trim() || place.internationalPhoneNumber?.trim() || "";
       setLeadPhone(listingPhone);
       setLeadEmail("");
+      setLeadFacebook("");
+      setLeadInstagram("");
+      setLeadGoogleBusinessCategory(primaryPlaceTypeLabel(place.types));
+      setLeadGooglePlaceTypesJson(JSON.stringify(place.types ?? []));
       const extra = [place.formattedAddress, place.websiteUri].filter(Boolean).join("\n");
       const contactLines: string[] = [];
       if (listingPhone) contactLines.push(`Google listing phone: ${listingPhone}`);
@@ -885,6 +1013,10 @@ function ProspectsIntelligenceViewInner({
       );
       setLeadEmail(h.emails[0] ?? "");
       setLeadPhone(h.phones[0] ?? "");
+      setLeadFacebook(h.socialUrls.facebook ?? "");
+      setLeadInstagram(h.socialUrls.instagram ?? "");
+      setLeadGoogleBusinessCategory("");
+      setLeadGooglePlaceTypesJson("[]");
     } finally {
       setUrlLoading(false);
     }
@@ -936,14 +1068,27 @@ function ProspectsIntelligenceViewInner({
         : activeReport?.kind === "place"
           ? activeReport.place.websiteUri || ""
           : "";
+    let googlePlaceTypes: string[] | undefined;
+    try {
+      const parsed = JSON.parse(leadGooglePlaceTypesJson) as unknown;
+      if (Array.isArray(parsed) && parsed.every((x) => typeof x === "string") && parsed.length) {
+        googlePlaceTypes = parsed as string[];
+      }
+    } catch {
+      googlePlaceTypes = undefined;
+    }
     const res = await createLeadFromProspectIntelAction({
       name: leadName.trim() || "Unknown",
       company: leadCompany.trim() || undefined,
       email: leadEmail.trim() || undefined,
       phone: leadPhone.trim() || undefined,
       website: website || undefined,
+      facebook: leadFacebook.trim() || undefined,
+      instagram: leadInstagram.trim() || undefined,
       notes: leadNotes.trim(),
       project_type: projectType,
+      google_business_category: leadGoogleBusinessCategory.trim() || undefined,
+      google_place_types: googlePlaceTypes,
     });
     setLeadPending(false);
     if ("error" in res && res.error) {
@@ -1109,7 +1254,14 @@ function ProspectsIntelligenceViewInner({
                 onViewReport={viewPlaceReport}
                 projectType={projectType}
                 onQuickCreateLead={handleQuickCreateFromPlace}
+                onGeneratePreview={handleGeneratePreviewFromPlacesRow}
+                generatingPreviewPlaceId={previewGenLoadingKey?.startsWith("place:") ? previewGenLoadingKey.slice(6) : null}
               />
+            ) : null}
+            {previewGenError ? (
+              <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+                {previewGenError}
+              </p>
             ) : null}
           </div>
         ) : null}
@@ -1257,7 +1409,10 @@ function ProspectsIntelligenceViewInner({
                     fetchedPageUrl={
                       activeReport.kind === "url" ? activeReport.urlMeta.url : null
                     }
+                    contactEmail={snapshotContactEmail}
+                    socialUrls={snapshotSocialUrls}
                     onPickPhone={(phone) => setLeadPhone((cur) => cur.trim() || phone)}
+                    onPickEmail={(email) => setLeadEmail((cur) => cur.trim() || email)}
                   />
                   <IntelContactHintsPanel
                     embedded
@@ -1278,6 +1433,31 @@ function ProspectsIntelligenceViewInner({
                   glanceFacts={intelGlanceFacts}
                 />
               </div>
+            </div>
+            <div className="mt-6">
+              <ProspectPreviewOutreachBlock
+                canGenerate={Boolean(activeReport)}
+                onGenerate={handleGenerateActiveReportPreview}
+                generatePending={
+                  Boolean(outreachPreviewKey) && previewGenLoadingKey === outreachPreviewKey
+                }
+                generateError={previewGenError}
+                preview={
+                  outreachPreviewKey ? previewMap[outreachPreviewKey] ?? null : null
+                }
+                smsDefaultTo={smsOutreachPrefill}
+                emailDefaultTo={leadEmail.trim()}
+                facebookUrl={
+                  snapshotSocialUrls.facebook?.trim() ||
+                  leadFacebook.trim() ||
+                  null
+                }
+                instagramUrl={
+                  snapshotSocialUrls.instagram?.trim() ||
+                  leadInstagram.trim() ||
+                  null
+                }
+              />
             </div>
           </ReportSection>
 
@@ -1314,6 +1494,21 @@ function ProspectsIntelligenceViewInner({
                     className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
                   />
                 </div>
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-xs font-medium text-text-secondary">
+                    Google business category (from listing)
+                  </label>
+                  <input
+                    value={leadGoogleBusinessCategory}
+                    onChange={(e) => setLeadGoogleBusinessCategory(e.target.value)}
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                    placeholder="e.g. Beauty Salon"
+                  />
+                  <p className="mt-1 text-[10px] text-text-secondary dark:text-zinc-500">
+                    Filled from Google Places types for local listings; editable before create. Separate from
+                    CRM contact category.
+                  </p>
+                </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-text-secondary">
                     Email (optional)
@@ -1333,6 +1528,32 @@ function ProspectsIntelligenceViewInner({
                     type="tel"
                     value={leadPhone}
                     onChange={(e) => setLeadPhone(e.target.value)}
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-text-secondary">
+                    Facebook (optional)
+                  </label>
+                  <input
+                    type="url"
+                    inputMode="url"
+                    placeholder="https://facebook.com/…"
+                    value={leadFacebook}
+                    onChange={(e) => setLeadFacebook(e.target.value)}
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-text-secondary">
+                    Instagram (optional)
+                  </label>
+                  <input
+                    type="url"
+                    inputMode="url"
+                    placeholder="https://instagram.com/…"
+                    value={leadInstagram}
+                    onChange={(e) => setLeadInstagram(e.target.value)}
                     className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
                   />
                 </div>

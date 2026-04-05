@@ -7,7 +7,9 @@ import {
   Briefcase,
   Building2,
   ChevronDown,
+  Facebook,
   FolderKanban,
+  Instagram,
   Layers,
   Loader2,
   Mail,
@@ -75,6 +77,10 @@ type Lead = {
   email: string | null;
   company: string | null;
   phone: string | null;
+  facebook: string | null;
+  instagram: string | null;
+  google_business_category: string | null;
+  google_place_types: string[] | null;
   source: string | null;
   stage: string | null;
   notes: string | null;
@@ -351,6 +357,11 @@ export default function LeadEditForm({
         className="mx-auto max-w-6xl"
       >
         <input type="hidden" name="id" value={lead.id} />
+        <input
+          type="hidden"
+          name="google_place_types_json"
+          value={JSON.stringify(lead.google_place_types ?? [])}
+        />
 
         <Link
           href="/leads"
@@ -481,6 +492,35 @@ export default function LeadEditForm({
                       defaultValue={lead.company ?? ""}
                       autoComplete="organization"
                       className={inputClass}
+                    />
+                  </FieldRow>
+                  <FieldRow icon={Sparkles} label="Google business category">
+                    <input
+                      name="google_business_category"
+                      type="text"
+                      defaultValue={lead.google_business_category ?? ""}
+                      className={inputClass}
+                      placeholder="From Google Places listing"
+                    />
+                  </FieldRow>
+                  <FieldRow icon={Facebook} label="Facebook">
+                    <input
+                      name="facebook"
+                      type="url"
+                      inputMode="url"
+                      defaultValue={lead.facebook ?? ""}
+                      className={inputClass}
+                      placeholder="https://facebook.com/…"
+                    />
+                  </FieldRow>
+                  <FieldRow icon={Instagram} label="Instagram">
+                    <input
+                      name="instagram"
+                      type="url"
+                      inputMode="url"
+                      defaultValue={lead.instagram ?? ""}
+                      className={inputClass}
+                      placeholder="https://instagram.com/…"
                     />
                   </FieldRow>
                 </div>

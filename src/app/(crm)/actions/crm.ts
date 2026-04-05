@@ -168,6 +168,23 @@ export async function createLead(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
   const company = String(formData.get("company") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
+  const facebook = String(formData.get("facebook") ?? "").trim();
+  const instagram = String(formData.get("instagram") ?? "").trim();
+  const google_business_category = String(
+    formData.get("google_business_category") ?? ""
+  ).trim();
+  let google_place_types: string[] | null = null;
+  const typesJson = String(formData.get("google_place_types_json") ?? "").trim();
+  if (typesJson) {
+    try {
+      const parsed = JSON.parse(typesJson) as unknown;
+      if (Array.isArray(parsed) && parsed.every((x) => typeof x === "string")) {
+        google_place_types = parsed;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
   const sourceRaw = String(formData.get("source") ?? "");
   const notes = String(formData.get("notes") ?? "").trim();
   const project_type = parseProjectTypeForCreate(formData, ptSet);
@@ -191,6 +208,11 @@ export async function createLead(formData: FormData) {
       email: email || null,
       company: company || null,
       phone: phone || null,
+      facebook: facebook || null,
+      instagram: instagram || null,
+      google_business_category: google_business_category || null,
+      google_place_types:
+        google_place_types && google_place_types.length > 0 ? google_place_types : null,
       source: source || null,
       notes: notes || null,
       project_type,
@@ -241,6 +263,23 @@ export async function updateLeadRow(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
   const company = String(formData.get("company") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
+  const facebook = String(formData.get("facebook") ?? "").trim();
+  const instagram = String(formData.get("instagram") ?? "").trim();
+  const google_business_category = String(
+    formData.get("google_business_category") ?? ""
+  ).trim();
+  let google_place_types: string[] | null = null;
+  const typesJsonUp = String(formData.get("google_place_types_json") ?? "").trim();
+  if (typesJsonUp) {
+    try {
+      const parsed = JSON.parse(typesJsonUp) as unknown;
+      if (Array.isArray(parsed) && parsed.every((x) => typeof x === "string")) {
+        google_place_types = parsed;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
   const sourceRaw = String(formData.get("source") ?? "");
   const stage = String(formData.get("stage") ?? "new").trim();
   const notes = String(formData.get("notes") ?? "").trim();
@@ -275,20 +314,26 @@ export async function updateLeadRow(formData: FormData) {
     return { error: "Invalid stage" };
   }
 
-  const { error } = await supabase
-    .from("lead")
-    .update({
-      name: name || null,
-      email: email || null,
-      company: company || null,
-      phone: phone || null,
-      source: source || null,
-      stage,
-      notes: notes || null,
-      project_type,
-      contact_category,
-    })
-    .eq("id", id);
+  const leadUpdate: Record<string, unknown> = {
+    name: name || null,
+    email: email || null,
+    company: company || null,
+    phone: phone || null,
+    facebook: facebook || null,
+    instagram: instagram || null,
+    google_business_category: google_business_category || null,
+    source: source || null,
+    stage,
+    notes: notes || null,
+    project_type,
+    contact_category,
+  };
+  if (formData.has("google_place_types_json")) {
+    leadUpdate.google_place_types =
+      google_place_types && google_place_types.length > 0 ? google_place_types : null;
+  }
+
+  const { error } = await supabase.from("lead").update(leadUpdate).eq("id", id);
 
   if (error) return { error: error.message };
 

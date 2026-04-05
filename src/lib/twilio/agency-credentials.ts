@@ -4,6 +4,7 @@ import { decryptIntegrationSecret } from "@/lib/crypto/integration-secrets";
 export type AgencyTwilioCreds = {
   accountSid: string;
   authToken: string;
+  fromPhone: string | null;
 };
 
 /**
@@ -14,7 +15,7 @@ export async function getAgencyTwilioCredentials(): Promise<AgencyTwilioCreds | 
     const admin = createAdminClient();
     const { data, error } = await admin
       .from("agency_twilio_integration")
-      .select("account_sid, auth_token_encrypted")
+      .select("account_sid, auth_token_encrypted, from_phone")
       .eq("id", 1)
       .maybeSingle();
 
@@ -22,7 +23,11 @@ export async function getAgencyTwilioCredentials(): Promise<AgencyTwilioCreds | 
       return null;
     }
     const authToken = decryptIntegrationSecret(data.auth_token_encrypted);
-    return { accountSid: data.account_sid.trim(), authToken };
+    return {
+      accountSid: data.account_sid.trim(),
+      authToken,
+      fromPhone: data.from_phone?.trim() || null,
+    };
   } catch {
     return null;
   }
