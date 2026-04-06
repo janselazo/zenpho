@@ -4,7 +4,7 @@ import {
   type GenerateProspectPreviewPayload,
 } from "@/lib/crm/prospect-preview-run-generate";
 
-/** Hobby plan still caps wall-clock; Pro+ allows longer runs for LLM + DB. */
+/** Requested ceiling; Vercel clamps to the deployment plan (often 60s on Hobby, higher on Pro / Fluid). */
 export const maxDuration = 120;
 
 /** LLM + OpenAI SDK expect Node; avoids Edge runtime surprises. */

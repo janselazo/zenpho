@@ -4,6 +4,11 @@ import {
   sanitizeProspectPreviewBodyHtml,
   sanitizeProspectPreviewFullDocumentHtml,
 } from "@/lib/crm/prospect-preview-sanitize";
+import {
+  prospectPreviewLlmTimeoutMs,
+  prospectPreviewMaxOutputTokens,
+  prospectPreviewTimeoutHint,
+} from "@/lib/crm/prospect-preview-limits";
 
 export type ProspectPreviewGenerateInput = {
   businessName: string;
@@ -23,9 +28,6 @@ export type ProspectPreviewGenerateInput = {
 const ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages";
 const DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-20250514";
 const DEFAULT_OPENAI_PREVIEW_MODEL = "gpt-4o-mini";
-/** Stay under CRM `maxDuration`; fail with a clear error instead of a platform timeout. */
-const LLM_FETCH_TIMEOUT_MS = 110_000;
-const PREVIEW_MAX_TOKENS = 8192;
 
 type LlmJson = { fullHtml?: string; bodyHtml?: string };
 
@@ -150,6 +152,8 @@ async function generateWithAnthropic(
     process.env.ANTHROPIC_PROSPECT_PREVIEW_MODEL?.trim() ||
     DEFAULT_ANTHROPIC_MODEL;
   const { userPrompt, system } = buildPreviewPrompts(input);
+  const llmMs = prospectPreviewLlmTimeoutMs();
+  const maxTokens = prospectPreviewMaxOutputTokens();
 
   try {
     const res = await fetch(ANTHROPIC_MESSAGES_URL, {
@@ -159,10 +163,10 @@ async function generateWithAnthropic(
         "x-api-key": apiKey,
         "anthropic-version": "2023-06-01",
       },
-      signal: AbortSignal.timeout(LLM_FETCH_TIMEOUT_MS),
+      signal: AbortSignal.timeout(llmMs),
       body: JSON.stringify({
         model,
-        max_tokens: PREVIEW_MAX_TOKENS,
+        max_tokens: maxTokens,
         system,
         messages: [{ role: "user", content: userPrompt }],
       }),
@@ -194,8 +198,7 @@ async function generateWithAnthropic(
     if (msg.includes("abort") || msg.includes("TimeoutError")) {
       return {
         ok: false,
-        error:
-          "Anthropic request timed out. On Vercel, ensure this app uses a plan/limit that allows long server actions (see CRM maxDuration) or try again.",
+        error: `Anthropic request timed out (${llmMs}ms). ${prospectPreviewTimeoutHint()}`,
       };
     }
     return { ok: false, error: msg };
@@ -215,12 +218,15 @@ async function generateWithOpenAI(
     DEFAULT_OPENAI_PREVIEW_MODEL;
   const { userPrompt, system } = buildPreviewPrompts(input);
 
+  const llmMs = prospectPreviewLlmTimeoutMs();
+  const maxTokens = prospectPreviewMaxOutputTokens();
+
   try {
-    const openai = new OpenAI({ apiKey, timeout: LLM_FETCH_TIMEOUT_MS });
+    const openai = new OpenAI({ apiKey, timeout: llmMs });
     const completion = await openai.chat.completions.create({
       model,
       temperature: 0.7,
-      max_tokens: PREVIEW_MAX_TOKENS,
+      max_tokens: maxTokens,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: system },
@@ -235,8 +241,7 @@ async function generateWithOpenAI(
     if (/timeout|timed out|ETIMEDOUT|abort/i.test(msg)) {
       return {
         ok: false,
-        error:
-          "OpenAI request timed out. On Vercel, use a deployment tier with enough function duration for LLM calls, or try again.",
+        error: `OpenAI request timed out (${llmMs}ms). ${prospectPreviewTimeoutHint()}`,
       };
     }
     return { ok: false, error: msg };
