@@ -11,7 +11,7 @@ function safeTrim(s: unknown): string {
 }
 
 export const STITCH_API_KEY_MISSING_USER_MESSAGE =
-  "STITCH_API_KEY is not set on this server. Cursor’s Google Stitch MCP uses separate settings: add the same Google API key (with Stitch API enabled in Google Cloud) to .env.local and Vercel as STITCH_API_KEY, then restart dev or redeploy. Or use “Copy prompt & open Stitch” below without a server key.";
+  "One-click Stitch needs STITCH_API_KEY on the server (the app cannot use Cursor’s MCP). Use “Copy prompt & open Google Stitch” below, or add a Google Stitch API key in .env.local / Vercel — see .env.example.";
 
 export async function runStitchProspectDesign(
   payload: StitchProspectDesignPayload

@@ -25,9 +25,10 @@ When Stitch is connected, ask the agent to use **Stitch MCP tools** (e.g. “cre
 
 ## Zenpho prospecting (in-app “Generate … in Google Stitch”)
 
-The CRM prospecting UI calls **`POST /api/prospecting/stitch-design`** on your **Next.js server**, which uses **`STITCH_API_KEY`** in **`.env.local`** (local) and **Vercel env** (deployed). That is **separate** from Cursor MCP: connecting Stitch in **Settings → Tools & MCP** does **not** set `STITCH_API_KEY` for the app.
+The CRM runs in the **browser** and on your **Next.js server**. **Cursor MCP only runs inside the IDE** — the deployed app cannot call your MCP session, OAuth, or “direct MCP connection” from a button click.
 
-Use the **same Google API key** (Stitch API enabled in Google Cloud) for both MCP (`X-Goog-Api-Key`) and **`STITCH_API_KEY`**, unless your org splits keys. See **[`.env.example`](.env.example)** for setup and verification notes. If the key is missing, the UI still offers **Copy prompt & open Google Stitch** via **`POST /api/prospecting/stitch-design-prompt`**.
+- **MCP-only workflow (no server key):** Use **Copy prompt & open Google Stitch** in prospecting; paste into [Stitch in the browser](https://labs.google.com/fx/en/tools/stitch). No `STITCH_API_KEY` required for that path.
+- **One-click generate from the CRM:** The server uses **`@google/stitch-sdk`**, which expects **`STITCH_API_KEY`** in **`.env.local`** / **Vercel** (a Google API key with Stitch API enabled — often the same value you put in MCP’s `X-Goog-Api-Key` **if** Google gave you one). See **[`.env.example`](.env.example)**. If you truly have no deployable API key, stay on copy-prompt; you cannot bridge MCP into production from here.
 
 ## Zenpho vs Stitch
 

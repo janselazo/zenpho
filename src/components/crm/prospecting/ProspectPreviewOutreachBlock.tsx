@@ -159,7 +159,7 @@ export default function ProspectPreviewOutreachBlock({
   const [stitchMobileResult, setStitchMobileResult] = useState<StitchOk | null>(null);
   const [stitchWebError, setStitchWebError] = useState<string | null>(null);
   const [stitchMobileError, setStitchMobileError] = useState<string | null>(null);
-  /** null = not loaded yet; false = STITCH_API_KEY missing on server (see GET /api/prospecting/stitch-config). */
+  /** null = not loaded; false = no STITCH_API_KEY (MCP-only / copy-prompt path; see GET /api/prospecting/stitch-config). */
   const [stitchApiConfigured, setStitchApiConfigured] = useState<boolean | null>(null);
   const [stitchConfigCheckFailed, setStitchConfigCheckFailed] = useState(false);
   const [stitchManualTarget, setStitchManualTarget] = useState<null | "website" | "mobile">(null);
@@ -1007,17 +1007,18 @@ export default function ProspectPreviewOutreachBlock({
         </section>
 
         {stitchContext && stitchApiConfigured === false ? (
-          <div className="rounded-xl border border-amber-500/35 bg-amber-500/[0.07] p-3 dark:border-amber-500/25 dark:bg-amber-500/10">
-            <p className="text-xs font-semibold text-amber-950 dark:text-amber-100/95">
-              Stitch server key not configured
+          <div className="rounded-xl border border-border/80 bg-surface/35 p-3 dark:border-zinc-700 dark:bg-zinc-900/45">
+            <p className="text-xs font-semibold text-text-primary dark:text-zinc-100">
+              Stitch in Cursor (MCP) ≠ Stitch in this app
             </p>
-            <p className="mt-1.5 text-[11px] leading-relaxed text-amber-900/95 dark:text-amber-200/85">
-              Cursor&apos;s Google Stitch MCP does not set credentials for this app. Add the same Google API key (Stitch
-              API enabled) to <span className="font-mono">.env.local</span> and Vercel as{" "}
-              <span className="font-mono">STITCH_API_KEY</span>, then restart dev or redeploy — see{" "}
-              <span className="font-mono">.env.example</span>. Or use{" "}
-              <span className="font-medium">Copy prompt &amp; open Google Stitch</span> in Web and Mobile below (no server
-              key required).
+            <p className="mt-1.5 text-[11px] leading-relaxed text-text-secondary dark:text-zinc-400">
+              Your MCP connection only works inside the IDE. The CRM cannot call it from the browser. Use{" "}
+              <span className="font-medium text-text-primary dark:text-zinc-200">
+                Copy prompt &amp; open Google Stitch
+              </span>{" "}
+              under Web and Mobile to paste into Stitch in the browser — no server key. Optional: add{" "}
+              <span className="font-mono">STITCH_API_KEY</span> (Google Stitch API key on the server) for one-click
+              generate — see <span className="font-mono">.env.example</span>.
             </p>
           </div>
         ) : null}

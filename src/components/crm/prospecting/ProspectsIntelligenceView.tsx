@@ -615,7 +615,7 @@ const HIGHLIGHT_SLIDES: {
 function IntelHighlightsCarousel({
   report,
   glanceFacts,
-  /** Google listing heuristic chips only; omit for URL reports. Pass only `active` tags. */
+  /** Google listing heuristic chips; omit for URL reports. `active` = gap flagged (amber); inactive = muted OK. */
   placeListingSignals,
 }: {
   report: MarketIntelReport;
@@ -659,25 +659,36 @@ function IntelHighlightsCarousel({
         ) : null}
         {placeListingSignals !== undefined ? (
           <div
-            className={`flex flex-wrap items-center gap-1.5 ${glanceFacts.length > 0 ? "mt-3 border-t border-border/40 pt-3 dark:border-zinc-700/40" : ""}`}
-            role="list"
-            aria-label="Listing signal tags"
+            className={`${glanceFacts.length > 0 ? "mt-3 border-t border-border/40 pt-3 dark:border-zinc-700/40" : ""}`}
           >
-            {placeListingSignals.length > 0 ? (
-              placeListingSignals.map((t) => (
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-text-secondary/55 dark:text-zinc-500">
+              Listing checks
+            </p>
+            <div
+              className="mt-1.5 flex flex-wrap items-center gap-1.5"
+              role="list"
+              aria-label="Listing signal tags"
+            >
+              {placeListingSignals.map((t) => (
                 <span
                   key={t.key}
                   role="listitem"
-                  className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-950 dark:border-amber-500/35 dark:bg-amber-500/15 dark:text-amber-100"
+                  title={t.active ? "Flagged as a listing gap" : "Not flagged for this listing"}
+                  className={
+                    t.active
+                      ? "rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-950 dark:border-amber-500/35 dark:bg-amber-500/15 dark:text-amber-100"
+                      : "rounded-full border border-border/70 bg-surface/50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-text-secondary/55 dark:border-zinc-600 dark:bg-zinc-900/45 dark:text-zinc-500"
+                  }
                 >
                   {t.label}
                 </span>
-              ))
-            ) : (
-              <p className="text-[10px] leading-snug text-text-secondary/70 dark:text-zinc-500">
+              ))}
+            </div>
+            {placeListingSignals.length > 0 && placeListingSignals.every((t) => !t.active) ? (
+              <p className="mt-2 text-[10px] leading-snug text-text-secondary/70 dark:text-zinc-500">
                 No listing gaps flagged for these heuristics.
               </p>
-            )}
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -1644,9 +1655,7 @@ function ProspectsIntelligenceViewInner({
                   report={activeReport.report}
                   glanceFacts={intelGlanceFacts}
                   placeListingSignals={
-                    activeReport.kind === "place"
-                      ? intelHighlightSignalTags.filter((t) => t.active)
-                      : undefined
+                    activeReport.kind === "place" ? intelHighlightSignalTags : undefined
                   }
                 />
               </div>
