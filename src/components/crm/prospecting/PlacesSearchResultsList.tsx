@@ -1,14 +1,7 @@
 "use client";
 
 import { useCallback, useState, type ReactNode } from "react";
-import {
-  Building2,
-  ExternalLink,
-  FileBarChart,
-  Loader2,
-  Sparkles,
-  UserPlus,
-} from "lucide-react";
+import { Building2, ExternalLink, FileBarChart, Loader2, UserPlus } from "lucide-react";
 import type { PlacesSearchPlace } from "@/lib/crm/places-types";
 import {
   googleFaviconUrl,
@@ -80,9 +73,6 @@ type Props = {
   /** Current project type for quick Create lead (must match CRM field options). */
   projectType: string;
   onQuickCreateLead: (place: PlacesSearchPlace) => Promise<void>;
-  onGeneratePreview?: (place: PlacesSearchPlace) => void;
-  /** When set, the matching row shows a spinner on the preview action. */
-  generatingPreviewPlaceId?: string | null;
 };
 
 const iconActionClass =
@@ -96,8 +86,6 @@ export default function PlacesSearchResultsList({
   onViewReport,
   projectType,
   onQuickCreateLead,
-  onGeneratePreview,
-  generatingPreviewPlaceId,
 }: Props) {
   const [creatingId, setCreatingId] = useState<string | null>(null);
   const fullCount = searchResultCount ?? places.length;
@@ -216,22 +204,6 @@ export default function PlacesSearchResultsList({
                       <UserPlus className="h-4 w-4" aria-hidden />
                     )}
                   </button>
-                  {onGeneratePreview ? (
-                    <button
-                      type="button"
-                      title="Generate website preview"
-                      aria-label="Generate website preview for this listing"
-                      disabled={generatingPreviewPlaceId === p.id}
-                      className={iconActionClass}
-                      onClick={() => onGeneratePreview(p)}
-                    >
-                      {generatingPreviewPlaceId === p.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                      ) : (
-                        <Sparkles className="h-4 w-4" aria-hidden />
-                      )}
-                    </button>
-                  ) : null}
                   <button
                     type="button"
                     title="View market intelligence report"

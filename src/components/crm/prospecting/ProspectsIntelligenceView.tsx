@@ -25,12 +25,7 @@ import {
   createLeadFromProspectIntelAction,
   createLeadFromPlacesListingAction,
 } from "@/app/(crm)/actions/prospect-intel";
-import type {
-  GenerateProspectPreviewPayload,
-  GenerateProspectPreviewResult,
-} from "@/lib/crm/prospect-preview-run-generate";
 import ProspectPreviewOutreachBlock, {
-  type ProspectPreviewOutreachSnapshot,
   type ProspectStitchContext,
 } from "@/components/crm/prospecting/ProspectPreviewOutreachBlock";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -833,14 +828,6 @@ function ProspectsIntelligenceViewInner({
   const [websiteDeepStatus, setWebsiteDeepStatus] =
     useState<ProspectWebsiteDeepStatus>(INITIAL_WEBSITE_DEEP);
 
-  const [previewMap, setPreviewMap] = useState<
-    Record<string, ProspectPreviewOutreachSnapshot>
-  >({});
-  const [previewGenLoadingKey, setPreviewGenLoadingKey] = useState<string | null>(
-    null,
-  );
-  const [previewGenError, setPreviewGenError] = useState<string | null>(null);
-
   const activeReport = useMemo(() => {
     if (urlReport && urlMeta) {
       return { report: urlReport, kind: "url" as const, urlMeta };
@@ -857,127 +844,6 @@ function ProspectsIntelligenceViewInner({
       ? `place:${activeReport.place.id}`
       : `url:${activeReport.urlMeta.url}`;
   }, [activeReport]);
-
-  useEffect(() => {
-    setPreviewGenError(null);
-  }, [outreachPreviewKey]);
-
-  const smsOutreachPrefill = useMemo(() => {
-    const lead = leadPhone.trim();
-    if (activeReport?.kind === "place") {
-      const listing =
-        activeReport.place.nationalPhoneNumber?.trim() ||
-        activeReport.place.internationalPhoneNumber?.trim() ||
-        "";
-      return lead || listing;
-    }
-    return lead;
-  }, [activeReport, leadPhone]);
-
-  const handleGeneratePreviewForKey = useCallback(
-    async (key: string, payload: GenerateProspectPreviewPayload) => {
-      setPreviewGenLoadingKey(key);
-      setPreviewGenError(null);
-      try {
-        const res = await fetch("/api/prospecting/generate-preview", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "same-origin",
-          body: JSON.stringify(payload),
-        });
-        const text = await res.text();
-        let parsed: unknown = null;
-        if (text) {
-          try {
-            parsed = JSON.parse(text);
-          } catch {
-            parsed = null;
-          }
-        }
-        const r =
-          parsed &&
-          typeof parsed === "object" &&
-          "ok" in parsed &&
-          typeof (parsed as { ok: unknown }).ok === "boolean"
-            ? (parsed as GenerateProspectPreviewResult)
-            : null;
-        if (!r) {
-          const htmlLike = text.trimStart().startsWith("<");
-          setPreviewGenError(
-            !res.ok && htmlLike
-              ? `Preview failed (${res.status}): the server returned an HTML error page — often a function timeout or crash. Check Vercel deployment logs and plan limits (Hobby has a short max duration).`
-              : res.ok
-                ? "Invalid response from preview API."
-                : `Preview request failed (${res.status}). Response was not JSON.`,
-          );
-          return;
-        }
-        if (!r.ok) {
-          setPreviewGenError(r.error);
-          return;
-        }
-        setPreviewMap((m) => ({
-          ...m,
-          [key]: {
-            previewId: r.previewId,
-            previewUrl: r.previewUrl,
-            previewFrameUrl: r.previewFrameUrl,
-            previewSlug: r.previewSlug,
-            businessName: r.businessName,
-            screenshotStatus: r.screenshotStatus,
-            screenshotUrl: r.screenshotUrl,
-          },
-        }));
-      } catch (e) {
-        const raw =
-          e instanceof Error
-            ? e.message
-            : "Preview generation failed. Check the browser console and server logs.";
-        const msg =
-          raw.includes("Server Components render") || raw.includes("digest")
-            ? "Preview request failed on the server (production hides details). Confirm ANTHROPIC_API_KEY and OPENAI_API_KEY on Vercel for Production (redeploy after changes), prospect_preview migration applied, and function duration: Hobby’s short timeout often causes this—check deployment logs for the digest or upgrade/lengthen maxDuration."
-            : raw;
-        setPreviewGenError(msg);
-      } finally {
-        setPreviewGenLoadingKey(null);
-      }
-    },
-    [],
-  );
-
-  const handleGenerateActiveReportPreview = useCallback(
-    async (opts?: { colorVibe?: string; servicesLine?: string }) => {
-      if (!activeReport || !outreachPreviewKey) {
-        setPreviewGenError(
-          "No report is active. Open a Places listing or research a URL first, then try again.",
-        );
-        return;
-      }
-      const payload =
-        activeReport.kind === "place"
-          ? ({
-              kind: "place" as const,
-              place: activeReport.place,
-              ...opts,
-            } as const)
-          : ({
-              kind: "url" as const,
-              url: activeReport.urlMeta.url,
-              pageTitle: activeReport.urlMeta.pageTitle,
-              ...opts,
-            } as const);
-      await handleGeneratePreviewForKey(outreachPreviewKey, payload);
-    },
-    [activeReport, outreachPreviewKey, handleGeneratePreviewForKey],
-  );
-
-  const handleGeneratePreviewFromPlacesRow = useCallback(
-    (place: PlacesSearchPlace) => {
-      const key = `place:${place.id}`;
-      void handleGeneratePreviewForKey(key, { kind: "place", place });
-    },
-    [handleGeneratePreviewForKey],
-  );
 
   const intelGlanceFacts = useMemo(
     () => (activeReport ? buildIntelGlanceFacts(activeReport) : []),
@@ -1509,14 +1375,7 @@ function ProspectsIntelligenceViewInner({
                 onViewReport={viewPlaceReport}
                 projectType={projectType}
                 onQuickCreateLead={handleQuickCreateFromPlace}
-                onGeneratePreview={handleGeneratePreviewFromPlacesRow}
-                generatingPreviewPlaceId={previewGenLoadingKey?.startsWith("place:") ? previewGenLoadingKey.slice(6) : null}
               />
-            ) : null}
-            {previewGenError ? (
-              <p className="text-sm text-red-600 dark:text-red-400" role="alert">
-                {previewGenError}
-              </p>
             ) : null}
           </div>
         ) : null}
@@ -1694,27 +1553,6 @@ function ProspectsIntelligenceViewInner({
             </div>
             <div className="mt-6">
               <ProspectPreviewOutreachBlock
-                canGenerate={Boolean(activeReport)}
-                onGenerate={handleGenerateActiveReportPreview}
-                generatePending={
-                  Boolean(outreachPreviewKey) && previewGenLoadingKey === outreachPreviewKey
-                }
-                generateError={previewGenError}
-                preview={
-                  outreachPreviewKey ? previewMap[outreachPreviewKey] ?? null : null
-                }
-                smsDefaultTo={smsOutreachPrefill}
-                emailDefaultTo={leadEmail.trim()}
-                facebookUrl={
-                  snapshotSocialUrls.facebook?.trim() ||
-                  leadFacebook.trim() ||
-                  null
-                }
-                instagramUrl={
-                  snapshotSocialUrls.instagram?.trim() ||
-                  leadInstagram.trim() ||
-                  null
-                }
                 stitchContext={stitchContext}
                 reportKey={outreachPreviewKey}
               />
