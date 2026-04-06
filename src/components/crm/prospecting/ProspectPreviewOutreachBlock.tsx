@@ -1015,10 +1015,12 @@ export default function ProspectPreviewOutreachBlock({
               Server does not see STITCH_API_KEY yet
             </p>
             <p className="mt-1.5 text-[11px] leading-relaxed text-text-secondary dark:text-zinc-400">
-              You can still try <span className="font-medium text-text-primary dark:text-zinc-200">Generate</span> — if it
-              errors, add <span className="font-mono">STITCH_API_KEY</span> to{" "}
-              <span className="font-mono">.env.local</span> / Vercel and <span className="font-medium">restart</span>{" "}
-              <span className="font-mono">npm run dev</span> (local) or redeploy. Or use{" "}
+              Generate uses the Stitch <span className="font-medium">HTTP API</span> on this server. Add{" "}
+              <span className="font-mono">STITCH_API_KEY</span> or{" "}
+              <span className="font-mono">GOOGLE_STITCH_API_KEY</span> to{" "}
+              <span className="font-mono">.env.local</span> / Vercel (no quotes), then{" "}
+              <span className="font-medium">restart</span> <span className="font-mono">npm run dev</span> or redeploy.
+              Or use{" "}
               <span className="font-medium text-text-primary dark:text-zinc-200">
                 Copy prompt &amp; open Google Stitch
               </span>{" "}

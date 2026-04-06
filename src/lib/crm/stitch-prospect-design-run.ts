@@ -1,6 +1,10 @@
 import { Stitch, StitchToolClient, StitchError } from "@google/stitch-sdk";
 import { requireAgencyStaff } from "@/app/(crm)/actions/prospect-preview-agency";
 import { buildStitchProspectGenerationBundle } from "@/lib/crm/stitch-prospect-bundle";
+import {
+  getStitchServerApiKey,
+  STITCH_API_KEY_MISSING_USER_MESSAGE,
+} from "@/lib/crm/stitch-server-key";
 import type {
   StitchProspectDesignPayload,
   StitchProspectDesignResult,
@@ -10,8 +14,7 @@ function safeTrim(s: unknown): string {
   return typeof s === "string" ? s.trim() : "";
 }
 
-export const STITCH_API_KEY_MISSING_USER_MESSAGE =
-  "One-click Stitch needs STITCH_API_KEY on the server (the app cannot use Cursor’s MCP). Use “Copy prompt & open Google Stitch” below, or add a Google Stitch API key in .env.local / Vercel — see .env.example.";
+export { STITCH_API_KEY_MISSING_USER_MESSAGE };
 
 export async function runStitchProspectDesign(
   payload: StitchProspectDesignPayload
@@ -21,7 +24,7 @@ export async function runStitchProspectDesign(
     return { ok: false as const, error: auth.error ?? "Unauthorized" };
   }
 
-  const apiKey = process.env.STITCH_API_KEY?.trim();
+  const apiKey = getStitchServerApiKey();
   if (!apiKey) {
     return {
       ok: false as const,
