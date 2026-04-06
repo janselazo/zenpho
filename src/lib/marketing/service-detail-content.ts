@@ -17,56 +17,56 @@ export type ServiceDetailBody = {
 };
 
 const bySlug: Record<string, ServiceDetailBody> = {
-  "mvp-development": {
+  "websites-development": {
     metaDescription:
-      "MVP development from Zenpho: a shippable first version in weeks — tight scope, core flows end to end, deploy and analytics, starting at $2,500.",
+      "Websites development from Zenpho: marketing sites and landing pages with clear IA, fast performance, accessible UI, forms and analytics — starting at $2,500.",
     intro: [
-      "Most MVPs fail before code ships because the scope tries to be a full product. We start from the outcome: what must be true after launch for this to be a win? That becomes a single vertical slice — the smallest build that still lets real users do something meaningful.",
-      "You get working software on a predictable rhythm: a first slice quickly, then weekly demos until the agreed MVP is live. We document what’s in, what’s out, and what comes next so you’re not guessing when it’s time to raise, sell, or hire.",
+      "Your website is the one place you control the full story: who you help, why you’re credible, and what you want visitors to do next. We scope around that — not a kitchen-sink sitemap — so what ships is easy to understand, fast to load, and straightforward for your team to update.",
+      "Whether it’s a focused launch page, a multi-section marketing site, or a refresh of something that’s outgrown its template, we build with the same production habits as our apps: staging previews, a short go-live checklist, and handoff notes so you’re not locked to us for every copy tweak.",
     ],
     sections: [
       {
-        title: "Scope that can ship",
+        title: "Discovery & structure",
         paragraphs: [
-          "Together we define one primary user, one critical journey, and the minimum data and permissions that journey needs. Everything else goes on a visible backlog — not in the first milestone.",
+          "We align on audience, primary conversion goal, and the proof that goal needs (social proof, product shots, team, pricing, FAQs). That drives information architecture and page flow before we touch visual polish.",
         ],
         bullets: [
-          "Problem framing, success metrics, and explicit out-of-scope list",
-          "Wire-level clarity before build so surprises show up early, not in week six",
-          "Tradeoffs named up front: speed vs. polish, build vs. buy for third parties",
-        ],
-      },
-      {
-        title: "Build & quality bar",
-        bullets: [
-          "Web-first or scoped mobile — chosen for how your users actually onboard",
-          "Auth, roles, and data models only as deep as this slice requires",
-          "Sensible error states, empty states, and deploy you can point stakeholders at",
+          "Goals, success metrics, and explicit out-of-scope for v1",
+          "Sitemap and key sections — no mystery pages that exist “because competitors have them”",
+          "Content gaps called out early so launch isn’t blocked by missing assets",
         ],
       },
       {
-        title: "Launch & learn",
+        title: "Design & build",
         bullets: [
-          "Staging and production deploy with a short go-live checklist",
-          "Basic analytics or event hooks so you can see where people drop off",
-          "Handoff notes and extension points for the next phase — no black box",
+          "Responsive layouts and typography tuned for readability on real devices",
+          "Performance and accessibility: semantic HTML, contrast, focus states, and image discipline",
+          "Brand-consistent UI without a generic template look — scoped to your assets and tone",
+        ],
+      },
+      {
+        title: "Launch & measurement",
+        bullets: [
+          "Contact and lead capture wired to your stack (form endpoints, CRM hooks, or email) as scoped",
+          "Analytics and conversion events named so you can see what works after go-live",
+          "SEO-friendly structure: titles, descriptions, Open Graph basics, and clean URLs where it matters",
         ],
       },
       {
         title: "How we deliver",
         paragraphs: [
-          "Same engagement model as our larger builds: visible progress every week, async updates in Slack, and room for a small number of scope adjustments when we learn something important — without turning the MVP into a rewrite.",
+          "Same rhythm as our other engagements: visible progress, async updates in Slack, and a small number of scoped revisions so we land something you’re proud to send traffic to.",
         ],
         bullets: [
-          "Fixed-scope MVP pricing starts at $2,500; exact quote after a short discovery call",
-          "Post-launch support window included; follow-on sprints when you’re ready",
+          "Fixed-scope website pricing starts at $2,500; exact quote after a short discovery call",
+          "Post-launch support window included; follow-on work when you add pages, locales, or deeper integrations",
         ],
       },
     ],
     idealFor: [
-      "Founders who need something real in users’ hands before the next funding or sales push",
-      "Teams replacing spreadsheets or manual workflows with a first productized version",
-      "Builders who want speed without pretending a prototype is production-ready",
+      "Companies launching or repositioning and needing a credible site before campaigns or outbound",
+      "Founders who outgrew a DIY builder but don’t need a full product app yet",
+      "Teams that want speed without sacrificing performance, accessibility, or handoff clarity",
     ],
   },
   "web-applications": {
@@ -109,7 +109,7 @@ const bySlug: Record<string, ServiceDetailBody> = {
       },
     ],
     idealFor: [
-      "Teams shipping a new SaaS MVP or replacing a spreadsheet workflow",
+      "Teams shipping a new SaaS or replacing a spreadsheet workflow",
       "Companies modernizing an internal admin or ops console",
       "Founders who want velocity without trading away maintainability",
     ],
@@ -159,97 +159,52 @@ const bySlug: Record<string, ServiceDetailBody> = {
       "Workflows used on the go (field service, sales, logistics, events)",
     ],
   },
-  "ai-in-your-product": {
+  "ai-automations": {
     metaDescription:
-      "Practical AI in your product: in-app assistants, semantic search, recommendations, and workflow help — grounded in your data, with guardrails and evaluation hooks, not slide-deck demos.",
+      "AI automations from Zenpho: one high-ROI workflow per engagement — CRM and email hooks, webhooks, LLM-assisted steps with guardrails, and observability. Starting at $3,000.",
     intro: [
-      "AI features only matter if people adopt them and you can trust the output. We focus on copilots, search, and assistive flows that sit inside real tasks — with retrieval over your content, clear citations or boundaries, and human-in-the-loop when the surface is customer-facing.",
-      "We bias toward measurable loops: logging prompts and outcomes (within your privacy model), offline evaluation where possible, and feature flags so you can roll out gradually.",
+      "We combine deterministic integrations with AI only where it earns its place: the boring plumbing stays boring (OAuth, webhooks, queues, retries), and models handle judgment-heavy slices with explicit boundaries, approvals, and logging.",
+      "Each engagement scopes one workflow end to end — discovery, build, and handoff — so you get something shippable and maintainable, not a shelf of half-wired experiments.",
     ],
     sections: [
       {
-        title: "Assistants & chat in context",
+        title: "Workflows & integrations",
         bullets: [
-          "In-product chat wired to your APIs and knowledge, not a generic wrapper",
-          "Tool use and structured steps when the task needs actions, not just text",
-          "Streaming UX, cancellation, and error recovery that feel native to your app",
+          "CRM, email, spreadsheets, and SaaS APIs wired with idempotency and failure handling you can see",
+          "Webhook receivers, scheduled jobs, and event pipelines sized to your volume",
+          "Human approval gates where money, customers, or compliance are on the line",
         ],
       },
       {
-        title: "Search & discovery",
+        title: "AI where it helps",
         bullets: [
-          "Semantic search over docs, catalog, or support content with tunable ranking",
-          "Hybrid retrieval (keyword + vector) when precision matters",
-          "Admin controls for what is indexed and how stale content is refreshed",
+          "Classification, summarization, routing, or draft generation scoped to your data and policies",
+          "Retrieval and tool use when the task needs context — not a generic chat shell",
+          "Cost, latency, and evaluation hooks so you can tune or roll back without drama",
         ],
       },
       {
-        title: "Recommendations & signals",
-        bullets: [
-          "Lightweight personalization and ranking with explicit cold-start behavior",
-          "Hooks to log impressions and clicks so you can improve with real usage",
-        ],
-      },
-      {
-        title: "Safety, compliance, and operations",
+        title: "Safety & operations",
         paragraphs: [
-          "Customer-facing AI gets red-team thinking: prompt injection surfaces, PII handling, rate limits, and audit-friendly logging as agreed. We scope what “grounded” means for your domain and build to that bar.",
+          "Customer-facing or revenue-touching automation gets the same bar as product AI: PII handling, rate limits, escalation when confidence is low, and audit-friendly logs as agreed.",
         ],
         bullets: [
-          "Human review queues when outputs affect money, legal, or reputation",
-          "Cost and latency budgets so features stay viable at your scale",
+          "Dead-letter and replay paths so flaky partners don’t become silent failures",
+          "Runbooks and handoff so your team can pause, extend, or change providers",
+        ],
+      },
+      {
+        title: "How we deliver",
+        bullets: [
+          "Fixed-scope AI Automations pricing starts at $3,000; exact quote after a short discovery call",
+          "One primary workflow per engagement — expand with follow-on slices when the first loop is stable",
         ],
       },
     ],
     idealFor: [
-      "Teams with proprietary content or workflows that generic ChatGPT can’t access",
-      "Products where search or support load is a real cost center",
-      "Founders who want AI as a product feature, not a one-off integration",
-    ],
-  },
-  "automation-integrations": {
-    metaDescription:
-      "Automation and integrations from Zenpho: OAuth, SSO, webhooks, event pipelines, payments and partner APIs — plus guarded multi-step workflows so ops, sales, and support escape copy-paste.",
-    intro: [
-      "The best integrations disappear: data shows up in the right system, exceptions get surfaced, and humans only touch the edges that need judgment. We connect CRMs, billing, data stores, and custom APIs with idempotency, retries, and monitoring so a flaky partner doesn’t become your on-call nightmare.",
-      "When you need agents or multi-step automation, we still design for approvals, audit trails, and guardrails — automation should reduce risk, not hide it.",
-    ],
-    sections: [
-      {
-        title: "Identity & connectivity",
-        bullets: [
-          "OAuth 2.0 / OIDC and SSO patterns for SaaS and internal tools",
-          "Webhook receivers with signature verification and replay protection",
-          "Event buses, queues, or scheduled jobs — chosen for your volume and failure modes",
-        ],
-      },
-      {
-        title: "Business systems",
-        bullets: [
-          "CRM and marketing tooling: sync rules, conflict resolution, and backfill strategies",
-          "Payments and billing: Stripe and similar with explicit state machines for subscriptions and invoices",
-          "Data warehouses or lakes: incremental syncs and schema evolution as scoped",
-        ],
-      },
-      {
-        title: "Workflows & agents",
-        bullets: [
-          "Multi-step flows with human approval gates where money or customers are involved",
-          "Clear escalation when automation isn’t confident — no silent wrong answers",
-          "Observability per integration: success rates, latency, and dead-letter handling",
-        ],
-      },
-      {
-        title: "Internal tools",
-        paragraphs: [
-          "Sometimes the highest ROI is a focused internal app: reconcile exceptions, trigger replays, or give support a single pane. We build those with the same production discipline as customer-facing software.",
-        ],
-      },
-    ],
-    idealFor: [
-      "Ops and revenue teams drowning in spreadsheet bridges between SaaS tools",
-      "Products that must exchange data with partner or customer systems",
-      "Companies ready to replace brittle Zapier chains with owned pipelines",
+      "Ops and revenue teams bridging SaaS tools with too much copy-paste",
+      "Products that need in-app assistive flows or semantic search over proprietary content",
+      "Companies ready to own integrations instead of brittle no-code chains alone",
     ],
   },
 };

@@ -249,7 +249,11 @@ function LeadTableTagsCell({
 }
 
 const projectTypeTextClasses: Record<string, string> = {
-  "mvp dev": "text-violet-700 dark:text-violet-400",
+  "websites development": "text-cyan-700 dark:text-cyan-400",
+  "ai automations": "text-violet-700 dark:text-violet-400",
+  "web apps": "text-sky-700 dark:text-sky-400",
+  "mobile apps": "text-emerald-700 dark:text-emerald-400",
+  "mvp dev": "text-cyan-700 dark:text-cyan-400",
   "web app": "text-sky-700 dark:text-sky-400",
   "mobile app": "text-emerald-700 dark:text-emerald-400",
   website: "text-cyan-700 dark:text-cyan-400",
@@ -258,10 +262,18 @@ const projectTypeTextClasses: Record<string, string> = {
 };
 
 const projectTypePillClasses: Record<string, string> = {
-  "mvp dev":
+  "websites development":
+    "bg-cyan-100 text-cyan-900 dark:bg-cyan-950/45 dark:text-cyan-100",
+  "ai automations":
     "bg-violet-100 text-violet-900 dark:bg-violet-950/45 dark:text-violet-100",
+  "web apps": "bg-sky-100 text-sky-900 dark:bg-sky-950/45 dark:text-sky-100",
+  "mobile apps":
+    "bg-emerald-100 text-emerald-900 dark:bg-emerald-950/45 dark:text-emerald-100",
+  "mvp dev":
+    "bg-cyan-100 text-cyan-900 dark:bg-cyan-950/45 dark:text-cyan-100",
   "web app": "bg-sky-100 text-sky-900 dark:bg-sky-950/45 dark:text-sky-100",
-  "mobile app": "bg-emerald-100 text-emerald-900 dark:bg-emerald-950/45 dark:text-emerald-100",
+  "mobile app":
+    "bg-emerald-100 text-emerald-900 dark:bg-emerald-950/45 dark:text-emerald-100",
   website: "bg-cyan-100 text-cyan-900 dark:bg-cyan-950/45 dark:text-cyan-100",
   "ecommerce store": "bg-amber-100 text-amber-900 dark:bg-amber-950/45 dark:text-amber-100",
   other: "bg-violet-100 text-violet-900 dark:bg-violet-950/45 dark:text-violet-100",

@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import type { NewProjectDealPrefill } from "@/lib/crm/new-project-deal-prefill";
 import {
+  DEFAULT_LEAD_PROJECT_TYPE,
   LEAD_PROJECT_TYPE_OPTIONS,
   PLAN_LABELS,
   PLAN_STAGE_ORDER,
@@ -77,7 +78,8 @@ export default function NewProjectModal({
   const defaultPlanSlug = planStageOrder[0] ?? "backlog";
   const [plan, setPlan] = useState<string>(defaultPlanSlug);
   const [teamMemberId, setTeamMemberId] = useState("");
-  const defaultProjectType = leadProjectTypeOptions[0] ?? "MVP Dev";
+  const defaultProjectType =
+    leadProjectTypeOptions[0] ?? DEFAULT_LEAD_PROJECT_TYPE;
   const [projectType, setProjectType] = useState<string>(defaultProjectType);
   const [endDate, setEndDate] = useState("");
   const [budget, setBudget] = useState("");

@@ -24,13 +24,28 @@ const nextConfig = {
       { source: "/agency", destination: "/services", permanent: true },
       { source: "/methodology", destination: "/about", permanent: true },
       {
+        source: "/services/mvp-development",
+        destination: "/services/websites-development",
+        permanent: true,
+      },
+      {
         source: "/services/websites-ecommerce",
-        destination: "/services/mvp-development",
+        destination: "/services/websites-development",
         permanent: true,
       },
       {
         source: "/services/websites",
-        destination: "/services/mvp-development",
+        destination: "/services/websites-development",
+        permanent: true,
+      },
+      {
+        source: "/services/ai-in-your-product",
+        destination: "/services/ai-automations",
+        permanent: true,
+      },
+      {
+        source: "/services/automation-integrations",
+        destination: "/services/ai-automations",
         permanent: true,
       },
     ];

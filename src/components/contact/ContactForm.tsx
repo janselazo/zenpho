@@ -8,7 +8,7 @@ const inputClass =
   "w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-text-primary placeholder:text-text-secondary/40 outline-none shadow-sm transition-all focus:border-accent focus:ring-2 focus:ring-accent/15";
 
 export default function ContactForm() {
-  const [projectType, setProjectType] = useState("mvp-dev");
+  const [projectType, setProjectType] = useState("websites-development");
 
   return (
     <motion.form
@@ -60,10 +60,13 @@ export default function ContactForm() {
         </label>
         <div className="flex flex-wrap gap-2">
           {[
-            { value: "mvp-dev", label: "MVP Dev" },
-            { value: "web-app", label: "Web App" },
-            { value: "mobile-app", label: "Mobile App" },
-            { value: "website", label: "Website" },
+            {
+              value: "websites-development",
+              label: "Websites Development",
+            },
+            { value: "ai-automations", label: "AI Automations" },
+            { value: "web-apps", label: "Web Apps" },
+            { value: "mobile-apps", label: "Mobile Apps" },
           ].map((type) => (
             <button
               key={type.value}

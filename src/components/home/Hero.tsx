@@ -29,7 +29,7 @@ export default function Hero() {
           initial={{ opacity: 1, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, delay: 0.06 }}
-          className="heading-display text-5xl font-bold leading-[1.1] tracking-tight text-text-primary sm:text-6xl sm:leading-[1.08] md:text-6xl md:leading-[1.1] lg:text-7xl lg:leading-[1.08]"
+          className="heading-display text-6xl font-bold leading-[1.08] tracking-tight text-text-primary sm:text-7xl sm:leading-[1.06] md:text-7xl md:leading-[1.06] lg:text-8xl lg:leading-[1.04]"
         >
           <span className="block">We build and scale</span>
           <span className="mt-0.5 block text-accent sm:mt-1">software products</span>
@@ -43,9 +43,9 @@ export default function Hero() {
         >
           We turn your{" "}
           <span className="font-semibold text-emerald-500">idea</span> into a
-          working software product in{" "}
+          software product in{" "}
           <span className="font-semibold text-accent">2 weeks</span> — fast,
-          affordable, and built to grow.
+          affordable, and built to grow
         </motion.p>
 
         <motion.div

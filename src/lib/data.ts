@@ -85,17 +85,17 @@ export interface DevelopmentPricingOffering {
 /** Development offerings in ascending price order for the pricing grid. */
 export const developmentPricingOfferings: DevelopmentPricingOffering[] = [
   {
-    id: "mvp-development",
-    title: "MVP Development",
+    id: "websites-development",
+    title: "Websites Development",
     subtitle:
-      "A shippable first version you can put in front of users — scoped tight, built fast, ready to learn from.",
+      "Marketing sites, landing pages, and company presence — fast to ship, on-brand, and built to convert.",
     priceAmount: "$2,500",
     priceSuffix: "starting",
     features: [
-      "Discovery and scope locked to one clear MVP slice — no kitchen-sink specs",
-      "Core user flows implemented end to end (web or simple mobile, as scoped)",
-      "Production-minded foundations: auth, data, and deploy as the build needs",
-      "Weekly demos, staging previews, and a short handoff so you can iterate",
+      "Discovery and IA scoped to your audience, goals, and primary calls to action",
+      "Responsive layouts, performance-minded frontend, and accessible UI patterns",
+      "Contact and lead capture, analytics hooks, and SEO-friendly structure as scoped",
+      "Staging preview, launch checklist, and handoff so you can update copy or use a light CMS",
       "Slack channel + post-launch support window",
     ],
   },
@@ -109,7 +109,7 @@ export const developmentPricingOfferings: DevelopmentPricingOffering[] = [
     features: [
       "Auth, roles, and production-ready patterns",
       "APIs, integrations, and data models as scoped",
-      "MVP-first delivery with weekly milestones",
+      "Phased delivery with weekly milestones — ship a usable slice, then extend",
       "CI-friendly codebase your team can extend",
       "Slack channel + post-launch support window",
     ],
@@ -130,23 +130,56 @@ export const developmentPricingOfferings: DevelopmentPricingOffering[] = [
   },
 ];
 
+/** Full-width row below the main 3-column pricing grid. */
+export const aiAutomationsPricingOffering: DevelopmentPricingOffering = {
+  id: "ai-automations",
+  title: "AI Automations",
+  subtitle:
+    "Workflows, agents, and integrations that reduce manual work — scoped with guardrails, logging, and handoff your team can run.",
+  priceAmount: "$3,000",
+  priceSuffix: "starting",
+  features: [
+    "Discovery focused on one high-ROI automation or assistive workflow",
+    "LLM or deterministic steps with human approval where revenue or customers are involved",
+    "Hooks into your stack: CRM, email, spreadsheets, webhooks, or custom APIs as scoped",
+    "Retries, error surfacing, and basic observability so failures aren’t silent",
+    "Runbook-style handoff so you can extend, pause, or retrain safely",
+    "Slack channel + post-launch support window",
+  ],
+};
+
+/** Services grid on /services — aligned with pricing tiers (4 offerings). */
 export const services: Service[] = [
   {
-    slug: "mvp-development",
-    title: "MVP Development",
-    subtitle: "Ship something real in weeks, not months",
+    slug: "websites-development",
+    title: "Websites Development",
+    subtitle: "A site that reflects your brand and drives the next step",
     description:
-      "We scope and build the smallest version of your product that still delivers real value — so you can validate with users, unblock fundraising, and learn what to build next without burning six months on a deck.",
+      "We design and build marketing sites, landing pages, and company presence on the web — clear story, strong calls to action, and fast, accessible pages your team can evolve without a rebuild every quarter.",
     details: [
-      "Ruthless scope: one primary job-to-be-done, clear success criteria, explicit out-of-scope list",
-      "End-to-end flows your first users can actually complete — not mockups or a brittle demo",
-      "Instrumentation and deploy included so you can measure and ship follow-on iterations",
+      "Structure and messaging aligned to who you’re for, what you want them to do, and what proof they need to see",
+      "Modern frontend stack with performance, accessibility, and SEO hygiene baked in — not bolted on after launch",
+      "Forms, tracking, and handoff patterns that fit how you sell: book a call, request a quote, or join a list",
     ],
-    icon: "zap",
+    icon: "globe",
+  },
+  {
+    slug: "ai-automations",
+    title: "AI Automations",
+    subtitle: "Workflows and integrations that reduce manual work — safely",
+    description:
+      "We scope and build automations that combine AI where it helps with deterministic steps where it must: CRM and email hooks, webhooks, internal tools, and guarded multi-step flows your team can run and extend.",
+    details: [
+      "One high-ROI workflow per engagement — discovery, approvals where money or customers are involved, and observability so failures aren’t silent",
+      "Connects to your stack: spreadsheets, SaaS APIs, custom backends, and LLM-assisted steps with clear boundaries",
+      "Handoff and runbooks so you can pause, extend, or retrain without vendor lock-in on every tweak",
+    ],
+    icon: "brain",
   },
   {
     slug: "web-applications",
-    title: "Web applications",
+    title: "Web Apps",
+    subtitle: "SaaS, dashboards, and internal tools",
     description:
       "SaaS, dashboards, and internal tools — secure, maintainable, and ready to grow with real traffic and real users.",
     details: [
@@ -158,7 +191,8 @@ export const services: Service[] = [
   },
   {
     slug: "mobile-apps",
-    title: "Mobile apps",
+    title: "Mobile Apps",
+    subtitle: "iOS, Android, or both",
     description:
       "iOS and Android when the product belongs in someone’s pocket — including offline-first when the job doesn’t stop at the signal bar.",
     details: [
@@ -167,30 +201,6 @@ export const services: Service[] = [
       "Aligned with the same metrics mindset as your web product",
     ],
     icon: "rocket",
-  },
-  {
-    slug: "ai-in-your-product",
-    title: "AI in your product",
-    description:
-      "Copilots, search, and assistive flows people actually adopt — grounded in your data with guardrails, not a keynote demo.",
-    details: [
-      "In-app assistants, chat, and semantic search over your content",
-      "Recommendations and signals with evaluation hooks",
-      "Workflow and content assistance with human-in-the-loop when it’s customer-facing",
-    ],
-    icon: "brain",
-  },
-  {
-    slug: "automation-integrations",
-    title: "Automation & integrations",
-    description:
-      "Connect CRMs, payments, data stores, and custom APIs so ops, sales, and support stop living in copy-paste and spreadsheets.",
-    details: [
-      "OAuth, SSO, webhooks, and event pipelines",
-      "Agents and multi-step workflows with approvals and guardrails",
-      "Payments, partner APIs, and internal tools wired end to end",
-    ],
-    icon: "zap",
   },
 ];
 
@@ -205,19 +215,19 @@ export const processSteps: ProcessStep[] = [
     number: "02",
     title: "Design",
     description:
-      "We create the structure and visual flow of your product — so you can see exactly what we're building before we write a single line of code.",
+      "We create the structure and visual flow of your product so you can see exactly what we're building before we write a single line of code.",
   },
   {
     number: "03",
     title: "Build",
     description:
-      "Our team develops your fully functional web app, mobile app, or MVP — fast, clean, and built to scale.",
+      "Our team develops your fully functional website, web app, or mobile app fast, clean, and built to scale.",
   },
   {
     number: "04",
     title: "Launch",
     description:
-      "We deliver your ready-to-launch product, support you through go-live, and make sure everything works perfectly from day one.",
+      "We deliver your working software product, support you through go-live, and make sure everything works perfectly from day one.",
   },
 ];
 
@@ -267,7 +277,7 @@ export const portfolioProjects: PortfolioProject[] = [
     tags: ["SaaS", "Mobile", "NFC", "Growth"],
     type: "agency",
     category: "mobile-app",
-    result: "Production launch",
+    result: "Web App",
   },
   {
     client: "Apex Inspection Pro",
@@ -277,7 +287,7 @@ export const portfolioProjects: PortfolioProject[] = [
     tags: ["SaaS", "Inspections", "Web App"],
     type: "agency",
     category: "web-app",
-    result: "Production launch",
+    result: "Web App",
   },
   {
     client: "TQMuch",
@@ -287,7 +297,7 @@ export const portfolioProjects: PortfolioProject[] = [
     tags: ["DTC", "Food & Beverage", "Catalog"],
     type: "agency",
     category: "website",
-    result: "Live commerce",
+    result: "Ecommerce Website",
   },
   {
     client: "SoldTools",
@@ -310,7 +320,7 @@ export const featuredProjects: FeaturedProject[] = [
       "Built a full-stack SaaS platform with NFC tap-to-share, QR networking, AI-powered lead scoring, and team management — turning every interaction into a measurable business opportunity.",
     tags: ["SaaS", "Mobile", "NFC", "Growth"],
     type: "agency",
-    result: "Production launch",
+    result: "Web App",
   },
   {
     client: "Apex Inspection Pro",
@@ -319,7 +329,7 @@ export const featuredProjects: FeaturedProject[] = [
       "Built a production-ready web app that lets inspectors capture property details, auto-fill report templates, and close jobs in one guided flow — eliminating incomplete reports for good.",
     tags: ["SaaS", "Inspections", "Web App"],
     type: "agency",
-    result: "Production launch",
+    result: "Web App",
   },
   {
     client: "TQMuch",
@@ -328,7 +338,7 @@ export const featuredProjects: FeaturedProject[] = [
       "Built a mobile-first ordering experience with a full product catalog, temperature-controlled shipping, and automated fulfillment — so the team focuses on the food, not the orders.",
     tags: ["DTC", "Food & Beverage", "Catalog"],
     type: "agency",
-    result: "Live commerce",
+    result: "Ecommerce Website",
   },
   {
     client: "SoldTools",

@@ -233,15 +233,19 @@ export const LEAD_STAGE_LABELS: Record<LeadStage, string> = {
   nurture: "Nurture",
 };
 
-/** Lead "Project type" dropdown (stored as-display on `lead.project_type`) */
+/** Lead "Project type" dropdown (stored as-display on `lead.project_type`; same list on products / Work). */
 export const LEAD_PROJECT_TYPE_OPTIONS = [
-  "MVP Dev",
-  "Web App",
-  "Mobile App",
-  "Website",
+  "Websites Development",
+  "AI Automations",
+  "Web Apps",
+  "Mobile Apps",
 ] as const;
 
 export type LeadProjectType = (typeof LEAD_PROJECT_TYPE_OPTIONS)[number];
+
+/** Default pick when settings list is empty or missing first entry. */
+export const DEFAULT_LEAD_PROJECT_TYPE: LeadProjectType =
+  LEAD_PROJECT_TYPE_OPTIONS[0];
 
 /** Lead "Contact category" dropdown (stored as-display on `lead.contact_category`) */
 export const LEAD_CONTACT_CATEGORY_OPTIONS = [

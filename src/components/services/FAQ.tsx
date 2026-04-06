@@ -43,7 +43,7 @@ export default function FAQ() {
         title="Common"
         titleAccent="questions"
         titleAccentInline
-        description="No surprises — just clear answers about how we work."
+        description="No surprises, just clear answers about how we work."
       />
 
       <div className="mx-auto max-w-3xl space-y-3">

@@ -15,14 +15,14 @@ interface Testimonial {
 const testimonials: Testimonial[] = [
   {
     quote:
-      "We went from a rough idea to a production SaaS in weeks. The inspection platform they shipped became our single source of truth overnight — our team was able to adopt it immediately and we've gotten nothing but compliments from clients.",
+      "We went from a rough idea to a production SaaS in weeks. The inspection platform they shipped became our single source of truth overnight. Our team was able to adopt it immediately and we've gotten nothing but compliments from clients.",
     name: "Michael Torres",
     title: "CEO",
     company: "Apex Inspection Pro",
   },
   {
     quote:
-      "They built our online ordering flow end to end — catalog, checkout, fulfillment — and now we run daily operations without needing a developer. The speed of delivery and attention to detail were exceptional.",
+      "They built our online ordering flow end to end, including catalog, checkout, and fulfillment, and now we run daily operations without needing a developer. The speed of delivery and attention to detail were exceptional.",
     name: "Andrea Guzmán",
     title: "Founder",
     company: "TQMuch",

@@ -252,11 +252,25 @@ function stripSocialTracking(u: URL): string {
     host.endsWith("instagram.com") ||
     host.endsWith("facebook.com") ||
     host === "fb.com" ||
-    host.endsWith("tiktok.com")
+    host.endsWith("tiktok.com") ||
+    host.endsWith("youtube.com") ||
+    host === "youtu.be"
   ) {
     copy.search = "";
   }
   return copy.toString();
+}
+
+/** Decode minimal HTML entities in raw `href` before `URL()` (themes often leave `&amp;` in attributes). */
+function decodeHrefForUrl(raw: string): string {
+  let s = raw.trim();
+  s = s.replace(/&amp;/gi, "&").replace(/&quot;/gi, '"').replace(/&#39;/g, "'");
+  try {
+    s = decodeURIComponent(s);
+  } catch {
+    /* keep */
+  }
+  return s;
 }
 
 export function mergeProspectSocialUrls(...parts: ProspectSocialUrls[]): ProspectSocialUrls {
@@ -267,12 +281,193 @@ export function mergeProspectSocialUrls(...parts: ProspectSocialUrls[]): Prospec
     if (!out.linkedin && p.linkedin) out.linkedin = p.linkedin;
     if (!out.twitter && p.twitter) out.twitter = p.twitter;
     if (!out.tiktok && p.tiktok) out.tiktok = p.tiktok;
+    if (!out.youtube && p.youtube) out.youtube = p.youtube;
+    if (!out.whatsapp && p.whatsapp) out.whatsapp = p.whatsapp;
   }
   return out;
 }
 
+/** Instagram profile path segment (handles are mostly [a-z0-9._]; some themes use hyphens). */
+const INSTAGRAM_HANDLE_SEGMENT = /^[a-z0-9._-]+$/i;
+
+function applySocialUrlToProspect(out: ProspectSocialUrls, u: URL): void {
+  if (u.protocol !== "http:" && u.protocol !== "https:") return;
+  const host = u.hostname.replace(/^www\./i, "").toLowerCase();
+
+  if (
+    !out.facebook &&
+    (host === "facebook.com" ||
+      host === "fb.com" ||
+      host === "m.facebook.com" ||
+      host === "l.facebook.com")
+  ) {
+    const seg = u.pathname.split("/").filter(Boolean)[0]?.toLowerCase() ?? "";
+    const skip = new Set([
+      "sharer",
+      "dialog",
+      "plugins",
+      "share.php",
+      "login",
+      "groups",
+      "events",
+      "marketplace",
+      "watch",
+      "gaming",
+      "reel",
+      "reels",
+      "stories",
+      "ads",
+      "business",
+      "policy",
+      "help",
+      "privacy",
+    ]);
+    if (seg && !skip.has(seg) && u.pathname.replace(/\/$/, "").length > 1) {
+      out.facebook = stripSocialTracking(u);
+    }
+  }
+
+  if (
+    !out.instagram &&
+    (host === "instagram.com" || host === "m.instagram.com" || host === "l.instagram.com")
+  ) {
+    const parts = u.pathname.split("/").filter(Boolean);
+    const first = parts[0]?.toLowerCase() ?? "";
+    if (["p", "reel", "reels", "stories", "tv", "explore", "accounts"].includes(first)) return;
+    if (parts.length >= 1 && INSTAGRAM_HANDLE_SEGMENT.test(parts[0] ?? "")) {
+      out.instagram = stripSocialTracking(u);
+    }
+  }
+
+  if (!out.linkedin && host === "linkedin.com") {
+    const p = u.pathname.toLowerCase();
+    if (p.includes("/in/") || p.includes("/company/") || p.includes("/school/")) {
+      out.linkedin = stripSocialTracking(u);
+    }
+  }
+
+  if (
+    !out.twitter &&
+    (host === "twitter.com" || host === "x.com" || host === "mobile.twitter.com")
+  ) {
+    const parts = u.pathname.split("/").filter(Boolean);
+    const first = parts[0]?.toLowerCase() ?? "";
+    if (
+      ["intent", "share", "i", "home", "search", "hashtag", "settings", "login", "signup"].includes(
+        first
+      )
+    ) {
+      return;
+    }
+    if (parts.length >= 1 && /^[a-z0-9_]+$/i.test(parts[0] ?? "")) {
+      out.twitter = stripSocialTracking(u);
+    }
+  }
+
+  if (
+    !out.tiktok &&
+    (host === "tiktok.com" ||
+      host === "www.tiktok.com" ||
+      host === "vm.tiktok.com" ||
+      host === "m.tiktok.com")
+  ) {
+    const parts = u.pathname.split("/").filter(Boolean);
+    const seg = (parts[0] ?? "").toLowerCase();
+    if (["video", "discover", "tag", "music", "legal", "foryou"].includes(seg)) return;
+    if (seg.startsWith("@")) {
+      const handle = seg.slice(1);
+      if (/^[a-z0-9._-]+$/i.test(handle)) {
+        out.tiktok = stripSocialTracking(u);
+      }
+    }
+  }
+
+  if (
+    !out.youtube &&
+    (host === "youtube.com" || host === "www.youtube.com" || host === "m.youtube.com")
+  ) {
+    const parts = u.pathname.split("/").filter(Boolean);
+    const first = (parts[0] ?? "").toLowerCase();
+    if (first.startsWith("@") && /^@[\w.-]+$/i.test(first)) {
+      out.youtube = stripSocialTracking(u);
+    } else if (
+      (first === "channel" || first === "c" || first === "user") &&
+      parts.length >= 2 &&
+      parts[1]
+    ) {
+      out.youtube = stripSocialTracking(u);
+    }
+  }
+
+  if (!out.whatsapp && (host === "wa.me" || host === "www.wa.me")) {
+    const digits = u.pathname.replace(/\D/g, "");
+    if (digits.length >= 8 && digits.length <= 15) {
+      out.whatsapp = `https://wa.me/${digits}`;
+    }
+  }
+
+  if (!out.whatsapp && host === "api.whatsapp.com") {
+    const send = u.pathname.toLowerCase();
+    if (send.includes("/send")) {
+      const ph = u.searchParams.get("phone")?.replace(/\D/g, "") ?? "";
+      if (ph.length >= 8 && ph.length <= 15) {
+        out.whatsapp = `https://wa.me/${ph}`;
+      }
+    }
+  }
+}
+
+function walkLdJsonCollectSameAs(node: unknown, acc: string[]): void {
+  const visit = (o: unknown): void => {
+    if (o == null) return;
+    if (typeof o === "string") {
+      const t = o.trim();
+      if (/^https?:\/\//i.test(t)) acc.push(t);
+      return;
+    }
+    if (Array.isArray(o)) {
+      o.forEach(visit);
+      return;
+    }
+    if (typeof o !== "object") return;
+    const obj = o as Record<string, unknown>;
+    const sameAs = obj.sameAs;
+    if (sameAs != null) {
+      if (typeof sameAs === "string") {
+        const t = sameAs.trim();
+        if (/^https?:\/\//i.test(t)) acc.push(t);
+      } else if (Array.isArray(sameAs)) {
+        for (const x of sameAs) {
+          if (typeof x === "string") {
+            const t = x.trim();
+            if (/^https?:\/\//i.test(t)) acc.push(t);
+          }
+        }
+      }
+    }
+    for (const v of Object.values(obj)) visit(v);
+  };
+  visit(node);
+}
+
+/** Shopify / SEO themes often put Instagram only in JSON-LD `sameAs`, not in visible `<a>` markup. */
+function extractSameAsHttpUrlsFromLdJson(html: string): string[] {
+  const urls: string[] = [];
+  const ldRe = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let lm: RegExpExecArray | null;
+  while ((lm = ldRe.exec(html)) !== null) {
+    try {
+      const data = JSON.parse(lm[1].trim());
+      walkLdJsonCollectSameAs(data, urls);
+    } catch {
+      /* invalid JSON-LD */
+    }
+  }
+  return urls;
+}
+
 /**
- * Resolve anchor hrefs and pick one profile-style URL per network (best-effort).
+ * Resolve anchor/link hrefs and JSON-LD `sameAs` URLs; pick one profile-style URL per network (best-effort).
  */
 export function extractProspectSocialUrls(html: string, pageBaseUrl: string): ProspectSocialUrls {
   const out: ProspectSocialUrls = { ...EMPTY_PROSPECT_SOCIAL_URLS };
@@ -288,107 +483,24 @@ export function extractProspectSocialUrls(html: string, pageBaseUrl: string): Pr
   while ((m = hrefRe.exec(html)) !== null) {
     let raw = m[1].trim();
     if (!raw || /^javascript:/i.test(raw)) continue;
-    try {
-      raw = decodeURIComponent(raw);
-    } catch {
-      /* ignore */
-    }
+    raw = decodeHrefForUrl(raw);
     let u: URL;
     try {
       u = new URL(raw, base);
     } catch {
       continue;
     }
-    if (u.protocol !== "http:" && u.protocol !== "https:") continue;
-    const host = u.hostname.replace(/^www\./i, "").toLowerCase();
+    applySocialUrlToProspect(out, u);
+  }
 
-    if (
-      !out.facebook &&
-      (host === "facebook.com" ||
-        host === "fb.com" ||
-        host === "m.facebook.com" ||
-        host === "l.facebook.com")
-    ) {
-      const seg = u.pathname.split("/").filter(Boolean)[0]?.toLowerCase() ?? "";
-      const skip = new Set([
-        "sharer",
-        "dialog",
-        "plugins",
-        "share.php",
-        "login",
-        "groups",
-        "events",
-        "marketplace",
-        "watch",
-        "gaming",
-        "reel",
-        "reels",
-        "stories",
-        "ads",
-        "business",
-        "policy",
-        "help",
-        "privacy",
-      ]);
-      if (seg && !skip.has(seg) && u.pathname.replace(/\/$/, "").length > 1) {
-        out.facebook = stripSocialTracking(u);
-      }
+  for (const raw of extractSameAsHttpUrlsFromLdJson(html)) {
+    let u: URL;
+    try {
+      u = new URL(raw.trim(), base);
+    } catch {
+      continue;
     }
-
-    if (
-      !out.instagram &&
-      (host === "instagram.com" || host === "m.instagram.com" || host === "l.instagram.com")
-    ) {
-      const parts = u.pathname.split("/").filter(Boolean);
-      const first = parts[0]?.toLowerCase() ?? "";
-      if (["p", "reel", "reels", "stories", "tv", "explore", "accounts"].includes(first)) continue;
-      if (parts.length >= 1 && /^[a-z0-9._]+$/i.test(parts[0] ?? "")) {
-        out.instagram = stripSocialTracking(u);
-      }
-    }
-
-    if (!out.linkedin && host === "linkedin.com") {
-      const p = u.pathname.toLowerCase();
-      if (p.includes("/in/") || p.includes("/company/") || p.includes("/school/")) {
-        out.linkedin = stripSocialTracking(u);
-      }
-    }
-
-    if (
-      !out.twitter &&
-      (host === "twitter.com" || host === "x.com" || host === "mobile.twitter.com")
-    ) {
-      const parts = u.pathname.split("/").filter(Boolean);
-      const first = parts[0]?.toLowerCase() ?? "";
-      if (
-        ["intent", "share", "i", "home", "search", "hashtag", "settings", "login", "signup"].includes(
-          first
-        )
-      ) {
-        continue;
-      }
-      if (parts.length >= 1 && /^[a-z0-9_]+$/i.test(parts[0] ?? "")) {
-        out.twitter = stripSocialTracking(u);
-      }
-    }
-
-    if (
-      !out.tiktok &&
-      (host === "tiktok.com" ||
-        host === "www.tiktok.com" ||
-        host === "vm.tiktok.com" ||
-        host === "m.tiktok.com")
-    ) {
-      const parts = u.pathname.split("/").filter(Boolean);
-      const seg = (parts[0] ?? "").toLowerCase();
-      if (["video", "discover", "tag", "music", "legal", "foryou"].includes(seg)) continue;
-      if (seg.startsWith("@")) {
-        const handle = seg.slice(1);
-        if (/^[a-z0-9._]+$/i.test(handle)) {
-          out.tiktok = stripSocialTracking(u);
-        }
-      }
-    }
+    applySocialUrlToProspect(out, u);
   }
 
   return out;

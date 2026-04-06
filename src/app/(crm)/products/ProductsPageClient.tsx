@@ -150,6 +150,10 @@ function typeTagStyles(projectType: string | undefined) {
   if (!projectType)
     return "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300";
   const t = projectType.toLowerCase();
+  if (t.includes("website") || t === "mvp dev")
+    return "bg-cyan-100 text-cyan-800 dark:bg-cyan-950/50 dark:text-cyan-300";
+  if (t.includes("ai") && t.includes("autom"))
+    return "bg-violet-100 text-violet-800 dark:bg-violet-950/50 dark:text-violet-300";
   if (t.includes("mobile"))
     return "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300";
   if (t.includes("web"))

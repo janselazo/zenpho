@@ -4,12 +4,21 @@ import { useCallback, useEffect, useState } from "react";
 import {
   Copy,
   ExternalLink,
+  Layers,
   Loader2,
   Mail,
   MessageCircle,
+  Monitor,
   Send,
+  Smartphone,
   Sparkles,
+  Workflow,
 } from "lucide-react";
+import type { PlacesSearchPlace } from "@/lib/crm/places-types";
+import type {
+  StitchProspectDesignPayload,
+  StitchProspectDesignResult,
+} from "@/lib/crm/stitch-prospect-design-types";
 import { getProspectPreviewStatusAction } from "@/app/(crm)/actions/prospect-preview-generate-actions";
 import {
   sendProspectPreviewEmailAction,
@@ -67,6 +76,34 @@ export type ProspectPreviewGenerateOptions = {
   servicesLine?: string;
 };
 
+/** Context for Google Stitch prompts (Local Business listing or URL research). */
+export type ProspectStitchContext =
+  | { kind: "place"; place: PlacesSearchPlace }
+  | {
+      kind: "url";
+      url: string;
+      pageTitle: string | null;
+      metaDescription: string | null;
+    };
+
+type StitchOk = Extract<StitchProspectDesignResult, { ok: true }>;
+
+const STITCH_HELP_URL =
+  typeof process.env.NEXT_PUBLIC_STITCH_APP_URL === "string" &&
+  process.env.NEXT_PUBLIC_STITCH_APP_URL.trim()
+    ? process.env.NEXT_PUBLIC_STITCH_APP_URL.trim()
+    : "https://labs.google.com/fx/en/tools/stitch";
+
+function stitchBrandingSummary(ctx: ProspectStitchContext): string {
+  if (ctx.kind === "place") {
+    const p = ctx.place;
+    const bits = [p.name, p.formattedAddress].filter((x) => x?.trim());
+    return bits.length ? bits.join(" · ") : p.name;
+  }
+  const title = ctx.pageTitle?.trim();
+  return title ? `${title} · ${ctx.url}` : ctx.url;
+}
+
 type Props = {
   canGenerate: boolean;
   /** Async so the button can show immediate loading until the server action finishes. */
@@ -78,6 +115,10 @@ type Props = {
   emailDefaultTo: string;
   facebookUrl: string | null;
   instagramUrl: string | null;
+  /** When set, show Stitch website + mobile panels beside the hosted preview flow. */
+  stitchContext?: ProspectStitchContext | null;
+  /** Clears Stitch results when the active prospect report changes. */
+  reportKey?: string;
 };
 
 export default function ProspectPreviewOutreachBlock({
@@ -90,6 +131,8 @@ export default function ProspectPreviewOutreachBlock({
   emailDefaultTo,
   facebookUrl,
   instagramUrl,
+  stitchContext = null,
+  reportKey = "",
 }: Props) {
   const [smsTemplate, setSmsTemplate] = useState(DEFAULT_SMS);
   const [emailSubj, setEmailSubj] = useState(DEFAULT_EMAIL_SUBJ);
@@ -111,7 +154,21 @@ export default function ProspectPreviewOutreachBlock({
   const [generateClickPending, setGenerateClickPending] = useState(false);
   const [servicesOverride, setServicesOverride] = useState("");
   const [colorVibeOverride, setColorVibeOverride] = useState("");
-  const [shareTab, setShareTab] = useState<"sms" | "email">("sms");
+  const [stitchWebBusy, setStitchWebBusy] = useState(false);
+  const [stitchMobileBusy, setStitchMobileBusy] = useState(false);
+  const [stitchWebResult, setStitchWebResult] = useState<StitchOk | null>(null);
+  const [stitchMobileResult, setStitchMobileResult] = useState<StitchOk | null>(null);
+  const [stitchWebError, setStitchWebError] = useState<string | null>(null);
+  const [stitchMobileError, setStitchMobileError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setStitchWebBusy(false);
+    setStitchMobileBusy(false);
+    setStitchWebResult(null);
+    setStitchMobileResult(null);
+    setStitchWebError(null);
+    setStitchMobileError(null);
+  }, [reportKey]);
 
   useEffect(() => {
     setSmsTemplate(readLs(LS_SMS, DEFAULT_SMS));
@@ -275,22 +332,208 @@ export default function ProspectPreviewOutreachBlock({
     return `mailto:${emailTo.trim()}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
   }
 
-  return (
-    <div className="rounded-xl border border-border/80 bg-surface/40 p-4 dark:border-zinc-700/70 dark:bg-zinc-900/50">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500">
-          Proposed site preview
-        </h3>
-        <p className="text-[10px] text-text-secondary/80 dark:text-zinc-500">
-          Phase 2: Meta/Twilio API DMs · MMS when screenshot is ready
+  function buildStitchPayload(target: "website" | "mobile"): StitchProspectDesignPayload | null {
+    if (!stitchContext) return null;
+    const servicesLine = servicesOverride.trim() || undefined;
+    const colorVibe = colorVibeOverride.trim() || undefined;
+    if (stitchContext.kind === "place") {
+      return {
+        target,
+        kind: "place",
+        place: stitchContext.place,
+        servicesLine,
+        colorVibe,
+      };
+    }
+    return {
+      target,
+      kind: "url",
+      url: stitchContext.url,
+      pageTitle: stitchContext.pageTitle,
+      metaDescription: stitchContext.metaDescription,
+      servicesLine,
+      colorVibe,
+    };
+  }
+
+  const runStitchDesign = useCallback(
+    async (target: "website" | "mobile") => {
+      const payload = buildStitchPayload(target);
+      if (!payload) return;
+      if (target === "website") {
+        setStitchWebBusy(true);
+        setStitchWebError(null);
+      } else {
+        setStitchMobileBusy(true);
+        setStitchMobileError(null);
+      }
+      try {
+        const res = await fetch("/api/prospecting/stitch-design", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify(payload),
+        });
+        const text = await res.text();
+        let parsed: unknown = null;
+        if (text) {
+          try {
+            parsed = JSON.parse(text);
+          } catch {
+            parsed = null;
+          }
+        }
+        const r =
+          parsed &&
+          typeof parsed === "object" &&
+          "ok" in parsed &&
+          typeof (parsed as { ok: unknown }).ok === "boolean"
+            ? (parsed as StitchProspectDesignResult)
+            : null;
+        if (!r) {
+          if (target === "website") {
+            setStitchWebError("Invalid response from Stitch API.");
+            setStitchWebResult(null);
+          } else {
+            setStitchMobileError("Invalid response from Stitch API.");
+            setStitchMobileResult(null);
+          }
+          return;
+        }
+        if (!r.ok) {
+          if (target === "website") {
+            setStitchWebError(r.error);
+            setStitchWebResult(null);
+          } else {
+            setStitchMobileError(r.error);
+            setStitchMobileResult(null);
+          }
+          return;
+        }
+        if (target === "website") {
+          setStitchWebResult(r);
+        } else {
+          setStitchMobileResult(r);
+        }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Stitch request failed.";
+        if (target === "website") {
+          setStitchWebError(msg);
+          setStitchWebResult(null);
+        } else {
+          setStitchMobileError(msg);
+          setStitchMobileResult(null);
+        }
+      } finally {
+        if (target === "website") setStitchWebBusy(false);
+        else setStitchMobileBusy(false);
+      }
+    },
+    [stitchContext, servicesOverride, colorVibeOverride]
+  );
+
+  const stitchWebsiteButton = (
+    <button
+      type="button"
+      disabled={!stitchContext || stitchWebBusy}
+      onClick={() => void runStitchDesign("website")}
+      className="inline-flex items-center gap-2 rounded-xl border border-violet-500/40 bg-violet-500/10 px-4 py-2 text-sm font-semibold text-violet-800 shadow-sm transition-colors hover:bg-violet-500/15 disabled:opacity-50 dark:border-violet-400/35 dark:bg-violet-500/15 dark:text-violet-200 dark:hover:bg-violet-500/25"
+    >
+      {stitchWebBusy ? (
+        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+      ) : (
+        <Layers className="h-4 w-4" aria-hidden />
+      )}
+      {stitchWebBusy ? "Stitch (website)…" : "Website design in Google Stitch"}
+    </button>
+  );
+
+  const stitchWebsiteResultBlock =
+    stitchWebResult || stitchWebError ? (
+      <div className="rounded-lg border border-violet-500/25 bg-violet-500/[0.06] p-3 dark:border-violet-400/20 dark:bg-violet-500/10">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-violet-900/80 dark:text-violet-200/90">
+          Stitch · desktop concept
         </p>
+        {stitchWebError ? (
+          <p className="mt-2 text-xs text-red-600 dark:text-red-400" role="alert">
+            {stitchWebError}
+          </p>
+        ) : stitchWebResult ? (
+          <div className="mt-2 space-y-2">
+            {/* eslint-disable-next-line @next/next/no-img-element -- Stitch CDN screenshot URL */}
+            <img
+              src={stitchWebResult.imageUrl}
+              alt="Stitch website design preview"
+              className="max-h-48 w-full rounded-md border border-border object-contain object-top dark:border-zinc-700"
+            />
+            <div className="flex flex-wrap gap-2">
+              <a
+                href={stitchWebResult.htmlUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 text-xs font-medium text-violet-700 hover:underline dark:text-violet-300"
+              >
+                Open HTML export
+                <ExternalLink className="h-3 w-3 opacity-70" aria-hidden />
+              </a>
+              <button
+                type="button"
+                onClick={() =>
+                  void copyAndFlash(
+                    `Project: ${stitchWebResult.projectId}\nScreen: ${stitchWebResult.screenId}\n${stitchWebResult.projectTitle}`
+                  )
+                }
+                className="inline-flex items-center gap-1 text-xs font-medium text-text-secondary hover:text-text-primary dark:text-zinc-400"
+              >
+                <Copy className="h-3 w-3" aria-hidden />
+                Copy project &amp; screen IDs
+              </button>
+            </div>
+            <a
+              href={STITCH_HELP_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="block text-[11px] text-text-secondary hover:underline dark:text-zinc-500"
+            >
+              Open Google Stitch (find this project by title or ID)
+            </a>
+          </div>
+        ) : null}
       </div>
+    ) : null;
+
+  return (
+    <div
+      className={
+        stitchContext ? "grid gap-6 lg:grid-cols-2 lg:items-start" : "contents"
+      }
+    >
+      <div className="space-y-4">
+        <section
+          className="rounded-xl border border-border/80 bg-surface/40 p-4 dark:border-zinc-700/70 dark:bg-zinc-900/50"
+          aria-labelledby="prospect-offering-websites-heading"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3
+              id="prospect-offering-websites-heading"
+              className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500"
+            >
+              Websites development
+            </h3>
+            <p className="text-[10px] text-text-secondary/80 dark:text-zinc-500">
+              Proposed site preview · Stitch · hosted HTML · share
+            </p>
+          </div>
 
       {!preview ? (
         <div className="mt-3 space-y-2">
           <p className="text-xs text-text-secondary dark:text-zinc-400">
-            An LLM (Claude if ANTHROPIC_API_KEY is set, otherwise OpenAI) builds a full HTML/CSS page; we host it,
-            show a live iframe preview, capture a thumbnail, then you can share by SMS, email, or social handoff.
+            Optional: run{" "}
+            <span className="font-medium text-text-primary dark:text-zinc-200">Website design in Google Stitch</span>{" "}
+            first to review a generated concept (screenshot + HTML export), then use{" "}
+            <span className="font-medium text-text-primary dark:text-zinc-200">Generate website preview</span> when you
+            want the hosted one-pager for clients. The LLM builds full HTML/CSS; we host it, iframe it, capture a
+            thumbnail, and you can share by SMS, email, or social handoff.
           </p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             <div className="sm:col-span-2">
@@ -316,34 +559,38 @@ export default function ProspectPreviewOutreachBlock({
               />
             </div>
           </div>
-          <button
-            type="button"
-            disabled={!canGenerate || generatePending || generateClickPending}
-            onClick={() => {
-              if (!canGenerate) return;
-              setGenerateClickPending(true);
-              void (async () => {
-                try {
-                  const o: ProspectPreviewGenerateOptions = {};
-                  if (servicesOverride.trim()) o.servicesLine = servicesOverride.trim();
-                  if (colorVibeOverride.trim()) o.colorVibe = colorVibeOverride.trim();
-                  await onGenerate(
-                    Object.keys(o).length > 0 ? o : undefined
-                  );
-                } finally {
-                  setGenerateClickPending(false);
-                }
-              })();
-            }}
-            className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-accent-hover disabled:opacity-50"
-          >
-            {generatePending || generateClickPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-            ) : (
-              <Sparkles className="h-4 w-4" aria-hidden />
-            )}
-            {generatePending || generateClickPending ? "Generating…" : "Generate website preview"}
-          </button>
+          {stitchWebsiteResultBlock}
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+            {stitchContext ? stitchWebsiteButton : null}
+            <button
+              type="button"
+              disabled={!canGenerate || generatePending || generateClickPending}
+              onClick={() => {
+                if (!canGenerate) return;
+                setGenerateClickPending(true);
+                void (async () => {
+                  try {
+                    const o: ProspectPreviewGenerateOptions = {};
+                    if (servicesOverride.trim()) o.servicesLine = servicesOverride.trim();
+                    if (colorVibeOverride.trim()) o.colorVibe = colorVibeOverride.trim();
+                    await onGenerate(
+                      Object.keys(o).length > 0 ? o : undefined
+                    );
+                  } finally {
+                    setGenerateClickPending(false);
+                  }
+                })();
+              }}
+              className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-accent-hover disabled:opacity-50"
+            >
+              {generatePending || generateClickPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <Sparkles className="h-4 w-4" aria-hidden />
+              )}
+              {generatePending || generateClickPending ? "Generating…" : "Generate website preview"}
+            </button>
+          </div>
           {generateError ? (
             <p className="text-xs text-red-600 dark:text-red-400" role="alert">
               {generateError}
@@ -371,6 +618,7 @@ export default function ProspectPreviewOutreachBlock({
                 <Copy className="h-3.5 w-3.5" aria-hidden />
                 Copy link
               </button>
+              {stitchContext ? stitchWebsiteButton : null}
             </div>
             {preview.previewSlug ? (
               <p className="text-[11px] text-text-secondary dark:text-zinc-500">
@@ -381,6 +629,8 @@ export default function ProspectPreviewOutreachBlock({
               </p>
             ) : null}
           </div>
+
+          {stitchWebsiteResultBlock}
 
           <div>
             <p className="text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
@@ -451,64 +701,41 @@ export default function ProspectPreviewOutreachBlock({
               </div>
             </div>
 
-            <div
-              className="mt-4 inline-flex w-full max-w-md rounded-lg border border-border/80 bg-border/10 p-1 dark:border-zinc-700 dark:bg-zinc-900/80 sm:w-auto"
-              role="tablist"
-              aria-label="Outreach channel"
-            >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={shareTab === "sms"}
-                onClick={() => setShareTab("sms")}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors sm:flex-initial sm:px-4 ${
-                  shareTab === "sms"
-                    ? "bg-white text-text-primary shadow-sm dark:bg-zinc-800 dark:text-zinc-100"
-                    : "text-text-secondary hover:text-text-primary dark:text-zinc-500 dark:hover:text-zinc-200"
-                }`}
-              >
-                <MessageCircle className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-                SMS &amp; social
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={shareTab === "email"}
-                onClick={() => setShareTab("email")}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors sm:flex-initial sm:px-4 ${
-                  shareTab === "email"
-                    ? "bg-white text-text-primary shadow-sm dark:bg-zinc-800 dark:text-zinc-100"
-                    : "text-text-secondary hover:text-text-primary dark:text-zinc-500 dark:hover:text-zinc-200"
-                }`}
-              >
-                <Mail className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-                Email
-              </button>
-            </div>
+            <div className="mt-4 space-y-6">
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="prospect-preview-your-name"
+                  className="text-xs font-medium text-text-primary dark:text-zinc-300"
+                >
+                  Name in message
+                </label>
+                <p className="text-[11px] text-text-secondary dark:text-zinc-500">
+                  Fills <span className="font-mono">{"{{yourName}}"}</span> in SMS and email. Defaults to this business;
+                  change if you want a different sign-off.
+                </p>
+                <input
+                  id="prospect-preview-your-name"
+                  value={yourName}
+                  onChange={(e) => setYourName(e.target.value)}
+                  onBlur={persistTemplates}
+                  className="w-full max-w-lg rounded-lg border border-border bg-white px-3 py-2.5 text-sm outline-none ring-accent/0 transition-shadow focus:border-accent/50 focus:ring-2 focus:ring-accent/20 dark:border-zinc-600 dark:bg-zinc-900"
+                />
+              </div>
 
-            <div className="mt-4 min-h-[12rem]">
-              {shareTab === "sms" ? (
-                <div className="space-y-4" role="tabpanel">
-                  <div className="space-y-1.5">
-                    <label
-                      htmlFor="prospect-preview-your-name"
-                      className="text-xs font-medium text-text-primary dark:text-zinc-300"
-                    >
-                      Name in message
-                    </label>
-                    <p className="text-[11px] text-text-secondary dark:text-zinc-500">
-                      Fills <span className="font-mono">{"{{yourName}}"}</span>. Defaults to this business; change if
-                      you want a different sign-off.
-                    </p>
-                    <input
-                      id="prospect-preview-your-name"
-                      value={yourName}
-                      onChange={(e) => setYourName(e.target.value)}
-                      onBlur={persistTemplates}
-                      className="w-full max-w-lg rounded-lg border border-border bg-white px-3 py-2.5 text-sm outline-none ring-accent/0 transition-shadow focus:border-accent/50 focus:ring-2 focus:ring-accent/20 dark:border-zinc-600 dark:bg-zinc-900"
-                    />
-                  </div>
-
+              <section
+                aria-labelledby="prospect-share-sms-heading"
+                className="rounded-xl border border-border/90 bg-white/50 p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/35"
+              >
+                <div className="mb-4 flex items-center gap-2 border-b border-border/60 pb-3 dark:border-zinc-700">
+                  <MessageCircle className="h-4 w-4 text-accent dark:text-blue-400" aria-hidden />
+                  <h5
+                    id="prospect-share-sms-heading"
+                    className="text-sm font-semibold text-text-primary dark:text-zinc-100"
+                  >
+                    SMS &amp; social
+                  </h5>
+                </div>
+                <div className="space-y-4">
                   <div className="space-y-1.5">
                     <label
                       htmlFor="prospect-preview-sms-template"
@@ -549,7 +776,7 @@ export default function ProspectPreviewOutreachBlock({
                         type="button"
                         disabled={smsBusy || !smsTo.trim()}
                         onClick={() => void onSendSms()}
-                        className="flex w-full items-center justify-center gap-2 rounded-lg bg-zinc-900 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+                        className="flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-accent-hover disabled:opacity-50"
                       >
                         {smsBusy ? (
                           <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -603,8 +830,22 @@ export default function ProspectPreviewOutreachBlock({
                     </div>
                   )}
                 </div>
-              ) : (
-                <div className="space-y-4" role="tabpanel">
+              </section>
+
+              <section
+                aria-labelledby="prospect-share-email-heading"
+                className="rounded-xl border border-border/90 bg-white/50 p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/35"
+              >
+                <div className="mb-4 flex items-center gap-2 border-b border-border/60 pb-3 dark:border-zinc-700">
+                  <Mail className="h-4 w-4 text-accent dark:text-blue-400" aria-hidden />
+                  <h5
+                    id="prospect-share-email-heading"
+                    className="text-sm font-semibold text-text-primary dark:text-zinc-100"
+                  >
+                    Email
+                  </h5>
+                </div>
+                <div className="space-y-4">
                   <div className="space-y-1.5">
                     <label
                       htmlFor="prospect-preview-email-subj"
@@ -679,7 +920,7 @@ export default function ProspectPreviewOutreachBlock({
                     </p>
                   )}
                 </div>
-              )}
+              </section>
             </div>
           </div>
 
@@ -695,6 +936,175 @@ export default function ProspectPreviewOutreachBlock({
           ) : null}
         </div>
       )}
+        </section>
+
+        <section
+          aria-labelledby="prospect-offering-webapp-heading"
+          className="rounded-xl border border-dashed border-border/80 bg-surface/20 p-4 dark:border-zinc-700/60 dark:bg-zinc-900/35"
+        >
+          <div className="flex gap-3">
+            <Monitor
+              className="mt-0.5 h-5 w-5 shrink-0 text-sky-600 opacity-90 dark:text-sky-400"
+              aria-hidden
+            />
+            <div className="min-w-0">
+              <h3
+                id="prospect-offering-webapp-heading"
+                className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500"
+              >
+                Web app preview
+              </h3>
+              <p className="mt-1.5 text-xs leading-relaxed text-text-secondary dark:text-zinc-400">
+                Reserved for proposing web applications to clients. No preview or
+                generation is connected here yet.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section
+          aria-labelledby="prospect-offering-mobile-heading"
+          className="rounded-xl border border-dashed border-border/80 bg-surface/20 p-4 dark:border-zinc-700/60 dark:bg-zinc-900/35"
+        >
+          <div className="flex gap-3">
+            <Smartphone
+              className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600 opacity-90 dark:text-emerald-400"
+              aria-hidden
+            />
+            <div className="min-w-0">
+              <h3
+                id="prospect-offering-mobile-heading"
+                className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500"
+              >
+                Mobile app
+              </h3>
+              <p className="mt-1.5 text-xs leading-relaxed text-text-secondary dark:text-zinc-400">
+                Reserved for proposing mobile products. No preview or generation
+                is connected here yet.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section
+          aria-labelledby="prospect-offering-automations-heading"
+          className="rounded-xl border border-dashed border-border/80 bg-surface/20 p-4 dark:border-zinc-700/60 dark:bg-zinc-900/35"
+        >
+          <div className="flex gap-3">
+            <Workflow
+              className="mt-0.5 h-5 w-5 shrink-0 text-violet-600 opacity-90 dark:text-violet-400"
+              aria-hidden
+            />
+            <div className="min-w-0">
+              <h3
+                id="prospect-offering-automations-heading"
+                className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500"
+              >
+                AI automations
+              </h3>
+              <p className="mt-1.5 text-xs leading-relaxed text-text-secondary dark:text-zinc-400">
+                Reserved for proposing AI automations and workflow work. No tools
+                wired here yet.
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      {stitchContext ? (
+        <aside className="rounded-xl border border-border/80 bg-surface/40 p-4 dark:border-zinc-700/70 dark:bg-zinc-900/50">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500">
+              Mobile app design (Stitch)
+            </h3>
+            <Smartphone className="h-4 w-4 shrink-0 text-text-secondary opacity-70 dark:text-zinc-500" aria-hidden />
+          </div>
+          <p className="mt-2 text-xs text-text-secondary dark:text-zinc-400">
+            {stitchContext.kind === "place" ? (
+              <>
+                Uses your{" "}
+                <span className="font-medium text-text-primary dark:text-zinc-200">Google Business Profile</span>{" "}
+                (name, address, categories, rating, listing website) as branding context for a phone-sized UI concept.
+              </>
+            ) : (
+              <>
+                URL research only — brand context comes from the fetched page title and meta description. Open a{" "}
+                <span className="font-medium text-text-primary dark:text-zinc-200">Local Business</span> listing for
+                full Google profile fields.
+              </>
+            )}
+          </p>
+          <p className="mt-2 rounded-lg border border-border/60 bg-white/40 px-2.5 py-2 text-[11px] text-text-secondary dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
+            {stitchBrandingSummary(stitchContext)}
+          </p>
+          <p className="mt-2 text-[11px] text-text-secondary/90 dark:text-zinc-500">
+            Generation often takes a few minutes. Do not double-click — the Stitch API may still complete if the
+            request times out at the edge.
+          </p>
+          <button
+            type="button"
+            disabled={stitchMobileBusy}
+            onClick={() => void runStitchDesign("mobile")}
+            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-violet-500/40 bg-violet-500/10 px-4 py-2.5 text-sm font-semibold text-violet-800 shadow-sm transition-colors hover:bg-violet-500/15 disabled:opacity-50 dark:border-violet-400/35 dark:bg-violet-500/15 dark:text-violet-200 dark:hover:bg-violet-500/25 sm:w-auto"
+          >
+            {stitchMobileBusy ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <Smartphone className="h-4 w-4" aria-hidden />
+            )}
+            {stitchMobileBusy ? "Stitch (mobile)…" : "Generate mobile UI in Google Stitch"}
+          </button>
+          {stitchMobileError ? (
+            <p className="mt-2 text-xs text-red-600 dark:text-red-400" role="alert">
+              {stitchMobileError}
+            </p>
+          ) : null}
+          {stitchMobileResult ? (
+            <div className="mt-3 space-y-2 rounded-lg border border-violet-500/25 bg-violet-500/[0.06] p-3 dark:border-violet-400/20 dark:bg-violet-500/10">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-violet-900/80 dark:text-violet-200/90">
+                Stitch · mobile concept
+              </p>
+              {/* eslint-disable-next-line @next/next/no-img-element -- Stitch CDN screenshot URL */}
+              <img
+                src={stitchMobileResult.imageUrl}
+                alt="Stitch mobile design preview"
+                className="max-h-64 w-full rounded-md border border-border object-contain object-top dark:border-zinc-700"
+              />
+              <div className="flex flex-wrap gap-2">
+                <a
+                  href={stitchMobileResult.htmlUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-xs font-medium text-violet-700 hover:underline dark:text-violet-300"
+                >
+                  Open HTML export
+                  <ExternalLink className="h-3 w-3 opacity-70" aria-hidden />
+                </a>
+                <button
+                  type="button"
+                  onClick={() =>
+                    void copyAndFlash(
+                      `Project: ${stitchMobileResult.projectId}\nScreen: ${stitchMobileResult.screenId}\n${stitchMobileResult.projectTitle}`
+                    )
+                  }
+                  className="inline-flex items-center gap-1 text-xs font-medium text-text-secondary hover:text-text-primary dark:text-zinc-400"
+                >
+                  <Copy className="h-3 w-3" aria-hidden />
+                  Copy project &amp; screen IDs
+                </button>
+              </div>
+              <a
+                href={STITCH_HELP_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="block text-[11px] text-text-secondary hover:underline dark:text-zinc-500"
+              >
+                Open Google Stitch (find this project by title or ID)
+              </a>
+            </div>
+          ) : null}
+        </aside>
+      ) : null}
     </div>
   );
 }

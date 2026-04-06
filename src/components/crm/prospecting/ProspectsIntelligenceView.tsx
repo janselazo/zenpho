@@ -17,6 +17,7 @@ import { signalsFromPlace } from "@/lib/crm/prospect-intel-place-signals";
 import type { PlacesSearchPlace } from "@/lib/crm/places-types";
 import { PLACES_TEXT_SEARCH_CATEGORY_SUGGESTIONS } from "@/lib/crm/places-text-search-category-suggestions";
 import type { MergedCrmFieldOptions } from "@/lib/crm/field-options";
+import { DEFAULT_LEAD_PROJECT_TYPE } from "@/lib/crm/mock-data";
 import {
   researchProspectFromUrl,
   saveProspectIntelReportAction,
@@ -29,6 +30,7 @@ import type {
 } from "@/lib/crm/prospect-preview-run-generate";
 import ProspectPreviewOutreachBlock, {
   type ProspectPreviewOutreachSnapshot,
+  type ProspectStitchContext,
 } from "@/components/crm/prospecting/ProspectPreviewOutreachBlock";
 import { useRouter, useSearchParams } from "next/navigation";
 import { primaryPlaceTypeLabel } from "@/lib/crm/places-search-ui";
@@ -723,7 +725,7 @@ function ProspectsIntelligenceViewInner({
   const searchParams = useSearchParams();
   const prevReportSearchParam = useRef<string | null>(null);
   const defaultProjectType =
-    fieldOptions.leadProjectTypes[0] ?? "MVP Dev";
+    fieldOptions.leadProjectTypes[0] ?? DEFAULT_LEAD_PROJECT_TYPE;
   const [businessName, setBusinessName] = useState("");
   const [category, setCategory] = useState("");
   const [city, setCity] = useState("");
@@ -944,6 +946,19 @@ function ProspectsIntelligenceViewInner({
       ),
     [activeReport]
   );
+
+  const stitchContext: ProspectStitchContext | null = useMemo(() => {
+    if (!activeReport) return null;
+    if (activeReport.kind === "place") {
+      return { kind: "place", place: activeReport.place };
+    }
+    return {
+      kind: "url",
+      url: activeReport.urlMeta.url,
+      pageTitle: activeReport.urlMeta.pageTitle,
+      metaDescription: activeReport.urlMeta.metaDescription,
+    };
+  }, [activeReport]);
 
   const snapshotSocialUrls = useMemo(() => {
     const deep = websiteDeepStatus.contacts?.socialUrls;
@@ -1626,6 +1641,8 @@ function ProspectsIntelligenceViewInner({
                   leadInstagram.trim() ||
                   null
                 }
+                stitchContext={stitchContext}
+                reportKey={outreachPreviewKey}
               />
             </div>
           </ReportSection>

@@ -7,6 +7,9 @@ export type ProspectSocialUrls = {
   linkedin: string | null;
   twitter: string | null;
   tiktok: string | null;
+  youtube: string | null;
+  /** Click-to-chat link, usually `https://wa.me/<digits>`. */
+  whatsapp: string | null;
 };
 
 export const EMPTY_PROSPECT_SOCIAL_URLS: ProspectSocialUrls = {
@@ -15,6 +18,8 @@ export const EMPTY_PROSPECT_SOCIAL_URLS: ProspectSocialUrls = {
   linkedin: null,
   twitter: null,
   tiktok: null,
+  youtube: null,
+  whatsapp: null,
 };
 
 export type PageContactHints = {

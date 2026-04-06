@@ -12,7 +12,7 @@ export default function Process() {
         title="How we"
         titleAccent="work"
         titleAccentInline
-        description="We keep it simple, fast, and transparent. From the moment you share your idea with us, we take full ownership of the process — so you can focus on your business while we build your product."
+        description="We keep it simple, fast, and transparent. From the moment you share your idea with us, we take full ownership of the process so you can focus on your business while we build your product."
       />
 
       <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">

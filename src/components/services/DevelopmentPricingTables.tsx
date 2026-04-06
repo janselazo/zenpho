@@ -1,6 +1,9 @@
 import Link from "next/link";
 import type { DevelopmentPricingOffering } from "@/lib/data";
-import { developmentPricingOfferings } from "@/lib/data";
+import {
+  aiAutomationsPricingOffering,
+  developmentPricingOfferings,
+} from "@/lib/data";
 
 /** Minimal list check — stroke only, no box (matches marketing reference). */
 function FeatureCheckIcon({ className }: { className?: string }) {
@@ -95,16 +98,68 @@ function OfferingCard({ offering }: { offering: DevelopmentPricingOffering }) {
   );
 }
 
+function HorizontalPricingOffering({ offering }: { offering: DevelopmentPricingOffering }) {
+  const suffix = offering.priceSuffix ?? "starting";
+
+  return (
+    <article
+      id={`pricing-${offering.id}`}
+      className="mx-auto max-w-6xl rounded-3xl border border-border/90 bg-white p-6 shadow-soft sm:p-8 lg:p-10"
+    >
+      <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-12 xl:gap-16">
+        <div className="lg:max-w-sm lg:shrink-0 xl:max-w-md">
+          <h2 className="text-xl font-bold tracking-tight text-text-primary sm:text-2xl">
+            {offering.title}
+          </h2>
+          <div className="mt-4 flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
+            <span className="text-4xl font-bold tracking-tight text-text-primary sm:text-[2.5rem] sm:leading-none">
+              {offering.priceAmount}
+            </span>
+            <span className="text-sm font-medium text-text-secondary">/ {suffix}</span>
+          </div>
+          <p className="mt-3 text-sm leading-relaxed text-text-secondary sm:text-[15px]">
+            {offering.subtitle}
+          </p>
+          <Link
+            href="/booking"
+            className="mt-6 inline-flex w-full items-center justify-center rounded-full border border-border bg-white px-6 py-3.5 text-sm font-semibold text-text-primary transition-colors hover:border-accent/35 hover:bg-surface-light/80 sm:w-auto"
+          >
+            Book a call
+          </Link>
+        </div>
+
+        <div className="min-w-0 flex-1 border-t border-border/60 pt-8 lg:border-l lg:border-t-0 lg:pl-12 lg:pt-0 xl:pl-16">
+          <p className="text-xs font-bold uppercase tracking-wider text-text-primary">Includes:</p>
+          <ul className="mt-3 grid gap-2.5 sm:grid-cols-2 sm:gap-x-6 lg:gap-x-8">
+            {offering.features.map((line) => (
+              <li key={line} className="flex gap-3 text-sm leading-snug text-text-secondary">
+                <FeatureCheckIcon className="mt-0.5 h-[1.125rem] w-[1.125rem] shrink-0 text-accent" />
+                <span>{line}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </article>
+  );
+}
+
 export default function DevelopmentPricingTables({
   offerings = developmentPricingOfferings,
+  horizontalOffering = aiAutomationsPricingOffering,
 }: {
   offerings?: DevelopmentPricingOffering[];
+  /** Optional full-width row below the grid; pass `null` to hide. */
+  horizontalOffering?: DevelopmentPricingOffering | null;
 }) {
   return (
-    <div className="mx-auto grid max-w-6xl gap-5 sm:gap-6 md:grid-cols-2 lg:grid-cols-3 xl:items-start xl:gap-5">
-      {offerings.map((offering) => (
-        <OfferingCard key={offering.id} offering={offering} />
-      ))}
+    <div className="mx-auto max-w-6xl space-y-8 lg:space-y-10">
+      <div className="grid gap-5 sm:gap-6 md:grid-cols-2 lg:grid-cols-3 xl:items-start xl:gap-5">
+        {offerings.map((offering) => (
+          <OfferingCard key={offering.id} offering={offering} />
+        ))}
+      </div>
+      {horizontalOffering ? <HorizontalPricingOffering offering={horizontalOffering} /> : null}
     </div>
   );
 }

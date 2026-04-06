@@ -1,7 +1,15 @@
 /** Soft pill classes for product / lead project type (aligned with Leads table type colors). */
 const KNOWN: Record<string, string> = {
-  "mvp dev":
+  "websites development":
+    "bg-cyan-100 text-cyan-900 dark:bg-cyan-950/45 dark:text-cyan-200",
+  "ai automations":
     "bg-violet-100 text-violet-900 dark:bg-violet-950/45 dark:text-violet-200",
+  "web apps":
+    "bg-sky-100 text-sky-900 dark:bg-sky-950/50 dark:text-sky-200",
+  "mobile apps":
+    "bg-emerald-100 text-emerald-900 dark:bg-emerald-950/45 dark:text-emerald-200",
+  "mvp dev":
+    "bg-cyan-100 text-cyan-900 dark:bg-cyan-950/45 dark:text-cyan-200",
   "web app":
     "bg-sky-100 text-sky-900 dark:bg-sky-950/50 dark:text-sky-200",
   "mobile app":

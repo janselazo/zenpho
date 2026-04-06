@@ -18,7 +18,6 @@ import {
   MessageSquare,
   Settings,
   Timer,
-  UserSearch,
   Users,
   UsersRound,
   Workflow,
@@ -33,7 +32,6 @@ const opportunitiesNav: Array<{
   label: string;
   icon: LucideIcon;
 }> = [
-  { href: "/prospecting/prospects", label: "Prospects", icon: UserSearch },
   { href: "/leads", label: "Leads", icon: UsersRound },
   { href: "/calendar", label: "Appointments", icon: Calendar },
   { href: "/conversations", label: "Conversations", icon: MessageSquare },
@@ -54,10 +52,12 @@ const agencyNav = [
 ];
 
 const playbookSection = PROSPECTING_SECTIONS.find((s) => s.slug === "playbook");
+const prospectsSection = PROSPECTING_SECTIONS.find((s) => s.slug === "prospects");
 const prospectingSectionsWithoutPlaybook = PROSPECTING_SECTIONS.filter(
   (s) => s.slug !== "playbook" && s.slug !== "prospects"
 );
 const PlaybookNavIcon = playbookSection?.icon;
+const ProspectsNavIcon = prospectsSection?.icon;
 
 const SIDEBAR_SECTION_STORAGE_PREFIX = "zenpho-sidebar-section-";
 
@@ -132,7 +132,7 @@ export default function AppSidebar() {
           </span>
         </Link>
 
-        {/* Dashboard + Playbook */}
+        {/* Dashboard, Playbook, Prospects */}
         <div className="px-2 pt-4">
           <nav className="flex flex-col gap-0.5">
             <NavLink href="/dashboard" active={isActive(pathname, "/dashboard")}>
@@ -149,6 +149,18 @@ export default function AppSidebar() {
               >
                 <PlaybookNavIcon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
                 {playbookSection.label}
+              </NavLink>
+            ) : null}
+            {prospectsSection && ProspectsNavIcon ? (
+              <NavLink
+                href={prospectsSection.href}
+                active={
+                  pathname === prospectsSection.href ||
+                  pathname.startsWith(`${prospectsSection.href}/`)
+                }
+              >
+                <ProspectsNavIcon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+                {prospectsSection.label}
               </NavLink>
             ) : null}
           </nav>
