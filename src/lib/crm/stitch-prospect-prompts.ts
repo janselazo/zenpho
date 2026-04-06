@@ -8,7 +8,7 @@ function safe(s: string | null | undefined, max = 800): string {
   return t.length > max ? `${t.slice(0, max - 1)}…` : t;
 }
 
-function placeContext(p: PlacesSearchPlace, servicesLine?: string, colorVibe?: string): string {
+function placeContext(p: PlacesSearchPlace, colorVibe?: string): string {
   const primary = primaryPlaceTypeLabel(p.types);
   const typesLine =
     p.types?.filter(Boolean).slice(0, 8).join(", ") || primary || "local business";
@@ -22,7 +22,6 @@ function placeContext(p: PlacesSearchPlace, servicesLine?: string, colorVibe?: s
     p.nationalPhoneNumber?.trim() || p.internationalPhoneNumber?.trim()
       ? `Phone on listing: ${safe(p.nationalPhoneNumber || p.internationalPhoneNumber, 40)}`
       : null,
-    servicesLine?.trim() ? `Services line (user override): ${safe(servicesLine, 400)}` : null,
     colorVibe?.trim() ? `Visual direction: ${safe(colorVibe, 400)}` : null,
   ];
   return lines.filter(Boolean).join("\n");
@@ -32,14 +31,12 @@ function urlContext(
   url: string,
   pageTitle?: string | null,
   metaDescription?: string | null,
-  servicesLine?: string,
   colorVibe?: string
 ): string {
   const lines = [
     `Page / brand title: ${safe(pageTitle, 200) || "(none)"}`,
     `Source URL: ${safe(url, 500)}`,
     metaDescription?.trim() ? `Meta description: ${safe(metaDescription, 500)}` : null,
-    servicesLine?.trim() ? `Services line (user override): ${safe(servicesLine, 400)}` : null,
     colorVibe?.trim() ? `Visual direction: ${safe(colorVibe, 400)}` : null,
     "Note: No Google Business Profile payload — infer industry from title, URL, and description.",
   ];
@@ -49,14 +46,8 @@ function urlContext(
 export function buildStitchWebsitePrompt(payload: StitchProspectDesignPayload): string {
   const block =
     payload.kind === "place"
-      ? placeContext(payload.place, payload.servicesLine, payload.colorVibe)
-      : urlContext(
-          payload.url,
-          payload.pageTitle,
-          payload.metaDescription,
-          payload.servicesLine,
-          payload.colorVibe
-        );
+      ? placeContext(payload.place, payload.colorVibe)
+      : urlContext(payload.url, payload.pageTitle, payload.metaDescription, payload.colorVibe);
 
   return `${block}
 
@@ -69,14 +60,8 @@ Output as a polished UI design suitable for a client pitch (not wireframe-only).
 export function buildStitchMobilePrompt(payload: StitchProspectDesignPayload): string {
   const block =
     payload.kind === "place"
-      ? placeContext(payload.place, payload.servicesLine, payload.colorVibe)
-      : urlContext(
-          payload.url,
-          payload.pageTitle,
-          payload.metaDescription,
-          payload.servicesLine,
-          payload.colorVibe
-        );
+      ? placeContext(payload.place, payload.colorVibe)
+      : urlContext(payload.url, payload.pageTitle, payload.metaDescription, payload.colorVibe);
 
   const gmb =
     payload.kind === "place"

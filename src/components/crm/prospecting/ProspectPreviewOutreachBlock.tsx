@@ -54,8 +54,6 @@ export default function ProspectPreviewOutreachBlock({
   stitchContext = null,
   reportKey = "",
 }: Props) {
-  const [servicesOverride, setServicesOverride] = useState("");
-  const [colorVibeOverride, setColorVibeOverride] = useState("");
   const [stitchWebBusy, setStitchWebBusy] = useState(false);
   const [stitchMobileBusy, setStitchMobileBusy] = useState(false);
   const [stitchWebResult, setStitchWebResult] = useState<StitchOk | null>(null);
@@ -184,20 +182,16 @@ export default function ProspectPreviewOutreachBlock({
         setStitchManualTarget(null);
       }
     },
-    [stitchContext, servicesOverride, colorVibeOverride]
+    [stitchContext]
   );
 
   function buildStitchPayload(target: "website" | "mobile"): StitchProspectDesignPayload | null {
     if (!stitchContext) return null;
-    const servicesLine = servicesOverride.trim() || undefined;
-    const colorVibe = colorVibeOverride.trim() || undefined;
     if (stitchContext.kind === "place") {
       return {
         target,
         kind: "place",
         place: stitchContext.place,
-        servicesLine,
-        colorVibe,
       };
     }
     return {
@@ -206,8 +200,6 @@ export default function ProspectPreviewOutreachBlock({
       url: stitchContext.url,
       pageTitle: stitchContext.pageTitle,
       metaDescription: stitchContext.metaDescription,
-      servicesLine,
-      colorVibe,
     };
   }
 
@@ -288,7 +280,7 @@ export default function ProspectPreviewOutreachBlock({
         else setStitchMobileBusy(false);
       }
     },
-    [stitchContext, servicesOverride, colorVibeOverride]
+    [stitchContext]
   );
 
   const stitchWebsiteResultBlock =
@@ -437,32 +429,6 @@ export default function ProspectPreviewOutreachBlock({
           <p className="mt-2 rounded-lg border border-border/60 bg-white/40 px-2.5 py-2 text-[11px] text-text-secondary dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
             {stitchBrandingSummary(stitchContext)}
           </p>
-        ) : null}
-        {stitchContext ? (
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <label className="block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
-                Services (optional — overrides inferred categories)
-              </label>
-              <input
-                value={servicesOverride}
-                onChange={(e) => setServicesOverride(e.target.value)}
-                placeholder="e.g. Full-service pet grooming, nail trims, de-shedding"
-                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
-                Color and mood (optional — default from env)
-              </label>
-              <input
-                value={colorVibeOverride}
-                onChange={(e) => setColorVibeOverride(e.target.value)}
-                placeholder="e.g. Soft teal and cream, friendly and spotless"
-                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-              />
-            </div>
-          </div>
         ) : null}
         <p className="mt-2 text-[11px] text-text-secondary/90 dark:text-zinc-500">
           Generation often takes a few minutes. Do not double-click — the Stitch API may still complete if the request
