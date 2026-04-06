@@ -27,5 +27,9 @@ export type StitchProspectDesignResult =
       projectTitle: string;
       imageUrl: string;
       htmlUrl: string;
+      /** When hosting succeeded: same public URLs as LLM prospect previews (e.g. preview.zenpho.com/{slug}). */
+      hostedPreviewUrl?: string;
+      hostedPreviewSlug?: string;
+      hostedPreviewId?: string;
     }
   | { ok: false; error: string; code?: "STITCH_API_KEY_MISSING" };

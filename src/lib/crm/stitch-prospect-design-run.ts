@@ -5,6 +5,7 @@ import {
   getStitchServerApiKey,
   STITCH_API_KEY_MISSING_USER_MESSAGE,
 } from "@/lib/crm/stitch-server-key";
+import { persistStitchHtmlAsProspectPreview } from "@/lib/crm/stitch-prospect-host-preview";
 import type {
   StitchProspectDesignPayload,
   StitchProspectDesignResult,
@@ -20,7 +21,7 @@ export async function runStitchProspectDesign(
   payload: StitchProspectDesignPayload
 ): Promise<StitchProspectDesignResult> {
   const auth = await requireAgencyStaff();
-  if (auth.error || !auth.user) {
+  if (auth.error || !auth.user || !auth.supabase) {
     return { ok: false as const, error: auth.error ?? "Unauthorized" };
   }
 
@@ -64,6 +65,14 @@ export async function runStitchProspectDesign(
         error: "Stitch returned no screenshot or HTML URL. Try again in a minute.",
       };
     }
+
+    const hosted = await persistStitchHtmlAsProspectPreview({
+      supabase: auth.supabase,
+      userId: auth.user.id,
+      payload,
+      htmlExportUrl: html,
+    });
+
     return {
       ok: true as const,
       projectId: project.projectId,
@@ -71,6 +80,13 @@ export async function runStitchProspectDesign(
       projectTitle,
       imageUrl: img,
       htmlUrl: html,
+      ...(hosted
+        ? {
+            hostedPreviewUrl: hosted.hostedPreviewUrl,
+            hostedPreviewSlug: hosted.hostedPreviewSlug,
+            hostedPreviewId: hosted.hostedPreviewId,
+          }
+        : {}),
     };
   } catch (e) {
     if (e instanceof StitchError) {

@@ -28,6 +28,10 @@ import {
   instagramProfileUrl,
   messengerHandoffUrlFromFacebook,
 } from "@/lib/crm/social-handoff-urls";
+import {
+  stitchWithGoogleAppHomeUrl,
+  stitchWithGoogleProjectUrl,
+} from "@/lib/crm/stitch-withgoogle-url";
 
 const LS_SMS = "zenpho:prospect-preview-sms-template";
 const LS_EMAIL_SUBJ = "zenpho:prospect-preview-email-subject";
@@ -87,11 +91,7 @@ export type ProspectStitchContext =
 
 type StitchOk = Extract<StitchProspectDesignResult, { ok: true }>;
 
-const STITCH_HELP_URL =
-  typeof process.env.NEXT_PUBLIC_STITCH_APP_URL === "string" &&
-  process.env.NEXT_PUBLIC_STITCH_APP_URL.trim()
-    ? process.env.NEXT_PUBLIC_STITCH_APP_URL.trim()
-    : "https://stitch.withgoogle.com/";
+const STITCH_HELP_URL = stitchWithGoogleAppHomeUrl();
 
 function stitchBrandingSummary(ctx: ProspectStitchContext): string {
   if (ctx.kind === "place") {
@@ -548,13 +548,33 @@ export default function ProspectPreviewOutreachBlock({
               className="max-h-48 w-full rounded-md border border-border object-contain object-top dark:border-zinc-700"
             />
             <div className="flex flex-wrap gap-2">
+              {stitchWebResult.hostedPreviewUrl ? (
+                <a
+                  href={stitchWebResult.hostedPreviewUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-violet-800 hover:underline dark:text-violet-200"
+                >
+                  Open hosted preview
+                  <ExternalLink className="h-3 w-3 opacity-70" aria-hidden />
+                </a>
+              ) : null}
               <a
-                href={stitchWebResult.htmlUrl}
+                href={stitchWithGoogleProjectUrl(stitchWebResult.projectId)}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center gap-1 text-xs font-medium text-violet-700 hover:underline dark:text-violet-300"
               >
-                Open HTML export
+                Open in Stitch
+                <ExternalLink className="h-3 w-3 opacity-70" aria-hidden />
+              </a>
+              <a
+                href={stitchWebResult.htmlUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 text-xs font-medium text-text-secondary hover:text-text-primary hover:underline dark:text-zinc-400 dark:hover:text-zinc-300"
+              >
+                Download HTML
                 <ExternalLink className="h-3 w-3 opacity-70" aria-hidden />
               </a>
               <button
@@ -570,14 +590,6 @@ export default function ProspectPreviewOutreachBlock({
                 Copy project &amp; screen IDs
               </button>
             </div>
-            <a
-              href={STITCH_HELP_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="block text-[11px] text-text-secondary hover:underline dark:text-zinc-500"
-            >
-              Open Google Stitch (find this project by title or ID)
-            </a>
           </div>
         ) : null}
       </div>
@@ -1205,13 +1217,33 @@ export default function ProspectPreviewOutreachBlock({
                 className="max-h-64 w-full rounded-md border border-border object-contain object-top dark:border-zinc-700"
               />
               <div className="flex flex-wrap gap-2">
+                {stitchMobileResult.hostedPreviewUrl ? (
+                  <a
+                    href={stitchMobileResult.hostedPreviewUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-violet-800 hover:underline dark:text-violet-200"
+                  >
+                    Open hosted preview
+                    <ExternalLink className="h-3 w-3 opacity-70" aria-hidden />
+                  </a>
+                ) : null}
                 <a
-                  href={stitchMobileResult.htmlUrl}
+                  href={stitchWithGoogleProjectUrl(stitchMobileResult.projectId)}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-1 text-xs font-medium text-violet-700 hover:underline dark:text-violet-300"
                 >
-                  Open HTML export
+                  Open in Stitch
+                  <ExternalLink className="h-3 w-3 opacity-70" aria-hidden />
+                </a>
+                <a
+                  href={stitchMobileResult.htmlUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-xs font-medium text-text-secondary hover:text-text-primary hover:underline dark:text-zinc-400 dark:hover:text-zinc-300"
+                >
+                  Download HTML
                   <ExternalLink className="h-3 w-3 opacity-70" aria-hidden />
                 </a>
                 <button
@@ -1227,14 +1259,6 @@ export default function ProspectPreviewOutreachBlock({
                   Copy project &amp; screen IDs
                 </button>
               </div>
-              <a
-                href={STITCH_HELP_URL}
-                target="_blank"
-                rel="noreferrer"
-                className="block text-[11px] text-text-secondary hover:underline dark:text-zinc-500"
-              >
-                Open Google Stitch (find this project by title or ID)
-              </a>
             </div>
           ) : null}
         </section>
