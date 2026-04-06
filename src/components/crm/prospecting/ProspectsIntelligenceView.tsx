@@ -23,7 +23,7 @@ import {
   createLeadFromProspectIntelAction,
   createLeadFromPlacesListingAction,
 } from "@/app/(crm)/actions/prospect-intel";
-import { generateProspectPreviewAction } from "@/app/(crm)/actions/prospect-preview-generate-actions";
+import type { GenerateProspectPreviewPayload } from "@/lib/crm/prospect-preview-run-generate";
 import ProspectPreviewOutreachBlock, {
   type ProspectPreviewOutreachSnapshot,
 } from "@/components/crm/prospecting/ProspectPreviewOutreachBlock";
@@ -821,11 +821,35 @@ function ProspectsIntelligenceViewInner({
   }, [activeReport, leadPhone]);
 
   const handleGeneratePreviewForKey = useCallback(
-    async (key: string, payload: Parameters<typeof generateProspectPreviewAction>[0]) => {
+    async (key: string, payload: GenerateProspectPreviewPayload) => {
       setPreviewGenLoadingKey(key);
       setPreviewGenError(null);
       try {
-        const r = await generateProspectPreviewAction(payload);
+        const res = await fetch("/api/prospecting/generate-preview", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify(payload),
+        });
+        const r = (await res.json().catch(() => null)) as
+          | {
+              ok: true;
+              previewId: string;
+              previewUrl: string;
+              businessName: string;
+              screenshotStatus: string;
+              screenshotUrl: string | null;
+            }
+          | { ok: false; error: string }
+          | null;
+        if (!r || typeof r !== "object" || !("ok" in r)) {
+          setPreviewGenError(
+            res.ok
+              ? "Invalid response from preview API."
+              : `Preview request failed (${res.status}).`,
+          );
+          return;
+        }
         if (!r.ok) {
           setPreviewGenError(r.error);
           return;
