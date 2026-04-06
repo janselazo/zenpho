@@ -121,6 +121,7 @@ const RAW = [
   "university",
   "used car dealer",
   "veterinarian",
+  "wedding venue",
   "wine bar",
   "window installer",
   "window replacement",

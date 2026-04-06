@@ -25,9 +25,12 @@ export default function PlacesCategoryAutocomplete({
 
   const filtered = useMemo(() => {
     const q = value.trim().toLowerCase();
-    const list = q
-      ? suggestions.filter((s) => s.toLowerCase().includes(q))
-      : [...suggestions];
+    if (!q) return [...suggestions].slice(0, 14);
+    const tokens = q.split(/\s+/).filter(Boolean);
+    const list = suggestions.filter((s) => {
+      const sl = s.toLowerCase();
+      return tokens.every((t) => sl.includes(t));
+    });
     return list.slice(0, 14);
   }, [value, suggestions]);
 
