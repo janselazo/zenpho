@@ -117,8 +117,8 @@ function StitchPreviewLinks({
   copyAndFlash: (t: string) => void;
 }) {
   return (
-    <div className="mt-2 space-y-2 rounded-lg border border-violet-500/25 bg-violet-500/[0.06] p-3 dark:border-violet-400/20 dark:bg-violet-500/10">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-violet-900/80 dark:text-violet-200/90">
+    <div className="mt-2 space-y-2 rounded-lg border border-blue-500/25 bg-blue-500/[0.06] p-3 dark:border-blue-400/20 dark:bg-blue-500/10">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-900/80 dark:text-blue-200/90">
         {label}
       </p>
       {/* eslint-disable-next-line @next/next/no-img-element -- Stitch CDN screenshot URL */}
@@ -133,7 +133,7 @@ function StitchPreviewLinks({
             href={result.hostedPreviewUrl}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 text-xs font-semibold text-violet-800 hover:underline dark:text-violet-200"
+            className="inline-flex items-center gap-1 text-xs font-semibold text-blue-800 hover:underline dark:text-blue-200"
           >
             Open hosted preview
             <ExternalLink className="h-3 w-3 opacity-70" aria-hidden />
@@ -143,7 +143,7 @@ function StitchPreviewLinks({
           href={stitchWithGoogleProjectUrl(result.projectId)}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-1 text-xs font-medium text-violet-700 hover:underline dark:text-violet-300"
+          className="inline-flex items-center gap-1 text-xs font-medium text-blue-700 hover:underline dark:text-blue-300"
         >
           Open in Stitch
           <ExternalLink className="h-3 w-3 opacity-70" aria-hidden />
@@ -587,7 +587,7 @@ export default function ProspectPreviewOutreachBlock({
   /** Inset ring only — avoids `ring-offset-*` painting outside the card (some browsers composite that oddly). */
   const cardRing = (key: SelectedOffer) =>
     selectedOffer === key
-      ? "ring-2 ring-inset ring-violet-500/50 dark:ring-violet-400/40"
+      ? "ring-2 ring-inset ring-blue-500/50 dark:ring-blue-400/40"
       : "";
 
   const placeVsUrlIntro =
@@ -684,7 +684,7 @@ export default function ProspectPreviewOutreachBlock({
                   e.stopPropagation();
                   void runStitchDesign("website");
                 }}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-800 disabled:opacity-50 dark:border-violet-400/35 dark:bg-violet-500/15 dark:text-violet-200"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 disabled:opacity-50 dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200"
               >
                 {stitchWebBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
                 {stitchWebBusy ? "Generating…" : "Generate website in Google Stitch"}
@@ -697,7 +697,7 @@ export default function ProspectPreviewOutreachBlock({
                     e.stopPropagation();
                     void copyStitchPromptManual("website");
                   }}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-violet-500/50 px-3 py-2 text-xs font-semibold text-violet-900 dark:text-violet-200"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-blue-500/50 px-3 py-2 text-xs font-semibold text-blue-900 dark:text-blue-200"
                 >
                   {stitchManualTarget === "website" ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
@@ -748,7 +748,7 @@ export default function ProspectPreviewOutreachBlock({
                   e.stopPropagation();
                   void runStitchDesign("webapp");
                 }}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-800 disabled:opacity-50 dark:border-violet-400/35 dark:bg-violet-500/15 dark:text-violet-200"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 disabled:opacity-50 dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200"
               >
                 {stitchWebAppBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
                 {stitchWebAppBusy ? "Generating…" : "Generate web app in Google Stitch"}
@@ -761,7 +761,7 @@ export default function ProspectPreviewOutreachBlock({
                     e.stopPropagation();
                     void copyStitchPromptManual("webapp");
                   }}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-violet-500/50 px-3 py-2 text-xs font-semibold text-violet-900 dark:text-violet-200"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-blue-500/50 px-3 py-2 text-xs font-semibold text-blue-900 dark:text-blue-200"
                 >
                   {stitchManualTarget === "webapp" ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
@@ -811,7 +811,7 @@ export default function ProspectPreviewOutreachBlock({
                   e.stopPropagation();
                   void runStitchDesign("mobile");
                 }}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-800 disabled:opacity-50 dark:border-violet-400/35 dark:bg-violet-500/15 dark:text-violet-200"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 disabled:opacity-50 dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200"
               >
                 {stitchMobileBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
                 {stitchMobileBusy ? "Generating…" : "Generate mobile UI in Google Stitch"}
@@ -824,7 +824,7 @@ export default function ProspectPreviewOutreachBlock({
                     e.stopPropagation();
                     void copyStitchPromptManual("mobile");
                   }}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-violet-500/50 px-3 py-2 text-xs font-semibold text-violet-900 dark:text-violet-200"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-blue-500/50 px-3 py-2 text-xs font-semibold text-blue-900 dark:text-blue-200"
                 >
                   {stitchManualTarget === "mobile" ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />

@@ -4,6 +4,8 @@ import twilio from "twilio";
 import { Resend } from "resend";
 import { prospectPreviewPageUrl } from "@/lib/crm/prospect-preview-public-url";
 import { getAgencyTwilioCredentials } from "@/lib/twilio/agency-credentials";
+import { getAgencySendGridCredentials } from "@/lib/sendgrid/agency-credentials";
+import { sendSendGridMail } from "@/lib/sendgrid/mail-send";
 import { mergeProspectOutreachTemplate } from "@/lib/crm/prospect-outreach-template";
 import { requireAgencyStaff } from "@/app/(crm)/actions/prospect-preview-agency";
 
@@ -106,19 +108,6 @@ export async function sendProspectPreviewEmailAction(input: {
     return { ok: false as const, error: auth.error ?? "Unauthorized" };
   }
 
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  if (!apiKey) {
-    return { ok: false as const, error: "RESEND_API_KEY is not configured." };
-  }
-
-  const from = process.env.RESEND_FROM_EMAIL?.trim();
-  if (!from) {
-    return {
-      ok: false as const,
-      error: "Set RESEND_FROM_EMAIL (e.g. onboarding@resend.dev or your verified domain).",
-    };
-  }
-
   const { data: prevRow } = await auth.supabase
     .from("prospect_preview")
     .select("slug, screenshot_url, screenshot_status")
@@ -176,13 +165,58 @@ export async function sendProspectPreviewEmailAction(input: {
 ${previewImageHtml}
 `.trim();
 
-  const resend = new Resend(apiKey);
+  const plainText = `${textBody}\n\n${previewUrl}`;
+
+  const sendGridCreds = await getAgencySendGridCredentials();
+  if (sendGridCreds) {
+    const sgAttachments =
+      attachments?.map((a) => ({
+        contentBase64: a.content.toString("base64"),
+        filename: a.filename,
+        type: a.contentType ?? "application/octet-stream",
+        disposition: "inline" as const,
+        contentId: a.contentId,
+      })) ?? [];
+
+    const sent = await sendSendGridMail({
+      apiKey: sendGridCreds.apiKey,
+      to: input.to.trim(),
+      from: { email: sendGridCreds.fromEmail, name: sendGridCreds.fromName },
+      replyTo: sendGridCreds.replyTo,
+      subject: subj,
+      text: plainText,
+      html: htmlBody,
+      ...(sgAttachments.length ? { attachments: sgAttachments } : {}),
+    });
+    if (!sent.ok) {
+      return { ok: false as const, error: sent.error };
+    }
+    return { ok: true as const };
+  }
+
+  const resendKey = process.env.RESEND_API_KEY?.trim();
+  const resendFrom = process.env.RESEND_FROM_EMAIL?.trim();
+  if (!resendKey) {
+    return {
+      ok: false as const,
+      error:
+        "No email provider configured. Add SendGrid under Settings → Integrations, or set RESEND_API_KEY on the server.",
+    };
+  }
+  if (!resendFrom) {
+    return {
+      ok: false as const,
+      error: "Set RESEND_FROM_EMAIL on the server, or configure SendGrid in Settings → Integrations.",
+    };
+  }
+
+  const resend = new Resend(resendKey);
   const { error } = await resend.emails.send({
-    from,
+    from: resendFrom,
     to: input.to.trim(),
     subject: subj,
     html: htmlBody,
-    text: `${textBody}\n\n${previewUrl}`,
+    text: plainText,
     ...(attachments?.length ? { attachments } : {}),
   });
 

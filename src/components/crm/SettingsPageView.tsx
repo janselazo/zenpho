@@ -212,8 +212,8 @@ const INTEGRATIONS: IntegrationItem[] = [
     id: "sendgrid",
     name: "SendGrid",
     category: "Communication",
-    description: "Email parsing for inbound leads",
-    available: false,
+    description: "Transactional email for the CRM (e.g. prospect preview shares)",
+    available: true,
   },
   {
     id: "google-calendar",
@@ -287,6 +287,13 @@ function IntegrationsTab() {
                 item.id === "twilio-sms" ? (
                   <Link
                     href="/settings/integrations/twilio"
+                    className="rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-text-primary shadow-sm transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                  >
+                    Configure
+                  </Link>
+                ) : item.id === "sendgrid" ? (
+                  <Link
+                    href="/settings/integrations/sendgrid"
                     className="rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-text-primary shadow-sm transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
                   >
                     Configure
