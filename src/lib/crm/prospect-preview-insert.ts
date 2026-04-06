@@ -21,12 +21,19 @@ export async function insertProspectPreviewWithSlug(params: {
   businessName: string;
   businessAddress: string | null;
   primaryCategory: string | null;
+  /** When set (Stitch), public /preview/{slug} 302s here so visitors see the live Stitch screen. */
+  stitchPreviewUrl?: string | null;
 }): Promise<InsertProspectPreviewResult> {
   const nameForSlug = params.businessName.trim() || "preview";
 
   for (let attempt = 0; attempt < MAX_SLUG_COLLISION_RETRIES; attempt++) {
     const id = randomUUID();
     const slug = prospectPreviewSlugFromBusiness(nameForSlug, id);
+
+    const stitchUrl =
+      typeof params.stitchPreviewUrl === "string" && params.stitchPreviewUrl.trim()
+        ? params.stitchPreviewUrl.trim()
+        : null;
 
     const { data, error } = await params.supabase
       .from("prospect_preview")
@@ -40,6 +47,7 @@ export async function insertProspectPreviewWithSlug(params: {
         primary_category: params.primaryCategory,
         screenshot_status: "pending",
         slug,
+        ...(stitchUrl ? { stitch_preview_url: stitchUrl } : {}),
       })
       .select("id")
       .single();
