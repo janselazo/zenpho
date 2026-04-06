@@ -1,4 +1,5 @@
-import DOMPurify from "isomorphic-dompurify";
+import sanitizeHtml from "sanitize-html";
+import type { IOptions } from "sanitize-html";
 
 const FULL_DOC_ALLOWED_TAGS = [
   "html",
@@ -47,30 +48,93 @@ const FULL_DOC_ALLOWED_TAGS = [
   "button",
 ] as const;
 
-const FULL_DOC_ALLOWED_ATTR = [
-  "class",
-  "style",
-  "href",
-  "src",
-  "alt",
-  "title",
-  "target",
-  "rel",
-  "width",
-  "height",
-  "loading",
-  "charset",
-  "content",
-  "name",
-  "http-equiv",
-  "media",
-  "type",
-  "lang",
-  "dir",
-  "id",
-  "role",
-  "aria-label",
-] as const;
+/** Shared: no event handlers, no data-*; URLs restricted in options. */
+const baseSanitizeOptions: IOptions = {
+  allowedSchemes: ["http", "https", "mailto", "tel"],
+  allowProtocolRelative: false,
+  disallowedTagsMode: "discard",
+  enforceHtmlBoundary: false,
+  parseStyleAttributes: true,
+  allowedSchemesAppliedToAttributes: ["href", "src", "cite"],
+};
+
+const fullDocumentOptions: IOptions = {
+  ...baseSanitizeOptions,
+  allowedTags: [...FULL_DOC_ALLOWED_TAGS],
+  allowedAttributes: {
+    "*": [
+      "class",
+      "style",
+      "id",
+      "role",
+      "aria-label",
+      "title",
+      "lang",
+      "dir",
+      "width",
+      "height",
+      "loading",
+      "colspan",
+      "rowspan",
+      "charset",
+      "content",
+      "name",
+      "http-equiv",
+      "media",
+      "type",
+    ],
+    a: ["href", "target", "rel"],
+    img: ["src", "alt", "srcset", "sizes"],
+  },
+};
+
+const bodyFragmentOptions: IOptions = {
+  ...baseSanitizeOptions,
+  allowedTags: [
+    "div",
+    "section",
+    "article",
+    "header",
+    "footer",
+    "main",
+    "nav",
+    "aside",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "p",
+    "a",
+    "span",
+    "img",
+    "strong",
+    "b",
+    "em",
+    "i",
+    "ul",
+    "ol",
+    "li",
+    "br",
+    "hr",
+    "blockquote",
+    "figure",
+    "figcaption",
+    "small",
+    "table",
+    "thead",
+    "tbody",
+    "tr",
+    "th",
+    "td",
+  ],
+  allowedAttributes: {
+    "*": ["class", "style", "id", "role", "aria-label", "title"],
+    a: ["href", "target", "rel"],
+    img: ["src", "alt", "title", "width", "height", "loading", "srcset", "sizes"],
+  },
+};
 
 /**
  * Sanitize a full HTML document from the model (allows &lt;style&gt; in &lt;head&gt;; no scripts, no external CSS links).
@@ -81,28 +145,11 @@ export function sanitizeProspectPreviewFullDocumentHtml(html: string): string {
     dirty =
       "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"/><title>Preview</title></head><body><p>Preview</p></body></html>";
   }
-  const purified = DOMPurify.sanitize(dirty, {
-    WHOLE_DOCUMENT: true,
-    ALLOWED_TAGS: [...FULL_DOC_ALLOWED_TAGS],
-    ALLOWED_ATTR: [...FULL_DOC_ALLOWED_ATTR],
-    ALLOW_DATA_ATTR: false,
-    FORBID_TAGS: ["script", "iframe", "object", "embed", "link", "base", "form", "input", "textarea", "select", "option", "template"],
-    FORBID_ATTR: [
-      "onerror",
-      "onload",
-      "onclick",
-      "onmouseover",
-      "onfocus",
-      "onblur",
-      "oninput",
-      "onmouseenter",
-      "onmouseleave",
-    ],
-  });
-  const out = typeof purified === "string" ? purified : String(purified);
-  const trimmed = out.trim();
-  if (/^<!DOCTYPE/i.test(trimmed)) return trimmed;
-  return `<!DOCTYPE html>\n${trimmed}`;
+  const purified = sanitizeHtml(dirty, fullDocumentOptions);
+  const out = purified.trim();
+  if (/^<!DOCTYPE/i.test(out)) return out;
+  if (/^<html\b/i.test(out)) return `<!DOCTYPE html>\n${out}`;
+  return `<!DOCTYPE html>\n${out}`;
 }
 
 /**
@@ -111,61 +158,7 @@ export function sanitizeProspectPreviewFullDocumentHtml(html: string): string {
 export function sanitizeProspectPreviewBodyHtml(html: string): string {
   const dirty =
     (typeof html === "string" ? html : "").trim() || "<p>Preview</p>";
-  return DOMPurify.sanitize(dirty, {
-    ALLOWED_TAGS: [
-      "div",
-      "section",
-      "article",
-      "header",
-      "footer",
-      "main",
-      "nav",
-      "aside",
-      "h1",
-      "h2",
-      "h3",
-      "h4",
-      "h5",
-      "h6",
-      "p",
-      "a",
-      "span",
-      "img",
-      "strong",
-      "b",
-      "em",
-      "i",
-      "ul",
-      "ol",
-      "li",
-      "br",
-      "hr",
-      "blockquote",
-      "figure",
-      "figcaption",
-      "small",
-      "table",
-      "thead",
-      "tbody",
-      "tr",
-      "th",
-      "td",
-    ],
-    ALLOWED_ATTR: [
-      "class",
-      "style",
-      "href",
-      "src",
-      "alt",
-      "title",
-      "target",
-      "rel",
-      "width",
-      "height",
-      "loading",
-    ],
-    ALLOW_DATA_ATTR: false,
-  });
+  return sanitizeHtml(dirty, bodyFragmentOptions);
 }
 
 export function buildProspectPreviewDocument(bodyInner: string): string {
