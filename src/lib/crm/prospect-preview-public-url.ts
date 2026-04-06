@@ -18,6 +18,14 @@ export function getPublicAppOrigin(): string {
  * - Else if `slug` is set → `{PUBLIC_APP_URL}/preview/{slug}`.
  * - Else → `{PUBLIC_APP_URL}/preview/{uuid}` (legacy).
  */
+/**
+ * URL Microlink (and other crawlers) should fetch: always primary app origin + UUID path.
+ * Avoids preview subdomains / slugs that may not resolve or match TLS yet.
+ */
+export function prospectPreviewMicrolinkUrl(previewId: string): string {
+  return `${getPublicAppOrigin()}/preview/${previewId}`;
+}
+
 export function prospectPreviewPageUrl(previewId: string, slug?: string | null): string {
   const hostOnly = process.env.PREVIEW_PUBLIC_HOST?.trim()
     .replace(/^https?:\/\//i, "")

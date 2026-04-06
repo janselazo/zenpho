@@ -53,6 +53,8 @@ function writeLs(key: string, value: string) {
 export type ProspectPreviewOutreachSnapshot = {
   previewId: string;
   previewUrl: string;
+  /** Primary origin + UUID — embed in CRM iframe when share URL is another host. */
+  previewFrameUrl?: string;
   /** Pretty path segment (from business name); optional for older previews. */
   previewSlug?: string;
   businessName: string;
@@ -97,6 +99,10 @@ export default function ProspectPreviewOutreachBlock({
   const [emailTo, setEmailTo] = useState("");
   const [shotUrl, setShotUrl] = useState<string | null>(null);
   const [shotStatus, setShotStatus] = useState<string>("pending");
+  /** True after polling stops while status stayed pending (server never updated row). */
+  const [shotPollTimedOut, setShotPollTimedOut] = useState(false);
+  /** Iframe uses stable UUID URL on primary origin when available. */
+  const [iframeSrc, setIframeSrc] = useState("");
   const [smsBusy, setSmsBusy] = useState(false);
   const [emailBusy, setEmailBusy] = useState(false);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
@@ -132,30 +138,49 @@ export default function ProspectPreviewOutreachBlock({
     if (!preview) {
       setShotUrl(null);
       setShotStatus("pending");
+      setShotPollTimedOut(false);
+      setIframeSrc("");
       return;
     }
     setShotUrl(preview.screenshotUrl);
     setShotStatus(preview.screenshotStatus);
-  }, [preview?.previewId, preview?.screenshotUrl, preview?.screenshotStatus]);
+    setShotPollTimedOut(false);
+    setIframeSrc(preview.previewFrameUrl ?? preview.previewUrl);
+  }, [
+    preview?.previewId,
+    preview?.previewFrameUrl,
+    preview?.previewUrl,
+    preview?.screenshotUrl,
+    preview?.screenshotStatus,
+  ]);
 
   useEffect(() => {
     if (!preview?.previewId) return;
     let cancelled = false;
     let attempts = 0;
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+
     const poll = async () => {
       const r = await getProspectPreviewStatusAction(preview.previewId);
       if (cancelled || !r.ok) return;
       setShotUrl(r.screenshotUrl);
       setShotStatus(r.screenshotStatus);
+      setIframeSrc(r.previewFrameUrl);
       attempts += 1;
-      if (r.screenshotStatus === "pending" && attempts < 45) {
-        setTimeout(poll, 2500);
+      if (r.screenshotStatus === "pending") {
+        if (cancelled) return;
+        if (attempts < 45) {
+          timeoutHandle = setTimeout(() => void poll(), 2500);
+        } else {
+          setShotPollTimedOut(true);
+        }
       }
     };
-    const t = setTimeout(poll, 800);
+
+    timeoutHandle = setTimeout(() => void poll(), 800);
     return () => {
       cancelled = true;
-      clearTimeout(t);
+      if (timeoutHandle) clearTimeout(timeoutHandle);
     };
   }, [preview?.previewId]);
 
@@ -363,7 +388,7 @@ export default function ProspectPreviewOutreachBlock({
             </p>
             <iframe
               title={`Site preview for ${preview.businessName}`}
-              src={preview.previewUrl}
+              src={iframeSrc || preview.previewUrl}
               className="mt-2 h-[22rem] w-full max-w-2xl rounded-lg border border-border bg-white dark:border-zinc-700 dark:bg-zinc-950"
               sandbox="allow-same-origin"
             />
@@ -373,14 +398,24 @@ export default function ProspectPreviewOutreachBlock({
             <p className="text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
               Thumbnail
             </p>
-            {shotStatus === "pending" ? (
+            {shotStatus === "pending" && shotPollTimedOut ? (
+              <p className="mt-2 text-xs text-amber-800 dark:text-amber-200/90">
+                Screenshot never completed. Ensure{" "}
+                <span className="font-mono">PUBLIC_APP_URL</span> is your live HTTPS app URL (Microlink must reach{" "}
+                <span className="font-mono">/preview/&lt;id&gt;</span>), set{" "}
+                <span className="font-mono">SUPABASE_SERVICE_ROLE_KEY</span> on the server, and optionally{" "}
+                <span className="font-mono">MICROLINK_API_KEY</span>. Then generate a new preview.
+              </p>
+            ) : shotStatus === "pending" ? (
               <div className="mt-2 flex items-center gap-2 text-xs text-text-secondary dark:text-zinc-400">
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
                 Capturing screenshot…
               </div>
             ) : shotStatus === "failed" ? (
               <p className="mt-2 text-xs text-amber-800 dark:text-amber-200/90">
-                Screenshot unavailable (check PUBLIC_APP_URL, MICROLINK_API_KEY, or BLOB_READ_WRITE_TOKEN).
+                Screenshot unavailable — Microlink could not render the page, or storage update failed. Check{" "}
+                <span className="font-mono">PUBLIC_APP_URL</span>,{" "}
+                <span className="font-mono">MICROLINK_API_KEY</span>, and deployment logs; generate again.
               </p>
             ) : shotUrl ? (
               // eslint-disable-next-line @next/next/no-img-element -- external screenshot URL

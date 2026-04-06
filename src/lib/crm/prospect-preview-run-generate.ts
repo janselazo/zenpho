@@ -1,6 +1,9 @@
 import { generateProspectPreviewDocument } from "@/lib/crm/prospect-preview-generate";
 import { captureProspectPreviewScreenshot } from "@/lib/crm/prospect-preview-screenshot";
-import { prospectPreviewPageUrl } from "@/lib/crm/prospect-preview-public-url";
+import {
+  prospectPreviewMicrolinkUrl,
+  prospectPreviewPageUrl,
+} from "@/lib/crm/prospect-preview-public-url";
 import { prospectPreviewSlugFromBusiness } from "@/lib/crm/prospect-preview-slug";
 import type { PlacesSearchPlace } from "@/lib/crm/places-types";
 import { primaryPlaceTypeLabel } from "@/lib/crm/places-search-ui";
@@ -26,6 +29,8 @@ export type GenerateProspectPreviewResult =
       ok: true;
       previewId: string;
       previewUrl: string;
+      /** Primary app origin + `/preview/{uuid}` — CRM iframe + Microlink (stable vs pretty share URL). */
+      previewFrameUrl: string;
       /** URL path segment when using pretty links (from Google business name + id). */
       previewSlug: string;
       businessName: string;
@@ -283,6 +288,7 @@ async function runGenerateProspectPreviewCore(
   }
 
   const previewUrl = prospectPreviewPageUrl(id, previewSlug);
+  const previewFrameUrl = prospectPreviewMicrolinkUrl(id);
   console.log("[prospectPreview] generate: success", { previewId: id, previewSlug });
   void captureProspectPreviewScreenshot(id).catch(() => {
     /* logged in screenshot helper path */
@@ -292,6 +298,7 @@ async function runGenerateProspectPreviewCore(
     ok: true as const,
     previewId: id,
     previewUrl,
+    previewFrameUrl,
     previewSlug,
     businessName: (row.business_name as string) || input.businessName,
     screenshotStatus: row.screenshot_status as string,

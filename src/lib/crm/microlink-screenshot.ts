@@ -17,11 +17,29 @@ export async function fetchMicrolinkScreenshotUrl(
 
   try {
     const res = await fetch(micUrl, { headers, signal: AbortSignal.timeout(timeoutMs) });
-    const json = (await res.json()) as {
-      data?: { screenshot?: { url?: string } };
-    };
-    return json?.data?.screenshot?.url?.trim() || null;
-  } catch {
+    const text = await res.text();
+    if (!res.ok) {
+      console.warn(
+        "[microlink] screenshot request failed",
+        res.status,
+        text.slice(0, 300),
+      );
+      return null;
+    }
+    let json: { data?: { screenshot?: { url?: string } }; message?: string };
+    try {
+      json = JSON.parse(text) as typeof json;
+    } catch {
+      console.warn("[microlink] screenshot invalid JSON", text.slice(0, 200));
+      return null;
+    }
+    const url = json?.data?.screenshot?.url?.trim();
+    if (!url && json?.message) {
+      console.warn("[microlink] screenshot", json.message);
+    }
+    return url || null;
+  } catch (e) {
+    console.warn("[microlink] screenshot error", e);
     return null;
   }
 }

@@ -1,6 +1,9 @@
 "use server";
 
-import { prospectPreviewPageUrl } from "@/lib/crm/prospect-preview-public-url";
+import {
+  prospectPreviewMicrolinkUrl,
+  prospectPreviewPageUrl,
+} from "@/lib/crm/prospect-preview-public-url";
 import {
   runGenerateProspectPreview,
   type GenerateProspectPreviewPayload,
@@ -16,6 +19,7 @@ export async function generateProspectPreviewAction(
       ok: true;
       previewId: string;
       previewUrl: string;
+      previewFrameUrl: string;
       previewSlug: string;
       businessName: string;
       screenshotStatus: string;
@@ -57,5 +61,6 @@ export async function getProspectPreviewStatusAction(previewId: string) {
     screenshotStatus: data.screenshot_status as string,
     businessName: data.business_name as string,
     previewUrl: prospectPreviewPageUrl(id, slug),
+    previewFrameUrl: prospectPreviewMicrolinkUrl(id),
   };
 }
