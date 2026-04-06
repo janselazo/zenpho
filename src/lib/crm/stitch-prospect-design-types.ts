@@ -28,4 +28,4 @@ export type StitchProspectDesignResult =
       imageUrl: string;
       htmlUrl: string;
     }
-  | { ok: false; error: string };
+  | { ok: false; error: string; code?: "STITCH_API_KEY_MISSING" };

@@ -1,9 +1,6 @@
 import { Stitch, StitchToolClient, StitchError } from "@google/stitch-sdk";
 import { requireAgencyStaff } from "@/app/(crm)/actions/prospect-preview-agency";
-import {
-  buildStitchMobilePrompt,
-  buildStitchWebsitePrompt,
-} from "@/lib/crm/stitch-prospect-prompts";
+import { buildStitchProspectGenerationBundle } from "@/lib/crm/stitch-prospect-bundle";
 import type {
   StitchProspectDesignPayload,
   StitchProspectDesignResult,
@@ -12,6 +9,9 @@ import type {
 function safeTrim(s: unknown): string {
   return typeof s === "string" ? s.trim() : "";
 }
+
+export const STITCH_API_KEY_MISSING_USER_MESSAGE =
+  "STITCH_API_KEY is not set on this server. Cursor’s Google Stitch MCP uses separate settings: add the same Google API key (with Stitch API enabled in Google Cloud) to .env.local and Vercel as STITCH_API_KEY, then restart dev or redeploy. Or use “Copy prompt & open Stitch” below without a server key.";
 
 export async function runStitchProspectDesign(
   payload: StitchProspectDesignPayload
@@ -25,8 +25,8 @@ export async function runStitchProspectDesign(
   if (!apiKey) {
     return {
       ok: false as const,
-      error:
-        "STITCH_API_KEY is not set. Add a Google Stitch API key to .env.local (server) and Vercel project env, then redeploy.",
+      code: "STITCH_API_KEY_MISSING" as const,
+      error: STITCH_API_KEY_MISSING_USER_MESSAGE,
     };
   }
 
@@ -41,24 +41,7 @@ export async function runStitchProspectDesign(
     }
   }
 
-  const isWebsite = payload.target === "website";
-  const prompt = isWebsite ? buildStitchWebsitePrompt(payload) : buildStitchMobilePrompt(payload);
-  const deviceType = isWebsite ? "DESKTOP" : "MOBILE";
-
-  const businessLabel =
-    payload.kind === "place"
-      ? safeTrim(payload.place.name).slice(0, 60) || "Business"
-      : (() => {
-          try {
-            return new URL(
-              /^https?:\/\//i.test(payload.url) ? payload.url : `https://${payload.url}`
-            ).hostname.replace(/^www\./i, "");
-          } catch {
-            return "Website";
-          }
-        })();
-
-  const projectTitle = `Zenpho — ${businessLabel} (${isWebsite ? "web" : "mobile"})`.slice(0, 120);
+  const { prompt, projectTitle, deviceType } = buildStitchProspectGenerationBundle(payload);
 
   const toolClient = new StitchToolClient({
     apiKey,

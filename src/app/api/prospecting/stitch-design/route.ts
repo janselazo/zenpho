@@ -1,27 +1,11 @@
 import { NextResponse } from "next/server";
 import { runStitchProspectDesign } from "@/lib/crm/stitch-prospect-design-run";
-import type { StitchProspectDesignPayload } from "@/lib/crm/stitch-prospect-design-types";
+import { parseStitchDesignPayload } from "@/lib/crm/stitch-prospect-payload";
 
 /** Stitch generation can take several minutes; plan limits may clamp lower on Hobby. */
 export const maxDuration = 300;
 
 export const runtime = "nodejs";
-
-function isValidStitchPayload(body: unknown): body is StitchProspectDesignPayload {
-  if (!body || typeof body !== "object") return false;
-  const o = body as Record<string, unknown>;
-  if (o.target !== "website" && o.target !== "mobile") return false;
-  if (o.kind === "place") {
-    const p = o.place;
-    if (!p || typeof p !== "object") return false;
-    const pl = p as Record<string, unknown>;
-    return typeof pl.id === "string" && typeof pl.name === "string";
-  }
-  if (o.kind === "url") {
-    return typeof o.url === "string" && o.url.trim().length > 0;
-  }
-  return false;
-}
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -31,7 +15,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false as const, error: "Invalid JSON body." }, { status: 400 });
   }
 
-  if (!isValidStitchPayload(body)) {
+  const payload = parseStitchDesignPayload(body);
+  if (!payload) {
     return NextResponse.json(
       { ok: false as const, error: "Invalid Stitch payload (need target, kind, place|url)." },
       { status: 400 }
@@ -39,7 +24,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await runStitchProspectDesign(body);
+    const result = await runStitchProspectDesign(payload);
     return NextResponse.json(result);
   } catch (e) {
     console.error("[stitch-design] route", e);

@@ -23,6 +23,12 @@ When Stitch is connected, ask the agent to use **Stitch MCP tools** (e.g. “cre
 3. **`list_projects`**, **`get_project`**, **`list_screens`**, **`get_screen`** — inspect state and assets.
 4. **`edit_screens`**, **`generate_variants`**, design-system tools — iterate once a project exists.
 
+## Zenpho prospecting (in-app “Generate … in Google Stitch”)
+
+The CRM prospecting UI calls **`POST /api/prospecting/stitch-design`** on your **Next.js server**, which uses **`STITCH_API_KEY`** in **`.env.local`** (local) and **Vercel env** (deployed). That is **separate** from Cursor MCP: connecting Stitch in **Settings → Tools & MCP** does **not** set `STITCH_API_KEY` for the app.
+
+Use the **same Google API key** (Stitch API enabled in Google Cloud) for both MCP (`X-Goog-Api-Key`) and **`STITCH_API_KEY`**, unless your org splits keys. See **[`.env.example`](.env.example)** for setup and verification notes. If the key is missing, the UI still offers **Copy prompt & open Google Stitch** via **`POST /api/prospecting/stitch-design-prompt`**.
+
 ## Zenpho vs Stitch
 
 - **This repo** is the Next.js app; **Stitch** is where generated UI/designs live. There is no automatic sync—export or hand-off from Stitch into code as needed.

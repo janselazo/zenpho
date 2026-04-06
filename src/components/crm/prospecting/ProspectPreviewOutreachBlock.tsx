@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import {
   Copy,
   ExternalLink,
-  Layers,
   Loader2,
   Mail,
   MessageCircle,
@@ -115,7 +114,7 @@ type Props = {
   emailDefaultTo: string;
   facebookUrl: string | null;
   instagramUrl: string | null;
-  /** When set, show Stitch website + mobile panels beside the hosted preview flow. */
+  /** When set, Stitch web/mobile cards use listing or URL branding context. */
   stitchContext?: ProspectStitchContext | null;
   /** Clears Stitch results when the active prospect report changes. */
   reportKey?: string;
@@ -160,6 +159,38 @@ export default function ProspectPreviewOutreachBlock({
   const [stitchMobileResult, setStitchMobileResult] = useState<StitchOk | null>(null);
   const [stitchWebError, setStitchWebError] = useState<string | null>(null);
   const [stitchMobileError, setStitchMobileError] = useState<string | null>(null);
+  /** null = not loaded yet; false = STITCH_API_KEY missing on server (see GET /api/prospecting/stitch-config). */
+  const [stitchApiConfigured, setStitchApiConfigured] = useState<boolean | null>(null);
+  const [stitchConfigCheckFailed, setStitchConfigCheckFailed] = useState(false);
+  const [stitchManualTarget, setStitchManualTarget] = useState<null | "website" | "mobile">(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setStitchConfigCheckFailed(false);
+    void fetch("/api/prospecting/stitch-config", { credentials: "same-origin" })
+      .then(async (res) => {
+        const data: unknown = await res.json().catch(() => null);
+        if (cancelled) return;
+        if (
+          data &&
+          typeof data === "object" &&
+          "ok" in data &&
+          (data as { ok: unknown }).ok === true &&
+          "stitchApiKeyConfigured" in data &&
+          typeof (data as { stitchApiKeyConfigured: unknown }).stitchApiKeyConfigured === "boolean"
+        ) {
+          setStitchApiConfigured((data as { stitchApiKeyConfigured: boolean }).stitchApiKeyConfigured);
+        } else {
+          setStitchConfigCheckFailed(true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setStitchConfigCheckFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     setStitchWebBusy(false);
@@ -332,6 +363,67 @@ export default function ProspectPreviewOutreachBlock({
     return `mailto:${emailTo.trim()}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
   }
 
+  const copyStitchPromptManual = useCallback(
+    async (target: "website" | "mobile") => {
+      const payload = buildStitchPayload(target);
+      if (!payload) return;
+      setStitchManualTarget(target);
+      try {
+        const res = await fetch("/api/prospecting/stitch-design-prompt", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify(payload),
+        });
+        const text = await res.text();
+        let data: unknown = null;
+        if (text) {
+          try {
+            data = JSON.parse(text);
+          } catch {
+            data = null;
+          }
+        }
+        if (
+          !data ||
+          typeof data !== "object" ||
+          !("ok" in data) ||
+          (data as { ok: unknown }).ok !== true ||
+          typeof (data as { prompt: unknown }).prompt !== "string"
+        ) {
+          const err =
+            data &&
+            typeof data === "object" &&
+            "error" in data &&
+            typeof (data as { error: unknown }).error === "string"
+              ? (data as { error: string }).error
+              : "Could not build Stitch prompt.";
+          setCopyMsg(err);
+          setTimeout(() => setCopyMsg(null), 4000);
+          return;
+        }
+        const d = data as { prompt: string; projectTitle?: string; deviceType?: string };
+        const header = [
+          d.projectTitle ? `Suggested project title: ${d.projectTitle}` : null,
+          d.deviceType ? `Device type for Stitch: ${d.deviceType}` : null,
+        ]
+          .filter(Boolean)
+          .join("\n");
+        const clip = [header, "", d.prompt].filter(Boolean).join("\n");
+        await navigator.clipboard.writeText(clip);
+        setCopyMsg("Prompt copied. Paste it into Google Stitch in the new tab.");
+        setTimeout(() => setCopyMsg(null), 3500);
+        window.open(STITCH_HELP_URL, "_blank", "noopener,noreferrer");
+      } catch {
+        setCopyMsg("Could not copy prompt (browser blocked or network error).");
+        setTimeout(() => setCopyMsg(null), 4000);
+      } finally {
+        setStitchManualTarget(null);
+      }
+    },
+    [stitchContext, servicesOverride, colorVibeOverride]
+  );
+
   function buildStitchPayload(target: "website" | "mobile"): StitchProspectDesignPayload | null {
     if (!stitchContext) return null;
     const servicesLine = servicesOverride.trim() || undefined;
@@ -401,6 +493,9 @@ export default function ProspectPreviewOutreachBlock({
           return;
         }
         if (!r.ok) {
+          if ("code" in r && r.code === "STITCH_API_KEY_MISSING") {
+            setStitchApiConfigured(false);
+          }
           if (target === "website") {
             setStitchWebError(r.error);
             setStitchWebResult(null);
@@ -410,6 +505,7 @@ export default function ProspectPreviewOutreachBlock({
           }
           return;
         }
+        setStitchApiConfigured(true);
         if (target === "website") {
           setStitchWebResult(r);
         } else {
@@ -430,22 +526,6 @@ export default function ProspectPreviewOutreachBlock({
       }
     },
     [stitchContext, servicesOverride, colorVibeOverride]
-  );
-
-  const stitchWebsiteButton = (
-    <button
-      type="button"
-      disabled={!stitchContext || stitchWebBusy}
-      onClick={() => void runStitchDesign("website")}
-      className="inline-flex items-center gap-2 rounded-xl border border-violet-500/40 bg-violet-500/10 px-4 py-2 text-sm font-semibold text-violet-800 shadow-sm transition-colors hover:bg-violet-500/15 disabled:opacity-50 dark:border-violet-400/35 dark:bg-violet-500/15 dark:text-violet-200 dark:hover:bg-violet-500/25"
-    >
-      {stitchWebBusy ? (
-        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-      ) : (
-        <Layers className="h-4 w-4" aria-hidden />
-      )}
-      {stitchWebBusy ? "Stitch (website)…" : "Website design in Google Stitch"}
-    </button>
   );
 
   const stitchWebsiteResultBlock =
@@ -503,12 +583,7 @@ export default function ProspectPreviewOutreachBlock({
     ) : null;
 
   return (
-    <div
-      className={
-        stitchContext ? "grid gap-6 lg:grid-cols-2 lg:items-start" : "contents"
-      }
-    >
-      <div className="space-y-4">
+    <div className="space-y-4">
         <section
           className="rounded-xl border border-border/80 bg-surface/40 p-4 dark:border-zinc-700/70 dark:bg-zinc-900/50"
           aria-labelledby="prospect-offering-websites-heading"
@@ -528,9 +603,9 @@ export default function ProspectPreviewOutreachBlock({
       {!preview ? (
         <div className="mt-3 space-y-2">
           <p className="text-xs text-text-secondary dark:text-zinc-400">
-            Optional: run{" "}
-            <span className="font-medium text-text-primary dark:text-zinc-200">Website design in Google Stitch</span>{" "}
-            first to review a generated concept (screenshot + HTML export), then use{" "}
+            Optional: use{" "}
+            <span className="font-medium text-text-primary dark:text-zinc-200">Web app design (Stitch)</span> below for
+            a desktop-sized UI concept (screenshot + HTML export), then run{" "}
             <span className="font-medium text-text-primary dark:text-zinc-200">Generate website preview</span> when you
             want the hosted one-pager for clients. The LLM builds full HTML/CSS; we host it, iframe it, capture a
             thumbnail, and you can share by SMS, email, or social handoff.
@@ -559,9 +634,7 @@ export default function ProspectPreviewOutreachBlock({
               />
             </div>
           </div>
-          {stitchWebsiteResultBlock}
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-            {stitchContext ? stitchWebsiteButton : null}
             <button
               type="button"
               disabled={!canGenerate || generatePending || generateClickPending}
@@ -618,7 +691,6 @@ export default function ProspectPreviewOutreachBlock({
                 <Copy className="h-3.5 w-3.5" aria-hidden />
                 Copy link
               </button>
-              {stitchContext ? stitchWebsiteButton : null}
             </div>
             {preview.previewSlug ? (
               <p className="text-[11px] text-text-secondary dark:text-zinc-500">
@@ -629,8 +701,6 @@ export default function ProspectPreviewOutreachBlock({
               </p>
             ) : null}
           </div>
-
-          {stitchWebsiteResultBlock}
 
           <div>
             <p className="text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
@@ -938,122 +1008,181 @@ export default function ProspectPreviewOutreachBlock({
       )}
         </section>
 
+        {stitchContext && stitchApiConfigured === false ? (
+          <div className="rounded-xl border border-amber-500/35 bg-amber-500/[0.07] p-3 dark:border-amber-500/25 dark:bg-amber-500/10">
+            <p className="text-xs font-semibold text-amber-950 dark:text-amber-100/95">
+              Stitch server key not configured
+            </p>
+            <p className="mt-1.5 text-[11px] leading-relaxed text-amber-900/95 dark:text-amber-200/85">
+              Cursor&apos;s Google Stitch MCP does not set credentials for this app. Add the same Google API key (Stitch
+              API enabled) to <span className="font-mono">.env.local</span> and Vercel as{" "}
+              <span className="font-mono">STITCH_API_KEY</span>, then restart dev or redeploy — see{" "}
+              <span className="font-mono">.env.example</span>. Or use{" "}
+              <span className="font-medium">Copy prompt &amp; open Google Stitch</span> in Web and Mobile below (no server
+              key required).
+            </p>
+          </div>
+        ) : null}
+        {stitchContext && stitchConfigCheckFailed ? (
+          <p className="text-[11px] text-text-secondary dark:text-zinc-500" role="status">
+            Could not verify Stitch configuration; one-click generate may still work if the key is set on the server.
+          </p>
+        ) : null}
+
         <section
           aria-labelledby="prospect-offering-webapp-heading"
-          className="rounded-xl border border-dashed border-border/80 bg-surface/20 p-4 dark:border-zinc-700/60 dark:bg-zinc-900/35"
+          className="rounded-xl border border-border/80 bg-surface/40 p-4 dark:border-zinc-700/70 dark:bg-zinc-900/50"
         >
-          <div className="flex gap-3">
-            <Monitor
-              className="mt-0.5 h-5 w-5 shrink-0 text-sky-600 opacity-90 dark:text-sky-400"
-              aria-hidden
-            />
-            <div className="min-w-0">
-              <h3
-                id="prospect-offering-webapp-heading"
-                className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500"
-              >
-                Web app preview
-              </h3>
-              <p className="mt-1.5 text-xs leading-relaxed text-text-secondary dark:text-zinc-400">
-                Reserved for proposing web applications to clients. No preview or
-                generation is connected here yet.
-              </p>
-            </div>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3
+              id="prospect-offering-webapp-heading"
+              className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500"
+            >
+              Web app design (Stitch)
+            </h3>
+            <Monitor className="h-4 w-4 shrink-0 text-text-secondary opacity-70 dark:text-zinc-500" aria-hidden />
           </div>
+          <p className="mt-2 text-xs text-text-secondary dark:text-zinc-400">
+            {stitchContext ? (
+              stitchContext.kind === "place" ? (
+                <>
+                  Uses your{" "}
+                  <span className="font-medium text-text-primary dark:text-zinc-200">Google Business Profile</span>{" "}
+                  (name, address, categories, rating, listing website) as branding context for a desktop-sized web app UI
+                  concept.
+                </>
+              ) : (
+                <>
+                  URL research only — brand context comes from the fetched page title and meta description. Open a{" "}
+                  <span className="font-medium text-text-primary dark:text-zinc-200">Local Business</span> listing for
+                  full Google profile fields.
+                </>
+              )
+            ) : (
+              <>
+                Open a <span className="font-medium text-text-primary dark:text-zinc-200">Local Business</span> listing
+                or run <span className="font-medium text-text-primary dark:text-zinc-200">URL research</span> above to
+                enable Stitch with branding context.
+              </>
+            )}
+          </p>
+          {stitchContext ? (
+            <p className="mt-2 rounded-lg border border-border/60 bg-white/40 px-2.5 py-2 text-[11px] text-text-secondary dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
+              {stitchBrandingSummary(stitchContext)}
+            </p>
+          ) : null}
+          <p className="mt-2 text-[11px] text-text-secondary/90 dark:text-zinc-500">
+            Generation often takes a few minutes. Do not double-click — the Stitch API may still complete if the request
+            times out at the edge.
+          </p>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+            <button
+              type="button"
+              disabled={!stitchContext || stitchWebBusy || stitchApiConfigured === false}
+              onClick={() => void runStitchDesign("website")}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-violet-500/40 bg-violet-500/10 px-4 py-2.5 text-sm font-semibold text-violet-800 shadow-sm transition-colors hover:bg-violet-500/15 disabled:opacity-50 dark:border-violet-400/35 dark:bg-violet-500/15 dark:text-violet-200 dark:hover:bg-violet-500/25 sm:w-auto"
+            >
+              {stitchWebBusy ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <Monitor className="h-4 w-4" aria-hidden />
+              )}
+              {stitchWebBusy ? "Stitch (web app)…" : "Generate web app UI in Google Stitch"}
+            </button>
+            {stitchContext && stitchApiConfigured === false ? (
+              <button
+                type="button"
+                disabled={stitchManualTarget !== null}
+                onClick={() => void copyStitchPromptManual("website")}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-violet-500/50 bg-transparent px-4 py-2.5 text-sm font-semibold text-violet-900 shadow-sm transition-colors hover:bg-violet-500/10 disabled:opacity-50 dark:border-violet-400/40 dark:text-violet-200 dark:hover:bg-violet-500/15 sm:w-auto"
+              >
+                {stitchManualTarget === "website" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                ) : (
+                  <Copy className="h-4 w-4" aria-hidden />
+                )}
+                Copy prompt &amp; open Google Stitch
+              </button>
+            ) : null}
+          </div>
+          {stitchWebsiteResultBlock}
         </section>
 
         <section
           aria-labelledby="prospect-offering-mobile-heading"
-          className="rounded-xl border border-dashed border-border/80 bg-surface/20 p-4 dark:border-zinc-700/60 dark:bg-zinc-900/35"
+          className="rounded-xl border border-border/80 bg-surface/40 p-4 dark:border-zinc-700/70 dark:bg-zinc-900/50"
         >
-          <div className="flex gap-3">
-            <Smartphone
-              className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600 opacity-90 dark:text-emerald-400"
-              aria-hidden
-            />
-            <div className="min-w-0">
-              <h3
-                id="prospect-offering-mobile-heading"
-                className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500"
-              >
-                Mobile app
-              </h3>
-              <p className="mt-1.5 text-xs leading-relaxed text-text-secondary dark:text-zinc-400">
-                Reserved for proposing mobile products. No preview or generation
-                is connected here yet.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <section
-          aria-labelledby="prospect-offering-automations-heading"
-          className="rounded-xl border border-dashed border-border/80 bg-surface/20 p-4 dark:border-zinc-700/60 dark:bg-zinc-900/35"
-        >
-          <div className="flex gap-3">
-            <Workflow
-              className="mt-0.5 h-5 w-5 shrink-0 text-violet-600 opacity-90 dark:text-violet-400"
-              aria-hidden
-            />
-            <div className="min-w-0">
-              <h3
-                id="prospect-offering-automations-heading"
-                className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500"
-              >
-                AI automations
-              </h3>
-              <p className="mt-1.5 text-xs leading-relaxed text-text-secondary dark:text-zinc-400">
-                Reserved for proposing AI automations and workflow work. No tools
-                wired here yet.
-              </p>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      {stitchContext ? (
-        <aside className="rounded-xl border border-border/80 bg-surface/40 p-4 dark:border-zinc-700/70 dark:bg-zinc-900/50">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500">
+            <h3
+              id="prospect-offering-mobile-heading"
+              className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500"
+            >
               Mobile app design (Stitch)
             </h3>
             <Smartphone className="h-4 w-4 shrink-0 text-text-secondary opacity-70 dark:text-zinc-500" aria-hidden />
           </div>
           <p className="mt-2 text-xs text-text-secondary dark:text-zinc-400">
-            {stitchContext.kind === "place" ? (
-              <>
-                Uses your{" "}
-                <span className="font-medium text-text-primary dark:text-zinc-200">Google Business Profile</span>{" "}
-                (name, address, categories, rating, listing website) as branding context for a phone-sized UI concept.
-              </>
+            {stitchContext ? (
+              stitchContext.kind === "place" ? (
+                <>
+                  Uses your{" "}
+                  <span className="font-medium text-text-primary dark:text-zinc-200">Google Business Profile</span>{" "}
+                  (name, address, categories, rating, listing website) as branding context for a phone-sized UI concept.
+                </>
+              ) : (
+                <>
+                  URL research only — brand context comes from the fetched page title and meta description. Open a{" "}
+                  <span className="font-medium text-text-primary dark:text-zinc-200">Local Business</span> listing for
+                  full Google profile fields.
+                </>
+              )
             ) : (
               <>
-                URL research only — brand context comes from the fetched page title and meta description. Open a{" "}
-                <span className="font-medium text-text-primary dark:text-zinc-200">Local Business</span> listing for
-                full Google profile fields.
+                Open a <span className="font-medium text-text-primary dark:text-zinc-200">Local Business</span> listing
+                or run <span className="font-medium text-text-primary dark:text-zinc-200">URL research</span> above to
+                enable Stitch with branding context.
               </>
             )}
           </p>
-          <p className="mt-2 rounded-lg border border-border/60 bg-white/40 px-2.5 py-2 text-[11px] text-text-secondary dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
-            {stitchBrandingSummary(stitchContext)}
-          </p>
+          {stitchContext ? (
+            <p className="mt-2 rounded-lg border border-border/60 bg-white/40 px-2.5 py-2 text-[11px] text-text-secondary dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
+              {stitchBrandingSummary(stitchContext)}
+            </p>
+          ) : null}
           <p className="mt-2 text-[11px] text-text-secondary/90 dark:text-zinc-500">
-            Generation often takes a few minutes. Do not double-click — the Stitch API may still complete if the
-            request times out at the edge.
+            Generation often takes a few minutes. Do not double-click — the Stitch API may still complete if the request
+            times out at the edge.
           </p>
-          <button
-            type="button"
-            disabled={stitchMobileBusy}
-            onClick={() => void runStitchDesign("mobile")}
-            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-violet-500/40 bg-violet-500/10 px-4 py-2.5 text-sm font-semibold text-violet-800 shadow-sm transition-colors hover:bg-violet-500/15 disabled:opacity-50 dark:border-violet-400/35 dark:bg-violet-500/15 dark:text-violet-200 dark:hover:bg-violet-500/25 sm:w-auto"
-          >
-            {stitchMobileBusy ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-            ) : (
-              <Smartphone className="h-4 w-4" aria-hidden />
-            )}
-            {stitchMobileBusy ? "Stitch (mobile)…" : "Generate mobile UI in Google Stitch"}
-          </button>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+            <button
+              type="button"
+              disabled={!stitchContext || stitchMobileBusy || stitchApiConfigured === false}
+              onClick={() => void runStitchDesign("mobile")}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-violet-500/40 bg-violet-500/10 px-4 py-2.5 text-sm font-semibold text-violet-800 shadow-sm transition-colors hover:bg-violet-500/15 disabled:opacity-50 dark:border-violet-400/35 dark:bg-violet-500/15 dark:text-violet-200 dark:hover:bg-violet-500/25 sm:w-auto"
+            >
+              {stitchMobileBusy ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <Smartphone className="h-4 w-4" aria-hidden />
+              )}
+              {stitchMobileBusy ? "Stitch (mobile)…" : "Generate mobile UI in Google Stitch"}
+            </button>
+            {stitchContext && stitchApiConfigured === false ? (
+              <button
+                type="button"
+                disabled={stitchManualTarget !== null}
+                onClick={() => void copyStitchPromptManual("mobile")}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-violet-500/50 bg-transparent px-4 py-2.5 text-sm font-semibold text-violet-900 shadow-sm transition-colors hover:bg-violet-500/10 disabled:opacity-50 dark:border-violet-400/40 dark:text-violet-200 dark:hover:bg-violet-500/15 sm:w-auto"
+              >
+                {stitchManualTarget === "mobile" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                ) : (
+                  <Copy className="h-4 w-4" aria-hidden />
+                )}
+                Copy prompt &amp; open Google Stitch
+              </button>
+            ) : null}
+          </div>
           {stitchMobileError ? (
             <p className="mt-2 text-xs text-red-600 dark:text-red-400" role="alert">
               {stitchMobileError}
@@ -1103,8 +1232,61 @@ export default function ProspectPreviewOutreachBlock({
               </a>
             </div>
           ) : null}
-        </aside>
-      ) : null}
+        </section>
+
+        <section
+          aria-labelledby="prospect-offering-automations-heading"
+          className="rounded-xl border border-border/80 bg-surface/40 p-4 dark:border-zinc-700/70 dark:bg-zinc-900/50"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3
+              id="prospect-offering-automations-heading"
+              className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500"
+            >
+              AI automations
+            </h3>
+            <Workflow className="h-4 w-4 shrink-0 text-text-secondary opacity-70 dark:text-zinc-500" aria-hidden />
+          </div>
+          <p className="mt-2 text-xs text-text-secondary dark:text-zinc-400">
+            {stitchContext ? (
+              stitchContext.kind === "place" ? (
+                <>
+                  Uses your{" "}
+                  <span className="font-medium text-text-primary dark:text-zinc-200">Google Business Profile</span> and
+                  listing signals as context to propose AI workflows (lead routing, follow-ups, scheduling handoffs).
+                  Generation in Stitch is not wired for automations yet — this block keeps the same prospecting pattern
+                  for when it is.
+                </>
+              ) : (
+                <>
+                  URL research only — use a <span className="font-medium text-text-primary dark:text-zinc-200">Local Business</span>{" "}
+                  listing for richer automation ideas tied to categories and hours.
+                </>
+              )
+            ) : (
+              <>
+                Open a listing or URL research above; when automation generation is available, it will use the same
+                branding context as web and mobile Stitch.
+              </>
+            )}
+          </p>
+          {stitchContext ? (
+            <p className="mt-2 rounded-lg border border-border/60 bg-white/40 px-2.5 py-2 text-[11px] text-text-secondary dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
+              {stitchBrandingSummary(stitchContext)}
+            </p>
+          ) : null}
+          <p className="mt-2 text-[11px] text-text-secondary/90 dark:text-zinc-500">
+            No API is connected yet — avoids duplicate Stitch calls while web and mobile concepts stay above.
+          </p>
+          <button
+            type="button"
+            disabled
+            className="mt-3 inline-flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl border border-border/80 bg-surface/30 px-4 py-2.5 text-sm font-semibold text-text-secondary/80 opacity-70 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-500 sm:w-auto"
+          >
+            <Workflow className="h-4 w-4" aria-hidden />
+            Generate automation concept (coming soon)
+          </button>
+        </section>
     </div>
   );
 }
