@@ -80,9 +80,9 @@ const HIGHLIGHT_LOW_REVIEWS_THRESHOLD = 25;
 function listingCheckPassLabel(p: PlacesSearchPlace, key: string): string {
   switch (key) {
     case "no_website":
-      return "Website on listing";
+      return "Website";
     case "no_claimed_profile":
-      return "Site & phone on listing";
+      return "Site & phone";
     case "low_reviews":
       return p.userRatingCount == null ? "Review count not shown" : "Enough reviews";
     case "low_rating":
@@ -454,7 +454,7 @@ function IntelContactHintsPanel({
               )}
             </li>
             <li>
-              <span className="text-text-secondary dark:text-zinc-500">Website on listing: </span>
+              <span className="text-text-secondary dark:text-zinc-500">Website: </span>
               {listingWebsite ? (
                 <a
                   href={listingWebsite}

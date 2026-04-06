@@ -1,10 +1,10 @@
 import { generateProspectPreviewDocument } from "@/lib/crm/prospect-preview-generate";
 import { captureProspectPreviewScreenshot } from "@/lib/crm/prospect-preview-screenshot";
+import { insertProspectPreviewWithSlug } from "@/lib/crm/prospect-preview-insert";
 import {
   prospectPreviewMicrolinkUrl,
   prospectPreviewPageUrl,
 } from "@/lib/crm/prospect-preview-public-url";
-import { prospectPreviewSlugFromBusiness } from "@/lib/crm/prospect-preview-slug";
 import type { PlacesSearchPlace } from "@/lib/crm/places-types";
 import { primaryPlaceTypeLabel } from "@/lib/crm/places-search-ui";
 import { requireAgencyStaff } from "@/app/(crm)/actions/prospect-preview-agency";
@@ -240,52 +240,38 @@ async function runGenerateProspectPreviewCore(
   }
   console.log("[prospectPreview] generate: LLM ok, inserting row");
 
-  const { data: row, error } = await auth.supabase
-    .from("prospect_preview")
-    .insert({
-      user_id: auth.user.id,
-      html: gen.html,
-      place_google_id: input.placeGoogleId,
-      business_name: input.businessName,
-      business_address: input.businessAddress,
-      primary_category: input.primaryCategory,
-      screenshot_status: "pending",
-    })
-    .select("id, business_name, screenshot_status, screenshot_url")
-    .single();
+  const inserted = await insertProspectPreviewWithSlug({
+    supabase: auth.supabase,
+    userId: auth.user.id,
+    html: gen.html,
+    placeGoogleId: input.placeGoogleId,
+    businessName: input.businessName,
+    businessAddress: input.businessAddress,
+    primaryCategory: input.primaryCategory,
+  });
 
-  if (error) {
-    console.error("[prospectPreview] generate: insert failed", error.code, error.message);
-    if (error.message.includes("does not exist") || error.code === "42P01") {
+  if (!inserted.ok) {
+    console.error("[prospectPreview] generate: insert failed", inserted.code, inserted.error);
+    if (
+      inserted.error.includes("does not exist") ||
+      inserted.code === "42P01"
+    ) {
       return {
         ok: false as const,
         error:
           "Preview storage missing. Apply migration supabase/migrations/20260506120000_prospect_preview_lead_category.sql.",
       };
     }
-    return { ok: false as const, error: error.message };
+    return { ok: false as const, error: inserted.error };
   }
 
-  const id = row?.id as string | undefined;
-  if (!id) {
-    console.error("[prospectPreview] generate: insert returned no id");
-    return {
-      ok: false as const,
-      error: "Could not save preview (database returned no id).",
-    };
-  }
+  const { id, slug: previewSlug } = inserted;
 
-  const previewSlug = prospectPreviewSlugFromBusiness(
-    (row.business_name as string) || input.businessName,
-    id,
-  );
-  const { error: slugErr } = await auth.supabase
+  const { data: row } = await auth.supabase
     .from("prospect_preview")
-    .update({ slug: previewSlug })
-    .eq("id", id);
-  if (slugErr) {
-    console.warn("[prospectPreview] generate: slug update failed", slugErr.message);
-  }
+    .select("screenshot_status, screenshot_url")
+    .eq("id", id)
+    .maybeSingle();
 
   const previewUrl = prospectPreviewPageUrl(id, previewSlug);
   const previewFrameUrl = prospectPreviewMicrolinkUrl(id);
@@ -300,9 +286,9 @@ async function runGenerateProspectPreviewCore(
     previewUrl,
     previewFrameUrl,
     previewSlug,
-    businessName: (row.business_name as string) || input.businessName,
-    screenshotStatus: row.screenshot_status as string,
-    screenshotUrl: (row.screenshot_url as string | null) ?? null,
+    businessName: input.businessName,
+    screenshotStatus: (row?.screenshot_status as string) ?? "pending",
+    screenshotUrl: (row?.screenshot_url as string | null) ?? null,
   };
 }
 

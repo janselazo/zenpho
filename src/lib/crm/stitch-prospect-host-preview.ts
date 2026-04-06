@@ -1,8 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { StitchProspectDesignPayload } from "@/lib/crm/stitch-prospect-design-types";
+import { insertProspectPreviewWithSlug } from "@/lib/crm/prospect-preview-insert";
 import { captureProspectPreviewScreenshot } from "@/lib/crm/prospect-preview-screenshot";
 import { prospectPreviewPageUrl } from "@/lib/crm/prospect-preview-public-url";
-import { prospectPreviewSlugFromBusiness } from "@/lib/crm/prospect-preview-slug";
 import { sanitizeProspectPreviewFullDocumentHtml } from "@/lib/crm/prospect-preview-sanitize";
 import { primaryPlaceTypeLabel } from "@/lib/crm/places-search-ui";
 
@@ -100,37 +100,22 @@ export async function persistStitchHtmlAsProspectPreview(params: {
 
   const meta = stitchPayloadToPreviewMeta(params.payload);
 
-  const { data: row, error } = await params.supabase
-    .from("prospect_preview")
-    .insert({
-      user_id: params.userId,
-      html: safe,
-      place_google_id: meta.placeGoogleId,
-      business_name: meta.businessName,
-      business_address: meta.businessAddress,
-      primary_category: meta.primaryCategory,
-      screenshot_status: "pending",
-    })
-    .select("id, business_name")
-    .single();
+  const inserted = await insertProspectPreviewWithSlug({
+    supabase: params.supabase,
+    userId: params.userId,
+    html: safe,
+    placeGoogleId: meta.placeGoogleId,
+    businessName: meta.businessName,
+    businessAddress: meta.businessAddress,
+    primaryCategory: meta.primaryCategory,
+  });
 
-  if (error || !row?.id) {
-    console.warn("[stitch host preview] insert failed", error?.message);
+  if (!inserted.ok) {
+    console.warn("[stitch host preview] insert failed", inserted.error);
     return null;
   }
 
-  const id = row.id as string;
-  const businessName = (row.business_name as string)?.trim() || meta.businessName;
-  const previewSlug = prospectPreviewSlugFromBusiness(businessName, id);
-
-  const { error: slugErr } = await params.supabase
-    .from("prospect_preview")
-    .update({ slug: previewSlug })
-    .eq("id", id);
-  if (slugErr) {
-    console.warn("[stitch host preview] slug update failed", slugErr.message);
-  }
-
+  const { id, slug: previewSlug } = inserted;
   const hostedPreviewUrl = prospectPreviewPageUrl(id, previewSlug);
 
   void captureProspectPreviewScreenshot(id).catch(() => {
