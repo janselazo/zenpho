@@ -139,6 +139,19 @@ function normalizePlaceForPreview(place: PlacesSearchPlace) {
 export async function runGenerateProspectPreview(
   payload: GenerateProspectPreviewPayload
 ): Promise<GenerateProspectPreviewResult> {
+  try {
+    return await runGenerateProspectPreviewCore(payload);
+  } catch (e) {
+    console.error("[prospectPreview] generate: unexpected throw", e);
+    const msg =
+      e instanceof Error ? e.message : "Preview generation failed unexpectedly.";
+    return { ok: false as const, error: msg };
+  }
+}
+
+async function runGenerateProspectPreviewCore(
+  payload: GenerateProspectPreviewPayload
+): Promise<GenerateProspectPreviewResult> {
   const auth = await requireAgencyStaff();
   if (auth.error || !auth.user || !auth.supabase) {
     console.warn("[prospectPreview] generate: auth failed", auth.error ?? "missing user/supabase");
@@ -267,3 +280,4 @@ export async function runGenerateProspectPreview(
     screenshotUrl: (row.screenshot_url as string | null) ?? null,
   };
 }
+

@@ -7,6 +7,9 @@ import {
 /** Hobby plan still caps wall-clock; Pro+ allows longer runs for LLM + DB. */
 export const maxDuration = 120;
 
+/** LLM + OpenAI SDK expect Node; avoids Edge runtime surprises. */
+export const runtime = "nodejs";
+
 function isValidPayload(body: unknown): body is GenerateProspectPreviewPayload {
   if (!body || typeof body !== "object" || !("kind" in body)) return false;
   const o = body as Record<string, unknown>;
@@ -39,6 +42,7 @@ export async function POST(request: Request) {
   } catch (e) {
     console.error("[generate-preview] route", e);
     const msg = e instanceof Error ? e.message : "Preview generation failed unexpectedly.";
-    return NextResponse.json({ ok: false as const, error: msg }, { status: 500 });
+    // Always 200 + JSON so the client can read `error` (platform 500s often omit JSON).
+    return NextResponse.json({ ok: false as const, error: msg });
   }
 }

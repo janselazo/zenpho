@@ -23,7 +23,10 @@ import {
   createLeadFromProspectIntelAction,
   createLeadFromPlacesListingAction,
 } from "@/app/(crm)/actions/prospect-intel";
-import type { GenerateProspectPreviewPayload } from "@/lib/crm/prospect-preview-run-generate";
+import type {
+  GenerateProspectPreviewPayload,
+  GenerateProspectPreviewResult,
+} from "@/lib/crm/prospect-preview-run-generate";
 import ProspectPreviewOutreachBlock, {
   type ProspectPreviewOutreachSnapshot,
 } from "@/components/crm/prospecting/ProspectPreviewOutreachBlock";
@@ -831,22 +834,30 @@ function ProspectsIntelligenceViewInner({
           credentials: "same-origin",
           body: JSON.stringify(payload),
         });
-        const r = (await res.json().catch(() => null)) as
-          | {
-              ok: true;
-              previewId: string;
-              previewUrl: string;
-              businessName: string;
-              screenshotStatus: string;
-              screenshotUrl: string | null;
-            }
-          | { ok: false; error: string }
-          | null;
-        if (!r || typeof r !== "object" || !("ok" in r)) {
+        const text = await res.text();
+        let parsed: unknown = null;
+        if (text) {
+          try {
+            parsed = JSON.parse(text);
+          } catch {
+            parsed = null;
+          }
+        }
+        const r =
+          parsed &&
+          typeof parsed === "object" &&
+          "ok" in parsed &&
+          typeof (parsed as { ok: unknown }).ok === "boolean"
+            ? (parsed as GenerateProspectPreviewResult)
+            : null;
+        if (!r) {
+          const htmlLike = text.trimStart().startsWith("<");
           setPreviewGenError(
-            res.ok
-              ? "Invalid response from preview API."
-              : `Preview request failed (${res.status}).`,
+            !res.ok && htmlLike
+              ? `Preview failed (${res.status}): the server returned an HTML error page — often a function timeout or crash. Check Vercel deployment logs and plan limits (Hobby has a short max duration).`
+              : res.ok
+                ? "Invalid response from preview API."
+                : `Preview request failed (${res.status}). Response was not JSON.`,
           );
           return;
         }

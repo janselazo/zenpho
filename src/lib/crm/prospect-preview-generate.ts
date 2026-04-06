@@ -214,9 +214,9 @@ async function generateWithOpenAI(
     process.env.OPENAI_PROSPECT_PREVIEW_MODEL?.trim() ||
     DEFAULT_OPENAI_PREVIEW_MODEL;
   const { userPrompt, system } = buildPreviewPrompts(input);
-  const openai = new OpenAI({ apiKey, timeout: LLM_FETCH_TIMEOUT_MS });
 
   try {
+    const openai = new OpenAI({ apiKey, timeout: LLM_FETCH_TIMEOUT_MS });
     const completion = await openai.chat.completions.create({
       model,
       temperature: 0.7,
