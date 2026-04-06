@@ -1009,16 +1009,16 @@ export default function ProspectPreviewOutreachBlock({
         {stitchContext && stitchApiConfigured === false ? (
           <div className="rounded-xl border border-border/80 bg-surface/35 p-3 dark:border-zinc-700 dark:bg-zinc-900/45">
             <p className="text-xs font-semibold text-text-primary dark:text-zinc-100">
-              Stitch in Cursor (MCP) ≠ Stitch in this app
+              One-click Stitch needs a server key
             </p>
             <p className="mt-1.5 text-[11px] leading-relaxed text-text-secondary dark:text-zinc-400">
-              Your MCP connection only works inside the IDE. The CRM cannot call it from the browser. Use{" "}
+              Cursor MCP does not run in the browser. Use{" "}
               <span className="font-medium text-text-primary dark:text-zinc-200">
                 Copy prompt &amp; open Google Stitch
               </span>{" "}
-              under Web and Mobile to paste into Stitch in the browser — no server key. Optional: add{" "}
-              <span className="font-mono">STITCH_API_KEY</span> (Google Stitch API key on the server) for one-click
-              generate — see <span className="font-mono">.env.example</span>.
+              (Web/Mobile), or set <span className="font-mono">STITCH_API_KEY</span> in{" "}
+              <span className="font-mono">.env.local</span> / Vercel and restart — see{" "}
+              <span className="font-mono">.env.example</span>.
             </p>
           </div>
         ) : null}
