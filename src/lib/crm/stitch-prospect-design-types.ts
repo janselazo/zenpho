@@ -3,14 +3,14 @@ import type { PlacesSearchPlace } from "@/lib/crm/places-types";
 /** POST /api/prospecting/stitch-design — same shape as generate-preview plus `target`. */
 export type StitchProspectDesignPayload =
   | {
-      target: "website" | "mobile";
+      target: "website" | "webapp" | "mobile";
       kind: "place";
       place: PlacesSearchPlace;
       servicesLine?: string;
       colorVibe?: string;
     }
   | {
-      target: "website" | "mobile";
+      target: "website" | "webapp" | "mobile";
       kind: "url";
       url: string;
       pageTitle?: string | null;

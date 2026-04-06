@@ -93,6 +93,55 @@ ${WEBSITE_VISUAL_CHECKLIST}
 Output: polished, pitch-ready HTML document suitable for a prospect preview.`.trim();
 }
 
+const WEBAPP_VISUAL_CHECKLIST = `
+Visual quality (desktop web product, 2024–2026):
+- **App shell:** fixed **left sidebar** (icon + label nav) or compact top bar + secondary tabs — not a marketing hero page.
+- **Density:** data tables, KPI stat cards, filter row, pagination or list affordances; realistic placeholder rows (names, dates, statuses, currency) for the vertical.
+- Typography and color: cohesive from Visual direction; confident accent on primary actions and active nav item; WCAG-minded contrast.
+- Cards, soft shadows, large radii; optional subtle sidebar tint vs main canvas.
+- **No inline \`<script>\`** — view swap is CSS \`:target\` / \`:has\` only (Tailwind CDN \`<script src>\` OK).`.trim();
+
+/** Desktop-width **web application** UI (operator / back-office), not a marketing website. */
+export function buildStitchWebAppPrompt(payload: StitchProspectDesignPayload): string {
+  const block =
+    payload.kind === "place"
+      ? placeContext(payload.place, payload.colorVibe)
+      : urlContext(payload.url, payload.pageTitle, payload.metaDescription, payload.colorVibe);
+
+  const gmb =
+    payload.kind === "place"
+      ? "Brand identity must align with the Google Business Profile (name, category, and location above). "
+      : "Infer industry from the page title, URL, and description. ";
+
+  return `${block}
+
+Task: ${gmb}Output **one complete HTML5 document** for a **desktop web application** (browser-width product UI) for staff/operators of this business — **not** a public marketing site and **not** a phone mockup. Think **SaaS-style dashboard**: sidebar navigation, main canvas with tables and metrics.
+
+Each main **view** is a full main-area panel; **only one view visible at a time** in the content region. **No** JS router, **no inline \`<script>\`**.
+
+## Page switch pattern (CSS only)
+Use a layout with **sidebar** links and \`<main>\` containing \`<section id="dash" class="page">\`, \`id="clients"\`, \`id="schedule"\`, \`id="settings"\` (exact ids). Same \`:target\` + \`:has\` show/hide as the website prompt:
+
+- \`.page\` panels hidden by default; **\`min-height\`** fills the main area below any top bar; **\`overflow-y: auto\`** on the active panel.
+- Default show \`#dash\` when no hash; other ids when targeted; hide \`#dash\` when \`#clients\`, \`#schedule\`, or \`#settings\` is \`:target\`.
+- **Active sidebar link** styling via \`body:has(#clients:target) aside a[href="#clients"]\`, etc.
+
+Sidebar labels: **Dashboard**, **Clients**, **Schedule**, **Settings** → \`<a href="#dash">\`, \`#clients\`, \`#schedule\`, \`#settings\`.
+
+## Structure checklist
+1. **#dash** — Row of KPI cards (e.g. today’s bookings, revenue or pipeline, open tasks); chart or table placeholder; “needs attention” list with realistic items for the category.
+2. **#clients** — Search/filter bar; **data table** (name, last visit, status, action); category-appropriate columns (e.g. pet + owner for grooming).
+3. **#schedule** — Week or day calendar strip + time blocks or appointment list.
+4. **#settings** — Sections for business profile, notifications, integrations (placeholders only).
+
+## Copy
+Unique copy per view, tied to business name and vertical — not generic lorem repeated everywhere.
+
+${WEBAPP_VISUAL_CHECKLIST}
+
+Output: polished desktop web-app mockup in one HTML file for a client pitch.`.trim();
+}
+
 const MOBILE_VISUAL_CHECKLIST = `
 Visual quality (premium operator app, 2024–2026):
 - Optional **dark navy / charcoal shell** with **lavender or mint accent** for active tab and KPI highlights — still harmonize with Visual direction above; do not ignore colorVibe.

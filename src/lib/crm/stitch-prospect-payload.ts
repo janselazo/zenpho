@@ -3,7 +3,7 @@ import type { StitchProspectDesignPayload } from "@/lib/crm/stitch-prospect-desi
 export function parseStitchDesignPayload(body: unknown): StitchProspectDesignPayload | null {
   if (!body || typeof body !== "object") return null;
   const o = body as Record<string, unknown>;
-  if (o.target !== "website" && o.target !== "mobile") return null;
+  if (o.target !== "website" && o.target !== "webapp" && o.target !== "mobile") return null;
   if (o.kind === "place") {
     const p = o.place;
     if (!p || typeof p !== "object") return null;

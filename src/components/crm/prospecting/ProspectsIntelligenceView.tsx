@@ -884,6 +884,22 @@ function ProspectsIntelligenceViewInner({
     };
   }, [activeReport]);
 
+  const outreachBusinessName = useMemo(() => {
+    if (!activeReport) return "";
+    if (activeReport.kind === "place") return activeReport.place.name.trim();
+    const t = activeReport.urlMeta.pageTitle?.trim();
+    if (t) return t;
+    try {
+      return new URL(
+        /^https?:\/\//i.test(activeReport.urlMeta.url)
+          ? activeReport.urlMeta.url
+          : `https://${activeReport.urlMeta.url}`
+      ).hostname.replace(/^www\./i, "");
+    } catch {
+      return "";
+    }
+  }, [activeReport]);
+
   const snapshotSocialUrls = useMemo(() => {
     const deep = websiteDeepStatus.contacts?.socialUrls;
     if (activeReport?.kind === "url" && urlHomepageHints) {
@@ -1565,6 +1581,10 @@ function ProspectsIntelligenceViewInner({
               <ProspectPreviewOutreachBlock
                 stitchContext={stitchContext}
                 reportKey={outreachPreviewKey}
+                businessName={outreachBusinessName}
+                contactPhone={leadPhone}
+                contactEmail={leadEmail}
+                marketIntelReport={activeReport?.report ?? null}
               />
             </div>
           </ReportSection>

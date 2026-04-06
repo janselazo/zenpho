@@ -1,15 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Copy,
   ExternalLink,
+  FileDown,
+  LayoutDashboard,
   Loader2,
+  Mail,
+  MessageSquare,
   Monitor,
   Smartphone,
   Workflow,
 } from "lucide-react";
 import type { PlacesSearchPlace } from "@/lib/crm/places-types";
+import type { MarketIntelReport } from "@/lib/crm/prospect-intel-report";
 import type {
   StitchProspectDesignPayload,
   StitchProspectDesignResult,
@@ -18,6 +23,11 @@ import {
   stitchWithGoogleAppHomeUrl,
   stitchWithGoogleProjectUrl,
 } from "@/lib/crm/stitch-withgoogle-url";
+import {
+  sendProspectPreviewEmailAction,
+  sendProspectPreviewSmsAction,
+} from "@/app/(crm)/actions/prospect-preview";
+import { generateProspectAutomationPdfAction } from "@/app/(crm)/actions/prospect-automation-report";
 
 /** Context for Google Stitch prompts (Local Business listing or URL research). */
 export type ProspectStitchContext =
@@ -30,8 +40,15 @@ export type ProspectStitchContext =
     };
 
 type StitchOk = Extract<StitchProspectDesignResult, { ok: true }>;
+type StitchTarget = "website" | "webapp" | "mobile";
+type SelectedOffer = StitchTarget | "automations";
 
 const STITCH_HELP_URL = stitchWithGoogleAppHomeUrl();
+
+const DEFAULT_SMS_TEMPLATE =
+  "Hi — here's a quick preview we put together for {{businessName}}:\n\n{{previewUrl}}\n\nHappy to walk through it if helpful.";
+const DEFAULT_EMAIL_SUBJECT = "Preview for {{businessName}}";
+const DEFAULT_EMAIL_BODY = DEFAULT_SMS_TEMPLATE;
 
 function stitchBrandingSummary(ctx: ProspectStitchContext): string {
   if (ctx.kind === "place") {
@@ -43,33 +60,147 @@ function stitchBrandingSummary(ctx: ProspectStitchContext): string {
   return title ? `${title} · ${ctx.url}` : ctx.url;
 }
 
+function StitchPreviewLinks({
+  result,
+  label,
+  copyAndFlash,
+}: {
+  result: StitchOk;
+  label: string;
+  copyAndFlash: (t: string) => void;
+}) {
+  return (
+    <div className="mt-2 space-y-2 rounded-lg border border-violet-500/25 bg-violet-500/[0.06] p-3 dark:border-violet-400/20 dark:bg-violet-500/10">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-violet-900/80 dark:text-violet-200/90">
+        {label}
+      </p>
+      {/* eslint-disable-next-line @next/next/no-img-element -- Stitch CDN screenshot URL */}
+      <img
+        src={result.imageUrl}
+        alt=""
+        className="max-h-40 w-full rounded-md border border-border object-contain object-top dark:border-zinc-700"
+      />
+      <div className="flex flex-wrap gap-2">
+        {result.hostedPreviewUrl ? (
+          <a
+            href={result.hostedPreviewUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 text-xs font-semibold text-violet-800 hover:underline dark:text-violet-200"
+          >
+            Open hosted preview
+            <ExternalLink className="h-3 w-3 opacity-70" aria-hidden />
+          </a>
+        ) : null}
+        <a
+          href={stitchWithGoogleProjectUrl(result.projectId)}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1 text-xs font-medium text-violet-700 hover:underline dark:text-violet-300"
+        >
+          Open in Stitch
+          <ExternalLink className="h-3 w-3 opacity-70" aria-hidden />
+        </a>
+        <a
+          href={result.htmlUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1 text-xs font-medium text-text-secondary hover:text-text-primary hover:underline dark:text-zinc-400 dark:hover:text-zinc-300"
+        >
+          Download HTML
+          <ExternalLink className="h-3 w-3 opacity-70" aria-hidden />
+        </a>
+        <button
+          type="button"
+          onClick={() =>
+            void copyAndFlash(
+              `Project: ${result.projectId}\nScreen: ${result.screenId}\n${result.projectTitle}`
+            )
+          }
+          className="inline-flex items-center gap-1 text-xs font-medium text-text-secondary hover:text-text-primary dark:text-zinc-400"
+        >
+          <Copy className="h-3 w-3" aria-hidden />
+          Copy project &amp; screen IDs
+        </button>
+      </div>
+    </div>
+  );
+}
+
 type Props = {
-  /** When set, Stitch web/mobile cards use listing or URL branding context. */
   stitchContext?: ProspectStitchContext | null;
-  /** Clears Stitch results when the active prospect report changes. */
   reportKey?: string;
+  /** Display name for merge tags and PDF title. */
+  businessName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  yourName?: string;
+  marketIntelReport?: MarketIntelReport | null;
 };
 
 export default function ProspectPreviewOutreachBlock({
   stitchContext = null,
   reportKey = "",
+  businessName: businessNameProp = "",
+  contactPhone = "",
+  contactEmail = "",
+  yourName = "",
+  marketIntelReport = null,
 }: Props) {
   const [stitchWebBusy, setStitchWebBusy] = useState(false);
+  const [stitchWebAppBusy, setStitchWebAppBusy] = useState(false);
   const [stitchMobileBusy, setStitchMobileBusy] = useState(false);
   const [stitchWebResult, setStitchWebResult] = useState<StitchOk | null>(null);
+  const [stitchWebAppResult, setStitchWebAppResult] = useState<StitchOk | null>(null);
   const [stitchMobileResult, setStitchMobileResult] = useState<StitchOk | null>(null);
   const [stitchWebError, setStitchWebError] = useState<string | null>(null);
+  const [stitchWebAppError, setStitchWebAppError] = useState<string | null>(null);
   const [stitchMobileError, setStitchMobileError] = useState<string | null>(null);
-  /**
-   * Whether GET /api/prospecting/stitch-config saw STITCH_API_KEY (informational only).
-   * We do not disable generate on `false` — stale false happens after adding a key without refresh, or first fetch timing.
-   */
   const [stitchApiConfigured, setStitchApiConfigured] = useState<boolean | null>(null);
-  /** When true, server adds screens to STITCH_PROJECT_ID instead of createProject each run. */
   const [stitchLinkedProjectConfigured, setStitchLinkedProjectConfigured] = useState(false);
   const [stitchConfigCheckFailed, setStitchConfigCheckFailed] = useState(false);
-  const [stitchManualTarget, setStitchManualTarget] = useState<null | "website" | "mobile">(null);
+  const [stitchManualTarget, setStitchManualTarget] = useState<null | StitchTarget>(null);
   const [copyMsg, setCopyMsg] = useState<string | null>(null);
+  const [selectedOffer, setSelectedOffer] = useState<SelectedOffer>("website");
+
+  const [smsTo, setSmsTo] = useState(contactPhone);
+  const [emailTo, setEmailTo] = useState(contactEmail);
+  const [smsBodyTemplate, setSmsBodyTemplate] = useState(DEFAULT_SMS_TEMPLATE);
+  const [emailSubjectTemplate, setEmailSubjectTemplate] = useState(DEFAULT_EMAIL_SUBJECT);
+  const [emailBodyTemplate, setEmailBodyTemplate] = useState(DEFAULT_EMAIL_BODY);
+  const [attachPreviewImage, setAttachPreviewImage] = useState(true);
+  const [shareBusy, setShareBusy] = useState<null | "sms" | "email">(null);
+  const [shareMsg, setShareMsg] = useState<string | null>(null);
+
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfMsg, setPdfMsg] = useState<string | null>(null);
+  const [pdfFilename, setPdfFilename] = useState<string | null>(null);
+
+  const resolvedBusinessName = useMemo(() => {
+    const t = businessNameProp.trim();
+    if (t) return t;
+    if (stitchContext?.kind === "place") return stitchContext.place.name.trim() || "Business";
+    if (stitchContext?.kind === "url") {
+      const title = stitchContext.pageTitle?.trim();
+      if (title) return title;
+      try {
+        return new URL(
+          /^https?:\/\//i.test(stitchContext.url) ? stitchContext.url : `https://${stitchContext.url}`
+        ).hostname.replace(/^www\./i, "");
+      } catch {
+        return "Business";
+      }
+    }
+    return "Business";
+  }, [businessNameProp, stitchContext]);
+
+  useEffect(() => {
+    setSmsTo(contactPhone);
+  }, [contactPhone]);
+
+  useEffect(() => {
+    setEmailTo(contactEmail);
+  }, [contactEmail]);
 
   useEffect(() => {
     let cancelled = false;
@@ -108,11 +239,18 @@ export default function ProspectPreviewOutreachBlock({
 
   useEffect(() => {
     setStitchWebBusy(false);
+    setStitchWebAppBusy(false);
     setStitchMobileBusy(false);
     setStitchWebResult(null);
+    setStitchWebAppResult(null);
     setStitchMobileResult(null);
     setStitchWebError(null);
+    setStitchWebAppError(null);
     setStitchMobileError(null);
+    setSelectedOffer("website");
+    setShareMsg(null);
+    setPdfMsg(null);
+    setPdfFilename(null);
   }, [reportKey]);
 
   const copyAndFlash = useCallback(async (text: string) => {
@@ -126,8 +264,25 @@ export default function ProspectPreviewOutreachBlock({
     }
   }, []);
 
+  const buildStitchPayload = useCallback(
+    (target: StitchTarget): StitchProspectDesignPayload | null => {
+      if (!stitchContext) return null;
+      if (stitchContext.kind === "place") {
+        return { target, kind: "place", place: stitchContext.place };
+      }
+      return {
+        target,
+        kind: "url",
+        url: stitchContext.url,
+        pageTitle: stitchContext.pageTitle,
+        metaDescription: stitchContext.metaDescription,
+      };
+    },
+    [stitchContext]
+  );
+
   const copyStitchPromptManual = useCallback(
-    async (target: "website" | "mobile") => {
+    async (target: StitchTarget) => {
       const payload = buildStitchPayload(target);
       if (!payload) return;
       setStitchManualTarget(target);
@@ -182,38 +337,33 @@ export default function ProspectPreviewOutreachBlock({
         setStitchManualTarget(null);
       }
     },
-    [stitchContext]
+    [buildStitchPayload]
   );
 
-  function buildStitchPayload(target: "website" | "mobile"): StitchProspectDesignPayload | null {
-    if (!stitchContext) return null;
-    if (stitchContext.kind === "place") {
-      return {
-        target,
-        kind: "place",
-        place: stitchContext.place,
-      };
-    }
-    return {
-      target,
-      kind: "url",
-      url: stitchContext.url,
-      pageTitle: stitchContext.pageTitle,
-      metaDescription: stitchContext.metaDescription,
-    };
-  }
+  const setBusyForTarget = (target: StitchTarget, v: boolean) => {
+    if (target === "website") setStitchWebBusy(v);
+    else if (target === "webapp") setStitchWebAppBusy(v);
+    else setStitchMobileBusy(v);
+  };
+
+  const setErrorForTarget = (target: StitchTarget, e: string | null) => {
+    if (target === "website") setStitchWebError(e);
+    else if (target === "webapp") setStitchWebAppError(e);
+    else setStitchMobileError(e);
+  };
+
+  const setResultForTarget = (target: StitchTarget, r: StitchOk | null) => {
+    if (target === "website") setStitchWebResult(r);
+    else if (target === "webapp") setStitchWebAppResult(r);
+    else setStitchMobileResult(r);
+  };
 
   const runStitchDesign = useCallback(
-    async (target: "website" | "mobile") => {
+    async (target: StitchTarget) => {
       const payload = buildStitchPayload(target);
       if (!payload) return;
-      if (target === "website") {
-        setStitchWebBusy(true);
-        setStitchWebError(null);
-      } else {
-        setStitchMobileBusy(true);
-        setStitchMobileError(null);
-      }
+      setBusyForTarget(target, true);
+      setErrorForTarget(target, null);
       try {
         const res = await fetch("/api/prospecting/stitch-design", {
           method: "POST",
@@ -238,116 +388,162 @@ export default function ProspectPreviewOutreachBlock({
             ? (parsed as StitchProspectDesignResult)
             : null;
         if (!r) {
-          if (target === "website") {
-            setStitchWebError("Invalid response from Stitch API.");
-            setStitchWebResult(null);
-          } else {
-            setStitchMobileError("Invalid response from Stitch API.");
-            setStitchMobileResult(null);
-          }
+          setErrorForTarget(target, "Invalid response from Stitch API.");
+          setResultForTarget(target, null);
           return;
         }
         if (!r.ok) {
           if ("code" in r && r.code === "STITCH_API_KEY_MISSING") {
             setStitchApiConfigured(false);
           }
-          if (target === "website") {
-            setStitchWebError(r.error);
-            setStitchWebResult(null);
-          } else {
-            setStitchMobileError(r.error);
-            setStitchMobileResult(null);
-          }
+          setErrorForTarget(target, r.error);
+          setResultForTarget(target, null);
           return;
         }
         setStitchApiConfigured(true);
-        if (target === "website") {
-          setStitchWebResult(r);
-        } else {
-          setStitchMobileResult(r);
-        }
+        setResultForTarget(target, r);
+        setSelectedOffer(target);
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Stitch request failed.";
-        if (target === "website") {
-          setStitchWebError(msg);
-          setStitchWebResult(null);
-        } else {
-          setStitchMobileError(msg);
-          setStitchMobileResult(null);
-        }
+        setErrorForTarget(target, msg);
+        setResultForTarget(target, null);
       } finally {
-        if (target === "website") setStitchWebBusy(false);
-        else setStitchMobileBusy(false);
+        setBusyForTarget(target, false);
       }
     },
-    [stitchContext]
+    [buildStitchPayload]
   );
 
-  const stitchWebsiteResultBlock =
-    stitchWebResult || stitchWebError ? (
-      <div className="rounded-lg border border-violet-500/25 bg-violet-500/[0.06] p-3 dark:border-violet-400/20 dark:bg-violet-500/10">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-violet-900/80 dark:text-violet-200/90">
-          Stitch · desktop concept
-        </p>
-        {stitchWebError ? (
-          <p className="mt-2 text-xs text-red-600 dark:text-red-400" role="alert">
-            {stitchWebError}
-          </p>
-        ) : stitchWebResult ? (
-          <div className="mt-2 space-y-2">
-            {/* eslint-disable-next-line @next/next/no-img-element -- Stitch CDN screenshot URL */}
-            <img
-              src={stitchWebResult.imageUrl}
-              alt="Stitch website design preview"
-              className="max-h-48 w-full rounded-md border border-border object-contain object-top dark:border-zinc-700"
-            />
-            <div className="flex flex-wrap gap-2">
-              {stitchWebResult.hostedPreviewUrl ? (
-                <a
-                  href={stitchWebResult.hostedPreviewUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-violet-800 hover:underline dark:text-violet-200"
-                >
-                  Open hosted preview
-                  <ExternalLink className="h-3 w-3 opacity-70" aria-hidden />
-                </a>
-              ) : null}
-              <a
-                href={stitchWithGoogleProjectUrl(stitchWebResult.projectId)}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-xs font-medium text-violet-700 hover:underline dark:text-violet-300"
-              >
-                Open in Stitch
-                <ExternalLink className="h-3 w-3 opacity-70" aria-hidden />
-              </a>
-              <a
-                href={stitchWebResult.htmlUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-xs font-medium text-text-secondary hover:text-text-primary hover:underline dark:text-zinc-400 dark:hover:text-zinc-300"
-              >
-                Download HTML
-                <ExternalLink className="h-3 w-3 opacity-70" aria-hidden />
-              </a>
-              <button
-                type="button"
-                onClick={() =>
-                  void copyAndFlash(
-                    `Project: ${stitchWebResult.projectId}\nScreen: ${stitchWebResult.screenId}\n${stitchWebResult.projectTitle}`
-                  )
-                }
-                className="inline-flex items-center gap-1 text-xs font-medium text-text-secondary hover:text-text-primary dark:text-zinc-400"
-              >
-                <Copy className="h-3 w-3" aria-hidden />
-                Copy project &amp; screen IDs
-              </button>
-            </div>
-          </div>
-        ) : null}
-      </div>
-    ) : null;
+  const hostedPreviewIdForSelection = useMemo(() => {
+    if (selectedOffer === "website") return stitchWebResult?.hostedPreviewId?.trim() || null;
+    if (selectedOffer === "webapp") return stitchWebAppResult?.hostedPreviewId?.trim() || null;
+    if (selectedOffer === "mobile") return stitchMobileResult?.hostedPreviewId?.trim() || null;
+    return null;
+  }, [selectedOffer, stitchWebResult, stitchWebAppResult, stitchMobileResult]);
+
+  const canSharePreview =
+    selectedOffer !== "automations" && Boolean(hostedPreviewIdForSelection && resolvedBusinessName);
+
+  const sendSms = useCallback(async () => {
+    const id = hostedPreviewIdForSelection;
+    if (!id || !smsTo.trim()) {
+      setShareMsg("Add a phone number and select a card with a hosted preview.");
+      return;
+    }
+    setShareBusy("sms");
+    setShareMsg(null);
+    const res = await sendProspectPreviewSmsAction({
+      previewId: id,
+      to: smsTo.trim(),
+      bodyTemplate: smsBodyTemplate,
+      businessName: resolvedBusinessName,
+      yourName: yourName.trim() || undefined,
+      includeMmsImage: attachPreviewImage,
+    });
+    setShareBusy(null);
+    if (res.ok) {
+      setShareMsg("warning" in res && res.warning ? res.warning : "SMS sent.");
+    } else {
+      setShareMsg(res.error);
+    }
+  }, [
+    hostedPreviewIdForSelection,
+    smsTo,
+    smsBodyTemplate,
+    resolvedBusinessName,
+    yourName,
+    attachPreviewImage,
+  ]);
+
+  const sendEmail = useCallback(async () => {
+    const id = hostedPreviewIdForSelection;
+    if (!id || !emailTo.trim()) {
+      setShareMsg("Add an email address and select a card with a hosted preview.");
+      return;
+    }
+    setShareBusy("email");
+    setShareMsg(null);
+    const res = await sendProspectPreviewEmailAction({
+      previewId: id,
+      to: emailTo.trim(),
+      subjectTemplate: emailSubjectTemplate,
+      bodyTemplate: emailBodyTemplate,
+      businessName: resolvedBusinessName,
+      yourName: yourName.trim() || undefined,
+    });
+    setShareBusy(null);
+    if (res.ok) {
+      setShareMsg("Email sent.");
+    } else {
+      setShareMsg(res.error);
+    }
+  }, [
+    hostedPreviewIdForSelection,
+    emailTo,
+    emailSubjectTemplate,
+    emailBodyTemplate,
+    resolvedBusinessName,
+    yourName,
+  ]);
+
+  const generatePdf = useCallback(async () => {
+    if (!marketIntelReport) {
+      setPdfMsg("No market intel report loaded.");
+      return;
+    }
+    setPdfBusy(true);
+    setPdfMsg(null);
+    const res = await generateProspectAutomationPdfAction({
+      report: marketIntelReport,
+      businessName: resolvedBusinessName,
+    });
+    setPdfBusy(false);
+    if (!res.ok) {
+      setPdfMsg(res.error);
+      return;
+    }
+    setPdfFilename(res.filename);
+    setPdfMsg("Report downloaded.");
+    try {
+      const bin = atob(res.pdfBase64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const blob = new Blob([bytes], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = res.filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setPdfMsg("Could not start download in this browser.");
+    }
+  }, [marketIntelReport, resolvedBusinessName]);
+
+  const cardRing = (key: SelectedOffer) =>
+    selectedOffer === key
+      ? "ring-2 ring-violet-500/50 ring-offset-2 ring-offset-surface dark:ring-violet-400/40 dark:ring-offset-zinc-950"
+      : "";
+
+  const placeVsUrlIntro =
+    stitchContext?.kind === "place" ? (
+      <>
+        Uses your{" "}
+        <span className="font-medium text-text-primary dark:text-zinc-200">Google Business Profile</span> (name,
+        address, categories, rating, listing website) as branding context.
+      </>
+    ) : stitchContext ? (
+      <>
+        URL research only — brand context from page title and meta. Open a{" "}
+        <span className="font-medium text-text-primary dark:text-zinc-200">Local Business</span> listing for full
+        profile fields.
+      </>
+    ) : (
+      <>
+        Open a <span className="font-medium text-text-primary dark:text-zinc-200">Local Business</span> listing or run{" "}
+        <span className="font-medium text-text-primary dark:text-zinc-200">URL research</span> above.
+      </>
+    );
 
   return (
     <div className="space-y-4">
@@ -363,16 +559,9 @@ export default function ProspectPreviewOutreachBlock({
             Server does not see STITCH_API_KEY yet
           </p>
           <p className="mt-1.5 text-[11px] leading-relaxed text-text-secondary dark:text-zinc-400">
-            Generate uses the Stitch <span className="font-medium">HTTP API</span> on this server. Add{" "}
-            <span className="font-mono">STITCH_API_KEY</span> or{" "}
-            <span className="font-mono">GOOGLE_STITCH_API_KEY</span> to{" "}
-            <span className="font-mono">.env.local</span> / Vercel (no quotes), then{" "}
-            <span className="font-medium">restart</span> <span className="font-mono">npm run dev</span> or redeploy.
-            Or use{" "}
-            <span className="font-medium text-text-primary dark:text-zinc-200">
-              Copy prompt &amp; open Google Stitch
-            </span>{" "}
-            — see <span className="font-mono">.env.example</span>.
+            Add <span className="font-mono">STITCH_API_KEY</span> to env, restart dev, or use{" "}
+            <span className="font-medium">Copy prompt &amp; open Google Stitch</span> — see{" "}
+            <span className="font-mono">.env.example</span>.
           </p>
         </div>
       ) : null}
@@ -383,286 +572,358 @@ export default function ProspectPreviewOutreachBlock({
       ) : null}
       {stitchContext && stitchLinkedProjectConfigured ? (
         <p className="text-[11px] text-text-secondary dark:text-zinc-500" role="status">
-          New Stitch screens are added to your linked project (
-          <span className="font-mono">STITCH_PROJECT_ID</span> on the server), not a new project each time.
+          New Stitch screens use <span className="font-mono">STITCH_PROJECT_ID</span> when set on the server.
         </p>
       ) : null}
 
-      <section
-        aria-labelledby="prospect-offering-webapp-heading"
-        className="rounded-xl border border-border/80 bg-surface/40 p-4 dark:border-zinc-700/70 dark:bg-zinc-900/50"
-      >
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3
-            id="prospect-offering-webapp-heading"
-            className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500"
-          >
-            Web app design (Stitch)
-          </h3>
-          <Monitor className="h-4 w-4 shrink-0 text-text-secondary opacity-70 dark:text-zinc-500" aria-hidden />
-        </div>
-        <p className="mt-2 text-xs text-text-secondary dark:text-zinc-400">
-          {stitchContext ? (
-            stitchContext.kind === "place" ? (
-              <>
-                Uses your{" "}
-                <span className="font-medium text-text-primary dark:text-zinc-200">Google Business Profile</span>{" "}
-                (name, address, categories, rating, listing website) as branding context for a desktop-sized web app UI
-                concept.
-              </>
-            ) : (
-              <>
-                URL research only — brand context comes from the fetched page title and meta description. Open a{" "}
-                <span className="font-medium text-text-primary dark:text-zinc-200">Local Business</span> listing for
-                full Google profile fields.
-              </>
-            )
-          ) : (
-            <>
-              Open a <span className="font-medium text-text-primary dark:text-zinc-200">Local Business</span> listing or
-              run <span className="font-medium text-text-primary dark:text-zinc-200">URL research</span> above to enable
-              Stitch with branding context.
-            </>
-          )}
+      <div className="rounded-xl border border-border/80 bg-surface/30 p-4 dark:border-zinc-700/70 dark:bg-zinc-900/40">
+        <h3 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500">
+          Design concepts &amp; outreach
+        </h3>
+        <p className="mt-1 text-[11px] text-text-secondary dark:text-zinc-500">
+          Select a card to share its hosted preview via SMS or email (after generation). Use{" "}
+          <span className="font-mono">{"{{previewUrl}}"}</span> and{" "}
+          <span className="font-mono">{"{{businessName}}"}</span> in templates.
         </p>
         {stitchContext ? (
-          <p className="mt-2 rounded-lg border border-border/60 bg-white/40 px-2.5 py-2 text-[11px] text-text-secondary dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
+          <p className="mt-3 rounded-lg border border-border/60 bg-white/40 px-2.5 py-2 text-[11px] text-text-secondary dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
             {stitchBrandingSummary(stitchContext)}
           </p>
         ) : null}
-        <p className="mt-2 text-[11px] text-text-secondary/90 dark:text-zinc-500">
-          Generation often takes a few minutes. Do not double-click — the Stitch API may still complete if the request
-          times out at the edge.
-        </p>
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-          <button
-            type="button"
-            disabled={!stitchContext || stitchWebBusy}
-            onClick={() => void runStitchDesign("website")}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-violet-500/40 bg-violet-500/10 px-4 py-2.5 text-sm font-semibold text-violet-800 shadow-sm transition-colors hover:bg-violet-500/15 disabled:opacity-50 dark:border-violet-400/35 dark:bg-violet-500/15 dark:text-violet-200 dark:hover:bg-violet-500/25 sm:w-auto"
-          >
-            {stitchWebBusy ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-            ) : (
-              <Monitor className="h-4 w-4" aria-hidden />
-            )}
-            {stitchWebBusy ? "Stitch (web app)…" : "Generate web app UI in Google Stitch"}
-          </button>
-          {stitchContext && stitchApiConfigured === false ? (
-            <button
-              type="button"
-              disabled={stitchManualTarget !== null}
-              onClick={() => void copyStitchPromptManual("website")}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-violet-500/50 bg-transparent px-4 py-2.5 text-sm font-semibold text-violet-900 shadow-sm transition-colors hover:bg-violet-500/10 disabled:opacity-50 dark:border-violet-400/40 dark:text-violet-200 dark:hover:bg-violet-500/15 sm:w-auto"
-            >
-              {stitchManualTarget === "website" ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              ) : (
-                <Copy className="h-4 w-4" aria-hidden />
-              )}
-              Copy prompt &amp; open Google Stitch
-            </button>
-          ) : null}
-        </div>
-        {stitchWebsiteResultBlock}
-      </section>
 
-      <section
-        aria-labelledby="prospect-offering-mobile-heading"
-        className="rounded-xl border border-border/80 bg-surface/40 p-4 dark:border-zinc-700/70 dark:bg-zinc-900/50"
-      >
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3
-            id="prospect-offering-mobile-heading"
-            className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500"
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          {/* Website */}
+          <div
+            className={`cursor-pointer rounded-lg border border-border/70 bg-white/50 p-3 text-left transition-shadow dark:border-zinc-700/80 dark:bg-zinc-900/50 ${cardRing("website")}`}
+            onClick={() => setSelectedOffer("website")}
           >
-            Mobile app design (Stitch)
-          </h3>
-          <Smartphone className="h-4 w-4 shrink-0 text-text-secondary opacity-70 dark:text-zinc-500" aria-hidden />
-        </div>
-        <p className="mt-2 text-xs text-text-secondary dark:text-zinc-400">
-          {stitchContext ? (
-            stitchContext.kind === "place" ? (
-              <>
-                Uses your{" "}
-                <span className="font-medium text-text-primary dark:text-zinc-200">Google Business Profile</span>{" "}
-                (name, address, categories, rating, listing website) as branding context for a phone-sized UI concept.
-              </>
-            ) : (
-              <>
-                URL research only — brand context comes from the fetched page title and meta description. Open a{" "}
-                <span className="font-medium text-text-primary dark:text-zinc-200">Local Business</span> listing for
-                full Google profile fields.
-              </>
-            )
-          ) : (
-            <>
-              Open a <span className="font-medium text-text-primary dark:text-zinc-200">Local Business</span> listing or
-              run <span className="font-medium text-text-primary dark:text-zinc-200">URL research</span> above to enable
-              Stitch with branding context.
-            </>
-          )}
-        </p>
-        {stitchContext ? (
-          <p className="mt-2 rounded-lg border border-border/60 bg-white/40 px-2.5 py-2 text-[11px] text-text-secondary dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
-            {stitchBrandingSummary(stitchContext)}
-          </p>
-        ) : null}
-        <p className="mt-2 text-[11px] text-text-secondary/90 dark:text-zinc-500">
-          One-click mobile generate calls the Stitch API with{" "}
-          <span className="font-medium text-text-primary dark:text-zinc-300">Gemini 3.1 Pro</span> for deeper layout
-          reasoning (aligned with &quot;Thinking with 3.1 Pro&quot; in the Stitch app).
-        </p>
-        <p className="mt-2 text-[11px] text-text-secondary/90 dark:text-zinc-500">
-          Generation often takes a few minutes. Do not double-click — the Stitch API may still complete if the request
-          times out at the edge.
-        </p>
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-          <button
-            type="button"
-            disabled={!stitchContext || stitchMobileBusy}
-            onClick={() => void runStitchDesign("mobile")}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-violet-500/40 bg-violet-500/10 px-4 py-2.5 text-sm font-semibold text-violet-800 shadow-sm transition-colors hover:bg-violet-500/15 disabled:opacity-50 dark:border-violet-400/35 dark:bg-violet-500/15 dark:text-violet-200 dark:hover:bg-violet-500/25 sm:w-auto"
-          >
-            {stitchMobileBusy ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-            ) : (
-              <Smartphone className="h-4 w-4" aria-hidden />
-            )}
-            {stitchMobileBusy ? "Stitch (mobile)…" : "Generate mobile UI in Google Stitch"}
-          </button>
-          {stitchContext && stitchApiConfigured === false ? (
-            <button
-              type="button"
-              disabled={stitchManualTarget !== null}
-              onClick={() => void copyStitchPromptManual("mobile")}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-violet-500/50 bg-transparent px-4 py-2.5 text-sm font-semibold text-violet-900 shadow-sm transition-colors hover:bg-violet-500/10 disabled:opacity-50 dark:border-violet-400/40 dark:text-violet-200 dark:hover:bg-violet-500/15 sm:w-auto"
-            >
-              {stitchManualTarget === "mobile" ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              ) : (
-                <Copy className="h-4 w-4" aria-hidden />
-              )}
-              Copy prompt &amp; open Google Stitch
-            </button>
-          ) : null}
-        </div>
-        {stitchMobileError ? (
-          <p className="mt-2 text-xs text-red-600 dark:text-red-400" role="alert">
-            {stitchMobileError}
-          </p>
-        ) : null}
-        {stitchMobileResult ? (
-          <div className="mt-3 space-y-2 rounded-lg border border-violet-500/25 bg-violet-500/[0.06] p-3 dark:border-violet-400/20 dark:bg-violet-500/10">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-violet-900/80 dark:text-violet-200/90">
-              Stitch · mobile concept
+            <div className="flex items-center justify-between gap-2">
+              <h4 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500">
+                Website design
+              </h4>
+              <Monitor className="h-4 w-4 shrink-0 text-text-secondary opacity-70 dark:text-zinc-500" aria-hidden />
+            </div>
+            <p className="mt-2 text-[11px] leading-snug text-text-secondary dark:text-zinc-400">
+              Marketing / brochure-style multi-page website concept (desktop). {placeVsUrlIntro}
             </p>
-            {/* eslint-disable-next-line @next/next/no-img-element -- Stitch CDN screenshot URL */}
-            <img
-              src={stitchMobileResult.imageUrl}
-              alt="Stitch mobile design preview"
-              className="max-h-64 w-full rounded-md border border-border object-contain object-top dark:border-zinc-700"
-            />
-            <div className="flex flex-wrap gap-2">
-              {stitchMobileResult.hostedPreviewUrl ? (
-                <a
-                  href={stitchMobileResult.hostedPreviewUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-violet-800 hover:underline dark:text-violet-200"
-                >
-                  Open hosted preview
-                  <ExternalLink className="h-3 w-3 opacity-70" aria-hidden />
-                </a>
-              ) : null}
-              <a
-                href={stitchWithGoogleProjectUrl(stitchMobileResult.projectId)}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-xs font-medium text-violet-700 hover:underline dark:text-violet-300"
-              >
-                Open in Stitch
-                <ExternalLink className="h-3 w-3 opacity-70" aria-hidden />
-              </a>
-              <a
-                href={stitchMobileResult.htmlUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-xs font-medium text-text-secondary hover:text-text-primary hover:underline dark:text-zinc-400 dark:hover:text-zinc-300"
-              >
-                Download HTML
-                <ExternalLink className="h-3 w-3 opacity-70" aria-hidden />
-              </a>
+            <p className="mt-2 text-[10px] text-text-secondary/90 dark:text-zinc-500">
+              Generation can take a few minutes — do not double-click.
+            </p>
+            <div className="mt-2 flex flex-col gap-2">
               <button
                 type="button"
-                onClick={() =>
-                  void copyAndFlash(
-                    `Project: ${stitchMobileResult.projectId}\nScreen: ${stitchMobileResult.screenId}\n${stitchMobileResult.projectTitle}`
-                  )
-                }
-                className="inline-flex items-center gap-1 text-xs font-medium text-text-secondary hover:text-text-primary dark:text-zinc-400"
+                disabled={!stitchContext || stitchWebBusy}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void runStitchDesign("website");
+                }}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-800 disabled:opacity-50 dark:border-violet-400/35 dark:bg-violet-500/15 dark:text-violet-200"
               >
-                <Copy className="h-3 w-3" aria-hidden />
-                Copy project &amp; screen IDs
+                {stitchWebBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
+                {stitchWebBusy ? "Generating…" : "Generate website in Google Stitch"}
               </button>
+              {stitchContext && stitchApiConfigured === false ? (
+                <button
+                  type="button"
+                  disabled={stitchManualTarget !== null}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void copyStitchPromptManual("website");
+                  }}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-violet-500/50 px-3 py-2 text-xs font-semibold text-violet-900 dark:text-violet-200"
+                >
+                  {stitchManualTarget === "website" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" aria-hidden />
+                  )}
+                  Copy prompt
+                </button>
+              ) : null}
             </div>
+            {stitchWebError ? (
+              <p className="mt-2 text-[11px] text-red-600 dark:text-red-400">{stitchWebError}</p>
+            ) : null}
+            {stitchWebResult ? (
+              <div onClick={(e) => e.stopPropagation()} className="mt-2">
+                <StitchPreviewLinks
+                  result={stitchWebResult}
+                  label="Stitch · website"
+                  copyAndFlash={copyAndFlash}
+                />
+              </div>
+            ) : null}
           </div>
-        ) : null}
-      </section>
 
-      <section
-        aria-labelledby="prospect-offering-automations-heading"
-        className="rounded-xl border border-border/80 bg-surface/40 p-4 dark:border-zinc-700/70 dark:bg-zinc-900/50"
-      >
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3
-            id="prospect-offering-automations-heading"
-            className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500"
+          {/* Web app */}
+          <div
+            className={`cursor-pointer rounded-lg border border-border/70 bg-white/50 p-3 text-left dark:border-zinc-700/80 dark:bg-zinc-900/50 ${cardRing("webapp")}`}
+            onClick={() => setSelectedOffer("webapp")}
           >
-            AI automations
-          </h3>
-          <Workflow className="h-4 w-4 shrink-0 text-text-secondary opacity-70 dark:text-zinc-500" aria-hidden />
+            <div className="flex items-center justify-between gap-2">
+              <h4 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500">
+                Web apps
+              </h4>
+              <LayoutDashboard className="h-4 w-4 shrink-0 text-text-secondary opacity-70 dark:text-zinc-500" aria-hidden />
+            </div>
+            <p className="mt-2 text-[11px] leading-snug text-text-secondary dark:text-zinc-400">
+              Desktop <span className="font-medium text-text-primary dark:text-zinc-200">web application</span> UI —
+              dashboard, sidebar, tables (operator tool, not a marketing site). {placeVsUrlIntro}
+            </p>
+            <p className="mt-2 text-[10px] text-text-secondary/90 dark:text-zinc-500">
+              Generation can take a few minutes — do not double-click.
+            </p>
+            <div className="mt-2 flex flex-col gap-2">
+              <button
+                type="button"
+                disabled={!stitchContext || stitchWebAppBusy}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void runStitchDesign("webapp");
+                }}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-800 disabled:opacity-50 dark:border-violet-400/35 dark:bg-violet-500/15 dark:text-violet-200"
+              >
+                {stitchWebAppBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
+                {stitchWebAppBusy ? "Generating…" : "Generate web app in Google Stitch"}
+              </button>
+              {stitchContext && stitchApiConfigured === false ? (
+                <button
+                  type="button"
+                  disabled={stitchManualTarget !== null}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void copyStitchPromptManual("webapp");
+                  }}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-violet-500/50 px-3 py-2 text-xs font-semibold text-violet-900 dark:text-violet-200"
+                >
+                  {stitchManualTarget === "webapp" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" aria-hidden />
+                  )}
+                  Copy prompt
+                </button>
+              ) : null}
+            </div>
+            {stitchWebAppError ? (
+              <p className="mt-2 text-[11px] text-red-600 dark:text-red-400">{stitchWebAppError}</p>
+            ) : null}
+            {stitchWebAppResult ? (
+              <div onClick={(e) => e.stopPropagation()} className="mt-2">
+                <StitchPreviewLinks
+                  result={stitchWebAppResult}
+                  label="Stitch · web app"
+                  copyAndFlash={copyAndFlash}
+                />
+              </div>
+            ) : null}
+          </div>
+
+          {/* Mobile */}
+          <div
+            className={`cursor-pointer rounded-lg border border-border/70 bg-white/50 p-3 text-left dark:border-zinc-700/80 dark:bg-zinc-900/50 ${cardRing("mobile")}`}
+            onClick={() => setSelectedOffer("mobile")}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <h4 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500">
+                Mobile app design
+              </h4>
+              <Smartphone className="h-4 w-4 shrink-0 text-text-secondary opacity-70 dark:text-zinc-500" aria-hidden />
+            </div>
+            <p className="mt-2 text-[11px] leading-snug text-text-secondary dark:text-zinc-400">
+              Phone-sized operator app UI. Gemini 3.1 Pro for mobile generation. {placeVsUrlIntro}
+            </p>
+            <p className="mt-2 text-[10px] text-text-secondary/90 dark:text-zinc-500">
+              Generation can take a few minutes — do not double-click.
+            </p>
+            <div className="mt-2 flex flex-col gap-2">
+              <button
+                type="button"
+                disabled={!stitchContext || stitchMobileBusy}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void runStitchDesign("mobile");
+                }}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-800 disabled:opacity-50 dark:border-violet-400/35 dark:bg-violet-500/15 dark:text-violet-200"
+              >
+                {stitchMobileBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
+                {stitchMobileBusy ? "Generating…" : "Generate mobile UI in Google Stitch"}
+              </button>
+              {stitchContext && stitchApiConfigured === false ? (
+                <button
+                  type="button"
+                  disabled={stitchManualTarget !== null}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void copyStitchPromptManual("mobile");
+                  }}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-violet-500/50 px-3 py-2 text-xs font-semibold text-violet-900 dark:text-violet-200"
+                >
+                  {stitchManualTarget === "mobile" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" aria-hidden />
+                  )}
+                  Copy prompt
+                </button>
+              ) : null}
+            </div>
+            {stitchMobileError ? (
+              <p className="mt-2 text-[11px] text-red-600 dark:text-red-400">{stitchMobileError}</p>
+            ) : null}
+            {stitchMobileResult ? (
+              <div onClick={(e) => e.stopPropagation()} className="mt-2">
+                <StitchPreviewLinks
+                  result={stitchMobileResult}
+                  label="Stitch · mobile"
+                  copyAndFlash={copyAndFlash}
+                />
+              </div>
+            ) : null}
+          </div>
+
+          {/* AI automations */}
+          <div
+            className={`cursor-pointer rounded-lg border border-border/70 bg-white/50 p-3 text-left dark:border-zinc-700/80 dark:bg-zinc-900/50 ${cardRing("automations")}`}
+            onClick={() => setSelectedOffer("automations")}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <h4 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500">
+                AI automations
+              </h4>
+              <Workflow className="h-4 w-4 shrink-0 text-text-secondary opacity-70 dark:text-zinc-500" aria-hidden />
+            </div>
+            <p className="mt-2 text-[11px] leading-snug text-text-secondary dark:text-zinc-400">
+              Ideas from the <span className="font-medium text-text-primary dark:text-zinc-200">Highlights</span> report
+              (lead routing, follow-ups, assistants). Export a PDF to share automation opportunities — not a Stitch
+              screen.
+            </p>
+            <button
+              type="button"
+              disabled={!marketIntelReport || pdfBusy}
+              onClick={(e) => {
+                e.stopPropagation();
+                void generatePdf();
+              }}
+              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-xs font-semibold text-text-primary hover:bg-surface/80 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+            >
+              {pdfBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <FileDown className="h-3.5 w-3.5" aria-hidden />}
+              {pdfBusy ? "Building PDF…" : "Generate report (PDF)"}
+            </button>
+            {pdfMsg ? (
+              <p className="mt-2 text-[11px] text-text-secondary dark:text-zinc-400" role="status">
+                {pdfMsg}
+                {pdfFilename ? <span className="ml-1 font-mono text-[10px]">{pdfFilename}</span> : null}
+              </p>
+            ) : null}
+          </div>
         </div>
-        <p className="mt-2 text-xs text-text-secondary dark:text-zinc-400">
-          {stitchContext ? (
-            stitchContext.kind === "place" ? (
+
+        <div className="mt-6 border-t border-border/60 pt-4 dark:border-zinc-700/60">
+          <p className="text-[11px] font-medium text-text-secondary dark:text-zinc-400">
+            Share selected preview
+            {selectedOffer !== "automations" ? (
               <>
-                Uses your{" "}
-                <span className="font-medium text-text-primary dark:text-zinc-200">Google Business Profile</span> and
-                listing signals as context to propose AI workflows (lead routing, follow-ups, scheduling handoffs).
-                Generation in Stitch is not wired for automations yet — this block keeps the same prospecting pattern
-                for when it is.
+                {" "}
+                (<span className="capitalize">{selectedOffer}</span>)
               </>
             ) : (
-              <>
-                URL research only — use a <span className="font-medium text-text-primary dark:text-zinc-200">Local Business</span>{" "}
-                listing for richer automation ideas tied to categories and hours.
-              </>
-            )
-          ) : (
-            <>
-              Open a listing or URL research above; when automation generation is available, it will use the same
-              branding context as web and mobile Stitch.
-            </>
-          )}
-        </p>
-        {stitchContext ? (
-          <p className="mt-2 rounded-lg border border-border/60 bg-white/40 px-2.5 py-2 text-[11px] text-text-secondary dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
-            {stitchBrandingSummary(stitchContext)}
+              " — pick a Website, Web app, or Mobile card with a hosted preview"
+            )}
           </p>
-        ) : null}
-        <p className="mt-2 text-[11px] text-text-secondary/90 dark:text-zinc-500">
-          No API is connected yet — avoids duplicate Stitch calls while web and mobile concepts stay above.
-        </p>
-        <button
-          type="button"
-          disabled
-          className="mt-3 inline-flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl border border-border/80 bg-surface/30 px-4 py-2.5 text-sm font-semibold text-text-secondary/80 opacity-70 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-500 sm:w-auto"
-        >
-          <Workflow className="h-4 w-4" aria-hidden />
-          Generate automation concept (coming soon)
-        </button>
-      </section>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+                SMS to
+              </label>
+              <input
+                type="tel"
+                value={smsTo}
+                onChange={(e) => setSmsTo(e.target.value)}
+                placeholder="+1…"
+                className="w-full rounded-lg border border-border px-2 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-900"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+                Email to
+              </label>
+              <input
+                type="email"
+                value={emailTo}
+                onChange={(e) => setEmailTo(e.target.value)}
+                className="w-full rounded-lg border border-border px-2 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-900"
+              />
+            </div>
+          </div>
+          <div className="mt-2">
+            <label className="mb-1 block text-[10px] font-medium text-text-secondary dark:text-zinc-500">
+              SMS / email body (use {"{{previewUrl}}"}, {"{{businessName}}"})
+            </label>
+            <textarea
+              value={smsBodyTemplate}
+              onChange={(e) => setSmsBodyTemplate(e.target.value)}
+              rows={3}
+              className="w-full rounded-lg border border-border px-2 py-1.5 font-mono text-[11px] dark:border-zinc-700 dark:bg-zinc-900"
+            />
+          </div>
+          <div className="mt-2">
+            <label className="mb-1 block text-[10px] font-medium text-text-secondary dark:text-zinc-500">
+              Email subject
+            </label>
+            <input
+              value={emailSubjectTemplate}
+              onChange={(e) => setEmailSubjectTemplate(e.target.value)}
+              className="w-full rounded-lg border border-border px-2 py-1.5 font-mono text-[11px] dark:border-zinc-700 dark:bg-zinc-900"
+            />
+          </div>
+          <div className="mt-2">
+            <label className="mb-1 block text-[10px] font-medium text-text-secondary dark:text-zinc-500">
+              Email body (optional — defaults to SMS body if you only use one)
+            </label>
+            <textarea
+              value={emailBodyTemplate}
+              onChange={(e) => setEmailBodyTemplate(e.target.value)}
+              rows={3}
+              className="w-full rounded-lg border border-border px-2 py-1.5 font-mono text-[11px] dark:border-zinc-700 dark:bg-zinc-900"
+            />
+          </div>
+          <label className="mt-2 flex cursor-pointer items-center gap-2 text-[11px] text-text-secondary dark:text-zinc-400">
+            <input
+              type="checkbox"
+              checked={attachPreviewImage}
+              onChange={(e) => setAttachPreviewImage(e.target.checked)}
+              className="rounded border-border"
+            />
+            Attach preview image (MMS when screenshot is ready; email embeds when available)
+          </label>
+          {shareMsg ? (
+            <p className="mt-2 text-[11px] text-text-secondary dark:text-zinc-400" role="status">
+              {shareMsg}
+            </p>
+          ) : null}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={!canSharePreview || shareBusy !== null || !smsTo.trim()}
+              onClick={() => void sendSms()}
+              className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-xs font-semibold text-emerald-900 disabled:opacity-50 dark:border-emerald-400/35 dark:bg-emerald-500/15 dark:text-emerald-100"
+            >
+              {shareBusy === "sms" ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <MessageSquare className="h-3.5 w-3.5" aria-hidden />}
+              Send SMS
+            </button>
+            <button
+              type="button"
+              disabled={!canSharePreview || shareBusy !== null || !emailTo.trim()}
+              onClick={() => void sendEmail()}
+              className="inline-flex items-center gap-2 rounded-lg border border-sky-500/40 bg-sky-500/10 px-4 py-2 text-xs font-semibold text-sky-900 disabled:opacity-50 dark:border-sky-400/35 dark:bg-sky-500/15 dark:text-sky-100"
+            >
+              {shareBusy === "email" ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Mail className="h-3.5 w-3.5" aria-hidden />}
+              Send email
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

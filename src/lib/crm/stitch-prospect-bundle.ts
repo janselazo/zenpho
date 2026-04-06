@@ -1,5 +1,6 @@
 import {
   buildStitchMobilePrompt,
+  buildStitchWebAppPrompt,
   buildStitchWebsitePrompt,
 } from "@/lib/crm/stitch-prospect-prompts";
 import type { StitchProspectDesignPayload } from "@/lib/crm/stitch-prospect-design-types";
@@ -20,9 +21,14 @@ export function buildStitchProspectGenerationBundle(
   payload: StitchProspectDesignPayload
 ): StitchProspectGenerationBundle {
   const filled = applyStitchProspectPayloadDefaults(payload);
-  const isWebsite = filled.target === "website";
-  const prompt = isWebsite ? buildStitchWebsitePrompt(filled) : buildStitchMobilePrompt(filled);
-  const deviceType = isWebsite ? "DESKTOP" : "MOBILE";
+  const prompt =
+    filled.target === "website"
+      ? buildStitchWebsitePrompt(filled)
+      : filled.target === "webapp"
+        ? buildStitchWebAppPrompt(filled)
+        : buildStitchMobilePrompt(filled);
+  const deviceType: "DESKTOP" | "MOBILE" =
+    filled.target === "mobile" ? "MOBILE" : "DESKTOP";
 
   const businessLabel =
     filled.kind === "place"
@@ -37,7 +43,9 @@ export function buildStitchProspectGenerationBundle(
           }
         })();
 
-  const projectTitle = `Zenpho — ${businessLabel} (${isWebsite ? "web" : "mobile"})`.slice(0, 120);
+  const targetLabel =
+    filled.target === "website" ? "website" : filled.target === "webapp" ? "webapp" : "mobile";
+  const projectTitle = `Zenpho — ${businessLabel} (${targetLabel})`.slice(0, 120);
 
   return { prompt, projectTitle, deviceType };
 }
