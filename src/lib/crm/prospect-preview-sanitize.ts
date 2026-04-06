@@ -47,6 +47,8 @@ const FULL_DOC_ALLOWED_TAGS = [
   "th",
   "td",
   "button",
+  /** Stitch / Tailwind CDN builds rely on this; inline script is still stripped in exclusiveFilter. */
+  "script",
 ] as const;
 
 /** Shared: no event handlers, no data-*; URLs restricted in options. */
@@ -96,12 +98,32 @@ const fullDocumentOptions: IOptions = {
       "as",
       "integrity",
     ],
+    script: ["src", "type", "async", "defer", "crossorigin", "integrity", "nomodule"],
   },
   exclusiveFilter(frame) {
-    if (frame.tag !== "link") return false;
-    const href = String(frame.attribs?.href ?? "").trim();
-    if (!href) return true;
-    return !prospectPreviewTrustedLinkHref(href);
+    if (frame.tag === "link") {
+      const href = String(frame.attribs?.href ?? "").trim();
+      if (!href) return true;
+      return !prospectPreviewTrustedLinkHref(href);
+    }
+    if (frame.tag === "script") {
+      const inner = String(frame.text ?? "").trim();
+      if (inner) return true;
+      const src = String(frame.attribs?.src ?? "").trim();
+      if (!src) return true;
+      if (!prospectPreviewTrustedScriptSrc(src)) return true;
+      const typ = String(frame.attribs?.type ?? "").trim().toLowerCase();
+      if (
+        typ &&
+        typ !== "text/javascript" &&
+        typ !== "application/javascript" &&
+        typ !== "module"
+      ) {
+        return true;
+      }
+      return false;
+    }
+    return false;
   },
 };
 
@@ -119,6 +141,37 @@ function prospectPreviewTrustedLinkHref(href: string): boolean {
     if (h === "www.gstatic.com" || h.endsWith(".gstatic.com")) return true;
     if (h === "stitch.withgoogle.com" || h.endsWith(".withgoogle.com")) return true;
     if (h === "cdn.tailwindcss.com") return true;
+    if (h === "cdn.jsdelivr.net") return true;
+    if (h === "unpkg.com") return true;
+    if (h === "cdnjs.cloudflare.com") return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Tailwind (and some Tailwind v4 browser builds) load from &lt;script src&gt;. We allow only HTTPS
+ * CDNs that Stitch exports commonly use — no inline script (XSS).
+ */
+function prospectPreviewTrustedScriptSrc(src: string): boolean {
+  try {
+    const u = new URL(src);
+    if (u.protocol !== "https:") return false;
+    const h = u.hostname.toLowerCase();
+    if (h === "cdn.tailwindcss.com") return true;
+    if (h === "cdn.jsdelivr.net") {
+      const p = u.pathname.toLowerCase();
+      return (
+        p.startsWith("/npm/tailwindcss") ||
+        p.startsWith("/npm/@tailwindcss/") ||
+        p.startsWith("/gh/tailwindlabs/")
+      );
+    }
+    if (h === "unpkg.com") {
+      const p = u.pathname.toLowerCase();
+      return p.startsWith("/tailwindcss") || p.startsWith("/@tailwindcss/");
+    }
     return false;
   } catch {
     return false;
@@ -174,7 +227,8 @@ const bodyFragmentOptions: IOptions = {
 };
 
 /**
- * Sanitize a full HTML document from the model (allows &lt;style&gt; and vetted &lt;link&gt; for fonts/CSS; no scripts).
+ * Sanitize a full HTML document from the model (allows &lt;style&gt;, vetted &lt;link&gt;, and
+ * vetted external &lt;script src&gt; for Tailwind CDN — no inline script).
  */
 export function sanitizeProspectPreviewFullDocumentHtml(html: string): string {
   let dirty = (typeof html === "string" ? html : "").trim();
