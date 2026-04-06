@@ -617,25 +617,34 @@ function IntelContactHintsPanel({
 const HIGHLIGHT_SLIDES: {
   label: string;
   titleClass: string;
-  key: keyof Pick<MarketIntelReport, "software" | "aiAutomations" | "productGrowth">;
+  key: keyof Pick<
+    MarketIntelReport,
+    "customWebsites" | "webApps" | "mobileApps" | "aiAutomations"
+  >;
 }[] = [
   {
-    key: "software",
-    label: "Software development",
+    key: "customWebsites",
+    label: "Custom websites",
     titleClass:
       "text-[11px] font-semibold uppercase tracking-widest text-blue-600/80 dark:text-blue-400",
+  },
+  {
+    key: "webApps",
+    label: "Web apps",
+    titleClass:
+      "text-[11px] font-semibold uppercase tracking-widest text-cyan-600/80 dark:text-cyan-400",
+  },
+  {
+    key: "mobileApps",
+    label: "Mobile apps",
+    titleClass:
+      "text-[11px] font-semibold uppercase tracking-widest text-emerald-600/80 dark:text-emerald-400",
   },
   {
     key: "aiAutomations",
     label: "AI automations",
     titleClass:
       "text-[11px] font-semibold uppercase tracking-widest text-violet-600/80 dark:text-violet-400",
-  },
-  {
-    key: "productGrowth",
-    label: "Product growth",
-    titleClass:
-      "text-[11px] font-semibold uppercase tracking-widest text-emerald-600/80 dark:text-emerald-400",
   },
 ];
 
@@ -1462,7 +1471,8 @@ function ProspectsIntelligenceViewInner({
               </h2>
               <p className="mt-1 max-w-2xl text-[11px] text-text-secondary dark:text-zinc-500">
                 Overview: business snapshot with GTM insight and website scan; highlights use live signals plus
-                software / AI / growth angles. Then add a lead and run enrichment tools. Notes use plain sections
+                custom websites, web apps, mobile apps, and AI automations. Then add a lead and run enrichment tools.
+                Notes use plain sections
                 (not markdown lists).
               </p>
             </div>

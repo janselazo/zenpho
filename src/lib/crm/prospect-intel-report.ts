@@ -1,6 +1,6 @@
 /**
- * Rule-based market intel (software / AI / growth) from public signals.
- * No LLM — extend later with optional OpenAI over extracted text.
+ * Rule-based market intel (custom websites / web apps / mobile apps / AI automations)
+ * from public signals. No LLM — extend later with optional OpenAI over extracted text.
  */
 
 export type IntelSignals = {
@@ -17,9 +17,10 @@ export type IntelSignals = {
 };
 
 export type MarketIntelReport = {
-  software: string[];
+  customWebsites: string[];
+  webApps: string[];
+  mobileApps: string[];
   aiAutomations: string[];
-  productGrowth: string[];
   summary: string;
 };
 
@@ -59,9 +60,8 @@ function hostnameOnly(raw: string): string | null {
 /** Prepend highly specific lines so Highlights lead with this business, not only playbooks. */
 function injectObservedContext(
   signals: IntelSignals,
-  software: string[],
-  aiAutomations: string[],
-  productGrowth: string[]
+  customWebsites: string[],
+  aiAutomations: string[]
 ) {
   const name = signals.name?.trim() || "This business";
 
@@ -74,8 +74,8 @@ function injectObservedContext(
   const primary = formatPrimaryCategories(signals.placeTypes);
   if (primary) {
     prependUnique(
-      software,
-      `Google categories for ${name}: ${primary}. Scope site, bookings, and ops tooling around how buyers compare in that segment.`
+      customWebsites,
+      `Google categories for ${name}: ${primary}. Scope marketing site, landing pages, and proof around how buyers compare in that segment.`
     );
   }
 
@@ -84,8 +84,8 @@ function injectObservedContext(
     if (signals.rating != null) parts.push(`${signals.rating.toFixed(1)}★`);
     if (signals.reviewCount != null) parts.push(`${signals.reviewCount} Google reviews`);
     prependUnique(
-      productGrowth,
-      `${name} shows ${parts.join(", ")} — review velocity, referrals, and reputation response are credible growth levers to propose.`
+      customWebsites,
+      `${name} shows ${parts.join(", ")} — surface reviews, guarantees, and CTAs on-site so search and ad traffic converts.`
     );
   }
 
@@ -93,7 +93,7 @@ function injectObservedContext(
     const a = signals.formattedAddress.trim();
     const short = a.length > 90 ? `${a.slice(0, 88)}…` : a;
     prependUnique(
-      productGrowth,
+      customWebsites,
       `Listed address: ${short} — tie local SEO, landing pages, and paid geo to this service area.`
     );
   }
@@ -109,7 +109,7 @@ function injectObservedContext(
       signals.https === false ? "http" : signals.https === true ? "https" : null;
     const tail = [host, scheme].filter(Boolean).join(" · ");
     prependUnique(
-      software,
+      customWebsites,
       tail
         ? `Their public URL today (${tail}) — prioritize fixes and CTAs on that path before pitching net-new properties.`
         : `${name} has a site linked from Google — anchor improvements to that live funnel first.`
@@ -120,7 +120,7 @@ function injectObservedContext(
     const pt = signals.pageTitle!.trim();
     const clip = pt.length > 110 ? `${pt.slice(0, 108)}…` : pt;
     prependUnique(
-      software,
+      customWebsites,
       `Homepage title observed: “${clip}” — echo this positioning in proposed UX and outbound.`
     );
   }
@@ -129,7 +129,7 @@ function injectObservedContext(
     const md = signals.metaDescription!.trim();
     const clip = md.length > 100 ? `${md.slice(0, 98)}…` : md;
     prependUnique(
-      productGrowth,
+      customWebsites,
       `Meta description (${md.length} chars): “${clip}” — sharpen outcome + locale if CTR from search is a goal.`
     );
   }
@@ -178,21 +178,26 @@ function isRetail(types: string): boolean {
   );
 }
 
-const DEFAULT_AI_GTM: string[] = [
+const DEFAULT_AI_AUTOMATIONS: string[] = [
   "Website assistant (rules-first or light AI): answer services, hours, service area, and “how much does X cost?” with guardrails — capture name + phone + job type, then SMS the owner. Strong angle for after-hours and mobile Google traffic.",
   "Lead magnet tailored to the niche: printable checklist, cost estimator, or “questions to ask before you hire” PDF — one landing page + email capture. Use as your outreach hook (“we sketched a magnet idea for [their segment]”).",
   "Speed-to-lead automation: form or chat submit → instant SMS + email to the prospect (“we got your request”) and a task for staff — optional AI draft of a personalized follow-up the owner edits before send.",
   "Repeatable doc flow: AI-assisted first drafts of quotes, scopes, or proposals from a short intake form — cuts turnaround vs competitors still copying Word templates.",
 ];
 
-const DEFAULT_SOFTWARE: string[] = [
-  "Ship or tighten a conversion-focused web surface: fast mobile experience, clear primary CTA (call, book, quote), and structured data for local/organic — reduces bounce from high-intent clicks.",
-  "Integrations that stop lead leakage: form/chat → CRM or spreadsheet, calendar holds for estimates, optional payments for deposits — fewer “forgot to call back” losses.",
+const DEFAULT_CUSTOM_WEBSITES: string[] = [
+  "High-converting marketing site or landing: clear offer, proof, primary CTA (call, book, quote), fast mobile, and structured data for local search.",
+  "Baseline measurement on the site: conversion events on calls, forms, and chat; monthly review of top queries and landing pages — so bets tie to real demand.",
 ];
 
-const DEFAULT_GROWTH: string[] = [
-  "Baseline funnel measurement: conversion events on calls, forms, and chat; monthly review of top queries and landing pages — so growth bets are tied to real demand, not guesses.",
-  "Offer packaging tests: headline + guarantee + one proof block on the hero — small A/B or before/after on the same traffic often beats new ad spend.",
+const DEFAULT_WEB_APPS: string[] = [
+  "Web booking, client portal, or intake that works 24/7: schedules, forms, and confirmations without more phone load.",
+  "Integrations that stop lead leakage: form or chat → CRM or spreadsheet, calendar holds for estimates, optional deposits — fewer dropped follow-ups.",
+];
+
+const DEFAULT_MOBILE_APPS: string[] = [
+  "Native or cross-platform mobile when repeat usage, maps, camera, or push notifications justify a home-screen app beyond the website.",
+  "Crew or customer companion: today’s route or bookings, photos, sign-offs, or reschedule reminders — matched to how the business works on-site.",
 ];
 
 function pushUnique(arr: string[], line: string, max: number) {
@@ -206,11 +211,7 @@ function pushAi(arr: string[], line: string) {
   pushUnique(arr, line, 10);
 }
 
-function pushSoft(arr: string[], line: string) {
-  pushUnique(arr, line, 7);
-}
-
-function pushGrowth(arr: string[], line: string) {
+function pushSlide(arr: string[], line: string) {
   pushUnique(arr, line, 7);
 }
 
@@ -319,19 +320,20 @@ function buildInsightSummary(signals: IntelSignals): string {
 }
 
 export function buildMarketIntelReport(signals: IntelSignals): MarketIntelReport {
-  const software: string[] = [];
+  const customWebsites: string[] = [];
+  const webApps: string[] = [];
+  const mobileApps: string[] = [];
   const aiAutomations: string[] = [];
-  const productGrowth: string[] = [];
 
   const types = typesHaystack(signals.placeTypes);
 
   if (!signals.hasWebsite) {
-    pushSoft(
-      software,
+    pushSlide(
+      customWebsites,
       "No public website listed — start with a single high-converting landing (offer, proof, one CTA) plus click-to-call; expand to full site once messaging converts."
     );
-    pushGrowth(
-      productGrowth,
+    pushSlide(
+      customWebsites,
       "Own your funnel: first-party site + UTM-tagged links from GMB/social so you can attribute calls and forms — essential before scaling paid search or partners."
     );
     pushAi(
@@ -340,8 +342,8 @@ export function buildMarketIntelReport(signals: IntelSignals): MarketIntelReport
     );
   } else {
     if (signals.https === false) {
-      pushSoft(
-        software,
+      pushSlide(
+        customWebsites,
         "Site not served over HTTPS — fix for trust, SEO, and form security; quick win before adding chat, payments, or lead capture."
       );
     }
@@ -350,14 +352,14 @@ export function buildMarketIntelReport(signals: IntelSignals): MarketIntelReport
       "On-site chat or embedded assistant on the existing URL: qualify service + urgency, offer scheduling or callback — reduces abandonment when people don’t want to call."
     );
     if (nonEmpty(signals.metaDescription) && signals.metaDescription!.trim().length < 80) {
-      pushGrowth(
-        productGrowth,
+      pushSlide(
+        customWebsites,
         "Meta description is thin — rewrite for one clear outcome + geography/service; lifts organic CTR and aligns ad/organic messaging for the same landing page."
       );
     }
     if (!nonEmpty(signals.pageTitle)) {
-      pushSoft(
-        software,
+      pushSlide(
+        customWebsites,
         "Weak or missing page title — hurts SEO and link previews; pair with Open Graph tags when you pitch a content or social referral program."
       );
     }
@@ -369,9 +371,9 @@ export function buildMarketIntelReport(signals: IntelSignals): MarketIntelReport
     signals.rating != null &&
     signals.rating >= 3.5
   ) {
-    pushGrowth(
-      productGrowth,
-      "Review volume is modest — automate post-job SMS/email (“How did we do?”) with a direct link; stack with a simple referral incentive in the same flow."
+    pushSlide(
+      customWebsites,
+      "Review volume is modest — surface proof blocks and post-service follow-up CTAs on the site; pair with SMS/email that deep-links to Google."
     );
     pushAi(
       aiAutomations,
@@ -380,12 +382,12 @@ export function buildMarketIntelReport(signals: IntelSignals): MarketIntelReport
   }
 
   if (signals.rating != null && signals.rating < 4) {
-    pushGrowth(
-      productGrowth,
-      "Rating headroom — pair operational fixes with visible response on reviews; ticketing + SLA reminders prevent issues that show up as one-star spikes."
+    pushSlide(
+      customWebsites,
+      "Rating headroom — pair operational fixes with visible response on reviews; make “how we handle issues” obvious on the homepage and contact paths."
     );
-    pushSoft(
-      software,
+    pushSlide(
+      webApps,
       "Customer comms hub: shared inbox for SMS/email/reviews with assignment — so nothing falls through while you improve the underlying service."
     );
   }
@@ -395,30 +397,38 @@ export function buildMarketIntelReport(signals: IntelSignals): MarketIntelReport
       aiAutomations,
       "Menu, hours, and dietary FAQ bot + “Book a table” / ordering deep links — captures tourists and voice-searchers who won’t read a PDF menu."
     );
-    pushGrowth(
-      productGrowth,
+    pushSlide(
+      customWebsites,
       "Lead magnet: “private event / catering one-pager” or seasonal menu PDF behind email — fuels B2B and party inquiries beyond walk-in traffic."
     );
-    pushSoft(
-      software,
+    pushSlide(
+      webApps,
       "Reservations or waitlist integration on the hero — if they still rely on phone-only peak hours, that’s revenue left on the table."
+    );
+    pushSlide(
+      mobileApps,
+      "Branded ordering or loyalty app for repeat guests when pickup/delivery and push promos matter more than a one-off web visit."
     );
   } else if (isFitnessWellness(types)) {
     pushAi(
       aiAutomations,
       "Trial or class-pack assistant: goals, schedule, location → suggest program + book intro — reduces front-desk back-and-forth and no-shows with SMS reminders."
     );
-    pushGrowth(
-      productGrowth,
+    pushSlide(
+      customWebsites,
       "Magnet: free “7-day reset” or mobility checklist PDF — segment leads by goal for email/SMS nurture into membership."
+    );
+    pushSlide(
+      mobileApps,
+      "Member app for class packs, check-in, and schedule changes — cuts front-desk load when people live on their phones."
     );
   } else if (isHealthMedical(types)) {
     pushAi(
       aiAutomations,
       "Pre-visit intake and insurance FAQ assistant — collects demographics and reason for visit; staff gets a structured summary (HIPAA-scoped design in scope)."
     );
-    pushGrowth(
-      productGrowth,
+    pushSlide(
+      customWebsites,
       "Trust content as magnet: “what to expect first visit” or condition-specific checklist — captures high-intent searchers comparing providers."
     );
   } else if (isLegal(types)) {
@@ -426,8 +436,8 @@ export function buildMarketIntelReport(signals: IntelSignals): MarketIntelReport
       aiAutomations,
       "Intake bot triages practice area and urgency — routes to the right form and discourages off-scope leads early; owner reviews sensitive replies before client-facing send."
     );
-    pushGrowth(
-      productGrowth,
+    pushSlide(
+      customWebsites,
       "Gated guide: “before you sign / questions for your [practice area] consult” — positions you as educator and gives a natural reason to follow up."
     );
   } else if (isRealEstate(types)) {
@@ -435,27 +445,39 @@ export function buildMarketIntelReport(signals: IntelSignals): MarketIntelReport
       aiAutomations,
       "Listing Q&A + buyer/seller assistant (neighborhood, schools, process timeline) with handoff to agent calendar — scales first-touch without losing human close."
     );
-    pushGrowth(
-      productGrowth,
+    pushSlide(
+      customWebsites,
       "Valuation or “what’s my home worth” mini-flow as lead magnet — pair with automated market snapshot email sequence."
+    );
+    pushSlide(
+      mobileApps,
+      "Pocket listing alerts and saved-search mobile experience for serious buyers — when push and maps beat email-only nurture."
     );
   } else if (isHomeTrade(types)) {
     pushAi(
       aiAutomations,
       "Emergency vs routine triage chat: zip + issue type + photos upload prompt → dispatches to on-call tech and sends ETA template — wins “need someone now” searches."
     );
-    pushSoft(
-      software,
+    pushSlide(
+      webApps,
       "Estimate request → calendar slot + crew assignment — reduces phone tag and makes same-day response a competitive differentiator."
+    );
+    pushSlide(
+      mobileApps,
+      "Field tech app: today’s route, job photos, and customer sign-off in one flow — fewer clipboard handoffs and disputed completions."
     );
   } else if (isRetail(types)) {
     pushAi(
       aiAutomations,
       "Store assistant: hours, parking, inventory FAQs (“Do you carry X?”), and promotions — bridge online discovery to in-store visit or BOPIS if they add online selling later."
     );
-    pushGrowth(
-      productGrowth,
+    pushSlide(
+      customWebsites,
       "Local SEO + structured events/sales pages; magnet could be loyalty signup or stylist/design consult for high-AOV categories."
+    );
+    pushSlide(
+      mobileApps,
+      "Store or loyalty companion when BOPIS, barcode lookup, or repeat purchase reminders belong in-app, not only on the web."
     );
   }
 
@@ -464,12 +486,12 @@ export function buildMarketIntelReport(signals: IntelSignals): MarketIntelReport
       aiAutomations,
       "Inventory-aware assistant (make/model trims in stock) + service booking handoff — answers “do you have this?” and routes test-drive vs service intent without burning BDC time."
     );
-    pushGrowth(
-      productGrowth,
+    pushSlide(
+      customWebsites,
       "Fixed-ops lead magnet: service specials, recall checks, or maintenance intervals by mileage — balances floor traffic with repeat repair revenue."
     );
-    pushSoft(
-      software,
+    pushSlide(
+      mobileApps,
       "Mobile trade-in / appraisal request + SMS follow-up — meets shoppers comparing dealers before they visit the lot."
     );
   }
@@ -479,19 +501,20 @@ export function buildMarketIntelReport(signals: IntelSignals): MarketIntelReport
       aiAutomations,
       "Missed-call SMS + booking reminders + review requests in one automation stack — classic local GTM stack; position as “done in two weeks” implementation."
     );
-    pushSoft(
-      software,
+    pushSlide(
+      webApps,
       "Customer booking portal or embedded scheduler if they’re phone-heavy — unlocks 24/7 capture without more headcount."
     );
   }
 
-  injectObservedContext(signals, software, aiAutomations, productGrowth);
+  injectObservedContext(signals, customWebsites, aiAutomations);
 
-  ensureMinimum(software, DEFAULT_SOFTWARE, 2, 7);
-  ensureMinimum(aiAutomations, DEFAULT_AI_GTM, 2, 10);
-  ensureMinimum(productGrowth, DEFAULT_GROWTH, 2, 7);
+  ensureMinimum(customWebsites, DEFAULT_CUSTOM_WEBSITES, 2, 7);
+  ensureMinimum(webApps, DEFAULT_WEB_APPS, 2, 7);
+  ensureMinimum(mobileApps, DEFAULT_MOBILE_APPS, 2, 7);
+  ensureMinimum(aiAutomations, DEFAULT_AI_AUTOMATIONS, 2, 10);
 
   const summary = buildInsightSummary(signals);
 
-  return { software, aiAutomations, productGrowth, summary };
+  return { customWebsites, webApps, mobileApps, aiAutomations, summary };
 }

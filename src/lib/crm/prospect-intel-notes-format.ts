@@ -23,14 +23,17 @@ export function formatReportAsPlainNotes(
     );
   }
 
-  if (report.software.length) {
-    chunks.push("SOFTWARE", ...indentBulletLines(report.software), "");
+  if (report.customWebsites.length) {
+    chunks.push("CUSTOM WEBSITES", ...indentBulletLines(report.customWebsites), "");
+  }
+  if (report.webApps.length) {
+    chunks.push("WEB APPS", ...indentBulletLines(report.webApps), "");
+  }
+  if (report.mobileApps.length) {
+    chunks.push("MOBILE APPS", ...indentBulletLines(report.mobileApps), "");
   }
   if (report.aiAutomations.length) {
     chunks.push("AI AUTOMATIONS", ...indentBulletLines(report.aiAutomations), "");
-  }
-  if (report.productGrowth.length) {
-    chunks.push("PRODUCT GROWTH", ...indentBulletLines(report.productGrowth), "");
   }
 
   const summaryBody = report.summary.trim().split("\n");
