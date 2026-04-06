@@ -50,7 +50,7 @@ Visual quality (2024–2026 product UI, not a generic template):
 - Layout: generous whitespace; 8/12/16px rhythm; separate sections with subtle borders, soft tints, or light gradients (CSS only).
 - Polish: soft shadows, large radii on cards; optional subtle gradient or mesh hero band; pill-shaped primary buttons.
 - Components: inline SVG icons where helpful; styled image placeholders (aspect-ratio, rounded) if no photos.
-- Motion: CSS only — transition on :hover / :focus-visible for links and buttons; no JavaScript behavior beyond anchor navigation.`.trim();
+- Motion: CSS only — transition on :hover / :focus-visible for links and buttons; no JavaScript — page changes use the **:target + :has** pattern below, not scroll.`.trim();
 
 export function buildStitchWebsitePrompt(payload: StitchProspectDesignPayload): string {
   const block =
@@ -60,20 +60,30 @@ export function buildStitchWebsitePrompt(payload: StitchProspectDesignPayload): 
 
   return `${block}
 
-Task: Output **one complete HTML5 document** (desktop-width marketing **multi-page** experience) for this business. All “pages” live in **one file** as full-viewport **sections** with **in-page navigation** — no separate URLs, no client-side router, **no inline \`<script>\`** (Tailwind or other CDN \`<script src>\` is OK if needed). Interactions = **click nav → scroll to section** only.
+Task: Output **one complete HTML5 document** (desktop-width marketing **multi-page** experience) for this business. Each “page” is a **separate full-viewport screen** inside the same file: **only one page is visible at a time** — **no long single scroll** stacking all pages. **No** separate HTTP URLs, **no** JS router, **no inline \`<script>\`** (Tailwind CDN \`<script src>\` OK). Interaction = **click nav → swap visible page** using **CSS only** (\`:target\` + \`:has\`).
 
-## Structure checklist (required section \`id\`s)
-Each section must be at least **min-height: 100vh** (or equivalent full panel), with **scroll-margin-top** so titles clear a sticky header.
+## Page switch pattern (required — copy this behavior in \`<style>\`)
+Wrap all page \`<section>\`s in \`<main>\` (or one clear wrapper). Each page: \`<section id="home" class="page">\` … \`</section>\` (ids exactly: \`home\`, \`services\`, \`expertise\`, \`reviews\`, \`location\`).
 
-1. **#home** — Hero: real business name, sharp value proposition, primary CTA (Book / Call / Get quote). Prefer **asymmetric or full-bleed** layout — not a tiny centered title-only block; strong typographic or gradient visual anchor.
+Use CSS equivalent to:
+
+- Hide every \`.page\` by default; **\`min-height: 100vh\`** per page; **\`overflow-y: auto\`** inside a page if its content is tall (so the **outer document** does not become one giant scroll of all pages).
+- **Initial view:** \`body:not(:has(main .page:target)) #home\` **and** \`#home:target\` → \`display: block\` (or flex).
+- When \`#services\`, \`#expertise\`, \`#reviews\`, or \`#location\` matches \`:target\`, show that section the same way.
+- When a **non-home** page is \`:target\`, hide \`#home\` via \`body:has(#services:target) #home\`, \`body:has(#expertise:target) #home\`, etc.
+- **Active nav styling (no JS):** e.g. \`body:has(#services:target) nav a[href="#services"] { font-weight: 700; border-bottom: … }\` (repeat per tab).
+
+Nav links: \`<a href="#home">\`, \`#services\`, \`#expertise\`, \`#reviews\`, \`#location\`. **Do not** rely on \`scroll-behavior\` or stacked \`min-height:100vh\` sections in one scroll — use **show/hide** as above.
+
+## Structure checklist (required \`id\`s on \`<section class="page">\`)
+1. **#home** — Hero: real business name, sharp value proposition, primary CTA (Book / Call / Get quote). Prefer **asymmetric or full-bleed** layout; strong typographic or gradient anchor.
 2. **#services** — Service cards or list **specific to the category** (use Google types / title / description — not generic lorem).
-3. **#expertise** — Why us: process steps, credentials, team or certification placeholders, trust copy grounded in the vertical.
+3. **#expertise** — Why us: process, credentials, team or certification placeholders, trust copy grounded in the vertical.
 4. **#reviews** — If rating/review count exists in context, show them prominently; else credible testimonial-style quotes with initials/roles.
-5. **#location** — Hours-style block, map placeholder, contact; **use listing address and phone when provided** above.
+5. **#location** — Hours, map placeholder, contact; **use listing address and phone when provided** above.
 
-## Navigation
-- **Sticky or fixed top header** with links: Home, Services, Expertise, Reviews, Location → \`<a href="#home">\`, \`#services\`, \`#expertise\`, \`#reviews\`, \`#location\`.
-- In \`<style>\`: \`html { scroll-behavior: smooth; }\` plus section scroll-margin for the header height.
+## Navigation chrome
+- **Sticky or fixed top header** with the five anchor links; optional **Book** CTA button as \`<a href="#location">\` or \`tel:\` when phone exists.
 
 ## Copy
 Each section must have **unique, substantive copy** tied to the business name, category, and location — **not** repeated placeholder paragraphs across sections.
@@ -91,7 +101,7 @@ Visual quality (premium operator app, 2024–2026):
 - Cards: soft shadow, large radius; labels in small caps or overline style; **realistic fake data** (first names, pet/job types, times, currency) for credibility.
 - List rows: optional chevron; three-dot menus as visual affordances; 44px+ tap targets.
 - Typography hierarchy and accessible contrast; CSS-only :hover/:focus-visible transitions where useful.
-- **No inline \`<script>\`** — navigation is anchor scroll only (CDN \`<script src>\` for Tailwind OK if used).`.trim();
+- **No inline \`<script>\`** — page swap is CSS \`:target\` / \`:has\` only (CDN \`<script src>\` for Tailwind OK if used).`.trim();
 
 export function buildStitchMobilePrompt(payload: StitchProspectDesignPayload): string {
   const block =
@@ -106,28 +116,32 @@ export function buildStitchMobilePrompt(payload: StitchProspectDesignPayload): s
 
   return `${block}
 
-Task: ${gmb}Output **one complete HTML5 document** for a **phone-width operator / owner app** (not a consumer marketing site). All “screens” are **vertical full-viewport sections** in **one file**, switched by **bottom nav anchor links** — no router, **no inline \`<script>\`**, \`html { scroll-behavior: smooth; }\` in \`<style>\`.
+Task: ${gmb}Output **one complete HTML5 document** for a **phone-width operator / owner app** (not a consumer marketing site). Each tab is a **separate full-screen** — **only one screen visible at a time** (no one long scroll through all tabs). Same file, **no JS router**, **no inline \`<script>\`**.
 
-## Structure checklist (required section \`id\`s)
-Each panel **min-height: 100vh**. Add **padding-bottom** on scrollable content and/or **scroll-margin-bottom** so the last lines aren’t hidden behind the fixed tab bar.
+## Page switch pattern (required — CSS only)
+Use \`<section id="home" class="page">\`, \`id="clients"\`, \`id="book"\`, \`id="reviews"\` inside \`<main>\`. CSS same idea as the website prompt:
 
+- All \`.page\` hidden by default; **\`min-height: 100vh\`** (minus fixed chrome); **\`overflow-y: auto\`** on the active page content so **only that tab scrolls**, not the whole document stacked.
+- **Default:** show \`#home\` when no hash: \`body:not(:has(main .page:target)) #home\` and \`#home:target\` → visible.
+- Show \`#clients\`, \`#book\`, \`#reviews\` when those ids are \`:target\`; when any of those is targeted, **hide** \`#home\` via \`body:has(#clients:target) #home\`, \`body:has(#book:target) #home\`, \`body:has(#reviews:target) #home\`.
+- **Bottom tab active state:** \`body:has(#book:target) nav.bottom-tabs a[href="#book"] { … }\` (repeat per tab). Fixed **bottom** nav with four \`<a href="#home">\` … \`#reviews\`.
+
+## Structure checklist (required \`id\`s)
 1. **#home** (dashboard)
-   - KPI row: e.g. status (“Accepting …”) and revenue or bookings today (plausible numbers).
-   - **New request / notification** row (e.g. incoming booking) with chevron.
-   - **Today’s schedule**: 2–3 list items with small thumbnails or icons, pet/client names, service labels, times; overflow menu dots.
-   - Primary action: large **“+ Book”** or similar — **link to \`#book\`** (anchor), not a fake form submit.
+   - KPI row: status (“Accepting …”) and revenue or bookings today (plausible numbers).
+   - **New request** row with chevron.
+   - **Today’s schedule**: 2–3 rows with thumbnails/icons, names, services, times.
+   - Primary **“+ Book”** as \`<a href="#book">\` (switches tab), not a form submit.
 
-2. **#clients**
-   - Search or “Add” affordance; scrollable list of **category-appropriate** clients (e.g. pet + owner for grooming, job title for trades — infer from Google types / title).
+2. **#clients** — Search / add affordance; **category-appropriate** client list.
 
-3. **#book**
-   - Week strip or calendar placeholder + time slots or upcoming appointments list; clear book flow visual.
+3. **#book** — Calendar / slots / appointments.
 
-4. **#reviews**
-   - Rating summary (use **real stars/review count from context** when present); 1–2 review snippets; CTA row to request reviews (SMS/email copy as label only).
+4. **#reviews** — Rating summary from context when available; snippets; request-review CTA row.
 
-## Bottom navigation (fixed)
-Four items: **Home**, **Clients**, **Book**, **Reviews** → \`<a href="#home">\`, \`#clients\`, \`#book\`, \`#reviews\` with inline SVG or icon font via allowed \`<link>\` (e.g. Google Fonts / Material icons).
+## Chrome
+- **Fixed top bar** (avatar, business name, bell).
+- **Fixed bottom** tab bar: Home, Clients, Book, Reviews → \`<a href="#home">\`, \`#clients\`, \`#book\`, \`#reviews\` with inline SVG or icon \`<link>\` (e.g. Google Fonts / Material icons).
 
 ## Copy
 Unique copy per section, tied to the business name and vertical — not the same paragraph repeated.
