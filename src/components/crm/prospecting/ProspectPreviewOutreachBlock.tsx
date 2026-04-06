@@ -91,7 +91,7 @@ const STITCH_HELP_URL =
   typeof process.env.NEXT_PUBLIC_STITCH_APP_URL === "string" &&
   process.env.NEXT_PUBLIC_STITCH_APP_URL.trim()
     ? process.env.NEXT_PUBLIC_STITCH_APP_URL.trim()
-    : "https://labs.google.com/fx/en/tools/stitch";
+    : "https://stitch.withgoogle.com/";
 
 function stitchBrandingSummary(ctx: ProspectStitchContext): string {
   if (ctx.kind === "place") {
@@ -159,7 +159,10 @@ export default function ProspectPreviewOutreachBlock({
   const [stitchMobileResult, setStitchMobileResult] = useState<StitchOk | null>(null);
   const [stitchWebError, setStitchWebError] = useState<string | null>(null);
   const [stitchMobileError, setStitchMobileError] = useState<string | null>(null);
-  /** null = not loaded; false = no STITCH_API_KEY (MCP-only / copy-prompt path; see GET /api/prospecting/stitch-config). */
+  /**
+   * Whether GET /api/prospecting/stitch-config saw STITCH_API_KEY (informational only).
+   * We do not disable generate on `false` — stale false happens after adding a key without refresh, or first fetch timing.
+   */
   const [stitchApiConfigured, setStitchApiConfigured] = useState<boolean | null>(null);
   const [stitchConfigCheckFailed, setStitchConfigCheckFailed] = useState(false);
   const [stitchManualTarget, setStitchManualTarget] = useState<null | "website" | "mobile">(null);
@@ -190,7 +193,7 @@ export default function ProspectPreviewOutreachBlock({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reportKey]);
 
   useEffect(() => {
     setStitchWebBusy(false);
@@ -1009,16 +1012,17 @@ export default function ProspectPreviewOutreachBlock({
         {stitchContext && stitchApiConfigured === false ? (
           <div className="rounded-xl border border-border/80 bg-surface/35 p-3 dark:border-zinc-700 dark:bg-zinc-900/45">
             <p className="text-xs font-semibold text-text-primary dark:text-zinc-100">
-              One-click Stitch needs a server key
+              Server does not see STITCH_API_KEY yet
             </p>
             <p className="mt-1.5 text-[11px] leading-relaxed text-text-secondary dark:text-zinc-400">
-              Cursor MCP does not run in the browser. Use{" "}
+              You can still try <span className="font-medium text-text-primary dark:text-zinc-200">Generate</span> — if it
+              errors, add <span className="font-mono">STITCH_API_KEY</span> to{" "}
+              <span className="font-mono">.env.local</span> / Vercel and <span className="font-medium">restart</span>{" "}
+              <span className="font-mono">npm run dev</span> (local) or redeploy. Or use{" "}
               <span className="font-medium text-text-primary dark:text-zinc-200">
                 Copy prompt &amp; open Google Stitch
               </span>{" "}
-              (Web/Mobile), or set <span className="font-mono">STITCH_API_KEY</span> in{" "}
-              <span className="font-mono">.env.local</span> / Vercel and restart — see{" "}
-              <span className="font-mono">.env.example</span>.
+              — see <span className="font-mono">.env.example</span>.
             </p>
           </div>
         ) : null}
@@ -1077,7 +1081,7 @@ export default function ProspectPreviewOutreachBlock({
           <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <button
               type="button"
-              disabled={!stitchContext || stitchWebBusy || stitchApiConfigured === false}
+              disabled={!stitchContext || stitchWebBusy}
               onClick={() => void runStitchDesign("website")}
               className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-violet-500/40 bg-violet-500/10 px-4 py-2.5 text-sm font-semibold text-violet-800 shadow-sm transition-colors hover:bg-violet-500/15 disabled:opacity-50 dark:border-violet-400/35 dark:bg-violet-500/15 dark:text-violet-200 dark:hover:bg-violet-500/25 sm:w-auto"
             >
@@ -1155,7 +1159,7 @@ export default function ProspectPreviewOutreachBlock({
           <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <button
               type="button"
-              disabled={!stitchContext || stitchMobileBusy || stitchApiConfigured === false}
+              disabled={!stitchContext || stitchMobileBusy}
               onClick={() => void runStitchDesign("mobile")}
               className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-violet-500/40 bg-violet-500/10 px-4 py-2.5 text-sm font-semibold text-violet-800 shadow-sm transition-colors hover:bg-violet-500/15 disabled:opacity-50 dark:border-violet-400/35 dark:bg-violet-500/15 dark:text-violet-200 dark:hover:bg-violet-500/25 sm:w-auto"
             >

@@ -60,7 +60,13 @@ const SESSION_SCROLL_TO_REPORT_KEY = "zenpho:prospect-intel-scroll-v1";
 
 type IntelGlanceFact = { label: string; value: string };
 
-type IntelHighlightSignalTag = { key: string; label: string; active: boolean };
+type IntelHighlightSignalTag = {
+  key: string;
+  /** True = gap flagged (amber chip). */
+  active: boolean;
+  /** Chip text: problem wording when active, clear “pass” wording when inactive. */
+  displayLabel: string;
+};
 
 /** Stars below this count as a weak listing (when Google returns a rating). */
 const HIGHLIGHT_LOW_RATING_THRESHOLD = 4;
@@ -71,20 +77,39 @@ const HIGHLIGHT_LOW_REVIEWS_THRESHOLD = 25;
  * Opportunity tags for Google listings. “No claimed profile” uses a thin-profile heuristic:
  * no owner website on the listing and/or no phone on the listing (Places API does not expose GBP verification).
  */
+function listingCheckPassLabel(p: PlacesSearchPlace, key: string): string {
+  switch (key) {
+    case "no_website":
+      return "Website on listing";
+    case "no_claimed_profile":
+      return "Site & phone on listing";
+    case "low_reviews":
+      return p.userRatingCount == null ? "Review count not shown" : "Enough reviews";
+    case "low_rating":
+      return p.rating == null ? "Rating not shown" : "Rating OK";
+    default:
+      return "OK";
+  }
+}
+
 function buildIntelHighlightSignalTags(
   ar:
     | { kind: "url"; urlMeta: { url: string } }
     | { kind: "place"; place: PlacesSearchPlace }
     | null
 ): IntelHighlightSignalTag[] {
-  const labels: { key: string; label: string }[] = [
-    { key: "no_website", label: "No Website" },
-    { key: "no_claimed_profile", label: "No Claimed Profile" },
-    { key: "low_reviews", label: "Low Reviews" },
-    { key: "low_rating", label: "Low Rating" },
+  const gapLabels: { key: string; label: string }[] = [
+    { key: "no_website", label: "No website" },
+    { key: "no_claimed_profile", label: "No claimed profile" },
+    { key: "low_reviews", label: "Low reviews" },
+    { key: "low_rating", label: "Low rating" },
   ];
   if (!ar || ar.kind !== "place") {
-    return labels.map((l) => ({ ...l, active: false }));
+    return gapLabels.map((l) => ({
+      key: l.key,
+      active: false,
+      displayLabel: l.label,
+    }));
   }
   const p = ar.place;
   const noWebsite = !p.websiteUri?.trim();
@@ -101,7 +126,14 @@ function buildIntelHighlightSignalTags(
     low_reviews: lowReviews,
     low_rating: lowRating,
   };
-  return labels.map((l) => ({ ...l, active: byKey[l.key] ?? false }));
+  return gapLabels.map((l) => {
+    const active = byKey[l.key] ?? false;
+    return {
+      key: l.key,
+      active,
+      displayLabel: active ? l.label : listingCheckPassLabel(p, l.key),
+    };
+  });
 }
 
 function humanizePlaceType(t: string): string {
@@ -615,7 +647,7 @@ const HIGHLIGHT_SLIDES: {
 function IntelHighlightsCarousel({
   report,
   glanceFacts,
-  /** Google listing heuristic chips; omit for URL reports. `active` = gap flagged (amber); inactive = muted OK. */
+  /** Google listing heuristic chips; omit for URL reports. `active` = gap (amber); inactive = pass copy + green tint. */
   placeListingSignals,
 }: {
   report: MarketIntelReport;
@@ -673,20 +705,20 @@ function IntelHighlightsCarousel({
                 <span
                   key={t.key}
                   role="listitem"
-                  title={t.active ? "Flagged as a listing gap" : "Not flagged for this listing"}
+                  title={t.active ? "Listing gap — prospecting opportunity" : "This check passed for this listing"}
                   className={
                     t.active
                       ? "rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-950 dark:border-amber-500/35 dark:bg-amber-500/15 dark:text-amber-100"
-                      : "rounded-full border border-border/70 bg-surface/50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-text-secondary/55 dark:border-zinc-600 dark:bg-zinc-900/45 dark:text-zinc-500"
+                      : "rounded-full border border-emerald-200/70 bg-emerald-50/80 px-2.5 py-0.5 text-[10px] font-medium text-emerald-950 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100/95"
                   }
                 >
-                  {t.label}
+                  {t.displayLabel}
                 </span>
               ))}
             </div>
             {placeListingSignals.length > 0 && placeListingSignals.every((t) => !t.active) ? (
-              <p className="mt-2 text-[10px] leading-snug text-text-secondary/70 dark:text-zinc-500">
-                No listing gaps flagged for these heuristics.
+              <p className="mt-2 text-[10px] leading-snug text-emerald-800/90 dark:text-emerald-200/80">
+                All listing checks passed — nothing flagged for these heuristics.
               </p>
             ) : null}
           </div>
