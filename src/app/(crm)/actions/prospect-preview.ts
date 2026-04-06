@@ -28,7 +28,16 @@ export async function sendProspectPreviewSmsAction(input: {
     return { ok: false as const, error: "Set a From phone number in Twilio integration settings." };
   }
 
-  const previewUrl = prospectPreviewPageUrl(input.previewId.trim());
+  const { data: row } = await auth.supabase
+    .from("prospect_preview")
+    .select("screenshot_url, screenshot_status, slug")
+    .eq("id", input.previewId.trim())
+    .maybeSingle();
+
+  const previewUrl = prospectPreviewPageUrl(
+    input.previewId.trim(),
+    row?.slug?.trim() || null,
+  );
   const body = mergeProspectOutreachTemplate(input.bodyTemplate, {
     previewUrl,
     businessName: input.businessName,
@@ -38,14 +47,9 @@ export async function sendProspectPreviewSmsAction(input: {
   const client = twilio(creds.accountSid, creds.authToken);
 
   let mediaUrl: string | undefined;
-  if (input.includeMmsImage && auth.supabase) {
-    const { data: shot } = await auth.supabase
-      .from("prospect_preview")
-      .select("screenshot_url, screenshot_status")
-      .eq("id", input.previewId.trim())
-      .maybeSingle();
-    const u = shot?.screenshot_url?.trim();
-    if (shot?.screenshot_status === "ready" && u?.startsWith("https://")) {
+  if (input.includeMmsImage && row) {
+    const u = row.screenshot_url?.trim();
+    if (row.screenshot_status === "ready" && u?.startsWith("https://")) {
       mediaUrl = u;
     }
   }
@@ -115,7 +119,16 @@ export async function sendProspectPreviewEmailAction(input: {
     };
   }
 
-  const previewUrl = prospectPreviewPageUrl(input.previewId.trim());
+  const { data: prevRow } = await auth.supabase
+    .from("prospect_preview")
+    .select("slug, screenshot_url, screenshot_status")
+    .eq("id", input.previewId.trim())
+    .maybeSingle();
+
+  const previewUrl = prospectPreviewPageUrl(
+    input.previewId.trim(),
+    prevRow?.slug?.trim() || null,
+  );
   const subj = mergeProspectOutreachTemplate(input.subjectTemplate, {
     previewUrl,
     businessName: input.businessName,
@@ -127,14 +140,9 @@ export async function sendProspectPreviewEmailAction(input: {
     yourName: input.yourName,
   });
 
-  const { data: shot } = await auth.supabase
-    .from("prospect_preview")
-    .select("screenshot_url, screenshot_status")
-    .eq("id", input.previewId.trim())
-    .maybeSingle();
-
-  const img = shot?.screenshot_url?.trim();
-  const hasImg = shot?.screenshot_status === "ready" && img?.startsWith("https://");
+  const img = prevRow?.screenshot_url?.trim();
+  const hasImg =
+    prevRow?.screenshot_status === "ready" && img?.startsWith("https://");
 
   let previewImageHtml = "";
   let attachments:

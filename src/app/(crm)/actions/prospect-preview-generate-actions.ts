@@ -12,7 +12,15 @@ export type { GenerateProspectPreviewPayload };
 export async function generateProspectPreviewAction(
   payload: GenerateProspectPreviewPayload,
 ): Promise<
-  | { ok: true; previewId: string; previewUrl: string; businessName: string; screenshotStatus: string; screenshotUrl: string | null }
+  | {
+      ok: true;
+      previewId: string;
+      previewUrl: string;
+      previewSlug: string;
+      businessName: string;
+      screenshotStatus: string;
+      screenshotUrl: string | null;
+    }
   | { ok: false; error: string }
 > {
   try {
@@ -34,18 +42,20 @@ export async function getProspectPreviewStatusAction(previewId: string) {
 
   const { data, error } = await auth.supabase
     .from("prospect_preview")
-    .select("screenshot_url, screenshot_status, business_name")
+    .select("screenshot_url, screenshot_status, business_name, slug")
     .eq("id", id)
     .maybeSingle();
 
   if (error) return { ok: false as const, error: error.message };
   if (!data) return { ok: false as const, error: "Preview not found." };
 
+  const slug = (data.slug as string | null | undefined)?.trim() || null;
+
   return {
     ok: true as const,
     screenshotUrl: data.screenshot_url as string | null,
     screenshotStatus: data.screenshot_status as string,
     businessName: data.business_name as string,
-    previewUrl: prospectPreviewPageUrl(id),
+    previewUrl: prospectPreviewPageUrl(id, slug),
   };
 }

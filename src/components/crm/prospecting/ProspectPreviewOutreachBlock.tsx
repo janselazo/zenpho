@@ -53,6 +53,8 @@ function writeLs(key: string, value: string) {
 export type ProspectPreviewOutreachSnapshot = {
   previewId: string;
   previewUrl: string;
+  /** Pretty path segment (from business name); optional for older previews. */
+  previewSlug?: string;
   businessName: string;
   screenshotStatus: string;
   screenshotUrl: string | null;
@@ -325,24 +327,34 @@ export default function ProspectPreviewOutreachBlock({
         </div>
       ) : (
         <div className="mt-3 space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <a
-              href={preview.previewUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-medium hover:bg-surface dark:border-zinc-600 dark:bg-zinc-800 dark:hover:bg-zinc-700"
-            >
-              Open preview
-              <ExternalLink className="h-3.5 w-3.5 opacity-70" aria-hidden />
-            </a>
-            <button
-              type="button"
-              onClick={() => void copyAndFlash(preview.previewUrl)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-surface dark:border-zinc-600 dark:hover:bg-zinc-800"
-            >
-              <Copy className="h-3.5 w-3.5" aria-hidden />
-              Copy link
-            </button>
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <a
+                href={preview.previewUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-medium hover:bg-surface dark:border-zinc-600 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+              >
+                Open preview
+                <ExternalLink className="h-3.5 w-3.5 opacity-70" aria-hidden />
+              </a>
+              <button
+                type="button"
+                onClick={() => void copyAndFlash(preview.previewUrl)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-surface dark:border-zinc-600 dark:hover:bg-zinc-800"
+              >
+                <Copy className="h-3.5 w-3.5" aria-hidden />
+                Copy link
+              </button>
+            </div>
+            {preview.previewSlug ? (
+              <p className="text-[11px] text-text-secondary dark:text-zinc-500">
+                URL slug from business name:{" "}
+                <span className="font-mono text-text-primary/90 dark:text-zinc-300">
+                  {preview.previewSlug}
+                </span>
+              </p>
+            ) : null}
           </div>
 
           <div>

@@ -24,7 +24,15 @@ export async function captureProspectPreviewScreenshot(previewId: string): Promi
     return;
   }
 
-  const pageUrl = prospectPreviewPageUrl(previewId);
+  const { data: row } = await admin
+    .from("prospect_preview")
+    .select("slug")
+    .eq("id", previewId)
+    .maybeSingle();
+  const pageUrl = prospectPreviewPageUrl(
+    previewId,
+    (row?.slug as string | null | undefined)?.trim() || null,
+  );
   const remoteImageUrl = await fetchMicrolinkScreenshotUrl(pageUrl);
 
   if (!remoteImageUrl) {

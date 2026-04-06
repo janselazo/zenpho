@@ -12,7 +12,27 @@ export function getPublicAppOrigin(): string {
   return "http://localhost:3000";
 }
 
-export function prospectPreviewPageUrl(previewId: string): string {
+/**
+ * Public link for a prospect preview.
+ * - If `PREVIEW_PUBLIC_HOST` is set (e.g. `preview.zenpho.com`) and `slug` is set → `https://preview.zenpho.com/{slug}`.
+ * - Else if `slug` is set → `{PUBLIC_APP_URL}/preview/{slug}`.
+ * - Else → `{PUBLIC_APP_URL}/preview/{uuid}` (legacy).
+ */
+export function prospectPreviewPageUrl(previewId: string, slug?: string | null): string {
+  const hostOnly = process.env.PREVIEW_PUBLIC_HOST?.trim()
+    .replace(/^https?:\/\//i, "")
+    .replace(/\/.*$/, "")
+    .trim();
+
+  const s = typeof slug === "string" && slug.trim() ? slug.trim() : null;
+
+  if (hostOnly && s) {
+    return `https://${hostOnly}/${s}`;
+  }
+
   const base = getPublicAppOrigin();
+  if (s) {
+    return `${base}/preview/${s}`;
+  }
   return `${base}/preview/${previewId}`;
 }

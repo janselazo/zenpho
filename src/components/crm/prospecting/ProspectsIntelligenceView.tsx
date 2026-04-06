@@ -870,6 +870,7 @@ function ProspectsIntelligenceViewInner({
           [key]: {
             previewId: r.previewId,
             previewUrl: r.previewUrl,
+            previewSlug: r.previewSlug,
             businessName: r.businessName,
             screenshotStatus: r.screenshotStatus,
             screenshotUrl: r.screenshotUrl,

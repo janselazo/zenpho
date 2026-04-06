@@ -1,6 +1,7 @@
 import { generateProspectPreviewDocument } from "@/lib/crm/prospect-preview-generate";
 import { captureProspectPreviewScreenshot } from "@/lib/crm/prospect-preview-screenshot";
 import { prospectPreviewPageUrl } from "@/lib/crm/prospect-preview-public-url";
+import { prospectPreviewSlugFromBusiness } from "@/lib/crm/prospect-preview-slug";
 import type { PlacesSearchPlace } from "@/lib/crm/places-types";
 import { primaryPlaceTypeLabel } from "@/lib/crm/places-search-ui";
 import { requireAgencyStaff } from "@/app/(crm)/actions/prospect-preview-agency";
@@ -25,6 +26,8 @@ export type GenerateProspectPreviewResult =
       ok: true;
       previewId: string;
       previewUrl: string;
+      /** URL path segment when using pretty links (from Google business name + id). */
+      previewSlug: string;
       businessName: string;
       screenshotStatus: string;
       screenshotUrl: string | null;
@@ -266,7 +269,21 @@ async function runGenerateProspectPreviewCore(
       error: "Could not save preview (database returned no id).",
     };
   }
-  console.log("[prospectPreview] generate: success", { previewId: id });
+
+  const previewSlug = prospectPreviewSlugFromBusiness(
+    (row.business_name as string) || input.businessName,
+    id,
+  );
+  const { error: slugErr } = await auth.supabase
+    .from("prospect_preview")
+    .update({ slug: previewSlug })
+    .eq("id", id);
+  if (slugErr) {
+    console.warn("[prospectPreview] generate: slug update failed", slugErr.message);
+  }
+
+  const previewUrl = prospectPreviewPageUrl(id, previewSlug);
+  console.log("[prospectPreview] generate: success", { previewId: id, previewSlug });
   void captureProspectPreviewScreenshot(id).catch(() => {
     /* logged in screenshot helper path */
   });
@@ -274,7 +291,8 @@ async function runGenerateProspectPreviewCore(
   return {
     ok: true as const,
     previewId: id,
-    previewUrl: prospectPreviewPageUrl(id),
+    previewUrl,
+    previewSlug,
     businessName: (row.business_name as string) || input.businessName,
     screenshotStatus: row.screenshot_status as string,
     screenshotUrl: (row.screenshot_url as string | null) ?? null,
