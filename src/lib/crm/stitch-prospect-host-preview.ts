@@ -5,7 +5,6 @@ import { captureProspectPreviewScreenshot } from "@/lib/crm/prospect-preview-scr
 import { prospectPreviewPageUrl } from "@/lib/crm/prospect-preview-public-url";
 import { sanitizeProspectPreviewFullDocumentHtml } from "@/lib/crm/prospect-preview-sanitize";
 import { primaryPlaceTypeLabel } from "@/lib/crm/places-search-ui";
-import { stitchWithGoogleScreenPreviewUrl } from "@/lib/crm/stitch-withgoogle-url";
 
 const MAX_HTML_BYTES = 2_500_000;
 const FETCH_MS = 60_000;
@@ -84,8 +83,6 @@ export async function persistStitchHtmlAsProspectPreview(params: {
   userId: string;
   payload: StitchProspectDesignPayload;
   htmlExportUrl: string;
-  stitchProjectId: string;
-  stitchScreenId: string;
 }): Promise<StitchHostedPreview | null> {
   const raw = await fetchHtmlFromStitchExportUrl(params.htmlExportUrl);
   if (!raw?.trim()) {
@@ -102,10 +99,6 @@ export async function persistStitchHtmlAsProspectPreview(params: {
   }
 
   const meta = stitchPayloadToPreviewMeta(params.payload);
-  const stitchPreviewUrl = stitchWithGoogleScreenPreviewUrl(
-    params.stitchProjectId,
-    params.stitchScreenId
-  );
 
   const inserted = await insertProspectPreviewWithSlug({
     supabase: params.supabase,
@@ -115,7 +108,6 @@ export async function persistStitchHtmlAsProspectPreview(params: {
     businessName: meta.businessName,
     businessAddress: meta.businessAddress,
     primaryCategory: meta.primaryCategory,
-    stitchPreviewUrl: stitchPreviewUrl || null,
   });
 
   if (!inserted.ok) {

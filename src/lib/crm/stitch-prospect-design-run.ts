@@ -71,8 +71,6 @@ export async function runStitchProspectDesign(
       userId: auth.user.id,
       payload,
       htmlExportUrl: html,
-      stitchProjectId: project.projectId,
-      stitchScreenId: screen.screenId,
     });
 
     return {

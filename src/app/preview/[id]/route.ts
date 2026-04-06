@@ -1,6 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { prospectPreviewHtmlResponseHeaders } from "@/lib/crm/prospect-preview-frame-ancestors";
-import { isAllowedStitchPreviewRedirectUrl } from "@/lib/crm/stitch-withgoogle-url";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -31,25 +30,12 @@ export async function GET(
     return new Response("Not found", { status: 404 });
   }
 
-  const base = admin.from("prospect_preview").select("html, stitch_preview_url");
+  const base = admin.from("prospect_preview").select("html");
   const { data, error } = isUuid
     ? await base.eq("id", segment).maybeSingle()
     : await base.eq("slug", segment).maybeSingle();
 
-  if (error) {
-    return new Response("Not found", { status: 404 });
-  }
-
-  const stitchRaw =
-    data &&
-    typeof (data as { stitch_preview_url?: unknown }).stitch_preview_url === "string"
-      ? (data as { stitch_preview_url: string }).stitch_preview_url.trim()
-      : "";
-  if (stitchRaw && isAllowedStitchPreviewRedirectUrl(stitchRaw)) {
-    return Response.redirect(stitchRaw, 302);
-  }
-
-  if (!data?.html?.trim()) {
+  if (error || !data?.html?.trim()) {
     return new Response("Not found", { status: 404 });
   }
 
