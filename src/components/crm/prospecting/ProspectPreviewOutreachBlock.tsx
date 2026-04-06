@@ -45,10 +45,57 @@ type SelectedOffer = StitchTarget | "automations";
 
 const STITCH_HELP_URL = stitchWithGoogleAppHomeUrl();
 
-const DEFAULT_SMS_TEMPLATE =
-  "Hi — here's a quick preview we put together for {{businessName}}:\n\n{{previewUrl}}\n\nHappy to walk through it if helpful.";
-const DEFAULT_EMAIL_SUBJECT = "Preview for {{businessName}}";
-const DEFAULT_EMAIL_BODY = DEFAULT_SMS_TEMPLATE;
+type ShareTemplates = {
+  smsBody: string;
+  emailSubject: string;
+  emailBody: string;
+};
+
+function defaultShareTemplatesForOffer(offer: SelectedOffer): ShareTemplates {
+  switch (offer) {
+    case "website":
+      return {
+        smsBody:
+          "Hi — here's a quick website concept preview for {{businessName}}:\n\n{{previewUrl}}\n\nHappy to walk through it if helpful.",
+        emailSubject: "Website concept preview for {{businessName}}",
+        emailBody:
+          "Hi —\n\nSharing a hosted website concept preview we generated for {{businessName}}:\n\n{{previewUrl}}\n\nThis is a brochure-style marketing site direction (desktop). Happy to review and iterate.\n\nThanks,",
+      };
+    case "webapp":
+      return {
+        smsBody:
+          "Hi — here's a desktop web app UI preview for {{businessName}}:\n\n{{previewUrl}}\n\nOperator-style dashboard (not a marketing site). Say if you'd like a walkthrough.",
+        emailSubject: "Web app UI preview for {{businessName}}",
+        emailBody:
+          "Hi —\n\nSharing a desktop web application UI preview for {{businessName}}:\n\n{{previewUrl}}\n\nDashboard, sidebar, and tables — built for operators, not a brochure site. Happy to walk through flows and next steps.\n\nThanks,",
+      };
+    case "mobile":
+      return {
+        smsBody:
+          "Hi — here's a mobile app UI preview for {{businessName}}:\n\n{{previewUrl}}\n\nPhone-sized operator flows. Reply if you want a quick tour.",
+        emailSubject: "Mobile app UI preview for {{businessName}}",
+        emailBody:
+          "Hi —\n\nSharing a phone-sized mobile app UI preview for {{businessName}}:\n\n{{previewUrl}}\n\nOriented toward day-to-day operator tasks. I can talk through screens and prioritization.\n\nThanks,",
+      };
+    case "automations":
+      return {
+        smsBody:
+          "Hi — we outlined AI automation opportunities for {{businessName}} (lead routing, follow-ups, assistants). Reply if you'd like the PDF or a short call.",
+        emailSubject: "AI automation ideas for {{businessName}}",
+        emailBody:
+          "Hi —\n\nWe summarized AI automation opportunities for {{businessName}} from our research (routing, follow-ups, assistants). I can send the PDF or walk through highlights — just reply.\n\n(Hosted preview links apply to Website / Web app / Mobile; use Generate report (PDF) on the AI automations card.)\n\nThanks,",
+      };
+  }
+}
+
+function createInitialShareTemplates(): Record<SelectedOffer, ShareTemplates> {
+  return {
+    website: defaultShareTemplatesForOffer("website"),
+    webapp: defaultShareTemplatesForOffer("webapp"),
+    mobile: defaultShareTemplatesForOffer("mobile"),
+    automations: defaultShareTemplatesForOffer("automations"),
+  };
+}
 
 function stitchBrandingSummary(ctx: ProspectStitchContext): string {
   if (ctx.kind === "place") {
@@ -165,9 +212,7 @@ export default function ProspectPreviewOutreachBlock({
 
   const [smsTo, setSmsTo] = useState(contactPhone);
   const [emailTo, setEmailTo] = useState(contactEmail);
-  const [smsBodyTemplate, setSmsBodyTemplate] = useState(DEFAULT_SMS_TEMPLATE);
-  const [emailSubjectTemplate, setEmailSubjectTemplate] = useState(DEFAULT_EMAIL_SUBJECT);
-  const [emailBodyTemplate, setEmailBodyTemplate] = useState(DEFAULT_EMAIL_BODY);
+  const [shareTemplates, setShareTemplates] = useState(createInitialShareTemplates);
   const [attachPreviewImage, setAttachPreviewImage] = useState(true);
   const [shareBusy, setShareBusy] = useState<null | "sms" | "email">(null);
   const [shareMsg, setShareMsg] = useState<string | null>(null);
@@ -193,6 +238,18 @@ export default function ProspectPreviewOutreachBlock({
     }
     return "Business";
   }, [businessNameProp, stitchContext]);
+
+  const activeShareTpl = shareTemplates[selectedOffer];
+
+  const updateActiveShareTemplates = useCallback(
+    (patch: Partial<ShareTemplates>) => {
+      setShareTemplates((prev) => ({
+        ...prev,
+        [selectedOffer]: { ...prev[selectedOffer], ...patch },
+      }));
+    },
+    [selectedOffer]
+  );
 
   useEffect(() => {
     setSmsTo(contactPhone);
@@ -248,6 +305,7 @@ export default function ProspectPreviewOutreachBlock({
     setStitchWebAppError(null);
     setStitchMobileError(null);
     setSelectedOffer("website");
+    setShareTemplates(createInitialShareTemplates());
     setShareMsg(null);
     setPdfMsg(null);
     setPdfFilename(null);
@@ -435,7 +493,7 @@ export default function ProspectPreviewOutreachBlock({
     const res = await sendProspectPreviewSmsAction({
       previewId: id,
       to: smsTo.trim(),
-      bodyTemplate: smsBodyTemplate,
+      bodyTemplate: shareTemplates[selectedOffer].smsBody,
       businessName: resolvedBusinessName,
       yourName: yourName.trim() || undefined,
       includeMmsImage: attachPreviewImage,
@@ -448,8 +506,9 @@ export default function ProspectPreviewOutreachBlock({
     }
   }, [
     hostedPreviewIdForSelection,
+    selectedOffer,
+    shareTemplates,
     smsTo,
-    smsBodyTemplate,
     resolvedBusinessName,
     yourName,
     attachPreviewImage,
@@ -466,8 +525,8 @@ export default function ProspectPreviewOutreachBlock({
     const res = await sendProspectPreviewEmailAction({
       previewId: id,
       to: emailTo.trim(),
-      subjectTemplate: emailSubjectTemplate,
-      bodyTemplate: emailBodyTemplate,
+      subjectTemplate: shareTemplates[selectedOffer].emailSubject,
+      bodyTemplate: shareTemplates[selectedOffer].emailBody,
       businessName: resolvedBusinessName,
       yourName: yourName.trim() || undefined,
     });
@@ -479,9 +538,9 @@ export default function ProspectPreviewOutreachBlock({
     }
   }, [
     hostedPreviewIdForSelection,
+    selectedOffer,
+    shareTemplates,
     emailTo,
-    emailSubjectTemplate,
-    emailBodyTemplate,
     resolvedBusinessName,
     yourName,
   ]);
@@ -493,36 +552,42 @@ export default function ProspectPreviewOutreachBlock({
     }
     setPdfBusy(true);
     setPdfMsg(null);
-    const res = await generateProspectAutomationPdfAction({
-      report: marketIntelReport,
-      businessName: resolvedBusinessName,
-    });
-    setPdfBusy(false);
-    if (!res.ok) {
-      setPdfMsg(res.error);
-      return;
-    }
-    setPdfFilename(res.filename);
-    setPdfMsg("Report downloaded.");
     try {
-      const bin = atob(res.pdfBase64);
-      const bytes = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      const blob = new Blob([bytes], { type: "application/pdf" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = res.filename;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      setPdfMsg("Could not start download in this browser.");
+      const res = await generateProspectAutomationPdfAction({
+        report: marketIntelReport,
+        businessName: resolvedBusinessName,
+      });
+      if (!res.ok) {
+        setPdfMsg(res.error);
+        return;
+      }
+      setPdfFilename(res.filename);
+      setPdfMsg("Report downloaded.");
+      try {
+        const bin = atob(res.pdfBase64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        const blob = new Blob([bytes], { type: "application/pdf" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = res.filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch {
+        setPdfMsg("Could not start download in this browser.");
+      }
+    } catch (e) {
+      setPdfMsg(e instanceof Error ? e.message : "PDF request failed.");
+    } finally {
+      setPdfBusy(false);
     }
   }, [marketIntelReport, resolvedBusinessName]);
 
+  /** Inset ring only — avoids `ring-offset-*` painting outside the card (some browsers composite that oddly). */
   const cardRing = (key: SelectedOffer) =>
     selectedOffer === key
-      ? "ring-2 ring-violet-500/50 ring-offset-2 ring-offset-surface dark:ring-violet-400/40 dark:ring-offset-zinc-950"
+      ? "ring-2 ring-inset ring-violet-500/50 dark:ring-violet-400/40"
       : "";
 
   const placeVsUrlIntro =
@@ -581,9 +646,11 @@ export default function ProspectPreviewOutreachBlock({
           Design concepts &amp; outreach
         </h3>
         <p className="mt-1 text-[11px] text-text-secondary dark:text-zinc-500">
-          Select a card to share its hosted preview via SMS or email (after generation). Use{" "}
+          Select a card to choose which hosted preview you send (after generation). SMS and email copy are saved per
+          card type and update when you switch cards. Use{" "}
           <span className="font-mono">{"{{previewUrl}}"}</span> and{" "}
-          <span className="font-mono">{"{{businessName}}"}</span> in templates.
+          <span className="font-mono">{"{{businessName}}"}</span> for Website, Web app, and Mobile; AI automations
+          templates focus on the PDF follow-up.
         </p>
         {stitchContext ? (
           <p className="mt-3 rounded-lg border border-border/60 bg-white/40 px-2.5 py-2 text-[11px] text-text-secondary dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
@@ -821,20 +888,51 @@ export default function ProspectPreviewOutreachBlock({
 
         <div className="mt-6 border-t border-border/60 pt-4 dark:border-zinc-700/60">
           <p className="text-[11px] font-medium text-text-secondary dark:text-zinc-400">
-            Share selected preview
+            Share outreach
             {selectedOffer !== "automations" ? (
               <>
                 {" "}
-                (<span className="capitalize">{selectedOffer}</span>)
+                · templates for{" "}
+                <span className="text-text-primary dark:text-zinc-200">
+                  {selectedOffer === "website"
+                    ? "Website design"
+                    : selectedOffer === "webapp"
+                      ? "Web apps"
+                      : "Mobile app design"}
+                </span>
               </>
             ) : (
-              " — pick a Website, Web app, or Mobile card with a hosted preview"
+              <>
+                {" "}
+                · templates for <span className="text-text-primary dark:text-zinc-200">AI automations</span> (hosted
+                link send requires Website, Web app, or Mobile)
+              </>
             )}
           </p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
-                SMS to
+
+          <div className="mt-4 grid gap-6 lg:grid-cols-2 lg:items-stretch">
+            <section
+              className="flex min-h-0 flex-col rounded-xl border border-border/70 bg-white/45 p-4 dark:border-zinc-700/70 dark:bg-zinc-900/35"
+              aria-labelledby="prospect-share-sms-heading"
+            >
+              <div className="flex items-center gap-2 border-b border-border/50 pb-2 dark:border-zinc-700/50">
+                <MessageSquare className="h-4 w-4 text-emerald-700/80 dark:text-emerald-400/90" aria-hidden />
+                <h4
+                  id="prospect-share-sms-heading"
+                  className="text-xs font-semibold uppercase tracking-widest text-text-secondary/85 dark:text-zinc-400"
+                >
+                  SMS
+                </h4>
+              </div>
+              <p className="mt-2 text-[10px] leading-snug text-text-secondary dark:text-zinc-500">
+                Merge tags: <span className="font-mono">{"{{previewUrl}}"}</span>,{" "}
+                <span className="font-mono">{"{{businessName}}"}</span>
+                {selectedOffer === "automations" ? (
+                  <> — optional for this card (no Stitch preview link).</>
+                ) : null}
+              </p>
+              <label className="mb-1 mt-3 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+                To
               </label>
               <input
                 type="tel"
@@ -843,10 +941,59 @@ export default function ProspectPreviewOutreachBlock({
                 placeholder="+1…"
                 className="w-full rounded-lg border border-border px-2 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-900"
               />
-            </div>
-            <div>
-              <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
-                Email to
+              <label className="mb-1 mt-3 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+                Message
+              </label>
+              <textarea
+                value={activeShareTpl.smsBody}
+                onChange={(e) => updateActiveShareTemplates({ smsBody: e.target.value })}
+                rows={5}
+                className="min-h-[7.5rem] w-full flex-1 rounded-lg border border-border px-2 py-1.5 font-mono text-[11px] dark:border-zinc-700 dark:bg-zinc-900"
+              />
+              <label className="mt-3 flex cursor-pointer items-start gap-2 text-[11px] text-text-secondary dark:text-zinc-400">
+                <input
+                  type="checkbox"
+                  checked={attachPreviewImage}
+                  onChange={(e) => setAttachPreviewImage(e.target.checked)}
+                  className="mt-0.5 rounded border-border"
+                />
+                <span>Attach preview screenshot for MMS when ready (email may embed when available).</span>
+              </label>
+              <div className="mt-4">
+                <button
+                  type="button"
+                  disabled={!canSharePreview || shareBusy !== null || !smsTo.trim()}
+                  onClick={() => void sendSms()}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2.5 text-xs font-semibold text-emerald-900 disabled:opacity-50 dark:border-emerald-400/35 dark:bg-emerald-500/15 dark:text-emerald-100 sm:w-auto"
+                >
+                  {shareBusy === "sms" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                  ) : (
+                    <MessageSquare className="h-3.5 w-3.5" aria-hidden />
+                  )}
+                  Send SMS
+                </button>
+              </div>
+            </section>
+
+            <section
+              className="flex min-h-0 flex-col rounded-xl border border-border/70 bg-white/45 p-4 dark:border-zinc-700/70 dark:bg-zinc-900/35"
+              aria-labelledby="prospect-share-email-heading"
+            >
+              <div className="flex items-center gap-2 border-b border-border/50 pb-2 dark:border-zinc-700/50">
+                <Mail className="h-4 w-4 text-sky-700/80 dark:text-sky-400/90" aria-hidden />
+                <h4
+                  id="prospect-share-email-heading"
+                  className="text-xs font-semibold uppercase tracking-widest text-text-secondary/85 dark:text-zinc-400"
+                >
+                  Email
+                </h4>
+              </div>
+              <p className="mt-2 text-[10px] leading-snug text-text-secondary dark:text-zinc-500">
+                Same merge tags as SMS. Body can be longer and distinct per service type.
+              </p>
+              <label className="mb-1 mt-3 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+                To
               </label>
               <input
                 type="email"
@@ -854,74 +1001,46 @@ export default function ProspectPreviewOutreachBlock({
                 onChange={(e) => setEmailTo(e.target.value)}
                 className="w-full rounded-lg border border-border px-2 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-900"
               />
-            </div>
+              <label className="mb-1 mt-3 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+                Subject
+              </label>
+              <input
+                value={activeShareTpl.emailSubject}
+                onChange={(e) => updateActiveShareTemplates({ emailSubject: e.target.value })}
+                className="w-full rounded-lg border border-border px-2 py-1.5 font-mono text-[11px] dark:border-zinc-700 dark:bg-zinc-900"
+              />
+              <label className="mb-1 mt-3 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+                Body
+              </label>
+              <textarea
+                value={activeShareTpl.emailBody}
+                onChange={(e) => updateActiveShareTemplates({ emailBody: e.target.value })}
+                rows={6}
+                className="min-h-[9rem] w-full flex-1 rounded-lg border border-border px-2 py-1.5 font-mono text-[11px] dark:border-zinc-700 dark:bg-zinc-900"
+              />
+              <div className="mt-4">
+                <button
+                  type="button"
+                  disabled={!canSharePreview || shareBusy !== null || !emailTo.trim()}
+                  onClick={() => void sendEmail()}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-sky-500/40 bg-sky-500/10 px-4 py-2.5 text-xs font-semibold text-sky-900 disabled:opacity-50 dark:border-sky-400/35 dark:bg-sky-500/15 dark:text-sky-100 sm:w-auto"
+                >
+                  {shareBusy === "email" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                  ) : (
+                    <Mail className="h-3.5 w-3.5" aria-hidden />
+                  )}
+                  Send email
+                </button>
+              </div>
+            </section>
           </div>
-          <div className="mt-2">
-            <label className="mb-1 block text-[10px] font-medium text-text-secondary dark:text-zinc-500">
-              SMS / email body (use {"{{previewUrl}}"}, {"{{businessName}}"})
-            </label>
-            <textarea
-              value={smsBodyTemplate}
-              onChange={(e) => setSmsBodyTemplate(e.target.value)}
-              rows={3}
-              className="w-full rounded-lg border border-border px-2 py-1.5 font-mono text-[11px] dark:border-zinc-700 dark:bg-zinc-900"
-            />
-          </div>
-          <div className="mt-2">
-            <label className="mb-1 block text-[10px] font-medium text-text-secondary dark:text-zinc-500">
-              Email subject
-            </label>
-            <input
-              value={emailSubjectTemplate}
-              onChange={(e) => setEmailSubjectTemplate(e.target.value)}
-              className="w-full rounded-lg border border-border px-2 py-1.5 font-mono text-[11px] dark:border-zinc-700 dark:bg-zinc-900"
-            />
-          </div>
-          <div className="mt-2">
-            <label className="mb-1 block text-[10px] font-medium text-text-secondary dark:text-zinc-500">
-              Email body (optional — defaults to SMS body if you only use one)
-            </label>
-            <textarea
-              value={emailBodyTemplate}
-              onChange={(e) => setEmailBodyTemplate(e.target.value)}
-              rows={3}
-              className="w-full rounded-lg border border-border px-2 py-1.5 font-mono text-[11px] dark:border-zinc-700 dark:bg-zinc-900"
-            />
-          </div>
-          <label className="mt-2 flex cursor-pointer items-center gap-2 text-[11px] text-text-secondary dark:text-zinc-400">
-            <input
-              type="checkbox"
-              checked={attachPreviewImage}
-              onChange={(e) => setAttachPreviewImage(e.target.checked)}
-              className="rounded border-border"
-            />
-            Attach preview image (MMS when screenshot is ready; email embeds when available)
-          </label>
+
           {shareMsg ? (
-            <p className="mt-2 text-[11px] text-text-secondary dark:text-zinc-400" role="status">
+            <p className="mt-4 text-[11px] text-text-secondary dark:text-zinc-400" role="status">
               {shareMsg}
             </p>
           ) : null}
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={!canSharePreview || shareBusy !== null || !smsTo.trim()}
-              onClick={() => void sendSms()}
-              className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-xs font-semibold text-emerald-900 disabled:opacity-50 dark:border-emerald-400/35 dark:bg-emerald-500/15 dark:text-emerald-100"
-            >
-              {shareBusy === "sms" ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <MessageSquare className="h-3.5 w-3.5" aria-hidden />}
-              Send SMS
-            </button>
-            <button
-              type="button"
-              disabled={!canSharePreview || shareBusy !== null || !emailTo.trim()}
-              onClick={() => void sendEmail()}
-              className="inline-flex items-center gap-2 rounded-lg border border-sky-500/40 bg-sky-500/10 px-4 py-2 text-xs font-semibold text-sky-900 disabled:opacity-50 dark:border-sky-400/35 dark:bg-sky-500/15 dark:text-sky-100"
-            >
-              {shareBusy === "email" ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Mail className="h-3.5 w-3.5" aria-hidden />}
-              Send email
-            </button>
-          </div>
         </div>
       </div>
     </div>
