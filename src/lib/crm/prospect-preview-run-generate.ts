@@ -248,6 +248,7 @@ async function runGenerateProspectPreviewCore(
     businessName: input.businessName,
     businessAddress: input.businessAddress,
     primaryCategory: input.primaryCategory,
+    previewDeviceType: "DESKTOP",
   });
 
   if (!inserted.ok) {

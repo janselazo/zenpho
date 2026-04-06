@@ -21,6 +21,8 @@ export async function insertProspectPreviewWithSlug(params: {
   businessName: string;
   businessAddress: string | null;
   primaryCategory: string | null;
+  /** MOBILE: public preview URL uses a phone-width iframe shell. */
+  previewDeviceType?: "MOBILE" | "DESKTOP" | null;
 }): Promise<InsertProspectPreviewResult> {
   const nameForSlug = params.businessName.trim() || "preview";
 
@@ -38,6 +40,7 @@ export async function insertProspectPreviewWithSlug(params: {
         business_name: params.businessName,
         business_address: params.businessAddress,
         primary_category: params.primaryCategory,
+        preview_device_type: params.previewDeviceType ?? null,
         screenshot_status: "pending",
         slug,
       })

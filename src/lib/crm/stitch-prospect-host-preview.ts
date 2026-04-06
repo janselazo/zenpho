@@ -108,6 +108,7 @@ export async function persistStitchHtmlAsProspectPreview(params: {
     businessName: meta.businessName,
     businessAddress: meta.businessAddress,
     primaryCategory: meta.primaryCategory,
+    previewDeviceType: params.payload.target === "mobile" ? "MOBILE" : "DESKTOP",
   });
 
   if (!inserted.ok) {
