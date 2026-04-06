@@ -103,6 +103,7 @@ export default function ProspectPreviewOutreachBlock({
   const [generateClickPending, setGenerateClickPending] = useState(false);
   const [servicesOverride, setServicesOverride] = useState("");
   const [colorVibeOverride, setColorVibeOverride] = useState("");
+  const [shareTab, setShareTab] = useState<"sms" | "email">("sms");
 
   useEffect(() => {
     setSmsTemplate(readLs(LS_SMS, DEFAULT_SMS));
@@ -110,6 +111,12 @@ export default function ProspectPreviewOutreachBlock({
     setEmailBody(readLs(LS_EMAIL_BODY, DEFAULT_EMAIL_BODY));
     setYourName(readLs(LS_YOUR_NAME, ""));
   }, []);
+
+  /** Prefill “your name” with the prospect business for {{yourName}}; user can edit. */
+  useEffect(() => {
+    if (!preview?.businessName?.trim()) return;
+    setYourName(preview.businessName.trim());
+  }, [preview?.previewId]);
 
   useEffect(() => {
     setSmsTo(smsDefaultTo.trim());
@@ -373,141 +380,261 @@ export default function ProspectPreviewOutreachBlock({
             ) : null}
           </div>
 
-          <div className="space-y-2">
-            <label className="block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
-              Your name (optional placeholder)
-            </label>
-            <input
-              value={yourName}
-              onChange={(e) => setYourName(e.target.value)}
-              onBlur={persistTemplates}
-              className="w-full max-w-md rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-              placeholder="Alex"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
-              Message template — SMS and social copy ({"{{previewUrl}}"} {"{{businessName}}"} {"{{yourName}}"})
-            </label>
-            <textarea
-              value={smsTemplate}
-              onChange={(e) => setSmsTemplate(e.target.value)}
-              onBlur={persistTemplates}
-              rows={3}
-              className="w-full rounded-lg border border-border px-3 py-2 font-mono text-xs dark:border-zinc-700 dark:bg-zinc-900"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
-              Email subject
-            </label>
-            <input
-              value={emailSubj}
-              onChange={(e) => setEmailSubj(e.target.value)}
-              onBlur={persistTemplates}
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-            />
-            <label className="block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
-              Email body
-            </label>
-            <textarea
-              value={emailBody}
-              onChange={(e) => setEmailBody(e.target.value)}
-              onBlur={persistTemplates}
-              rows={4}
-              className="w-full rounded-lg border border-border px-3 py-2 font-mono text-xs dark:border-zinc-700 dark:bg-zinc-900"
-            />
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {showSms ? (
-              <div className="flex min-w-[12rem] flex-1 flex-col gap-1">
-                <input
-                  type="tel"
-                  value={smsTo}
-                  onChange={(e) => setSmsTo(e.target.value)}
-                  placeholder="To (E.164)"
-                  className="rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-                />
-                <button
-                  type="button"
-                  disabled={smsBusy || !smsTo.trim()}
-                  onClick={() => void onSendSms()}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-zinc-900 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
-                >
-                  {smsBusy ? (
-                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                  ) : (
-                    <Send className="h-4 w-4" aria-hidden />
-                  )}
-                  Send SMS
-                </button>
+          <div className="rounded-xl border border-border/90 bg-gradient-to-b from-surface/80 to-surface/40 p-4 shadow-sm dark:border-zinc-700/80 dark:from-zinc-900/60 dark:to-zinc-950/40">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h4 className="text-sm font-semibold text-text-primary dark:text-zinc-100">
+                  Share with client
+                </h4>
+                <p className="mt-0.5 text-xs text-text-secondary dark:text-zinc-500">
+                  Templates support{" "}
+                  <code className="rounded bg-border/40 px-1 py-px text-[10px] dark:bg-zinc-800">
+                    {"{{previewUrl}}"}
+                  </code>
+                  ,{" "}
+                  <code className="rounded bg-border/40 px-1 py-px text-[10px] dark:bg-zinc-800">
+                    {"{{businessName}}"}
+                  </code>
+                  ,{" "}
+                  <code className="rounded bg-border/40 px-1 py-px text-[10px] dark:bg-zinc-800">
+                    {"{{yourName}}"}
+                  </code>
+                  .
+                </p>
               </div>
-            ) : null}
-
-            {showEmail ? (
-              <div className="flex min-w-[12rem] flex-1 flex-col gap-1">
-                <input
-                  type="email"
-                  value={emailTo}
-                  onChange={(e) => setEmailTo(e.target.value)}
-                  placeholder="To email"
-                  className="rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-                />
-                <button
-                  type="button"
-                  disabled={emailBusy || !emailTo.trim()}
-                  onClick={() => void onSendEmail()}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-xs font-semibold hover:bg-surface dark:border-zinc-600 dark:hover:bg-zinc-800"
-                >
-                  {emailBusy ? (
-                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                  ) : (
-                    <Mail className="h-4 w-4" aria-hidden />
-                  )}
-                  Send email (Resend)
-                </button>
-                <a
-                  href={mailtoFallbackHref()}
-                  className="text-center text-[11px] font-medium text-accent hover:underline dark:text-blue-400"
-                >
-                  Open in email app instead
-                </a>
-              </div>
-            ) : null}
-          </div>
-
-          {(showFb || showIg) && (
-            <div className="flex flex-wrap gap-2 border-t border-border/70 pt-3 dark:border-zinc-800">
-              {showFb ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    void copyAndFlash(composedForShare);
-                    window.open(fbHandoff ?? "", "_blank", "noopener,noreferrer");
-                  }}
-                  className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-surface dark:border-zinc-600 dark:hover:bg-zinc-800"
-                >
-                  <MessageCircle className="h-4 w-4" aria-hidden />
-                  Messenger (copy + open)
-                </button>
-              ) : null}
-              {showIg ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    void copyAndFlash(composedForShare);
-                    window.open(igUrl ?? "", "_blank", "noopener,noreferrer");
-                  }}
-                  className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-surface dark:border-zinc-600 dark:hover:bg-zinc-800"
-                >
-                  Instagram (copy + open)
-                </button>
-              ) : null}
             </div>
-          )}
+
+            <div
+              className="mt-4 inline-flex w-full max-w-md rounded-lg border border-border/80 bg-border/10 p-1 dark:border-zinc-700 dark:bg-zinc-900/80 sm:w-auto"
+              role="tablist"
+              aria-label="Outreach channel"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={shareTab === "sms"}
+                onClick={() => setShareTab("sms")}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors sm:flex-initial sm:px-4 ${
+                  shareTab === "sms"
+                    ? "bg-white text-text-primary shadow-sm dark:bg-zinc-800 dark:text-zinc-100"
+                    : "text-text-secondary hover:text-text-primary dark:text-zinc-500 dark:hover:text-zinc-200"
+                }`}
+              >
+                <MessageCircle className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+                SMS &amp; social
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={shareTab === "email"}
+                onClick={() => setShareTab("email")}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors sm:flex-initial sm:px-4 ${
+                  shareTab === "email"
+                    ? "bg-white text-text-primary shadow-sm dark:bg-zinc-800 dark:text-zinc-100"
+                    : "text-text-secondary hover:text-text-primary dark:text-zinc-500 dark:hover:text-zinc-200"
+                }`}
+              >
+                <Mail className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+                Email
+              </button>
+            </div>
+
+            <div className="mt-4 min-h-[12rem]">
+              {shareTab === "sms" ? (
+                <div className="space-y-4" role="tabpanel">
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="prospect-preview-your-name"
+                      className="text-xs font-medium text-text-primary dark:text-zinc-300"
+                    >
+                      Name in message
+                    </label>
+                    <p className="text-[11px] text-text-secondary dark:text-zinc-500">
+                      Fills <span className="font-mono">{"{{yourName}}"}</span>. Defaults to this business; change if
+                      you want a different sign-off.
+                    </p>
+                    <input
+                      id="prospect-preview-your-name"
+                      value={yourName}
+                      onChange={(e) => setYourName(e.target.value)}
+                      onBlur={persistTemplates}
+                      className="w-full max-w-lg rounded-lg border border-border bg-white px-3 py-2.5 text-sm outline-none ring-accent/0 transition-shadow focus:border-accent/50 focus:ring-2 focus:ring-accent/20 dark:border-zinc-600 dark:bg-zinc-900"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="prospect-preview-sms-template"
+                      className="text-xs font-medium text-text-primary dark:text-zinc-300"
+                    >
+                      Message template
+                    </label>
+                    <p className="text-[11px] text-text-secondary dark:text-zinc-500">
+                      Used for SMS and when you copy for Messenger or Instagram.
+                    </p>
+                    <textarea
+                      id="prospect-preview-sms-template"
+                      value={smsTemplate}
+                      onChange={(e) => setSmsTemplate(e.target.value)}
+                      onBlur={persistTemplates}
+                      rows={4}
+                      className="w-full rounded-lg border border-border bg-white px-3 py-2.5 font-mono text-xs leading-relaxed outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 dark:border-zinc-600 dark:bg-zinc-900"
+                    />
+                  </div>
+
+                  {showSms ? (
+                    <div className="space-y-2 rounded-lg border border-dashed border-border/90 bg-white/60 p-3 dark:border-zinc-700 dark:bg-zinc-900/40">
+                      <label
+                        htmlFor="prospect-preview-sms-to"
+                        className="text-xs font-medium text-text-primary dark:text-zinc-300"
+                      >
+                        Recipient phone
+                      </label>
+                      <input
+                        id="prospect-preview-sms-to"
+                        type="tel"
+                        value={smsTo}
+                        onChange={(e) => setSmsTo(e.target.value)}
+                        placeholder="+1… or E.164"
+                        className="w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 dark:border-zinc-600 dark:bg-zinc-900"
+                      />
+                      <button
+                        type="button"
+                        disabled={smsBusy || !smsTo.trim()}
+                        onClick={() => void onSendSms()}
+                        className="flex w-full items-center justify-center gap-2 rounded-lg bg-zinc-900 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+                      >
+                        {smsBusy ? (
+                          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                        ) : (
+                          <Send className="h-4 w-4" aria-hidden />
+                        )}
+                        Send SMS
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-xs text-amber-900 dark:text-amber-200/90">
+                      Add a phone number on the lead or listing to send SMS from here.
+                    </p>
+                  )}
+
+                  {(showFb || showIg) && (
+                    <div className="border-t border-border/60 pt-4 dark:border-zinc-800">
+                      <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+                        Social handoff
+                      </p>
+                      <p className="mb-3 text-xs text-text-secondary dark:text-zinc-500">
+                        Copies your message, then opens the app so you can paste and send.
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {showFb ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              void copyAndFlash(composedForShare);
+                              window.open(fbHandoff ?? "", "_blank", "noopener,noreferrer");
+                            }}
+                            className="inline-flex items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-xs font-medium shadow-sm hover:bg-surface dark:border-zinc-600 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+                          >
+                            <MessageCircle className="h-4 w-4" aria-hidden />
+                            Messenger
+                          </button>
+                        ) : null}
+                        {showIg ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              void copyAndFlash(composedForShare);
+                              window.open(igUrl ?? "", "_blank", "noopener,noreferrer");
+                            }}
+                            className="inline-flex items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-xs font-medium shadow-sm hover:bg-surface dark:border-zinc-600 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+                          >
+                            Instagram
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-4" role="tabpanel">
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="prospect-preview-email-subj"
+                      className="text-xs font-medium text-text-primary dark:text-zinc-300"
+                    >
+                      Subject line
+                    </label>
+                    <input
+                      id="prospect-preview-email-subj"
+                      value={emailSubj}
+                      onChange={(e) => setEmailSubj(e.target.value)}
+                      onBlur={persistTemplates}
+                      className="w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 dark:border-zinc-600 dark:bg-zinc-900"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="prospect-preview-email-body"
+                      className="text-xs font-medium text-text-primary dark:text-zinc-300"
+                    >
+                      Email body
+                    </label>
+                    <textarea
+                      id="prospect-preview-email-body"
+                      value={emailBody}
+                      onChange={(e) => setEmailBody(e.target.value)}
+                      onBlur={persistTemplates}
+                      rows={6}
+                      className="w-full rounded-lg border border-border bg-white px-3 py-2.5 font-mono text-xs leading-relaxed outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 dark:border-zinc-600 dark:bg-zinc-900"
+                    />
+                  </div>
+
+                  {showEmail ? (
+                    <div className="space-y-2 rounded-lg border border-dashed border-border/90 bg-white/60 p-3 dark:border-zinc-700 dark:bg-zinc-900/40">
+                      <label
+                        htmlFor="prospect-preview-email-to"
+                        className="text-xs font-medium text-text-primary dark:text-zinc-300"
+                      >
+                        Recipient email
+                      </label>
+                      <input
+                        id="prospect-preview-email-to"
+                        type="email"
+                        value={emailTo}
+                        onChange={(e) => setEmailTo(e.target.value)}
+                        placeholder="name@company.com"
+                        className="w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 dark:border-zinc-600 dark:bg-zinc-900"
+                      />
+                      <button
+                        type="button"
+                        disabled={emailBusy || !emailTo.trim()}
+                        onClick={() => void onSendEmail()}
+                        className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-white px-4 py-3 text-sm font-semibold shadow-sm transition-colors hover:bg-surface disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+                      >
+                        {emailBusy ? (
+                          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                        ) : (
+                          <Mail className="h-4 w-4" aria-hidden />
+                        )}
+                        Send with Resend
+                      </button>
+                      <a
+                        href={mailtoFallbackHref()}
+                        className="block text-center text-xs font-medium text-accent hover:underline dark:text-blue-400"
+                      >
+                        Open in default mail app instead
+                      </a>
+                    </div>
+                  ) : (
+                    <p className="rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-xs text-amber-900 dark:text-amber-200/90">
+                      Add an email in the Lead section above to enable Resend and the mail-app shortcut from here.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
 
           {actionMsg ? (
             <p className="text-xs text-text-secondary dark:text-zinc-400" role="status">
