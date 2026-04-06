@@ -85,8 +85,14 @@ export function buildStitchMobilePrompt(payload: StitchProspectDesignPayload): s
 
   return `${block}
 
-Task: ${gmb}Design a primary mobile app screen (phone form factor) for this business — e.g. home / hub with clear hierarchy.
-Include: app bar or header with business name, 1–2 hero actions appropriate to the industry, and a simple navigation pattern (e.g. bottom nav or prominent primary buttons).
-Visual style: contemporary native-mobile patterns (iOS or Material-inspired), readable tap targets, cohesive color system.
-Output as a polished mobile UI mockup for a client pitch.`.trim();
+Task: ${gmb}Design one scrollable phone screen (mobile app UI) as an **operator / owner** tool for this local business — not a consumer marketing landing page.
+The screen should read like a credible case-study hub that surfaces day-to-day workflows:
+- **Clients / CRM**: quick view of recent or upcoming clients (names or placeholders), search or “add client” affordance.
+- **Bookings & appointments**: today’s schedule or next slots, clear primary action to book or view calendar.
+- **Reviews**: a module to **request reviews** (e.g. SMS/email invite) and show rating summary when listing data includes stars/review count.
+- Optional fourth row: messages or notifications stub if it fits without clutter.
+
+Layout: app bar with business name; primary content as **cards or sections** with clear labels; bottom navigation or tab-like affordance for Home / Clients / Book / Reviews (icons + labels).
+Visual style: contemporary native-mobile (iOS or Material-inspired), strong hierarchy, accessible tap targets, cohesive colors aligned with the brand context above.
+Output as a polished single-screen mobile mockup suitable for a client pitch.`.trim();
 }

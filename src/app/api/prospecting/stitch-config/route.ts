@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAgencyStaff } from "@/app/(crm)/actions/prospect-preview-agency";
+import { isStitchLinkedProjectConfigured } from "@/lib/crm/stitch-linked-project";
 import { isStitchServerApiKeyConfigured } from "@/lib/crm/stitch-server-key";
 
 export const runtime = "nodejs";
@@ -13,5 +14,10 @@ export async function GET() {
     return NextResponse.json({ ok: false as const, error: auth.error ?? "Unauthorized" }, { status: 401 });
   }
   const stitchApiKeyConfigured = isStitchServerApiKeyConfigured();
-  return NextResponse.json({ ok: true as const, stitchApiKeyConfigured });
+  const stitchLinkedProjectConfigured = isStitchLinkedProjectConfigured();
+  return NextResponse.json({
+    ok: true as const,
+    stitchApiKeyConfigured,
+    stitchLinkedProjectConfigured,
+  });
 }

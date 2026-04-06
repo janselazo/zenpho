@@ -6,10 +6,14 @@ import {
   STITCH_API_KEY_MISSING_USER_MESSAGE,
 } from "@/lib/crm/stitch-server-key";
 import { persistStitchHtmlAsProspectPreview } from "@/lib/crm/stitch-prospect-host-preview";
+import { getStitchLinkedProjectId } from "@/lib/crm/stitch-linked-project";
 import type {
   StitchProspectDesignPayload,
   StitchProspectDesignResult,
 } from "@/lib/crm/stitch-prospect-design-types";
+
+/** Mobile generations use Stitch “Thinking with 3.1 Pro” (Gemini 3.1 Pro) when the API accepts modelId. */
+const STITCH_MOBILE_MODEL_ID = "GEMINI_3_1_PRO" as const;
 
 function safeTrim(s: unknown): string {
   return typeof s === "string" ? s.trim() : "";
@@ -53,9 +57,14 @@ export async function runStitchProspectDesign(
   });
   const sdk = new Stitch(toolClient);
 
+  const linkedProjectId = getStitchLinkedProjectId();
+
   try {
-    const project = await sdk.createProject(projectTitle);
-    const screen = await project.generate(prompt, deviceType);
+    const project = linkedProjectId
+      ? sdk.project(linkedProjectId)
+      : await sdk.createProject(projectTitle);
+    const modelId = payload.target === "mobile" ? STITCH_MOBILE_MODEL_ID : undefined;
+    const screen = await project.generate(prompt, deviceType, modelId);
     const [imageUrl, htmlUrl] = await Promise.all([screen.getImage(), screen.getHtml()]);
     const img = typeof imageUrl === "string" ? imageUrl.trim() : "";
     const html = typeof htmlUrl === "string" ? htmlUrl.trim() : "";
@@ -90,9 +99,15 @@ export async function runStitchProspectDesign(
     };
   } catch (e) {
     if (e instanceof StitchError) {
+      const base = `${e.code}: ${e.message}`.trim();
+      const permissionHint =
+        linkedProjectId &&
+        (e.code === "PERMISSION_DENIED" || /permission|403|forbidden/i.test(e.message))
+          ? " Your STITCH_PROJECT_ID must be a project the same Stitch API key can edit."
+          : "";
       return {
         ok: false as const,
-        error: `${e.code}: ${e.message}`.trim(),
+        error: `${base}${permissionHint}`.trim(),
       };
     }
     const msg = e instanceof Error ? e.message : "Stitch request failed.";

@@ -67,6 +67,8 @@ export default function ProspectPreviewOutreachBlock({
    * We do not disable generate on `false` — stale false happens after adding a key without refresh, or first fetch timing.
    */
   const [stitchApiConfigured, setStitchApiConfigured] = useState<boolean | null>(null);
+  /** When true, server adds screens to STITCH_PROJECT_ID instead of createProject each run. */
+  const [stitchLinkedProjectConfigured, setStitchLinkedProjectConfigured] = useState(false);
   const [stitchConfigCheckFailed, setStitchConfigCheckFailed] = useState(false);
   const [stitchManualTarget, setStitchManualTarget] = useState<null | "website" | "mobile">(null);
   const [copyMsg, setCopyMsg] = useState<string | null>(null);
@@ -86,7 +88,14 @@ export default function ProspectPreviewOutreachBlock({
           "stitchApiKeyConfigured" in data &&
           typeof (data as { stitchApiKeyConfigured: unknown }).stitchApiKeyConfigured === "boolean"
         ) {
-          setStitchApiConfigured((data as { stitchApiKeyConfigured: boolean }).stitchApiKeyConfigured);
+          const o = data as {
+            stitchApiKeyConfigured: boolean;
+            stitchLinkedProjectConfigured?: unknown;
+          };
+          setStitchApiConfigured(o.stitchApiKeyConfigured);
+          setStitchLinkedProjectConfigured(
+            typeof o.stitchLinkedProjectConfigured === "boolean" ? o.stitchLinkedProjectConfigured : false
+          );
         } else {
           setStitchConfigCheckFailed(true);
         }
@@ -380,6 +389,12 @@ export default function ProspectPreviewOutreachBlock({
           Could not verify Stitch configuration; one-click generate may still work if the key is set on the server.
         </p>
       ) : null}
+      {stitchContext && stitchLinkedProjectConfigured ? (
+        <p className="text-[11px] text-text-secondary dark:text-zinc-500" role="status">
+          New Stitch screens are added to your linked project (
+          <span className="font-mono">STITCH_PROJECT_ID</span> on the server), not a new project each time.
+        </p>
+      ) : null}
 
       <section
         aria-labelledby="prospect-offering-webapp-heading"
@@ -527,6 +542,11 @@ export default function ProspectPreviewOutreachBlock({
             {stitchBrandingSummary(stitchContext)}
           </p>
         ) : null}
+        <p className="mt-2 text-[11px] text-text-secondary/90 dark:text-zinc-500">
+          One-click mobile generate calls the Stitch API with{" "}
+          <span className="font-medium text-text-primary dark:text-zinc-300">Gemini 3.1 Pro</span> for deeper layout
+          reasoning (aligned with &quot;Thinking with 3.1 Pro&quot; in the Stitch app).
+        </p>
         <p className="mt-2 text-[11px] text-text-secondary/90 dark:text-zinc-500">
           Generation often takes a few minutes. Do not double-click — the Stitch API may still complete if the request
           times out at the edge.
