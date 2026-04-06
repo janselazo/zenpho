@@ -43,6 +43,15 @@ function urlContext(
   return lines.filter(Boolean).join("\n");
 }
 
+const WEBSITE_VISUAL_CHECKLIST = `
+Visual quality (2024–2026 product UI, not a generic template):
+- Typography: refined sans or pairing; clear scale (display / H1–H3 / body / caption); comfortable line-height; avoid unstyled default system fonts.
+- Color: cohesive palette from Visual direction + context — dominant neutrals, one confident accent for CTAs and active nav; WCAG-minded contrast (no faint gray body text on white).
+- Layout: generous whitespace; 8/12/16px rhythm; separate sections with subtle borders, soft tints, or light gradients (CSS only).
+- Polish: soft shadows, large radii on cards; optional subtle gradient or mesh hero band; pill-shaped primary buttons.
+- Components: inline SVG icons where helpful; styled image placeholders (aspect-ratio, rounded) if no photos.
+- Motion: CSS only — transition on :hover / :focus-visible for links and buttons; no JavaScript behavior beyond anchor navigation.`.trim();
+
 export function buildStitchWebsitePrompt(payload: StitchProspectDesignPayload): string {
   const block =
     payload.kind === "place"
@@ -51,11 +60,38 @@ export function buildStitchWebsitePrompt(payload: StitchProspectDesignPayload): 
 
   return `${block}
 
-Task: Design a single desktop-width marketing homepage mockup for this business.
-Include: strong hero with the real business name, clear value proposition, services or offering section, trust signals where data allows (e.g. rating), and a contact / CTA area.
-Style: professional, accessible, modern; typography hierarchy; generous whitespace.
-Output as a polished UI design suitable for a client pitch (not wireframe-only).`.trim();
+Task: Output **one complete HTML5 document** (desktop-width marketing **multi-page** experience) for this business. All “pages” live in **one file** as full-viewport **sections** with **in-page navigation** — no separate URLs, no client-side router, **no inline \`<script>\`** (Tailwind or other CDN \`<script src>\` is OK if needed). Interactions = **click nav → scroll to section** only.
+
+## Structure checklist (required section \`id\`s)
+Each section must be at least **min-height: 100vh** (or equivalent full panel), with **scroll-margin-top** so titles clear a sticky header.
+
+1. **#home** — Hero: real business name, sharp value proposition, primary CTA (Book / Call / Get quote). Prefer **asymmetric or full-bleed** layout — not a tiny centered title-only block; strong typographic or gradient visual anchor.
+2. **#services** — Service cards or list **specific to the category** (use Google types / title / description — not generic lorem).
+3. **#expertise** — Why us: process steps, credentials, team or certification placeholders, trust copy grounded in the vertical.
+4. **#reviews** — If rating/review count exists in context, show them prominently; else credible testimonial-style quotes with initials/roles.
+5. **#location** — Hours-style block, map placeholder, contact; **use listing address and phone when provided** above.
+
+## Navigation
+- **Sticky or fixed top header** with links: Home, Services, Expertise, Reviews, Location → \`<a href="#home">\`, \`#services\`, \`#expertise\`, \`#reviews\`, \`#location\`.
+- In \`<style>\`: \`html { scroll-behavior: smooth; }\` plus section scroll-margin for the header height.
+
+## Copy
+Each section must have **unique, substantive copy** tied to the business name, category, and location — **not** repeated placeholder paragraphs across sections.
+
+${WEBSITE_VISUAL_CHECKLIST}
+
+Output: polished, pitch-ready HTML document suitable for a prospect preview.`.trim();
 }
+
+const MOBILE_VISUAL_CHECKLIST = `
+Visual quality (premium operator app, 2024–2026):
+- Optional **dark navy / charcoal shell** with **lavender or mint accent** for active tab and KPI highlights — still harmonize with Visual direction above; do not ignore colorVibe.
+- **Top app bar**: circular avatar placeholder, business name (from context), bell / notification icon; polished spacing.
+- **Bottom tab bar**: four tabs with **icon + label**; **clear active state** (filled pill, tinted icon, or highlighted background).
+- Cards: soft shadow, large radius; labels in small caps or overline style; **realistic fake data** (first names, pet/job types, times, currency) for credibility.
+- List rows: optional chevron; three-dot menus as visual affordances; 44px+ tap targets.
+- Typography hierarchy and accessible contrast; CSS-only :hover/:focus-visible transitions where useful.
+- **No inline \`<script>\`** — navigation is anchor scroll only (CDN \`<script src>\` for Tailwind OK if used).`.trim();
 
 export function buildStitchMobilePrompt(payload: StitchProspectDesignPayload): string {
   const block =
@@ -70,14 +106,33 @@ export function buildStitchMobilePrompt(payload: StitchProspectDesignPayload): s
 
   return `${block}
 
-Task: ${gmb}Design one scrollable phone screen (mobile app UI) as an **operator / owner** tool for this local business — not a consumer marketing landing page.
-The screen should read like a credible case-study hub that surfaces day-to-day workflows:
-- **Clients / CRM**: quick view of recent or upcoming clients (names or placeholders), search or “add client” affordance.
-- **Bookings & appointments**: today’s schedule or next slots, clear primary action to book or view calendar.
-- **Reviews**: a module to **request reviews** (e.g. SMS/email invite) and show rating summary when listing data includes stars/review count.
-- Optional fourth row: messages or notifications stub if it fits without clutter.
+Task: ${gmb}Output **one complete HTML5 document** for a **phone-width operator / owner app** (not a consumer marketing site). All “screens” are **vertical full-viewport sections** in **one file**, switched by **bottom nav anchor links** — no router, **no inline \`<script>\`**, \`html { scroll-behavior: smooth; }\` in \`<style>\`.
 
-Layout: app bar with business name; primary content as **cards or sections** with clear labels; bottom navigation or tab-like affordance for Home / Clients / Book / Reviews (icons + labels).
-Visual style: contemporary native-mobile (iOS or Material-inspired), strong hierarchy, accessible tap targets, cohesive colors aligned with the brand context above.
-Output as a polished single-screen mobile mockup suitable for a client pitch.`.trim();
+## Structure checklist (required section \`id\`s)
+Each panel **min-height: 100vh**. Add **padding-bottom** on scrollable content and/or **scroll-margin-bottom** so the last lines aren’t hidden behind the fixed tab bar.
+
+1. **#home** (dashboard)
+   - KPI row: e.g. status (“Accepting …”) and revenue or bookings today (plausible numbers).
+   - **New request / notification** row (e.g. incoming booking) with chevron.
+   - **Today’s schedule**: 2–3 list items with small thumbnails or icons, pet/client names, service labels, times; overflow menu dots.
+   - Primary action: large **“+ Book”** or similar — **link to \`#book\`** (anchor), not a fake form submit.
+
+2. **#clients**
+   - Search or “Add” affordance; scrollable list of **category-appropriate** clients (e.g. pet + owner for grooming, job title for trades — infer from Google types / title).
+
+3. **#book**
+   - Week strip or calendar placeholder + time slots or upcoming appointments list; clear book flow visual.
+
+4. **#reviews**
+   - Rating summary (use **real stars/review count from context** when present); 1–2 review snippets; CTA row to request reviews (SMS/email copy as label only).
+
+## Bottom navigation (fixed)
+Four items: **Home**, **Clients**, **Book**, **Reviews** → \`<a href="#home">\`, \`#clients\`, \`#book\`, \`#reviews\` with inline SVG or icon font via allowed \`<link>\` (e.g. Google Fonts / Material icons).
+
+## Copy
+Unique copy per section, tied to the business name and vertical — not the same paragraph repeated.
+
+${MOBILE_VISUAL_CHECKLIST}
+
+Output: polished multi-screen mobile mockup in one HTML file, suitable for a client pitch.`.trim();
 }
