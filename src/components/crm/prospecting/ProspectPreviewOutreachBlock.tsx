@@ -384,25 +384,23 @@ export default function ProspectPreviewOutreachBlock({
             data = null;
           }
         }
-        if (
-          !data ||
-          typeof data !== "object" ||
-          !("ok" in data) ||
-          (data as { ok: unknown }).ok !== true ||
-          typeof (data as { prompt: unknown }).prompt !== "string"
-        ) {
-          const err =
-            data &&
-            typeof data === "object" &&
-            "error" in data &&
-            typeof (data as { error: unknown }).error === "string"
-              ? (data as { error: string }).error
-              : "Could not build Stitch prompt.";
+        if (!data || typeof data !== "object") {
+          setCopyMsg("Could not build Stitch prompt.");
+          setTimeout(() => setCopyMsg(null), 4000);
+          return;
+        }
+        const o = data as Record<string, unknown>;
+        if (o.ok !== true || typeof o.prompt !== "string") {
+          const err = typeof o.error === "string" ? o.error : "Could not build Stitch prompt.";
           setCopyMsg(err);
           setTimeout(() => setCopyMsg(null), 4000);
           return;
         }
-        const d = data as { prompt: string; projectTitle?: string; deviceType?: string };
+        const d = {
+          prompt: o.prompt,
+          projectTitle: typeof o.projectTitle === "string" ? o.projectTitle : undefined,
+          deviceType: typeof o.deviceType === "string" ? o.deviceType : undefined,
+        };
         const header = [
           d.projectTitle ? `Suggested project title: ${d.projectTitle}` : null,
           d.deviceType ? `Device type for Stitch: ${d.deviceType}` : null,
