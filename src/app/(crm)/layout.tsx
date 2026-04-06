@@ -7,6 +7,13 @@ import { createClient } from "@/lib/supabase/server";
 /** Avoid static prerender: server pages call Supabase; build env may omit public keys. */
 export const dynamic = "force-dynamic";
 
+/**
+ * Prospect preview (and other CRM server actions) call external LLMs; default Vercel/server
+ * timeouts are often too short and surface as opaque “digest” errors in production.
+ * @see https://vercel.com/docs/functions/runtimes#max-duration
+ */
+export const maxDuration = 120;
+
 export const metadata = {
   title: "AI Product Studio",
   robots: { index: false, follow: false },

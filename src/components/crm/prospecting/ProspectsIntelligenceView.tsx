@@ -847,7 +847,7 @@ function ProspectsIntelligenceViewInner({
             : "Preview generation failed. Check the browser console and server logs.";
         const msg =
           raw.includes("Server Components render") || raw.includes("digest")
-            ? "Preview request failed on the server (production hides details). Set ANTHROPIC_API_KEY or OPENAI_API_KEY, run the prospect_preview migration, and check your deployment logs for the error digest."
+            ? "Preview request failed on the server (production hides details). Confirm ANTHROPIC_API_KEY and OPENAI_API_KEY on Vercel for Production (redeploy after changes), prospect_preview migration applied, and function duration: Hobby’s short timeout often causes this—check deployment logs for the digest or upgrade/lengthen maxDuration."
             : raw;
         setPreviewGenError(msg);
       } finally {
