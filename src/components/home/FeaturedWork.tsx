@@ -2,9 +2,15 @@
 
 import { motion } from "framer-motion";
 import { featuredProjects } from "@/lib/data";
+import {
+  WORK_CATEGORY_LABELS,
+  WORK_CATEGORY_TYPE_PILL_CLASS,
+  workResultPillClass,
+} from "@/lib/marketing/work-pill-styles";
 import SectionHeading from "@/components/ui/SectionHeading";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
+import Badge from "@/components/ui/Badge";
 
 export default function FeaturedWork() {
   return (
@@ -26,23 +32,31 @@ export default function FeaturedWork() {
             viewport={{ once: true, amount: 0.05, margin: "0px 0px 160px 0px" }}
             transition={{ duration: 0.45, delay: i * 0.08 }}
           >
-            <Card className="flex h-full flex-col">
-              <div className="mb-3 flex items-center justify-between gap-2">
+            <Card className="flex h-full flex-col border-border/80 bg-white/90 shadow-soft backdrop-blur-[2px] dark:border-zinc-800/80 dark:bg-zinc-900/60">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <span
-                  className={`text-xs font-semibold uppercase tracking-wider ${
-                    project.type === "agency" ? "text-accent" : "text-accent-violet"
+                  className={`inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide ${
+                    project.type === "agency"
+                      ? "text-accent"
+                      : "text-accent-violet"
                   }`}
                 >
-                  {project.type === "agency" ? "Client build" : "Studio"}
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      project.type === "agency" ? "bg-accent" : "bg-accent-violet"
+                    }`}
+                  />
+                  {project.type === "agency" ? "Client" : "Studio"}
                 </span>
-                {project.result && (
-                  <span className="rounded-full bg-surface px-2.5 py-0.5 text-xs font-medium text-accent">
-                    {project.result}
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  {project.status ? <Badge status={project.status} /> : null}
+                  <span className={WORK_CATEGORY_TYPE_PILL_CLASS[project.category]}>
+                    {WORK_CATEGORY_LABELS[project.category]}
                   </span>
-                )}
+                </div>
               </div>
               {project.client ? (
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-text-secondary/90">
+                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-text-secondary/90">
                   {project.client}
                 </p>
               ) : null}
@@ -52,16 +66,13 @@ export default function FeaturedWork() {
               <p className="mt-2 flex-1 text-sm leading-relaxed text-text-secondary">
                 {project.description}
               </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {project.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full border border-border bg-surface px-2.5 py-0.5 text-xs text-text-secondary"
-                  >
-                    {tag}
+              {project.result ? (
+                <div className="mt-3">
+                  <span className={workResultPillClass(project.result)}>
+                    {project.result}
                   </span>
-                ))}
-              </div>
+                </div>
+              ) : null}
             </Card>
           </motion.div>
         ))}

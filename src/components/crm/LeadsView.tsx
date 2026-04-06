@@ -249,6 +249,7 @@ function LeadTableTagsCell({
 }
 
 const projectTypeTextClasses: Record<string, string> = {
+  "custom websites": "text-cyan-700 dark:text-cyan-400",
   "websites development": "text-cyan-700 dark:text-cyan-400",
   "ai automations": "text-violet-700 dark:text-violet-400",
   "web apps": "text-sky-700 dark:text-sky-400",
@@ -262,6 +263,8 @@ const projectTypeTextClasses: Record<string, string> = {
 };
 
 const projectTypePillClasses: Record<string, string> = {
+  "custom websites":
+    "bg-cyan-100 text-cyan-900 dark:bg-cyan-950/45 dark:text-cyan-100",
   "websites development":
     "bg-cyan-100 text-cyan-900 dark:bg-cyan-950/45 dark:text-cyan-100",
   "ai automations":

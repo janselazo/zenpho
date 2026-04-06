@@ -62,11 +62,11 @@ export default function ContactForm() {
           {[
             {
               value: "websites-development",
-              label: "Websites Development",
+              label: "Custom Websites",
             },
-            { value: "ai-automations", label: "AI Automations" },
             { value: "web-apps", label: "Web Apps" },
             { value: "mobile-apps", label: "Mobile Apps" },
+            { value: "ai-automations", label: "AI Automations" },
           ].map((type) => (
             <button
               key={type.value}

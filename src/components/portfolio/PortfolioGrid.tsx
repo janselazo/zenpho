@@ -4,6 +4,12 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { portfolioProjects, type ProjectCategory } from "@/lib/data";
+import {
+  WORK_CATEGORY_FILTER_ACTIVE_CLASS,
+  WORK_CATEGORY_LABELS,
+  WORK_CATEGORY_TYPE_PILL_CLASS,
+  workResultPillClass,
+} from "@/lib/marketing/work-pill-styles";
 import SectionHeading from "@/components/ui/SectionHeading";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
@@ -13,44 +19,8 @@ const categoryFilters: { id: ProjectCategory | "all"; label: string }[] = [
   { id: "mobile-app", label: "Mobile App" },
   { id: "web-app", label: "Web App" },
   { id: "website", label: "Website" },
+  { id: "ecommerce", label: "Ecommerce Store" },
 ];
-
-/** Category chips (right-aligned) + filter selected state + result pill. */
-const CATEGORY_STYLES: Record<
-  ProjectCategory,
-  { typePill: string; filterActive: string; resultPill: string }
-> = {
-  "mobile-app": {
-    typePill:
-      "border border-emerald-200/90 bg-emerald-50 text-emerald-900 dark:border-emerald-800/55 dark:bg-emerald-950/45 dark:text-emerald-100",
-    filterActive:
-      "border-emerald-500/80 bg-emerald-500/10 text-emerald-900 dark:border-emerald-500/45 dark:bg-emerald-950/55 dark:text-emerald-100",
-    resultPill:
-      "border border-emerald-200/90 bg-emerald-50 text-emerald-900 dark:border-emerald-800/55 dark:bg-emerald-950/45 dark:text-emerald-100",
-  },
-  "web-app": {
-    typePill:
-      "border border-sky-200/90 bg-sky-50 text-sky-900 dark:border-sky-800/55 dark:bg-sky-950/45 dark:text-sky-100",
-    filterActive:
-      "border-sky-500/80 bg-sky-500/10 text-sky-900 dark:border-sky-500/45 dark:bg-sky-950/55 dark:text-sky-100",
-    resultPill:
-      "border border-sky-200/90 bg-sky-50 text-sky-900 dark:border-sky-800/55 dark:bg-sky-950/45 dark:text-sky-100",
-  },
-  website: {
-    typePill:
-      "border border-violet-200/90 bg-violet-50 text-violet-900 dark:border-violet-800/55 dark:bg-violet-950/45 dark:text-violet-100",
-    filterActive:
-      "border-violet-500/80 bg-violet-500/10 text-violet-900 dark:border-violet-500/45 dark:bg-violet-950/55 dark:text-violet-100",
-    resultPill:
-      "border border-violet-200/90 bg-violet-50 text-violet-900 dark:border-violet-800/55 dark:bg-violet-950/45 dark:text-violet-100",
-  },
-};
-
-const TAG_CHIP_ROTATION = [
-  "border-sky-200/70 bg-sky-50/90 text-sky-900 dark:border-sky-800/45 dark:bg-sky-950/35 dark:text-sky-200",
-  "border-amber-200/70 bg-amber-50/90 text-amber-950 dark:border-amber-800/45 dark:bg-amber-950/30 dark:text-amber-100",
-  "border-slate-200/80 bg-slate-50 text-slate-800 dark:border-slate-600/50 dark:bg-slate-800/55 dark:text-slate-100",
-] as const;
 
 function filterChipClass(
   id: ProjectCategory | "all",
@@ -64,7 +34,7 @@ function filterChipClass(
   if (id === "all") {
     return `${base}border-accent bg-accent/10 text-accent`;
   }
-  return `${base}${CATEGORY_STYLES[id].filterActive}`;
+  return `${base}${WORK_CATEGORY_FILTER_ACTIVE_CLASS[id]}`;
 }
 
 export default function PortfolioGrid() {
@@ -143,11 +113,8 @@ export default function PortfolioGrid() {
                 </span>
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   {project.status ? <Badge status={project.status} /> : null}
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${CATEGORY_STYLES[project.category].typePill}`}
-                  >
-                    {categoryFilters.find((f) => f.id === project.category)
-                      ?.label ?? project.category}
+                  <span className={WORK_CATEGORY_TYPE_PILL_CLASS[project.category]}>
+                    {WORK_CATEGORY_LABELS[project.category]}
                   </span>
                 </div>
               </div>
@@ -165,22 +132,14 @@ export default function PortfolioGrid() {
               {(project.result || project.metrics) && (
                 <div className="mt-3">
                   <span
-                    className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${CATEGORY_STYLES[project.category].resultPill}`}
+                    className={workResultPillClass(
+                      project.result ?? project.metrics ?? ""
+                    )}
                   >
                     {project.result ?? project.metrics}
                   </span>
                 </div>
               )}
-              <div className="mt-4 flex flex-wrap gap-2">
-                {project.tags.map((tag, ti) => (
-                  <span
-                    key={tag}
-                    className={`rounded-full border px-2 py-1 text-[10px] font-medium ${TAG_CHIP_ROTATION[ti % TAG_CHIP_ROTATION.length]}`}
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
             </Card>
           </motion.div>
         ))}

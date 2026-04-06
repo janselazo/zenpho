@@ -1,5 +1,38 @@
 import type { PlacesSearchPlace } from "@/lib/crm/places-types";
 
+function coerceFiniteNumber(v: unknown): number | null {
+  if (v === null || v === undefined) return null;
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string") {
+    const t = v.trim();
+    if (!t) return null;
+    const n = Number(t);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
+function coerceFiniteInt(v: unknown): number | null {
+  const n = coerceFiniteNumber(v);
+  return n === null ? null : Math.round(n);
+}
+
+/**
+ * Coerce rating, review count, and website URI after JSON/session restore or odd API shapes
+ * so UI heuristics (highlights, filters) match glance facts.
+ */
+export function sanitizePlacesSearchPlace(p: PlacesSearchPlace): PlacesSearchPlace {
+  const w = p.websiteUri;
+  const websiteUri =
+    w == null ? null : String(w).trim() || null;
+  return {
+    ...p,
+    rating: coerceFiniteNumber(p.rating),
+    userRatingCount: coerceFiniteInt(p.userRatingCount),
+    websiteUri,
+  };
+}
+
 /** Raw Place object from Google Places API (New) Text Search or Place Details. */
 export type GoogPlaceJson = {
   id?: string;
@@ -31,10 +64,9 @@ export function normalizePlacesApiPlace(p: GoogPlaceJson): PlacesSearchPlace | n
     id,
     name,
     formattedAddress: p.formattedAddress ?? null,
-    rating: typeof p.rating === "number" ? p.rating : null,
-    userRatingCount:
-      typeof p.userRatingCount === "number" ? p.userRatingCount : null,
-    websiteUri: p.websiteUri ?? null,
+    rating: coerceFiniteNumber(p.rating),
+    userRatingCount: coerceFiniteInt(p.userRatingCount),
+    websiteUri: p.websiteUri == null ? null : String(p.websiteUri).trim() || null,
     types: Array.isArray(p.types) ? p.types : [],
     nationalPhoneNumber: p.nationalPhoneNumber?.trim() || null,
     internationalPhoneNumber: p.internationalPhoneNumber?.trim() || null,

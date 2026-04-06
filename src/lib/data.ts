@@ -33,6 +33,12 @@ export interface TechItem {
   category: string;
 }
 
+export type ProjectCategory =
+  | "mobile-app"
+  | "web-app"
+  | "website"
+  | "ecommerce";
+
 export interface FeaturedProject {
   /** Company or brand name (shown above the project title). */
   client?: string;
@@ -40,13 +46,11 @@ export interface FeaturedProject {
   description: string;
   tags: string[];
   type: "agency" | "studio";
+  /** Portfolio column / top-right type pill (same as Work page). */
+  category: ProjectCategory;
+  status?: "live" | "beta" | "building" | "research";
   result?: string;
 }
-
-export type ProjectCategory =
-  | "mobile-app"
-  | "web-app"
-  | "website";
 
 export interface PortfolioProject {
   title: string;
@@ -86,7 +90,7 @@ export interface DevelopmentPricingOffering {
 export const developmentPricingOfferings: DevelopmentPricingOffering[] = [
   {
     id: "websites-development",
-    title: "Websites Development",
+    title: "Custom Websites",
     subtitle:
       "Marketing sites, landing pages, and company presence — fast to ship, on-brand, and built to convert.",
     priceAmount: "$2,500",
@@ -148,11 +152,11 @@ export const aiAutomationsPricingOffering: DevelopmentPricingOffering = {
   ],
 };
 
-/** Services grid on /services — aligned with pricing tiers (4 offerings). */
+/** Services grid on /services — Custom Websites → Web Apps → Mobile Apps → AI Automations. */
 export const services: Service[] = [
   {
     slug: "websites-development",
-    title: "Websites Development",
+    title: "Custom Websites",
     subtitle: "A site that reflects your brand and drives the next step",
     description:
       "We design and build marketing sites, landing pages, and company presence on the web — clear story, strong calls to action, and fast, accessible pages your team can evolve without a rebuild every quarter.",
@@ -162,19 +166,6 @@ export const services: Service[] = [
       "Forms, tracking, and handoff patterns that fit how you sell: book a call, request a quote, or join a list",
     ],
     icon: "globe",
-  },
-  {
-    slug: "ai-automations",
-    title: "AI Automations",
-    subtitle: "Workflows and integrations that reduce manual work — safely",
-    description:
-      "We scope and build automations that combine AI where it helps with deterministic steps where it must: CRM and email hooks, webhooks, internal tools, and guarded multi-step flows your team can run and extend.",
-    details: [
-      "One high-ROI workflow per engagement — discovery, approvals where money or customers are involved, and observability so failures aren’t silent",
-      "Connects to your stack: spreadsheets, SaaS APIs, custom backends, and LLM-assisted steps with clear boundaries",
-      "Handoff and runbooks so you can pause, extend, or retrain without vendor lock-in on every tweak",
-    ],
-    icon: "brain",
   },
   {
     slug: "web-applications",
@@ -201,6 +192,19 @@ export const services: Service[] = [
       "Aligned with the same metrics mindset as your web product",
     ],
     icon: "rocket",
+  },
+  {
+    slug: "ai-automations",
+    title: "AI Automations",
+    subtitle: "Workflows and integrations that reduce manual work — safely",
+    description:
+      "We scope and build automations that combine AI where it helps with deterministic steps where it must: CRM and email hooks, webhooks, internal tools, and guarded multi-step flows your team can run and extend.",
+    details: [
+      "One high-ROI workflow per engagement — discovery, approvals where money or customers are involved, and observability so failures aren’t silent",
+      "Connects to your stack: spreadsheets, SaaS APIs, custom backends, and LLM-assisted steps with clear boundaries",
+      "Handoff and runbooks so you can pause, extend, or retrain without vendor lock-in on every tweak",
+    ],
+    icon: "brain",
   },
 ];
 
@@ -274,7 +278,7 @@ export const portfolioProjects: PortfolioProject[] = [
     title: "Digital Business Card & Networking App",
     description:
       "Built a full-stack SaaS platform with NFC tap-to-share, QR networking, AI-powered lead scoring, and team management — turning every interaction into a measurable business opportunity.",
-    tags: ["SaaS", "Mobile", "NFC", "Growth"],
+    tags: [],
     type: "agency",
     category: "mobile-app",
     result: "Web App",
@@ -284,7 +288,7 @@ export const portfolioProjects: PortfolioProject[] = [
     title: "SaaS Platform for Home Inspectors",
     description:
       "Built a production-ready web app that lets inspectors capture property details, auto-fill report templates, and close jobs in one guided flow — eliminating incomplete reports for good.",
-    tags: ["SaaS", "Inspections", "Web App"],
+    tags: [],
     type: "agency",
     category: "web-app",
     result: "Web App",
@@ -294,9 +298,9 @@ export const portfolioProjects: PortfolioProject[] = [
     title: "Nationwide Food Delivery Store",
     description:
       "Built a mobile-first ordering experience with a full product catalog, temperature-controlled shipping, and automated fulfillment — so the team focuses on the food, not the orders.",
-    tags: ["DTC", "Food & Beverage", "Catalog"],
+    tags: [],
     type: "agency",
-    category: "website",
+    category: "ecommerce",
     result: "Ecommerce Website",
   },
   {
@@ -304,11 +308,11 @@ export const portfolioProjects: PortfolioProject[] = [
     title: "Sales Intelligence Platform for Car Dealers",
     description:
       "A live in-house SaaS tool with lead capture, appointment scheduling, deal intelligence, and a referral engine — built and shipped at app.soldtools.com.",
-    tags: ["SaaS", "Automotive", "Web App"],
+    tags: [],
     type: "studio",
     category: "web-app",
     status: "live",
-    result: "Production app",
+    result: "Web App",
   },
 ];
 
@@ -318,8 +322,9 @@ export const featuredProjects: FeaturedProject[] = [
     title: "Digital Business Card & Networking App",
     description:
       "Built a full-stack SaaS platform with NFC tap-to-share, QR networking, AI-powered lead scoring, and team management — turning every interaction into a measurable business opportunity.",
-    tags: ["SaaS", "Mobile", "NFC", "Growth"],
+    tags: [],
     type: "agency",
+    category: "mobile-app",
     result: "Web App",
   },
   {
@@ -327,8 +332,9 @@ export const featuredProjects: FeaturedProject[] = [
     title: "SaaS Platform for Home Inspectors",
     description:
       "Built a production-ready web app that lets inspectors capture property details, auto-fill report templates, and close jobs in one guided flow — eliminating incomplete reports for good.",
-    tags: ["SaaS", "Inspections", "Web App"],
+    tags: [],
     type: "agency",
+    category: "web-app",
     result: "Web App",
   },
   {
@@ -336,8 +342,9 @@ export const featuredProjects: FeaturedProject[] = [
     title: "Nationwide Food Delivery Store",
     description:
       "Built a mobile-first ordering experience with a full product catalog, temperature-controlled shipping, and automated fulfillment — so the team focuses on the food, not the orders.",
-    tags: ["DTC", "Food & Beverage", "Catalog"],
+    tags: [],
     type: "agency",
+    category: "ecommerce",
     result: "Ecommerce Website",
   },
   {
@@ -345,9 +352,11 @@ export const featuredProjects: FeaturedProject[] = [
     title: "Sales Intelligence Platform for Car Dealers",
     description:
       "A live in-house SaaS tool with lead capture, appointment scheduling, deal intelligence, and a referral engine — built and shipped at app.soldtools.com.",
-    tags: ["SaaS", "Automotive", "Web App"],
+    tags: [],
     type: "studio",
-    result: "Production app",
+    category: "web-app",
+    status: "live",
+    result: "Web App",
   },
 ];
 

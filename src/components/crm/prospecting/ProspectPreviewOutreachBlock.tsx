@@ -518,7 +518,7 @@ export default function ProspectPreviewOutreachBlock({
               id="prospect-offering-websites-heading"
               className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500"
             >
-              Websites development
+              Custom Websites
             </h3>
             <p className="text-[10px] text-text-secondary/80 dark:text-zinc-500">
               Proposed site preview · Stitch · hosted HTML · share

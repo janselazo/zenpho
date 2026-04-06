@@ -19,7 +19,7 @@ export type ServiceDetailBody = {
 const bySlug: Record<string, ServiceDetailBody> = {
   "websites-development": {
     metaDescription:
-      "Websites development from Zenpho: marketing sites and landing pages with clear IA, fast performance, accessible UI, forms and analytics — starting at $2,500.",
+      "Custom websites from Zenpho: marketing sites and landing pages with clear IA, fast performance, accessible UI, forms and analytics — starting at $2,500.",
     intro: [
       "Your website is the one place you control the full story: who you help, why you’re credible, and what you want visitors to do next. We scope around that — not a kitchen-sink sitemap — so what ships is easy to understand, fast to load, and straightforward for your team to update.",
       "Whether it’s a focused launch page, a multi-section marketing site, or a refresh of something that’s outgrown its template, we build with the same production habits as our apps: staging previews, a short go-live checklist, and handoff notes so you’re not locked to us for every copy tweak.",

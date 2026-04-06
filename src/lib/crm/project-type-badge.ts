@@ -1,5 +1,7 @@
 /** Soft pill classes for product / lead project type (aligned with Leads table type colors). */
 const KNOWN: Record<string, string> = {
+  "custom websites":
+    "bg-cyan-100 text-cyan-900 dark:bg-cyan-950/45 dark:text-cyan-200",
   "websites development":
     "bg-cyan-100 text-cyan-900 dark:bg-cyan-950/45 dark:text-cyan-200",
   "ai automations":

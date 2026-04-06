@@ -15,6 +15,7 @@ import {
 } from "@/lib/crm/prospect-intel-report";
 import { signalsFromPlace } from "@/lib/crm/prospect-intel-place-signals";
 import type { PlacesSearchPlace } from "@/lib/crm/places-types";
+import { sanitizePlacesSearchPlace } from "@/lib/crm/places-google-shared";
 import { PLACES_TEXT_SEARCH_CATEGORY_SUGGESTIONS } from "@/lib/crm/places-text-search-category-suggestions";
 import type { MergedCrmFieldOptions } from "@/lib/crm/field-options";
 import { DEFAULT_LEAD_PROJECT_TYPE } from "@/lib/crm/mock-data";
@@ -614,11 +615,12 @@ const HIGHLIGHT_SLIDES: {
 function IntelHighlightsCarousel({
   report,
   glanceFacts,
-  signalTags,
+  /** Google listing heuristic chips only; omit for URL reports. Pass only `active` tags. */
+  placeListingSignals,
 }: {
   report: MarketIntelReport;
   glanceFacts: IntelGlanceFact[];
-  signalTags: IntelHighlightSignalTag[];
+  placeListingSignals?: IntelHighlightSignalTag[];
 }) {
   const [index, setIndex] = useState(0);
   const n = HIGHLIGHT_SLIDES.length;
@@ -655,25 +657,29 @@ function IntelHighlightsCarousel({
             </dl>
           </>
         ) : null}
-        <div
-          className={`flex flex-wrap gap-1.5 ${glanceFacts.length > 0 ? "mt-3 border-t border-border/40 pt-3 dark:border-zinc-700/40" : ""}`}
-          role="list"
-          aria-label="Listing signal tags"
-        >
-          {signalTags.map((t) => (
-            <span
-              key={t.key}
-              role="listitem"
-              className={
-                t.active
-                  ? "rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-950 dark:border-amber-500/35 dark:bg-amber-500/15 dark:text-amber-100"
-                  : "rounded-full border border-border/50 bg-white/60 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-text-secondary/35 dark:border-zinc-700/50 dark:bg-zinc-950/20 dark:text-zinc-600"
-              }
-            >
-              {t.label}
-            </span>
-          ))}
-        </div>
+        {placeListingSignals !== undefined ? (
+          <div
+            className={`flex flex-wrap items-center gap-1.5 ${glanceFacts.length > 0 ? "mt-3 border-t border-border/40 pt-3 dark:border-zinc-700/40" : ""}`}
+            role="list"
+            aria-label="Listing signal tags"
+          >
+            {placeListingSignals.length > 0 ? (
+              placeListingSignals.map((t) => (
+                <span
+                  key={t.key}
+                  role="listitem"
+                  className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-950 dark:border-amber-500/35 dark:bg-amber-500/15 dark:text-amber-100"
+                >
+                  {t.label}
+                </span>
+              ))
+            ) : (
+              <p className="text-[10px] leading-snug text-text-secondary/70 dark:text-zinc-500">
+                No listing gaps flagged for these heuristics.
+              </p>
+            )}
+          </div>
+        ) : null}
       </div>
       <div className="mt-3 flex min-h-0 flex-1 items-stretch gap-2">
         <button
@@ -1020,10 +1026,10 @@ function ProspectsIntelligenceViewInner({
 
   const applyPlaceReport = useCallback(
     (place: PlacesSearchPlace) => {
-      const normalized: PlacesSearchPlace = {
+      const normalized = sanitizePlacesSearchPlace({
         ...place,
         businessStatus: place.businessStatus ?? null,
-      };
+      });
       const signals = signalsFromPlace(normalized);
       const report = buildMarketIntelReport(signals);
       setPlaceReport({ place: normalized, report });
@@ -1208,13 +1214,23 @@ function ProspectsIntelligenceViewInner({
   const handleQuickCreateFromPlace = useCallback(
     async (place: PlacesSearchPlace) => {
       setQuickPlacesLeadMessage(null);
-      const res = await createLeadFromPlacesListingAction(place, projectType);
-      if ("error" in res && res.error) {
-        setQuickPlacesLeadMessage(res.error);
-        return;
+      try {
+        const res = await createLeadFromPlacesListingAction(place, projectType);
+        if ("error" in res && res.error) {
+          setQuickPlacesLeadMessage(res.error);
+          return;
+        }
+        setQuickPlacesLeadMessage(
+          "Lead created with Prospect tag. You can find it under Leads."
+        );
+        router.refresh();
+      } catch (e) {
+        setQuickPlacesLeadMessage(
+          e instanceof Error
+            ? e.message
+            : "Could not create lead. Try again."
+        );
       }
-      setQuickPlacesLeadMessage("Lead created with Prospect tag. You can find it under Leads.");
-      router.refresh();
     },
     [projectType, router]
   );
@@ -1245,41 +1261,54 @@ function ProspectsIntelligenceViewInner({
   async function submitLead() {
     setLeadPending(true);
     setLeadMessage(null);
-    const website =
-      activeReport?.kind === "url"
-        ? activeReport.urlMeta.url
-        : activeReport?.kind === "place"
-          ? activeReport.place.websiteUri || ""
-          : "";
-    let googlePlaceTypes: string[] | undefined;
     try {
-      const parsed = JSON.parse(leadGooglePlaceTypesJson) as unknown;
-      if (Array.isArray(parsed) && parsed.every((x) => typeof x === "string") && parsed.length) {
-        googlePlaceTypes = parsed as string[];
+      const website =
+        activeReport?.kind === "url"
+          ? activeReport.urlMeta.url
+          : activeReport?.kind === "place"
+            ? activeReport.place.websiteUri || ""
+            : "";
+      let googlePlaceTypes: string[] | undefined;
+      try {
+        const parsed = JSON.parse(leadGooglePlaceTypesJson) as unknown;
+        if (
+          Array.isArray(parsed) &&
+          parsed.every((x) => typeof x === "string") &&
+          parsed.length
+        ) {
+          googlePlaceTypes = parsed as string[];
+        }
+      } catch {
+        googlePlaceTypes = undefined;
       }
-    } catch {
-      googlePlaceTypes = undefined;
+      const res = await createLeadFromProspectIntelAction({
+        name: leadName.trim() || "Unknown",
+        company: leadCompany.trim() || undefined,
+        email: leadEmail.trim() || undefined,
+        phone: leadPhone.trim() || undefined,
+        website: website || undefined,
+        facebook: leadFacebook.trim() || undefined,
+        instagram: leadInstagram.trim() || undefined,
+        notes: leadNotes.trim(),
+        project_type: projectType,
+        google_business_category: leadGoogleBusinessCategory.trim() || undefined,
+        google_place_types: googlePlaceTypes,
+      });
+      if ("error" in res && res.error) {
+        setLeadMessage(res.error);
+        return;
+      }
+      setLeadMessage("Lead created. You can find it under Leads.");
+      router.refresh();
+    } catch (e) {
+      setLeadMessage(
+        e instanceof Error
+          ? e.message
+          : "Could not create lead. Try again."
+      );
+    } finally {
+      setLeadPending(false);
     }
-    const res = await createLeadFromProspectIntelAction({
-      name: leadName.trim() || "Unknown",
-      company: leadCompany.trim() || undefined,
-      email: leadEmail.trim() || undefined,
-      phone: leadPhone.trim() || undefined,
-      website: website || undefined,
-      facebook: leadFacebook.trim() || undefined,
-      instagram: leadInstagram.trim() || undefined,
-      notes: leadNotes.trim(),
-      project_type: projectType,
-      google_business_category: leadGoogleBusinessCategory.trim() || undefined,
-      google_place_types: googlePlaceTypes,
-    });
-    setLeadPending(false);
-    if ("error" in res && res.error) {
-      setLeadMessage(res.error);
-      return;
-    }
-    setLeadMessage("Lead created. You can find it under Leads.");
-    router.refresh();
   }
 
   async function saveReport() {
@@ -1614,7 +1643,11 @@ function ProspectsIntelligenceViewInner({
                 <IntelHighlightsCarousel
                   report={activeReport.report}
                   glanceFacts={intelGlanceFacts}
-                  signalTags={intelHighlightSignalTags}
+                  placeListingSignals={
+                    activeReport.kind === "place"
+                      ? intelHighlightSignalTags.filter((t) => t.active)
+                      : undefined
+                  }
                 />
               </div>
             </div>
@@ -1783,7 +1816,13 @@ function ProspectsIntelligenceViewInner({
                 {leadPending ? "Creating…" : "Create Lead"}
               </button>
               {leadMessage ? (
-                <p className="mt-2 text-sm text-emerald-700 dark:text-emerald-400">
+                <p
+                  className={
+                    leadMessage.startsWith("Lead created")
+                      ? "mt-2 text-sm text-emerald-700 dark:text-emerald-400"
+                      : "mt-2 text-sm text-red-600 dark:text-red-400"
+                  }
+                >
                   {leadMessage}
                 </p>
               ) : null}

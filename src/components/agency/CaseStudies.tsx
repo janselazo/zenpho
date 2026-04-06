@@ -2,6 +2,11 @@
 
 import { motion } from "framer-motion";
 import { featuredProjects } from "@/lib/data";
+import {
+  WORK_CATEGORY_LABELS,
+  WORK_CATEGORY_TYPE_PILL_CLASS,
+  workResultPillClass,
+} from "@/lib/marketing/work-pill-styles";
 import SectionHeading from "@/components/ui/SectionHeading";
 import Card from "@/components/ui/Card";
 
@@ -28,15 +33,20 @@ export default function CaseStudies() {
             transition={{ duration: 0.5, delay: i * 0.1 }}
           >
             <Card className="flex h-full flex-col">
-              <div className="mb-4 flex items-center justify-between">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
                 <span className="text-xs font-semibold uppercase tracking-widest text-accent">
                   Case study
                 </span>
-                {project.result && (
-                  <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-medium text-accent">
-                    {project.result}
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <span className={WORK_CATEGORY_TYPE_PILL_CLASS[project.category]}>
+                    {WORK_CATEGORY_LABELS[project.category]}
                   </span>
-                )}
+                  {project.result ? (
+                    <span className={workResultPillClass(project.result)}>
+                      {project.result}
+                    </span>
+                  ) : null}
+                </div>
               </div>
               {project.client ? (
                 <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-text-secondary">
@@ -49,16 +59,6 @@ export default function CaseStudies() {
               <p className="mt-3 flex-1 text-sm leading-relaxed text-text-secondary">
                 {project.description}
               </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {project.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full bg-surface-light px-3 py-1 text-xs text-text-secondary"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
             </Card>
           </motion.div>
         ))}
