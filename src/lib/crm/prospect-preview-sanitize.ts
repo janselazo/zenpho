@@ -7,6 +7,7 @@ const FULL_DOC_ALLOWED_TAGS = [
   "body",
   "title",
   "meta",
+  "link",
   "style",
   "div",
   "section",
@@ -85,8 +86,44 @@ const fullDocumentOptions: IOptions = {
     ],
     a: ["href", "target", "rel"],
     img: ["src", "alt", "srcset", "sizes"],
+    link: [
+      "rel",
+      "href",
+      "crossorigin",
+      "media",
+      "type",
+      "sizes",
+      "as",
+      "integrity",
+    ],
+  },
+  exclusiveFilter(frame) {
+    if (frame.tag !== "link") return false;
+    const href = String(frame.attribs?.href ?? "").trim();
+    if (!href) return true;
+    return !prospectPreviewTrustedLinkHref(href);
   },
 };
+
+/**
+ * Allow stylesheets, font preconnects, and icons from trusted CDNs used by Stitch / LLM exports.
+ * Without this, &lt;link&gt; tags are dropped and Material Icons render as ligature text (e.g. "star").
+ */
+function prospectPreviewTrustedLinkHref(href: string): boolean {
+  try {
+    const u = new URL(href);
+    if (u.protocol !== "https:") return false;
+    const h = u.hostname.toLowerCase();
+    if (h === "fonts.googleapis.com") return true;
+    if (h === "fonts.gstatic.com") return true;
+    if (h === "www.gstatic.com" || h.endsWith(".gstatic.com")) return true;
+    if (h === "stitch.withgoogle.com" || h.endsWith(".withgoogle.com")) return true;
+    if (h === "cdn.tailwindcss.com") return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
 
 const bodyFragmentOptions: IOptions = {
   ...baseSanitizeOptions,
@@ -137,7 +174,7 @@ const bodyFragmentOptions: IOptions = {
 };
 
 /**
- * Sanitize a full HTML document from the model (allows &lt;style&gt; in &lt;head&gt;; no scripts, no external CSS links).
+ * Sanitize a full HTML document from the model (allows &lt;style&gt; and vetted &lt;link&gt; for fonts/CSS; no scripts).
  */
 export function sanitizeProspectPreviewFullDocumentHtml(html: string): string {
   let dirty = (typeof html === "string" ? html : "").trim();
