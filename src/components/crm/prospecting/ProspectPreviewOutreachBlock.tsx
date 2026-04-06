@@ -687,7 +687,7 @@ export default function ProspectPreviewOutreachBlock({
                 className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 disabled:opacity-50 dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200"
               >
                 {stitchWebBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
-                {stitchWebBusy ? "Generating…" : "Generate website in Google Stitch"}
+                {stitchWebBusy ? "Generating…" : "Generate website"}
               </button>
               {stitchContext && stitchApiConfigured === false ? (
                 <button
@@ -751,7 +751,7 @@ export default function ProspectPreviewOutreachBlock({
                 className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 disabled:opacity-50 dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200"
               >
                 {stitchWebAppBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
-                {stitchWebAppBusy ? "Generating…" : "Generate web app in Google Stitch"}
+                {stitchWebAppBusy ? "Generating…" : "Generate web app"}
               </button>
               {stitchContext && stitchApiConfigured === false ? (
                 <button
@@ -814,7 +814,7 @@ export default function ProspectPreviewOutreachBlock({
                 className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 disabled:opacity-50 dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200"
               >
                 {stitchMobileBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
-                {stitchMobileBusy ? "Generating…" : "Generate mobile UI in Google Stitch"}
+                {stitchMobileBusy ? "Generating…" : "Generate mobile UI"}
               </button>
               {stitchContext && stitchApiConfigured === false ? (
                 <button
@@ -862,8 +862,9 @@ export default function ProspectPreviewOutreachBlock({
             </div>
             <p className="mt-2 text-[11px] leading-snug text-text-secondary dark:text-zinc-400">
               Ideas from the <span className="font-medium text-text-primary dark:text-zinc-200">Highlights</span> report
-              (lead routing, follow-ups, assistants). Export a PDF to share automation opportunities — not a Stitch
-              screen.
+              (lead routing, follow-ups, assistants). When the server has Anthropic or OpenAI configured (same as
+              prospect preview), the PDF adds AI-written opportunities, problems, solutions, and gaps; otherwise it
+              stays research-only. Not a Stitch screen.
             </p>
             <button
               type="button"
@@ -872,7 +873,7 @@ export default function ProspectPreviewOutreachBlock({
                 e.stopPropagation();
                 void generatePdf();
               }}
-              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-xs font-semibold text-text-primary hover:bg-surface/80 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 hover:bg-blue-500/[0.14] disabled:opacity-50 dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200 dark:hover:bg-blue-500/20"
             >
               {pdfBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <FileDown className="h-3.5 w-3.5" aria-hidden />}
               {pdfBusy ? "Building PDF…" : "Generate report (PDF)"}

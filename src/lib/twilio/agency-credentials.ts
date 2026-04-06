@@ -8,9 +8,22 @@ export type AgencyTwilioCreds = {
 };
 
 /**
- * Service-role load for webhooks and server jobs. Returns null if not configured.
+ * Twilio for outbound SMS and inbound webhook validation.
+ * When `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM_PHONE` are all set (e.g. on Vercel),
+ * those are used. Otherwise loads encrypted row via service role (Settings → Integrations).
  */
 export async function getAgencyTwilioCredentials(): Promise<AgencyTwilioCreds | null> {
+  const envSid = process.env.TWILIO_ACCOUNT_SID?.trim();
+  const envToken = process.env.TWILIO_AUTH_TOKEN?.trim();
+  const envFrom = process.env.TWILIO_FROM_PHONE?.trim();
+  if (envSid && envToken && envFrom) {
+    return {
+      accountSid: envSid,
+      authToken: envToken,
+      fromPhone: envFrom,
+    };
+  }
+
   try {
     const admin = createAdminClient();
     const { data, error } = await admin

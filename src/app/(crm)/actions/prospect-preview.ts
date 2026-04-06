@@ -24,7 +24,11 @@ export async function sendProspectPreviewSmsAction(input: {
 
   const creds = await getAgencyTwilioCredentials();
   if (!creds) {
-    return { ok: false as const, error: "Twilio is not configured (service role + integration)." };
+    return {
+      ok: false as const,
+      error:
+        "Twilio is not configured. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_FROM_PHONE on the server, or save credentials under Settings → Integrations → Twilio.",
+    };
   }
   if (!creds.fromPhone) {
     return { ok: false as const, error: "Set a From phone number in Twilio integration settings." };
@@ -200,13 +204,14 @@ ${previewImageHtml}
     return {
       ok: false as const,
       error:
-        "No email provider configured. Add SendGrid under Settings → Integrations, or set RESEND_API_KEY on the server.",
+        "No email provider configured. Set SENDGRID_API_KEY and SENDGRID_FROM_EMAIL, or RESEND_API_KEY and RESEND_FROM_EMAIL, or add SendGrid under Settings → Integrations.",
     };
   }
   if (!resendFrom) {
     return {
       ok: false as const,
-      error: "Set RESEND_FROM_EMAIL on the server, or configure SendGrid in Settings → Integrations.",
+      error:
+        "Set RESEND_FROM_EMAIL on the server, or set SENDGRID_API_KEY and SENDGRID_FROM_EMAIL, or configure SendGrid in Settings → Integrations.",
     };
   }
 

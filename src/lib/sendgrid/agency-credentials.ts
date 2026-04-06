@@ -9,9 +9,21 @@ export type AgencySendGridCreds = {
 };
 
 /**
- * Service-role load for server actions. Returns null if not configured or decrypt fails.
+ * SendGrid for outbound mail. When `SENDGRID_API_KEY` and `SENDGRID_FROM_EMAIL` are set (e.g. on Vercel),
+ * those are used. Otherwise loads encrypted row via service role (Settings → Integrations).
  */
 export async function getAgencySendGridCredentials(): Promise<AgencySendGridCreds | null> {
+  const envKey = process.env.SENDGRID_API_KEY?.trim();
+  const envFromEmail = process.env.SENDGRID_FROM_EMAIL?.trim();
+  if (envKey && envFromEmail) {
+    return {
+      apiKey: envKey,
+      fromEmail: envFromEmail,
+      fromName: process.env.SENDGRID_FROM_NAME?.trim() || null,
+      replyTo: process.env.SENDGRID_REPLY_TO?.trim() || null,
+    };
+  }
+
   try {
     const admin = createAdminClient();
     const { data, error } = await admin
