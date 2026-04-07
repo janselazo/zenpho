@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState, useTransition } from "react";
+import { useRef, useState, useTransition, type FormEvent } from "react";
 import {
   ArrowLeft,
   ExternalLink,
@@ -44,9 +44,11 @@ export default function SendGridIntegrationSettings({ initial }: Props) {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function onSave(formData: FormData) {
+  function handleFormSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
     setMessage(null);
     setError(null);
+    const formData = new FormData(e.currentTarget);
     startSave(async () => {
       const res = await saveSendGridIntegration(formData);
       if ("error" in res && res.error) setError(res.error);
@@ -103,7 +105,16 @@ export default function SendGridIntegrationSettings({ initial }: Props) {
 
       <div className="mt-6 h-px w-full bg-accent/40" aria-hidden />
 
-      <form ref={formRef} action={onSave} className="mt-8 space-y-8">
+      {error ? (
+        <p className="mt-6 text-sm text-red-600 dark:text-red-400" role="alert">
+          {error}
+        </p>
+      ) : null}
+      {message ? (
+        <p className="mt-6 text-sm text-emerald-700 dark:text-emerald-400">{message}</p>
+      ) : null}
+
+      <form ref={formRef} onSubmit={handleFormSubmit} className="mt-8 space-y-8">
         <section className={cardClass}>
           <div className="flex gap-3">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300">
@@ -283,15 +294,6 @@ export default function SendGridIntegrationSettings({ initial }: Props) {
           </div>
         </section>
       </form>
-
-      {error ? (
-        <p className="mt-4 text-sm text-red-600 dark:text-red-400" role="alert">
-          {error}
-        </p>
-      ) : null}
-      {message ? (
-        <p className="mt-4 text-sm text-emerald-700 dark:text-emerald-400">{message}</p>
-      ) : null}
 
       <section className={`${cardClass} mt-8`}>
         <h2 className="text-base font-semibold text-text-primary dark:text-zinc-100">Resend fallback</h2>

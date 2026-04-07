@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState, useTransition } from "react";
+import { useRef, useState, useTransition, type FormEvent } from "react";
 import {
   ArrowLeft,
   Check,
@@ -69,9 +69,11 @@ export default function TwilioIntegrationSettings({ initial, webhookOrigin }: Pr
     }
   }
 
-  async function onSave(formData: FormData) {
+  function handleFormSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
     setMessage(null);
     setError(null);
+    const formData = new FormData(e.currentTarget);
     formData.set("whatsapp_sandbox", whatsappSandbox ? "true" : "false");
     startSave(async () => {
       const res = await saveTwilioIntegration(formData);
@@ -129,7 +131,16 @@ export default function TwilioIntegrationSettings({ initial, webhookOrigin }: Pr
 
       <div className="mt-6 h-px w-full bg-accent/40" aria-hidden />
 
-      <form ref={formRef} action={onSave} className="mt-8 space-y-8">
+      {error ? (
+        <p className="mt-6 text-sm text-red-600 dark:text-red-400" role="alert">
+          {error}
+        </p>
+      ) : null}
+      {message ? (
+        <p className="mt-6 text-sm text-emerald-700 dark:text-emerald-400">{message}</p>
+      ) : null}
+
+      <form ref={formRef} onSubmit={handleFormSubmit} className="mt-8 space-y-8">
         <input type="hidden" name="whatsapp_sandbox" value={whatsappSandbox ? "true" : "false"} />
 
         {/* Credentials */}
@@ -386,15 +397,6 @@ export default function TwilioIntegrationSettings({ initial, webhookOrigin }: Pr
           </div>
         </section>
       </form>
-
-      {error ? (
-        <p className="mt-4 text-sm text-red-600 dark:text-red-400" role="alert">
-          {error}
-        </p>
-      ) : null}
-      {message ? (
-        <p className="mt-4 text-sm text-emerald-700 dark:text-emerald-400">{message}</p>
-      ) : null}
 
       {/* Webhooks */}
       <section className={`${cardClass} mt-8`}>
