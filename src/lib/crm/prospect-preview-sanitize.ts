@@ -267,3 +267,44 @@ ${safe}
 </body>
 </html>`;
 }
+
+/** Warm accent for legal/footer links in hosted previews (Stitch + LLM HTML). */
+const PREVIEW_FOOTER_LINK_STYLE = `<style id="zenpho-preview-footer-link-accent">
+  footer a,
+  [role="contentinfo"] a,
+  .footer a,
+  .site-footer a {
+    color: #f59e0b !important;
+  }
+  footer a:hover,
+  [role="contentinfo"] a:hover,
+  .footer a:hover,
+  .site-footer a:hover {
+    color: #ea580c !important;
+  }
+</style>`;
+
+/**
+ * Injects footer-focused link colors so Privacy/Terms (and similar) read clearly on generated previews.
+ */
+export function injectProspectPreviewFooterLinkStyles(html: string): string {
+  const h = typeof html === "string" ? html : "";
+  if (!h.trim()) return h;
+  if (/zenpho-preview-footer-link-accent/i.test(h)) return h;
+
+  const lower = h.toLowerCase();
+  const headClose = lower.lastIndexOf("</head>");
+  if (headClose !== -1) {
+    return h.slice(0, headClose) + PREVIEW_FOOTER_LINK_STYLE + h.slice(headClose);
+  }
+
+  const bodyOpen = lower.indexOf("<body");
+  if (bodyOpen !== -1) {
+    const tagEnd = h.indexOf(">", bodyOpen);
+    if (tagEnd !== -1) {
+      return h.slice(0, tagEnd + 1) + PREVIEW_FOOTER_LINK_STYLE + h.slice(tagEnd + 1);
+    }
+  }
+
+  return PREVIEW_FOOTER_LINK_STYLE + h;
+}

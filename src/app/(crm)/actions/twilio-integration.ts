@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   encryptIntegrationSecret,
   decryptIntegrationSecret,
+  INTEGRATION_SECRETS_KEY_HELP,
 } from "@/lib/crypto/integration-secrets";
 
 const ROW_ID = 1;
@@ -124,7 +125,12 @@ export async function saveTwilioIntegration(formData: FormData) {
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Encryption failed.";
-    return { error: msg.includes("INTEGRATION_SECRETS_KEY") ? "Server is missing INTEGRATION_SECRETS_KEY." : msg };
+    return {
+      error:
+        msg === "INTEGRATION_SECRETS_KEY_MISSING" || msg.includes("INTEGRATION_SECRETS_KEY")
+          ? INTEGRATION_SECRETS_KEY_HELP
+          : msg,
+    };
   }
 
   const { error } = await gate.supabase.from("agency_twilio_integration").upsert(
@@ -171,8 +177,12 @@ export async function testTwilioConnection(formData: FormData) {
     }
     try {
       authToken = decryptIntegrationSecret(existing.auth_token_encrypted);
-    } catch {
-      return { error: "Could not decrypt stored token. Check INTEGRATION_SECRETS_KEY and re-save." };
+    } catch (e) {
+      const m = e instanceof Error ? e.message : "";
+      if (m === "INTEGRATION_SECRETS_KEY_MISSING") {
+        return { error: INTEGRATION_SECRETS_KEY_HELP };
+      }
+      return { error: "Could not decrypt stored token. Check INTEGRATION_SECRETS_KEY matches the key used when saving, then re-save." };
     }
   }
 

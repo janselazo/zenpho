@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { prospectPreviewHtmlResponseHeaders } from "@/lib/crm/prospect-preview-frame-ancestors";
+import { injectProspectPreviewFooterLinkStyles } from "@/lib/crm/prospect-preview-sanitize";
 import { buildMobilePreviewFrameDocument } from "@/lib/crm/prospect-preview-mobile-frame";
 
 const UUID_RE =
@@ -43,6 +44,8 @@ export async function GET(
     return new Response("Not found", { status: 404 });
   }
 
+  const htmlOut = injectProspectPreviewFooterLinkStyles(data.html as string);
+
   const deviceType =
     typeof data.preview_device_type === "string" ? data.preview_device_type.trim() : "";
 
@@ -56,7 +59,7 @@ export async function GET(
     });
   }
 
-  return new Response(data.html as string, {
+  return new Response(htmlOut, {
     status: 200,
     headers: prospectPreviewHtmlResponseHeaders(),
   });
