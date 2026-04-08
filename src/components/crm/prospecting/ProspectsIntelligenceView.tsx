@@ -1584,6 +1584,7 @@ function ProspectsIntelligenceViewInner({
                 businessName={outreachBusinessName}
                 contactPhone={leadPhone}
                 contactEmail={leadEmail}
+                contactInstagram={leadInstagram}
                 marketIntelReport={activeReport?.report ?? null}
               />
             </div>

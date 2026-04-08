@@ -5,6 +5,7 @@ import {
   Copy,
   ExternalLink,
   FileDown,
+  Instagram,
   LayoutDashboard,
   Loader2,
   Mail,
@@ -28,6 +29,7 @@ import {
   sendProspectPreviewSmsAction,
 } from "@/app/(crm)/actions/prospect-preview";
 import { generateProspectAutomationPdfAction } from "@/app/(crm)/actions/prospect-automation-report";
+import { mergeProspectOutreachTemplate } from "@/lib/crm/prospect-outreach-template";
 
 /** Context for Google Stitch prompts (Local Business listing or URL research). */
 export type ProspectStitchContext =
@@ -45,10 +47,44 @@ type SelectedOffer = StitchTarget | "automations";
 
 const STITCH_HELP_URL = stitchWithGoogleAppHomeUrl();
 
+function buildClientPreviewLink(previewId: string, slug: string | null | undefined): string {
+  if (typeof window === "undefined") return "";
+  const origin = window.location.origin;
+  const s = slug?.trim();
+  if (s) return `${origin}/preview/${encodeURIComponent(s)}`;
+  return `${origin}/preview/${encodeURIComponent(previewId)}`;
+}
+
+/** Profile URL for opening in a new tab; accepts full https URL or @handle. */
+function normalizeInstagramProfileUrl(raw: string): string | null {
+  const t = raw.trim();
+  if (!t) return null;
+  if (/^https?:\/\//i.test(t)) {
+    try {
+      const u = new URL(t);
+      const h = u.hostname.replace(/^www\./i, "").toLowerCase();
+      if (h !== "instagram.com") return null;
+      u.hash = "";
+      let out = u.toString();
+      if (out.endsWith("/")) out = out.slice(0, -1);
+      return out;
+    } catch {
+      return null;
+    }
+  }
+  const handle = t.replace(/^@/, "").replace(/\/+$/, "").trim();
+  if (/^[a-z0-9._]{1,190}$/i.test(handle)) {
+    return `https://www.instagram.com/${handle}/`;
+  }
+  return null;
+}
+
 type ShareTemplates = {
   smsBody: string;
   emailSubject: string;
   emailBody: string;
+  /** Short DM-style copy; Instagram has no third-party “send DM” API — user pastes in the app. */
+  instagramBody: string;
 };
 
 function defaultShareTemplatesForOffer(offer: SelectedOffer): ShareTemplates {
@@ -60,6 +96,8 @@ function defaultShareTemplatesForOffer(offer: SelectedOffer): ShareTemplates {
         emailSubject: "A website concept we drafted for {{businessName}}",
         emailBody:
           "Hi —\n\nFollowing up on our research, here's a hosted preview with one possible direction for {{businessName}}'s marketing site — desktop-first, brochure-style layout:\n\n{{previewUrl}}\n\nTotally fine if now isn't the time. If it's useful, I can review it with you on a short call or iterate based on what you're aiming for.\n\nBest,\n{{yourName}}",
+        instagramBody:
+          "Hi! Quick website concept preview for {{businessName}} 👇\n\n{{previewUrl}}\n\nHappy to walk through it if useful.\n\n— {{yourName}}",
       };
     case "webapp":
       return {
@@ -68,6 +106,8 @@ function defaultShareTemplatesForOffer(offer: SelectedOffer): ShareTemplates {
         emailSubject: "Web app UI concept for {{businessName}}",
         emailBody:
           "Hi —\n\nHere's a desktop web application UI preview for {{businessName}} — think operator workflows: navigation, tables, and task-focused screens rather than a marketing site:\n\n{{previewUrl}}\n\nIf it resonates, we can dig into user journeys, what's MVP vs. later, and how this could sit alongside your stack.\n\nBest,\n{{yourName}}",
+        instagramBody:
+          "Hi! Sharing a web app UI preview for {{businessName}} (operator-style dashboards):\n\n{{previewUrl}}\n\nWant a quick tour of the flows?\n\n— {{yourName}}",
       };
     case "mobile":
       return {
@@ -76,6 +116,8 @@ function defaultShareTemplatesForOffer(offer: SelectedOffer): ShareTemplates {
         emailSubject: "Mobile app UI concept for {{businessName}}",
         emailBody:
           "Hi —\n\nSharing a mobile app UI preview for {{businessName}} — phone-sized screens oriented around real on-the-ground use, not just a pretty mock:\n\n{{previewUrl}}\n\nHappy to talk through priorities, what to build first, and how this could evolve.\n\nBest,\n{{yourName}}",
+        instagramBody:
+          "Hi! Phone-sized app UI preview for {{businessName}}:\n\n{{previewUrl}}\n\nSay the word if you want a quick walkthrough.\n\n— {{yourName}}",
       };
     case "automations":
       return {
@@ -84,6 +126,8 @@ function defaultShareTemplatesForOffer(offer: SelectedOffer): ShareTemplates {
         emailSubject: "AI automation opportunities for {{businessName}}",
         emailBody:
           "Hi —\n\nFrom our research on {{businessName}}, we pulled together AI automation opportunities — things like lead routing, follow-ups, and lightweight assistants that save your team time.\n\nI can send the PDF or walk through the highlights on a short call; whichever is easier.\n\n(Hosted preview links are for Website / Web app / Mobile concepts. For this track, use Generate report (PDF) on the AI automations card.)\n\nBest,\n{{yourName}}",
+        instagramBody:
+          "Hi! We mapped AI automation ideas for {{businessName}} (routing, follow-ups, assistants). Want a PDF or a quick call to skim highlights?\n\n— {{yourName}}",
       };
   }
 }
@@ -232,6 +276,8 @@ type Props = {
   businessName?: string;
   contactPhone?: string;
   contactEmail?: string;
+  /** Instagram profile URL or @handle (e.g. from enrichment). */
+  contactInstagram?: string;
   yourName?: string;
   marketIntelReport?: MarketIntelReport | null;
 };
@@ -242,6 +288,7 @@ export default function ProspectPreviewOutreachBlock({
   businessName: businessNameProp = "",
   contactPhone = "",
   contactEmail = "",
+  contactInstagram = "",
   yourName = "",
   marketIntelReport = null,
 }: Props) {
@@ -263,6 +310,7 @@ export default function ProspectPreviewOutreachBlock({
 
   const [smsTo, setSmsTo] = useState(contactPhone);
   const [emailTo, setEmailTo] = useState(contactEmail);
+  const [instagramTo, setInstagramTo] = useState(contactInstagram);
   const [shareTemplates, setShareTemplates] = useState(createInitialShareTemplates);
   const [attachPreviewImage, setAttachPreviewImage] = useState(true);
   const [shareBusy, setShareBusy] = useState<null | "sms" | "email">(null);
@@ -309,6 +357,10 @@ export default function ProspectPreviewOutreachBlock({
   useEffect(() => {
     setEmailTo(contactEmail);
   }, [contactEmail]);
+
+  useEffect(() => {
+    setInstagramTo(contactInstagram);
+  }, [contactInstagram]);
 
   useEffect(() => {
     let cancelled = false;
@@ -537,8 +589,40 @@ export default function ProspectPreviewOutreachBlock({
     return undefined;
   }, [selectedOffer, stitchWebResult, stitchWebAppResult, stitchMobileResult]);
 
+  const hostedPreviewSlugForSelection = useMemo(() => {
+    if (selectedOffer === "website") return stitchWebResult?.hostedPreviewSlug?.trim() || null;
+    if (selectedOffer === "webapp") return stitchWebAppResult?.hostedPreviewSlug?.trim() || null;
+    if (selectedOffer === "mobile") return stitchMobileResult?.hostedPreviewSlug?.trim() || null;
+    return null;
+  }, [selectedOffer, stitchWebResult, stitchWebAppResult, stitchMobileResult]);
+
   const canSharePreview =
     selectedOffer !== "automations" && Boolean(hostedPreviewIdForSelection && resolvedBusinessName);
+
+  const mergedInstagramMessage = useMemo(() => {
+    const id = hostedPreviewIdForSelection;
+    const previewUrl =
+      selectedOffer === "automations"
+        ? ""
+        : id
+          ? buildClientPreviewLink(id, hostedPreviewSlugForSelection)
+          : "";
+    return mergeProspectOutreachTemplate(activeShareTpl.instagramBody, {
+      previewUrl,
+      businessName: resolvedBusinessName,
+      yourName: yourName.trim(),
+    });
+  }, [
+    selectedOffer,
+    hostedPreviewIdForSelection,
+    hostedPreviewSlugForSelection,
+    activeShareTpl.instagramBody,
+    resolvedBusinessName,
+    yourName,
+  ]);
+
+  const canCopyInstagramMessage =
+    selectedOffer === "automations" || (Boolean(hostedPreviewIdForSelection) && Boolean(resolvedBusinessName));
 
   const sendSms = useCallback(async () => {
     const id = hostedPreviewIdForSelection;
@@ -606,6 +690,34 @@ export default function ProspectPreviewOutreachBlock({
     resolvedBusinessName,
     yourName,
   ]);
+
+  const copyInstagramMessage = useCallback(async () => {
+    if (!canCopyInstagramMessage) {
+      setShareMsg(
+        "Generate a hosted preview and keep Website, Web app, or Mobile selected to include {{previewUrl}}, or choose AI automations for a text-only message.",
+      );
+      return;
+    }
+    setShareMsg(null);
+    try {
+      await navigator.clipboard.writeText(mergedInstagramMessage);
+      setShareMsg(
+        "Instagram message copied. Open Instagram, start a DM with this business, and paste. Meta does not offer a one-click third-party DM API for arbitrary recipients.",
+      );
+    } catch {
+      setShareMsg("Could not copy (browser blocked).");
+    }
+  }, [canCopyInstagramMessage, mergedInstagramMessage]);
+
+  const openInstagramProfile = useCallback(() => {
+    const url = normalizeInstagramProfileUrl(instagramTo);
+    if (!url) {
+      setShareMsg("Enter their Instagram profile URL (https://instagram.com/…) or @handle.");
+      return;
+    }
+    setShareMsg(null);
+    window.open(url, "_blank", "noopener,noreferrer");
+  }, [instagramTo]);
 
   const generatePdf = useCallback(async () => {
     if (!marketIntelReport) {
@@ -708,7 +820,8 @@ export default function ProspectPreviewOutreachBlock({
           Design concepts &amp; outreach
         </h3>
         <p className="mt-1 text-[11px] text-text-secondary dark:text-zinc-500">
-          Select a card to choose which hosted preview you send (after generation). SMS and email copy are saved per
+          Select a card to choose which hosted preview you send (after generation). SMS, email, and Instagram copy are
+          saved per
           card type and update when you switch cards. Use{" "}
           <span className="font-mono">{"{{previewUrl}}"}</span> and{" "}
           <span className="font-mono">{"{{businessName}}"}</span> for Website, Web app, and Mobile; email defaults
@@ -977,7 +1090,7 @@ export default function ProspectPreviewOutreachBlock({
             )}
           </p>
 
-          <div className="mt-4 grid gap-6 lg:grid-cols-2 lg:items-stretch">
+          <div className="mt-4 grid gap-6 lg:grid-cols-3 lg:items-stretch">
             <section
               className="flex min-h-0 flex-col rounded-xl border border-border/70 bg-white/45 p-4 dark:border-zinc-700/70 dark:bg-zinc-900/35"
               aria-labelledby="prospect-share-sms-heading"
@@ -1105,6 +1218,65 @@ export default function ProspectPreviewOutreachBlock({
                     <Mail className="h-3.5 w-3.5" aria-hidden />
                   )}
                   Send email
+                </button>
+              </div>
+            </section>
+
+            <section
+              className="flex min-h-0 flex-col rounded-xl border border-border/70 bg-white/45 p-4 dark:border-zinc-700/70 dark:bg-zinc-900/35"
+              aria-labelledby="prospect-share-instagram-heading"
+            >
+              <div className="flex items-center gap-2 border-b border-border/50 pb-2 dark:border-zinc-700/50">
+                <Instagram className="h-4 w-4 text-pink-700/85 dark:text-pink-400/90" aria-hidden />
+                <h4
+                  id="prospect-share-instagram-heading"
+                  className="text-xs font-semibold uppercase tracking-widest text-text-secondary/85 dark:text-zinc-400"
+                >
+                  Instagram
+                </h4>
+              </div>
+              <p className="mt-2 text-[10px] leading-snug text-text-secondary dark:text-zinc-500">
+                Same merge tags as SMS. There is no supported way for this app to send Instagram DMs directly;
+                copy the message, then open their profile and paste in a DM (or use Meta&apos;s Business API with
+                your own app if you need automation).
+              </p>
+              <label className="mb-1 mt-3 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+                Profile URL or @handle
+              </label>
+              <input
+                type="text"
+                value={instagramTo}
+                onChange={(e) => setInstagramTo(e.target.value)}
+                placeholder="https://www.instagram.com/theirbrand/ or @theirbrand"
+                className="w-full rounded-lg border border-border px-2 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-900"
+              />
+              <label className="mb-1 mt-3 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+                Message
+              </label>
+              <textarea
+                value={activeShareTpl.instagramBody}
+                onChange={(e) => updateActiveShareTemplates({ instagramBody: e.target.value })}
+                rows={5}
+                className="min-h-[7.5rem] w-full flex-1 rounded-lg border border-border px-2 py-1.5 font-mono text-[11px] dark:border-zinc-700 dark:bg-zinc-900"
+              />
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={!canCopyInstagramMessage || shareBusy !== null}
+                  onClick={() => void copyInstagramMessage()}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-pink-500/40 bg-pink-500/10 px-4 py-2.5 text-xs font-semibold text-pink-950 disabled:opacity-50 dark:border-pink-400/35 dark:bg-pink-500/15 dark:text-pink-100 sm:w-auto"
+                >
+                  <Copy className="h-3.5 w-3.5" aria-hidden />
+                  Copy message
+                </button>
+                <button
+                  type="button"
+                  disabled={shareBusy !== null || !normalizeInstagramProfileUrl(instagramTo)}
+                  onClick={() => openInstagramProfile()}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-xs font-semibold text-text-primary disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-100 sm:w-auto"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                  Open profile
                 </button>
               </div>
             </section>

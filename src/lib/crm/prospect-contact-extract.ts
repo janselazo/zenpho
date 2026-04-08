@@ -182,7 +182,7 @@ export function discoverContactPageUrls(html: string, baseUrl: string, max = 5):
   const seen = new Set<string>();
   const scored: { url: string; score: number }[] = [];
 
-  const re = /<a\s[^>]*href=["']([^"'#]+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  const re = /<a\s[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
   let m: RegExpExecArray | null;
   while ((m = re.exec(html)) !== null) {
     const href = m[1].trim();
@@ -261,10 +261,11 @@ function stripSocialTracking(u: URL): string {
   return copy.toString();
 }
 
-/** Decode minimal HTML entities in raw `href` before `URL()` (themes often leave `&amp;` in attributes). */
+/** Decode minimal HTML entities in raw `href` before `URL()` (themes often leave `&amp;` or `&#038;` in attributes). */
 function decodeHrefForUrl(raw: string): string {
   let s = raw.trim();
   s = s.replace(/&amp;/gi, "&").replace(/&quot;/gi, '"').replace(/&#39;/g, "'");
+  s = s.replace(/&#0*38;/gi, "&").replace(/&#[xX]26;/gi, "&");
   try {
     s = decodeURIComponent(s);
   } catch {
@@ -406,15 +407,76 @@ function applySocialUrlToProspect(out: ProspectSocialUrls, u: URL): void {
     }
   }
 
-  if (!out.whatsapp && host === "api.whatsapp.com") {
-    const send = u.pathname.toLowerCase();
-    if (send.includes("/send")) {
-      const ph = u.searchParams.get("phone")?.replace(/\D/g, "") ?? "";
-      if (ph.length >= 8 && ph.length <= 15) {
-        out.whatsapp = `https://wa.me/${ph}`;
-      }
+  /** Many SMB sites use web.whatsapp.com or api.whatsapp.com with ?phone= (Elementor, WordPress, etc.). */
+  if (!out.whatsapp && (host === "api.whatsapp.com" || host === "www.api.whatsapp.com")) {
+    const ph = u.searchParams.get("phone")?.replace(/\D/g, "") ?? "";
+    if (ph.length >= 8 && ph.length <= 15) {
+      out.whatsapp = `https://wa.me/${ph}`;
     }
   }
+
+  if (!out.whatsapp && (host === "web.whatsapp.com" || host === "www.web.whatsapp.com")) {
+    const ph = u.searchParams.get("phone")?.replace(/\D/g, "") ?? "";
+    if (ph.length >= 8 && ph.length <= 15) {
+      out.whatsapp = `https://wa.me/${ph}`;
+    }
+  }
+
+  if (!out.whatsapp && u.protocol === "whatsapp:") {
+    const ph =
+      u.searchParams.get("phone")?.replace(/\D/g, "") ||
+      u.pathname.replace(/^\/+/, "").replace(/\D/g, "");
+    if (ph.length >= 8 && ph.length <= 15) {
+      out.whatsapp = `https://wa.me/${ph}`;
+    }
+  }
+}
+
+/** Digits suitable for wa.me (country code included, no +). */
+function waMeDigitsFromRawPhone(raw: string): string | null {
+  const d = raw.replace(/\D/g, "");
+  if (d.length >= 8 && d.length <= 15) return d;
+  return null;
+}
+
+/**
+ * Footers often use `<a href="tel:...">WhatsApp</a>` (same number as call) instead of wa.me.
+ */
+function inferWhatsAppFromTelAnchors(html: string): string | null {
+  const re = /<a\s[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null) {
+    const inner = m[2].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    if (!/\bwhatsapp\b/i.test(inner)) continue;
+    const rawHref = decodeHrefForUrl(m[1].trim());
+    if (!/^tel:/i.test(rawHref)) continue;
+    const telPart = decodeURIComponent(rawHref.slice(4).split(/[?;]/)[0] ?? "");
+    const digits = waMeDigitsFromRawPhone(telPart);
+    if (digits) return `https://wa.me/${digits}`;
+  }
+  return null;
+}
+
+/** Catch phone= in WhatsApp URLs when href is malformed or uses nonstandard quoting (best-effort). */
+function extractWhatsAppUrlsFromRawHtml(html: string): string[] {
+  const out: string[] = [];
+  for (const m of html.matchAll(
+    /https?:\/\/(?:web\.|api\.)whatsapp\.com\/[^"'\s<>]*[?&]phone=([^"'\s&<>]+)/gi,
+  )) {
+    let frag = (m[1] ?? "").replace(/&#0*38;/gi, "&");
+    try {
+      frag = decodeURIComponent(frag);
+    } catch {
+      /* keep */
+    }
+    const digits = waMeDigitsFromRawPhone(frag);
+    if (digits) out.push(`https://wa.me/${digits}`);
+  }
+  for (const m of html.matchAll(/https?:\/\/wa\.me\/(\d{8,15})(?:[\s"'<>/?]|$)/gi)) {
+    const digits = m[1];
+    if (digits && waMeDigitsFromRawPhone(digits)) out.push(`https://wa.me/${digits}`);
+  }
+  return out;
 }
 
 function walkLdJsonCollectSameAs(node: unknown, acc: string[]): void {
@@ -478,7 +540,8 @@ export function extractProspectSocialUrls(html: string, pageBaseUrl: string): Pr
     return out;
   }
 
-  const hrefRe = /href\s*=\s*["']([^"'#]*?)["']/gi;
+  /** Allow `#` so `href="...?x=1&#038;y=2"` (HTML-encoded &) matches through to the closing quote. */
+  const hrefRe = /href\s*=\s*["']([^"']*?)["']/gi;
   let m: RegExpExecArray | null;
   while ((m = hrefRe.exec(html)) !== null) {
     let raw = m[1].trim();
@@ -501,6 +564,15 @@ export function extractProspectSocialUrls(html: string, pageBaseUrl: string): Pr
       continue;
     }
     applySocialUrlToProspect(out, u);
+  }
+
+  if (!out.whatsapp) {
+    const fromTel = inferWhatsAppFromTelAnchors(html);
+    if (fromTel) out.whatsapp = fromTel;
+  }
+  if (!out.whatsapp) {
+    const hits = extractWhatsAppUrlsFromRawHtml(html);
+    if (hits[0]) out.whatsapp = hits[0];
   }
 
   return out;
