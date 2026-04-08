@@ -3,7 +3,11 @@
 import twilio from "twilio";
 import { Resend } from "resend";
 import { prospectPreviewPageUrl } from "@/lib/crm/prospect-preview-public-url";
-import { getAgencyTwilioCredentials } from "@/lib/twilio/agency-credentials";
+import { isIntegrationSecretsKeyConfigured } from "@/lib/crypto/integration-secrets";
+import {
+  getAgencyTwilioCredentials,
+  getTwilioEnvVarPresence,
+} from "@/lib/twilio/agency-credentials";
 import { getAgencySendGridCredentials } from "@/lib/sendgrid/agency-credentials";
 import { sendSendGridMail } from "@/lib/sendgrid/mail-send";
 import { mergeProspectOutreachTemplate } from "@/lib/crm/prospect-outreach-template";
@@ -24,10 +28,23 @@ export async function sendProspectPreviewSmsAction(input: {
 
   const creds = await getAgencyTwilioCredentials();
   if (!creds) {
+    const e = getTwilioEnvVarPresence();
+    const missing: string[] = [];
+    if (!e.accountSid) missing.push("TWILIO_ACCOUNT_SID");
+    if (!e.authToken) missing.push("TWILIO_AUTH_TOKEN (or TWILIO_SECRET_KEY)");
+    if (!e.fromPhone) missing.push("TWILIO_FROM_PHONE");
+    if (missing.length > 0) {
+      return {
+        ok: false as const,
+        error: `Twilio env missing on this server: ${missing.join(", ")}. Add them in Vercel → Project → Settings → Environment Variables for Production and/or Preview (match the URL you use), redeploy, or save under Settings → Integrations → Twilio. Logged-in staff can check GET /api/integrations/twilio-env.`,
+      };
+    }
+    const parts: string[] = [];
+    if (!isIntegrationSecretsKeyConfigured()) parts.push("INTEGRATION_SECRETS_KEY");
+    parts.push("SUPABASE_SERVICE_ROLE_KEY");
     return {
       ok: false as const,
-      error:
-        "Twilio is not configured. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN (or TWILIO_SECRET_KEY), and TWILIO_FROM_PHONE on the host that runs this action — e.g. .env.local then restart npm run dev locally, or Vercel → Environment Variables for Production/Preview then redeploy — or save credentials under Settings → Integrations → Twilio.",
+      error: `Twilio env variables are set, but loading credentials failed (database path). Set ${parts.join(" and ")} on the server and redeploy, then save Twilio under Settings → Integrations again. Staff: GET /api/integrations/twilio-env.`,
     };
   }
   if (!creds.fromPhone) {
