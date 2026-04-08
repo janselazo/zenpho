@@ -107,15 +107,48 @@ function stitchBrandingSummary(ctx: ProspectStitchContext): string {
   return title ? `${title} · ${ctx.url}` : ctx.url;
 }
 
+async function downloadStitchPreviewImage(
+  imageUrl: string,
+  target: StitchTarget,
+  screenId: string,
+  onFallback: () => void,
+): Promise<void> {
+  const safeId = screenId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 40) || "preview";
+  const base = `stitch-preview-${target}-${safeId}`;
+  try {
+    const res = await fetch(imageUrl, { mode: "cors" });
+    if (!res.ok) throw new Error("fetch failed");
+    const blob = await res.blob();
+    const ct = (blob.type || res.headers.get("content-type") || "").toLowerCase();
+    const ext = ct.includes("jpeg") || ct.includes("jpg") ? "jpg" : "png";
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${base}.${ext}`;
+    a.rel = "noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch {
+    window.open(imageUrl, "_blank", "noopener,noreferrer");
+    onFallback();
+  }
+}
+
 function StitchPreviewLinks({
   result,
   label,
+  target,
   copyAndFlash,
 }: {
   result: StitchOk;
   label: string;
+  target: StitchTarget;
   copyAndFlash: (t: string) => void;
 }) {
+  const [imageDownloadBusy, setImageDownloadBusy] = useState(false);
+
   return (
     <div className="mt-2 space-y-2 rounded-lg border border-blue-500/25 bg-blue-500/[0.06] p-3 dark:border-blue-400/20 dark:bg-blue-500/10">
       <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-900/80 dark:text-blue-200/90">
@@ -157,6 +190,24 @@ function StitchPreviewLinks({
           Download HTML
           <ExternalLink className="h-3 w-3 opacity-70" aria-hidden />
         </a>
+        <button
+          type="button"
+          disabled={imageDownloadBusy}
+          onClick={() => {
+            setImageDownloadBusy(true);
+            void downloadStitchPreviewImage(result.imageUrl, target, result.screenId, () =>
+              copyAndFlash("Opened preview image in a new tab — use Save Image As if needed."),
+            ).finally(() => setImageDownloadBusy(false));
+          }}
+          className="inline-flex items-center gap-1 text-xs font-medium text-text-secondary hover:text-text-primary disabled:opacity-50 dark:text-zinc-400"
+        >
+          {imageDownloadBusy ? (
+            <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+          ) : (
+            <FileDown className="h-3 w-3" aria-hidden />
+          )}
+          Download preview image
+        </button>
         <button
           type="button"
           onClick={() =>
@@ -479,6 +530,13 @@ export default function ProspectPreviewOutreachBlock({
     return null;
   }, [selectedOffer, stitchWebResult, stitchWebAppResult, stitchMobileResult]);
 
+  const stitchPreviewImageUrlForSelection = useMemo(() => {
+    if (selectedOffer === "website") return stitchWebResult?.imageUrl?.trim() || undefined;
+    if (selectedOffer === "webapp") return stitchWebAppResult?.imageUrl?.trim() || undefined;
+    if (selectedOffer === "mobile") return stitchMobileResult?.imageUrl?.trim() || undefined;
+    return undefined;
+  }, [selectedOffer, stitchWebResult, stitchWebAppResult, stitchMobileResult]);
+
   const canSharePreview =
     selectedOffer !== "automations" && Boolean(hostedPreviewIdForSelection && resolvedBusinessName);
 
@@ -497,6 +555,7 @@ export default function ProspectPreviewOutreachBlock({
       businessName: resolvedBusinessName,
       yourName: yourName.trim() || undefined,
       includeMmsImage: attachPreviewImage,
+      stitchPreviewImageUrl: stitchPreviewImageUrlForSelection,
     });
     setShareBusy(null);
     if (res.ok) {
@@ -506,6 +565,7 @@ export default function ProspectPreviewOutreachBlock({
     }
   }, [
     hostedPreviewIdForSelection,
+    stitchPreviewImageUrlForSelection,
     selectedOffer,
     shareTemplates,
     smsTo,
@@ -529,6 +589,7 @@ export default function ProspectPreviewOutreachBlock({
       bodyTemplate: shareTemplates[selectedOffer].emailBody,
       businessName: resolvedBusinessName,
       yourName: yourName.trim() || undefined,
+      stitchPreviewImageUrl: stitchPreviewImageUrlForSelection,
     });
     setShareBusy(null);
     if (res.ok) {
@@ -538,6 +599,7 @@ export default function ProspectPreviewOutreachBlock({
     }
   }, [
     hostedPreviewIdForSelection,
+    stitchPreviewImageUrlForSelection,
     selectedOffer,
     shareTemplates,
     emailTo,
@@ -717,6 +779,7 @@ export default function ProspectPreviewOutreachBlock({
                 <StitchPreviewLinks
                   result={stitchWebResult}
                   label="Stitch · website"
+                  target="website"
                   copyAndFlash={copyAndFlash}
                 />
               </div>
@@ -781,6 +844,7 @@ export default function ProspectPreviewOutreachBlock({
                 <StitchPreviewLinks
                   result={stitchWebAppResult}
                   label="Stitch · web app"
+                  target="webapp"
                   copyAndFlash={copyAndFlash}
                 />
               </div>
@@ -844,6 +908,7 @@ export default function ProspectPreviewOutreachBlock({
                 <StitchPreviewLinks
                   result={stitchMobileResult}
                   label="Stitch · mobile"
+                  target="mobile"
                   copyAndFlash={copyAndFlash}
                 />
               </div>
@@ -961,7 +1026,10 @@ export default function ProspectPreviewOutreachBlock({
                   onChange={(e) => setAttachPreviewImage(e.target.checked)}
                   className="mt-0.5 rounded border-border"
                 />
-                <span>Attach preview screenshot for MMS when ready (email may embed when available).</span>
+                <span>
+                  Attach preview image for MMS: uses the hosted page screenshot when ready, otherwise the Stitch
+                  preview image. Email inlines the same priority when the server can fetch the image.
+                </span>
               </label>
               <div className="mt-4">
                 <button
@@ -995,7 +1063,8 @@ export default function ProspectPreviewOutreachBlock({
               </div>
               <p className="mt-2 text-[10px] leading-snug text-text-secondary dark:text-zinc-500">
                 Same merge tags as SMS, plus <span className="font-mono">{"{{yourName}}"}</span> in the default
-                sign-off when your profile supplies it. Subject and body can differ per service type.
+                sign-off when your profile supplies it. Subject and body can differ per service type. A preview
+                image is embedded when available (hosted screenshot first, else Stitch CDN URL).
               </p>
               <label className="mb-1 mt-3 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
                 To

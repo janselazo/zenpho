@@ -13,6 +13,11 @@ import { sendSendGridMail } from "@/lib/sendgrid/mail-send";
 import { mergeProspectOutreachTemplate } from "@/lib/crm/prospect-outreach-template";
 import { requireAgencyStaff } from "@/app/(crm)/actions/prospect-preview-agency";
 
+function normalizeHttpsImageUrl(raw: string | undefined): string | null {
+  const t = raw?.trim() ?? "";
+  return t.startsWith("https://") ? t : null;
+}
+
 export async function sendProspectPreviewSmsAction(input: {
   previewId: string;
   to: string;
@@ -20,6 +25,8 @@ export async function sendProspectPreviewSmsAction(input: {
   businessName: string;
   yourName?: string;
   includeMmsImage?: boolean;
+  /** Stitch CDN preview; used for MMS when hosted screenshot is not ready yet. */
+  stitchPreviewImageUrl?: string;
 }) {
   const auth = await requireAgencyStaff();
   if (auth.error || !auth.supabase) {
@@ -70,10 +77,17 @@ export async function sendProspectPreviewSmsAction(input: {
   const client = twilio(creds.accountSid, creds.authToken);
 
   let mediaUrl: string | undefined;
-  if (input.includeMmsImage && row) {
-    const u = row.screenshot_url?.trim();
-    if (row.screenshot_status === "ready" && u?.startsWith("https://")) {
-      mediaUrl = u;
+  if (input.includeMmsImage) {
+    const screenshotReady =
+      row &&
+      row.screenshot_status === "ready" &&
+      Boolean(row.screenshot_url?.trim().startsWith("https://"));
+    const screenshotUrl = row?.screenshot_url?.trim();
+    const stitchUrl = normalizeHttpsImageUrl(input.stitchPreviewImageUrl);
+    if (screenshotReady && screenshotUrl) {
+      mediaUrl = screenshotUrl;
+    } else if (stitchUrl) {
+      mediaUrl = stitchUrl;
     }
   }
 
@@ -123,6 +137,8 @@ export async function sendProspectPreviewEmailAction(input: {
   bodyTemplate: string;
   businessName: string;
   yourName?: string;
+  /** Stitch CDN preview; inlined when hosted screenshot is not ready yet. */
+  stitchPreviewImageUrl?: string;
 }) {
   const auth = await requireAgencyStaff();
   if (auth.error || !auth.supabase) {
@@ -178,6 +194,28 @@ export async function sendProspectPreviewEmailAction(input: {
   }
   if (!previewImageHtml && hasImg && img) {
     previewImageHtml = `<p><img src="${img}" alt="Preview" style="max-width:100%;height:auto;border-radius:8px;" /></p>`;
+  }
+
+  const stitchImg = normalizeHttpsImageUrl(input.stitchPreviewImageUrl);
+  if (!previewImageHtml && stitchImg) {
+    try {
+      const imgRes = await fetch(stitchImg, { signal: AbortSignal.timeout(25_000) });
+      if (imgRes.ok) {
+        const buf = Buffer.from(await imgRes.arrayBuffer());
+        const ct = (imgRes.headers.get("content-type") ?? "").toLowerCase();
+        const isJpeg = ct.includes("jpeg") || ct.includes("jpg");
+        const filename = isJpeg ? "stitch-preview.jpg" : "stitch-preview.png";
+        const contentType = isJpeg ? "image/jpeg" : "image/png";
+        const contentId = "prospect_preview_img";
+        attachments = [{ filename, content: buf, contentType, contentId }];
+        previewImageHtml = `<p><img src="cid:${contentId}" alt="Concept preview" style="max-width:100%;height:auto;border-radius:8px;" /></p>`;
+      }
+    } catch {
+      previewImageHtml = "";
+    }
+  }
+  if (!previewImageHtml && stitchImg) {
+    previewImageHtml = `<p><img src="${stitchImg}" alt="Concept preview" style="max-width:100%;height:auto;border-radius:8px;" /></p>`;
   }
 
   const htmlBody = `
