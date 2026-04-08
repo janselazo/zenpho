@@ -2,15 +2,28 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:
 
 /** Shown when saving Twilio/SendGrid in Settings if env is unset. */
 export const INTEGRATION_SECRETS_KEY_HELP =
-  "INTEGRATION_SECRETS_KEY is not set. Generate a 32-byte secret (run: openssl rand -hex 32), add INTEGRATION_SECRETS_KEY=<that value> to .env.local locally or Vercel → Environment Variables for production, then restart npm run dev or redeploy. This key encrypts API tokens stored in the database.";
+  "INTEGRATION_SECRETS_KEY is not set on the server that handled this request. Generate a 32-byte secret (openssl rand -hex 32). Locally: add INTEGRATION_SECRETS_KEY=<value> to .env.local and restart npm run dev. On Vercel: Project → Settings → Environment Variables — enable it for Production and/or Preview (match the URL you use), add the variable, then Redeploy. .env.local is not uploaded to Vercel. This key encrypts API tokens stored in the database.";
 
 const ALGO = "aes-256-gcm";
 const IV_LEN = 12;
 const TAG_LEN = 16;
 const PREFIX = "v1:";
 
+/**
+ * Read at runtime — bracket access avoids Next/Webpack replacing `process.env.FOO` with a
+ * build-time value (undefined if the var was missing during `next build`), which breaks Vercel
+ * when INTEGRATION_SECRETS_KEY is only set as a runtime env on the deployment.
+ */
+function integrationSecretsKeyRaw(): string | undefined {
+  return process.env["INTEGRATION_SECRETS_KEY"];
+}
+
+export function isIntegrationSecretsKeyConfigured(): boolean {
+  return Boolean(integrationSecretsKeyRaw()?.trim());
+}
+
 function deriveKey(): Buffer {
-  const raw = process.env.INTEGRATION_SECRETS_KEY;
+  const raw = integrationSecretsKeyRaw();
   if (!raw?.trim()) {
     throw new Error("INTEGRATION_SECRETS_KEY_MISSING");
   }

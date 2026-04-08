@@ -14,11 +14,11 @@ export function getTwilioEnvVarPresence(): {
   fromPhone: boolean;
 } {
   return {
-    accountSid: Boolean(process.env.TWILIO_ACCOUNT_SID?.trim()),
+    accountSid: Boolean(process.env["TWILIO_ACCOUNT_SID"]?.trim()),
     authToken: Boolean(
-      process.env.TWILIO_AUTH_TOKEN?.trim() || process.env.TWILIO_SECRET_KEY?.trim(),
+      process.env["TWILIO_AUTH_TOKEN"]?.trim() || process.env["TWILIO_SECRET_KEY"]?.trim(),
     ),
-    fromPhone: Boolean(process.env.TWILIO_FROM_PHONE?.trim()),
+    fromPhone: Boolean(process.env["TWILIO_FROM_PHONE"]?.trim()),
   };
 }
 
@@ -29,10 +29,10 @@ export function getTwilioEnvVarPresence(): {
  * via service role (Settings → Integrations).
  */
 export async function getAgencyTwilioCredentials(): Promise<AgencyTwilioCreds | null> {
-  const envSid = process.env.TWILIO_ACCOUNT_SID?.trim();
+  const envSid = process.env["TWILIO_ACCOUNT_SID"]?.trim();
   const envToken =
-    process.env.TWILIO_AUTH_TOKEN?.trim() || process.env.TWILIO_SECRET_KEY?.trim();
-  const envFrom = process.env.TWILIO_FROM_PHONE?.trim();
+    process.env["TWILIO_AUTH_TOKEN"]?.trim() || process.env["TWILIO_SECRET_KEY"]?.trim();
+  const envFrom = process.env["TWILIO_FROM_PHONE"]?.trim();
   if (envSid && envToken && envFrom) {
     return {
       accountSid: envSid,
