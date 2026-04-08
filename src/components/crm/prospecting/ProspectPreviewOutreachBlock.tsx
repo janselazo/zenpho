@@ -56,34 +56,34 @@ function defaultShareTemplatesForOffer(offer: SelectedOffer): ShareTemplates {
     case "website":
       return {
         smsBody:
-          "Hi — here's a quick website concept preview for {{businessName}}:\n\n{{previewUrl}}\n\nHappy to walk through it if helpful.",
-        emailSubject: "Website concept preview for {{businessName}}",
+          "Hi — we put together a quick visual direction for {{businessName}}'s site. Peek when you can:\n\n{{previewUrl}}\n\nHappy to walk through it live or tweak from your feedback.",
+        emailSubject: "A website concept we drafted for {{businessName}}",
         emailBody:
-          "Hi —\n\nSharing a hosted website concept preview we generated for {{businessName}}:\n\n{{previewUrl}}\n\nThis is a brochure-style marketing site direction (desktop). Happy to review and iterate.\n\nThanks,",
+          "Hi —\n\nFollowing up on our research, here's a hosted preview with one possible direction for {{businessName}}'s marketing site — desktop-first, brochure-style layout:\n\n{{previewUrl}}\n\nTotally fine if now isn't the time. If it's useful, I can review it with you on a short call or iterate based on what you're aiming for.\n\nBest,\n{{yourName}}",
       };
     case "webapp":
       return {
         smsBody:
-          "Hi — here's a desktop web app UI preview for {{businessName}}:\n\n{{previewUrl}}\n\nOperator-style dashboard (not a marketing site). Say if you'd like a walkthrough.",
-        emailSubject: "Web app UI preview for {{businessName}}",
+          "Hi — sharing an internal-style web app UI preview for {{businessName}} (dashboards / tools, not a brochure):\n\n{{previewUrl}}\n\nReply if you want a quick tour of the flows.",
+        emailSubject: "Web app UI concept for {{businessName}}",
         emailBody:
-          "Hi —\n\nSharing a desktop web application UI preview for {{businessName}}:\n\n{{previewUrl}}\n\nDashboard, sidebar, and tables — built for operators, not a brochure site. Happy to walk through flows and next steps.\n\nThanks,",
+          "Hi —\n\nHere's a desktop web application UI preview for {{businessName}} — think operator workflows: navigation, tables, and task-focused screens rather than a marketing site:\n\n{{previewUrl}}\n\nIf it resonates, we can dig into user journeys, what's MVP vs. later, and how this could sit alongside your stack.\n\nBest,\n{{yourName}}",
       };
     case "mobile":
       return {
         smsBody:
-          "Hi — here's a mobile app UI preview for {{businessName}}:\n\n{{previewUrl}}\n\nPhone-sized operator flows. Reply if you want a quick tour.",
-        emailSubject: "Mobile app UI preview for {{businessName}}",
+          "Hi — here's a phone-sized app UI preview for {{businessName}}:\n\n{{previewUrl}}\n\nGeared toward day-to-day tasks on the go. Say the word if you want a quick walkthrough.",
+        emailSubject: "Mobile app UI concept for {{businessName}}",
         emailBody:
-          "Hi —\n\nSharing a phone-sized mobile app UI preview for {{businessName}}:\n\n{{previewUrl}}\n\nOriented toward day-to-day operator tasks. I can talk through screens and prioritization.\n\nThanks,",
+          "Hi —\n\nSharing a mobile app UI preview for {{businessName}} — phone-sized screens oriented around real on-the-ground use, not just a pretty mock:\n\n{{previewUrl}}\n\nHappy to talk through priorities, what to build first, and how this could evolve.\n\nBest,\n{{yourName}}",
       };
     case "automations":
       return {
         smsBody:
-          "Hi — we outlined AI automation opportunities for {{businessName}} (lead routing, follow-ups, assistants). Reply if you'd like the PDF or a short call.",
-        emailSubject: "AI automation ideas for {{businessName}}",
+          "Hi — we mapped AI automation opportunities for {{businessName}} (routing, follow-ups, assistants, etc.). Want the PDF or a 15-min call to skim highlights?",
+        emailSubject: "AI automation opportunities for {{businessName}}",
         emailBody:
-          "Hi —\n\nWe summarized AI automation opportunities for {{businessName}} from our research (routing, follow-ups, assistants). I can send the PDF or walk through highlights — just reply.\n\n(Hosted preview links apply to Website / Web app / Mobile; use Generate report (PDF) on the AI automations card.)\n\nThanks,",
+          "Hi —\n\nFrom our research on {{businessName}}, we pulled together AI automation opportunities — things like lead routing, follow-ups, and lightweight assistants that save your team time.\n\nI can send the PDF or walk through the highlights on a short call; whichever is easier.\n\n(Hosted preview links are for Website / Web app / Mobile concepts. For this track, use Generate report (PDF) on the AI automations card.)\n\nBest,\n{{yourName}}",
       };
   }
 }
@@ -649,8 +649,9 @@ export default function ProspectPreviewOutreachBlock({
           Select a card to choose which hosted preview you send (after generation). SMS and email copy are saved per
           card type and update when you switch cards. Use{" "}
           <span className="font-mono">{"{{previewUrl}}"}</span> and{" "}
-          <span className="font-mono">{"{{businessName}}"}</span> for Website, Web app, and Mobile; AI automations
-          templates focus on the PDF follow-up.
+          <span className="font-mono">{"{{businessName}}"}</span> for Website, Web app, and Mobile; email defaults
+          also use <span className="font-mono">{"{{yourName}}"}</span> (from your CRM context when provided). AI
+          automations templates focus on the PDF follow-up.
         </p>
         {stitchContext ? (
           <p className="mt-3 rounded-lg border border-border/60 bg-white/40 px-2.5 py-2 text-[11px] text-text-secondary dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
@@ -929,8 +930,10 @@ export default function ProspectPreviewOutreachBlock({
                 Merge tags: <span className="font-mono">{"{{previewUrl}}"}</span>,{" "}
                 <span className="font-mono">{"{{businessName}}"}</span>
                 {selectedOffer === "automations" ? (
-                  <> — optional for this card (no Stitch preview link).</>
-                ) : null}
+                  <> — <span className="font-mono">{"{{previewUrl}}"}</span> usually omitted (PDF follow-up).</>
+                ) : (
+                  <> — optional <span className="font-mono">{"{{yourName}}"}</span> (typical in email sign-off).</>
+                )}
               </p>
               <label className="mb-1 mt-3 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
                 To
@@ -991,7 +994,8 @@ export default function ProspectPreviewOutreachBlock({
                 </h4>
               </div>
               <p className="mt-2 text-[10px] leading-snug text-text-secondary dark:text-zinc-500">
-                Same merge tags as SMS. Body can be longer and distinct per service type.
+                Same merge tags as SMS, plus <span className="font-mono">{"{{yourName}}"}</span> in the default
+                sign-off when your profile supplies it. Subject and body can differ per service type.
               </p>
               <label className="mb-1 mt-3 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
                 To
