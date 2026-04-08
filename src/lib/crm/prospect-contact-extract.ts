@@ -292,6 +292,17 @@ export function mergeProspectSocialUrls(...parts: ProspectSocialUrls[]): Prospec
 const INSTAGRAM_HANDLE_SEGMENT = /^[a-z0-9._-]+$/i;
 
 function applySocialUrlToProspect(out: ProspectSocialUrls, u: URL): void {
+  if (u.protocol === "whatsapp:") {
+    if (!out.whatsapp) {
+      const ph =
+        u.searchParams.get("phone")?.replace(/\D/g, "") ||
+        u.pathname.replace(/^\/+/, "").replace(/\D/g, "");
+      if (ph.length >= 8 && ph.length <= 15) {
+        out.whatsapp = `https://wa.me/${ph}`;
+      }
+    }
+    return;
+  }
   if (u.protocol !== "http:" && u.protocol !== "https:") return;
   const host = u.hostname.replace(/^www\./i, "").toLowerCase();
 
@@ -417,15 +428,6 @@ function applySocialUrlToProspect(out: ProspectSocialUrls, u: URL): void {
 
   if (!out.whatsapp && (host === "web.whatsapp.com" || host === "www.web.whatsapp.com")) {
     const ph = u.searchParams.get("phone")?.replace(/\D/g, "") ?? "";
-    if (ph.length >= 8 && ph.length <= 15) {
-      out.whatsapp = `https://wa.me/${ph}`;
-    }
-  }
-
-  if (!out.whatsapp && u.protocol === "whatsapp:") {
-    const ph =
-      u.searchParams.get("phone")?.replace(/\D/g, "") ||
-      u.pathname.replace(/^\/+/, "").replace(/\D/g, "");
     if (ph.length >= 8 && ph.length <= 15) {
       out.whatsapp = `https://wa.me/${ph}`;
     }
