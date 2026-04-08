@@ -7,14 +7,31 @@ export type AgencyTwilioCreds = {
   fromPhone: string | null;
 };
 
+/** Booleans only — for staff diagnostics; never log secret values. */
+export function getTwilioEnvVarPresence(): {
+  accountSid: boolean;
+  authToken: boolean;
+  fromPhone: boolean;
+} {
+  return {
+    accountSid: Boolean(process.env.TWILIO_ACCOUNT_SID?.trim()),
+    authToken: Boolean(
+      process.env.TWILIO_AUTH_TOKEN?.trim() || process.env.TWILIO_SECRET_KEY?.trim(),
+    ),
+    fromPhone: Boolean(process.env.TWILIO_FROM_PHONE?.trim()),
+  };
+}
+
 /**
  * Twilio for outbound SMS and inbound webhook validation.
- * When `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM_PHONE` are all set (e.g. on Vercel),
- * those are used. Otherwise loads encrypted row via service role (Settings → Integrations).
+ * When `TWILIO_ACCOUNT_SID`, auth token (`TWILIO_AUTH_TOKEN` or alias `TWILIO_SECRET_KEY`), and
+ * `TWILIO_FROM_PHONE` are all set (e.g. on Vercel), those are used. Otherwise loads encrypted row
+ * via service role (Settings → Integrations).
  */
 export async function getAgencyTwilioCredentials(): Promise<AgencyTwilioCreds | null> {
   const envSid = process.env.TWILIO_ACCOUNT_SID?.trim();
-  const envToken = process.env.TWILIO_AUTH_TOKEN?.trim();
+  const envToken =
+    process.env.TWILIO_AUTH_TOKEN?.trim() || process.env.TWILIO_SECRET_KEY?.trim();
   const envFrom = process.env.TWILIO_FROM_PHONE?.trim();
   if (envSid && envToken && envFrom) {
     return {

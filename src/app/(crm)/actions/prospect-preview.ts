@@ -27,7 +27,7 @@ export async function sendProspectPreviewSmsAction(input: {
     return {
       ok: false as const,
       error:
-        "Twilio is not configured. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_FROM_PHONE on the server, or save credentials under Settings → Integrations → Twilio.",
+        "Twilio is not configured. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN (or TWILIO_SECRET_KEY), and TWILIO_FROM_PHONE on the host that runs this action — e.g. .env.local then restart npm run dev locally, or Vercel → Environment Variables for Production/Preview then redeploy — or save credentials under Settings → Integrations → Twilio.",
     };
   }
   if (!creds.fromPhone) {
