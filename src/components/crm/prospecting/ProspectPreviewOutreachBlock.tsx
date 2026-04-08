@@ -122,12 +122,12 @@ function defaultShareTemplatesForOffer(offer: SelectedOffer): ShareTemplates {
     case "automations":
       return {
         smsBody:
-          "Hi — we mapped AI automation opportunities for {{businessName}} (routing, follow-ups, assistants, etc.). Want the PDF or a 15-min call to skim highlights?",
-        emailSubject: "AI automation opportunities for {{businessName}}",
+          "Hi — we drafted an AI audit for {{businessName}}: repeatable processes, where time/money goes, and prioritized next steps (implementation quoted separately). Want the PDF or a quick call to walk through it?",
+        emailSubject: "AI audit for {{businessName}}",
         emailBody:
-          "Hi —\n\nFrom our research on {{businessName}}, we pulled together AI automation opportunities — things like lead routing, follow-ups, and lightweight assistants that save your team time.\n\nI can send the PDF or walk through the highlights on a short call; whichever is easier.\n\n(Hosted preview links are for Website / Web app / Mobile concepts. For this track, use Generate report (PDF) on the AI automations card.)\n\nBest,\n{{yourName}}",
+          "Hi —\n\nFrom our research on {{businessName}}, we put together a structured AI audit — map repeatable processes, spot the highest time/money costs, and recommend tools and workflows. You get a prioritized action plan; building or rolling out systems is scoped separately if you want to move forward.\n\nI can send the PDF or walk through it on a short call.\n\n(Hosted preview links are for Website / Web app / Mobile concepts. For this track, use Generate report (PDF) on the AI audit card.)\n\nBest,\n{{yourName}}",
         instagramBody:
-          "Hi! We mapped AI automation ideas for {{businessName}} (routing, follow-ups, assistants). Want a PDF or a quick call to skim highlights?\n\n— {{yourName}}",
+          "Hi! AI audit draft for {{businessName}} — processes, cost hotspots, recommended tools/workflows, and a prioritized plan (implementation is a separate step). Want the PDF or a quick call?\n\n— {{yourName}}",
       };
   }
 }
@@ -694,7 +694,7 @@ export default function ProspectPreviewOutreachBlock({
   const copyInstagramMessage = useCallback(async () => {
     if (!canCopyInstagramMessage) {
       setShareMsg(
-        "Generate a hosted preview and keep Website, Web app, or Mobile selected to include {{previewUrl}}, or choose AI automations for a text-only message.",
+        "Generate a hosted preview and keep Website, Web app, or Mobile selected to include {{previewUrl}}, or choose AI audit for a text-only message.",
       );
       return;
     }
@@ -826,7 +826,7 @@ export default function ProspectPreviewOutreachBlock({
           <span className="font-mono">{"{{previewUrl}}"}</span> and{" "}
           <span className="font-mono">{"{{businessName}}"}</span> for Website, Web app, and Mobile; email defaults
           also use <span className="font-mono">{"{{yourName}}"}</span> (from your CRM context when provided). AI
-          automations templates focus on the PDF follow-up.
+          audit templates focus on the PDF follow-up.
         </p>
         {stitchContext ? (
           <p className="mt-3 rounded-lg border border-border/60 bg-white/40 px-2.5 py-2 text-[11px] text-text-secondary dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
@@ -1028,22 +1028,23 @@ export default function ProspectPreviewOutreachBlock({
             ) : null}
           </div>
 
-          {/* AI automations */}
+          {/* AI audit (PDF) */}
           <div
             className={`cursor-pointer rounded-lg border border-border/70 bg-white/50 p-3 text-left dark:border-zinc-700/80 dark:bg-zinc-900/50 ${cardRing("automations")}`}
             onClick={() => setSelectedOffer("automations")}
           >
             <div className="flex items-center justify-between gap-2">
               <h4 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500">
-                AI automations
+                AI audit
               </h4>
               <Workflow className="h-4 w-4 shrink-0 text-text-secondary opacity-70 dark:text-zinc-500" aria-hidden />
             </div>
             <p className="mt-2 text-[11px] leading-snug text-text-secondary dark:text-zinc-400">
-              Ideas from the <span className="font-medium text-text-primary dark:text-zinc-200">Highlights</span> report
-              (lead routing, follow-ups, assistants). When the server has Anthropic or OpenAI configured (same as
-              prospect preview), the PDF adds AI-written opportunities, problems, solutions, and gaps; otherwise it
-              stays research-only. Not a Stitch screen.
+              Structured assessment: map repeatable processes, identify the biggest time or money costs, recommend AI
+              tools and workflows, and deliver a prioritized action plan. This PDF is not a build — implementation and
+              rollout are quoted separately. When Anthropic or OpenAI is configured (same as prospect preview), the
+              narrative is AI-written from your Highlights intel; otherwise the PDF stays research-only. Not a Stitch
+              screen.
             </p>
             <button
               type="button"
@@ -1084,8 +1085,8 @@ export default function ProspectPreviewOutreachBlock({
             ) : (
               <>
                 {" "}
-                · templates for <span className="text-text-primary dark:text-zinc-200">AI automations</span> (hosted
-                link send requires Website, Web app, or Mobile)
+                · templates for <span className="text-text-primary dark:text-zinc-200">AI audit</span> (hosted link send
+                requires Website, Web app, or Mobile)
               </>
             )}
           </p>

@@ -15,7 +15,11 @@ const HEADER_BAND_H = 78;
 const MAX_BULLETS_PER_SECTION = 8;
 const MAX_BULLET_CHARS = 240;
 const MAX_EXEC_SUMMARY_CHARS = 1_400;
+const MAX_IMPLEMENTATION_UPSELL_CHARS = 900;
 const MAX_RESEARCH_CONTEXT_CHARS = 2_500;
+
+const DEFAULT_IMPLEMENTATION_UPSELL =
+  "Implementation, integrations, security review, training, and production rollout are not part of this audit document. They are scoped and quoted as a separate engagement after you approve priorities from this plan.";
 
 /**
  * Standard Helvetica in pdf-lib is WinAnsi-encoded; `drawText` throws on many Unicode
@@ -122,7 +126,7 @@ function drawHeaderBand(
     color: rgb(0.91, 0.94, 0.99),
     borderWidth: 0,
   });
-  page.drawText(sanitizeTextForHelveticaPdf("AI automation report"), {
+  page.drawText(sanitizeTextForHelveticaPdf("AI audit report"), {
     x: MARGIN,
     y: PAGE_H - 30,
     size: 17,
@@ -220,12 +224,12 @@ function drawLegacyBody(ctx: PdfContext, report: MarketIntelReport, name: string
     drawRule(ctx);
   }
 
-  drawBold(ctx, "Suggested automations", 12);
+  drawBold(ctx, "Research notes (automation signals)", 12);
   const bullets = report.aiAutomations;
   if (bullets.length === 0) {
     drawBodyLines(
       ctx,
-      "No automation ideas are in the current market intel report. Try a Google listing with richer signals, or refresh the report."
+      "No research signals are in the current market intel report. Try a Google listing with richer signals, or refresh the report."
     );
   } else {
     for (const b of bullets.slice(0, MAX_BULLETS_PER_SECTION * 2)) {
@@ -258,14 +262,29 @@ function drawNarrativeBody(
     drawRule(ctx);
   }
 
-  drawBullets(ctx, narrative.opportunities, "Opportunities");
-  drawBullets(ctx, narrative.problems, "Problems");
-  drawBullets(ctx, narrative.solutions, "Solutions");
-  drawBullets(ctx, narrative.gaps, "Gaps");
+  drawBullets(ctx, narrative.repeatableProcesses, "Repeatable processes");
+  drawBullets(ctx, narrative.costAndImpact, "Cost and impact");
+  drawBullets(
+    ctx,
+    narrative.toolAndWorkflowRecommendations,
+    "AI tools and workflows"
+  );
+  drawBullets(ctx, narrative.prioritizedActionPlan, "Prioritized action plan");
+
+  const upsell =
+    narrative.implementationUpsell.trim() || DEFAULT_IMPLEMENTATION_UPSELL;
+  drawBold(ctx, "Implementation (separate engagement)", 12);
+  drawBodyLines(
+    ctx,
+    upsell.slice(0, MAX_IMPLEMENTATION_UPSELL_CHARS),
+    10.5
+  );
+  ctx.y -= 6;
+  drawRule(ctx);
 
   const ref = report.aiAutomations;
   if (ref.length > 0) {
-    drawBold(ctx, "Reference ideas (from research)", 12);
+    drawBold(ctx, "Reference signals (from research)", 12);
     for (const b of ref.slice(0, MAX_BULLETS_PER_SECTION)) {
       drawBodyLines(ctx, `* ${capBullet(b)}`, 10.5);
       ctx.y -= 2;
@@ -318,7 +337,7 @@ export async function generateProspectAutomationPdfAction(input: {
     return {
       ok: true,
       pdfBase64,
-      filename: `${safe}-ai-automations.pdf`,
+      filename: `${safe}-ai-audit.pdf`,
     };
   } catch (e) {
     const msg = e instanceof Error ? e.message : "PDF could not be generated.";

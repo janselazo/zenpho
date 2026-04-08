@@ -53,7 +53,7 @@ export const PROSPECTING_SECTIONS: ProspectingSection[] = [
     href: "/prospecting/prospects",
     icon: UserSearch,
     description:
-      "Local Business search (Google Places), website URL research, and tailored ideas for sites, web apps, mobile apps, and AI automations—then add targets as Leads.",
+      "Local Business search (Google Places), website URL research, and tailored ideas for sites, web apps, mobile apps, and AI audit signals—then add targets as Leads.",
   },
   {
     slug: "creatives",

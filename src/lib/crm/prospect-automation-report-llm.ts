@@ -12,12 +12,15 @@ const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
 const MAX_ITEMS_PER_ARRAY = 12;
 const MAX_STRING_LEN = 400;
 
+/** LLM output for the prospect AI audit PDF (assessment + plan; not a build spec). */
 export type AutomationReportNarrative = {
   executiveSummary: string;
-  opportunities: string[];
-  problems: string[];
-  solutions: string[];
-  gaps: string[];
+  repeatableProcesses: string[];
+  costAndImpact: string[];
+  toolAndWorkflowRecommendations: string[];
+  prioritizedActionPlan: string[];
+  /** Short paragraph: implementation / rollout quoted separately (upsell). */
+  implementationUpsell: string;
 };
 
 function truncateItem(s: string): string {
@@ -38,27 +41,55 @@ function boundedReportForPrompt(report: MarketIntelReport): Record<string, unkno
   };
 }
 
+function strField(o: Record<string, unknown>, k: string, alt?: string): string {
+  const v = o[k] ?? (alt ? o[alt] : undefined);
+  return typeof v === "string" ? v.trim() : "";
+}
+
+function arrField(o: Record<string, unknown>, k: string, alt?: string): string[] {
+  const v = o[k] ?? (alt ? o[alt] : undefined);
+  if (!Array.isArray(v)) return [];
+  return v
+    .filter((x) => typeof x === "string")
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
 function coerceNarrative(o: Record<string, unknown>): AutomationReportNarrative {
-  const exec =
-    typeof o.executiveSummary === "string"
-      ? o.executiveSummary.trim()
-      : typeof o.executive_summary === "string"
-        ? o.executive_summary.trim()
-        : "";
-  const arr = (k: string, alt?: string): string[] => {
-    const v = o[k] ?? (alt ? o[alt] : undefined);
-    if (!Array.isArray(v)) return [];
-    return v
-      .filter((x) => typeof x === "string")
-      .map((x) => x.trim())
-      .filter(Boolean);
-  };
+  const exec = strField(o, "executiveSummary", "executive_summary");
+
+  let repeatableProcesses = arrField(o, "repeatableProcesses", "repeatable_processes");
+  let costAndImpact = arrField(o, "costAndImpact", "cost_and_impact");
+  let toolAndWorkflowRecommendations = arrField(
+    o,
+    "toolAndWorkflowRecommendations",
+    "tool_and_workflow_recommendations"
+  );
+  let prioritizedActionPlan = arrField(o, "prioritizedActionPlan", "prioritized_action_plan");
+
+  let implementationUpsell = strField(o, "implementationUpsell", "implementation_upsell");
+
+  // Legacy schema (opportunities / problems / solutions / gaps)
+  if (repeatableProcesses.length === 0) {
+    repeatableProcesses = arrField(o, "opportunities");
+  }
+  if (costAndImpact.length === 0) {
+    costAndImpact = arrField(o, "problems");
+  }
+  if (toolAndWorkflowRecommendations.length === 0) {
+    toolAndWorkflowRecommendations = arrField(o, "solutions");
+  }
+  if (prioritizedActionPlan.length === 0) {
+    prioritizedActionPlan = arrField(o, "gaps");
+  }
+
   return {
     executiveSummary: exec,
-    opportunities: arr("opportunities"),
-    problems: arr("problems"),
-    solutions: arr("solutions"),
-    gaps: arr("gaps"),
+    repeatableProcesses,
+    costAndImpact,
+    toolAndWorkflowRecommendations,
+    prioritizedActionPlan,
+    implementationUpsell,
   };
 }
 
@@ -91,19 +122,22 @@ function buildPrompts(businessName: string, reportJson: string): {
   const system =
     "You output only valid JSON. No markdown fences, no commentary before or after the JSON object.";
 
-  const user = `You are helping a digital agency produce a short internal-style report for a prospect: "${businessName}".
+  const user = `You are helping a digital agency deliver an AI AUDIT for a prospect: "${businessName}".
 
-Below is JSON from a rule-based "market intel" pass (websites, apps, automations ideas, summary). Use ONLY this data and reasonable inferences from it. Do not invent addresses, ratings, or products not implied by the text.
+This is NOT a software build or delivery document. You produce a structured assessment and a prioritized action plan only. Implementation, integrations, and rollout are out of scope for this PDF and are quoted separately.
+
+Below is JSON from a rule-based "market intel" pass (websites, apps, automation-related research signals, summary). Use ONLY this data and reasonable inferences from it. Do not invent addresses, ratings, phone numbers, or products not implied by the text.
 
 Market intel JSON:
 ${reportJson}
 
 Return a single JSON object with exactly these keys (all required):
-- "executiveSummary": string, 2-4 sentences, plain English, focused on where AI automation could help this business.
-- "opportunities": array of 3-6 short strings — concrete AI automation opportunities (lead routing, SMS/email follow-ups, booking assistants, review requests, after-hours capture, etc.).
-- "problems": array of 3-6 short strings — operational or customer-facing friction implied by the intel (not generic platitudes).
-- "solutions": array of 3-6 short strings — how AI-powered workflows or assistants could address those problems.
-- "gaps": array of 3-6 short strings — gaps the business likely has (speed to lead, consistency, scale, data handoff) that automation could close.
+- "executiveSummary": string, 2-4 sentences, plain English. State that this document is an audit (map processes, cost/impact, recommendations, prioritized next steps) and that building or deploying systems is not included here.
+- "repeatableProcesses": array of 3-6 short strings — repeatable workflows or operational processes implied by the intel (e.g. intake, scheduling, follow-up, reviews). Name them as processes, not product specs.
+- "costAndImpact": array of 3-6 short strings — which of those processes likely cost the most time, money, missed revenue, or risk if left manual; tie to signals in the intel when possible.
+- "toolAndWorkflowRecommendations": array of 3-6 short strings — types of AI tools, patterns, or workflow designs that could address the hotspots (e.g. triage bot, draft-then-approve email, structured intake). Mention categories or patterns; do not promise a specific vendor contract or price.
+- "prioritizedActionPlan": array of 3-6 short strings in priority order — what to validate or do first, then next (discovery questions, pilots, metrics to track). This is the concrete "plan" output.
+- "implementationUpsell": string, 2-4 sentences. Clarify that full implementation, security review, integrations, training, and production rollout are a separate engagement after they approve priorities from this audit.
 
 Keep each bullet under 220 characters. Use ASCII-friendly punctuation.`;
 
@@ -163,7 +197,7 @@ async function generateWithAnthropic(
     const raw = block?.text?.trim() ?? "";
     const parsed = parseNarrativeJson(raw);
     if (!parsed) {
-      return { ok: false, error: "Anthropic returned invalid JSON for automation narrative." };
+      return { ok: false, error: "Anthropic returned invalid JSON for AI audit narrative." };
     }
     return { ok: true, data: parsed };
   } catch (e) {
@@ -206,7 +240,7 @@ async function generateWithOpenAI(
     const raw = completion.choices[0]?.message?.content?.trim() ?? "";
     const parsed = parseNarrativeJson(raw);
     if (!parsed) {
-      return { ok: false, error: "OpenAI returned invalid JSON for automation narrative." };
+      return { ok: false, error: "OpenAI returned invalid JSON for AI audit narrative." };
     }
     return { ok: true, data: parsed };
   } catch (e) {

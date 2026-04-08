@@ -642,7 +642,7 @@ const HIGHLIGHT_SLIDES: {
   },
   {
     key: "aiAutomations",
-    label: "AI automations",
+    label: "AI audit",
     titleClass:
       "text-[11px] font-semibold uppercase tracking-widest text-violet-600/80 dark:text-violet-400",
   },
@@ -1487,7 +1487,8 @@ function ProspectsIntelligenceViewInner({
               </h2>
               <p className="mt-1 max-w-2xl text-[11px] text-text-secondary dark:text-zinc-500">
                 Overview: business snapshot with GTM insight and website scan; highlights use live signals plus
-                custom websites, web apps, mobile apps, and AI automations. Then add a lead and run enrichment tools.
+                custom websites, web apps, mobile apps, and AI audit signals (PDF on the prospect card). Then add a
+                lead and run enrichment tools.
                 Notes use plain sections
                 (not markdown lists).
               </p>

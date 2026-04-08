@@ -33,7 +33,7 @@ export function formatReportAsPlainNotes(
     chunks.push("MOBILE APPS", ...indentBulletLines(report.mobileApps), "");
   }
   if (report.aiAutomations.length) {
-    chunks.push("AI AUTOMATIONS", ...indentBulletLines(report.aiAutomations), "");
+    chunks.push("AI AUDIT (RESEARCH SIGNALS)", ...indentBulletLines(report.aiAutomations), "");
   }
 
   const summaryBody = report.summary.trim().split("\n");
