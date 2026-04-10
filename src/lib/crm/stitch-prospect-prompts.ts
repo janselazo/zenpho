@@ -109,6 +109,8 @@ Each prospect must look **nothing like a default Stitch/Gemini marketing page**.
 - Vary **section backgrounds** (tint, subtle gradient, texture via CSS, or full-bleed contrast bands) so the page is not one white column wall-to-wall.
 - Mention the **business name** in real copy; make **services** specific to the Google category / URL context — not filler lorem.
 
+**Lane + layout execution:** The **Layout motif**, **Hero structure**, and every band inside \`#home\` must express the assigned aesthetic lane — but **never** at the cost of **Layout safety** (see technical brief): headlines and paragraphs stay readable. Decorative overlap or collage is allowed **only** when the lane calls for it **and** copy sits on a scrim or dedicated panel, not under unmasked photos.
+
 If **Visual direction** appears in the context block, harmonize with it; otherwise obey the lane above without drifting to a bland default.
 `.trim();
 }
@@ -184,7 +186,7 @@ Every design must feel made **specifically for this business**.
 ### Design rules
 - **Typography:** Distinctive, characterful font pairings. Avoid Arial, Inter, or Roboto as the only voice. Fonts should reflect the brand personality.
 - **Color:** One dominant palette with one sharp accent. 2–3 colors done brilliantly beats six done poorly.
-- **Layout:** Break the grid where it serves the brand — asymmetry, overlap, diagonal flow, generous negative space — while staying usable.
+- **Layout:** Break the grid where it serves the brand — asymmetry, diagonal flow, generous negative space — **without** covering body copy with imagery (see **Layout safety** in the technical brief). Overlap is for intentional, legible layers only.
 - **Motion:** Subtle surprise via **CSS only** — \`:hover\`, \`:focus-visible\`, transitions (see technical section; no inline \`<script>\`).
 - **Imagery:** Describe hero visuals, textures, and decorative elements that add atmosphere (placeholders styled if no photos).
 
@@ -273,14 +275,28 @@ Align with **Home, Clients, Book, Reviews** (\`#home\`, \`#clients\`, \`#book\`,
 Aim for a **native-quality** concept — not a mobile web article dressed as an app.
 `.trim();
 
+const WEBSITE_LAYOUT_SAFETY = `
+## Layout safety (mandatory — readability over decoration)
+
+- Build heroes and follow-on bands with **CSS Grid or flex**. Place photography in a **dedicated column or card** with **fixed aspect-ratio** — **do not** absolutely position large images on top of headings or body copy.
+- **Full-bleed background images** require a **gradient or scrim overlay** and foreground copy in a clear stacking layer with padding; body text must meet **WCAG contrast** against its background.
+- **Card or image rows** below the hero must follow **normal document flow** (\`gap\`, \`margin-top\`) — **no negative margins** that pull tiles upward over hero typography.
+- Avoid **z-index** stacks that put decorative imagery above text unless the text sits on an intentional overlay panel or scrim. Never obscure the business name or primary value proposition.
+`.trim();
+
+const WEBSITE_REFERENCE_PATTERNS = `
+## Reference patterns (structural inspiration — not copying other brands)
+
+High-end local-business marketing often uses: **generous whitespace**; **rounded-2xl** (or similar) cards; restrained palettes; **light scrims** on photography where text meets image; clear hierarchy (eyebrow → headline → body); icon + label feature rows; optional **bento-style** image grids. Adapt these **patterns** to **this** business’s industry and assigned lane — unique composition and copy, not a literal clone of any example site.
+`.trim();
+
 const WEBSITE_VISUAL_CHECKLIST = `
-Visual quality (bespoke to **Assigned differentiation**, not one repeated template):
-- Typography: honor the **Typography direction** — real font pairing, clear scale (display / H1–H3 / body / caption); comfortable line-height; never “system UI only.”
-- Color: from context + assigned lane — dominant mood + one sharp accent for CTAs; WCAG-minded contrast (no illegible gray-on-white body).
-- Layout: follow the **Layout motif** and **Hero structure**; vary rhythm between sections (tight vs airy) instead of identical card grids everywhere.
-- Polish: depth via shadow, border, overlap, or color bands as fits the lane — avoid the same “soft card + pill button” on every prospect.
-- Components: inline SVG icons where helpful; placeholders (aspect-ratio, masks) styled to match the lane if no photos.
-- Motion: CSS only — :hover / :focus-visible; navigation uses **:target + :has** below, not long scroll between “pages.”`.trim();
+Visual polish (honor **Assigned differentiation** and **Layout safety**):
+- Real font pairing and type scale; WCAG-minded contrast on body copy.
+- Depth via shadow, border, or color bands as fits the lane — vary rhythm between bands so every prospect does not look like the same “soft card + pill” kit.
+- Inline SVG icons and styled placeholders (\`aspect-ratio\`, rounded masks) when photos are absent.
+- **Motion:** CSS only (\`:hover\` / \`:focus-visible\`). **Navigation** uses **:target + :has** below — no inline \`<script>\`.
+`.trim();
 
 export function buildStitchWebsitePrompt(payload: StitchProspectDesignPayload): string {
   const block =
@@ -296,7 +312,13 @@ ${differentiation}
 
 ${WEBSITE_CREATIVE_DIRECTIVE}
 
-Task: Output **one complete HTML5 document** (desktop-width marketing **multi-page** experience) for this business. Each “page” is a **separate full-viewport screen** inside the same file: **only one page is visible at a time** — **no long single scroll** stacking all pages. **No** separate HTTP URLs, **no** JS router, **no inline \`<script>\`** (Tailwind CDN \`<script src>\` OK). Interaction = **click nav → swap visible page** using **CSS only** (\`:target\` + \`:has\`).
+Task: Output **one complete HTML5 document** (desktop-width marketing **multi-page** experience) for this business. Each “page” is a **separate full-viewport screen** inside the same file: **only one page is visible at a time** — **no long single scroll** stacking all five sections in one document flow. **No** separate HTTP URLs, **no** JS router, **no inline \`<script>\`** (Tailwind CDN \`<script src>\` OK). Interaction = **click nav → swap visible page** using **CSS only** (\`:target\` + \`:has\`).
+
+**Note on \`#home\`:** The home **screen** is still a single \`section#home.page\`, but it should contain **multiple vertical bands** (hero + highlights + trust/visual + CTA) with **internal scrolling** via \`overflow-y: auto\` on that section — so the home experience feels like a rich landing page, while other tabs remain separate full screens.
+
+${WEBSITE_LAYOUT_SAFETY}
+
+${WEBSITE_REFERENCE_PATTERNS}
 
 ## Page switch pattern (required — copy this behavior in \`<style>\`)
 Wrap all page \`<section>\`s in \`<main>\` (or one clear wrapper). Each page: \`<section id="home" class="page">\` … \`</section>\` (ids exactly: \`home\`, \`services\`, \`expertise\`, \`reviews\`, \`location\`).
@@ -312,11 +334,21 @@ Use CSS equivalent to:
 Nav links: \`<a href="#home">\`, \`#services\`, \`#expertise\`, \`#reviews\`, \`#location\`. **Do not** rely on \`scroll-behavior\` or stacked \`min-height:100vh\` sections in one scroll — use **show/hide** as above.
 
 ## Structure checklist (required \`id\`s on \`<section class="page">\`)
-1. **#home** — Hero: real business name, sharp value proposition, primary CTA (Book / Call / Get quote). Prefer **asymmetric or full-bleed** layout; strong typographic or gradient anchor.
-2. **#services** — Service cards or list **specific to the category** (use Google types / title / description — not generic lorem).
-3. **#expertise** — Why us: process, credentials, team or certification placeholders, trust copy grounded in the vertical.
-4. **#reviews** — If rating/review count exists in context, show them prominently; else credible testimonial-style quotes with initials/roles.
-5. **#location** — Hours, map placeholder, contact; **use listing address and phone when provided** above.
+
+1. **#home** — One \`section#home.page\` with **at least four stacked bands** (scroll inside this section). Each band must be visually distinct (spacing, background tint, or border) and use **real copy** for this business:
+   - **Band A — Hero:** Business name, value proposition, primary + secondary CTA (e.g. book / call / view services). Execute the assigned **Hero structure**; obey **Layout safety** (no imagery covering type).
+   - **Band B — Highlights:** A **three-column** row of offerings, stats, or price-from cards **specific to the industry** (salon menu hints, café items, retail services — not generic “Feature 1/2/3”).
+   - **Band C — Trust or visual:** Either a **bento-style** image grid (placeholders OK) **or** an icon + headline feature row (certifications, hours, differentiators).
+   - **Band D — Bottom CTA strip:** Book/call, short hours line, or “why choose us” — pushes users toward \`#location\` or \`tel:\`.
+   Gallery- or story-like **motifs** belong here or in Band C — do not leave \`#home\` as hero-only.
+
+2. **#services** — A **different** layout than home: multi-column **priced menu**, categorized lists, or tiered packages (columns or sections with headings). Industry-specific service names and price cues; not the same three cards repeated from \`#home\`.
+
+3. **#expertise** — **Story + proof:** Headline, 2–3 proof points (icons or short paragraphs), optional stat row (years, certifications, review count from context). Two-column (copy + image placeholder) welcome; distinct from \`#services\` and \`#reviews\`.
+
+4. **#reviews** — **Testimonial cards** (2+ quotes) plus an aggregate line if rating/review count exists in context; author initials, role, or neighborhood. Layout must differ from \`#expertise\` (e.g. card grid vs. long-form story).
+
+5. **#location** — **Split layout:** Address, hours, phone; **map or map-style placeholder**; **Get directions** or **Book** CTA; optional compact contact row. Use **listing address and phone** from context when provided.
 
 ## Navigation chrome
 - **Sticky or fixed top header** with the five anchor links; optional **Book** CTA button as \`<a href="#location">\` or \`tel:\` when phone exists.
