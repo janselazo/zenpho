@@ -96,23 +96,21 @@ function getSourceTextClass(source: string) {
   );
 }
 
-/** Soft filled pills for source column (reference-style CRM table). */
-const sourcePillClasses: Record<string, string> = {
-  website: "bg-sky-100 text-sky-900 dark:bg-sky-950/50 dark:text-sky-100",
-  referral: "bg-orange-100 text-orange-900 dark:bg-orange-950/45 dark:text-orange-100",
-  linkedin: "bg-blue-100 text-blue-900 dark:bg-blue-950/50 dark:text-blue-100",
-  "cold outreach": "bg-amber-100 text-amber-900 dark:bg-amber-950/45 dark:text-amber-100",
-  conference: "bg-violet-100 text-violet-900 dark:bg-violet-950/50 dark:text-violet-100",
-  facebook: "bg-purple-100 text-purple-900 dark:bg-purple-950/50 dark:text-purple-100",
-  direct: "bg-emerald-100 text-emerald-900 dark:bg-emerald-950/45 dark:text-emerald-100",
-  instagram: "bg-fuchsia-100 text-fuchsia-900 dark:bg-fuchsia-950/45 dark:text-fuchsia-100",
-};
+/** Table pills: single neutral treatment (readability over rainbow chips). */
+const leadTableDataPillClass =
+  "border border-zinc-200/80 bg-zinc-50 text-zinc-800 dark:border-zinc-600/55 dark:bg-zinc-800/55 dark:text-zinc-100";
 
-function getSourcePillClass(source: string) {
-  return (
-    sourcePillClasses[source.toLowerCase()] ??
-    "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"
-  );
+const leadTableActionBarClass =
+  "inline-flex shrink-0 flex-nowrap items-center gap-0 rounded-lg border border-zinc-200/90 bg-zinc-50/95 p-0.5 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/55";
+
+const leadTableActionBtnClass =
+  "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-white hover:text-zinc-800 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100";
+
+const leadTableActionDangerClass =
+  "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-red-950/45 dark:hover:text-red-400";
+
+function getSourcePillClass(_source: string) {
+  return leadTableDataPillClass;
 }
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -263,28 +261,6 @@ const projectTypeTextClasses: Record<string, string> = {
   other: "text-violet-700 dark:text-violet-400",
 };
 
-const projectTypePillClasses: Record<string, string> = {
-  "custom websites":
-    "bg-cyan-100 text-cyan-900 dark:bg-cyan-950/45 dark:text-cyan-100",
-  "websites development":
-    "bg-cyan-100 text-cyan-900 dark:bg-cyan-950/45 dark:text-cyan-100",
-  "ai automations":
-    "bg-violet-100 text-violet-900 dark:bg-violet-950/45 dark:text-violet-100",
-  "ai automation":
-    "bg-violet-100 text-violet-900 dark:bg-violet-950/45 dark:text-violet-100",
-  "web apps": "bg-sky-100 text-sky-900 dark:bg-sky-950/45 dark:text-sky-100",
-  "mobile apps":
-    "bg-emerald-100 text-emerald-900 dark:bg-emerald-950/45 dark:text-emerald-100",
-  "mvp dev":
-    "bg-cyan-100 text-cyan-900 dark:bg-cyan-950/45 dark:text-cyan-100",
-  "web app": "bg-sky-100 text-sky-900 dark:bg-sky-950/45 dark:text-sky-100",
-  "mobile app":
-    "bg-emerald-100 text-emerald-900 dark:bg-emerald-950/45 dark:text-emerald-100",
-  website: "bg-cyan-100 text-cyan-900 dark:bg-cyan-950/45 dark:text-cyan-100",
-  "ecommerce store": "bg-amber-100 text-amber-900 dark:bg-amber-950/45 dark:text-amber-100",
-  other: "bg-violet-100 text-violet-900 dark:bg-violet-950/45 dark:text-violet-100",
-};
-
 function getProjectTypeTextClass(projectType: string) {
   const key = projectType.trim().toLowerCase();
   return (
@@ -292,12 +268,8 @@ function getProjectTypeTextClass(projectType: string) {
   );
 }
 
-function getProjectTypePillClass(projectType: string) {
-  const key = projectType.trim().toLowerCase();
-  return (
-    projectTypePillClasses[key] ??
-    "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100"
-  );
+function getProjectTypePillClass(_projectType: string) {
+  return leadTableDataPillClass;
 }
 
 const contactCategoryTextClasses: Record<string, string> = {
@@ -308,15 +280,6 @@ const contactCategoryTextClasses: Record<string, string> = {
   "local business owner": "text-amber-800 dark:text-amber-400",
 };
 
-const contactCategoryPillClasses: Record<string, string> = {
-  "tech founder": "bg-indigo-100 text-indigo-900 dark:bg-indigo-950/45 dark:text-indigo-100",
-  "saas founder": "bg-fuchsia-100 text-fuchsia-900 dark:bg-fuchsia-950/45 dark:text-fuchsia-100",
-  "ecommerce owner": "bg-rose-100 text-rose-900 dark:bg-rose-950/45 dark:text-rose-100",
-  "retail / dtc founder": "bg-rose-100 text-rose-900 dark:bg-rose-950/45 dark:text-rose-100",
-  "local business owner":
-    "bg-amber-100 text-amber-950 dark:bg-amber-950/40 dark:text-amber-100",
-};
-
 function getContactCategoryTextClass(category: string) {
   const key = category.trim().toLowerCase();
   return (
@@ -324,12 +287,8 @@ function getContactCategoryTextClass(category: string) {
   );
 }
 
-function getContactCategoryPillClass(category: string) {
-  const key = category.trim().toLowerCase();
-  return (
-    contactCategoryPillClasses[key] ??
-    "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"
-  );
+function getContactCategoryPillClass(_category: string) {
+  return leadTableDataPillClass;
 }
 
 const inlineInputClass =
@@ -436,11 +395,7 @@ function PillSelect({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        className={`w-full appearance-none rounded-full border-0 py-2 pl-7 pr-8 text-xs font-semibold outline-none ring-1 ring-zinc-200/80 focus:ring-2 focus:ring-blue-400/25 disabled:cursor-not-allowed disabled:opacity-60 dark:ring-zinc-600 dark:focus:ring-blue-500/30 ${textClassName}`}
-        style={{
-          backgroundColor: hexToRgba(dotColor, 0.16),
-          color: dotColor,
-        }}
+        className={`w-full appearance-none rounded-lg border-0 bg-white py-1.5 pl-7 pr-8 text-[11px] font-medium text-zinc-800 outline-none ring-1 ring-zinc-200/85 focus:ring-2 focus:ring-blue-400/20 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-zinc-900/95 dark:text-zinc-100 dark:ring-zinc-600 dark:focus:ring-blue-500/25 ${textClassName}`}
       >
         {children}
       </select>
@@ -1367,9 +1322,12 @@ function LeadsTable({
   const toolbar = chrome ? (
     <div className="flex flex-col gap-3 border-b border-zinc-100 bg-white px-4 py-3.5 dark:border-zinc-800 dark:bg-zinc-900 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex flex-wrap items-center gap-3">
-        <span className="inline-flex items-center gap-2 rounded-lg bg-zinc-100 px-2.5 py-1.5 text-sm font-semibold text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50">
+        <span
+          className="inline-flex items-center justify-center rounded-lg bg-zinc-100 p-1.5 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50"
+          aria-label="Table view"
+          title="Table view"
+        >
           <Table2 className="h-4 w-4 text-zinc-500 dark:text-zinc-400" aria-hidden />
-          Table
         </span>
         <span className="text-sm text-zinc-500 dark:text-zinc-400">
           {chrome.leadCount} leads
@@ -1440,43 +1398,43 @@ function LeadsTable({
     <div className="overflow-hidden rounded-2xl border border-zinc-200/90 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
       {toolbar}
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[104rem] text-left text-sm">
+        <table className="w-full min-w-[96rem] text-left text-xs leading-snug text-zinc-700 dark:text-zinc-300">
         <thead>
           <tr className="border-b border-zinc-100 bg-zinc-50/95 dark:border-zinc-800 dark:bg-zinc-800/40">
-            <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            <th className="px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               Name
             </th>
-            <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            <th className="px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               Phone
             </th>
-            <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            <th className="px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               Email
             </th>
-            <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            <th className="px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               Status
             </th>
-            <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            <th className="px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               Service
             </th>
-            <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            <th className="px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               Category
             </th>
-            <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            <th className="px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               Company
             </th>
-            <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            <th className="px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               Product
             </th>
-            <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            <th className="px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               Tags
             </th>
-            <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            <th className="px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               Source
             </th>
-            <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            <th className="px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               Date
             </th>
-            <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            <th className="px-4 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               Actions
             </th>
           </tr>
@@ -1510,10 +1468,10 @@ function LeadsTable({
                     : "hover:bg-zinc-50/80 dark:hover:bg-zinc-800/35"
                 }`}
               >
-                <td className="px-5 py-4 align-top">
-                  <div className="flex items-center gap-3">
+                <td className="px-4 py-2.5 align-top">
+                  <div className="flex items-center gap-2.5">
                     <span
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky-100 text-xs font-bold text-blue-600 dark:bg-sky-950/55 dark:text-sky-300"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-200/90 text-[10px] font-bold text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200"
                       aria-hidden
                     >
                       {initials || "?"}
@@ -1555,7 +1513,7 @@ function LeadsTable({
                     )}
                   </div>
                 </td>
-                <td className="px-5 py-4 align-top">
+                <td className="px-4 py-2.5 align-top">
                   {isEditing ? (
                     <input
                       type="tel"
@@ -1572,7 +1530,7 @@ function LeadsTable({
                     </span>
                   )}
                 </td>
-                <td className="px-5 py-4 align-top">
+                <td className="px-4 py-2.5 align-top">
                   {isEditing ? (
                     <input
                       type="email"
@@ -1589,7 +1547,7 @@ function LeadsTable({
                     </span>
                   )}
                 </td>
-                <td className="px-5 py-4 align-top">
+                <td className="px-4 py-2.5 align-top">
                   {isEditing && draft ? (
                     <PillSelect
                       value={draft.stage}
@@ -1648,7 +1606,7 @@ function LeadsTable({
                     </PillSelect>
                   )}
                 </td>
-                <td className="px-5 py-4 align-top">
+                <td className="px-4 py-2.5 align-top">
                   {isEditing ? (
                     <div className="relative min-w-[7rem] max-w-[12rem]">
                       <select
@@ -1689,7 +1647,7 @@ function LeadsTable({
                         }
                         disabled={quickSelectDisabled}
                         aria-label={`Service for ${deleteLabel}`}
-                        className={`w-full appearance-none rounded-full border-0 py-2 pl-3 pr-8 text-xs font-semibold capitalize outline-none ring-1 ring-zinc-200/80 focus:ring-2 focus:ring-blue-400/25 disabled:cursor-not-allowed disabled:opacity-60 dark:ring-zinc-600 dark:focus:ring-blue-500/30 ${
+                        className={`w-full appearance-none rounded-lg border-0 py-1.5 pl-3 pr-8 text-[11px] font-medium capitalize outline-none ring-1 ring-zinc-200/85 focus:ring-2 focus:ring-blue-400/20 disabled:cursor-not-allowed disabled:opacity-60 dark:ring-zinc-600 dark:focus:ring-blue-500/25 ${
                           lead.project_type?.trim()
                             ? getProjectTypePillClass(lead.project_type)
                             : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
@@ -1717,7 +1675,7 @@ function LeadsTable({
                     </div>
                   )}
                 </td>
-                <td className="px-5 py-4 align-top">
+                <td className="px-4 py-2.5 align-top">
                   {isEditing ? (
                     <div className="relative min-w-[7rem] max-w-[12rem]">
                       <select
@@ -1751,7 +1709,7 @@ function LeadsTable({
                     </div>
                   ) : lead.contact_category?.trim() ? (
                     <span
-                      className={`inline-flex max-w-full rounded-full px-3 py-1 text-xs font-semibold ${getContactCategoryPillClass(lead.contact_category)}`}
+                      className={`inline-flex max-w-full rounded-lg px-2.5 py-0.5 text-[11px] font-medium ${getContactCategoryPillClass(lead.contact_category)}`}
                     >
                       <span className="truncate">{lead.contact_category}</span>
                     </span>
@@ -1759,7 +1717,7 @@ function LeadsTable({
                     <span className="text-zinc-400 dark:text-zinc-500">—</span>
                   )}
                 </td>
-                <td className="px-5 py-4 align-top">
+                <td className="px-4 py-2.5 align-top">
                   {isEditing ? (
                     <input
                       type="text"
@@ -1773,14 +1731,16 @@ function LeadsTable({
                       className={inlineInputClass}
                     />
                   ) : lead.company?.trim() ? (
-                    <span className="inline-flex max-w-full rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+                    <span
+                      className={`inline-flex max-w-full rounded-lg px-2.5 py-0.5 text-[11px] font-medium ${leadTableDataPillClass}`}
+                    >
                       <span className="truncate">{lead.company}</span>
                     </span>
                   ) : (
                     <span className="text-zinc-400 dark:text-zinc-500">—</span>
                   )}
                 </td>
-                <td className="px-5 py-4 align-top">
+                <td className="px-4 py-2.5 align-top">
                   {lead.primaryProject ? (
                     <Link
                       href={`/leads/${lead.id}`}
@@ -1798,7 +1758,7 @@ function LeadsTable({
                     <span className="text-zinc-400 dark:text-zinc-500">—</span>
                   )}
                 </td>
-                <td className="px-5 py-4 align-top">
+                <td className="px-4 py-2.5 align-top">
                   {isEditing ? (
                     <div className="flex min-w-0 max-w-[14rem] flex-col gap-1">
                       {(lead.leadTags ?? []).length === 0 ? (
@@ -1835,7 +1795,7 @@ function LeadsTable({
                     />
                   )}
                 </td>
-                <td className="px-5 py-4 align-top">
+                <td className="px-4 py-2.5 align-top">
                     {isEditing && draft ? (
                     <PillSelect
                       value={draft.source}
@@ -1872,7 +1832,7 @@ function LeadsTable({
                         }
                         disabled={quickSelectDisabled}
                         aria-label={`Source for ${deleteLabel}`}
-                        className={`w-full appearance-none rounded-full border-0 py-2 pl-3 pr-8 text-xs font-semibold capitalize outline-none ring-1 ring-zinc-200/80 focus:ring-2 focus:ring-blue-400/25 disabled:cursor-not-allowed disabled:opacity-60 dark:ring-zinc-600 dark:focus:ring-blue-500/30 ${getSourcePillClass(lead.source ?? "")}`}
+                        className={`w-full appearance-none rounded-lg border-0 py-1.5 pl-3 pr-8 text-[11px] font-medium capitalize outline-none ring-1 ring-zinc-200/85 focus:ring-2 focus:ring-blue-400/20 disabled:cursor-not-allowed disabled:opacity-60 dark:ring-zinc-600 dark:focus:ring-blue-500/25 ${getSourcePillClass(lead.source ?? "")}`}
                       >
                         <option value="">Not set</option>
                         {lead.source &&
@@ -1897,35 +1857,35 @@ function LeadsTable({
                     </div>
                   )}
                 </td>
-                <td className="px-5 py-4 align-top text-sm text-zinc-600 dark:text-zinc-400">
+                <td className="px-4 py-2.5 align-top tabular-nums text-zinc-600 dark:text-zinc-400">
                   {formatDate(lead.created_at)}
                 </td>
-                <td className="px-5 py-4 align-top">
-                  <div className="flex flex-wrap items-center gap-2">
+                <td className="px-4 py-2.5 align-top">
+                  <div className="flex justify-end">
                     {isEditing ? (
                       <div
                         role="group"
                         aria-label="Save or discard edits"
-                        className="inline-flex items-center gap-2 rounded-full border border-zinc-200/90 bg-zinc-100/95 p-1 pl-1.5 pr-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] dark:border-zinc-600 dark:bg-zinc-800/95 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+                        className={`${leadTableActionBarClass} gap-0.5`}
                       >
                         <button
                           type="button"
                           disabled={savePending}
                           onClick={() => void saveEdit(lead.id)}
-                          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white shadow-sm ring-1 ring-emerald-600/25 transition hover:bg-emerald-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:opacity-55 dark:bg-emerald-600 dark:ring-emerald-400/20 dark:hover:bg-emerald-500"
+                          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-emerald-600 text-white shadow-sm transition hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:opacity-55 dark:bg-emerald-600 dark:hover:bg-emerald-500"
                           aria-label="Save changes"
                           title="Save"
                         >
                           {savePending ? (
                             <Loader2
-                              className="h-4 w-4 shrink-0 animate-spin"
+                              className="h-3.5 w-3.5 shrink-0 animate-spin"
                               aria-hidden
                             />
                           ) : (
                             <Check
-                              className="h-4 w-4 shrink-0"
+                              className="h-3.5 w-3.5 shrink-0"
                               aria-hidden
-                              strokeWidth={2.75}
+                              strokeWidth={2.5}
                             />
                           )}
                         </button>
@@ -1933,58 +1893,58 @@ function LeadsTable({
                           type="button"
                           disabled={savePending}
                           onClick={cancelEdit}
-                          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-500 text-white shadow-sm ring-1 ring-red-600/25 transition hover:bg-red-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500 disabled:opacity-55 dark:bg-red-600 dark:ring-red-400/20 dark:hover:bg-red-500"
+                          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-400 disabled:opacity-55 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
                           aria-label="Discard changes"
                           title="Discard"
                         >
                           <X
-                            className="h-4 w-4 shrink-0"
+                            className="h-3.5 w-3.5 shrink-0"
                             aria-hidden
-                            strokeWidth={2.75}
+                            strokeWidth={2.5}
                           />
                         </button>
                       </div>
                     ) : (
-                      <>
+                      <div className={leadTableActionBarClass}>
                         <button
                           type="button"
                           onClick={() => onCreateProject(lead)}
                           disabled={editingId !== null}
-                          className="inline-flex items-center justify-center rounded-md p-1.5 text-violet-600 transition-colors hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-40 dark:text-violet-400 dark:hover:bg-violet-950/40"
+                          className={leadTableActionBtnClass}
                           aria-label={`Create project for ${deleteLabel}`}
                           title="Create project"
                         >
-                          <FolderKanban className="h-4 w-4 shrink-0" aria-hidden />
+                          <FolderKanban className="h-3.5 w-3.5 shrink-0" aria-hidden />
                         </button>
                         <button
                           type="button"
                           onClick={() => setNotesLead(lead)}
                           disabled={editingId !== null}
                           title="Notes"
-                          className="inline-flex items-center justify-center rounded-md p-1.5 text-accent-warm transition-colors hover:bg-accent-warm/10 disabled:cursor-not-allowed disabled:opacity-40 dark:text-amber-400 dark:hover:bg-amber-950/35"
+                          className={leadTableActionBtnClass}
                           aria-label={`View notes for ${deleteLabel}`}
                         >
-                          <LeadNotesGlyphIcon className="h-4 w-4 shrink-0" />
+                          <LeadNotesGlyphIcon className="h-3.5 w-3.5 shrink-0" />
                         </button>
                         <button
                           type="button"
                           onClick={() => onQuickTask(lead)}
                           disabled={editingId !== null}
                           title="Quick task"
-                          className="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                          className={leadTableActionBtnClass}
                           aria-label={`Add task for ${deleteLabel}`}
                         >
-                          <ListTodo className="h-4 w-4 shrink-0" aria-hidden />
+                          <ListTodo className="h-3.5 w-3.5 shrink-0" aria-hidden />
                         </button>
                         <button
                           type="button"
                           onClick={() => startEdit(lead)}
                           disabled={Boolean(editingId && editingId !== lead.id)}
-                          className="inline-flex items-center justify-center rounded-md p-1.5 text-accent transition-colors hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-40"
+                          className={leadTableActionBtnClass}
                           aria-label={`Edit ${deleteLabel}`}
                           title="Edit"
                         >
-                          <Pencil className="h-4 w-4 shrink-0" aria-hidden />
+                          <Pencil className="h-3.5 w-3.5 shrink-0" aria-hidden />
                         </button>
                         <button
                           type="button"
@@ -1994,19 +1954,19 @@ function LeadsTable({
                           }
                           onClick={() => void handleDeleteLead(lead)}
                           aria-busy={deletingId === lead.id}
-                          className="inline-flex items-center justify-center rounded-md p-1.5 text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-950/40"
+                          className={leadTableActionDangerClass}
                           aria-label={`Delete ${deleteLabel}`}
                         >
                           {deletingId === lead.id ? (
                             <Loader2
-                              className="h-4 w-4 shrink-0 animate-spin"
+                              className="h-3.5 w-3.5 shrink-0 animate-spin"
                               aria-hidden
                             />
                           ) : (
-                            <Trash2 className="h-4 w-4 shrink-0" aria-hidden />
+                            <Trash2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
                           )}
                         </button>
-                      </>
+                      </div>
                     )}
                   </div>
                 </td>

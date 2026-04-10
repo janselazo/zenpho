@@ -1705,16 +1705,17 @@ function ProspectsIntelligenceViewInner({
                 </div>
                 <div className="sm:col-span-2">
                   <label className="mb-1 block text-xs font-medium text-text-secondary">
-                    Notes (plain structured text)
+                    Notes
                   </label>
-                  <p className="mb-1 text-[11px] text-text-secondary dark:text-zinc-500">
-                    Prefilled with labeled sections and • bullets—not markdown.
+                  <p className="mb-1.5 text-[11px] leading-snug text-text-secondary dark:text-zinc-500">
+                    Filled from research—edit before saving. Sections use short
+                    labels; lines use • bullets (not Markdown).
                   </p>
                   <textarea
                     value={leadNotes}
                     onChange={(e) => setLeadNotes(e.target.value)}
-                    rows={10}
-                    className="min-h-[14rem] w-full rounded-lg border border-border px-3 py-2 font-mono text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                    rows={12}
+                    className="min-h-[13rem] w-full resize-y rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-xs leading-relaxed text-zinc-800 shadow-sm placeholder:text-zinc-400 focus:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-400/20 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-500 dark:focus:ring-zinc-500/20"
                   />
                 </div>
               </div>

@@ -4,9 +4,38 @@ function indentBulletLines(lines: string[]): string[] {
   return lines.map((line) => `  • ${line}`);
 }
 
+/** Indent non-empty lines for a plain-text block under a section header. */
+function indentBodyLines(block: string): string[] {
+  return block
+    .trim()
+    .split("\n")
+    .map((line) => `  ${line.trimEnd()}`)
+    .filter((line) => line.trim().length > 0);
+}
+
+/**
+ * If the whole block is one URL, label it so it scans like a field, not raw paste.
+ */
+function formatContextBody(contextBlock: string): string[] {
+  const raw = contextBlock.trim();
+  if (!raw) return [];
+
+  const lines = raw.split("\n").map((l) => l.trim()).filter(Boolean);
+  if (lines.length === 1 && /^https?:\/\//i.test(lines[0])) {
+    return [`  Website · ${lines[0]}`];
+  }
+
+  return lines.map((line) => {
+    if (/^https?:\/\//i.test(line)) {
+      return `  Website · ${line}`;
+    }
+    return `  ${line}`;
+  });
+}
+
 /**
  * Plain structured text for CRM lead notes (no markdown list syntax like "- ").
- * Sections use short labels; bullets use the • character and two-space indent.
+ * Section titles use sentence case; bullets use • with a two-space indent.
  */
 export function formatReportAsPlainNotes(
   report: MarketIntelReport,
@@ -16,35 +45,36 @@ export function formatReportAsPlainNotes(
   const chunks: string[] = [];
 
   if (contextBlock?.trim()) {
-    chunks.push(
-      "CONTEXT",
-      ...contextBlock.trim().split("\n").map((line) => `  ${line}`),
-      ""
-    );
+    chunks.push("Context", ...formatContextBody(contextBlock), "");
   }
 
   if (report.customWebsites.length) {
-    chunks.push("CUSTOM WEBSITES", ...indentBulletLines(report.customWebsites), "");
+    chunks.push("Custom websites", ...indentBulletLines(report.customWebsites), "");
   }
   if (report.webApps.length) {
-    chunks.push("WEB APPS", ...indentBulletLines(report.webApps), "");
+    chunks.push("Web apps", ...indentBulletLines(report.webApps), "");
   }
   if (report.mobileApps.length) {
-    chunks.push("MOBILE APPS", ...indentBulletLines(report.mobileApps), "");
+    chunks.push("Mobile apps", ...indentBulletLines(report.mobileApps), "");
   }
   if (report.aiAutomations.length) {
-    chunks.push("AI AUDIT (RESEARCH SIGNALS)", ...indentBulletLines(report.aiAutomations), "");
+    chunks.push("AI & automation", ...indentBulletLines(report.aiAutomations), "");
   }
 
-  const summaryBody = report.summary.trim().split("\n");
-  chunks.push("SUMMARY", ...summaryBody.map((line) => `  ${line}`), "");
-
-  if (contactSignalsBlock?.trim()) {
+  const summaryTrim = report.summary.trim();
+  if (summaryTrim) {
     chunks.push(
-      "CONTACT SIGNALS",
-      ...contactSignalsBlock.trim().split("\n").map((line) => `  ${line}`),
+      "Summary",
+      ...summaryTrim.split("\n").map((line) => `  ${line}`),
       ""
     );
+  }
+
+  if (contactSignalsBlock?.trim()) {
+    const contactLines = indentBodyLines(contactSignalsBlock);
+    if (contactLines.length) {
+      chunks.push("Contact signals", ...contactLines, "");
+    }
   }
 
   return chunks.join("\n").replace(/\n+$/, "");
