@@ -191,7 +191,7 @@ Every design must feel made **specifically for this business**.
 - **Imagery:** Describe hero visuals, textures, and decorative elements that add atmosphere (placeholders styled if no photos).
 
 ### Map to the five required sections
-The technical brief below fixes section ids (\`#home\`, \`#services\`, \`#expertise\`, \`#reviews\`, \`#location\`). Translate “booking / contact / about” intents into those screens: put **booking CTAs** on home and services and a clear **book / call path** on \`#location\`; use \`#expertise\` for story, team, and trust. The result should feel like a **premium custom site**, not a cheap template.
+The technical brief below fixes section ids (\`#home\`, \`#services\`, \`#expertise\`, \`#reviews\`, \`#location\`). **\`#home\`** must still contain a **full homepage** (banner, services, testimonials, gallery, contact, address, footer — see checklist). Other tabs hold **expanded** versions: **booking CTAs** on home and services; full **book / call / directions** on \`#location\`; **story / team / trust** on \`#expertise\`. The result should feel like a **premium custom site**, not a cheap template.
 `.trim();
 
 /** Creative director layer for desktop operator web apps — precedes technical Task/CSS contract. */
@@ -314,7 +314,7 @@ ${WEBSITE_CREATIVE_DIRECTIVE}
 
 Task: Output **one complete HTML5 document** (desktop-width marketing **multi-page** experience) for this business. Each “page” is a **separate full-viewport screen** inside the same file: **only one page is visible at a time** — **no long single scroll** stacking all five sections in one document flow. **No** separate HTTP URLs, **no** JS router, **no inline \`<script>\`** (Tailwind CDN \`<script src>\` OK). Interaction = **click nav → swap visible page** using **CSS only** (\`:target\` + \`:has\`).
 
-**Note on \`#home\`:** The home **screen** is still a single \`section#home.page\`, but it should contain **multiple vertical bands** (hero + highlights + trust/visual + CTA) with **internal scrolling** via \`overflow-y: auto\` on that section — so the home experience feels like a rich landing page, while other tabs remain separate full screens.
+**Note on \`#home\`:** The home **screen** is still a single \`section#home.page\`, but it must read like a **full marketing homepage**: stack **all** of the bands below (minimum **seven** content blocks + **footer**), with **internal scrolling** via \`overflow-y: auto\` on that section. Deeper detail can still exist on \`#services\`, \`#reviews\`, and \`#location\` — but **do not** leave \`#home\` as a thin hero only.
 
 ${WEBSITE_LAYOUT_SAFETY}
 
@@ -335,12 +335,14 @@ Nav links: \`<a href="#home">\`, \`#services\`, \`#expertise\`, \`#reviews\`, \`
 
 ## Structure checklist (required \`id\`s on \`<section class="page">\`)
 
-1. **#home** — One \`section#home.page\` with **at least four stacked bands** (scroll inside this section). Each band must be visually distinct (spacing, background tint, or border) and use **real copy** for this business:
-   - **Band A — Hero:** Business name, value proposition, primary + secondary CTA (e.g. book / call / view services). Execute the assigned **Hero structure**; obey **Layout safety** (no imagery covering type).
-   - **Band B — Highlights:** A **three-column** row of offerings, stats, or price-from cards **specific to the industry** (salon menu hints, café items, retail services — not generic “Feature 1/2/3”).
-   - **Band C — Trust or visual:** Either a **bento-style** image grid (placeholders OK) **or** an icon + headline feature row (certifications, hours, differentiators).
-   - **Band D — Bottom CTA strip:** Book/call, short hours line, or “why choose us” — pushes users toward \`#location\` or \`tel:\`.
-   Gallery- or story-like **motifs** belong here or in Band C — do not leave \`#home\` as hero-only.
+1. **#home** — One \`section#home.page\` with **seven mandatory homepage blocks** in order (scroll inside this section). Each block must be visually distinct and use **real copy** for this business. Obey **Layout safety** throughout.
+   - **(1) Principal banner / hero:** Full-width or split hero: business name, tagline, primary + secondary CTA; optional rating line from context.
+   - **(2) Services:** **Services overview** — 3–6 cards or categorized rows (industry-specific names, short blurbs or “from $”); \`<a href="#services">\` to the full Services page.
+   - **(3) Testimonials:** **Testimonials** — at least **two** quotes (cards or columns), stars, optional aggregate rating from context; \`<a href="#reviews">\` for more reviews.
+   - **(4) Gallery:** **Gallery** — bento or grid of 3–5 images (placeholders + captions OK); use grid + \`aspect-ratio\`, no text/image overlap.
+   - **(5) Contact us:** **Contact** — section title “Contact us” / “Get in touch”: static form fields (name, email, phone, message) **without** JS submit — use \`mailto:\` / \`tel:\` on buttons or labels, or purely visual form chrome.
+   - **(6) Our address:** **Address / visit us** — full address, hours summary, phone, map or map-style placeholder; \`<a href="#location">\` for full details.
+   - **(7) Footer:** **Site footer** — business name, mini nav (\`#services\`, \`#expertise\`, \`#reviews\`, \`#location\`), optional Privacy/Terms placeholders, **© year + business name**; footer styling (e.g. dark band) at the **bottom of \`#home\` only** (global nav stays in the header).
 
 2. **#services** — A **different** layout than home: multi-column **priced menu**, categorized lists, or tiered packages (columns or sections with headings). Industry-specific service names and price cues; not the same three cards repeated from \`#home\`.
 

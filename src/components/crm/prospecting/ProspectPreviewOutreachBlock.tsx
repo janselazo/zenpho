@@ -317,9 +317,10 @@ function StitchPreviewLinks({
           href={result.htmlUrl}
           target="_blank"
           rel="noreferrer"
+          title="Opens Stitch HTML export in a new browser tab"
           className="inline-flex items-center gap-1 text-xs font-medium text-text-secondary hover:text-text-primary hover:underline dark:text-zinc-400 dark:hover:text-zinc-300"
         >
-          Download HTML
+          View HTML
           <ExternalLink className="h-3 w-3 opacity-70" aria-hidden />
         </a>
         <button
