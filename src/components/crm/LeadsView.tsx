@@ -252,6 +252,7 @@ const projectTypeTextClasses: Record<string, string> = {
   "custom websites": "text-cyan-700 dark:text-cyan-400",
   "websites development": "text-cyan-700 dark:text-cyan-400",
   "ai automations": "text-violet-700 dark:text-violet-400",
+  "ai automation": "text-violet-700 dark:text-violet-400",
   "web apps": "text-sky-700 dark:text-sky-400",
   "mobile apps": "text-emerald-700 dark:text-emerald-400",
   "mvp dev": "text-cyan-700 dark:text-cyan-400",
@@ -268,6 +269,8 @@ const projectTypePillClasses: Record<string, string> = {
   "websites development":
     "bg-cyan-100 text-cyan-900 dark:bg-cyan-950/45 dark:text-cyan-100",
   "ai automations":
+    "bg-violet-100 text-violet-900 dark:bg-violet-950/45 dark:text-violet-100",
+  "ai automation":
     "bg-violet-100 text-violet-900 dark:bg-violet-950/45 dark:text-violet-100",
   "web apps": "bg-sky-100 text-sky-900 dark:bg-sky-950/45 dark:text-sky-100",
   "mobile apps":
@@ -302,6 +305,7 @@ const contactCategoryTextClasses: Record<string, string> = {
   "saas founder": "text-fuchsia-700 dark:text-fuchsia-400",
   "ecommerce owner": "text-rose-700 dark:text-rose-400",
   "retail / dtc founder": "text-rose-700 dark:text-rose-400",
+  "local business owner": "text-amber-800 dark:text-amber-400",
 };
 
 const contactCategoryPillClasses: Record<string, string> = {
@@ -309,6 +313,8 @@ const contactCategoryPillClasses: Record<string, string> = {
   "saas founder": "bg-fuchsia-100 text-fuchsia-900 dark:bg-fuchsia-950/45 dark:text-fuchsia-100",
   "ecommerce owner": "bg-rose-100 text-rose-900 dark:bg-rose-950/45 dark:text-rose-100",
   "retail / dtc founder": "bg-rose-100 text-rose-900 dark:bg-rose-950/45 dark:text-rose-100",
+  "local business owner":
+    "bg-amber-100 text-amber-950 dark:bg-amber-950/40 dark:text-amber-100",
 };
 
 function getContactCategoryTextClass(category: string) {

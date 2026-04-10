@@ -235,10 +235,10 @@ export const LEAD_STAGE_LABELS: Record<LeadStage, string> = {
 
 /** Lead "Project type" dropdown (stored as-display on `lead.project_type`; same list on products / Work). */
 export const LEAD_PROJECT_TYPE_OPTIONS = [
-  "Custom Websites",
-  "Web Apps",
-  "Mobile Apps",
-  "AI Automations",
+  "Website",
+  "Web App",
+  "Mobile App",
+  "AI Automation",
 ] as const;
 
 export type LeadProjectType = (typeof LEAD_PROJECT_TYPE_OPTIONS)[number];
@@ -251,7 +251,7 @@ export const DEFAULT_LEAD_PROJECT_TYPE: LeadProjectType =
 export const LEAD_CONTACT_CATEGORY_OPTIONS = [
   "Tech Founder",
   "SaaS Founder",
-  "Retail / DTC Founder",
+  "Local Business Owner",
 ] as const;
 
 export type LeadContactCategory =
