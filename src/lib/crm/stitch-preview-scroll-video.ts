@@ -1,6 +1,6 @@
 /**
- * Client-only: records a short WebM of vertically scrolling through hosted prospect HTML
- * (iframe + html2canvas + MediaRecorder). Import only from client components.
+ * Client-only: short WebM of scrolling through the hosted prospect homepage preview
+ * (iframe + html2canvas + MediaRecorder). Tuned for email: quick, sharp-ish, small file.
  */
 
 export type PreviewDeviceTypeForVideo = "MOBILE" | "DESKTOP" | null;
@@ -10,28 +10,54 @@ const DESKTOP_VIEW_H = 720;
 const MOBILE_VIEW_W = 390;
 const MOBILE_VIEW_H = 720;
 
-/** Output video dimensions. */
-const OUT_DESKTOP_W = 960;
-const OUT_DESKTOP_H = 540;
-const OUT_MOBILE_W = 312;
-const OUT_MOBILE_H = 576;
+/** Encode size — 720p landscape for desktop (good quality / reasonable weight for email). */
+const OUT_DESKTOP_W = 1280;
+const OUT_DESKTOP_H = 720;
+/** Narrow portrait — lighter than full 720p height, still readable on phones. */
+const OUT_MOBILE_W = 540;
+const OUT_MOBILE_H = 960;
 
-/** Target playback duration for the exported WebM. */
-const SCROLL_MS = 8000;
-const TARGET_FPS = 10;
+/** Quick homepage preview (not a long tour) — keeps attachment size down for email. */
+const OUTPUT_VIDEO_MS = 10_000;
+
+const CAPTURE_FRAMES_MIN = 22;
+const CAPTURE_FRAMES_MAX = 40;
+
+/** Canvas stream frame rate (content is mostly static holds per snap). */
+const TARGET_FPS = 12;
 const POST_LOAD_SETTLE_MS = 400;
 
-function pickVideoMimeType(): string {
-  if (typeof MediaRecorder === "undefined") return "";
-  const candidates = [
-    "video/webm;codecs=vp9",
-    "video/webm;codecs=vp8",
-    "video/webm",
+/** Target video bitrate (VP9/WebM) — browsers may approximate; keeps ~2–5 MB typical for ~10s 720p. */
+const VIDEO_BITRATE_DESKTOP_BPS = 2_000_000;
+const VIDEO_BITRATE_MOBILE_BPS = 1_200_000;
+
+/** html2canvas resolution multiplier (1 = full sharpness at viewport; then scaled to OUT_* with high-quality smoothing). */
+const CAPTURE_SCALE = 1;
+
+/** Public for UI (“~10s clip”, email-friendly). */
+export const PROSPECT_PREVIEW_VIDEO_DURATION_SEC = Math.round(OUTPUT_VIDEO_MS / 1000);
+
+export const PROSPECT_PREVIEW_VIDEO_EMAIL_HINT =
+  "Quick WebM preview (~10s, tuned for small file size — many inboxes cap attachments around 10–25 MB).";
+
+type MimeChoice = { mimeType: string; videoBitsPerSecond: number };
+
+function pickRecorderOptions(isMobile: boolean): MimeChoice {
+  const bitrate = isMobile ? VIDEO_BITRATE_MOBILE_BPS : VIDEO_BITRATE_DESKTOP_BPS;
+  const candidates: { mime: string }[] = [
+    { mime: "video/webm;codecs=vp9" },
+    { mime: "video/webm;codecs=vp8" },
+    { mime: "video/webm" },
   ];
-  for (const c of candidates) {
-    if (MediaRecorder.isTypeSupported(c)) return c;
+  if (typeof MediaRecorder === "undefined") {
+    return { mimeType: "", videoBitsPerSecond: bitrate };
   }
-  return "";
+  for (const c of candidates) {
+    if (MediaRecorder.isTypeSupported(c.mime)) {
+      return { mimeType: c.mime, videoBitsPerSecond: bitrate };
+    }
+  }
+  return { mimeType: "", videoBitsPerSecond: bitrate };
 }
 
 function delay(ms: number): Promise<void> {
@@ -42,14 +68,46 @@ async function nextPaint(): Promise<void> {
   await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
 }
 
+/**
+ * Prefer scrolling through the marketing #home section (or app #dash); fallback to full document.
+ */
+function getWalkthroughScrollRange(
+  doc: Document,
+  capH: number
+): { scrollStart: number; maxScroll: number } {
+  const scrollEl = doc.scrollingElement ?? doc.documentElement;
+  const fullMax = Math.max(0, scrollEl.scrollHeight - capH);
+
+  const roots = [
+    doc.getElementById("home"),
+    doc.getElementById("dash"),
+  ];
+
+  for (const el of roots) {
+    if (!el || el.offsetHeight < 1) continue;
+    const top = el.offsetTop;
+    const bottom = top + el.offsetHeight;
+    const endScroll = Math.min(fullMax, Math.max(0, bottom - capH));
+    const start = Math.min(Math.max(0, top), fullMax);
+    const range = Math.max(0, endScroll - start);
+    return { scrollStart: start, maxScroll: range };
+  }
+
+  return { scrollStart: 0, maxScroll: fullMax };
+}
+
+function pickCaptureFrameCount(maxScroll: number): number {
+  const density = Math.ceil(maxScroll / 140);
+  return Math.min(CAPTURE_FRAMES_MAX, Math.max(CAPTURE_FRAMES_MIN, density));
+}
+
 export type RecordScrollVideoOptions = {
   html: string;
   deviceType: PreviewDeviceTypeForVideo;
 };
 
 /**
- * Builds a scroll-through WebM from full-document HTML (same as hosted preview).
- * Phase 1 captures frames (slow); phase 2 plays them to canvas at fixed FPS so the clip is ~SCROLL_MS long.
+ * Scroll-through WebM: short duration, 720p-style encode where possible, bitrate-capped for email.
  */
 export async function recordProspectPreviewScrollVideo(
   options: RecordScrollVideoOptions,
@@ -58,14 +116,14 @@ export async function recordProspectPreviewScrollVideo(
     throw new Error("Scroll video recording runs in the browser only.");
   }
 
-  const mimeType = pickVideoMimeType();
+  const isMobile = options.deviceType === "MOBILE";
+  const { mimeType, videoBitsPerSecond } = pickRecorderOptions(isMobile);
   if (!mimeType) {
     throw new Error(
       "WebM recording is not supported in this browser. Try Chrome or Edge for scroll video export.",
     );
   }
 
-  const isMobile = options.deviceType === "MOBILE";
   const capW = isMobile ? MOBILE_VIEW_W : DESKTOP_VIEW_W;
   const capH = isMobile ? MOBILE_VIEW_H : DESKTOP_VIEW_H;
   const outW = isMobile ? OUT_MOBILE_W : OUT_DESKTOP_W;
@@ -93,9 +151,8 @@ export async function recordProspectPreviewScrollVideo(
     throw new Error("Preview document is not accessible.");
   }
 
-  const scrollRoot = doc.scrollingElement ?? doc.documentElement;
-  const maxScroll = Math.max(0, scrollRoot.scrollHeight - capH);
-  const totalFrames = Math.max(2, Math.ceil((SCROLL_MS / 1000) * TARGET_FPS));
+  const { scrollStart, maxScroll } = getWalkthroughScrollRange(doc, capH);
+  const totalFrames = pickCaptureFrameCount(Math.max(maxScroll, 80));
 
   const captureEl = doc.documentElement;
   const snaps: HTMLCanvasElement[] = [];
@@ -103,7 +160,7 @@ export async function recordProspectPreviewScrollVideo(
   try {
     for (let frame = 0; frame < totalFrames; frame++) {
       const t = totalFrames <= 1 ? 0 : frame / (totalFrames - 1);
-      const scrollTop = maxScroll * t;
+      const scrollTop = scrollStart + maxScroll * t;
       win.scrollTo(0, scrollTop);
       await nextPaint();
 
@@ -114,7 +171,7 @@ export async function recordProspectPreviewScrollVideo(
         windowHeight: capH,
         scrollX: 0,
         scrollY: -win.pageYOffset,
-        scale: 0.85,
+        scale: CAPTURE_SCALE,
         useCORS: true,
         allowTaint: true,
         logging: false,
@@ -129,14 +186,27 @@ export async function recordProspectPreviewScrollVideo(
   const canvas = document.createElement("canvas");
   canvas.width = outW;
   canvas.height = outH;
-  const ctx = canvas.getContext("2d");
+  const ctx = canvas.getContext("2d", { alpha: false });
   if (!ctx) {
     throw new Error("Canvas is not available.");
   }
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
 
   const stream = canvas.captureStream(TARGET_FPS);
   const chunks: BlobPart[] = [];
-  const recorder = new MediaRecorder(stream, { mimeType });
+
+  const recorderOptions: MediaRecorderOptions = {
+    mimeType,
+    videoBitsPerSecond,
+  };
+
+  let recorder: MediaRecorder;
+  try {
+    recorder = new MediaRecorder(stream, recorderOptions);
+  } catch {
+    recorder = new MediaRecorder(stream, { mimeType });
+  }
 
   const blobPromise = new Promise<Blob>((resolve, reject) => {
     recorder.ondataavailable = (e) => {
@@ -149,7 +219,7 @@ export async function recordProspectPreviewScrollVideo(
     };
   });
 
-  const frameIntervalMs = SCROLL_MS / totalFrames;
+  const frameIntervalMs = OUTPUT_VIDEO_MS / snaps.length;
   recorder.start(200);
 
   for (let i = 0; i < snaps.length; i++) {

@@ -2,6 +2,117 @@ import type { PlacesSearchPlace } from "@/lib/crm/places-types";
 import { primaryPlaceTypeLabel } from "@/lib/crm/places-search-ui";
 import type { StitchProspectDesignPayload } from "@/lib/crm/stitch-prospect-design-types";
 
+/** Stable hash for picking variation axes (same business → same axes on regenerate). */
+function stablePickIndex(seed: string, salt: string, modulo: number): number {
+  const combined = `${salt}\0${seed}`;
+  let h = 2166136261;
+  for (let i = 0; i < combined.length; i++) {
+    h ^= combined.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return Math.abs(h) % modulo;
+}
+
+function prospectUniquenessSeed(payload: StitchProspectDesignPayload): string {
+  if (payload.kind === "place") {
+    const id = (payload.place.id ?? "").trim();
+    const name = (payload.place.name ?? "").trim();
+    return `${id}:${name}:${primaryPlaceTypeLabel(payload.place.types)}`;
+  }
+  try {
+    const u = new URL(/^https?:\/\//i.test(payload.url) ? payload.url : `https://${payload.url}`);
+    return u.hostname + u.pathname;
+  } catch {
+    return payload.url.trim() || "url";
+  }
+}
+
+/** Mandates a concrete aesthetic so outputs diverge between businesses. */
+const WEBSITE_ASSIGNED_AESTHETIC_LANES = [
+  "Brutalist / raw editorial — stark type, visible grid, few colors",
+  "Warm organic & handcrafted — earth tones, soft shapes, tactile texture",
+  "Luxury minimal — editorial serif headlines, thin rules, generous air",
+  "Retro-futuristic neon — dark base, luminous accent, sharp geometry",
+  "Art deco geometric — symmetry, metallic accents, stepped forms",
+  "Soft pastel & illustrative — light base, playful shapes, friendly contrast",
+  "Industrial utilitarian — steel/concrete neutrals, strong dividers, monospace hints",
+  "Magazine editorial — pull quotes, column rhythm, byline-style metadata",
+  "Dark moody atmospheric — deep background, one warm highlight, dramatic crop",
+  "Vibrant maximalist — bold color blocks, collage energy, confident overlap",
+  "Coastal / airy — light blues & sand neutrals, breezy whitespace, soft radii",
+  "Heritage craft — deep ink + cream paper, badge motifs, timeless serif",
+] as const;
+
+const WEBSITE_ASSIGNED_LAYOUT_MOTIFS = [
+  "Asymmetric split hero: copy left (or right), bold visual panel opposite — not centered hero + stock photo",
+  "Full-bleed band + overlapping cards that break the rectangle grid",
+  "Editorial magazine: multi-column text, oversized headline, one strong pull quote",
+  "Minimal centered column: huge display wordmark, sparse lines — almost poster-like",
+  "Horizontal top bar + tall hero with stacked proof (stats, badges) under the H1",
+  "Z-pattern flow: diagonal or stepped section backgrounds alternating light/dark bands",
+  "Bento grid: unequal tiles for services (not three equal cards)",
+  "Frosted / layered panels (CSS only) with clear depth — not flat white boxes only",
+] as const;
+
+const WEBSITE_ASSIGNED_TYPE_DIRECTIONS = [
+  "High-contrast serif display (H1–H2) + clean geometric sans for body",
+  "Condensed grotesk headlines + humanist sans body for warmth",
+  "Old-style serif for trust + neutral sans UI text",
+  "Rounded display for friendly SMB + crisp sans for lists and CTAs",
+  "Narrow headline sans + slightly wider body sans (distinct weights, not one family only)",
+  "Slab serif accent for section labels + sans for paragraphs",
+  "Italic serif quote style for testimonials + sans elsewhere",
+] as const;
+
+const WEBSITE_ASSIGNED_HERO_STRUCTURES = [
+  "Headline + subhead + dual CTAs; visual is typographic or abstract (gradient mesh, pattern) — not generic stock trio",
+  "Headline over full-bleed duotone or gradient wash; nav floats transparent",
+  "Stacked: eyebrow, huge name, single CTA; services preview as horizontal scroll row (CSS)",
+  "Split with **fake** map or hours card as designed UI (not iframe) beside copy",
+  "Hero is mostly whitespace with one asymmetric image mask (clip-path or rounded irregular)",
+] as const;
+
+function buildWebsiteAssignedDifferentiationBlock(
+  payload: StitchProspectDesignPayload
+): string {
+  const seed = prospectUniquenessSeed(payload);
+  const lane =
+    WEBSITE_ASSIGNED_AESTHETIC_LANES[
+      stablePickIndex(seed, "lane", WEBSITE_ASSIGNED_AESTHETIC_LANES.length)
+    ];
+  const layout =
+    WEBSITE_ASSIGNED_LAYOUT_MOTIFS[
+      stablePickIndex(seed, "layout", WEBSITE_ASSIGNED_LAYOUT_MOTIFS.length)
+    ];
+  const typeDir =
+    WEBSITE_ASSIGNED_TYPE_DIRECTIONS[
+      stablePickIndex(seed, "type", WEBSITE_ASSIGNED_TYPE_DIRECTIONS.length)
+    ];
+  const hero =
+    WEBSITE_ASSIGNED_HERO_STRUCTURES[
+      stablePickIndex(seed, "hero", WEBSITE_ASSIGNED_HERO_STRUCTURES.length)
+    ];
+
+  return `
+## Assigned differentiation (mandatory — follow exactly)
+
+Each prospect must look **nothing like a default Stitch/Gemini marketing page**. For **this** business, you MUST commit to:
+
+1. **Aesthetic lane:** ${lane}
+2. **Layout motif:** ${layout}
+3. **Typography direction:** ${typeDir} — load distinct faces via \`<link>\` to Google Fonts (or similar); **do not** use Inter, Roboto, or Arial as the only fonts.
+4. **Hero structure:** ${hero}
+
+**Anti-sameness (hard rules):**
+- Do **not** produce the same hero → three equal cards → testimonial strip → footer pattern you would for an unrelated business.
+- Do **not** default to purple–blue gradients, generic “three feature icons,” or interchangeable SaaS marketing tropes unless the aesthetic lane explicitly demands neon/tech.
+- Vary **section backgrounds** (tint, subtle gradient, texture via CSS, or full-bleed contrast bands) so the page is not one white column wall-to-wall.
+- Mention the **business name** in real copy; make **services** specific to the Google category / URL context — not filler lorem.
+
+If **Visual direction** appears in the context block, harmonize with it; otherwise obey the lane above without drifting to a bland default.
+`.trim();
+}
+
 function safe(s: string | null | undefined, max = 800): string {
   const t = (s ?? "").trim().replace(/\s+/g, " ");
   if (!t) return "";
@@ -56,7 +167,7 @@ Before designing, deeply understand the business from the context above:
 - Target customer and what makes this business different from competitors.
 
 ### Commit to a bold aesthetic direction
-Pick **one** strong visual identity and execute it with precision. Examples — do not default to generic SaaS/marketing templates, purple gradients, or cookie-cutter layouts:
+The **Assigned differentiation** block above already chose your lane — execute **that** lane, not a generic default. Supplemental examples only (do not ignore the assigned lane):
 - Brutalist / raw editorial
 - Warm organic & handcrafted
 - Luxury minimal with refined typography
@@ -163,13 +274,13 @@ Aim for a **native-quality** concept — not a mobile web article dressed as an 
 `.trim();
 
 const WEBSITE_VISUAL_CHECKLIST = `
-Visual quality (2024–2026 product UI, not a generic template):
-- Typography: refined sans or pairing; clear scale (display / H1–H3 / body / caption); comfortable line-height; avoid unstyled default system fonts.
-- Color: cohesive palette from Visual direction + context — dominant neutrals, one confident accent for CTAs and active nav; WCAG-minded contrast (no faint gray body text on white).
-- Layout: generous whitespace; 8/12/16px rhythm; separate sections with subtle borders, soft tints, or light gradients (CSS only).
-- Polish: soft shadows, large radii on cards; optional subtle gradient or mesh hero band; pill-shaped primary buttons.
-- Components: inline SVG icons where helpful; styled image placeholders (aspect-ratio, rounded) if no photos.
-- Motion: CSS only — transition on :hover / :focus-visible for links and buttons; no JavaScript — page changes use the **:target + :has** pattern below, not scroll.`.trim();
+Visual quality (bespoke to **Assigned differentiation**, not one repeated template):
+- Typography: honor the **Typography direction** — real font pairing, clear scale (display / H1–H3 / body / caption); comfortable line-height; never “system UI only.”
+- Color: from context + assigned lane — dominant mood + one sharp accent for CTAs; WCAG-minded contrast (no illegible gray-on-white body).
+- Layout: follow the **Layout motif** and **Hero structure**; vary rhythm between sections (tight vs airy) instead of identical card grids everywhere.
+- Polish: depth via shadow, border, overlap, or color bands as fits the lane — avoid the same “soft card + pill button” on every prospect.
+- Components: inline SVG icons where helpful; placeholders (aspect-ratio, masks) styled to match the lane if no photos.
+- Motion: CSS only — :hover / :focus-visible; navigation uses **:target + :has** below, not long scroll between “pages.”`.trim();
 
 export function buildStitchWebsitePrompt(payload: StitchProspectDesignPayload): string {
   const block =
@@ -177,7 +288,11 @@ export function buildStitchWebsitePrompt(payload: StitchProspectDesignPayload): 
       ? placeContext(payload.place, payload.colorVibe)
       : urlContext(payload.url, payload.pageTitle, payload.metaDescription, payload.colorVibe);
 
+  const differentiation = buildWebsiteAssignedDifferentiationBlock(payload);
+
   return `${block}
+
+${differentiation}
 
 ${WEBSITE_CREATIVE_DIRECTIVE}
 
