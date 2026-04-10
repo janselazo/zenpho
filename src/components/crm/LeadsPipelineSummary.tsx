@@ -251,6 +251,19 @@ function MiniSparkline({
   );
 }
 
+const summaryIconTones = {
+  leads:
+    "bg-sky-50 text-sky-600 shadow-[inset_0_1px_0_0_rgb(255_255_255/0.6)] ring-1 ring-sky-200/90 dark:bg-sky-950/50 dark:text-sky-300 dark:shadow-none dark:ring-sky-800/60",
+  appointments:
+    "bg-violet-50 text-violet-600 shadow-[inset_0_1px_0_0_rgb(255_255_255/0.6)] ring-1 ring-violet-200/90 dark:bg-violet-950/45 dark:text-violet-300 dark:shadow-none dark:ring-violet-800/55",
+  proposals:
+    "bg-amber-50 text-amber-700 shadow-[inset_0_1px_0_0_rgb(255_255_255/0.6)] ring-1 ring-amber-200/90 dark:bg-amber-950/40 dark:text-amber-300 dark:shadow-none dark:ring-amber-900/45",
+  clients:
+    "bg-emerald-50 text-emerald-600 shadow-[inset_0_1px_0_0_rgb(255_255_255/0.6)] ring-1 ring-emerald-200/90 dark:bg-emerald-950/45 dark:text-emerald-300 dark:shadow-none dark:ring-emerald-800/55",
+} as const;
+
+type SummaryMetric = keyof typeof summaryIconTones;
+
 type SummaryCardProps = {
   title: string;
   value: string;
@@ -259,6 +272,7 @@ type SummaryCardProps = {
   spark: { label: string; v: number }[];
   icon: React.ReactNode;
   chartId: string;
+  metric: SummaryMetric;
 };
 
 function SummaryCard({
@@ -269,6 +283,7 @@ function SummaryCard({
   spark,
   icon,
   chartId,
+  metric,
 }: SummaryCardProps) {
   const up = trend?.up ?? true;
   const trendColor = trend == null ? "text-zinc-400" : up ? "text-emerald-600 dark:text-emerald-400" : "text-pink-600 dark:text-pink-400";
@@ -287,12 +302,15 @@ function SummaryCard({
         aria-hidden
       />
       <div className="relative flex items-start justify-between gap-1.5">
-        <div className="flex min-w-0 flex-1 items-start gap-2">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600 dark:bg-orange-950/80 dark:text-orange-300">
+        <div className="flex min-w-0 flex-1 items-start gap-2.5">
+          <div
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${summaryIconTones[metric]}`}
+            aria-hidden
+          >
             {icon}
           </div>
           <div className="min-w-0 pt-0.5">
-            <p className="text-[11px] font-semibold leading-tight text-text-primary underline decoration-zinc-300 decoration-1 underline-offset-2 dark:text-zinc-100 dark:decoration-zinc-600">
+            <p className="text-[11px] font-semibold leading-tight text-text-primary dark:text-zinc-100">
               {title}
             </p>
           </div>
@@ -540,7 +558,8 @@ export default function LeadsPipelineSummary({
           trend={pctChange(metrics.leadsN, metrics.leadsP)}
           spark={metrics.sparkLeads}
           chartId="leads"
-          icon={<Users className="h-3.5 w-3.5" strokeWidth={2.25} />}
+          metric="leads"
+          icon={<Users className="h-4 w-4" strokeWidth={2} aria-hidden />}
         />
         <SummaryCard
           title="Appointments"
@@ -549,7 +568,8 @@ export default function LeadsPipelineSummary({
           trend={pctChange(metrics.appts, metrics.apptsP)}
           spark={metrics.sparkAppts}
           chartId="appts"
-          icon={<Calendar className="h-3.5 w-3.5" strokeWidth={2.25} />}
+          metric="appointments"
+          icon={<Calendar className="h-4 w-4" strokeWidth={2} aria-hidden />}
         />
         <SummaryCard
           title="Proposals"
@@ -558,7 +578,8 @@ export default function LeadsPipelineSummary({
           trend={pctChange(metrics.props, metrics.propsP)}
           spark={metrics.sparkProps}
           chartId="props"
-          icon={<FileText className="h-3.5 w-3.5" strokeWidth={2.25} />}
+          metric="proposals"
+          icon={<FileText className="h-4 w-4" strokeWidth={2} aria-hidden />}
         />
         <SummaryCard
           title="Clients"
@@ -567,7 +588,8 @@ export default function LeadsPipelineSummary({
           trend={pctChange(metrics.clients, metrics.clientsP)}
           spark={metrics.sparkClients}
           chartId="clients"
-          icon={<Building2 className="h-3.5 w-3.5" strokeWidth={2.25} />}
+          metric="clients"
+          icon={<Building2 className="h-4 w-4" strokeWidth={2} aria-hidden />}
         />
       </div>
     </div>

@@ -12,8 +12,8 @@ import type {
   StitchProspectDesignResult,
 } from "@/lib/crm/stitch-prospect-design-types";
 
-/** Mobile generations use Stitch “Thinking with 3.1 Pro” (Gemini 3.1 Pro) when the API accepts modelId. */
-const STITCH_MOBILE_MODEL_ID = "GEMINI_3_1_PRO" as const;
+/** Stitch “Thinking with 3.1 Pro” (Gemini 3.1 Pro) — website, web app, and mobile API generations. */
+const STITCH_GEMINI_3_1_PRO_MODEL_ID = "GEMINI_3_1_PRO" as const;
 
 function safeTrim(s: unknown): string {
   return typeof s === "string" ? s.trim() : "";
@@ -63,8 +63,11 @@ export async function runStitchProspectDesign(
     const project = linkedProjectId
       ? sdk.project(linkedProjectId)
       : await sdk.createProject(projectTitle);
-    const modelId = payload.target === "mobile" ? STITCH_MOBILE_MODEL_ID : undefined;
-    const screen = await project.generate(prompt, deviceType, modelId);
+    const screen = await project.generate(
+      prompt,
+      deviceType,
+      STITCH_GEMINI_3_1_PRO_MODEL_ID,
+    );
     const [imageUrl, htmlUrl] = await Promise.all([screen.getImage(), screen.getHtml()]);
     const img = typeof imageUrl === "string" ? imageUrl.trim() : "";
     const html = typeof htmlUrl === "string" ? htmlUrl.trim() : "";

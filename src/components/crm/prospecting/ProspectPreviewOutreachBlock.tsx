@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Copy,
   ExternalLink,
@@ -12,6 +12,7 @@ import {
   MessageSquare,
   Monitor,
   Smartphone,
+  Video,
   Workflow,
 } from "lucide-react";
 import type { PlacesSearchPlace } from "@/lib/crm/places-types";
@@ -30,6 +31,11 @@ import {
 } from "@/app/(crm)/actions/prospect-preview";
 import { generateProspectAutomationPdfAction } from "@/app/(crm)/actions/prospect-automation-report";
 import { mergeProspectOutreachTemplate } from "@/lib/crm/prospect-outreach-template";
+import {
+  downloadBlob,
+  recordProspectPreviewScrollVideo,
+  type PreviewDeviceTypeForVideo,
+} from "@/lib/crm/stitch-preview-scroll-video";
 
 /** Context for Google Stitch prompts (Local Business listing or URL research). */
 export type ProspectStitchContext =
@@ -192,6 +198,22 @@ function StitchPreviewLinks({
   copyAndFlash: (t: string) => void;
 }) {
   const [imageDownloadBusy, setImageDownloadBusy] = useState(false);
+  const [videoBusy, setVideoBusy] = useState(false);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const [sessionVideoUrl, setSessionVideoUrl] = useState<string | null>(null);
+  const sessionVideoUrlRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (sessionVideoUrlRef.current) {
+        URL.revokeObjectURL(sessionVideoUrlRef.current);
+        sessionVideoUrlRef.current = null;
+      }
+    };
+  }, []);
+
+  const hostedId = result.hostedPreviewId?.trim();
+  const canScrollVideo = Boolean(hostedId);
 
   return (
     <div className="mt-2 space-y-2 rounded-lg border border-blue-500/25 bg-blue-500/[0.06] p-3 dark:border-blue-400/20 dark:bg-blue-500/10">
@@ -204,6 +226,15 @@ function StitchPreviewLinks({
         alt=""
         className="max-h-40 w-full rounded-md border border-border object-contain object-top dark:border-zinc-700"
       />
+      {sessionVideoUrl ? (
+        <video
+          className="max-h-48 w-full rounded-md border border-border object-contain dark:border-zinc-700"
+          src={sessionVideoUrl}
+          controls
+          playsInline
+          muted
+        />
+      ) : null}
       <div className="flex flex-wrap gap-2">
         {result.hostedPreviewUrl ? (
           <a
@@ -250,7 +281,65 @@ function StitchPreviewLinks({
           ) : (
             <FileDown className="h-3 w-3" aria-hidden />
           )}
-          Download preview image
+          Download image
+        </button>
+        <button
+          type="button"
+          disabled={!canScrollVideo || videoBusy}
+          title={
+            canScrollVideo
+              ? "Builds a short WebM by scrolling the hosted preview (can take a minute)."
+              : "Hosted preview is required — generate again or check preview hosting."
+          }
+          onClick={() => {
+            if (!hostedId) return;
+            setVideoError(null);
+            setVideoBusy(true);
+            void (async () => {
+              try {
+                const res = await fetch(
+                  `/api/prospecting/preview-html?previewId=${encodeURIComponent(hostedId)}`,
+                  { credentials: "same-origin" },
+                );
+                const data = (await res.json()) as {
+                  ok?: boolean;
+                  html?: string;
+                  deviceType?: PreviewDeviceTypeForVideo;
+                  error?: string;
+                };
+                if (!res.ok || !data.ok || !data.html?.trim()) {
+                  throw new Error(data.error || "Could not load preview HTML.");
+                }
+                const safeId = result.screenId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 40) || "preview";
+                const fileBase = `stitch-preview-${target}-${safeId}`;
+                const blob = await recordProspectPreviewScrollVideo({
+                  html: data.html,
+                  deviceType: data.deviceType ?? null,
+                });
+                if (sessionVideoUrlRef.current) {
+                  URL.revokeObjectURL(sessionVideoUrlRef.current);
+                }
+                const vUrl = URL.createObjectURL(blob);
+                sessionVideoUrlRef.current = vUrl;
+                setSessionVideoUrl(vUrl);
+                downloadBlob(blob, `${fileBase}-scroll.webm`);
+              } catch (e) {
+                const msg = e instanceof Error ? e.message : "Could not record scroll video.";
+                setVideoError(msg);
+                copyAndFlash(msg);
+              } finally {
+                setVideoBusy(false);
+              }
+            })();
+          }}
+          className="inline-flex items-center gap-1 text-xs font-medium text-text-secondary hover:text-text-primary disabled:opacity-50 dark:text-zinc-400"
+        >
+          {videoBusy ? (
+            <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+          ) : (
+            <Video className="h-3 w-3" aria-hidden />
+          )}
+          {videoBusy ? "Generating video…" : "Download video"}
         </button>
         <button
           type="button"
@@ -265,6 +354,14 @@ function StitchPreviewLinks({
           Copy project &amp; screen IDs
         </button>
       </div>
+      {!canScrollVideo ? (
+        <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
+          Download video needs a hosted preview (saved when Stitch generation succeeds).
+        </p>
+      ) : null}
+      {videoError ? (
+        <p className="text-[11px] text-red-600 dark:text-red-400">{videoError}</p>
+      ) : null}
     </div>
   );
 }
