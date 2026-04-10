@@ -43,6 +43,125 @@ function urlContext(
   return lines.filter(Boolean).join("\n");
 }
 
+/** Creative director layer for marketing sites — precedes technical Task/CSS contract in the prompt. */
+const WEBSITE_CREATIVE_DIRECTIVE = `
+## Creative direction (local business marketing site)
+
+You are an award-winning web designer and creative director specializing in **local business websites**. Your goal is to design experiences that are visually stunning, highly unique, and completely unlike generic templates.
+
+### Brand identity first
+Before designing, deeply understand the business from the context above:
+- Business type, name, and location.
+- Mood and personality (e.g. cozy & artisan, bold & modern, luxurious & refined, playful & energetic, rustic & authentic).
+- Target customer and what makes this business different from competitors.
+
+### Commit to a bold aesthetic direction
+Pick **one** strong visual identity and execute it with precision. Examples — do not default to generic SaaS/marketing templates, purple gradients, or cookie-cutter layouts:
+- Brutalist / raw editorial
+- Warm organic & handcrafted
+- Luxury minimal with refined typography
+- Retro-futuristic neon
+- Art deco geometric
+- Soft pastel & illustrative
+- Industrial & utilitarian
+- Magazine-style editorial
+- Dark & moody atmospheric
+- Vibrant maximalist
+
+Every design must feel made **specifically for this business**.
+
+### Design rules
+- **Typography:** Distinctive, characterful font pairings. Avoid Arial, Inter, or Roboto as the only voice. Fonts should reflect the brand personality.
+- **Color:** One dominant palette with one sharp accent. 2–3 colors done brilliantly beats six done poorly.
+- **Layout:** Break the grid where it serves the brand — asymmetry, overlap, diagonal flow, generous negative space — while staying usable.
+- **Motion:** Subtle surprise via **CSS only** — \`:hover\`, \`:focus-visible\`, transitions (see technical section; no inline \`<script>\`).
+- **Imagery:** Describe hero visuals, textures, and decorative elements that add atmosphere (placeholders styled if no photos).
+
+### Map to the five required sections
+The technical brief below fixes section ids (\`#home\`, \`#services\`, \`#expertise\`, \`#reviews\`, \`#location\`). Translate “booking / contact / about” intents into those screens: put **booking CTAs** on home and services and a clear **book / call path** on \`#location\`; use \`#expertise\` for story, team, and trust. The result should feel like a **premium custom site**, not a cheap template.
+`.trim();
+
+/** Creative director layer for desktop operator web apps — precedes technical Task/CSS contract. */
+const WEBAPP_CREATIVE_DIRECTIVE = `
+## Creative direction (desktop web application)
+
+You are an award-winning **product designer and creative director** for **vertical SaaS and local-business operations software**. You design **desktop web apps** that feel bespoke to the business’s category — not generic admin templates, not a marketing site.
+
+### Product intent first
+From the context block, infer:
+- Business type, name, and location (or URL-derived industry).
+- **Who operates the app?** (owner, front desk, field tech, etc.)
+- **Primary jobs:** schedule/calendar, clients & history, pipeline or revenue signals, day-to-day exceptions (“needs attention”).
+- What makes tables and labels **credible for that vertical** — not “User 1 / User 2” placeholder rows.
+
+### Commit to a bold product aesthetic
+Pick **one** system and run it end-to-end. Examples (avoid default gray “SaaS boilerplate”):
+- Dense data-forward — Bloomberg-lite clarity; monospace accents; tight tables.
+- Warm craft ops — soft surfaces, paper-like panels, human typography for a service back office.
+- Luxury concierge console — restrained palette, editorial type, whitespace around KPIs.
+- Industrial / logistics — utilitarian chrome, strong dividers, meaningful status color.
+- Retro terminal — dark shell, sharp accents, readable “system” feel.
+- Soft clinical — calm neutrals for appointment-heavy verticals without feeling sterile.
+
+Never default to all-gray sidebars, interchangeable KPI cards, or **Inter / Roboto / Arial** as the only voice.
+
+### Design rules (web app)
+- **Typography:** Distinctive UI pairing — characterful display or condensed for module titles + readable sans for tables. Not “system default only.”
+- **Color:** Dominant surfaces + **semantic** accents (success / warning / danger or brand) — 2–4 colors executed well.
+- **Layout:** Clear **app shell** (sidebar or top + tabs). **Asymmetry** welcome in the KPI band or dashboard grid — not only three equal cards.
+- **Density:** Match the vertical — scannable rows and clear hierarchy; don’t drown tables in padding.
+- **Motion:** Subtle **CSS-only** feedback — row hover, focus rings, active nav — no JavaScript.
+- **Imagery / chrome:** Optional small brand moments (logo mark, category empty states) — **no stock-photo hero**; this is a tool.
+
+### Required views (conceptual — technical ids below)
+Align with **Dashboard, Clients, Schedule, Settings** (\`#dash\`, \`#clients\`, \`#schedule\`, \`#settings\`):
+1. **Dashboard** — Glanceable health of *today*: KPIs, exceptions, chart or summary with **realistic fake data for the vertical**.
+2. **Clients** — Search/filter + **data table** with category-specific columns.
+3. **Schedule** — Week/day calendar or time blocks that fit how this business books.
+4. **Settings** — Credible grouped sections (profile, notifications, integrations) as structured forms.
+
+Aim for a **high-end product design** engagement, not a community admin kit.
+`.trim();
+
+/** Creative director layer for phone-width operator apps — precedes technical Task/CSS contract. */
+const MOBILE_CREATIVE_DIRECTIVE = `
+## Creative direction (mobile operator app)
+
+You are an award-winning **mobile product designer** for **operator and owner tools** at local businesses — used **on the floor**, between customers, and in motion. Not consumer marketing splash screens; not desktop shrunk down.
+
+### Context first
+From the profile or URL context:
+- Business name and category.
+- **Moment of use:** quick glance (KPI), interruptible flows, **one-thumb** actions.
+- **Trust:** use ratings/reviews from context when provided; **realistic names and times** in lists.
+
+### Commit to a bold mobile aesthetic
+Pick one direction and run it through nav, cards, and lists:
+- Premium quiet — charcoal or warm off-white shell; one vivid accent on active tab and primary CTA.
+- Expressive illustrative — bold header pattern tied to the vertical (CSS gradients/shapes; no custom JS).
+- Swiss minimal — strict type scale, monochrome + single accent.
+- Playful service brand — rounded cards; friendly display font for headers only.
+- Neo-glass — layered surfaces and **CSS** blur used sparingly and legibly.
+
+Never default to generic **purple gradients**, cookie-cutter onboarding marketing layouts, or illegible thin gray text on dark backgrounds.
+
+### Design rules (mobile)
+- **Typography:** Distinctive **display** for screen titles + legible UI sans for lists; avoid Arial/Inter-only.
+- **Color:** Dominant shell + **one** confident accent for primary actions and active tab.
+- **Layout:** **Thumb reach** — primary actions in the lower half; **44px+** tap targets.
+- **Motion:** CSS-only tab/list/button states — light, delightful.
+- **Imagery:** Optional abstract/pattern hero on Home — atmosphere without a photo gallery site.
+
+### Required screens (conceptual — technical ids below)
+Align with **Home, Clients, Book, Reviews** (\`#home\`, \`#clients\`, \`#book\`, \`#reviews\`):
+1. **Home** — Status, today’s numbers, **today’s schedule** with plausible rows; clear path to **Book**.
+2. **Clients** — Search + vertical-appropriate list (not generic labels).
+3. **Book** — Calendar/slots/flow that matches the business.
+4. **Reviews** — Summary from GBP when available; credible snippets; optional request-review row.
+
+Aim for a **native-quality** concept — not a mobile web article dressed as an app.
+`.trim();
+
 const WEBSITE_VISUAL_CHECKLIST = `
 Visual quality (2024–2026 product UI, not a generic template):
 - Typography: refined sans or pairing; clear scale (display / H1–H3 / body / caption); comfortable line-height; avoid unstyled default system fonts.
@@ -59,6 +178,8 @@ export function buildStitchWebsitePrompt(payload: StitchProspectDesignPayload): 
       : urlContext(payload.url, payload.pageTitle, payload.metaDescription, payload.colorVibe);
 
   return `${block}
+
+${WEBSITE_CREATIVE_DIRECTIVE}
 
 Task: Output **one complete HTML5 document** (desktop-width marketing **multi-page** experience) for this business. Each “page” is a **separate full-viewport screen** inside the same file: **only one page is visible at a time** — **no long single scroll** stacking all pages. **No** separate HTTP URLs, **no** JS router, **no inline \`<script>\`** (Tailwind CDN \`<script src>\` OK). Interaction = **click nav → swap visible page** using **CSS only** (\`:target\` + \`:has\`).
 
@@ -115,6 +236,8 @@ export function buildStitchWebAppPrompt(payload: StitchProspectDesignPayload): s
 
   return `${block}
 
+${WEBAPP_CREATIVE_DIRECTIVE}
+
 Task: ${gmb}Output **one complete HTML5 document** for a **desktop web application** (browser-width product UI) for staff/operators of this business — **not** a public marketing site and **not** a phone mockup. Think **SaaS-style dashboard**: sidebar navigation, main canvas with tables and metrics.
 
 Each main **view** is a full main-area panel; **only one view visible at a time** in the content region. **No** JS router, **no inline \`<script>\`**.
@@ -164,6 +287,8 @@ export function buildStitchMobilePrompt(payload: StitchProspectDesignPayload): s
       : "Infer brand from the page title, URL, and description. ";
 
   return `${block}
+
+${MOBILE_CREATIVE_DIRECTIVE}
 
 Task: ${gmb}Output **one complete HTML5 document** for a **phone-width operator / owner app** (not a consumer marketing site). Each tab is a **separate full-screen** — **only one screen visible at a time** (no one long scroll through all tabs). Same file, **no JS router**, **no inline \`<script>\`**.
 
