@@ -315,7 +315,7 @@ function StitchPreviewLinks({
               if (!blob) return;
               const safeId = result.screenId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 40) || "preview";
               const fileBase = `stitch-preview-${target}-${safeId}`;
-              downloadBlob(blob, `${fileBase}-walkthrough.webm`);
+              downloadBlob(blob, `${fileBase}-walkthrough.mp4`);
             }}
             className="inline-flex items-center gap-1.5 rounded-lg border border-purple-500/40 bg-purple-500/10 px-3 py-1.5 text-[11px] font-semibold text-purple-900 hover:bg-purple-500/[0.15] dark:border-purple-400/30 dark:bg-purple-500/15 dark:text-purple-100"
           >
@@ -323,7 +323,7 @@ function StitchPreviewLinks({
             Download homepage walkthrough
           </button>
           <span className="text-[9px] text-zinc-500 dark:text-zinc-400">
-            {PROSPECT_PREVIEW_VIDEO_DURATION_SEC}s WebM &mdash; attach to email or convert to MP4
+            {PROSPECT_PREVIEW_VIDEO_DURATION_SEC}s MP4 &mdash; attach to email or share directly
           </span>
         </div>
       ) : null}

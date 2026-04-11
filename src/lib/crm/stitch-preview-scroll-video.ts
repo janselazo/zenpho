@@ -1,7 +1,7 @@
 /**
- * Client-only: short WebM of scrolling through the hosted prospect homepage preview
- * (iframe + html2canvas + MediaRecorder). Tuned for prospect outreach: polished scroll
- * with intro/outro holds, eased motion, and sharp capture.
+ * Client-only: short MP4 of scrolling through the hosted prospect homepage preview
+ * (iframe + html2canvas + mediabunny WebCodecs MP4 encoder). Tuned for prospect outreach:
+ * polished scroll with intro/outro holds, eased motion, and sharp capture.
  */
 
 export type PreviewDeviceTypeForVideo = "MOBILE" | "DESKTOP" | null;
@@ -39,27 +39,7 @@ const OUTRO_HOLD_MS = 2_000;
 export const PROSPECT_PREVIEW_VIDEO_DURATION_SEC = Math.round(OUTPUT_VIDEO_MS / 1000);
 
 export const PROSPECT_PREVIEW_VIDEO_EMAIL_HINT =
-  `${PROSPECT_PREVIEW_VIDEO_DURATION_SEC}s homepage walkthrough (WebM) with intro/outro holds — attach to email or convert to MP4 for universal playback.`;
-
-type MimeChoice = { mimeType: string; videoBitsPerSecond: number };
-
-function pickRecorderOptions(isMobile: boolean): MimeChoice {
-  const bitrate = isMobile ? VIDEO_BITRATE_MOBILE_BPS : VIDEO_BITRATE_DESKTOP_BPS;
-  const candidates: { mime: string }[] = [
-    { mime: "video/webm;codecs=vp9" },
-    { mime: "video/webm;codecs=vp8" },
-    { mime: "video/webm" },
-  ];
-  if (typeof MediaRecorder === "undefined") {
-    return { mimeType: "", videoBitsPerSecond: bitrate };
-  }
-  for (const c of candidates) {
-    if (MediaRecorder.isTypeSupported(c.mime)) {
-      return { mimeType: c.mime, videoBitsPerSecond: bitrate };
-    }
-  }
-  return { mimeType: "", videoBitsPerSecond: bitrate };
-}
+  `${PROSPECT_PREVIEW_VIDEO_DURATION_SEC}s MP4 homepage walkthrough — attach to email or share directly.`;
 
 function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
@@ -113,7 +93,8 @@ export type RecordScrollVideoOptions = {
 };
 
 /**
- * Scroll-through WebM with intro/outro holds and eased scroll motion.
+ * Scroll-through MP4 with intro/outro holds and eased scroll motion.
+ * Uses mediabunny CanvasSource + WebCodecs H.264 encoder for universal MP4 output.
  */
 export async function recordProspectPreviewScrollVideo(
   options: RecordScrollVideoOptions,
@@ -123,12 +104,7 @@ export async function recordProspectPreviewScrollVideo(
   }
 
   const isMobile = options.deviceType === "MOBILE";
-  const { mimeType, videoBitsPerSecond } = pickRecorderOptions(isMobile);
-  if (!mimeType) {
-    throw new Error(
-      "WebM recording is not supported in this browser. Try Chrome or Edge for scroll video export.",
-    );
-  }
+  const bitrate = isMobile ? VIDEO_BITRATE_MOBILE_BPS : VIDEO_BITRATE_DESKTOP_BPS;
 
   const capW = isMobile ? MOBILE_VIEW_W : DESKTOP_VIEW_W;
   const capH = isMobile ? MOBILE_VIEW_H : DESKTOP_VIEW_H;
@@ -136,6 +112,7 @@ export async function recordProspectPreviewScrollVideo(
   const outH = isMobile ? OUT_MOBILE_H : OUT_DESKTOP_H;
 
   const { default: html2canvas } = await import("html2canvas");
+  const { Output, Mp4OutputFormat, BufferTarget, CanvasSource } = await import("mediabunny");
 
   const iframe = document.createElement("iframe");
   iframe.setAttribute("title", "Scroll capture");
@@ -194,74 +171,75 @@ export async function recordProspectPreviewScrollVideo(
     iframe.remove();
   }
 
-  const canvas = document.createElement("canvas");
-  canvas.width = outW;
-  canvas.height = outH;
-  const ctx = canvas.getContext("2d", { alpha: false });
+  const outputCanvas = document.createElement("canvas");
+  outputCanvas.width = outW;
+  outputCanvas.height = outH;
+  const ctx = outputCanvas.getContext("2d", { alpha: false });
   if (!ctx) {
     throw new Error("Canvas is not available.");
   }
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
 
-  const stream = canvas.captureStream(TARGET_FPS);
-  const chunks: BlobPart[] = [];
-
-  const recorderOptions: MediaRecorderOptions = {
-    mimeType,
-    videoBitsPerSecond,
-  };
-
-  let recorder: MediaRecorder;
-  try {
-    recorder = new MediaRecorder(stream, recorderOptions);
-  } catch {
-    recorder = new MediaRecorder(stream, { mimeType });
-  }
-
-  const blobPromise = new Promise<Blob>((resolve, reject) => {
-    recorder.ondataavailable = (e) => {
-      if (e.data.size) chunks.push(e.data);
-    };
-    recorder.onerror = () => reject(new Error("Video recording failed."));
-    recorder.onstop = () => {
-      const blob = new Blob(chunks, { type: mimeType.split(";")[0] || "video/webm" });
-      resolve(blob);
-    };
+  const videoSource = new CanvasSource(outputCanvas, {
+    codec: "avc",
+    bitrate,
+    latencyMode: "quality",
   });
 
-  const scrollDurationMs = OUTPUT_VIDEO_MS - INTRO_HOLD_MS - OUTRO_HOLD_MS;
-  const frameIntervalMs = scrollDurationMs / Math.max(snaps.length - 1, 1);
-  recorder.start(200);
+  const target = new BufferTarget();
+  const output = new Output({
+    format: new Mp4OutputFormat({ fastStart: "in-memory" }),
+    target,
+  });
+
+  output.addVideoTrack(videoSource, { frameRate: TARGET_FPS });
+  await output.start();
+
+  const frameDurSec = 1 / TARGET_FPS;
+  let ts = 0;
 
   // Intro hold: show hero for a beat
-  const firstSnap = snaps[0];
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, outW, outH);
-  ctx.drawImage(firstSnap, 0, 0, outW, outH);
-  await delay(INTRO_HOLD_MS);
+  ctx.drawImage(snaps[0], 0, 0, outW, outH);
+  const introFrames = Math.round((INTRO_HOLD_MS / 1000) * TARGET_FPS);
+  for (let i = 0; i < introFrames; i++) {
+    await videoSource.add(ts, frameDurSec);
+    ts += frameDurSec;
+  }
 
   // Scroll through captured frames with eased timing
-  for (let i = 0; i < snaps.length; i++) {
-    const snap = snaps[i];
+  const scrollDurationMs = OUTPUT_VIDEO_MS - INTRO_HOLD_MS - OUTRO_HOLD_MS;
+  const frameIntervalMs = scrollDurationMs / Math.max(snaps.length - 1, 1);
+  const framesPerSnap = Math.max(1, Math.round((frameIntervalMs / 1000) * TARGET_FPS));
+
+  for (const snap of snaps) {
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, outW, outH);
     ctx.drawImage(snap, 0, 0, outW, outH);
-    if (i < snaps.length - 1) {
-      await delay(frameIntervalMs);
+    for (let f = 0; f < framesPerSnap; f++) {
+      await videoSource.add(ts, frameDurSec);
+      ts += frameDurSec;
     }
   }
 
   // Outro hold: linger on the final view
-  await delay(OUTRO_HOLD_MS);
+  const outroFrames = Math.round((OUTRO_HOLD_MS / 1000) * TARGET_FPS);
+  for (let i = 0; i < outroFrames; i++) {
+    await videoSource.add(ts, frameDurSec);
+    ts += frameDurSec;
+  }
 
-  recorder.stop();
-  const blob = await blobPromise;
+  videoSource.close();
+  await output.finalize();
 
-  if (!blob || blob.size < 100) {
+  const buffer = target.buffer;
+  if (!buffer || buffer.byteLength < 100) {
     throw new Error("Recorded video is empty. Try again or use a simpler preview page.");
   }
-  return blob;
+
+  return new Blob([buffer], { type: "video/mp4" });
 }
 
 export function downloadBlob(blob: Blob, filename: string): void {
