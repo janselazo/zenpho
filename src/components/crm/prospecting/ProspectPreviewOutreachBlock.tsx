@@ -265,18 +265,26 @@ function StitchPreviewLinks({
 
     void (async () => {
       try {
-        const res = await fetch(
-          `/api/prospecting/preview-html?previewId=${encodeURIComponent(hostedId)}`,
-          { credentials: "same-origin" },
-        );
-        const data = (await res.json()) as {
-          ok?: boolean;
-          html?: string;
-          deviceType?: PreviewDeviceTypeForVideo;
-          error?: string;
-        };
-        if (!res.ok || !data.ok || !data.html?.trim()) {
-          throw new Error(data.error || "Could not load preview HTML.");
+        type PreviewHtmlResp = { ok?: boolean; html?: string; deviceType?: PreviewDeviceTypeForVideo; error?: string };
+        let lastErr: unknown;
+        let data: PreviewHtmlResp | null = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          if (cancelled) return;
+          if (attempt > 0) await new Promise((r) => setTimeout(r, 2000 * attempt));
+          try {
+            const res = await fetch(
+              `/api/prospecting/preview-html?previewId=${encodeURIComponent(hostedId)}`,
+              { credentials: "same-origin" },
+            );
+            const parsed = (await res.json()) as PreviewHtmlResp;
+            if (res.ok && parsed?.ok && parsed.html?.trim()) { data = parsed; break; }
+            lastErr = new Error(parsed?.error || "Could not load preview HTML.");
+          } catch (fetchErr) {
+            lastErr = fetchErr;
+          }
+        }
+        if (!data?.html?.trim()) {
+          throw lastErr ?? new Error("Could not load preview HTML after retries.");
         }
         const blob = await recordProspectPreviewScrollVideo({
           html: data.html,
