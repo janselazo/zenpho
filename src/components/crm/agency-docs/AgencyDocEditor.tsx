@@ -15,11 +15,13 @@ import {
   sanitizeDocHtml,
   type AgencyDocBlock,
 } from "@/lib/crm/agency-doc-body";
+import type { AgencyDocType } from "@/lib/crm/agency-custom-doc";
 
 type AgencyDocEditorProps = {
   slug: string;
   initialBody: string;
   canPersist: boolean;
+  docType?: AgencyDocType;
 };
 
 function newBlockRow(): AgencyDocBlock {
@@ -28,6 +30,7 @@ function newBlockRow(): AgencyDocBlock {
 
 export default function AgencyDocEditor({
   slug,
+  docType = "doc",
   initialBody,
   canPersist,
 }: AgencyDocEditorProps) {
@@ -49,7 +52,7 @@ export default function AgencyDocEditor({
     const text = bodyFromBlocks(nextRows);
     setErrorMessage(null);
     startTransition(async () => {
-      const res = await saveAgencyWorkspaceDoc(slug, text);
+      const res = await saveAgencyWorkspaceDoc(slug, text, docType);
       if ("error" in res && res.error) {
         setErrorMessage(res.error);
         return;

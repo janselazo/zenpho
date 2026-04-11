@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateAgencyDocHubCard } from "@/app/(crm)/actions/agency-docs";
+import type { AgencyDocType } from "@/lib/crm/agency-custom-doc";
 
 type AgencyDocHubCardEditModalProps = {
   slug: string;
@@ -10,6 +11,7 @@ type AgencyDocHubCardEditModalProps = {
   initialDescription: string;
   open: boolean;
   onClose: () => void;
+  docType?: AgencyDocType;
 };
 
 export default function AgencyDocHubCardEditModal({
@@ -18,6 +20,7 @@ export default function AgencyDocHubCardEditModal({
   initialDescription,
   open,
   onClose,
+  docType = "doc",
 }: AgencyDocHubCardEditModalProps) {
   const router = useRouter();
   const [title, setTitle] = useState(initialTitle);
@@ -39,7 +42,7 @@ export default function AgencyDocHubCardEditModal({
     e.preventDefault();
     setPending(true);
     setError(null);
-    const res = await updateAgencyDocHubCard(slug, title, description);
+    const res = await updateAgencyDocHubCard(slug, title, description, docType);
     setPending(false);
     if ("error" in res && res.error) {
       setError(res.error);

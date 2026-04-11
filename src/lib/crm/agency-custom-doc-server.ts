@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import type { AgencyCustomDocRow } from "@/lib/crm/agency-custom-doc";
+import type { AgencyCustomDocRow, AgencyDocType } from "@/lib/crm/agency-custom-doc";
 
 export async function fetchCustomDocBySlug(
   slug: string
@@ -10,7 +10,7 @@ export async function fetchCustomDocBySlug(
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("agency_custom_doc")
-      .select("id, slug, title, description, icon_key, created_at, created_by")
+      .select("id, slug, title, description, icon_key, doc_type, created_at, created_by")
       .eq("slug", slug)
       .maybeSingle();
     if (error || !data) return null;
@@ -45,13 +45,16 @@ export async function customDocSlugExists(slug: string): Promise<boolean> {
   }
 }
 
-export async function fetchAllCustomSlugs(): Promise<string[]> {
+export async function fetchAllCustomSlugs(
+  docType: AgencyDocType = "doc"
+): Promise<string[]> {
   if (!isSupabaseConfigured()) return [];
   try {
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("agency_custom_doc")
-      .select("slug");
+      .select("slug")
+      .eq("doc_type", docType);
     if (error || !data) return [];
     return data.map((r: { slug: string }) => r.slug);
   } catch {

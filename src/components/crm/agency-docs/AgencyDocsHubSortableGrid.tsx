@@ -23,11 +23,14 @@ import { reorderAgencyDocHubCards } from "@/app/(crm)/actions/agency-docs";
 import { hubDocIcon } from "@/lib/crm/agency-doc-icons";
 import { getAgencyDocBySlug } from "@/lib/crm/agency-docs";
 import type { AgencyHubDocItem } from "@/lib/crm/agency-docs-hub";
+import type { AgencyDocType } from "@/lib/crm/agency-custom-doc";
 import AgencyDocHubCardToolbar from "@/components/crm/agency-docs/AgencyDocHubCardToolbar";
 
 type Props = {
   items: AgencyHubDocItem[];
   canPersist: boolean;
+  docType?: AgencyDocType;
+  basePath?: string;
 };
 
 function serverItemsKey(items: AgencyHubDocItem[]) {
@@ -39,6 +42,8 @@ function serverItemsKey(items: AgencyHubDocItem[]) {
 export default function AgencyDocsHubSortableGrid({
   items,
   canPersist,
+  docType = "doc",
+  basePath = "/docs",
 }: Props) {
   const router = useRouter();
   const [ordered, setOrdered] = useState(items);
@@ -66,7 +71,7 @@ export default function AgencyDocsHubSortableGrid({
     const next = arrayMove(ordered, oldIndex, newIndex);
     setOrdered(next);
     startTransition(async () => {
-      const res = await reorderAgencyDocHubCards(next.map((i) => i.slug));
+      const res = await reorderAgencyDocHubCards(next.map((i) => i.slug), docType);
       if ("error" in res && res.error) {
         setOrdered(previous);
         window.alert(res.error);
@@ -83,7 +88,7 @@ export default function AgencyDocsHubSortableGrid({
     return (
       <ul className={gridClass}>
         {items.map((item) => (
-          <HubDocCardStatic key={item.slug} item={item} />
+          <HubDocCardStatic key={item.slug} item={item} basePath={basePath} docType={docType} />
         ))}
       </ul>
     );
@@ -106,6 +111,8 @@ export default function AgencyDocsHubSortableGrid({
               key={item.slug}
               item={item}
               persistPending={pending}
+              basePath={basePath}
+              docType={docType}
             />
           ))}
         </ul>
@@ -114,7 +121,15 @@ export default function AgencyDocsHubSortableGrid({
   );
 }
 
-function HubDocCardStatic({ item }: { item: AgencyHubDocItem }) {
+function HubDocCardStatic({
+  item,
+  basePath = "/docs",
+  docType = "doc",
+}: {
+  item: AgencyHubDocItem;
+  basePath?: string;
+  docType?: AgencyDocType;
+}) {
   const reg = getAgencyDocBySlug(item.slug);
   const Icon = reg?.icon ?? hubDocIcon(item.iconKey);
   return (
@@ -124,9 +139,10 @@ function HubDocCardStatic({ item }: { item: AgencyHubDocItem }) {
         title={item.title}
         description={item.description}
         canPersist={false}
+        docType={docType}
       />
       <Link
-        href={`/docs/${item.slug}`}
+        href={`${basePath}/${item.slug}`}
         className="flex h-full flex-col rounded-2xl border border-border bg-white p-6 pb-10 shadow-sm transition-colors hover:border-accent/25 hover:bg-surface/80 dark:border-zinc-800 dark:bg-zinc-900/80 dark:hover:border-blue-500/25 dark:hover:bg-zinc-800/60"
       >
         <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-surface text-text-secondary dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
@@ -146,9 +162,13 @@ function HubDocCardStatic({ item }: { item: AgencyHubDocItem }) {
 function HubDocCardSortable({
   item,
   persistPending,
+  basePath = "/docs",
+  docType = "doc",
 }: {
   item: AgencyHubDocItem;
   persistPending: boolean;
+  basePath?: string;
+  docType?: AgencyDocType;
 }) {
   const {
     attributes,
@@ -185,9 +205,10 @@ function HubDocCardSortable({
         title={item.title}
         description={item.description}
         canPersist
+        docType={docType}
       />
       <Link
-        href={`/docs/${item.slug}`}
+        href={`${basePath}/${item.slug}`}
         className={`flex h-full flex-col rounded-2xl border border-border bg-white p-6 pb-10 shadow-sm transition-colors hover:border-accent/25 hover:bg-surface/80 dark:border-zinc-800 dark:bg-zinc-900/80 dark:hover:border-blue-500/25 dark:hover:bg-zinc-800/60 ${
           persistPending ? "pointer-events-none opacity-70" : ""
         }`}

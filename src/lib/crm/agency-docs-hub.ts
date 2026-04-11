@@ -5,7 +5,7 @@ import {
   getAllAgencyDocs,
   type AgencyDocSlug,
 } from "@/lib/crm/agency-docs";
-import type { AgencyCustomDocRow } from "@/lib/crm/agency-custom-doc";
+import type { AgencyCustomDocRow, AgencyDocType } from "@/lib/crm/agency-custom-doc";
 import { fetchCustomDocBaseline } from "@/lib/crm/agency-custom-doc-server";
 
 export type AgencyHubDocItem = {
@@ -83,8 +83,11 @@ export function getRegistryDefaults(slug: AgencyDocSlug) {
 }
 
 /** Visible hub cards: built-in registry + custom docs, merged with hub_card overrides and sort. */
-export async function getAgencyHubDocItems(): Promise<AgencyHubDocItem[]> {
-  const registry = getAllAgencyDocs();
+export async function getAgencyHubDocItems(
+  docType: AgencyDocType = "doc"
+): Promise<AgencyHubDocItem[]> {
+  const includeRegistry = docType === "doc";
+  const registry = includeRegistry ? getAllAgencyDocs() : [];
 
   if (!isSupabaseConfigured()) {
     return registry.map((d) => ({
@@ -98,7 +101,8 @@ export async function getAgencyHubDocItems(): Promise<AgencyHubDocItem[]> {
     const supabase = await createClient();
     const { data: rows, error } = await supabase
       .from("agency_doc_hub_card")
-      .select("slug, hidden, title_override, description_override, sort_order");
+      .select("slug, hidden, title_override, description_override, sort_order")
+      .eq("doc_type", docType);
 
     if (error || !rows) {
       return registry.map((d) => ({
@@ -138,6 +142,7 @@ export async function getAgencyHubDocItems(): Promise<AgencyHubDocItem[]> {
     const { data: customRows, error: customError } = await supabase
       .from("agency_custom_doc")
       .select("slug, title, description, icon_key, created_at")
+      .eq("doc_type", docType)
       .order("created_at", { ascending: true });
 
     if (!customError && customRows?.length) {

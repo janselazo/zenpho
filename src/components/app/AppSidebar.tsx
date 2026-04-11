@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
 import {
   BookOpen,
+  Building2,
   Calendar,
   ChevronDown,
   FileBarChart,
@@ -48,6 +49,7 @@ const agencyNav = [
   { href: "/automations", label: "Automations", icon: Workflow },
   { href: "/reports", label: "Reports", icon: FileBarChart },
   { href: "/docs", label: "Docs", icon: BookOpen },
+  { href: "/industries", label: "Industries", icon: Building2 },
   { href: "/lead-magnets", label: "Lead magnets", icon: Magnet },
 ];
 

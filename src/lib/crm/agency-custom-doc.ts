@@ -1,3 +1,6 @@
+/** Discriminator for doc vs. industry (and future categories). */
+export type AgencyDocType = "doc" | "industry";
+
 /** Default body for custom docs when no row exists in `agency_workspace_doc`. */
 export const DEFAULT_CUSTOM_DOC_BODY = "";
 
@@ -34,6 +37,7 @@ export type AgencyCustomDocRow = {
   title: string;
   description: string;
   icon_key: string | null;
+  doc_type: AgencyDocType;
   created_at: string;
   created_by: string | null;
 };

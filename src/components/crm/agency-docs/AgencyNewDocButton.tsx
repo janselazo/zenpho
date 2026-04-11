@@ -4,8 +4,14 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { createAgencyCustomDoc } from "@/app/(crm)/actions/agency-docs";
+import type { AgencyDocType } from "@/lib/crm/agency-custom-doc";
 
-export default function AgencyNewDocButton() {
+type Props = {
+  docType?: AgencyDocType;
+  basePath?: string;
+};
+
+export default function AgencyNewDocButton({ docType = "doc", basePath = "/docs" }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -25,14 +31,14 @@ export default function AgencyNewDocButton() {
     e.preventDefault();
     setError(null);
     startTransition(async () => {
-      const res = await createAgencyCustomDoc({ title, description });
+      const res = await createAgencyCustomDoc({ title, description, docType });
       if ("error" in res && res.error) {
         setError(res.error);
         return;
       }
       if ("slug" in res && res.slug) {
         setOpen(false);
-        router.push(`/docs/${res.slug}`);
+        router.push(`${basePath}/${res.slug}`);
         router.refresh();
       }
     });

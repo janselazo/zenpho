@@ -13,6 +13,7 @@ import {
 import {
   isValidCustomDocSlugFormat,
   slugifyTitle,
+  type AgencyDocType,
 } from "@/lib/crm/agency-custom-doc";
 import { pickAgencyDocIconKey } from "@/lib/crm/agency-doc-icon-pick";
 import {
@@ -22,13 +23,21 @@ import {
   RESERVED_REGISTRY_SLUGS,
 } from "@/lib/crm/agency-docs";
 
+function basePath(docType: AgencyDocType): string {
+  return docType === "industry" ? "/industries" : "/docs";
+}
+
 async function isAllowedWorkspaceDocSlug(slug: string): Promise<boolean> {
   if (isAgencyDocSlug(slug)) return true;
   const row = await fetchCustomDocBySlug(slug);
   return Boolean(row);
 }
 
-export async function saveAgencyWorkspaceDoc(slug: string, body: string) {
+export async function saveAgencyWorkspaceDoc(
+  slug: string,
+  body: string,
+  docType: AgencyDocType = "doc"
+) {
   if (!(await isAllowedWorkspaceDocSlug(slug))) {
     return { error: "Invalid document" as const };
   }
@@ -50,15 +59,17 @@ export async function saveAgencyWorkspaceDoc(slug: string, body: string) {
   );
 
   if (error) return { error: error.message };
-  revalidatePath(`/docs/${slug}`);
-  revalidatePath("/docs");
+  const bp = basePath(docType);
+  revalidatePath(`${bp}/${slug}`);
+  revalidatePath(bp);
   return { ok: true as const };
 }
 
 export async function updateAgencyDocHubCard(
   slug: string,
   title: string,
-  description: string
+  description: string,
+  docType: AgencyDocType = "doc"
 ) {
   const baseline = await getHubCardBaseline(slug);
   if (!baseline) return { error: "Invalid document" as const };
@@ -90,6 +101,7 @@ export async function updateAgencyDocHubCard(
       title_override: titleOverride,
       description_override: descriptionOverride,
       sort_order: existing?.sort_order ?? null,
+      doc_type: docType,
       updated_by: user.id,
       updated_at: new Date().toISOString(),
     },
@@ -97,11 +109,14 @@ export async function updateAgencyDocHubCard(
   );
 
   if (error) return { error: error.message };
-  revalidatePath("/docs");
+  revalidatePath(basePath(docType));
   return { ok: true as const };
 }
 
-export async function hideAgencyDocHubCard(slug: string) {
+export async function hideAgencyDocHubCard(
+  slug: string,
+  docType: AgencyDocType = "doc"
+) {
   const baseline = await getHubCardBaseline(slug);
   if (!baseline) return { error: "Invalid document" as const };
 
@@ -111,7 +126,8 @@ export async function hideAgencyDocHubCard(slug: string) {
   } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized" as const };
 
-  // Custom doc: delete rows so the slug can be reused when creating a new doc.
+  const bp = basePath(docType);
+
   if (!isAgencyDocSlug(slug)) {
     const { error: workspaceErr } = await supabase
       .from("agency_workspace_doc")
@@ -131,8 +147,8 @@ export async function hideAgencyDocHubCard(slug: string) {
       .eq("slug", slug);
     if (hubErr) return { error: hubErr.message };
 
-    revalidatePath("/docs");
-    revalidatePath(`/docs/${slug}`);
+    revalidatePath(bp);
+    revalidatePath(`${bp}/${slug}`);
     return { ok: true as const };
   }
 
@@ -157,30 +173,36 @@ export async function hideAgencyDocHubCard(slug: string) {
     const { error } = await supabase.from("agency_doc_hub_card").insert({
       slug,
       hidden: true,
+      doc_type: docType,
       updated_by: user.id,
       updated_at: now,
     });
     if (error) return { error: error.message };
   }
 
-  revalidatePath("/docs");
+  revalidatePath(bp);
   return { ok: true as const };
 }
 
-async function allowedHubSlugSet(): Promise<Set<string>> {
-  const custom = await fetchAllCustomSlugs();
+async function allowedHubSlugSet(
+  docType: AgencyDocType = "doc"
+): Promise<Set<string>> {
+  const custom = await fetchAllCustomSlugs(docType);
   return new Set([
-    ...getAllAgencyDocs().map((d) => d.slug as string),
+    ...(docType === "doc" ? getAllAgencyDocs().map((d) => d.slug as string) : []),
     ...custom,
   ]);
 }
 
-export async function reorderAgencyDocHubCards(orderedSlugs: string[]) {
+export async function reorderAgencyDocHubCards(
+  orderedSlugs: string[],
+  docType: AgencyDocType = "doc"
+) {
   if (!orderedSlugs.length) {
     return { error: "Nothing to reorder." as const };
   }
 
-  const allowed = await allowedHubSlugSet();
+  const allowed = await allowedHubSlugSet(docType);
   const seen = new Set<string>();
   for (const s of orderedSlugs) {
     if (!allowed.has(s)) {
@@ -222,6 +244,7 @@ export async function reorderAgencyDocHubCards(orderedSlugs: string[]) {
         slug,
         sort_order,
         hidden: false,
+        doc_type: docType,
         updated_by: user.id,
         updated_at: now,
       });
@@ -229,16 +252,18 @@ export async function reorderAgencyDocHubCards(orderedSlugs: string[]) {
     }
   }
 
-  revalidatePath("/docs");
+  revalidatePath(basePath(docType));
   return { ok: true as const };
 }
 
 export async function createAgencyCustomDoc(form: {
   title: string;
   description: string;
+  docType?: AgencyDocType;
 }) {
   const title = form.title.trim();
   const desc = form.description.trim();
+  const docType = form.docType ?? "doc";
   if (!title) return { error: "Title is required." as const };
   if (!desc) return { error: "Description is required." as const };
 
@@ -251,7 +276,7 @@ export async function createAgencyCustomDoc(form: {
     } as const;
   }
 
-  if (RESERVED_REGISTRY_SLUGS.has(slug)) {
+  if (docType === "doc" && RESERVED_REGISTRY_SLUGS.has(slug)) {
     const def = getAgencyDocBySlug(slug);
     const name = def?.title ?? slug;
     return {
@@ -282,6 +307,7 @@ export async function createAgencyCustomDoc(form: {
     title,
     description: desc,
     icon_key,
+    doc_type: docType,
     created_by: user.id,
   });
 
@@ -290,6 +316,7 @@ export async function createAgencyCustomDoc(form: {
   const { data: maxRow } = await supabase
     .from("agency_doc_hub_card")
     .select("sort_order")
+    .eq("doc_type", docType)
     .order("sort_order", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -301,6 +328,7 @@ export async function createAgencyCustomDoc(form: {
     slug: candidate,
     hidden: false,
     sort_order: nextSort,
+    doc_type: docType,
     updated_by: user.id,
     updated_at: now,
   });
@@ -310,6 +338,7 @@ export async function createAgencyCustomDoc(form: {
     return { error: hubErr.message };
   }
 
-  revalidatePath("/docs");
+  const bp = basePath(docType);
+  revalidatePath(bp);
   return { ok: true as const, slug: candidate };
 }

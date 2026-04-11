@@ -1,10 +1,23 @@
 import { getAgencyHubDocItems } from "@/lib/crm/agency-docs-hub";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import type { AgencyDocType } from "@/lib/crm/agency-custom-doc";
 import AgencyNewDocButton from "@/components/crm/agency-docs/AgencyNewDocButton";
 import AgencyDocsHubSortableGrid from "@/components/crm/agency-docs/AgencyDocsHubSortableGrid";
 
-export default async function AgencyDocsHub() {
-  const items = await getAgencyHubDocItems();
+type Props = {
+  docType?: AgencyDocType;
+  heading?: string;
+  subtitle?: string;
+  basePath?: string;
+};
+
+export default async function AgencyDocsHub({
+  docType = "doc",
+  heading = "Agency docs",
+  subtitle = "Strategy, positioning, and operating context for the team \u2014 one place per topic.",
+  basePath = "/docs",
+}: Props) {
+  const items = await getAgencyHubDocItems(docType);
   const canPersist = isSupabaseConfigured();
 
   return (
@@ -15,11 +28,10 @@ export default async function AgencyDocsHub() {
             Agency workspace
           </p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-text-primary dark:text-zinc-50 md:text-4xl">
-            Agency docs
+            {heading}
           </h1>
           <p className="mt-3 max-w-2xl text-base text-text-secondary dark:text-zinc-400">
-            Strategy, positioning, and operating context for the team — one place
-            per topic.
+            {subtitle}
             {!canPersist ? (
               <>
                 {" "}
@@ -29,7 +41,7 @@ export default async function AgencyDocsHub() {
             ) : null}
           </p>
         </div>
-        {canPersist ? <AgencyNewDocButton /> : null}
+        {canPersist ? <AgencyNewDocButton docType={docType} basePath={basePath} /> : null}
       </div>
 
       {items.length === 0 ? (
@@ -37,7 +49,12 @@ export default async function AgencyDocsHub() {
           No documents on this grid yet.
         </p>
       ) : (
-        <AgencyDocsHubSortableGrid items={items} canPersist={canPersist} />
+        <AgencyDocsHubSortableGrid
+          items={items}
+          canPersist={canPersist}
+          docType={docType}
+          basePath={basePath}
+        />
       )}
     </div>
   );

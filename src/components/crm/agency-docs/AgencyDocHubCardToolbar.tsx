@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
 import { hideAgencyDocHubCard } from "@/app/(crm)/actions/agency-docs";
 import { getAgencyDocBySlug } from "@/lib/crm/agency-docs";
+import type { AgencyDocType } from "@/lib/crm/agency-custom-doc";
 import AgencyDocHubCardEditModal from "@/components/crm/agency-docs/AgencyDocHubCardEditModal";
 
 type AgencyDocHubCardToolbarProps = {
@@ -12,6 +13,7 @@ type AgencyDocHubCardToolbarProps = {
   title: string;
   description: string;
   canPersist: boolean;
+  docType?: AgencyDocType;
 };
 
 export default function AgencyDocHubCardToolbar({
@@ -19,6 +21,7 @@ export default function AgencyDocHubCardToolbar({
   title,
   description,
   canPersist,
+  docType = "doc",
 }: AgencyDocHubCardToolbarProps) {
   const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
@@ -33,7 +36,7 @@ export default function AgencyDocHubCardToolbar({
         : "Delete this custom document? Its hub card and saved content will be removed, and you can create a new doc with the same title."
     );
     if (!ok) return;
-    const res = await hideAgencyDocHubCard(slug);
+    const res = await hideAgencyDocHubCard(slug, docType);
     if ("error" in res && res.error) {
       window.alert(res.error);
       return;
@@ -75,6 +78,7 @@ export default function AgencyDocHubCardToolbar({
         initialDescription={description}
         open={editOpen}
         onClose={() => setEditOpen(false)}
+        docType={docType}
       />
     </>
   );
