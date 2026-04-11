@@ -340,27 +340,6 @@ function StitchPreviewLinks({
           </span>
         </div>
       ) : null}
-      {sessionVideoUrl ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              const blob = videoBlobRef.current;
-              if (!blob) return;
-              const safeId = result.screenId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 40) || "preview";
-              const fileBase = `stitch-preview-${target}-${safeId}`;
-              downloadBlob(blob, `${fileBase}-walkthrough.mp4`);
-            }}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-purple-500/40 bg-purple-500/10 px-3 py-1.5 text-[11px] font-semibold text-purple-900 hover:bg-purple-500/[0.15] dark:border-purple-400/30 dark:bg-purple-500/15 dark:text-purple-100"
-          >
-            <Video className="h-3.5 w-3.5" aria-hidden />
-            Download homepage walkthrough
-          </button>
-          <span className="text-[9px] text-zinc-500 dark:text-zinc-400">
-            {PROSPECT_PREVIEW_VIDEO_DURATION_SEC}s MP4 &mdash; attach to email or share directly
-          </span>
-        </div>
-      ) : null}
       <div className="flex flex-wrap gap-2">
         {result.hostedPreviewUrl ? (
           <a
@@ -410,6 +389,21 @@ function StitchPreviewLinks({
           )}
           Download image
         </button>
+        {sessionVideoUrl ? (
+          <button
+            type="button"
+            onClick={() => {
+              const blob = videoBlobRef.current;
+              if (!blob) return;
+              const safeId = result.screenId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 40) || "preview";
+              downloadBlob(blob, `stitch-preview-${target}-${safeId}-walkthrough.mp4`);
+            }}
+            className="inline-flex items-center gap-1 text-xs font-medium text-text-secondary hover:text-text-primary dark:text-zinc-400"
+          >
+            <Video className="h-3 w-3" aria-hidden />
+            Download video
+          </button>
+        ) : null}
         {videoError ? (
           <button
             type="button"
@@ -422,18 +416,6 @@ function StitchPreviewLinks({
             Retry video
           </button>
         ) : null}
-        <button
-          type="button"
-          onClick={() =>
-            void copyAndFlash(
-              `Project: ${result.projectId}\nScreen: ${result.screenId}\n${result.projectTitle}`
-            )
-          }
-          className="inline-flex items-center gap-1 text-xs font-medium text-text-secondary hover:text-text-primary dark:text-zinc-400"
-        >
-          <Copy className="h-3 w-3" aria-hidden />
-          Copy project &amp; screen IDs
-        </button>
       </div>
       {!canScrollVideo ? (
         <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
