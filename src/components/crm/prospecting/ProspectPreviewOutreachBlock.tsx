@@ -422,11 +422,41 @@ function BeforeAfterComparison({
   stitchResult: StitchOk;
   businessName: string;
 }) {
+  const [beforeLoaded, setBeforeLoaded] = useState(false);
+  const [afterLoaded, setAfterLoaded] = useState(false);
   const [beforeFailed, setBeforeFailed] = useState(false);
+  const [afterFailed, setAfterFailed] = useState(false);
   const [composing, setComposing] = useState(false);
   const [composeError, setComposeError] = useState<string | null>(null);
 
   const beforeSrc = `/api/prospecting/website-snapshot?url=${encodeURIComponent(existingWebsiteUrl)}`;
+  const afterSrc = stitchResult.imageUrl;
+  const bothReady = (beforeLoaded || beforeFailed) && (afterLoaded || afterFailed);
+
+  const beforeImgRef = useRef<HTMLImageElement | null>(null);
+  const afterImgRef = useRef<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    setBeforeLoaded(false);
+    setBeforeFailed(false);
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => { beforeImgRef.current = img; setBeforeLoaded(true); };
+    img.onerror = () => setBeforeFailed(true);
+    img.src = beforeSrc;
+    return () => { img.onload = null; img.onerror = null; };
+  }, [beforeSrc]);
+
+  useEffect(() => {
+    setAfterLoaded(false);
+    setAfterFailed(false);
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => { afterImgRef.current = img; setAfterLoaded(true); };
+    img.onerror = () => setAfterFailed(true);
+    img.src = afterSrc;
+    return () => { img.onload = null; img.onerror = null; };
+  }, [afterSrc]);
 
   const downloadComparison = useCallback(async () => {
     setComposing(true);
@@ -434,7 +464,7 @@ function BeforeAfterComparison({
     try {
       const blob = await composeBeforeAfterImage({
         beforeImageUrl: beforeSrc,
-        afterImageUrl: stitchResult.imageUrl,
+        afterImageUrl: afterSrc,
         businessName,
       });
       const url = URL.createObjectURL(blob);
@@ -451,7 +481,13 @@ function BeforeAfterComparison({
     } finally {
       setComposing(false);
     }
-  }, [beforeSrc, stitchResult.imageUrl, businessName]);
+  }, [beforeSrc, afterSrc, businessName]);
+
+  const imgSkeleton = (
+    <div className="flex h-36 items-center justify-center rounded-md border border-border bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800">
+      <Loader2 className="h-5 w-5 animate-spin text-zinc-400 dark:text-zinc-500" aria-hidden />
+    </div>
+  );
 
   return (
     <div className="mt-3 rounded-lg border border-amber-500/25 bg-amber-500/[0.04] p-3 dark:border-amber-400/20 dark:bg-amber-500/[0.06]">
@@ -467,12 +503,13 @@ function BeforeAfterComparison({
             <div className="flex h-28 items-center justify-center rounded-md border border-border bg-zinc-100 text-[10px] text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
               Screenshot unavailable
             </div>
+          ) : !beforeLoaded ? (
+            imgSkeleton
           ) : (
             /* eslint-disable-next-line @next/next/no-img-element -- Microlink proxy screenshot */
             <img
               src={beforeSrc}
               alt="Current website"
-              onError={() => setBeforeFailed(true)}
               className="max-h-36 w-full rounded-md border border-border object-contain object-top dark:border-zinc-700"
             />
           )}
@@ -484,12 +521,20 @@ function BeforeAfterComparison({
           <p className="mb-1.5 text-center text-[10px] font-semibold uppercase tracking-wider text-emerald-700/80 dark:text-emerald-300/80">
             Your new website
           </p>
-          {/* eslint-disable-next-line @next/next/no-img-element -- Stitch CDN screenshot */}
-          <img
-            src={stitchResult.imageUrl}
-            alt="New website design"
-            className="max-h-36 w-full rounded-md border border-border object-contain object-top dark:border-zinc-700"
-          />
+          {afterFailed ? (
+            <div className="flex h-28 items-center justify-center rounded-md border border-border bg-zinc-100 text-[10px] text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
+              Preview image unavailable
+            </div>
+          ) : !afterLoaded ? (
+            imgSkeleton
+          ) : (
+            /* eslint-disable-next-line @next/next/no-img-element -- Stitch CDN screenshot */
+            <img
+              src={afterSrc}
+              alt="New website design"
+              className="max-h-36 w-full rounded-md border border-border object-contain object-top dark:border-zinc-700"
+            />
+          )}
           {stitchResult.hostedPreviewUrl ? (
             <p className="mt-1 text-center">
               <a
@@ -505,27 +550,36 @@ function BeforeAfterComparison({
           ) : null}
         </div>
       </div>
-      <div className="mt-3 flex items-center gap-2">
-        <button
-          type="button"
-          disabled={composing || beforeFailed}
-          onClick={() => void downloadComparison()}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-[11px] font-semibold text-amber-900 disabled:opacity-50 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-100"
-        >
-          {composing ? (
-            <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
-          ) : (
-            <ImageDown className="h-3 w-3" aria-hidden />
-          )}
-          {composing ? "Composing\u2026" : "Download comparison image"}
-        </button>
-        {composeError ? (
-          <span className="text-[10px] text-red-600 dark:text-red-400">{composeError}</span>
-        ) : null}
-      </div>
-      <p className="mt-1.5 text-[9px] leading-snug text-zinc-500 dark:text-zinc-400">
-        Side-by-side PNG you can attach to SMS, email, or DM to show the prospect the upgrade.
-      </p>
+      {!bothReady ? (
+        <p className="mt-2 text-center text-[10px] text-zinc-500 dark:text-zinc-400">
+          <Loader2 className="mr-1 inline h-3 w-3 animate-spin" aria-hidden />
+          Loading website screenshots for comparison&hellip;
+        </p>
+      ) : (
+        <>
+          <div className="mt-3 flex items-center gap-2">
+            <button
+              type="button"
+              disabled={composing || beforeFailed || afterFailed}
+              onClick={() => void downloadComparison()}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-[11px] font-semibold text-amber-900 disabled:opacity-50 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-100"
+            >
+              {composing ? (
+                <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+              ) : (
+                <ImageDown className="h-3 w-3" aria-hidden />
+              )}
+              {composing ? "Composing\u2026" : "Download comparison image"}
+            </button>
+            {composeError ? (
+              <span className="text-[10px] text-red-600 dark:text-red-400">{composeError}</span>
+            ) : null}
+          </div>
+          <p className="mt-1.5 text-[9px] leading-snug text-zinc-500 dark:text-zinc-400">
+            Side-by-side PNG you can attach to SMS, email, or DM to show the prospect the upgrade.
+          </p>
+        </>
+      )}
     </div>
   );
 }
