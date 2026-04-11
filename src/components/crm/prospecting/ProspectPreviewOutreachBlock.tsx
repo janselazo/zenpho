@@ -128,32 +128,32 @@ function defaultShareTemplatesForOffer(offer: SelectedOffer): ShareTemplates {
     case "website":
       return {
         smsBody:
-          "Hi — we put together a quick visual direction for {{businessName}}'s site. Peek when you can:\n\n{{previewUrl}}\n\nHappy to walk through it live or tweak from your feedback.",
-        emailSubject: "A website concept we drafted for {{businessName}}",
+          "Hi {{businessName}}, we put together a website upgrade that could help you attract more customers online. Check it out:\n\n{{previewUrl}}\n\nHappy to walk you through it. Hablamos español!",
+        emailSubject: "A website concept we created for {{businessName}}",
         emailBody:
-          "Hi —\n\nFollowing up on our research, here's a hosted preview with one possible direction for {{businessName}}'s marketing site — desktop-first, brochure-style layout:\n\n{{previewUrl}}\n\nTotally fine if now isn't the time. If it's useful, I can review it with you on a short call or iterate based on what you're aiming for.\n\nBest,\n{{yourName}}",
+          "Hi {{businessName}},\n\nWe created a custom website concept for your business. Modern design, built to convert visitors into customers:\n\n{{previewUrl}}\n\nThis is yours to keep either way. If you'd like to take it live or make changes, we're here to help.\n\nHablamos español también.\n\nBest,\n{{yourName}}",
         instagramBody:
-          "Hi! Quick website concept preview for {{businessName}} 👇\n\n{{previewUrl}}\n\nHappy to walk through it if useful.\n\n— {{yourName}}",
+          "Hi {{businessName}}! We designed a website concept for your business, check it out:\n\n{{previewUrl}}\n\nLet us know what you think! Hablamos español\n\n{{yourName}}",
       };
     case "webapp":
       return {
         smsBody:
-          "Hi — sharing an internal-style web app UI preview for {{businessName}} (dashboards / tools, not a brochure):\n\n{{previewUrl}}\n\nReply if you want a quick tour of the flows.",
-        emailSubject: "Web app UI concept for {{businessName}}",
+          "Hi {{businessName}}, imagine managing your business from one dashboard. We designed a web app concept just for you:\n\n{{previewUrl}}\n\nReply and we'll walk you through it. Se habla español.",
+        emailSubject: "A web app concept we designed for {{businessName}}",
         emailBody:
-          "Hi —\n\nHere's a desktop web application UI preview for {{businessName}} — think operator workflows: navigation, tables, and task-focused screens rather than a marketing site:\n\n{{previewUrl}}\n\nIf it resonates, we can dig into user journeys, what's MVP vs. later, and how this could sit alongside your stack.\n\nBest,\n{{yourName}}",
+          "Hi {{businessName}},\n\nWe designed a web app concept that could help you run your business from a single dashboard. Appointments, clients, reports, all in one place:\n\n{{previewUrl}}\n\nIf this looks like something you'd use, we can hop on a quick call to talk about making it real.\n\nHablamos español también.\n\nBest,\n{{yourName}}",
         instagramBody:
-          "Hi! Sharing a web app UI preview for {{businessName}} (operator-style dashboards):\n\n{{previewUrl}}\n\nWant a quick tour of the flows?\n\n— {{yourName}}",
+          "Hi {{businessName}}! We designed a web app concept for your business, check it out:\n\n{{previewUrl}}\n\nLet us know what you think! Hablamos español\n\n{{yourName}}",
       };
     case "mobile":
       return {
         smsBody:
-          "Hi — here's a phone-sized app UI preview for {{businessName}}:\n\n{{previewUrl}}\n\nGeared toward day-to-day tasks on the go. Say the word if you want a quick walkthrough.",
-        emailSubject: "Mobile app UI concept for {{businessName}}",
+          "Hi {{businessName}}, we designed a mobile app concept so your customers can book, browse, and connect with you right from their phone:\n\n{{previewUrl}}\n\nWant a quick walkthrough? Hablamos español!",
+        emailSubject: "A mobile app concept we designed for {{businessName}}",
         emailBody:
-          "Hi —\n\nSharing a mobile app UI preview for {{businessName}} — phone-sized screens oriented around real on-the-ground use, not just a pretty mock:\n\n{{previewUrl}}\n\nHappy to talk through priorities, what to build first, and how this could evolve.\n\nBest,\n{{yourName}}",
+          "Hi {{businessName}},\n\nWe put together a mobile app preview for your business. Your customers would be able to reach you, book services, and stay connected all from their phone:\n\n{{previewUrl}}\n\nThis is yours to keep. If you want to take it further, let's set up a quick call.\n\nWe also speak Spanish if that's easier.\n\nBest,\n{{yourName}}",
         instagramBody:
-          "Hi! Phone-sized app UI preview for {{businessName}}:\n\n{{previewUrl}}\n\nSay the word if you want a quick walkthrough.\n\n— {{yourName}}",
+          "Hi {{businessName}}! We designed a mobile app concept for your business, check it out:\n\n{{previewUrl}}\n\nLet us know what you think! Hablamos español\n\n{{yourName}}",
       };
     case "automations":
       return {
