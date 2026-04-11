@@ -640,14 +640,29 @@ Task: ${gmb}Output **one complete HTML5 document** for a **desktop web applicati
 
 Each main **view** is a full main-area panel; **only one view visible at a time** in the content region. **No** JS router, **no inline \`<script>\`**.
 
-## Page switch pattern (CSS only)
-Use a layout with **sidebar** links and \`<main>\` containing \`<section id="dash" class="page">\`, \`id="clients"\`, \`id="schedule"\`, \`id="settings"\` (exact ids). Same \`:target\` + \`:has\` show/hide as the website prompt:
+## Page switch pattern (CSS only) — EXACT IDS REQUIRED
 
-- \`.page\` panels hidden by default; **\`min-height\`** fills the main area below any top bar; **\`overflow-y: auto\`** on the active panel.
-- Default show \`#dash\` when no hash; other ids when targeted; hide \`#dash\` when \`#clients\`, \`#schedule\`, or \`#settings\` is \`:target\`.
-- **Active sidebar link** styling via \`body:has(#clients:target) aside a[href="#clients"]\`, etc.
+**CRITICAL: You MUST use these EXACT section ids and sidebar labels. Do NOT rename, customize, or adapt them to the business type. The navigation depends on these exact strings.**
 
-Sidebar labels: **Dashboard**, **Clients**, **Schedule**, **Settings** → \`<a href="#dash">\`, \`#clients\`, \`#schedule\`, \`#settings\`.
+Use a layout with a **sidebar** (\`<aside>\`) containing nav links and \`<main>\` containing exactly these four sections:
+
+\`\`\`html
+<section id="dash" class="page">...</section>
+<section id="clients" class="page">...</section>
+<section id="schedule" class="page">...</section>
+<section id="settings" class="page">...</section>
+\`\`\`
+
+CSS rules (copy exactly):
+- \`.page { display: none; min-height: calc(100vh - 64px); overflow-y: auto; }\`
+- \`body:not(:has(main .page:target)) #dash { display: block; }\` (default view)
+- \`#dash:target, #clients:target, #schedule:target, #settings:target { display: block; }\`
+- \`body:has(#clients:target) #dash, body:has(#schedule:target) #dash, body:has(#settings:target) #dash { display: none; }\`
+- Active sidebar styling: \`body:has(#clients:target) aside a[href="#clients"] { ... }\` (repeat per section)
+
+Sidebar labels MUST be exactly: **Dashboard**, **Clients**, **Schedule**, **Settings** → \`<a href="#dash">\`, \`<a href="#clients">\`, \`<a href="#schedule">\`, \`<a href="#settings">\`.
+
+**Do NOT rename these to business-specific names** (e.g. do NOT use "Concierge", "Guest Registry", "Spa Services", etc.). The labels Dashboard/Clients/Schedule/Settings are intentional and universal.
 
 ## Structure checklist (every view must feel like a finished product, not a wireframe)
 1. **#dash** — The **hero view** that sells the product:

@@ -268,6 +268,22 @@ ${safe}
 </html>`;
 }
 
+/**
+ * Defensive fallback: if the model used non-standard page IDs (e.g. #concierge instead of #dash),
+ * the CSS :target default-show rule won't match and ALL .page sections stay hidden.
+ * This ensures the first .page child is visible when no hash target is active.
+ */
+const PREVIEW_PAGE_FALLBACK_STYLE = `<style id="zenpho-page-target-fallback">
+  body:not(:has(.page:target)) .page:first-of-type,
+  main:not(:has(.page:target)) > .page:first-of-type {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    position: relative !important;
+    pointer-events: auto !important;
+  }
+</style>`;
+
 /** Warm accent for legal/footer links in hosted previews (Stitch + LLM HTML). */
 const PREVIEW_FOOTER_LINK_STYLE = `<style id="zenpho-preview-footer-link-accent">
   footer a,
@@ -288,23 +304,29 @@ const PREVIEW_FOOTER_LINK_STYLE = `<style id="zenpho-preview-footer-link-accent"
  * Injects footer-focused link colors so Privacy/Terms (and similar) read clearly on generated previews.
  */
 export function injectProspectPreviewFooterLinkStyles(html: string): string {
-  const h = typeof html === "string" ? html : "";
+  let h = typeof html === "string" ? html : "";
   if (!h.trim()) return h;
-  if (/zenpho-preview-footer-link-accent/i.test(h)) return h;
+
+  const needsFooter = !/zenpho-preview-footer-link-accent/i.test(h);
+  const needsFallback = !/zenpho-page-target-fallback/i.test(h);
+  if (!needsFooter && !needsFallback) return h;
+
+  const inject = (needsFallback ? PREVIEW_PAGE_FALLBACK_STYLE : "") +
+                 (needsFooter ? PREVIEW_FOOTER_LINK_STYLE : "");
 
   const lower = h.toLowerCase();
   const headClose = lower.lastIndexOf("</head>");
   if (headClose !== -1) {
-    return h.slice(0, headClose) + PREVIEW_FOOTER_LINK_STYLE + h.slice(headClose);
+    return h.slice(0, headClose) + inject + h.slice(headClose);
   }
 
   const bodyOpen = lower.indexOf("<body");
   if (bodyOpen !== -1) {
     const tagEnd = h.indexOf(">", bodyOpen);
     if (tagEnd !== -1) {
-      return h.slice(0, tagEnd + 1) + PREVIEW_FOOTER_LINK_STYLE + h.slice(tagEnd + 1);
+      return h.slice(0, tagEnd + 1) + inject + h.slice(tagEnd + 1);
     }
   }
 
-  return PREVIEW_FOOTER_LINK_STYLE + h;
+  return inject + h;
 }
