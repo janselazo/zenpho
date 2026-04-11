@@ -301,7 +301,7 @@ function WebsiteScanLiveSnapshot({ siteUrl }: { siteUrl: string }) {
       </p>
       {failed ? (
         <p className="mt-2 text-[11px] text-text-secondary dark:text-zinc-500">
-          Preview unavailable (Microlink limits, blocked page, or add MICROLINK_API_KEY for production).
+          Website preview unavailable — the page may be blocking automated screenshots.
         </p>
       ) : (
         // eslint-disable-next-line @next/next/no-img-element -- proxied Microlink screenshot
