@@ -1156,7 +1156,7 @@ function ProspectsIntelligenceViewInner({
           return;
         }
         setQuickPlacesLeadMessage(
-          "Lead created with Prospect tag. You can find it under Leads."
+          "Lead created."
         );
         router.refresh();
       } catch (e) {
@@ -1233,7 +1233,7 @@ function ProspectsIntelligenceViewInner({
         setLeadMessage(res.error);
         return;
       }
-      setLeadMessage("Lead created. You can find it under Leads.");
+      setLeadMessage("Lead created.");
       router.refresh();
     } catch (e) {
       setLeadMessage(
