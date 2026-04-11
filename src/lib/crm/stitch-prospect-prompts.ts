@@ -224,7 +224,7 @@ Every design must feel made **specifically for this business**.
 - **Imagery:** Describe hero visuals, textures, and decorative elements that add atmosphere (placeholders styled if no photos).
 
 ### Map to the five required sections
-The technical brief below fixes section ids (\`#home\`, \`#services\`, \`#expertise\`, \`#reviews\`, \`#location\`). **\`#home\`** must still contain a **full homepage** (banner, services, testimonials, gallery, contact, address, footer — see checklist). Other tabs hold **expanded** versions: **booking CTAs** on home and services; full **book / call / directions** on \`#location\`; **story / team / trust** on \`#expertise\`. The result should feel like a **premium custom site**, not a cheap template.
+The technical brief below fixes section ids (\`#home\`, \`#services\`, \`#expertise\`, \`#reviews\`, \`#location\`). **\`#home\`** must still contain a **full homepage** (banner, services, gallery, reviews, contact, location, booking CTA, appointment form, footer — see checklist). Other tabs hold **expanded** versions: **booking CTAs** on home and services; full **book / call / directions** on \`#location\`; **story / team / trust** on \`#expertise\`. The result should feel like a **premium custom site**, not a cheap template.
 `.trim();
 
 /** Creative director layer for desktop operator web apps — precedes technical Task/CSS contract. */
@@ -356,7 +356,7 @@ ${WEBSITE_CREATIVE_DIRECTIVE}
 
 Task: Output **one complete HTML5 document** (desktop-width marketing **multi-page** experience) for this business. Each “page” is a **separate full-viewport screen** inside the same file: **only one page is visible at a time** — **no long single scroll** stacking all five sections in one document flow. **No** separate HTTP URLs, **no** JS router, **no inline \`<script>\`** (Tailwind CDN \`<script src>\` OK). Interaction = **click nav → swap visible page** using **CSS only** (\`:target\` + \`:has\`).
 
-**Note on \`#home\`:** The home **screen** is still a single \`section#home.page\`, but it must read like a **full marketing homepage**: stack **all** of the bands below (minimum **seven** content blocks + **footer**), with **internal scrolling** via \`overflow-y: auto\` on that section. Deeper detail can still exist on \`#services\`, \`#reviews\`, and \`#location\` — but **do not** leave \`#home\` as a thin hero only.
+**Note on \`#home\`:** The home **screen** is still a single \`section#home.page\`, but it must read like a **full marketing homepage**: stack **all** of the bands below (minimum **nine** content blocks including footer), with **internal scrolling** via \`overflow-y: auto\` on that section. Reviews and location must appear in full on the homepage (not just teasers). Deeper expanded versions can still exist on \`#services\`, \`#reviews\`, and \`#location\` — but **do not** leave \`#home\` as a thin hero only.
 
 ${WEBSITE_LAYOUT_SAFETY}
 
@@ -377,22 +377,24 @@ Nav links: \`<a href="#home">\`, \`#services\`, \`#expertise\`, \`#reviews\`, \`
 
 ## Structure checklist (required \`id\`s on \`<section class="page">\`)
 
-1. **#home** — One \`section#home.page\` with **seven mandatory homepage blocks** in order (scroll inside this section). Each block must be visually distinct and use **real copy** for this business. Obey **Layout safety** throughout.
+1. **#home** \u2014 One \`section#home.page\` with **nine mandatory homepage blocks** in order (scroll inside this section). Each block must be visually distinct and use **real copy** for this business. Obey **Layout safety** throughout. The homepage must feel **complete** \u2014 a visitor should be able to read reviews, see the address and hours, and contact the business **without leaving the homepage**.
    - **(1) Principal banner / hero:** Full-width or split hero: business name, tagline, primary + secondary CTA; optional rating line from context.
-   - **(2) Services:** **Services overview** — 3–6 cards or categorized rows (industry-specific names, short blurbs or “from $”); \`<a href="#services">\` to the full Services page.
-   - **(3) Testimonials:** **Testimonials** — at least **two** quotes (cards or columns), stars, optional aggregate rating from context; \`<a href="#reviews">\` for more reviews.
-   - **(4) Gallery:** **Gallery** — bento or grid of 3–5 images (placeholders + captions OK); use grid + \`aspect-ratio\`, no text/image overlap.
-   - **(5) Contact us:** **Contact** — section title “Contact us” / “Get in touch”: static form fields (name, email, phone, message) **without** JS submit — use \`mailto:\` / \`tel:\` on buttons or labels, or purely visual form chrome.
-   - **(6) Our address:** **Address / visit us** — full address, hours summary, phone, map or map-style placeholder; \`<a href="#location">\` for full details.
-   - **(7) Footer:** **Site footer** — business name, mini nav (\`#services\`, \`#expertise\`, \`#reviews\`, \`#location\`), optional Privacy/Terms placeholders, **© year + business name**; footer styling (e.g. dark band) at the **bottom of \`#home\` only** (global nav stays in the header).
+   - **(2) Services:** **Services overview** \u2014 3\u20136 cards or categorized rows (industry-specific names, short blurbs or \u201cfrom $\u201d); \`<a href="#services">\` to the full Services page.
+   - **(3) Gallery:** **Gallery** \u2014 bento or grid of 3\u20135 images (placeholders + captions OK); use grid + \`aspect-ratio\`, no text/image overlap.
+   - **(4) Reviews:** **Customer reviews** \u2014 a **full reviews section** on the homepage (not just a teaser). Show the aggregate rating (large star + number, e.g. \u201c4.8 \u2605 from 127 reviews\u201d) prominently, then at least **three** styled review cards with author name/initial avatar, star rating, and a realistic review quote specific to this business type. This must look like a premium social-proof section that builds trust immediately. Optional \`<a href="#reviews">\` to see all reviews.
+   - **(5) Contact us:** **Contact** \u2014 section title \u201cContact us\u201d / \u201cGet in touch\u201d: static form fields (name, email, phone, message) **without** JS submit \u2014 use \`mailto:\` / \`tel:\` on buttons or labels, or purely visual form chrome.
+   - **(6) Visit us / Location:** **Full location section** on the homepage \u2014 not a brief address line. Include: a styled heading (\u201cVisit Us\u201d / \u201cFind Us\u201d), the **complete address** on its own visual block, **business hours** as a clean table or day-by-day list, **phone number** with \`tel:\` link, and a **map-style placeholder or styled directions panel**. Include a \u201cGet Directions\u201d CTA button. This section must be visually rich and feel like a proper Location page embedded in the homepage.
+   - **(7) Booking / CTA band:** A visually distinct call-to-action band \u2014 \u201cReady to book?\u201d / \u201cSchedule your visit\u201d with a prominent button linking to \`tel:\` or a booking CTA. Contrasting background color from surrounding sections.
+   - **(8) Appointment request:** A separate styled **appointment request or inquiry form** area (name, phone, service type, preferred date) \u2014 purely visual, no JS submit. Distinct from the \u201cContact us\u201d section above by focusing on booking/scheduling.
+   - **(9) Footer:** **Site footer** \u2014 business name, mini nav (\`#services\`, \`#expertise\`, \`#reviews\`, \`#location\`), optional Privacy/Terms placeholders, **\u00a9 year + business name**; footer styling (e.g. dark band) at the **bottom of \`#home\` only** (global nav stays in the header).
 
-2. **#services** — A **different** layout than home: multi-column **priced menu**, categorized lists, or tiered packages (columns or sections with headings). Industry-specific service names and price cues; not the same three cards repeated from \`#home\`.
+2. **#services** \u2014 A **different** layout than home: multi-column **priced menu**, categorized lists, or tiered packages (columns or sections with headings). Industry-specific service names and price cues; not the same three cards repeated from \`#home\`.
 
-3. **#expertise** — **Story + proof:** Headline, 2–3 proof points (icons or short paragraphs), optional stat row (years, certifications, review count from context). Two-column (copy + image placeholder) welcome; distinct from \`#services\` and \`#reviews\`.
+3. **#expertise** \u2014 **Story + proof:** Headline, 2\u20133 proof points (icons or short paragraphs), optional stat row (years, certifications, review count from context). Two-column (copy + image placeholder) welcome; distinct from \`#services\` and \`#reviews\`.
 
-4. **#reviews** — **Testimonial cards** (2+ quotes) plus an aggregate line if rating/review count exists in context; author initials, role, or neighborhood. Layout must differ from \`#expertise\` (e.g. card grid vs. long-form story).
+4. **#reviews** \u2014 **Extended testimonial gallery** \u2014 all reviews in a card grid (4+ quotes) plus aggregate summary, author initials, role, or neighborhood. Layout must differ from the homepage reviews (e.g. masonry grid vs. carousel-style cards). This page is the deep-dive; the homepage already shows the key reviews.
 
-5. **#location** — **Split layout:** Address, hours, phone; **map or map-style placeholder**; **Get directions** or **Book** CTA; optional compact contact row. Use **listing address and phone** from context when provided.
+5. **#location** \u2014 **Full-page location experience:** Large map or map-style placeholder at the top, complete address and hours in a polished two-column layout, phone with click-to-call, **Get directions** and **Book** CTA buttons, optional nearby landmarks or parking notes. This is the expanded version of the homepage location section \u2014 must feel more spacious and detailed.
 
 ## Navigation chrome
 - **Sticky or fixed top header** with the five anchor links; optional **Book** CTA button as \`<a href="#location">\` or \`tel:\` when phone exists.
