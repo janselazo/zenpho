@@ -141,9 +141,9 @@ This business **already has a live website** (see "Listing website URL" in conte
   - **Typography:** From generic system fonts → premium Google Font pairings with 64px+ display headlines, clear type scale, elegant letter-spacing.
   - **Color:** From random or bland colors → a refined, intentional palette with one confident accent. At least one CSS gradient usage.
   - **Layout:** From cramped template → generous whitespace (48px+ between sections), asymmetric compositions, varied section backgrounds that create scroll rhythm.
-  - **Depth:** From flat boxes → layered surfaces with multi-layered box-shadows, floating cards with rounded corners, overlapping elements at section boundaries.
+  - **Depth:** From flat boxes → layered surfaces with **rich 3–4 layer box-shadows**, **glassmorphism/liquid glass panels** (\`backdrop-filter: blur(16px) saturate(180%)\` + semi-transparent backgrounds + subtle white borders) on hero overlays, nav bars, and testimonial cards over gradient sections. Floating cards with 16–24px rounded corners, overlapping elements at section boundaries. Every surface must have visible depth.
   - **Trust:** From missing or weak → prominent star rating display, premium testimonial cards with avatars, credibility bar (years in business, certifications).
-  - **Interactions:** From static → CSS hover states on every card, button, and link (shadow lift, scale, color shift).
+  - **Interactions:** From static → CSS hover states on every card, button, and link (shadow lift, scale, color shift). Glassmorphic hover effects (blur increase, background opacity shift).
 - **Add what the old site lacks**: premium gallery/portfolio section, booking page with visual calendar, a full About Us story page, polished contact form with styled inputs.
 - **The new design must look like a $50,000+ custom agency build** — the kind of site that wins design awards. The business owner should see it and think "THIS is how my business should look online."
 `.trim();
@@ -160,8 +160,8 @@ This business **does not have a website yet**. You are creating their **flagship
   - **Typography:** 2+ premium Google Font pairings with 64px+ display headlines, clear hierarchy from H1 to body. The fonts alone should communicate the brand personality.
   - **Color:** A refined palette derived from the business category's emotional register, with one confident accent color. At least one CSS gradient (hero, CTA, or section band).
   - **Layout:** Generous whitespace (48px+ between sections), asymmetric compositions, varied section backgrounds creating scroll rhythm (light → dark → tinted → light). No two consecutive sections with the same background.
-  - **Depth:** Every card and panel floats with multi-layered box-shadow. Overlapping elements at section boundaries. 3-level surface depth system throughout.
-  - **Interactions:** CSS hover states on every interactive element — shadow lift on cards, color shift on buttons, scale on gallery items.
+  - **Depth:** Every card and panel floats with **3–4 layer box-shadow** (not just one shadow value). **Glassmorphism / liquid glass** on at least 3 elements: hero overlay panel, navigation bar, testimonial cards, or CTA sections (\`backdrop-filter: blur(16px) saturate(180%); background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);\`). Overlapping elements at section boundaries. 4-level surface depth system throughout.
+  - **Interactions:** CSS hover states on every interactive element — shadow lift on cards, color shift on buttons, scale on gallery items, glassmorphic blur transitions on glass panels.
 - **Establish trust from day one**: prominent Google rating display (from context when available), premium testimonial cards with author avatars and realistic quotes, credibility indicators (years of experience, certifications, service count), and clear booking/contact CTAs.
 - **Content completeness**: every section must have **substantive, realistic copy** specific to this business — not placeholder lorem. Write headlines, taglines, service descriptions, and testimonial quotes that feel authentic for the category and location.
 - **Make it unmistakably custom**: this must look NOTHING like a template. The layout, color story, typography, and depth should make it impossible to confuse with a $49 Wix theme. The business owner should see this and immediately feel that **this IS their brand**.
@@ -402,16 +402,20 @@ Adapt these **patterns** to **this** business — unique composition, real copy,
 const WEBSITE_VISUAL_CHECKLIST = `
 Visual quality — premium marketing site (mandatory budgets):
 
-**Depth budget (3 levels minimum):**
+**Depth budget (4 levels minimum):**
 - Level 1: Section backgrounds (vary between white, off-white, tinted, dark — never all pure #fff)
-- Level 2: Card surfaces with multi-layered shadow: \`box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.06)\` and 12–20px border-radius
-- Level 3: Floating/overlapping elements (testimonial cards crossing section boundaries, hero badges) with stronger shadow
-- Every card, form, and content panel must visibly float — no flat, borderless, shadowless boxes
+- Level 2: Card surfaces with **rich multi-layered box-shadow**: \`box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.06), 0 12px 32px rgba(0,0,0,0.08)\` and 16–24px border-radius. Three shadow layers minimum on every card.
+- Level 3: **Glassmorphism / liquid glass surfaces** — at least 2–3 elements must use this treatment:
+  \`backdrop-filter: blur(16px) saturate(180%); background: rgba(255,255,255,0.25); border: 1px solid rgba(255,255,255,0.3); border-radius: 20px;\`
+  Use on: hero overlay panels, nav bar, testimonial cards over dark/gradient backgrounds, floating badges, or CTA card areas. The blur + transparency creates a premium liquid-glass effect.
+- Level 4: Floating/overlapping elements (testimonial cards crossing section boundaries, hero badges, glass panels) with **extra-strong shadow**: \`box-shadow: 0 4px 8px rgba(0,0,0,0.06), 0 16px 40px rgba(0,0,0,0.12), 0 24px 64px rgba(0,0,0,0.06)\`
+- Every card, form, and content panel must visibly float — no flat, borderless, shadowless boxes. **Minimum 3 box-shadow values per card.**
 
 **Color budget:**
 - Section backgrounds must alternate (light → dark → tinted → light) — never consecutive same-background sections
-- At least one CSS gradient usage (hero background, CTA button, section divider band, or decorative element)
+- **Multiple CSS gradient usages** (hero background, CTA buttons, section divider bands, card accent strips, and glassmorphic panel backgrounds). At least 3 gradient instances across the page.
 - One confident accent color used consistently on CTAs, links, active states, and key visual moments
+- **Glass-tinted surfaces:** Use semi-transparent colored backgrounds (\`rgba(accent, 0.08)\`) on alternating sections to create a cohesive color story with visible depth
 - WCAG contrast on all text surfaces
 
 **Typography budget:**
@@ -427,15 +431,17 @@ Visual quality — premium marketing site (mandatory budgets):
 - Links: color transition on hover
 - Navigation uses **:target + :has** — no inline \`<script>\` (Tailwind CDN \`<script src>\` OK)
 
-**Pitch-winning moments (include at least 3):**
-- Floating card that overlaps two sections (hero-to-content boundary or section-to-section)
-- Gradient hero background (2–3 stop gradient, 70vh+ tall) with luminous text
+**Pitch-winning moments (include at least 4):**
+- **Glassmorphic hero panel:** A frosted glass panel (\`backdrop-filter: blur(20px) saturate(180%)\` + semi-transparent white/colored background + \`1px solid rgba(255,255,255,0.3)\` border) floating over the gradient hero background, containing the headline and CTAs — the signature liquid-glass look
+- **Glass navigation bar:** Nav uses glassmorphism (\`backdrop-filter: blur(12px)\`, semi-transparent background, subtle border) floating over the hero — elegant and modern
+- **Floating glass card overlap:** A glassmorphic card that overlaps two sections (hero-to-content boundary), with blurred background showing through — creates stunning depth
+- Gradient hero background (2–3 stop gradient, 80vh+ tall) with luminous text and glass overlay
 - Oversized display typography (80px+) as the hero visual — type IS the design
-- Animated gradient CTA button (background-position shift on hover)
-- Layered shadow composition on cards (3+ box-shadow values for photorealistic depth)
-- Section with alternating 50/50 split layout (text left / visual right, then swap)
+- **Animated gradient CTA with glass shadow:** Primary buttons with CSS gradient + glass-style shadow (\`box-shadow: 0 4px 16px rgba(accent,0.3), 0 12px 32px rgba(accent,0.15)\`) and \`background-position\` shift on hover
+- **Layered shadow composition on every card** — 3–4 \`box-shadow\` values for photorealistic depth: \`0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.06), 0 12px 32px rgba(0,0,0,0.08), 0 24px 48px rgba(0,0,0,0.04)\`
+- **Glass testimonial cards:** Review cards with glassmorphism over a tinted/gradient section background — frosted glass + shadow + rounded corners
 - Bento-style service grid with one dominant tile (2x size) creating visual hierarchy
-- Premium testimonial card with large styled quote marks, author avatar circle, and star rating
+- Section with alternating 50/50 split layout (text left / visual right, then swap)
 
 **Anti-template rule:** If any section looks like it came from a free Wix/Squarespace template, redesign it. Every surface must have intentional depth, every heading must use the display font, every interactive element must have a hover state, every section must have a different background treatment from its neighbors.
 `.trim();
@@ -624,16 +630,20 @@ const WEBAPP_LAYOUT_SAFETY = `
 const WEBAPP_VISUAL_CHECKLIST = `
 Visual quality — premium desktop product (mandatory budgets):
 
-**Depth budget (3 levels minimum):**
+**Depth budget (4 levels minimum):**
 - Level 1: Base background (subtle tint or off-white, never pure #fff everywhere)
-- Level 2: Card surfaces with \`box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04)\` and 12–16px border-radius
-- Level 3: Elevated elements (modals, dropdowns, hover states) with stronger shadow: \`0 8px 30px rgba(0,0,0,0.12)\`
-- Every card must visibly float above its background — no flat, borderless, shadowless boxes
+- Level 2: Card surfaces with **rich multi-layered box-shadow**: \`box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.06), 0 12px 24px rgba(0,0,0,0.06)\` and 14–20px border-radius. Three shadow layers minimum on every card.
+- Level 3: **Glassmorphism / liquid glass surfaces** — use on at least 2–3 elements:
+  \`backdrop-filter: blur(16px) saturate(180%); background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.25); border-radius: 16px;\`
+  Ideal for: KPI hero cards over gradient header bands, sidebar header/logo area, stat cards overlapping dark-to-light transitions, modal overlays, or the greeting header. The frosted-glass look communicates premium SaaS quality.
+- Level 4: Elevated elements (modals, dropdowns, popovers) with **extra-strong shadow**: \`0 8px 24px rgba(0,0,0,0.1), 0 24px 48px rgba(0,0,0,0.08)\`
+- Every card must visibly float above its background — no flat, borderless, shadowless boxes. **Minimum 3 box-shadow values per card.**
 
 **Color budget:**
-- Sidebar/nav: strong intentional background (dark, brand-tinted, or gradient) — never default gray
-- At least one CSS gradient usage (header band, CTA button, hero card, or accent element)
-- Status colors: distinct pills for each state (emerald/success, amber/warning, rose/danger, blue/info) — not plain text
+- Sidebar/nav: strong intentional background (dark, brand-tinted, or gradient) — never default gray. Sidebar can use a **subtle glass effect** (dark frosted glass with \`backdrop-filter: blur\`) for premium depth.
+- **Multiple CSS gradient usages:** header band, CTA buttons, KPI hero card background, accent elements, and section transitions. At least 3 gradient instances.
+- Status colors: distinct pills for each state (emerald/success, amber/warning, rose/danger, blue/info) — not plain text. Pills should have **tinted glass-style backgrounds** (\`rgba(color, 0.12)\`) not flat solid fills.
+- **Glass-tinted card backgrounds:** Use semi-transparent colored backgrounds on stat cards and KPI widgets for a layered, premium feel
 - WCAG contrast compliance on all text
 
 **Typography budget:**
@@ -649,7 +659,7 @@ Visual quality — premium desktop product (mandatory budgets):
 - Active nav: smooth indicator transition (if sidebar uses moving bar/pill)
 - No inline \`<script>\` — view swap is CSS \`:target\` / \`:has\` only (Tailwind CDN \`<script src>\` OK)
 
-**Anti-wireframe rule:** If any view could be mistaken for a wireframe or unstyled mockup, it fails. Every surface must have intentional background treatment, every card must have shadow depth, every interactive element must have a hover state.
+**Anti-wireframe rule:** If any view could be mistaken for a wireframe or unstyled mockup, it fails. Every surface must have intentional background treatment, every card must have **3+ layer box-shadow depth**, every interactive element must have a hover state. At least 2–3 elements must use **glassmorphism** (backdrop-filter blur + semi-transparent background + subtle border). The dashboard must look like a **premium SaaS product** — not a Bootstrap admin template.
 `.trim();
 
 const WEBAPP_PITCH_MOMENTS = `
@@ -657,14 +667,16 @@ const WEBAPP_PITCH_MOMENTS = `
 
 These are the "wow" techniques that make a prospect say "I want this." You MUST include at least **three** of the following in your design:
 
-1. **Glassmorphic card:** At least one card with \`backdrop-filter: blur(16px)\` over a gradient or tinted background, with a subtle rgba white border — creates luxurious depth.
-2. **Gradient mesh or accent band:** A header area, sidebar header, or section divider that uses a multi-stop CSS gradient (not flat color) — creates visual richness and brand personality.
-3. **Oversized hero metric:** The primary KPI rendered at 56–72px in a display font with a large trend indicator — cinematic data presentation that dominates the dashboard.
-4. **Animated gradient CTA:** Primary action buttons with a subtle CSS gradient that shifts on hover (\`background-position\` animation) — creates a sense of interactivity and premium polish.
-5. **Floating overlap card:** A card or KPI band that visually overlaps the boundary between two sections (e.g. a dark header and white content area) using negative margin or transform — creates sophisticated layering.
-6. **Layered shadow composition:** Cards with multiple \`box-shadow\` values (e.g. \`0 1px 2px rgba(0,0,0,0.05), 0 4px 12px rgba(0,0,0,0.08), 0 12px 24px rgba(0,0,0,0.04)\`) — creates photorealistic depth that cheap templates never achieve.
-7. **Color-coded status system:** A consistent severity/status system using colored left-borders (4px) + matching pill badges throughout all views — creates a cohesive visual language that feels like a mature product.
-8. **Activity timeline:** A vertical dot-and-line timeline component for recent activity — creates a sense of a living, active system.
+1. **Glassmorphic KPI cards (MANDATORY):** The dashboard KPI hero cards MUST use liquid glass: \`backdrop-filter: blur(20px) saturate(180%); background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 16px;\` over the gradient header band. This is the signature premium SaaS look — frosted glass floating over rich color creates instant "wow."
+2. **Glassmorphic sidebar:** The sidebar (or its header area) should use a dark glassmorphism: \`backdrop-filter: blur(16px); background: rgba(15,15,30,0.85); border-right: 1px solid rgba(255,255,255,0.08);\` — gives the nav a premium frosted depth.
+3. **Gradient mesh header band:** The top area of the main content (greeting/KPI zone) uses a rich multi-stop CSS gradient (2–3 colors, brand-derived) with glassmorphic cards overlapping — this is the visual centerpiece.
+4. **Oversized hero metric:** The primary KPI rendered at 56–72px in a display font with a large trend indicator — cinematic data presentation.
+5. **Animated gradient CTA with glass shadow:** Primary action buttons with CSS gradient + glass-style glow shadow (\`box-shadow: 0 4px 16px rgba(accent,0.3), 0 12px 32px rgba(accent,0.12)\`) and hover shift — buttons feel alive.
+6. **Floating glass overlap card:** A glassmorphic card or KPI band that overlaps the boundary between the dark gradient header and white content area — the liquid glass blur reveals the gradient underneath, creating stunning layered depth.
+7. **Rich layered shadow composition (on EVERY card):** All cards must use 3–4 \`box-shadow\` values: \`0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.06), 0 12px 24px rgba(0,0,0,0.06), 0 20px 40px rgba(0,0,0,0.03)\` — photorealistic depth everywhere.
+8. **Glass-style status pills:** Status badges use tinted glass backgrounds (\`rgba(color, 0.12)\` + subtle border) instead of flat solid fills — more refined and modern.
+9. **Color-coded status system:** Consistent severity colors with left-borders (4px) + matching glass pills throughout all views.
+10. **Activity timeline:** Vertical dot-and-line timeline for recent activity — a living, active system feel.
 `.trim();
 
 /** Desktop-width **web application** UI (operator / back-office), not a marketing website. */
@@ -832,18 +844,21 @@ If **Visual direction** appears in the context block, harmonize with it; otherwi
 const MOBILE_VISUAL_CHECKLIST = `
 Visual quality — premium mobile operator app (mandatory budgets):
 
-**Depth budget (3 levels minimum):**
+**Depth budget (4 levels minimum):**
 - Level 1: Base background (subtle warm or cool tint — never pure #fff; use #faf8f5, #f5f5f7, #f0f4f8, or similar)
-- Level 2: Card surfaces with multi-layered shadow: \`box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 6px 16px rgba(0,0,0,0.06)\` and 16–20px border-radius
-- Level 3: Elevated elements (FAB, modals, bottom tab bar) with stronger shadow and optional \`backdrop-filter: blur(12px)\`
-- Every card must visibly float above the background — no flat, borderless rectangles
+- Level 2: Card surfaces with **rich multi-layered box-shadow**: \`box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.06), 0 12px 24px rgba(0,0,0,0.06)\` and 16–24px border-radius. Three shadow layers minimum on every card.
+- Level 3: **Glassmorphism / liquid glass surfaces** — use on at least 2–3 elements:
+  \`backdrop-filter: blur(16px) saturate(180%); background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.25); border-radius: 20px;\`
+  Ideal for: KPI stat cards overlapping the gradient header, the bottom tab bar (frosted glass), floating action buttons, notification cards, and booking summary panels. Liquid glass is THE signature look of premium mobile apps.
+- Level 4: Elevated elements (FAB, modals, popovers) with **extra-strong shadow**: \`0 8px 24px rgba(0,0,0,0.12), 0 20px 40px rgba(0,0,0,0.08)\`
+- Every card must visibly float above the background — no flat, borderless rectangles. **Minimum 3 box-shadow values per card.**
 
 **Color budget:**
 - Base: subtle tinted background (not pure white)
-- Header/hero: gradient or brand-tinted area — never flat white or plain gray
+- Header/hero: **rich gradient** (2–3 stops, brand-derived) or atmospheric brand-tinted area — never flat white or plain gray. The gradient is the canvas for glassmorphic cards to float over.
 - Accent: one confident color used consistently on active tab, primary CTA, key metrics, and status highlights
-- At least one CSS gradient usage (header area, CTA button, or hero card)
-- Status colors: distinct pills for each state (emerald/amber/rose/blue) with tinted background
+- **Multiple CSS gradient usages:** header area, CTA buttons, hero KPI card, and tab bar active indicator. At least 3 gradient instances.
+- Status colors: distinct pills with **glass-tinted backgrounds** (\`rgba(color, 0.12)\` + subtle border) for each state — not flat solid fills
 - WCAG contrast on all text surfaces
 
 **Typography budget:**
@@ -861,9 +876,9 @@ Visual quality — premium mobile operator app (mandatory budgets):
 
 **Top app bar:** Circular avatar placeholder (brand color with white initial), business name (from context), bell/notification icon with optional dot indicator; polished spacing and clear background treatment.
 
-**Bottom tab bar:** Four tabs with **icon + label**; premium active state (filled accent pill, tinted icon, or highlighted background + accent underline). Tab bar must have its own surface treatment (frosted blur, tinted background, or top shadow) — never a plain dark-gray bar.
+**Bottom tab bar (MANDATORY glassmorphism):** Five tabs with **icon + label**; premium active state (filled accent pill, tinted icon, or highlighted background + accent underline). Tab bar MUST use **liquid glass / glassmorphism**: \`backdrop-filter: blur(20px) saturate(180%); background: rgba(255,255,255,0.7); border-top: 1px solid rgba(255,255,255,0.5);\` (or dark variant for dark themes). The frosted glass tab bar is the most recognizable premium mobile pattern — never a plain opaque dark-gray bar.
 
-**Anti-wireframe rule:** If any screen could be mistaken for a wireframe or prototype, it fails. Every card must have shadow and rounded corners, every header must have intentional background treatment, every button must have hover/active state, every list item must have visual richness (avatar, badge, icon, or color accent).
+**Anti-wireframe rule:** If any screen could be mistaken for a wireframe or prototype, it fails. Every card must have **3+ layer box-shadow** and rounded corners (16–24px), every header must have gradient background treatment, every button must have hover/active state, every list item must have visual richness (avatar, badge, icon, or color accent). At least 2–3 elements must use **glassmorphism** (backdrop-filter blur + semi-transparent background + subtle border). The app must look like a **polished, published native app** — not a prototype.
 `.trim();
 
 const MOBILE_PITCH_MOMENTS = `
@@ -871,14 +886,17 @@ const MOBILE_PITCH_MOMENTS = `
 
 These are the "wow" techniques that make a prospect pick up their phone and say "I want this app." You MUST include at least **three**:
 
-1. **Immersive gradient header with overlap:** Home screen header uses a rich gradient (2–3 stops) spanning 160px+ tall, with white content cards overlapping the gradient edge by -24px to -32px (negative margin) — creates premium depth that screams custom design.
-2. **Frosted glass bottom tab bar:** Bottom tab bar uses \`backdrop-filter: blur(16px)\` with a semi-transparent background and subtle top border — every swipe feels premium.
-3. **Oversized cinematic metric:** The primary KPI on Home rendered at 48–56px in a display font with a large trend arrow — makes the first impression unforgettable.
-4. **Gradient CTA button:** The primary "Book Now" button uses a CSS gradient background with a subtle \`background-position\` shift on :active — feels alive and interactive.
-5. **Color-coded service system:** Every service type has a consistent color accent (left border on cards, tinted badge, colored icon) that repeats across Home, Book, and Clients — creates a cohesive visual language.
-6. **Layered shadow composition:** Cards with multiple box-shadow values (e.g. \`0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.06), 0 12px 24px rgba(0,0,0,0.04)\`) — photorealistic depth that cheap templates never achieve.
-7. **Avatar system:** Consistent circular avatar placeholders with colored backgrounds and white initials throughout all screens — creates a professional, app-like consistency.
-8. **Star rating visualization:** Review screen uses filled/empty star icons with a horizontal bar chart for rating distribution — makes the reviews section look like a real analytics dashboard.
+1. **Glassmorphic KPI cards over gradient (MANDATORY):** Home screen KPI stat cards MUST use liquid glass: \`backdrop-filter: blur(20px) saturate(180%); background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 20px;\` floating over the gradient header. The frosted glass reveals the gradient underneath — this is THE premium mobile app signature.
+2. **Immersive gradient header with glass overlap:** Home screen header uses a rich gradient (2–3 stops) spanning 160px+ tall, with glassmorphic cards overlapping the gradient edge by -24px to -32px — liquid glass + gradient = instant wow.
+3. **Frosted glass bottom tab bar (MANDATORY):** Bottom tab bar uses \`backdrop-filter: blur(20px) saturate(180%); background: rgba(255,255,255,0.7); border-top: 1px solid rgba(255,255,255,0.4);\` — every swipe feels like a native premium app.
+4. **Oversized cinematic metric:** The primary KPI on Home rendered at 48–56px in a display font with a large trend arrow — unforgettable first impression.
+5. **Gradient CTA with glass shadow:** The "Book Now" button uses CSS gradient + glass-style glow: \`box-shadow: 0 4px 16px rgba(accent,0.3), 0 12px 32px rgba(accent,0.12);\` and shift on :active — feels alive.
+6. **Glass-style notification cards:** Follow-up cards, review nudges, and unread badges use glassmorphism (frosted background + subtle border) — even small UI elements feel premium.
+7. **Rich layered shadow on EVERY card:** All cards use 3–4 \`box-shadow\` values: \`0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.06), 0 12px 24px rgba(0,0,0,0.06), 0 20px 40px rgba(0,0,0,0.03)\` — photorealistic depth everywhere.
+8. **Glass-tinted status pills:** Status badges use \`rgba(color, 0.12)\` backgrounds with subtle borders — refined and modern, not flat solid fills.
+9. **Color-coded service system:** Consistent color accents across Home, Book, and Clients — cohesive visual language.
+10. **Avatar system:** Circular avatar placeholders with colored glass-tinted backgrounds and white initials — professional consistency.
+11. **Star rating visualization:** Review screen with filled/empty stars + horizontal bar chart — real analytics dashboard feel.
 `.trim();
 
 export function buildStitchMobilePrompt(payload: StitchProspectDesignPayload): string {
