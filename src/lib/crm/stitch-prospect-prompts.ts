@@ -316,11 +316,12 @@ Never default to all-gray sidebars, interchangeable KPI cards, or **Inter / Robo
 7. **Table polish:** Data tables must have alternating row tints or clear dividers, colored status badges in pill format, hover state on rows, and action buttons with hover states. Minimum 5 realistic data rows.
 
 ### Required views (conceptual — technical ids below)
-Align with **Dashboard, Clients, Schedule, Reviews** (\`#dash\`, \`#clients\`, \`#schedule\`, \`#reviews\`):
+Align with **Dashboard, Clients, Conversations, Schedule, Reviews** (\`#dash\`, \`#clients\`, \`#inbox\`, \`#schedule\`, \`#reviews\`):
 1. **Dashboard** — The showpiece view. Personalized greeting header with date. Hero KPI card (oversized, accent treatment) flanked by supporting stat cards including **auto-reminders sent** and **no-show rate**. Below: a CSS-only chart or visualization, "follow-ups due today" mini-list, "needs attention" exception list with colored left-border severity indicators, and recent activity timeline (include entries like "SMS reminder sent", "New 5★ review", "Online booking confirmed"). **Realistic fake data for the vertical** — not placeholder text.
 2. **Clients** — **Simple CRM for repeat business.** Search/filter bar with filter chips (All, Active, Needs Follow-up). **Polished data table** with columns for name, last visit, next appointment, total visits, and follow-up status. Inline "Send Reminder" and "Book" action buttons per row. Avatar placeholder (circle with initial) per row. Minimum 5 realistic rows. Pagination or "showing X of Y" footer.
-3. **Schedule** — Week/day calendar with online booking integration. Color-coded by service type or status with a clear legend. Each appointment block shows client name, service, time, status badge, and SMS reminder icon. Include appointments labeled "Online booking". A "Share Booking Link" secondary button. Mini-calendar sidebar for date navigation.
-4. **Reviews** — Google Reviews management hub. Large aggregate rating display (4.8 ★) with total count. Star distribution bar chart. Growth metric ("Reviews this month: 14, +40%"). Recent review cards with author avatar, star rating, and realistic text. Prominent "Request a Review" CTA with SMS/WhatsApp send options.
+3. **Conversations** — Unified inbox centralizing SMS, email, WhatsApp, website chatbot, Facebook, and Instagram messages. Channel filter tabs with unread counts. Conversation list with avatar, client name, channel icon, message preview, and timestamp. Chat-style message thread with channel-switching indicators. Reply composer with channel selector.
+4. **Schedule** — Week/day calendar with online booking integration. Color-coded by service type or status with a clear legend. Each appointment block shows client name, service, time, status badge, and SMS reminder icon. Include appointments labeled "Online booking". A "Share Booking Link" secondary button. Mini-calendar sidebar for date navigation.
+5. **Reviews** — Google Reviews management hub. Large aggregate rating display (4.8 ★) with total count. Star distribution bar chart. Growth metric ("Reviews this month: 14, +40%"). Recent review cards with author avatar, star rating, and realistic text. Prominent "Request a Review" CTA with SMS/WhatsApp send options.
 
 Design this so that when a business owner sees it, they immediately think: **"I need this. How much does it cost?"**
 `.trim();
@@ -361,11 +362,12 @@ Never default to generic **purple gradients**, cookie-cutter onboarding layouts,
 7. **Consistent accent system:** The accent color must appear on: active tab indicator, primary CTA button, important badges, and key metrics. This creates visual coherence across screens.
 
 ### Required screens (conceptual — technical ids below)
-Align with **Home, Clients, Book, Reviews** (\`#home\`, \`#clients\`, \`#book\`, \`#reviews\`):
+Align with **Home, Clients, Conversations, Book, Reviews** (\`#home\`, \`#clients\`, \`#inbox\`, \`#book\`, \`#reviews\`):
 1. **Home** — The showpiece screen. Immersive header area (gradient/pattern, 140px+) with personalized greeting and date. Below: oversized KPI number (40px+) for today's primary metric + supporting stat pills including **"Reminders Sent"** and **"No-Shows: 0"**. **Today's schedule** with 3+ realistic appointment cards (avatar, client name, service, time, colored status badge, SMS reminder bell icon). A **"Follow-ups Due"** notification card. Prominent **"Book Now"** CTA. The Home screen alone should sell the product.
 2. **Clients** — **Simple CRM for repeat business.** Search bar + filter chips (All, Active, Needs Follow-up). Vertical list with avatar, client name, **last visit**, **total visits**, and **follow-up status badge**. Inline SMS reminder button per row. Minimum 4 realistic rows. "Add Client" floating action button. Communicates that tracking repeat customers drives most revenue.
-3. **Book** — **Easy online booking** — "Clients can book 24/7". Calendar strip with accent-highlighted selected day; tappable time slot chips (available/booked states); service type selector. Booking form with "Confirm Booking" button + a **"Share Booking Link"** secondary action for SMS/link sharing. Must feel like a real booking system that replaces phone-tag and increases conversions.
-4. **Reviews** — **Google Reviews growth engine.** Large aggregate rating (48px, e.g. "4.8") with review count. Growth metric: "This month: 14 new reviews (+40%)". Star distribution bars. 3+ review cards with avatar, stars, realistic text, date. **"Request a Review"** CTA with SMS and WhatsApp send options — "Going from a few reviews to 100+ boosts trust and inbound leads automatically.".
+3. **Conversations** — Unified inbox for all channels: SMS, email, WhatsApp, website chatbot, Facebook, and Instagram. Channel-colored filter tabs with unread counts. Conversation thread list with avatars, channel icons, message previews, and timestamps. Compose FAB for new messages. "4 unread · 2 need reply" summary banner. Never miss a lead across any channel.
+4. **Book** — **Easy online booking** — "Clients can book 24/7". Calendar strip with accent-highlighted selected day; tappable time slot chips (available/booked states); service type selector. Booking form with "Confirm Booking" button + a **"Share Booking Link"** secondary action for SMS/link sharing. Must feel like a real booking system that replaces phone-tag and increases conversions.
+5. **Reviews** — **Google Reviews growth engine.** Large aggregate rating (48px, e.g. "4.8") with review count. Growth metric: "This month: 14 new reviews (+40%)". Star distribution bars. 3+ review cards with avatar, stars, realistic text, date. **"Request a Review"** CTA with SMS and WhatsApp send options — "Going from a few reviews to 100+ boosts trust and inbound leads automatically.".
 
 Design this so that when a business owner sees it on their phone, they think: **"This is MY app. I need this."**
 `.trim();
@@ -475,7 +477,7 @@ Use CSS equivalent to:
 - **Initial view:** \`body:not(:has(main .page:target)) #home\` **and** \`#home:target\` → \`display: block\` (or flex).
 - When \`#services\`, \`#about\`, \`#gallery\`, \`#book\`, \`#reviews\`, or \`#location\` matches \`:target\`, show that section the same way.
 - When a **non-home** page is \`:target\`, hide \`#home\` via \`body:has(#services:target) #home\`, \`body:has(#about:target) #home\`, \`body:has(#gallery:target) #home\`, \`body:has(#book:target) #home\`, etc.
-- **Active nav styling (no JS):** e.g. \`body:has(#services:target) nav a[href="#services"] { font-weight: 700; border-bottom: … }\` (repeat per tab: \`#about\`, \`#gallery\`, \`#book\`, \`#reviews\`, \`#location\`).
+- **Active nav styling (no JS):** e.g. \`body:has(#services:target) nav a[href="#services"] { font-weight: 700; border-bottom: … }\` (repeat per tab: \`#home\`, \`#clients\`, \`#inbox\`, \`#book\`, \`#reviews\`).
 
 Nav links: \`<a href="#home">\`, \`#services\`, \`#about\`, \`#gallery\`, \`#book\`, \`#reviews\`, \`#location\`. **Do not** rely on \`scroll-behavior\` or stacked \`min-height:100vh\` sections in one scroll — use **show/hide** as above.
 
@@ -681,11 +683,12 @@ Each main **view** is a full main-area panel; **only one view visible at a time*
 
 **CRITICAL: You MUST use these EXACT section ids and sidebar labels. Do NOT rename, customize, or adapt them to the business type. The navigation depends on these exact strings.**
 
-Use a layout with a **sidebar** (\`<aside>\`) containing nav links and \`<main>\` containing exactly these four sections:
+Use a layout with a **sidebar** (\`<aside>\`) containing nav links and \`<main>\` containing exactly these five sections:
 
 \`\`\`html
 <section id="dash" class="page">...</section>
 <section id="clients" class="page">...</section>
+<section id="inbox" class="page">...</section>
 <section id="schedule" class="page">...</section>
 <section id="reviews" class="page">...</section>
 \`\`\`
@@ -693,13 +696,13 @@ Use a layout with a **sidebar** (\`<aside>\`) containing nav links and \`<main>\
 CSS rules (copy exactly):
 - \`.page { display: none; min-height: calc(100vh - 64px); overflow-y: auto; }\`
 - \`body:not(:has(main .page:target)) #dash { display: block; }\` (default view)
-- \`#dash:target, #clients:target, #schedule:target, #reviews:target { display: block; }\`
-- \`body:has(#clients:target) #dash, body:has(#schedule:target) #dash, body:has(#reviews:target) #dash { display: none; }\`
-- Active sidebar styling: \`body:has(#clients:target) aside a[href="#clients"] { ... }\` (repeat per section)
+- \`#dash:target, #clients:target, #inbox:target, #schedule:target, #reviews:target { display: block; }\`
+- \`body:has(#clients:target) #dash, body:has(#inbox:target) #dash, body:has(#schedule:target) #dash, body:has(#reviews:target) #dash { display: none; }\`
+- Active sidebar styling: \`body:has(#clients:target) aside a[href="#clients"] { ... }\` (repeat per section: #clients, #inbox, #schedule, #reviews)
 
-Sidebar labels MUST be exactly: **Dashboard**, **Clients**, **Schedule**, **Reviews** → \`<a href="#dash">\`, \`<a href="#clients">\`, \`<a href="#schedule">\`, \`<a href="#reviews">\`.
+Sidebar labels MUST be exactly: **Dashboard**, **Clients**, **Conversations**, **Schedule**, **Reviews** → \`<a href="#dash">\`, \`<a href="#clients">\`, \`<a href="#inbox">\`, \`<a href="#schedule">\`, \`<a href="#reviews">\`.
 
-**Do NOT rename these to business-specific names** (e.g. do NOT use "Concierge", "Guest Registry", "Spa Services", etc.). The labels Dashboard/Clients/Schedule/Reviews are intentional and universal.
+**Do NOT rename these to business-specific names** (e.g. do NOT use "Concierge", "Guest Registry", "Spa Services", etc.). The labels Dashboard/Clients/Conversations/Schedule/Reviews are intentional and universal.
 
 ## Structure checklist (every view must feel like a finished product, not a wireframe)
 1. **#dash** — The **hero view** that sells the product — a data-rich command center:
@@ -715,8 +718,14 @@ Sidebar labels MUST be exactly: **Dashboard**, **Clients**, **Schedule**, **Revi
    - **Needs attention:** Exception list with 3–4 items, each with a **colored left-border** (4px) for severity (red = urgent, amber = warning, green = ready), avatar/icon, client name, service, and status badge as a colored pill. Include at least one "Pending review request" item.
    - **Activity timeline:** 3–5 recent activity items with timestamps and subtle icons. Include entries like "SMS reminder sent to [Client]", "New 5★ review from [Client]", "Online booking confirmed". Use a vertical line or dot timeline pattern.
 2. **#clients** — **Simple CRM for tracking repeat customers.** Search/filter bar with styled inputs and **filter chip pills** (All, Active, Needs Follow-up). **Premium data table** with: circular avatar placeholder (initial) per row, columns for **Name**, **Last Visit** (date), **Next Appt** (date or "—"), **Visits** (total count), **Follow-up** status (colored pill: "Due" in amber, "Sent" in green, "Scheduled" in blue), category-specific column (e.g. pet name for grooming, case type for legal). Alternating row tints, **colored status pill** badges, row hover with shadow lift. Inline action buttons: **"Send Reminder"** (SMS icon) and **"Book"** per row. Minimum **6 realistic rows** showing a mix of active, due-for-follow-up, and recently visited clients. Pagination footer showing "Showing 1–6 of 24". The table must communicate that most revenue comes from repeat customers, not new ones.
-3. **#schedule** — **Full calendar view with online booking:** week or day layout with a mini-month calendar sidebar or header date picker. Time blocks **color-coded by service type** with a visible legend. Each appointment block shows: client name, service, time, duration, status badge, and a small **reminder icon** (✉ or bell) with tooltip "SMS reminder sent". Include 4+ realistic appointments — at least one labeled "Online booking" (from the self-service link). A **"+ New Appointment"** button styled as an accent CTA. Next to it, a **"Share Booking Link"** secondary button (link icon) for sharing the online booking page with clients. A small banner or badge: "Clients can book 24/7 — even after hours". The calendar must feel like a real scheduling tool that reduces phone-tag and no-shows.
-4. **#reviews** — **Google Reviews management — the growth engine for trust and inbound leads:**
+3. **#inbox** — **Unified conversations — every message in one place:**
+   - **Channel filter bar:** Horizontal tabs or filter chips for: **All**, **SMS**, **Email**, **WhatsApp**, **Website Chat**, **Facebook**, **Instagram**. Each chip has the channel icon and an unread count badge. The active filter has accent background/underline.
+   - **Conversation list (left panel):** A vertical list of conversation threads, each showing: **circular avatar** (client initial or channel icon), **client name**, **channel icon** (small, color-coded: green for WhatsApp, blue for Facebook/Messenger, pink for Instagram, teal for SMS, gray for email, orange for website chat), **last message preview** (truncated, 1–2 lines), **timestamp** (relative: "2m ago", "1h", "Yesterday"), and an **unread dot** (accent color) for new messages. Sort by most recent. Minimum **6 conversation rows**. Include a mix of channels. Selected conversation highlighted with accent tint.
+   - **Message thread (right panel):** A chat-style view showing the selected conversation. Messages styled as **chat bubbles** — incoming on the left (light background), outgoing on the right (accent or brand-colored background with white text). Each message shows: text content, timestamp below, and a small **channel badge** (e.g. "via WhatsApp", "via SMS") on the first message of a channel switch. Include 4–6 realistic messages in the thread, with at least one channel transition (e.g. started on website chat, continued on WhatsApp).
+   - **Reply composer (bottom):** A text input bar with: message field (placeholder "Type a reply..."), **channel selector dropdown** (small icon showing current reply channel — the agent can reply via SMS, WhatsApp, or email from the same thread), and a **Send** button (accent color). Optionally an attachment icon.
+   - **Quick stats header:** A compact bar above the conversation list: "12 unread · 3 need reply · 8 channels active" with small icons. Communicates volume at a glance.
+4. **#schedule** — **Full calendar view with online booking:** week or day layout with a mini-month calendar sidebar or header date picker. Time blocks **color-coded by service type** with a visible legend. Each appointment block shows: client name, service, time, duration, status badge, and a small **reminder icon** (✉ or bell) with tooltip "SMS reminder sent". Include 4+ realistic appointments — at least one labeled "Online booking" (from the self-service link). A **"+ New Appointment"** button styled as an accent CTA. Next to it, a **"Share Booking Link"** secondary button (link icon) for sharing the online booking page with clients. A small banner or badge: "Clients can book 24/7 — even after hours". The calendar must feel like a real scheduling tool that reduces phone-tag and no-shows.
+5. **#reviews** — **Google Reviews management — the growth engine for trust and inbound leads:**
    - **Aggregate rating hero:** Large display number (48px+) of the average rating (e.g. "4.8") with filled star icons and total review count ("127 reviews"). Accent background or gradient card.
    - **Star distribution:** Horizontal bar chart showing 5-star to 1-star breakdown with percentages and colored bars (green gradient for 5★, descending to red for 1★).
    - **Growth metric:** A card or badge: "Reviews this month: 14 (+40% vs last month)" with a trend arrow.
@@ -880,12 +889,12 @@ ${MOBILE_CREATIVE_DIRECTIVE}
 Task: ${gmb}Output **one complete HTML5 document** for a **phone-width operator / owner app** (not a consumer marketing site). Each tab is a **separate full-screen** — **only one screen visible at a time** (no one long scroll through all tabs). Same file, **no JS router**, **no inline \`<script>\`**.
 
 ## Page switch pattern (required — CSS only)
-Use \`<section id="home" class="page">\`, \`id="clients"\`, \`id="book"\`, \`id="reviews"\` inside \`<main>\`. CSS same idea as the website prompt:
+Use \`<section id="home" class="page">\`, \`id="clients"\`, \`id="inbox"\`, \`id="book"\`, \`id="reviews"\` inside \`<main>\`. CSS same idea as the website prompt:
 
 - All \`.page\` hidden by default; **\`min-height: 100vh\`** (minus fixed chrome); **\`overflow-y: auto\`** on the active page content so **only that tab scrolls**, not the whole document stacked.
 - **Default:** show \`#home\` when no hash: \`body:not(:has(main .page:target)) #home\` and \`#home:target\` → visible.
-- Show \`#clients\`, \`#book\`, \`#reviews\` when those ids are \`:target\`; when any of those is targeted, **hide** \`#home\` via \`body:has(#clients:target) #home\`, \`body:has(#book:target) #home\`, \`body:has(#reviews:target) #home\`.
-- **Bottom tab active state:** \`body:has(#book:target) nav.bottom-tabs a[href="#book"] { … }\` (repeat per tab: \`#about\`, \`#gallery\`, \`#book\`, \`#reviews\`, \`#location\`). Fixed **bottom** nav with four \`<a href="#home">\` … \`#reviews\`.
+- Show \`#clients\`, \`#inbox\`, \`#book\`, \`#reviews\` when those ids are \`:target\`; when any of those is targeted, **hide** \`#home\` via \`body:has(#clients:target) #home\`, \`body:has(#inbox:target) #home\`, \`body:has(#book:target) #home\`, \`body:has(#reviews:target) #home\`.
+- **Bottom tab active state:** \`body:has(#book:target) nav.bottom-tabs a[href="#book"] { … }\` (repeat per tab: \`#home\`, \`#clients\`, \`#inbox\`, \`#book\`, \`#reviews\`). Fixed **bottom** nav with five tabs: \`<a href="#home">\`, \`#clients\`, \`#inbox\`, \`#book\`, \`#reviews\`.
 
 ## Structure checklist (every screen must feel like a polished, published app)
 1. **#home** (dashboard) — The **hero screen** that sells the product — a data-rich snapshot:
@@ -901,14 +910,20 @@ Use \`<section id="home" class="page">\`, \`id="clients"\`, \`id="book"\`, \`id=
 
 2. **#clients** — **Simple CRM for tracking repeat customers.** Search bar with styled input (rounded, icon). **Filter chips** at top: "All", "Active", "Needs Follow-up". **Vertical list** with: **circular avatar** (colored initial), client name, **last visit date**, **total visits count**, and **follow-up status badge** (colored pill: "Due" in amber, "Sent" in green, "Scheduled" in blue). Each row includes a small **SMS icon** button to send a reminder. Minimum 4 realistic rows with subtle card separation (shadow or divider) showing a mix of active and follow-up-due clients. **"Add Client"** floating action button (accent color, circular, bottom-right corner with shadow). Each row: chevron, 48px+ tap target height. The list must communicate that tracking repeat customers and following up drives most revenue.
 
-3. **#book** — **Easy online booking — no more phone-tag:**
+3. **#inbox** — **Conversations — every message, one screen:**
+   - **Channel tabs:** Horizontal scrollable tab bar at top: **All** (with total unread badge), **SMS**, **Email**, **WhatsApp**, **Chat** (website chatbot), **FB**, **IG**. Each tab has a small channel-colored icon and unread count. Active tab has accent underline or filled background. Fits mobile width with horizontal scroll.
+   - **Conversation list:** Vertical list of threads, each card showing: **circular avatar** (client initial or channel icon with channel-colored ring), **client name** (bold if unread), **channel icon** (tiny, color-coded: green WhatsApp, blue Facebook, pink Instagram, teal SMS, gray email, orange chat), **message preview** (1 line, truncated), **timestamp** (relative: "2m", "1h", "Yesterday"), and an **unread dot** on the left edge. Minimum **5 conversation cards** with a mix of channels. Tapping opens the thread (simulate with visual cue).
+   - **Compose FAB:** A floating action button (accent color, bottom-right, circular with a message/pen icon, with shadow) for starting a new conversation.
+   - **Unread summary banner:** A compact accent-tinted banner at top or below tabs: "4 unread · 2 need reply" with small icons.
+
+4. **#book** — **Easy online booking — no more phone-tag:**
    - **Header banner:** A small accent banner: "Clients can book 24/7 — even after hours" with a link/share icon.
    - **Calendar strip:** Horizontal scrollable days (7-day strip) with the selected day highlighted (accent background, bold). Show day name + date number.
    - **Time slots:** Available times as **styled chip cards** (rounded pill shape, 48px+ height) — available slots have accent-tinted border or subtle background; booked slots are greyed/muted with "Booked" overlay. Show 4–6 slots per day.
    - **Service selector:** Styled chips or segmented control above the calendar for service types (with service-specific icons or colors).
    - **Booking summary card:** Below slots — selected service, date, time, with a prominent "Confirm Booking" gradient/accent button. Below the button, a **"Share Booking Link"** secondary action (link icon + "Copy link" or "Share via SMS") so the business can send the booking page to clients. Must feel like a **real booking system** that increases conversions by letting people book without calling.
 
-4. **#reviews** — **Google Reviews — the growth engine for trust and inbound leads:**
+5. **#reviews** — **Google Reviews — the growth engine for trust and inbound leads:**
    - **Aggregate rating hero:** Large display number (48px+) of the average rating (e.g. "4.8") with filled star icons and total review count ("127 reviews"). Accent background card or gradient.
    - **Growth metric:** A pill or card: "This month: 14 new reviews (+40%)" with a green trend arrow. Communicates momentum.
    - **Star distribution:** Visual bar chart (5-star to 1-star with horizontal bars, colored green-to-red gradient).
@@ -916,7 +931,7 @@ Use \`<section id="home" class="page">\`, \`id="clients"\`, \`id="book"\`, \`id=
    - **Request a Review CTA:** Prominent accent card at the bottom: "Request a Review" with **SMS and WhatsApp icons** and send buttons. A note: "Going from a few reviews to 100+ boosts trust and brings in new customers automatically." Styled as a primary action — this is the single most impactful feature for inbound lead generation.
 ## Chrome
 - **Fixed top bar** (avatar, business name, bell).
-- **Fixed bottom** tab bar: Home, Clients, Book, Reviews → \`<a href="#home">\`, \`#clients\`, \`#book\`, \`#reviews\` with inline SVG or icon \`<link>\` (e.g. Google Fonts / Material icons).
+- **Fixed bottom** tab bar: Home, Clients, Inbox, Book, Reviews → \`<a href="#home">\`, \`#clients\`, \`#inbox\`, \`#book\`, \`#reviews\` with inline SVG or icon \`<link>\` (e.g. Google Fonts / Material icons).
 
 ## Copy
 Unique copy per section, tied to the business name and vertical — not the same paragraph repeated.
