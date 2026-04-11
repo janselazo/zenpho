@@ -57,7 +57,7 @@ export async function runStitchProspectDesign(
 
   let enrichedPayload = payload;
   if (brandUrl && !payload.brandColors) {
-    const colors = await fetchAndExtractBrandColors(brandUrl).catch(() => null);
+    const colors = await fetchAndExtractBrandColors(brandUrl, 4000).catch(() => null);
     if (colors) {
       enrichedPayload = { ...payload, brandColors: colors };
     }
@@ -66,90 +66,105 @@ export async function runStitchProspectDesign(
   const { prompt, projectTitle, deviceType } = buildStitchProspectGenerationBundle(enrichedPayload);
 
   const linkedProjectId = getStitchLinkedProjectId();
-  const MAX_ATTEMPTS = 2;
 
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    const toolClient = new StitchToolClient({
-      apiKey,
-      timeout: 280_000,
-    });
-    const sdk = new Stitch(toolClient);
+  const toolClient = new StitchToolClient({
+    apiKey,
+    timeout: 280_000,
+  });
+  const sdk = new Stitch(toolClient);
 
+  try {
+    const project = linkedProjectId
+      ? sdk.project(linkedProjectId)
+      : await sdk.createProject(projectTitle);
+
+    // Step 1: Generate — if this succeeds server-side, the screen exists in Stitch even
+    // if the SDK throws while parsing the response.
+    let screen: Awaited<ReturnType<typeof project.generate>>;
     try {
-      const project = linkedProjectId
-        ? sdk.project(linkedProjectId)
-        : await sdk.createProject(projectTitle);
-      const screen = await project.generate(
+      screen = await project.generate(
         prompt,
         deviceType,
         STITCH_GEMINI_3_1_PRO_MODEL_ID,
       );
-      const [imageUrl, htmlUrl] = await Promise.all([screen.getImage(), screen.getHtml()]);
-      const img = typeof imageUrl === "string" ? imageUrl.trim() : "";
-      const html = typeof htmlUrl === "string" ? htmlUrl.trim() : "";
-      if (!img || !html) {
-        return {
-          ok: false as const,
-          error: "Stitch returned no screenshot or HTML URL. Try again in a minute.",
-        };
-      }
-
-      const hosted = await persistStitchHtmlAsProspectPreview({
-        supabase: auth.supabase,
-        userId: auth.user.id,
-        payload,
-        htmlExportUrl: html,
-      });
-
-      return {
-        ok: true as const,
-        projectId: project.projectId,
-        screenId: screen.screenId,
-        projectTitle,
-        imageUrl: img,
-        htmlUrl: html,
-        ...(hosted
-          ? {
-              hostedPreviewUrl: hosted.hostedPreviewUrl,
-              hostedPreviewSlug: hosted.hostedPreviewSlug,
-              hostedPreviewId: hosted.hostedPreviewId,
-            }
-          : {}),
-      };
-    } catch (e) {
-      const isRetryable =
-        (e instanceof StitchError &&
-          /incomplete|projection|UNKNOWN_ERROR/i.test(`${e.code}: ${e.message}`)) ||
-        (e instanceof Error && /incomplete|projection/i.test(e.message));
-
-      if (isRetryable && attempt < MAX_ATTEMPTS) {
-        console.warn(`[stitch-design] attempt ${attempt} failed with retryable error, retrying…`, e instanceof Error ? e.message : e);
-        try { await toolClient.close(); } catch { /* ignore */ }
-        continue;
-      }
-
-      if (e instanceof StitchError) {
-        const base = `${e.code}: ${e.message}`.trim();
+    } catch (genErr) {
+      const errText = genErr instanceof Error ? genErr.message : String(genErr);
+      console.error("[stitch-design] generate failed:", errText);
+      if (genErr instanceof StitchError) {
+        const base = `${genErr.code}: ${genErr.message}`.trim();
         const permissionHint =
           linkedProjectId &&
-          (e.code === "PERMISSION_DENIED" || /permission|403|forbidden/i.test(e.message))
+          (genErr.code === "PERMISSION_DENIED" || /permission|403|forbidden/i.test(genErr.message))
             ? " Your STITCH_PROJECT_ID must be a project the same Stitch API key can edit."
             : "";
-        return {
-          ok: false as const,
-          error: `${base}${permissionHint}`.trim(),
-        };
+        return { ok: false as const, error: `${base}${permissionHint}`.trim() };
       }
-      const msg = e instanceof Error ? e.message : "Stitch request failed.";
-      return { ok: false as const, error: msg };
-    } finally {
+      return { ok: false as const, error: errText || "Stitch generation failed." };
+    }
+
+    // Step 2: Retrieve image + HTML URLs (separate from generate so a parse error in
+    // generate doesn't lose the screen). Retry URL retrieval up to 3 times.
+    let img = "";
+    let html = "";
+    for (let urlAttempt = 0; urlAttempt < 3; urlAttempt++) {
       try {
-        await toolClient.close();
-      } catch {
-        /* ignore */
+        const [imageUrl, htmlUrl] = await Promise.all([screen.getImage(), screen.getHtml()]);
+        img = typeof imageUrl === "string" ? imageUrl.trim() : "";
+        html = typeof htmlUrl === "string" ? htmlUrl.trim() : "";
+        if (img && html) break;
+      } catch (urlErr) {
+        console.warn(`[stitch-design] URL retrieval attempt ${urlAttempt + 1} failed:`, urlErr instanceof Error ? urlErr.message : urlErr);
+        if (urlAttempt < 2) await new Promise((r) => setTimeout(r, 2000));
       }
     }
-  }
 
-  return { ok: false as const, error: "Stitch generation failed after retries." };
+    if (!img || !html) {
+      return {
+        ok: false as const,
+        error: `Stitch created the screen (project ${project.projectId}, screen ${screen.screenId}) but could not retrieve the image/HTML URLs. Open it directly in Stitch.`,
+      };
+    }
+
+    // Step 3: Persist HTML as hosted preview (non-fatal if it fails).
+    const hosted = await persistStitchHtmlAsProspectPreview({
+      supabase: auth.supabase,
+      userId: auth.user.id,
+      payload,
+      htmlExportUrl: html,
+    });
+
+    return {
+      ok: true as const,
+      projectId: project.projectId,
+      screenId: screen.screenId,
+      projectTitle,
+      imageUrl: img,
+      htmlUrl: html,
+      ...(hosted
+        ? {
+            hostedPreviewUrl: hosted.hostedPreviewUrl,
+            hostedPreviewSlug: hosted.hostedPreviewSlug,
+            hostedPreviewId: hosted.hostedPreviewId,
+          }
+        : {}),
+    };
+  } catch (e) {
+    if (e instanceof StitchError) {
+      const base = `${e.code}: ${e.message}`.trim();
+      const permissionHint =
+        linkedProjectId &&
+        (e.code === "PERMISSION_DENIED" || /permission|403|forbidden/i.test(e.message))
+          ? " Your STITCH_PROJECT_ID must be a project the same Stitch API key can edit."
+          : "";
+      return { ok: false as const, error: `${base}${permissionHint}`.trim() };
+    }
+    const msg = e instanceof Error ? e.message : "Stitch request failed.";
+    return { ok: false as const, error: msg };
+  } finally {
+    try {
+      await toolClient.close();
+    } catch {
+      /* ignore */
+    }
+  }
 }
