@@ -316,11 +316,11 @@ Never default to all-gray sidebars, interchangeable KPI cards, or **Inter / Robo
 7. **Table polish:** Data tables must have alternating row tints or clear dividers, colored status badges in pill format, hover state on rows, and action buttons with hover states. Minimum 5 realistic data rows.
 
 ### Required views (conceptual — technical ids below)
-Align with **Dashboard, Clients, Schedule, Settings** (\`#dash\`, \`#clients\`, \`#schedule\`, \`#settings\`):
-1. **Dashboard** — The showpiece view. Personalized greeting header with date. Hero KPI card (oversized, accent treatment) flanked by supporting stat cards with trend indicators. Below: a CSS-only chart or visualization area + "needs attention" exception list with colored left-border severity indicators + recent activity timeline (3–5 items with timestamps). **Realistic fake data for the vertical** — not placeholder text.
-2. **Clients** — Search/filter bar with styled inputs and filter chips; **polished data table** with category-specific columns, alternating row tints, row hover states with shadow lift, inline action buttons, and colored status pill badges. Avatar placeholder (circle with initial) per row. Minimum 5 realistic rows. Pagination or "showing X of Y" footer.
-3. **Schedule** — Week/day calendar or time blocks that fit how this business books. Color-coded by service type or status with a clear legend. Each appointment block must show client name, service, time, and status badge. Include realistic details. A mini-calendar (month view) sidebar or header strip for date navigation.
-4. **Settings** — Credible grouped sections (profile, notifications, integrations, billing) as structured forms with toggle switches, select dropdowns, save buttons, and a profile card with avatar placeholder. Not just text inputs — use cards to group related settings with section headings and descriptions.
+Align with **Dashboard, Clients, Schedule, Reviews** (\`#dash\`, \`#clients\`, \`#schedule\`, \`#reviews\`):
+1. **Dashboard** — The showpiece view. Personalized greeting header with date. Hero KPI card (oversized, accent treatment) flanked by supporting stat cards including **auto-reminders sent** and **no-show rate**. Below: a CSS-only chart or visualization, "follow-ups due today" mini-list, "needs attention" exception list with colored left-border severity indicators, and recent activity timeline (include entries like "SMS reminder sent", "New 5★ review", "Online booking confirmed"). **Realistic fake data for the vertical** — not placeholder text.
+2. **Clients** — **Simple CRM for repeat business.** Search/filter bar with filter chips (All, Active, Needs Follow-up). **Polished data table** with columns for name, last visit, next appointment, total visits, and follow-up status. Inline "Send Reminder" and "Book" action buttons per row. Avatar placeholder (circle with initial) per row. Minimum 5 realistic rows. Pagination or "showing X of Y" footer.
+3. **Schedule** — Week/day calendar with online booking integration. Color-coded by service type or status with a clear legend. Each appointment block shows client name, service, time, status badge, and SMS reminder icon. Include appointments labeled "Online booking". A "Share Booking Link" secondary button. Mini-calendar sidebar for date navigation.
+4. **Reviews** — Google Reviews management hub. Large aggregate rating display (4.8 ★) with total count. Star distribution bar chart. Growth metric ("Reviews this month: 14, +40%"). Recent review cards with author avatar, star rating, and realistic text. Prominent "Request a Review" CTA with SMS/WhatsApp send options.
 
 Design this so that when a business owner sees it, they immediately think: **"I need this. How much does it cost?"**
 `.trim();
@@ -362,10 +362,10 @@ Never default to generic **purple gradients**, cookie-cutter onboarding layouts,
 
 ### Required screens (conceptual — technical ids below)
 Align with **Home, Clients, Book, Reviews** (\`#home\`, \`#clients\`, \`#book\`, \`#reviews\`):
-1. **Home** — The showpiece screen. Immersive header area (gradient/pattern, 140px+) with personalized greeting and date. Below: oversized KPI number (40px+) for today's primary metric + 1–2 supporting stats. **Today's schedule** with 3+ realistic appointment cards (avatar placeholder, client name, service, time, colored status badge). Prominent **"Book Now"** CTA as a gradient or filled accent button. The Home screen alone should sell the product.
-2. **Clients** — Search bar with styled input and rounded corners; vertical list with **circular avatar placeholders** (colored initial), client name, last visit date, and status badge per row. Minimum 4 realistic rows. Include an **"Add Client"** floating action button (accent color, shadow, bottom-right) or inline CTA. Each row must have a chevron and subtle row divider or card separation.
-3. **Book** — **Calendar strip** (horizontal scrollable days with the selected day highlighted in accent color) or **week view date picker**; available time slots as **tappable chip cards** with clear available/booked states (booked = muted/greyed, available = accent-tinted border or background); **service type selector** as styled chips or segmented control above the calendar. A **booking form** below: name, service, date/time summary, and a prominent **"Confirm Booking"** button. Must feel like a **real booking system**, not wireframe slots.
-4. **Reviews** — Large aggregate rating display (big star + number, e.g. "4.8" at 48px) with review count and a visual star bar. 2+ review cards with author initial avatar (colored circle), star rating (filled/empty stars), realistic snippet text, and date. **"Request Review"** CTA card at the bottom with a distinct accent style.
+1. **Home** — The showpiece screen. Immersive header area (gradient/pattern, 140px+) with personalized greeting and date. Below: oversized KPI number (40px+) for today's primary metric + supporting stat pills including **"Reminders Sent"** and **"No-Shows: 0"**. **Today's schedule** with 3+ realistic appointment cards (avatar, client name, service, time, colored status badge, SMS reminder bell icon). A **"Follow-ups Due"** notification card. Prominent **"Book Now"** CTA. The Home screen alone should sell the product.
+2. **Clients** — **Simple CRM for repeat business.** Search bar + filter chips (All, Active, Needs Follow-up). Vertical list with avatar, client name, **last visit**, **total visits**, and **follow-up status badge**. Inline SMS reminder button per row. Minimum 4 realistic rows. "Add Client" floating action button. Communicates that tracking repeat customers drives most revenue.
+3. **Book** — **Easy online booking** — "Clients can book 24/7". Calendar strip with accent-highlighted selected day; tappable time slot chips (available/booked states); service type selector. Booking form with "Confirm Booking" button + a **"Share Booking Link"** secondary action for SMS/link sharing. Must feel like a real booking system that replaces phone-tag and increases conversions.
+4. **Reviews** — **Google Reviews growth engine.** Large aggregate rating (48px, e.g. "4.8") with review count. Growth metric: "This month: 14 new reviews (+40%)". Star distribution bars. 3+ review cards with avatar, stars, realistic text, date. **"Request a Review"** CTA with SMS and WhatsApp send options — "Going from a few reviews to 100+ boosts trust and inbound leads automatically.".
 
 Design this so that when a business owner sees it on their phone, they think: **"This is MY app. I need this."**
 `.trim();
@@ -687,19 +687,19 @@ Use a layout with a **sidebar** (\`<aside>\`) containing nav links and \`<main>\
 <section id="dash" class="page">...</section>
 <section id="clients" class="page">...</section>
 <section id="schedule" class="page">...</section>
-<section id="settings" class="page">...</section>
+<section id="reviews" class="page">...</section>
 \`\`\`
 
 CSS rules (copy exactly):
 - \`.page { display: none; min-height: calc(100vh - 64px); overflow-y: auto; }\`
 - \`body:not(:has(main .page:target)) #dash { display: block; }\` (default view)
-- \`#dash:target, #clients:target, #schedule:target, #settings:target { display: block; }\`
-- \`body:has(#clients:target) #dash, body:has(#schedule:target) #dash, body:has(#settings:target) #dash { display: none; }\`
+- \`#dash:target, #clients:target, #schedule:target, #reviews:target { display: block; }\`
+- \`body:has(#clients:target) #dash, body:has(#schedule:target) #dash, body:has(#reviews:target) #dash { display: none; }\`
 - Active sidebar styling: \`body:has(#clients:target) aside a[href="#clients"] { ... }\` (repeat per section)
 
-Sidebar labels MUST be exactly: **Dashboard**, **Clients**, **Schedule**, **Settings** → \`<a href="#dash">\`, \`<a href="#clients">\`, \`<a href="#schedule">\`, \`<a href="#settings">\`.
+Sidebar labels MUST be exactly: **Dashboard**, **Clients**, **Schedule**, **Reviews** → \`<a href="#dash">\`, \`<a href="#clients">\`, \`<a href="#schedule">\`, \`<a href="#reviews">\`.
 
-**Do NOT rename these to business-specific names** (e.g. do NOT use "Concierge", "Guest Registry", "Spa Services", etc.). The labels Dashboard/Clients/Schedule/Settings are intentional and universal.
+**Do NOT rename these to business-specific names** (e.g. do NOT use "Concierge", "Guest Registry", "Spa Services", etc.). The labels Dashboard/Clients/Schedule/Reviews are intentional and universal.
 
 ## Structure checklist (every view must feel like a finished product, not a wireframe)
 1. **#dash** — The **hero view** that sells the product:
@@ -710,7 +710,12 @@ Sidebar labels MUST be exactly: **Dashboard**, **Clients**, **Schedule**, **Sett
    - **Activity timeline:** 3–5 recent activity items with timestamps, action descriptions, and subtle icons. Use a vertical line or dot timeline pattern.
 2. **#clients** — Search/filter bar with styled inputs and **filter chip pills** (active/inactive states); **premium data table** with: circular avatar placeholder (initial) per row, category-specific columns (e.g. pet name + owner for grooming, case type for legal), alternating row tints, **colored status pill** badges, row hover with shadow lift, inline action buttons with hover states. Minimum **6 realistic rows**. Pagination footer showing “Showing 1–6 of 24”.
 3. **#schedule** — **Full calendar view:** week or day layout with a mini-month calendar sidebar or header date picker. Time blocks **color-coded by service type** with a visible legend. Each appointment block shows: client name, service, time, duration, and a status badge. Include 4+ realistic appointments. A **“+ New Appointment”** button styled as an accent CTA. The calendar must feel like a real scheduling tool.
-4. **#settings** — Grouped into **cards with section headings and descriptions**: Profile card (avatar, business name, address — editable fields), Notifications card (toggle switches with labels), Integrations card (3 integration placeholders with connected/disconnected status badges), Billing card (plan name, price, usage bar). Each card has its own save button. Must feel like a real settings page.
+4. **#reviews** — **Google Reviews management — the growth engine for trust and inbound leads:**
+   - **Aggregate rating hero:** Large display number (48px+) of the average rating (e.g. "4.8") with filled star icons and total review count ("127 reviews"). Accent background or gradient card.
+   - **Star distribution:** Horizontal bar chart showing 5-star to 1-star breakdown with percentages and colored bars (green gradient for 5★, descending to red for 1★).
+   - **Growth metric:** A card or badge: "Reviews this month: 14 (+40% vs last month)" with a trend arrow.
+   - **Recent reviews:** 3+ review cards, each with: circular author avatar (colored initial), star rating (filled/empty stars), realistic review text specific to this business type, date. Mix of 5-star and 4-star reviews.
+   - **Request a Review CTA:** Prominent accent card at the bottom: "Request a Review" with SMS and WhatsApp icons, a note like "Send a review link via SMS or WhatsApp after each appointment. Going from a few reviews to 100+ boosts trust and inbound leads." Styled as a primary action, not an afterthought.
 
 ## Copy
 Unique copy per view, tied to business name and vertical — not generic lorem repeated everywhere.
