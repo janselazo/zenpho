@@ -7,6 +7,7 @@ import {
 } from "@/lib/crm/stitch-server-key";
 import { persistStitchHtmlAsProspectPreview } from "@/lib/crm/stitch-prospect-host-preview";
 import { getStitchLinkedProjectId } from "@/lib/crm/stitch-linked-project";
+import { fetchAndExtractBrandColors } from "@/lib/crm/brand-color-extract";
 import type {
   StitchProspectDesignPayload,
   StitchProspectDesignResult,
@@ -49,7 +50,20 @@ export async function runStitchProspectDesign(
     }
   }
 
-  const { prompt, projectTitle, deviceType } = buildStitchProspectGenerationBundle(payload);
+  const brandUrl =
+    payload.kind === "place"
+      ? payload.place.websiteUri?.trim() || null
+      : payload.url?.trim() || null;
+
+  let enrichedPayload = payload;
+  if (brandUrl && !payload.brandColors) {
+    const colors = await fetchAndExtractBrandColors(brandUrl).catch(() => null);
+    if (colors) {
+      enrichedPayload = { ...payload, brandColors: colors };
+    }
+  }
+
+  const { prompt, projectTitle, deviceType } = buildStitchProspectGenerationBundle(enrichedPayload);
 
   const toolClient = new StitchToolClient({
     apiKey,

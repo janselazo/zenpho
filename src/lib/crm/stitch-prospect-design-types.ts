@@ -1,4 +1,5 @@
 import type { PlacesSearchPlace } from "@/lib/crm/places-types";
+import type { BrandColorResult } from "@/lib/crm/brand-color-extract";
 
 /** POST /api/prospecting/stitch-design — same shape as generate-preview plus `target`. */
 export type StitchProspectDesignPayload =
@@ -8,6 +9,8 @@ export type StitchProspectDesignPayload =
       place: PlacesSearchPlace;
       servicesLine?: string;
       colorVibe?: string;
+      /** Extracted from the business's existing website, if available. */
+      brandColors?: BrandColorResult | null;
     }
   | {
       target: "website" | "webapp" | "mobile";
@@ -17,6 +20,8 @@ export type StitchProspectDesignPayload =
       metaDescription?: string | null;
       servicesLine?: string;
       colorVibe?: string;
+      /** Extracted from the provided URL, if available. */
+      brandColors?: BrandColorResult | null;
     };
 
 export type StitchProspectDesignResult =

@@ -1,6 +1,7 @@
 import type { PlacesSearchPlace } from "@/lib/crm/places-types";
 import { primaryPlaceTypeLabel } from "@/lib/crm/places-search-ui";
 import type { StitchProspectDesignPayload } from "@/lib/crm/stitch-prospect-design-types";
+import type { BrandColorResult } from "@/lib/crm/brand-color-extract";
 
 /** Stable hash for picking variation axes (same business → same axes on regenerate). */
 function stablePickIndex(seed: string, salt: string, modulo: number): number {
@@ -117,6 +118,8 @@ Each prospect must look **nothing like a default Stitch/Gemini marketing page**.
 **Lane + layout execution:** The **Layout motif**, **Hero structure**, and every band inside \`#home\` must express the assigned aesthetic lane — but **never** at the cost of **Layout safety** (see technical brief): headlines and paragraphs stay readable. Decorative overlap or collage is allowed **only** when the lane calls for it **and** copy sits on a scrim or dedicated panel, not under unmasked photos.
 
 If **Visual direction** appears in the context block, harmonize with it; otherwise obey the lane above without drifting to a bland default.
+
+**Brand color override:** If a "Brand Identity Colors" section appears above, those extracted hex values **override** the lane's color suggestions. Keep the lane's layout, typography, and composition rules but re-skin the color palette to match the client's actual brand. The prospect must instantly recognize their own brand identity in the design.
 `.trim();
 }
 
@@ -203,6 +206,37 @@ function urlContext(
     "Note: No Google Business Profile payload — infer industry from title, URL, and description.",
   ];
   return lines.filter(Boolean).join("\n");
+}
+
+/**
+ * Builds a mandatory branding block when brand colors were extracted from
+ * the business\u2019s existing website or logo. Injected into every prompt type.
+ */
+function buildBrandColorDirective(colors: BrandColorResult | null | undefined): string {
+  if (!colors?.primary) return "";
+  const lines = [
+    "## Brand Identity Colors (MANDATORY)",
+    "",
+    "We extracted these colors from the business\u2019s **existing website or logo**. You **MUST** use them as the foundation of your design \u2014 they are the client\u2019s actual brand identity.",
+    "",
+    `**Primary brand color:** ${colors.primary}`,
+  ];
+  if (colors.accent) {
+    lines.push(`**Secondary/accent color:** ${colors.accent}`);
+  }
+  if (colors.palette.length > 2) {
+    lines.push(`**Full extracted palette:** ${colors.palette.join(", ")}`);
+  }
+  lines.push("");
+  lines.push("**Rules:**");
+  lines.push("- Use the **primary brand color** as the dominant accent throughout \u2014 nav highlights, CTAs, headers/hero backgrounds, link colors, active states, and badge accents.");
+  lines.push("- Use the **secondary color** (if present) for supporting elements \u2014 hover states, secondary buttons, borders, chart accents, or gradient endpoints.");
+  lines.push("- Derive tints and shades from the brand palette for backgrounds, card tints, and subtle accents (e.g. 10% opacity of primary for card backgrounds).");
+  lines.push("- **Do NOT ignore these colors** and substitute a generic blue/purple/teal. The prospect must instantly recognize their own brand in the design.");
+  lines.push("- Neutrals (backgrounds, text, borders) should complement the brand palette \u2014 warm neutrals for warm brands, cool neutrals for cool brands.");
+  lines.push("- If the extracted palette is dark/saturated, you may lighten it for backgrounds but keep the hue family consistent.");
+  lines.push("");
+  return lines.join("\n");
 }
 
 /** Creative director layer for marketing sites — precedes technical Task/CSS contract in the prompt. */
@@ -414,10 +448,11 @@ export function buildStitchWebsitePrompt(payload: StitchProspectDesignPayload): 
   const situationBrief = hasExistingWebsite(payload)
     ? WEBSITE_REDESIGN_BRIEF
     : WEBSITE_NEW_PREMIUM_BRIEF;
+  const brandDirective = buildBrandColorDirective(payload.brandColors);
 
   return `${block}
 
-${situationBrief}
+${brandDirective}${situationBrief}
 
 ${differentiation}
 
@@ -551,6 +586,7 @@ Each prospect's web app must look **nothing like a generic admin template**. For
 - **Data must be realistic**: use plausible names, dates, service types, prices, and statuses specific to this business vertical — not "User 1", "Item A", or placeholder lorem.
 - **Empty states** (if shown) must be category-specific with relevant illustration or icon, not a generic "no data" box.
 - The sidebar, nav, and chrome must express the assigned lane — color, type, and density should feel intentional, not default.
+- **Brand color override:** If a "Brand Identity Colors" section appears above, those extracted hex values **override** the lane's color suggestions. Keep the lane's layout and composition rules but re-skin the color palette to match the client's actual brand identity.
 
 Design as if this were a **$50K custom SaaS product** — polished onboarding states, refined data visualization, intentional empty states, premium iconography, and a cohesive visual system throughout.
 
@@ -622,6 +658,7 @@ export function buildStitchWebAppPrompt(payload: StitchProspectDesignPayload): s
       : urlContext(payload.url, payload.pageTitle, payload.metaDescription, payload.colorVibe);
 
   const differentiation = buildWebAppAssignedDifferentiationBlock(payload);
+  const brandDirective = buildBrandColorDirective(payload.brandColors);
 
   const gmb =
     payload.kind === "place"
@@ -630,7 +667,7 @@ export function buildStitchWebAppPrompt(payload: StitchProspectDesignPayload): s
 
   return `${block}
 
-${differentiation}
+${brandDirective}${differentiation}
 
 ${WEBAPP_CREATIVE_DIRECTIVE}
 
@@ -748,6 +785,7 @@ Each prospect’s mobile app must look **nothing like a generic mobile template*
 - **Data must be realistic**: use plausible names, service types, times, and amounts specific to this business vertical — not “User 1”, “Service A”, or placeholder text.
 - The top bar, bottom tabs, and cards must express the assigned lane — color, type, and composition should feel intentional.
 - **Card design** must vary: use different card sizes, accent borders, or icon treatments across screens — not identical rectangles everywhere.
+- **Brand color override:** If a "Brand Identity Colors" section appears above, those extracted hex values **override** the lane's color suggestions. Keep the lane's layout and composition rules but re-skin the color palette to match the client's actual brand identity.
 
 Design as a **native-quality, App Store-featured concept** — fluid visual transitions (CSS only), polished card compositions, intentional micro-typography, and a cohesive color story.
 
@@ -815,6 +853,7 @@ export function buildStitchMobilePrompt(payload: StitchProspectDesignPayload): s
       : urlContext(payload.url, payload.pageTitle, payload.metaDescription, payload.colorVibe);
 
   const differentiation = buildMobileAssignedDifferentiationBlock(payload);
+  const brandDirective = buildBrandColorDirective(payload.brandColors);
 
   const gmb =
     payload.kind === "place"
@@ -823,7 +862,7 @@ export function buildStitchMobilePrompt(payload: StitchProspectDesignPayload): s
 
   return `${block}
 
-${differentiation}
+${brandDirective}${differentiation}
 
 ${MOBILE_CREATIVE_DIRECTIVE}
 
