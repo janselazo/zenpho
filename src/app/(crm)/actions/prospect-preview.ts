@@ -58,11 +58,14 @@ export async function sendProspectPreviewSmsAction(input: {
     return { ok: false as const, error: "Set a From phone number in Twilio integration settings." };
   }
 
-  const { data: row } = await auth.supabase
+  const { data: row, error: rowErr } = await auth.supabase
     .from("prospect_preview")
     .select("screenshot_url, screenshot_status, slug")
     .eq("id", input.previewId.trim())
     .maybeSingle();
+  if (rowErr) {
+    return { ok: false as const, error: "Could not load preview for SMS." };
+  }
 
   const previewUrl = prospectPreviewPageUrl(
     input.previewId.trim(),
@@ -145,11 +148,14 @@ export async function sendProspectPreviewEmailAction(input: {
     return { ok: false as const, error: auth.error ?? "Unauthorized" };
   }
 
-  const { data: prevRow } = await auth.supabase
+  const { data: prevRow, error: prevRowErr } = await auth.supabase
     .from("prospect_preview")
     .select("slug, screenshot_url, screenshot_status")
     .eq("id", input.previewId.trim())
     .maybeSingle();
+  if (prevRowErr) {
+    return { ok: false as const, error: "Could not load preview for email." };
+  }
 
   const previewUrl = prospectPreviewPageUrl(
     input.previewId.trim(),

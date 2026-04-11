@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  ArrowRight,
   Copy,
   ExternalLink,
   FileDown,
+  ImageDown,
   Instagram,
   LayoutDashboard,
   Loader2,
@@ -15,6 +17,9 @@ import {
   Video,
   Workflow,
 } from "lucide-react";
+import {
+  composeBeforeAfterImage,
+} from "@/lib/crm/prospect-before-after-image";
 import type { PlacesSearchPlace } from "@/lib/crm/places-types";
 import type { MarketIntelReport } from "@/lib/crm/prospect-intel-report";
 import type {
@@ -285,12 +290,42 @@ function StitchPreviewLinks({
       />
       {sessionVideoUrl ? (
         <video
-          className="max-h-48 w-full rounded-md border border-border object-contain dark:border-zinc-700"
+          className="max-h-64 w-full rounded-md border border-border object-contain dark:border-zinc-700"
           src={sessionVideoUrl}
           controls
           playsInline
           muted
+          autoPlay
+          loop
         />
+      ) : videoPreparing ? (
+        <div className="flex items-center gap-2 rounded-md border border-dashed border-blue-500/30 bg-blue-500/[0.04] px-3 py-2.5 dark:border-blue-400/20 dark:bg-blue-500/[0.06]">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600 dark:text-blue-400" aria-hidden />
+          <span className="text-[11px] font-medium text-blue-800 dark:text-blue-200">
+            Recording {PROSPECT_PREVIEW_VIDEO_DURATION_SEC}s homepage walkthrough&hellip;
+          </span>
+        </div>
+      ) : null}
+      {sessionVideoUrl ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              const blob = videoBlobRef.current;
+              if (!blob) return;
+              const safeId = result.screenId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 40) || "preview";
+              const fileBase = `stitch-preview-${target}-${safeId}`;
+              downloadBlob(blob, `${fileBase}-walkthrough.webm`);
+            }}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-purple-500/40 bg-purple-500/10 px-3 py-1.5 text-[11px] font-semibold text-purple-900 hover:bg-purple-500/[0.15] dark:border-purple-400/30 dark:bg-purple-500/15 dark:text-purple-100"
+          >
+            <Video className="h-3.5 w-3.5" aria-hidden />
+            Download homepage walkthrough
+          </button>
+          <span className="text-[9px] text-zinc-500 dark:text-zinc-400">
+            {PROSPECT_PREVIEW_VIDEO_DURATION_SEC}s WebM &mdash; attach to email or convert to MP4
+          </span>
+        </div>
       ) : null}
       <div className="flex flex-wrap gap-2">
         {result.hostedPreviewUrl ? (
@@ -341,36 +376,6 @@ function StitchPreviewLinks({
           )}
           Download image
         </button>
-        <button
-          type="button"
-          disabled={!canScrollVideo || videoPreparing || !sessionVideoUrl}
-          title={
-            !canScrollVideo
-              ? "Hosted preview is required — generate again or check preview hosting."
-              : videoPreparing
-                ? `Recording a ~${PROSPECT_PREVIEW_VIDEO_DURATION_SEC}s walkthrough in your browser…`
-                : sessionVideoUrl
-                  ? "Save the WebM that was prepared when the preview finished."
-                  : "Video not ready yet."
-          }
-          onClick={() => {
-            const blob = videoBlobRef.current;
-            if (!blob) return;
-            const safeId = result.screenId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 40) || "preview";
-            const fileBase = `stitch-preview-${target}-${safeId}`;
-            downloadBlob(blob, `${fileBase}-walkthrough.webm`);
-          }}
-          className="inline-flex items-center gap-1 text-xs font-medium text-text-secondary hover:text-text-primary disabled:opacity-50 dark:text-zinc-400"
-        >
-          {videoPreparing ? (
-            <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
-          ) : (
-            <Video className="h-3 w-3" aria-hidden />
-          )}
-          {videoPreparing
-            ? `Preparing video (~${PROSPECT_PREVIEW_VIDEO_DURATION_SEC}s)…`
-            : "Download video"}
-        </button>
         {videoError ? (
           <button
             type="button"
@@ -398,17 +403,129 @@ function StitchPreviewLinks({
       </div>
       {!canScrollVideo ? (
         <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
-          Download video needs a hosted preview (saved when Stitch generation succeeds).
+          Homepage walkthrough video needs a hosted preview (saved when Stitch generation succeeds).
         </p>
-      ) : (
-        <p className="text-[10px] leading-snug text-zinc-500 dark:text-zinc-400">
-          Quick ~{PROSPECT_PREVIEW_VIDEO_DURATION_SEC}s homepage preview (WebM) is prepared in your browser after the
-          screenshot — Download when ready. {PROSPECT_PREVIEW_VIDEO_EMAIL_HINT}
-        </p>
-      )}
+      ) : null}
       {videoError ? (
         <p className="text-[11px] text-red-600 dark:text-red-400">{videoError}</p>
       ) : null}
+    </div>
+  );
+}
+
+function BeforeAfterComparison({
+  existingWebsiteUrl,
+  stitchResult,
+  businessName,
+}: {
+  existingWebsiteUrl: string;
+  stitchResult: StitchOk;
+  businessName: string;
+}) {
+  const [beforeFailed, setBeforeFailed] = useState(false);
+  const [composing, setComposing] = useState(false);
+  const [composeError, setComposeError] = useState<string | null>(null);
+
+  const beforeSrc = `/api/prospecting/website-snapshot?url=${encodeURIComponent(existingWebsiteUrl)}`;
+
+  const downloadComparison = useCallback(async () => {
+    setComposing(true);
+    setComposeError(null);
+    try {
+      const blob = await composeBeforeAfterImage({
+        beforeImageUrl: beforeSrc,
+        afterImageUrl: stitchResult.imageUrl,
+        businessName,
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `before-after-${businessName.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 40)}.png`;
+      a.rel = "noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setComposeError(e instanceof Error ? e.message : "Could not compose comparison image.");
+    } finally {
+      setComposing(false);
+    }
+  }, [beforeSrc, stitchResult.imageUrl, businessName]);
+
+  return (
+    <div className="mt-3 rounded-lg border border-amber-500/25 bg-amber-500/[0.04] p-3 dark:border-amber-400/20 dark:bg-amber-500/[0.06]">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-900/80 dark:text-amber-200/90">
+        Before vs After
+      </p>
+      <div className="mt-2 grid grid-cols-2 gap-3">
+        <div>
+          <p className="mb-1.5 text-center text-[10px] font-semibold uppercase tracking-wider text-red-700/80 dark:text-red-300/80">
+            Current website
+          </p>
+          {beforeFailed ? (
+            <div className="flex h-28 items-center justify-center rounded-md border border-border bg-zinc-100 text-[10px] text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
+              Screenshot unavailable
+            </div>
+          ) : (
+            /* eslint-disable-next-line @next/next/no-img-element -- Microlink proxy screenshot */
+            <img
+              src={beforeSrc}
+              alt="Current website"
+              onError={() => setBeforeFailed(true)}
+              className="max-h-36 w-full rounded-md border border-border object-contain object-top dark:border-zinc-700"
+            />
+          )}
+          <p className="mt-1 truncate text-center text-[9px] text-zinc-500 dark:text-zinc-400">
+            {existingWebsiteUrl}
+          </p>
+        </div>
+        <div>
+          <p className="mb-1.5 text-center text-[10px] font-semibold uppercase tracking-wider text-emerald-700/80 dark:text-emerald-300/80">
+            Your new website
+          </p>
+          {/* eslint-disable-next-line @next/next/no-img-element -- Stitch CDN screenshot */}
+          <img
+            src={stitchResult.imageUrl}
+            alt="New website design"
+            className="max-h-36 w-full rounded-md border border-border object-contain object-top dark:border-zinc-700"
+          />
+          {stitchResult.hostedPreviewUrl ? (
+            <p className="mt-1 text-center">
+              <a
+                href={stitchResult.hostedPreviewUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-[9px] font-medium text-blue-700 hover:underline dark:text-blue-300"
+              >
+                Open live preview
+                <ArrowRight className="ml-0.5 inline h-2.5 w-2.5" aria-hidden />
+              </a>
+            </p>
+          ) : null}
+        </div>
+      </div>
+      <div className="mt-3 flex items-center gap-2">
+        <button
+          type="button"
+          disabled={composing || beforeFailed}
+          onClick={() => void downloadComparison()}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-[11px] font-semibold text-amber-900 disabled:opacity-50 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-100"
+        >
+          {composing ? (
+            <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+          ) : (
+            <ImageDown className="h-3 w-3" aria-hidden />
+          )}
+          {composing ? "Composing\u2026" : "Download comparison image"}
+        </button>
+        {composeError ? (
+          <span className="text-[10px] text-red-600 dark:text-red-400">{composeError}</span>
+        ) : null}
+      </div>
+      <p className="mt-1.5 text-[9px] leading-snug text-zinc-500 dark:text-zinc-400">
+        Side-by-side PNG you can attach to SMS, email, or DM to show the prospect the upgrade.
+      </p>
     </div>
   );
 }
@@ -436,6 +553,13 @@ export default function ProspectPreviewOutreachBlock({
   yourName = "",
   marketIntelReport = null,
 }: Props) {
+  const copyMsgTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (copyMsgTimerRef.current) clearTimeout(copyMsgTimerRef.current);
+    };
+  }, []);
+
   const [stitchWebBusy, setStitchWebBusy] = useState(false);
   const [stitchWebAppBusy, setStitchWebAppBusy] = useState(false);
   const [stitchMobileBusy, setStitchMobileBusy] = useState(false);
@@ -449,7 +573,14 @@ export default function ProspectPreviewOutreachBlock({
   const [stitchLinkedProjectConfigured, setStitchLinkedProjectConfigured] = useState(false);
   const [stitchConfigCheckFailed, setStitchConfigCheckFailed] = useState(false);
   const [stitchManualTarget, setStitchManualTarget] = useState<null | StitchTarget>(null);
-  const [copyMsg, setCopyMsg] = useState<string | null>(null);
+  const [copyMsg, setCopyMsgRaw] = useState<string | null>(null);
+  const flashCopyMsg = useCallback((msg: string | null, ms?: number) => {
+    if (copyMsgTimerRef.current) clearTimeout(copyMsgTimerRef.current);
+    setCopyMsgRaw(msg);
+    if (msg && ms) {
+      copyMsgTimerRef.current = setTimeout(() => setCopyMsgRaw(null), ms);
+    }
+  }, []);
   const [selectedOffer, setSelectedOffer] = useState<SelectedOffer>("website");
 
   const [smsTo, setSmsTo] = useState(contactPhone);
@@ -481,6 +612,12 @@ export default function ProspectPreviewOutreachBlock({
     }
     return "Business";
   }, [businessNameProp, stitchContext]);
+
+  const existingWebsiteUrl = useMemo(() => {
+    if (stitchContext?.kind === "place") return stitchContext.place.websiteUri?.trim() || null;
+    if (stitchContext?.kind === "url") return stitchContext.url?.trim() || null;
+    return null;
+  }, [stitchContext]);
 
   const activeShareTpl = shareTemplates[selectedOffer];
 
@@ -561,13 +698,11 @@ export default function ProspectPreviewOutreachBlock({
   const copyAndFlash = useCallback(async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      setCopyMsg("Copied to clipboard.");
-      setTimeout(() => setCopyMsg(null), 2500);
+      flashCopyMsg("Copied to clipboard.", 2500);
     } catch {
-      setCopyMsg("Could not copy (browser blocked).");
-      setTimeout(() => setCopyMsg(null), 3500);
+      flashCopyMsg("Could not copy (browser blocked).", 3500);
     }
-  }, []);
+  }, [flashCopyMsg]);
 
   const buildStitchPayload = useCallback(
     (target: StitchTarget): StitchProspectDesignPayload | null => {
@@ -608,15 +743,13 @@ export default function ProspectPreviewOutreachBlock({
           }
         }
         if (!data || typeof data !== "object") {
-          setCopyMsg("Could not build Stitch prompt.");
-          setTimeout(() => setCopyMsg(null), 4000);
+          flashCopyMsg("Could not build Stitch prompt.", 4000);
           return;
         }
         const o = data as Record<string, unknown>;
         if (o.ok !== true || typeof o.prompt !== "string") {
           const err = typeof o.error === "string" ? o.error : "Could not build Stitch prompt.";
-          setCopyMsg(err);
-          setTimeout(() => setCopyMsg(null), 4000);
+          flashCopyMsg(err, 4000);
           return;
         }
         const d = {
@@ -632,12 +765,10 @@ export default function ProspectPreviewOutreachBlock({
           .join("\n");
         const clip = [header, "", d.prompt].filter(Boolean).join("\n");
         await navigator.clipboard.writeText(clip);
-        setCopyMsg("Prompt copied. Paste it into Google Stitch in the new tab.");
-        setTimeout(() => setCopyMsg(null), 3500);
+        flashCopyMsg("Prompt copied. Paste it into Google Stitch in the new tab.", 3500);
         window.open(STITCH_HELP_URL, "_blank", "noopener,noreferrer");
       } catch {
-        setCopyMsg("Could not copy prompt (browser blocked or network error).");
-        setTimeout(() => setCopyMsg(null), 4000);
+        flashCopyMsg("Could not copy prompt (browser blocked or network error).", 4000);
       } finally {
         setStitchManualTarget(null);
       }
@@ -1039,6 +1170,13 @@ export default function ProspectPreviewOutreachBlock({
                   target="website"
                   copyAndFlash={copyAndFlash}
                 />
+                {existingWebsiteUrl ? (
+                  <BeforeAfterComparison
+                    existingWebsiteUrl={existingWebsiteUrl}
+                    stitchResult={stitchWebResult}
+                    businessName={resolvedBusinessName}
+                  />
+                ) : null}
               </div>
             ) : null}
           </div>

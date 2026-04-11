@@ -184,9 +184,12 @@ export async function enrichWebsiteContactsDeepAction(
   });
 
   const extra = discoverContactPageUrls(first.html, root, MAX_CONTACT_PAGES);
-  for (const u of extra) {
-    const pg = await fetchHtmlSafe(u);
-    if (!pg.ok) continue;
+  const extraResults = await Promise.allSettled(extra.map((u) => fetchHtmlSafe(u)));
+  for (let i = 0; i < extra.length; i++) {
+    const result = extraResults[i];
+    if (result.status !== "fulfilled" || !result.value.ok) continue;
+    const pg = result.value;
+    const u = extra[i];
     const hx = extractPublicContactHints(pg.html);
     socialUrls = mergeProspectSocialUrls(socialUrls, extractProspectSocialUrls(pg.html, u));
     byPage.push({

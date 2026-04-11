@@ -268,12 +268,6 @@ async function runGenerateProspectPreviewCore(
 
   const { id, slug: previewSlug } = inserted;
 
-  const { data: row } = await auth.supabase
-    .from("prospect_preview")
-    .select("screenshot_status, screenshot_url")
-    .eq("id", id)
-    .maybeSingle();
-
   const previewUrl = prospectPreviewPageUrl(id, previewSlug);
   const previewFrameUrl = prospectPreviewMicrolinkUrl(id);
   console.log("[prospectPreview] generate: success", { previewId: id, previewSlug });
@@ -288,8 +282,8 @@ async function runGenerateProspectPreviewCore(
     previewFrameUrl,
     previewSlug,
     businessName: input.businessName,
-    screenshotStatus: (row?.screenshot_status as string) ?? "pending",
-    screenshotUrl: (row?.screenshot_url as string | null) ?? null,
+    screenshotStatus: "pending",
+    screenshotUrl: null,
   };
 }
 

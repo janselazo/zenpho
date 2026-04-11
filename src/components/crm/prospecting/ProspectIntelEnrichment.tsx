@@ -101,6 +101,7 @@ export default function ProspectIntelEnrichment({
   const [apolloLoading, setApolloLoading] = useState(false);
   const [apolloError, setApolloError] = useState<string | null>(null);
   const [apolloEnrichLoading, setApolloEnrichLoading] = useState(false);
+  const apolloGenRef = useRef(0);
   const [apolloEnrichError, setApolloEnrichError] = useState<string | null>(null);
 
   const [hunterEmails, setHunterEmails] = useState<HunterEmailRow[] | null>(null);
@@ -211,10 +212,12 @@ export default function ProspectIntelEnrichment({
 
   const runApollo = useCallback(() => {
     if (!domain) return;
+    const gen = ++apolloGenRef.current;
     setApolloLoading(true);
     setApolloError(null);
     setApolloEnrichError(null);
     void apolloProspectPeopleAction(domain).then((r) => {
+      if (apolloGenRef.current !== gen) return;
       setApolloLoading(false);
       if (!r.ok) {
         setApolloError(r.error);
@@ -235,6 +238,7 @@ export default function ProspectIntelEnrichment({
       if (descriptors.length === 0) return;
       setApolloEnrichLoading(true);
       void apolloEnrichProspectPeopleAction(domain, descriptors).then((er) => {
+        if (apolloGenRef.current !== gen) return;
         setApolloEnrichLoading(false);
         if (!er.ok) {
           setApolloEnrichError(er.error);

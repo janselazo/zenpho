@@ -127,7 +127,7 @@ function ContactChannelStrip({
           Boolean(web),
           web ? (
             <a
-              href={web}
+              href={/^https?:\/\//i.test(web) ? web : `https://${web}`}
               target="_blank"
               rel="noreferrer"
               className={channelBtnClass}
@@ -147,7 +147,7 @@ function ContactChannelStrip({
           Boolean(email),
           email ? (
             <a
-              href={`mailto:${encodeURIComponent(email)}`}
+              href={`mailto:${email}`}
               className={channelBtnClass}
               title={email}
               aria-label={`Email ${email}`}

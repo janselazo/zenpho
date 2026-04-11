@@ -1,6 +1,7 @@
 /**
  * Client-only: short WebM of scrolling through the hosted prospect homepage preview
- * (iframe + html2canvas + MediaRecorder). Tuned for email: quick, sharp-ish, small file.
+ * (iframe + html2canvas + MediaRecorder). Tuned for prospect outreach: polished scroll
+ * with intro/outro holds, eased motion, and sharp capture.
  */
 
 export type PreviewDeviceTypeForVideo = "MOBILE" | "DESKTOP" | null;
@@ -10,35 +11,35 @@ const DESKTOP_VIEW_H = 720;
 const MOBILE_VIEW_W = 390;
 const MOBILE_VIEW_H = 720;
 
-/** Encode size — 720p landscape for desktop (good quality / reasonable weight for email). */
 const OUT_DESKTOP_W = 1280;
 const OUT_DESKTOP_H = 720;
-/** Narrow portrait — lighter than full 720p height, still readable on phones. */
 const OUT_MOBILE_W = 540;
 const OUT_MOBILE_H = 960;
 
-/** Quick homepage preview (not a long tour) — keeps attachment size down for email. */
-const OUTPUT_VIDEO_MS = 10_000;
+const OUTPUT_VIDEO_MS = 15_000;
 
-const CAPTURE_FRAMES_MIN = 22;
-const CAPTURE_FRAMES_MAX = 40;
+const CAPTURE_FRAMES_MIN = 35;
+const CAPTURE_FRAMES_MAX = 60;
 
-/** Canvas stream frame rate (content is mostly static holds per snap). */
-const TARGET_FPS = 12;
-const POST_LOAD_SETTLE_MS = 400;
+const TARGET_FPS = 20;
+const POST_LOAD_SETTLE_MS = 500;
 
-/** Target video bitrate (VP9/WebM) — browsers may approximate; keeps ~2–5 MB typical for ~10s 720p. */
-const VIDEO_BITRATE_DESKTOP_BPS = 2_000_000;
-const VIDEO_BITRATE_MOBILE_BPS = 1_200_000;
+const VIDEO_BITRATE_DESKTOP_BPS = 3_000_000;
+const VIDEO_BITRATE_MOBILE_BPS = 1_800_000;
 
-/** html2canvas resolution multiplier (1 = full sharpness at viewport; then scaled to OUT_* with high-quality smoothing). */
-const CAPTURE_SCALE = 1;
+/** html2canvas resolution multiplier — 1.5 for sharper text rendering on Stitch designs. */
+const CAPTURE_SCALE = 1.5;
 
-/** Public for UI (“~10s clip”, email-friendly). */
+/** Intro hold: show the hero for this many ms before scrolling begins. */
+const INTRO_HOLD_MS = 2_000;
+/** Outro hold: hold the final frame for this many ms after scrolling ends. */
+const OUTRO_HOLD_MS = 2_000;
+
+/** Public for UI. */
 export const PROSPECT_PREVIEW_VIDEO_DURATION_SEC = Math.round(OUTPUT_VIDEO_MS / 1000);
 
 export const PROSPECT_PREVIEW_VIDEO_EMAIL_HINT =
-  "Quick WebM preview (~10s, tuned for small file size — many inboxes cap attachments around 10–25 MB).";
+  `${PROSPECT_PREVIEW_VIDEO_DURATION_SEC}s homepage walkthrough (WebM) with intro/outro holds — attach to email or convert to MP4 for universal playback.`;
 
 type MimeChoice = { mimeType: string; videoBitsPerSecond: number };
 
@@ -66,6 +67,11 @@ function delay(ms: number): Promise<void> {
 
 async function nextPaint(): Promise<void> {
   await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+}
+
+/** Cosine ease-in-out: starts slow, accelerates, then decelerates. */
+function easeInOut(t: number): number {
+  return 0.5 - 0.5 * Math.cos(Math.PI * t);
 }
 
 /**
@@ -97,7 +103,7 @@ function getWalkthroughScrollRange(
 }
 
 function pickCaptureFrameCount(maxScroll: number): number {
-  const density = Math.ceil(maxScroll / 140);
+  const density = Math.ceil(maxScroll / 100);
   return Math.min(CAPTURE_FRAMES_MAX, Math.max(CAPTURE_FRAMES_MIN, density));
 }
 
@@ -107,7 +113,7 @@ export type RecordScrollVideoOptions = {
 };
 
 /**
- * Scroll-through WebM: short duration, 720p-style encode where possible, bitrate-capped for email.
+ * Scroll-through WebM with intro/outro holds and eased scroll motion.
  */
 export async function recordProspectPreviewScrollVideo(
   options: RecordScrollVideoOptions,
@@ -137,8 +143,12 @@ export async function recordProspectPreviewScrollVideo(
   iframe.srcdoc = options.html;
 
   await new Promise<void>((resolve, reject) => {
-    iframe.onload = () => resolve();
-    iframe.onerror = () => reject(new Error("Preview iframe failed to load."));
+    const loadTimeout = setTimeout(() => {
+      iframe.remove();
+      reject(new Error("Preview iframe timed out after 30 s."));
+    }, 30_000);
+    iframe.onload = () => { clearTimeout(loadTimeout); resolve(); };
+    iframe.onerror = () => { clearTimeout(loadTimeout); reject(new Error("Preview iframe failed to load.")); };
     document.body.appendChild(iframe);
   });
 
@@ -159,8 +169,9 @@ export async function recordProspectPreviewScrollVideo(
 
   try {
     for (let frame = 0; frame < totalFrames; frame++) {
-      const t = totalFrames <= 1 ? 0 : frame / (totalFrames - 1);
-      const scrollTop = scrollStart + maxScroll * t;
+      const rawT = totalFrames <= 1 ? 0 : frame / (totalFrames - 1);
+      const easedT = easeInOut(rawT);
+      const scrollTop = scrollStart + maxScroll * easedT;
       win.scrollTo(0, scrollTop);
       await nextPaint();
 
@@ -219,16 +230,30 @@ export async function recordProspectPreviewScrollVideo(
     };
   });
 
-  const frameIntervalMs = OUTPUT_VIDEO_MS / snaps.length;
+  const scrollDurationMs = OUTPUT_VIDEO_MS - INTRO_HOLD_MS - OUTRO_HOLD_MS;
+  const frameIntervalMs = scrollDurationMs / Math.max(snaps.length - 1, 1);
   recorder.start(200);
 
+  // Intro hold: show hero for a beat
+  const firstSnap = snaps[0];
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, outW, outH);
+  ctx.drawImage(firstSnap, 0, 0, outW, outH);
+  await delay(INTRO_HOLD_MS);
+
+  // Scroll through captured frames with eased timing
   for (let i = 0; i < snaps.length; i++) {
     const snap = snaps[i];
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, outW, outH);
     ctx.drawImage(snap, 0, 0, outW, outH);
-    await delay(frameIntervalMs);
+    if (i < snaps.length - 1) {
+      await delay(frameIntervalMs);
+    }
   }
+
+  // Outro hold: linger on the final view
+  await delay(OUTRO_HOLD_MS);
 
   recorder.stop();
   const blob = await blobPromise;

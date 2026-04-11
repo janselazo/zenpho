@@ -1026,6 +1026,7 @@ function ProspectsIntelligenceViewInner({
       } catch {
         /* private mode */
       }
+      sessionStorage.removeItem(SESSION_PLACE_REPORT_KEY);
       applyPlaceReport(place);
     } catch {
       sessionStorage.removeItem(SESSION_PLACE_REPORT_KEY);
