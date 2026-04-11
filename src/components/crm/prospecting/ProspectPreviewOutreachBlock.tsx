@@ -901,48 +901,76 @@ export default function ProspectPreviewOutreachBlock({
       if (!payload) return;
       setBusyForTarget(target, true);
       setErrorForTarget(target, null);
+
+      const MAX_ATTEMPTS = 2;
+      const TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes per attempt
+
       try {
-        const res = await fetch("/api/prospecting/stitch-design", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "same-origin",
-          body: JSON.stringify(payload),
-        });
-        const text = await res.text();
-        let parsed: unknown = null;
-        if (text) {
+        let lastError = "";
+        for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+          const ac = new AbortController();
+          const timer = setTimeout(() => ac.abort(), TIMEOUT_MS);
           try {
-            parsed = JSON.parse(text);
-          } catch {
-            parsed = null;
+            const res = await fetch("/api/prospecting/stitch-design", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "same-origin",
+              signal: ac.signal,
+              body: JSON.stringify(payload),
+            });
+            clearTimeout(timer);
+            const text = await res.text();
+            let parsed: unknown = null;
+            if (text) {
+              try {
+                parsed = JSON.parse(text);
+              } catch {
+                parsed = null;
+              }
+            }
+            const r =
+              parsed &&
+              typeof parsed === "object" &&
+              "ok" in parsed &&
+              typeof (parsed as { ok: unknown }).ok === "boolean"
+                ? (parsed as StitchProspectDesignResult)
+                : null;
+            if (!r) {
+              setErrorForTarget(target, "Invalid response from Stitch API.");
+              setResultForTarget(target, null);
+              return;
+            }
+            if (!r.ok) {
+              if ("code" in r && r.code === "STITCH_API_KEY_MISSING") {
+                setStitchApiConfigured(false);
+              }
+              setErrorForTarget(target, r.error);
+              setResultForTarget(target, null);
+              return;
+            }
+            setStitchApiConfigured(true);
+            setResultForTarget(target, r);
+            setSelectedOffer(target);
+            return;
+          } catch (e) {
+            clearTimeout(timer);
+            const isAbort = e instanceof DOMException && e.name === "AbortError";
+            const isNetworkFailure =
+              isAbort ||
+              (e instanceof TypeError && /failed to fetch|network/i.test(e.message));
+            lastError = isAbort
+              ? "Design generation timed out. The design may have been created in Google Stitch. Please try again."
+              : e instanceof Error
+                ? e.message
+                : "Stitch request failed.";
+            if (isNetworkFailure && attempt < MAX_ATTEMPTS - 1) {
+              await new Promise((r) => setTimeout(r, 3000));
+              continue;
+            }
+            break;
           }
         }
-        const r =
-          parsed &&
-          typeof parsed === "object" &&
-          "ok" in parsed &&
-          typeof (parsed as { ok: unknown }).ok === "boolean"
-            ? (parsed as StitchProspectDesignResult)
-            : null;
-        if (!r) {
-          setErrorForTarget(target, "Invalid response from Stitch API.");
-          setResultForTarget(target, null);
-          return;
-        }
-        if (!r.ok) {
-          if ("code" in r && r.code === "STITCH_API_KEY_MISSING") {
-            setStitchApiConfigured(false);
-          }
-          setErrorForTarget(target, r.error);
-          setResultForTarget(target, null);
-          return;
-        }
-        setStitchApiConfigured(true);
-        setResultForTarget(target, r);
-        setSelectedOffer(target);
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : "Stitch request failed.";
-        setErrorForTarget(target, msg);
+        setErrorForTarget(target, lastError);
         setResultForTarget(target, null);
       } finally {
         setBusyForTarget(target, false);
