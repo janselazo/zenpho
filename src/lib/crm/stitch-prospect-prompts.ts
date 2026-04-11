@@ -386,7 +386,7 @@ const WEBSITE_REFERENCE_PATTERNS = `
 
 Award-winning local-business websites share these premium patterns — adapt them to **this** business's industry and assigned lane:
 
-**Hero patterns:** Immersive full-viewport heroes with gradient or dark backgrounds, luminous display typography (64px+), floating trust badges, transparent nav overlays, dual CTAs with distinct hierarchy (primary filled/gradient + secondary ghost).
+**Hero patterns (CRITICAL — the hero makes or breaks the design):** Immersive full-viewport heroes (80vh+ minimum) with gradient or dark backgrounds that span edge-to-edge. Navigation is transparent and overlaid on the hero, never a separate opaque bar. Luminous display typography (64–100px+) as the visual centerpiece. Floating trust badges (rating, review count). Dual CTAs with distinct hierarchy (primary filled/gradient + secondary ghost). The hero alone must make the prospect think the website cost $50,000+. A thin dark bar with small text is NEVER acceptable as a hero.
 
 **Section rhythm:** Alternating background treatments per section (light → dark → tinted → light), generous 48–80px vertical spacing, decorative section dividers (gradient bands, angled clip-paths, or thin decorative rules).
 
@@ -484,7 +484,17 @@ Nav links: \`<a href="#home">\`, \`#services\`, \`#about\`, \`#gallery\`, \`#boo
 ## Structure checklist (required \`id\`s on \`<section class="page">\`)
 
 1. **#home** \u2014 One \`section#home.page\` with **nine mandatory homepage blocks** in order (scroll inside this section). Each block must be visually distinct and use **real copy** for this business. Obey **Layout safety** throughout. The homepage must feel **complete** \u2014 a visitor should be able to read reviews, see the address and hours, and contact the business **without leaving the homepage**.
-   - **(1) Principal banner / hero:** Full-width or split hero: business name, tagline, primary CTA **\u201cBook Now\u201d** (linking to \`#book\`) + secondary CTA (e.g. \u201cOur Services\u201d linking to \`#services\`); optional rating line from context. The **Book Now** button must be prominent and visually distinct (filled/solid style, contrasting color).
+   - **(1) Principal banner / hero — THE MOST IMPORTANT ELEMENT ON THE PAGE:**
+     This is the first thing the prospect sees — it must be **dramatic, immersive, and impossible to ignore**. Minimum requirements:
+     - **Height:** At least **80vh** (80% of viewport height). Never a thin strip or bar. The hero must dominate the entire screen above the fold.
+     - **Background:** Full-bleed **gradient**, **dark atmospheric wash**, or **bold brand-color treatment** spanning the entire hero area. Use multi-stop CSS gradients (2–3 colors), dark overlays with luminous text, or rich brand tones. **Never** a flat gray, plain white, or thin solid-color strip.
+     - **Headline:** Business name or main tagline in **display typography at 64–100px+**, bold or medium weight. This must be the largest, most visually striking text on the entire page. Use a characterful Google Font (Playfair Display, Cormorant, DM Serif Display, etc.) — not system defaults.
+     - **Subheadline/tagline:** A compelling one-liner below the headline (20–24px), conveying what makes this business special.
+     - **Dual CTAs:** Primary **“Book Now”** button (large, filled/gradient, linking to \`#book\`, min 48px tall, with hover glow or shadow) + secondary **“Our Services”** ghost/outline button (linking to \`#services\`). Both with generous padding.
+     - **Trust signal:** A floating rating badge or proof strip (e.g. “4.8 ★ from 127 reviews”, “Serving [City] since 2005”) positioned as an overlay or below the CTAs — social proof within the first viewport.
+     - **Visual richness:** Include at least ONE of: decorative CSS shapes/blobs, gradient mesh background, frosted glass panel (backdrop-filter), overlapping composition where content cards cross the hero boundary, abstract pattern, or luminous text glow (text-shadow with accent color). The hero must have **visual depth** — not just text on a flat color.
+     - **Navigation overlay:** The top nav must be **transparent or semi-transparent**, overlaying the hero background — not a separate opaque bar that pushes the hero down. Use \`position: fixed\` or \`sticky\` with glassmorphism or transparent styling. The hero gradient/image must extend behind the navigation area.
+     **ANTI-PATTERNS (never do these):** No thin 50–100px dark bars with small centered text. No plain solid-color rectangles with 16px body-sized font. No hero that looks like a navigation bar or a footer. No empty white space with a small heading. The hero must be an **immersive, full-screen visual experience** that makes the prospect stop scrolling and think “this looks expensive.”
    - **(2) Services:** **Services overview** \u2014 3\u20136 cards or categorized rows (industry-specific names, short blurbs or \u201cfrom $\u201d); \`<a href="#services">\` to the full Services page.
    - **(3) Gallery:** **Gallery** \u2014 bento or grid of 3\u20135 images (placeholders + captions OK); use grid + \`aspect-ratio\`, no text/image overlap.
    - **(4) Reviews:** **Customer reviews** \u2014 a **full reviews section** on the homepage (not just a teaser). Show the aggregate rating (large star + number, e.g. \u201c4.8 \u2605 from 127 reviews\u201d) prominently, then at least **three** styled review cards with author name/initial avatar, star rating, and a realistic review quote specific to this business type. This must look like a premium social-proof section that builds trust immediately. Optional \`<a href="#reviews">\` to see all reviews.
@@ -511,8 +521,13 @@ Nav links: \`<a href="#home">\`, \`#services\`, \`#about\`, \`#gallery\`, \`#boo
 7. **#location** — **Full-page location experience:** Large map or map-style placeholder at the top, complete address and hours in a polished two-column layout, phone with click-to-call, **Get directions** and **Book** CTA buttons, optional nearby landmarks or parking notes. This is the expanded version of the homepage location section — must feel more spacious and detailed.
 
 ## Navigation chrome
-- **Sticky or fixed top header** with all section anchor links; **Book Now** CTA button as \`<a href="#book">\` (always present, filled/accent style, right-aligned in nav).
-
+- **Transparent overlay nav:** The navigation must sit **on top of the hero** with a transparent or semi-transparent background (\`background: rgba(0,0,0,0.1)\` or \`backdrop-filter: blur(12px)\` glassmorphism). Do **not** create a separate opaque dark bar that pushes the hero down — the hero background must extend behind the nav.
+- **Sticky behavior:** \`position: fixed\` or \`sticky\` top. On scroll (if applicable), the nav can gain a solid/frosted background.
+- **Logo/brand mark** on the left (business name in a styled font or initial mark).
+- **Section links** centered or right-aligned: \`<a href="#home">\`, \`#services\`, \`#about\`, \`#gallery\`, \`#book\`, \`#reviews\`, \`#location\`. Links styled in light/white text if over a dark hero, with hover underline or accent color transition.
+- **Book Now CTA** as \`<a href="#book">\` — always visible, **filled/accent style** with contrasting background, right-aligned in nav. This is the primary conversion button — it must stand out from the other nav links.
+- **Active nav styling (no JS):** e.g. \`body:has(#services:target) nav a[href="#services"] { font-weight: 700; border-bottom: 2px solid currentColor; }\` (repeat per section).
+- **NEVER** make the nav a wide opaque dark band that looks bigger than the hero content below it. The nav must be lightweight and elegant — the hero dominates, not the navigation.
 ## Copy
 Each section must have **unique, substantive copy** tied to the business name, category, and location — **not** repeated placeholder paragraphs across sections.
 
