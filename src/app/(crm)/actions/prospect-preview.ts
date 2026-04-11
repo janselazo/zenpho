@@ -18,6 +18,12 @@ function normalizeHttpsImageUrl(raw: string | undefined): string | null {
   return t.startsWith("https://") ? t : null;
 }
 
+export type OutreachFileAttachment = {
+  name: string;
+  base64: string;
+  contentType: string;
+};
+
 export async function sendProspectPreviewSmsAction(input: {
   previewId: string;
   to: string;
@@ -27,6 +33,8 @@ export async function sendProspectPreviewSmsAction(input: {
   includeMmsImage?: boolean;
   /** Stitch CDN preview; used for MMS when hosted screenshot is not ready yet. */
   stitchPreviewImageUrl?: string;
+  /** Extra file attachments (base64). Uploaded to Supabase storage for Twilio MMS. */
+  extraAttachments?: OutreachFileAttachment[];
 }) {
   const auth = await requireAgencyStaff();
   if (auth.error || !auth.supabase) {
@@ -94,17 +102,39 @@ export async function sendProspectPreviewSmsAction(input: {
     }
   }
 
+  const allMediaUrls: string[] = [];
+  if (mediaUrl) allMediaUrls.push(mediaUrl);
+
+  if (input.extraAttachments?.length) {
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const admin = createAdminClient();
+    for (const att of input.extraAttachments.slice(0, 9)) {
+      try {
+        const buf = Buffer.from(att.base64, "base64");
+        const ext = att.name.split(".").pop() ?? "bin";
+        const path = `outreach/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        const { error: upErr } = await admin.storage
+          .from("prospect-attachments")
+          .upload(path, buf, { contentType: att.contentType, upsert: false });
+        if (upErr) continue;
+        const { data: { publicUrl } } = admin.storage.from("prospect-attachments").getPublicUrl(path);
+        if (publicUrl) allMediaUrls.push(publicUrl);
+      } catch { /* skip failed upload */ }
+    }
+  }
+
   try {
     await client.messages.create({
       from: creds.fromPhone,
       to: input.to.trim(),
       body,
-      ...(mediaUrl ? { mediaUrl: [mediaUrl] } : {}),
+      ...(allMediaUrls.length ? { mediaUrl: allMediaUrls.slice(0, 10) } : {}),
     });
     return { ok: true as const };
   } catch (e) {
+    const hasMedia = allMediaUrls.length > 0;
     const noMms =
-      mediaUrl &&
+      hasMedia &&
       e &&
       typeof e === "object" &&
       "message" in e &&
@@ -142,6 +172,8 @@ export async function sendProspectPreviewEmailAction(input: {
   yourName?: string;
   /** Stitch CDN preview; inlined when hosted screenshot is not ready yet. */
   stitchPreviewImageUrl?: string;
+  /** Extra file attachments (base64) sent as email attachments. */
+  extraAttachments?: OutreachFileAttachment[];
 }) {
   const auth = await requireAgencyStaff();
   if (auth.error || !auth.supabase) {
@@ -222,6 +254,18 @@ export async function sendProspectPreviewEmailAction(input: {
   }
   if (!previewImageHtml && stitchImg) {
     previewImageHtml = `<p><img src="${stitchImg}" alt="Concept preview" style="max-width:100%;height:auto;border-radius:8px;" /></p>`;
+  }
+
+  if (input.extraAttachments?.length) {
+    for (const att of input.extraAttachments) {
+      const buf = Buffer.from(att.base64, "base64");
+      attachments = attachments ?? [];
+      attachments.push({
+        filename: att.name,
+        content: buf,
+        contentType: att.contentType,
+      });
+    }
   }
 
   const htmlBody = `

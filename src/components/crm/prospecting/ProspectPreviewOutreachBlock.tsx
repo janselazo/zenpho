@@ -13,9 +13,12 @@ import {
   Mail,
   MessageSquare,
   Monitor,
+  Paperclip,
+  Plus,
   Smartphone,
   Video,
   Workflow,
+  X,
 } from "lucide-react";
 import {
   composeBeforeAfterImage,
@@ -57,6 +60,26 @@ export type ProspectStitchContext =
 type StitchOk = Extract<StitchProspectDesignResult, { ok: true }>;
 type StitchTarget = "website" | "webapp" | "mobile";
 type SelectedOffer = StitchTarget | "automations";
+
+type OutreachAttachment = {
+  id: string;
+  name: string;
+  blob: Blob;
+  source: "suggested" | "custom";
+};
+
+const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
+const ALLOWED_ATTACHMENT_TYPES = new Set([
+  "image/png", "image/jpeg", "image/gif", "image/webp",
+  "video/mp4", "video/webm",
+  "application/pdf",
+]);
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 const STITCH_HELP_URL = stitchWithGoogleAppHomeUrl();
 
@@ -198,11 +221,13 @@ function StitchPreviewLinks({
   label,
   target,
   copyAndFlash,
+  onVideoReady,
 }: {
   result: StitchOk;
   label: string;
   target: StitchTarget;
   copyAndFlash: (t: string) => void;
+  onVideoReady?: (blob: Blob) => void;
 }) {
   const [imageDownloadBusy, setImageDownloadBusy] = useState(false);
   const [videoPreparing, setVideoPreparing] = useState(false);
@@ -259,6 +284,7 @@ function StitchPreviewLinks({
         });
         if (cancelled) return;
         videoBlobRef.current = blob;
+        onVideoReady?.(blob);
         const vUrl = URL.createObjectURL(blob);
         sessionVideoUrlRef.current = vUrl;
         setSessionVideoUrl(vUrl);
@@ -642,8 +668,39 @@ export default function ProspectPreviewOutreachBlock({
   const [instagramTo, setInstagramTo] = useState(contactInstagram);
   const [shareTemplates, setShareTemplates] = useState(createInitialShareTemplates);
   const [attachPreviewImage, setAttachPreviewImage] = useState(true);
+  const [outreachAttachments, setOutreachAttachments] = useState<OutreachAttachment[]>([]);
+  const parentVideoBlobRef = useRef<Blob | null>(null);
+  const [hasVideoBlob, setHasVideoBlob] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [shareBusy, setShareBusy] = useState<null | "sms" | "email">(null);
   const [shareMsg, setShareMsg] = useState<string | null>(null);
+
+  const addOutreachAttachment = useCallback((att: OutreachAttachment) => {
+    setOutreachAttachments((prev) => {
+      if (prev.some((a) => a.id === att.id)) return prev;
+      return [...prev, att];
+    });
+  }, []);
+
+  const removeOutreachAttachment = useCallback((id: string) => {
+    setOutreachAttachments((prev) => prev.filter((a) => a.id !== id));
+  }, []);
+
+  const handleFilePick = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    for (const file of Array.from(files)) {
+      if (!ALLOWED_ATTACHMENT_TYPES.has(file.type)) continue;
+      if (file.size > MAX_ATTACHMENT_BYTES) continue;
+      addOutreachAttachment({
+        id: `file-${Date.now()}-${file.name}`,
+        name: file.name,
+        blob: file,
+        source: "custom",
+      });
+    }
+    e.target.value = "";
+  }, [addOutreachAttachment]);
 
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfMsg, setPdfMsg] = useState<string | null>(null);
@@ -953,6 +1010,18 @@ export default function ProspectPreviewOutreachBlock({
   const canCopyInstagramMessage =
     selectedOffer === "automations" || (Boolean(hostedPreviewIdForSelection) && Boolean(resolvedBusinessName));
 
+  const serializeAttachments = useCallback(async () => {
+    const out: { name: string; base64: string; contentType: string }[] = [];
+    for (const att of outreachAttachments) {
+      const buf = await att.blob.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let binary = "";
+      for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+      out.push({ name: att.name, base64: btoa(binary), contentType: att.blob.type || "application/octet-stream" });
+    }
+    return out;
+  }, [outreachAttachments]);
+
   const sendSms = useCallback(async () => {
     const id = hostedPreviewIdForSelection;
     if (!id || !smsTo.trim()) {
@@ -961,6 +1030,7 @@ export default function ProspectPreviewOutreachBlock({
     }
     setShareBusy("sms");
     setShareMsg(null);
+    const extraAttachments = await serializeAttachments();
     const res = await sendProspectPreviewSmsAction({
       previewId: id,
       to: smsTo.trim(),
@@ -969,6 +1039,7 @@ export default function ProspectPreviewOutreachBlock({
       yourName: yourName.trim() || undefined,
       includeMmsImage: attachPreviewImage,
       stitchPreviewImageUrl: stitchPreviewImageUrlForSelection,
+      extraAttachments: extraAttachments.length ? extraAttachments : undefined,
     });
     setShareBusy(null);
     if (res.ok) {
@@ -985,6 +1056,7 @@ export default function ProspectPreviewOutreachBlock({
     resolvedBusinessName,
     yourName,
     attachPreviewImage,
+    serializeAttachments,
   ]);
 
   const sendEmail = useCallback(async () => {
@@ -995,6 +1067,7 @@ export default function ProspectPreviewOutreachBlock({
     }
     setShareBusy("email");
     setShareMsg(null);
+    const extraAttachments = await serializeAttachments();
     const res = await sendProspectPreviewEmailAction({
       previewId: id,
       to: emailTo.trim(),
@@ -1003,6 +1076,7 @@ export default function ProspectPreviewOutreachBlock({
       businessName: resolvedBusinessName,
       yourName: yourName.trim() || undefined,
       stitchPreviewImageUrl: stitchPreviewImageUrlForSelection,
+      extraAttachments: extraAttachments.length ? extraAttachments : undefined,
     });
     setShareBusy(null);
     if (res.ok) {
@@ -1018,6 +1092,7 @@ export default function ProspectPreviewOutreachBlock({
     emailTo,
     resolvedBusinessName,
     yourName,
+    serializeAttachments,
   ]);
 
   const copyInstagramMessage = useCallback(async () => {
@@ -1223,6 +1298,7 @@ export default function ProspectPreviewOutreachBlock({
                   label="Stitch · website"
                   target="website"
                   copyAndFlash={copyAndFlash}
+                  onVideoReady={(b) => { parentVideoBlobRef.current = b; setHasVideoBlob(true); }}
                 />
                 {existingWebsiteUrl ? (
                   <BeforeAfterComparison
@@ -1295,6 +1371,7 @@ export default function ProspectPreviewOutreachBlock({
                   label="Stitch · web app"
                   target="webapp"
                   copyAndFlash={copyAndFlash}
+                  onVideoReady={(b) => { parentVideoBlobRef.current = b; setHasVideoBlob(true); }}
                 />
               </div>
             ) : null}
@@ -1359,6 +1436,7 @@ export default function ProspectPreviewOutreachBlock({
                   label="Stitch · mobile"
                   target="mobile"
                   copyAndFlash={copyAndFlash}
+                  onVideoReady={(b) => { parentVideoBlobRef.current = b; setHasVideoBlob(true); }}
                 />
               </div>
             ) : null}
@@ -1426,6 +1504,102 @@ export default function ProspectPreviewOutreachBlock({
               </>
             )}
           </p>
+
+          {/* Attachments bar — shared across SMS & email */}
+          <div className="mt-3 rounded-lg border border-border/60 bg-zinc-50/60 p-3 dark:border-zinc-700/50 dark:bg-zinc-800/40">
+            <div className="flex items-center gap-2">
+              <Paperclip className="h-3.5 w-3.5 text-text-secondary dark:text-zinc-400" aria-hidden />
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-text-secondary dark:text-zinc-400">
+                Attachments
+              </span>
+              <span className="text-[9px] text-zinc-400 dark:text-zinc-500">
+                Sent with both SMS (MMS) and email
+              </span>
+            </div>
+
+            {outreachAttachments.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {outreachAttachments.map((att) => (
+                  <span
+                    key={att.id}
+                    className="inline-flex items-center gap-1 rounded-full border border-border bg-white px-2 py-0.5 text-[10px] dark:border-zinc-700 dark:bg-zinc-800"
+                  >
+                    {att.blob.type.startsWith("video/") ? (
+                      <Video className="h-3 w-3 text-purple-500" aria-hidden />
+                    ) : att.blob.type.startsWith("image/") ? (
+                      <ImageDown className="h-3 w-3 text-emerald-600" aria-hidden />
+                    ) : (
+                      <FileDown className="h-3 w-3 text-sky-500" aria-hidden />
+                    )}
+                    <span className="max-w-[140px] truncate">{att.name}</span>
+                    <span className="text-zinc-400">({formatFileSize(att.blob.size)})</span>
+                    <button
+                      type="button"
+                      onClick={() => removeOutreachAttachment(att.id)}
+                      className="ml-0.5 rounded-full p-0.5 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                      aria-label={`Remove ${att.name}`}
+                    >
+                      <X className="h-2.5 w-2.5" aria-hidden />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {hasVideoBlob && parentVideoBlobRef.current && !outreachAttachments.some((a) => a.id === "walkthrough-video") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const blob = parentVideoBlobRef.current;
+                    if (!blob) return;
+                    addOutreachAttachment({ id: "walkthrough-video", name: "homepage-walkthrough.mp4", blob, source: "suggested" });
+                  }}
+                  className="inline-flex items-center gap-1 rounded-full border border-dashed border-purple-400/50 px-2 py-0.5 text-[10px] text-purple-700 hover:bg-purple-50 dark:border-purple-500/40 dark:text-purple-300 dark:hover:bg-purple-500/10"
+                >
+                  <Plus className="h-2.5 w-2.5" aria-hidden />
+                  <Video className="h-3 w-3" aria-hidden />
+                  Walkthrough video
+                </button>
+              )}
+              {existingWebsiteUrl && stitchWebResult && !outreachAttachments.some((a) => a.id === "before-after-image") && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const blob = await composeBeforeAfterImage({
+                        beforeImageUrl: `/api/prospecting/website-snapshot?url=${encodeURIComponent(existingWebsiteUrl)}`,
+                        afterImageUrl: stitchWebResult.imageUrl,
+                        businessName: resolvedBusinessName,
+                      });
+                      addOutreachAttachment({ id: "before-after-image", name: "before-after-comparison.png", blob, source: "suggested" });
+                    } catch { /* silent */ }
+                  }}
+                  className="inline-flex items-center gap-1 rounded-full border border-dashed border-amber-400/50 px-2 py-0.5 text-[10px] text-amber-700 hover:bg-amber-50 dark:border-amber-500/40 dark:text-amber-300 dark:hover:bg-amber-500/10"
+                >
+                  <Plus className="h-2.5 w-2.5" aria-hidden />
+                  <ImageDown className="h-3 w-3" aria-hidden />
+                  Before vs After image
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center gap-1 rounded-full border border-dashed border-zinc-400/50 px-2 py-0.5 text-[10px] text-text-secondary hover:bg-zinc-100 dark:border-zinc-600/50 dark:text-zinc-400 dark:hover:bg-zinc-800"
+              >
+                <Plus className="h-2.5 w-2.5" aria-hidden />
+                Add file
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*,video/mp4,video/webm,application/pdf"
+                onChange={handleFilePick}
+                className="hidden"
+              />
+            </div>
+          </div>
 
           <div className="mt-4 grid gap-6 lg:grid-cols-3 lg:items-stretch">
             <section
