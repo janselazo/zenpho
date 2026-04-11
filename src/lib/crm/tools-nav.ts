@@ -12,5 +12,5 @@ export type ToolsNavItem = {
 };
 
 export const toolsNav: ToolsNavItem[] = [
-  { href: "/tools", label: "Overview", icon: Wrench },
+  { href: "/tools", label: "Live", icon: Wrench },
 ];
