@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Wrench } from "lucide-react";
+import { Magnet, Wrench } from "lucide-react";
 
 /**
  * CRM sidebar entries under **Tools**. Each public free tool (calculator, checker, etc.)
@@ -12,5 +12,6 @@ export type ToolsNavItem = {
 };
 
 export const toolsNav: ToolsNavItem[] = [
-  { href: "/tools", label: "Live", icon: Wrench },
+  { href: "/tools", label: "Tools", icon: Wrench },
+  { href: "/lead-magnets", label: "Lead magnets", icon: Magnet },
 ];

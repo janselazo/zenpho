@@ -2117,6 +2117,8 @@ function AgendaTab({ date }: { date: Date }) {
     return carryForward(raw, today);
   });
   const [draft, setDraft] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
 
@@ -2155,6 +2157,26 @@ function AgendaTab({ date }: { date: Date }) {
       ...entriesByDate,
       [dateKey]: entries.filter((e) => e.id !== id),
     });
+  }
+
+  function startEdit(entry: AgendaEntry) {
+    setEditingId(entry.id);
+    setEditText(entry.text);
+  }
+
+  function commitEdit() {
+    if (editingId === null) return;
+    const trimmed = editText.trim();
+    if (trimmed) {
+      update({
+        ...entriesByDate,
+        [dateKey]: entries.map((e) =>
+          e.id === editingId ? { ...e, text: trimmed } : e
+        ),
+      });
+    }
+    setEditingId(null);
+    setEditText("");
   }
 
   function handleDragStart(idx: number) {
@@ -2280,17 +2302,42 @@ function AgendaTab({ date }: { date: Date }) {
                     )}
                   </button>
 
-                  {/* Text */}
-                  <span
-                    className={`flex-1 text-lg ${
-                      entry.done
-                        ? "text-amber-700/30 line-through"
-                        : "text-amber-900/80"
-                    }`}
-                    style={{ fontFamily: "var(--font-caveat), cursive" }}
+                  {/* Text / inline edit */}
+                  {editingId === entry.id ? (
+                    <input
+                      autoFocus
+                      type="text"
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") commitEdit();
+                        if (e.key === "Escape") { setEditingId(null); setEditText(""); }
+                      }}
+                      onBlur={commitEdit}
+                      className="flex-1 bg-transparent text-lg font-semibold text-amber-900/80 outline-none"
+                      style={{ fontFamily: "var(--font-caveat), cursive" }}
+                    />
+                  ) : (
+                    <span
+                      className={`flex-1 text-lg font-semibold ${
+                        entry.done
+                          ? "text-amber-700/30 line-through"
+                          : "text-amber-900/80"
+                      }`}
+                      style={{ fontFamily: "var(--font-caveat), cursive" }}
+                    >
+                      {entry.text}
+                    </span>
+                  )}
+
+                  {/* Edit */}
+                  <button
+                    type="button"
+                    onClick={() => startEdit(entry)}
+                    className="rounded p-1 text-amber-400/0 transition-colors group-hover:text-amber-400 group-hover:hover:text-amber-600"
                   >
-                    {entry.text}
-                  </span>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
 
                   {/* Delete */}
                   <button
