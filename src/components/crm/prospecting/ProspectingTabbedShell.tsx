@@ -11,16 +11,6 @@ export interface ProspectingShellTab {
   body: React.ReactNode;
 }
 
-function PlaceholderPanel({ text }: { text: string }) {
-  return (
-    <div className="rounded-2xl border border-dashed border-border bg-surface/30 px-6 py-10 text-center text-sm text-text-secondary dark:border-zinc-700 dark:bg-zinc-800/20 dark:text-zinc-400">
-      {text}
-    </div>
-  );
-}
-
-export { PlaceholderPanel };
-
 export default function ProspectingTabbedShell({
   title,
   description,
@@ -56,8 +46,7 @@ export default function ProspectingTabbedShell({
           id={`${t.id}-panel`}
           role="tabpanel"
           aria-labelledby={`${t.id}-tab`}
-          hidden={active !== t.id}
-          className="mt-6"
+          className={active !== t.id ? "hidden" : "mt-6"}
         >
           {t.body}
         </div>

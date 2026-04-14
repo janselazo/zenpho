@@ -13,7 +13,7 @@ export default function ContentMarketingImagesPage() {
   return (
     <ComingSoonModule
       title="Images"
-      description="Stock uploads, generated visuals, and on-brand templates for ads, social, and outbound—organized for content marketing workflows."
+      description="Stock uploads, generated visuals, and on-brand templates for ads, social, and outbound—organized for Creatives workflows."
       features={FEATURES}
       icon={ImageIcon}
     />

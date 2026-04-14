@@ -31,9 +31,8 @@ import ProspectPreviewOutreachBlock, {
 import { useRouter, useSearchParams } from "next/navigation";
 import { primaryPlaceTypeLabel } from "@/lib/crm/places-search-ui";
 import { Building2, ChevronLeft, ChevronRight, Rocket } from "lucide-react";
-import ProspectingTabbedShell, {
-  PlaceholderPanel,
-} from "@/components/crm/prospecting/ProspectingTabbedShell";
+import ProspectingPendingContent from "@/components/crm/prospecting/ProspectingPendingContent";
+import ProspectingTabbedShell from "@/components/crm/prospecting/ProspectingTabbedShell";
 import PlacesBusinessAutocomplete from "@/components/crm/prospecting/PlacesBusinessAutocomplete";
 import PlacesCategoryAutocomplete from "@/components/crm/prospecting/PlacesCategoryAutocomplete";
 import PlacesSearchResultsList from "@/components/crm/prospecting/PlacesSearchResultsList";
@@ -48,6 +47,12 @@ import { EMPTY_PROSPECT_SOCIAL_URLS } from "@/lib/crm/prospect-enrichment-types"
 import type { SocialEnrichmentResult } from "@/lib/crm/social-profile-scrape";
 
 type SocialEnrichmentOk = Extract<SocialEnrichmentResult, { ok: true }>;
+
+const TECH_STARTUPS_PENDING_FEATURES = [
+  "Funding, stack, and hiring signals for SaaS and product teams",
+  "Saved lists and outreach hooks tied to Playbook",
+  "Integrations with startup data providers — wiring in a later phase",
+];
 
 const cardClass =
   "rounded-2xl border border-border bg-white p-5 shadow-sm dark:border-zinc-800/70 dark:bg-zinc-900/60 dark:shadow-none";
@@ -1594,7 +1599,15 @@ function ProspectsIntelligenceViewInner({
             id: "tech-startups",
             label: "Tech Startups",
             icon: Rocket,
-            body: <PlaceholderPanel text="Coming soon." />,
+            body: (
+              <ProspectingPendingContent
+                title="Tech Startups"
+                description="Research and lists for funded product companies — discovery, signals, and tailored outreach will land here in a later phase."
+                features={TECH_STARTUPS_PENDING_FEATURES}
+                icon={Rocket}
+                titleLevel="tab"
+              />
+            ),
           },
           {
             id: "local-business",

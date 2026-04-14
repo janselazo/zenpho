@@ -59,11 +59,11 @@ export const PROSPECTING_SECTIONS: ProspectingSection[] = [
   },
   {
     slug: "creatives",
-    label: "Content marketing",
+    label: "Creatives",
     href: "/prospecting/creatives",
     icon: Palette,
     description:
-      "Images and videos for content marketing—libraries, templates, and brand-consistent assets for outbound, social, and paid.",
+      "Images and videos for your GTM—libraries, templates, and brand-consistent assets for outbound, social, and paid.",
     soon: true,
     comingSoonFeatures: [
       "Image and video workspaces with brand kits tied to your offer and ICP",
@@ -94,6 +94,13 @@ export const PROSPECTING_SECTIONS: ProspectingSection[] = [
     icon: Share2,
     description:
       "Plan and publish B2B content to grow trust and inbound leads from social channels.",
+    soon: true,
+    comingSoonFeatures: [
+      "Plan and schedule posts across LinkedIn, X, and Meta from one workspace",
+      "Brand voice presets and approval flows before anything goes live",
+      "Engagement signals tied to Leads and Playbook touches",
+      "OAuth connections — connect accounts in Settings when integrations ship",
+    ],
   },
   {
     slug: "campaigns",
@@ -102,6 +109,13 @@ export const PROSPECTING_SECTIONS: ProspectingSection[] = [
     icon: Mails,
     description:
       "Email marketing and one-to-one outreach — templates, sends, and replies tied to leads and deals.",
+    soon: true,
+    comingSoonFeatures: [
+      "Newsletters, nurture sequences, and one-to-one outreach templates",
+      "Sends and replies connected to Leads and Deals",
+      "Deliverability and domain health in one place",
+      "Hooks into Playbook for one-click attach to sequences",
+    ],
   },
   {
     slug: "paid-ads",
@@ -110,6 +124,13 @@ export const PROSPECTING_SECTIONS: ProspectingSection[] = [
     icon: Megaphone,
     description:
       "LinkedIn, Meta, and search campaigns — budgets, creatives, and conversion tracking for your pipeline.",
+    soon: true,
+    comingSoonFeatures: [
+      "LinkedIn, Meta, and search campaigns in one view",
+      "Budgets, creatives, and conversion tracking for your pipeline",
+      "Attribution to Leads and Deals",
+      "Ad platform integrations — wiring in a later phase",
+    ],
   },
   {
     slug: "seo",
@@ -118,6 +139,13 @@ export const PROSPECTING_SECTIONS: ProspectingSection[] = [
     icon: Search,
     description:
       "Keywords, content gaps, and organic opportunities for your agency offer.",
+    soon: true,
+    comingSoonFeatures: [
+      "Target keywords, intent, and ranking snapshots for your pages",
+      "Content calendar tied to clusters, briefs, and publish status",
+      "Blog and newsletter themes tied to organic strategy",
+      "Core Web Vitals, indexation, and crawl monitoring — integrations TBD",
+    ],
   },
   {
     slug: "referrals",
@@ -134,6 +162,13 @@ export const PROSPECTING_SECTIONS: ProspectingSection[] = [
     icon: Handshake,
     description:
       "Track referral partners, co-marketing motions, and shared pipeline.",
+    soon: true,
+    comingSoonFeatures: [
+      "Directory of agencies, tech partners, and referrers with status and owner",
+      "Co-marketing motions, rev-share agreements, and joint GTM plays",
+      "Opportunities sourced or influenced by partners, linked to Deals",
+      "Partner pipeline and shared reporting",
+    ],
   },
   {
     slug: "marketplaces",

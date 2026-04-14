@@ -13,7 +13,7 @@ export default function ContentMarketingVideosPage() {
   return (
     <ComingSoonModule
       title="Videos"
-      description="Plan and store video creatives for content marketing—hooks, bumpers, and exports tuned for each channel."
+      description="Plan and store video assets for campaigns—hooks, bumpers, and exports tuned for each channel."
       features={FEATURES}
       icon={Video}
     />
