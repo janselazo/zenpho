@@ -2,7 +2,6 @@
 
 import {
   Mails,
-  Megaphone,
   Users,
   Share2,
   Briefcase,
@@ -11,6 +10,8 @@ import {
   Gauge,
   Newspaper,
   Mail,
+  Globe2,
+  MapPin,
 } from "lucide-react";
 import {
   getProspectingSection,
@@ -45,7 +46,29 @@ export default function ProspectingSectionClient({
   }
 
   if (slug === "networking") {
-    return <NetworkingEventsView />;
+    return (
+      <ProspectingTabbedShell
+        title="Networking"
+        description={section.description}
+        ariaLabel="Networking"
+        tabs={[
+          {
+            id: "offline",
+            label: "Offline",
+            icon: MapPin,
+            body: <NetworkingEventsView embedded />,
+          },
+          {
+            id: "online",
+            label: "Online",
+            icon: Globe2,
+            body: (
+              <PlaceholderPanel text="Virtual events, communities, and digital networking — discovery and saved lists will appear here in a later phase." />
+            ),
+          },
+        ]}
+      />
+    );
   }
 
   if (slug === "social-media") {
@@ -79,9 +102,9 @@ export default function ProspectingSectionClient({
   if (slug === "campaigns") {
     return (
       <ProspectingTabbedShell
-        title="Campaigns"
+        title="Cold outreach"
         description={section.description}
-        ariaLabel="Campaigns"
+        ariaLabel="Cold outreach"
         tabs={[
           {
             id: "email-marketing",
@@ -91,16 +114,24 @@ export default function ProspectingSectionClient({
               <PlaceholderPanel text="Newsletters, nurture sequences, and one-to-one outreach — templates, sends, and replies will connect to Leads and Deals in a later phase." />
             ),
           },
-          {
-            id: "paid-ads",
-            label: "Paid Ads",
-            icon: Megaphone,
-            body: (
-              <PlaceholderPanel text="LinkedIn, Meta, and search campaigns — budgets, creatives, and conversion tracking will live here once integrations are wired." />
-            ),
-          },
         ]}
       />
+    );
+  }
+
+  if (slug === "paid-ads") {
+    return (
+      <div>
+        <h1 className="heading-display text-2xl font-bold text-text-primary dark:text-zinc-100">
+          Paid Ads
+        </h1>
+        <p className="mt-1 max-w-2xl text-sm text-text-secondary dark:text-zinc-400">
+          {section.description}
+        </p>
+        <div className="mt-8">
+          <PlaceholderPanel text="LinkedIn, Meta, and search campaigns — budgets, creatives, and conversion tracking will live here once integrations are wired." />
+        </div>
+      </div>
     );
   }
 

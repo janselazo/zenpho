@@ -76,7 +76,12 @@ const PRESETS: { id: string; label: string; days: number }[] = [
   { id: "90", label: "90 days", days: 90 },
 ];
 
-export default function NetworkingEventsView() {
+export default function NetworkingEventsView({
+  embedded = false,
+}: {
+  /** When true, omit the page-level "Networking" H1 (parent provides the section title). */
+  embedded?: boolean;
+} = {}) {
   const [city, setCity] = useState("Miami");
   const [keyword, setKeyword] = useState("networking");
   const [range, setRange] = useState<DateRange | undefined>(() =>
@@ -176,9 +181,15 @@ export default function NetworkingEventsView() {
             <CalendarDays className="h-5 w-5" aria-hidden />
           </span>
           <div>
-            <h1 className="heading-display text-2xl font-bold tracking-tight text-text-primary dark:text-zinc-100">
-              Networking
-            </h1>
+            {embedded ? (
+              <h2 className="heading-display text-xl font-bold tracking-tight text-text-primary dark:text-zinc-100">
+                Offline
+              </h2>
+            ) : (
+              <h1 className="heading-display text-2xl font-bold tracking-tight text-text-primary dark:text-zinc-100">
+                Networking
+              </h1>
+            )}
             <p className="mt-0.5 max-w-2xl text-sm leading-relaxed text-text-secondary dark:text-zinc-400">
               Find events in any city for your trip or outreach. Results come
               from Ticketmaster&apos;s catalog (often ticketed shows and larger

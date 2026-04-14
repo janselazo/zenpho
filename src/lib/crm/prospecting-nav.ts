@@ -4,6 +4,7 @@ import {
   Share2,
   BookOpen,
   Megaphone,
+  Mails,
   Store,
   LayoutTemplate,
   Handshake,
@@ -21,6 +22,7 @@ export type ProspectingSectionSlug =
   | "landing-pages"
   | "social-media"
   | "campaigns"
+  | "paid-ads"
   | "marketplaces"
   | "partnerships"
   | "referrals"
@@ -95,11 +97,43 @@ export const PROSPECTING_SECTIONS: ProspectingSection[] = [
   },
   {
     slug: "campaigns",
-    label: "Campaigns",
+    label: "Cold outreach",
     href: "/prospecting/campaigns",
+    icon: Mails,
+    description:
+      "Email marketing and one-to-one outreach — templates, sends, and replies tied to leads and deals.",
+  },
+  {
+    slug: "paid-ads",
+    label: "Paid Ads",
+    href: "/prospecting/paid-ads",
     icon: Megaphone,
     description:
-      "Coordinate multi-touch campaigns across email, ads, and events for your pipeline.",
+      "LinkedIn, Meta, and search campaigns — budgets, creatives, and conversion tracking for your pipeline.",
+  },
+  {
+    slug: "seo",
+    label: "SEO",
+    href: "/prospecting/seo",
+    icon: Search,
+    description:
+      "Keywords, content gaps, and organic opportunities for your agency offer.",
+  },
+  {
+    slug: "referrals",
+    label: "Referrals",
+    href: "/referrals",
+    icon: Gift,
+    description:
+      "Public review links, referral touchpoints, and social proof for leads and partners.",
+  },
+  {
+    slug: "partnerships",
+    label: "Partnerships",
+    href: "/prospecting/partnerships",
+    icon: Handshake,
+    description:
+      "Track referral partners, co-marketing motions, and shared pipeline.",
   },
   {
     slug: "marketplaces",
@@ -117,36 +151,12 @@ export const PROSPECTING_SECTIONS: ProspectingSection[] = [
     ],
   },
   {
-    slug: "partnerships",
-    label: "Partnerships",
-    href: "/prospecting/partnerships",
-    icon: Handshake,
-    description:
-      "Track referral partners, co-marketing motions, and shared pipeline.",
-  },
-  {
     slug: "networking",
     label: "Networking",
     href: "/prospecting/networking",
     icon: Network,
     description:
       "Find networking-style events in a city by date range—venues, organizers, and links (Ticketmaster catalog).",
-  },
-  {
-    slug: "referrals",
-    label: "Referrals",
-    href: "/referrals",
-    icon: Gift,
-    description:
-      "Public review links, referral touchpoints, and social proof for leads and partners.",
-  },
-  {
-    slug: "seo",
-    label: "SEO",
-    href: "/prospecting/seo",
-    icon: Search,
-    description:
-      "Keywords, content gaps, and organic opportunities for your agency offer.",
   },
 ];
 
