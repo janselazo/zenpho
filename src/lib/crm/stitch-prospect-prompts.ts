@@ -82,7 +82,7 @@ function buildWebsiteAssignedDifferentiationBlock(
   payload: StitchProspectDesignPayload
 ): string {
   const seed = prospectUniquenessSeed(payload);
-  const lane =
+  let lane: string =
     WEBSITE_ASSIGNED_AESTHETIC_LANES[
       stablePickIndex(seed, "lane", WEBSITE_ASSIGNED_AESTHETIC_LANES.length)
     ];
@@ -99,6 +99,14 @@ function buildWebsiteAssignedDifferentiationBlock(
       stablePickIndex(seed, "hero", WEBSITE_ASSIGNED_HERO_STRUCTURES.length)
     ];
 
+  const hasBrandColors = !!payload.brandColors?.primary;
+
+  // Strip example hex codes from the lane when real brand colors exist,
+  // so the model doesn't treat lane hex suggestions as binding.
+  if (hasBrandColors) {
+    lane = lane.replace(/#[0-9a-fA-F]{3,8}\b/g, "").replace(/\(\s*\)/g, "").replace(/\s{2,}/g, " ");
+  }
+
   return `
 ## Assigned differentiation (mandatory — follow exactly)
 
@@ -108,7 +116,9 @@ Each prospect must look **nothing like a default Stitch/Gemini marketing page**.
 2. **Layout motif:** ${layout}
 3. **Typography direction:** ${typeDir} — load distinct faces via \`<link>\` to Google Fonts (or similar); **do not** use Inter, Roboto, or Arial as the only fonts.
 4. **Hero structure:** ${hero}
-
+${hasBrandColors
+    ? `\n**CRITICAL — Brand color override (HIGHEST PRIORITY):** A "Brand Identity Colors" section appears earlier in this prompt with the prospect's **real hex values** extracted from their actual website. Those colors are the client's **real brand identity** — customers already associate those colors with this business. You **MUST** use those exact brand hex values as the primary and accent colors throughout the entire design. The aesthetic lane above defines the **mood, composition, typography, and design philosophy** only — **all specific color choices MUST come from the "Brand Identity Colors" section**, not from the lane description. Derive tints, shades, and gradients from the real brand palette. The prospect must instantly see their own brand when viewing the design.\n`
+    : `\n**Brand color override:** If a "Brand Identity Colors" section appears above, those extracted hex values **override** the lane's color suggestions. Keep the lane's layout, typography, and composition rules but re-skin the color palette to match the client's actual brand. The prospect must instantly recognize their own brand identity in the design.\n`}
 **Anti-sameness (hard rules):**
 - Do **not** produce the same hero → three equal cards → testimonial strip → footer pattern you would for an unrelated business.
 - Do **not** default to purple–blue gradients, generic “three feature icons,” or interchangeable SaaS marketing tropes unless the aesthetic lane explicitly demands neon/tech.
@@ -118,8 +128,6 @@ Each prospect must look **nothing like a default Stitch/Gemini marketing page**.
 **Lane + layout execution:** The **Layout motif**, **Hero structure**, and every band inside \`#home\` must express the assigned aesthetic lane — but **never** at the cost of **Layout safety** (see technical brief): headlines and paragraphs stay readable. Decorative overlap or collage is allowed **only** when the lane calls for it **and** copy sits on a scrim or dedicated panel, not under unmasked photos.
 
 If **Visual direction** appears in the context block, harmonize with it; otherwise obey the lane above without drifting to a bland default.
-
-**Brand color override:** If a "Brand Identity Colors" section appears above, those extracted hex values **override** the lane's color suggestions. Keep the lane's layout, typography, and composition rules but re-skin the color palette to match the client's actual brand. The prospect must instantly recognize their own brand identity in the design.
 `.trim();
 }
 
@@ -603,7 +611,7 @@ function buildWebAppAssignedDifferentiationBlock(
   payload: StitchProspectDesignPayload
 ): string {
   const seed = prospectUniquenessSeed(payload);
-  const lane =
+  let lane: string =
     WEBAPP_ASSIGNED_AESTHETIC_LANES[
       stablePickIndex(seed, "webapp-lane", WEBAPP_ASSIGNED_AESTHETIC_LANES.length)
     ];
@@ -615,6 +623,11 @@ function buildWebAppAssignedDifferentiationBlock(
     WEBAPP_ASSIGNED_TYPE_DIRECTIONS[
       stablePickIndex(seed, "webapp-type", WEBAPP_ASSIGNED_TYPE_DIRECTIONS.length)
     ];
+
+  const hasBrandColors = !!payload.brandColors?.primary;
+  if (hasBrandColors) {
+    lane = lane.replace(/#[0-9a-fA-F]{3,8}\b/g, "").replace(/\(\s*\)/g, "").replace(/\s{2,}/g, " ");
+  }
 
   return `
 ## Assigned differentiation (mandatory — follow exactly)
@@ -631,7 +644,9 @@ Each prospect's web app must look **nothing like a generic admin template**. For
 - **Data must be realistic**: use plausible names, dates, service types, prices, and statuses specific to this business vertical — not "User 1", "Item A", or placeholder lorem.
 - **Empty states** (if shown) must be category-specific with relevant illustration or icon, not a generic "no data" box.
 - The sidebar, nav, and chrome must express the assigned lane — color, type, and density should feel intentional, not default.
-- **Brand color override (CRITICAL):** If a "Brand Identity Colors" section appears above, those extracted hex values **completely override** the lane's color suggestions. Use the prospect's primary color for the sidebar active indicator, KPI card accent backgrounds, chart bar fills, gradient bands, CTA buttons, link colors, and status pill highlights. Use the secondary/accent color for hover states, chart secondary series, and border accents. Keep the lane's **layout, typography, and composition rules** but re-skin **every color surface** to match the client's actual brand identity. The prospect must look at this and instantly recognize their own brand — not a generic SaaS template.
+${hasBrandColors
+    ? `- **CRITICAL — Brand color override (HIGHEST PRIORITY):** The "Brand Identity Colors" section above contains the prospect's **real hex values** from their actual website. You **MUST** use those exact colors as primary and accent throughout — sidebar active indicator, KPI card accents, chart fills, gradient bands, CTAs, links, and status pills. The lane's hex examples are generic mood suggestions only — **replace them all** with the real brand palette. The prospect must instantly recognize their own brand.`
+    : `- **Brand color override (CRITICAL):** If a "Brand Identity Colors" section appears above, those extracted hex values **completely override** the lane's color suggestions. Use the prospect's primary color for the sidebar active indicator, KPI card accent backgrounds, chart bar fills, gradient bands, CTA buttons, link colors, and status pill highlights. Use the secondary/accent color for hover states, chart secondary series, and border accents. Keep the lane's **layout, typography, and composition rules** but re-skin **every color surface** to match the client's actual brand identity. The prospect must look at this and instantly recognize their own brand — not a generic SaaS template.`}
 
 Design as if this were a **$50K custom SaaS product** — polished onboarding states, refined data visualization, intentional empty states, premium iconography, and a cohesive visual system throughout.
 
@@ -841,7 +856,7 @@ function buildMobileAssignedDifferentiationBlock(
   payload: StitchProspectDesignPayload
 ): string {
   const seed = prospectUniquenessSeed(payload);
-  const lane =
+  let lane: string =
     MOBILE_ASSIGNED_AESTHETIC_LANES[
       stablePickIndex(seed, "mobile-lane", MOBILE_ASSIGNED_AESTHETIC_LANES.length)
     ];
@@ -853,6 +868,11 @@ function buildMobileAssignedDifferentiationBlock(
     MOBILE_ASSIGNED_TYPE_DIRECTIONS[
       stablePickIndex(seed, "mobile-type", MOBILE_ASSIGNED_TYPE_DIRECTIONS.length)
     ];
+
+  const hasBrandColors = !!payload.brandColors?.primary;
+  if (hasBrandColors) {
+    lane = lane.replace(/#[0-9a-fA-F]{3,8}\b/g, "").replace(/\(\s*\)/g, "").replace(/\s{2,}/g, " ");
+  }
 
   return `
 ## Assigned differentiation (mandatory — follow exactly)
@@ -869,7 +889,9 @@ Each prospect’s mobile app must look **nothing like a generic mobile template*
 - **Data must be realistic**: use plausible names, service types, times, and amounts specific to this business vertical — not “User 1”, “Service A”, or placeholder text.
 - The top bar, bottom tabs, and cards must express the assigned lane — color, type, and composition should feel intentional.
 - **Card design** must vary: use different card sizes, accent borders, or icon treatments across screens — not identical rectangles everywhere.
-- **Brand color override:** If a "Brand Identity Colors" section appears above, those extracted hex values **override** the lane's color suggestions. Keep the lane's layout and composition rules but re-skin the color palette to match the client's actual brand identity.
+${hasBrandColors
+    ? `- **CRITICAL — Brand color override (HIGHEST PRIORITY):** The "Brand Identity Colors" section above contains the prospect's **real hex values** from their actual website. You **MUST** use those exact colors throughout — tab bar active indicators, header gradients, card accents, CTAs, and status badges. The lane's hex examples are generic mood suggestions only — **replace them all** with the real brand palette. The prospect must instantly recognize their own brand.`
+    : `- **Brand color override:** If a "Brand Identity Colors" section appears above, those extracted hex values **override** the lane's color suggestions. Keep the lane's layout and composition rules but re-skin the color palette to match the client's actual brand identity.`}
 
 Design as a **native-quality, App Store-featured concept** — fluid visual transitions (CSS only), polished card compositions, intentional micro-typography, and a cohesive color story.
 

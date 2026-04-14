@@ -92,6 +92,17 @@ function extractAllColors(html: string): RGBTuple[] {
   return raw;
 }
 
+/** Parse a color value (hex, rgb, hsl) into an RGBTuple. Returns null if unrecognised. */
+function parseColorValue(val: string): RGBTuple | null {
+  const hex = hexToRgb(val);
+  if (hex) return hex;
+  const rgbMatch = val.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+  if (rgbMatch) return [parseInt(rgbMatch[1]), parseInt(rgbMatch[2]), parseInt(rgbMatch[3])];
+  const hslMatch = val.match(/hsla?\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%/);
+  if (hslMatch) return hslToRgb(parseInt(hslMatch[1]), parseInt(hslMatch[2]), parseInt(hslMatch[3]));
+  return null;
+}
+
 /** Extracts colors from high-signal areas: CSS vars, meta tags, nav/header styles, brand classes. */
 function extractPriorityColors(html: string): RGBTuple[] {
   const priority: RGBTuple[] = [];
@@ -99,23 +110,22 @@ function extractPriorityColors(html: string): RGBTuple[] {
   const themeColorRe = /<meta\s+name=["']theme-color["']\s+content=["']([^"']+)["']/gi;
   let m: RegExpExecArray | null;
   while ((m = themeColorRe.exec(html)) !== null) {
-    const rgb = hexToRgb(m[1].trim());
+    const rgb = parseColorValue(m[1].trim());
     if (rgb) priority.push(rgb);
   }
 
   const msColorRe = /<meta\s+name=["']msapplication-TileColor["']\s+content=["']([^"']+)["']/gi;
   while ((m = msColorRe.exec(html)) !== null) {
-    const rgb = hexToRgb(m[1].trim());
+    const rgb = parseColorValue(m[1].trim());
     if (rgb) priority.push(rgb);
   }
 
-  const cssVarRe = /--(?:primary|brand|accent|main|theme|color-primary|brand-color|logo)[^:]*:\s*([^;}{]+)/gi;
+  // Standard CSS vars (--primary, --brand, --accent, etc.) plus
+  // Wix (--color_*), Squarespace (--accent-*, --site-*), WordPress (--wp--preset--color-*).
+  const cssVarRe = /--(?:primary|brand|accent|main|theme|color-primary|brand-color|logo|color_\d+|accent-[a-z]+|site-[a-z-]+|wp--preset--color-[a-z-]+)[^:]*:\s*([^;}{]+)/gi;
   while ((m = cssVarRe.exec(html)) !== null) {
-    const val = m[1].trim();
-    const rgb = hexToRgb(val);
-    if (rgb) { priority.push(rgb); continue; }
-    const rgbMatch = val.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
-    if (rgbMatch) priority.push([parseInt(rgbMatch[1]), parseInt(rgbMatch[2]), parseInt(rgbMatch[3])]);
+    const rgb = parseColorValue(m[1].trim());
+    if (rgb) priority.push(rgb);
   }
 
   const navHeaderRe = /(?:nav|header|\.navbar|\.header|\.logo|\.brand|\.site-header)[^{}]*\{([^}]{1,600})\}/gi;
@@ -124,14 +134,8 @@ function extractPriorityColors(html: string): RGBTuple[] {
     const bgColorRe = /(?:background-color|background|color)\s*:\s*([^;]+)/gi;
     let bm: RegExpExecArray | null;
     while ((bm = bgColorRe.exec(block)) !== null) {
-      const val = bm[1].trim();
-      const rgb = hexToRgb(val);
-      if (rgb && !isNearWhiteOrBlack(rgb)) priority.push(rgb);
-      const rgbMatch2 = val.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
-      if (rgbMatch2) {
-        const c: RGBTuple = [parseInt(rgbMatch2[1]), parseInt(rgbMatch2[2]), parseInt(rgbMatch2[3])];
-        if (!isNearWhiteOrBlack(c)) priority.push(c);
-      }
+      const c = parseColorValue(bm[1].trim());
+      if (c && !isNearWhiteOrBlack(c)) priority.push(c);
     }
   }
 
@@ -198,24 +202,39 @@ export function extractBrandColors(html: string): BrandColorResult | null {
   };
 }
 
-// ── HTML fetch (shared) ──────────────────────────────────────────────────────
+// ── Shared helpers ──────────────────────────────────────────────────────────
+
+function resolveUrl(raw: string, baseUrl: string): string | null {
+  try {
+    return new URL(raw, baseUrl).href;
+  } catch {
+    return null;
+  }
+}
+
+// ── HTML / CSS fetch helpers ─────────────────────────────────────────────────
+
+const FETCH_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (compatible; ZenphoBot/1.0; +https://zenpho.com)",
+  Accept: "text/html,application/xhtml+xml,text/css",
+};
+
+function normalizeUrl(url: string): string {
+  return /^https?:\/\//i.test(url) ? url : `https://${url}`;
+}
 
 export async function fetchPageHtml(
   url: string,
   timeoutMs = 8000,
 ): Promise<string | null> {
   if (!url?.trim()) return null;
-  const normalized = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+  const normalized = normalizeUrl(url);
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     const res = await fetch(normalized, {
       signal: controller.signal,
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (compatible; ZenphoBot/1.0; +https://zenpho.com)",
-        Accept: "text/html,application/xhtml+xml",
-      },
+      headers: { ...FETCH_HEADERS, Accept: "text/html,application/xhtml+xml" },
       redirect: "follow",
     });
     clearTimeout(timer);
@@ -226,6 +245,59 @@ export async function fetchPageHtml(
   } catch {
     return null;
   }
+}
+
+/** Extract stylesheet URLs from <link rel="stylesheet"> tags in raw HTML. */
+function extractLinkedStylesheetUrls(html: string, baseUrl: string): string[] {
+  const urls: string[] = [];
+  const re = /<link\s+[^>]*rel=["']stylesheet["'][^>]*href=["']([^"']+)["']/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null) {
+    const u = resolveUrl(m[1].trim(), baseUrl);
+    if (u) urls.push(u);
+  }
+  const revRe = /<link\s+[^>]*href=["']([^"']+)["'][^>]*rel=["']stylesheet["']/gi;
+  while ((m = revRe.exec(html)) !== null) {
+    const u = resolveUrl(m[1].trim(), baseUrl);
+    if (u && !urls.includes(u)) urls.push(u);
+  }
+  return urls;
+}
+
+/**
+ * Fetch up to `limit` external CSS files in parallel (best-effort, short timeout).
+ * Returns concatenated CSS text for color scanning.
+ */
+async function fetchExternalCss(
+  stylesheetUrls: string[],
+  timeoutMs: number,
+  limit = 3,
+): Promise<string> {
+  const subset = stylesheetUrls.slice(0, limit);
+  if (subset.length === 0) return "";
+  const results = await Promise.allSettled(
+    subset.map(async (u) => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const res = await fetch(u, {
+          signal: controller.signal,
+          headers: FETCH_HEADERS,
+          redirect: "follow",
+        });
+        clearTimeout(timer);
+        if (!res.ok) return "";
+        const text = await res.text();
+        return text.length > 500_000 ? text.slice(0, 500_000) : text;
+      } catch {
+        clearTimeout(timer);
+        return "";
+      }
+    }),
+  );
+  return results
+    .map((r) => (r.status === "fulfilled" ? r.value : ""))
+    .join("\n");
 }
 
 /**
@@ -243,23 +315,17 @@ export async function fetchAndExtractBrandColors(
 
 // ── Logo extraction ──────────────────────────────────────────────────────────
 
-function resolveUrl(raw: string, baseUrl: string): string | null {
-  try {
-    return new URL(raw, baseUrl).href;
-  } catch {
-    return null;
-  }
-}
-
 /**
  * Best-effort logo URL extraction from raw HTML.
- * Priority: og:image → apple-touch-icon → large png favicon → <img> with "logo" in src/alt/class.
+ * Priority: og:image → apple-touch-icon → large favicon → <img> with "logo" →
+ * Wix wix-image/data-pin-media with "logo" → any favicon as last resort.
  */
 export function extractLogoUrl(html: string, baseUrl: string): string | null {
   if (!html || typeof html !== "string") return null;
 
   let m: RegExpExecArray | null;
 
+  // og:image (both attribute orders)
   const ogRe = /<meta\s+[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/gi;
   if ((m = ogRe.exec(html)) !== null) {
     const u = resolveUrl(m[1].trim(), baseUrl);
@@ -271,18 +337,26 @@ export function extractLogoUrl(html: string, baseUrl: string): string | null {
     if (u) return u;
   }
 
+  // apple-touch-icon
   const touchRe = /<link\s+[^>]*rel=["']apple-touch-icon[^"']*["'][^>]*href=["']([^"']+)["']/gi;
   if ((m = touchRe.exec(html)) !== null) {
     const u = resolveUrl(m[1].trim(), baseUrl);
     if (u) return u;
   }
+  // apple-touch-icon (href before rel)
+  const touchRev = /<link\s+[^>]*href=["']([^"']+)["'][^>]*rel=["']apple-touch-icon[^"']*["']/gi;
+  if ((m = touchRev.exec(html)) !== null) {
+    const u = resolveUrl(m[1].trim(), baseUrl);
+    if (u) return u;
+  }
 
-  const iconRe = /<link\s+[^>]*rel=["']icon["'][^>]*type=["']image\/png["'][^>]*href=["']([^"']+)["']/gi;
+  // Large png/svg favicon (rel="icon")
+  const iconRe = /<link\s+[^>]*rel=["'](?:shortcut )?icon["'][^>]*href=["']([^"']+)["']/gi;
   let bestIcon: string | null = null;
   let bestSize = 0;
   while ((m = iconRe.exec(html)) !== null) {
-    const href = m[0];
-    const sizeMatch = href.match(/sizes=["'](\d+)x\d+["']/i);
+    const tag = m[0];
+    const sizeMatch = tag.match(/sizes=["'](\d+)x\d+["']/i);
     const size = sizeMatch ? parseInt(sizeMatch[1]) : 16;
     if (size > bestSize) {
       bestSize = size;
@@ -292,22 +366,35 @@ export function extractLogoUrl(html: string, baseUrl: string): string | null {
   }
   if (bestIcon && bestSize >= 64) return bestIcon;
 
-  const imgRe = /<img\s+[^>]*(?:src|alt|class)=[^>]*>/gi;
+  // <img> with "logo" in tag attributes (src, alt, class, id)
+  const imgRe = /<img\s+[^>]*(?:src|alt|class|id)=[^>]*>/gi;
   while ((m = imgRe.exec(html)) !== null) {
     const tag = m[0];
     if (!/logo/i.test(tag)) continue;
-    const srcMatch = tag.match(/src=["']([^"']+)["']/i);
+    const srcMatch = tag.match(/(?:src|data-src)=["']([^"']+)["']/i);
     if (!srcMatch) continue;
     const src = srcMatch[1].trim();
-    if (/\.svg$|\.png$|\.jpg$|\.jpeg$|\.webp$/i.test(src) || /^data:/i.test(src) === false) {
-      const u = resolveUrl(src, baseUrl);
-      if (u && !/^data:/i.test(u)) return u;
-    }
+    if (/^data:/i.test(src)) continue;
+    const u = resolveUrl(src, baseUrl);
+    if (u) return u;
   }
 
+  // Wix: look for wix:image or data-pin-media with "logo" nearby
+  const wixImgRe = /(?:wix:image|data-pin-media)=["']([^"']+)["']/gi;
+  while ((m = wixImgRe.exec(html)) !== null) {
+    const ctx = html.slice(Math.max(0, m.index - 200), m.index + m[0].length + 200);
+    if (!/logo/i.test(ctx)) continue;
+    const raw = m[1].trim();
+    if (/^https?:\/\//i.test(raw)) return raw;
+    const u = resolveUrl(raw, baseUrl);
+    if (u) return u;
+  }
+
+  // Any favicon as last resort
   if (bestIcon) return bestIcon;
 
-  return null;
+  // Absolute last resort: /favicon.ico
+  return resolveUrl("/favicon.ico", baseUrl);
 }
 
 // ── Combined brand asset extraction ──────────────────────────────────────────
@@ -319,6 +406,8 @@ export type BrandAssets = {
 
 /**
  * Fetches a URL once and extracts both brand colors and logo URL.
+ * When inline HTML yields no colors, follows up to 3 external stylesheets
+ * (common for Wix, Squarespace, WordPress sites that deliver styles via JS/CSS bundles).
  */
 export async function fetchBrandAssetsFromUrl(
   url: string,
@@ -326,9 +415,22 @@ export async function fetchBrandAssetsFromUrl(
 ): Promise<BrandAssets> {
   const html = await fetchPageHtml(url, timeoutMs);
   if (!html) return { colors: null, logoUrl: null };
-  const normalized = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+  const normalized = normalizeUrl(url);
+
+  let colors = extractBrandColors(html);
+
+  if (!colors) {
+    const cssUrls = extractLinkedStylesheetUrls(html, normalized);
+    if (cssUrls.length > 0) {
+      const cssText = await fetchExternalCss(cssUrls, Math.min(timeoutMs, 4000));
+      if (cssText) {
+        colors = extractBrandColors(html + "\n" + cssText);
+      }
+    }
+  }
+
   return {
-    colors: extractBrandColors(html),
+    colors,
     logoUrl: extractLogoUrl(html, normalized),
   };
 }

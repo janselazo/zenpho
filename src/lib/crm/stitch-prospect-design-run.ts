@@ -57,7 +57,11 @@ export async function runStitchProspectDesign(
 
   let enrichedPayload = payload;
   if (brandUrl && (!payload.brandColors || !payload.logoUrl)) {
-    const assets = await fetchBrandAssetsFromUrl(brandUrl, 4000).catch(() => ({ colors: null, logoUrl: null }));
+    const assets = await fetchBrandAssetsFromUrl(brandUrl, 6000).catch((e) => {
+      console.warn("[stitch-design] brand asset fetch failed:", e instanceof Error ? e.message : e);
+      return { colors: null, logoUrl: null };
+    });
+    console.info("[stitch-design] brand extraction for", brandUrl, "→ colors:", assets.colors, "logo:", assets.logoUrl);
     enrichedPayload = {
       ...payload,
       brandColors: payload.brandColors ?? assets.colors ?? undefined,
