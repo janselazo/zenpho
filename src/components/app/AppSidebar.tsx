@@ -99,7 +99,6 @@ export default function AppSidebar() {
   const [prospectingOpen, toggleProspecting] =
     useSidebarSectionOpen("prospecting");
   const [agencyOpen, toggleAgency] = useSidebarSectionOpen("agency");
-  const [toolsOpen, toggleTools] = useSidebarSectionOpen("tools");
 
   async function signOut() {
     try {
@@ -200,6 +199,24 @@ export default function AppSidebar() {
           open={prospectingOpen}
           onToggle={toggleProspecting}
         >
+          {/* Product-Led: tools + lead magnets (above Creatives) */}
+          <div className="mb-1 mt-0 px-3 text-[10px] font-semibold uppercase tracking-wider text-text-secondary/40 dark:text-zinc-500">
+            Product-Led
+          </div>
+          {toolsNav.map(({ href, label, icon: Icon }) => (
+            <NavLink
+              key={href}
+              href={href}
+              active={
+                href === "/tools"
+                  ? pathname === "/tools"
+                  : isActive(pathname, href)
+              }
+            >
+              <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+              {label}
+            </NavLink>
+          ))}
           {prospectingSectionsWithoutPlaybook.map(({ href, label, icon: Icon, soon }) => (
             <NavLink
               key={href}
@@ -217,24 +234,6 @@ export default function AppSidebar() {
         <SidebarSection label="Agency" open={agencyOpen} onToggle={toggleAgency}>
           {agencyNav.map(({ href, label, icon: Icon }) => (
             <NavLink key={href} href={href} active={isActive(pathname, href)}>
-              <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-              {label}
-            </NavLink>
-          ))}
-        </SidebarSection>
-
-        {/* Tools — free utilities hub (nav grows as each tool ships) */}
-        <SidebarSection label="Tools" open={toolsOpen} onToggle={toggleTools}>
-          {toolsNav.map(({ href, label, icon: Icon }) => (
-            <NavLink
-              key={href}
-              href={href}
-              active={
-                href === "/tools"
-                  ? pathname === "/tools"
-                  : isActive(pathname, href)
-              }
-            >
               <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
               {label}
             </NavLink>
