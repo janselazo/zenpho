@@ -11,6 +11,8 @@ export type StitchProspectDesignPayload =
       colorVibe?: string;
       /** Extracted from the business's existing website, if available. */
       brandColors?: BrandColorResult | null;
+      /** Official logo image URL scraped from the business's website. */
+      logoUrl?: string | null;
     }
   | {
       target: "website" | "webapp" | "mobile";
@@ -22,6 +24,8 @@ export type StitchProspectDesignPayload =
       colorVibe?: string;
       /** Extracted from the provided URL, if available. */
       brandColors?: BrandColorResult | null;
+      /** Official logo image URL scraped from the provided URL. */
+      logoUrl?: string | null;
     };
 
 export type StitchProspectDesignResult =

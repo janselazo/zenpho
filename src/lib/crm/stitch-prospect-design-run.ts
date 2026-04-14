@@ -7,7 +7,7 @@ import {
 } from "@/lib/crm/stitch-server-key";
 import { persistStitchHtmlAsProspectPreview } from "@/lib/crm/stitch-prospect-host-preview";
 import { getStitchLinkedProjectId } from "@/lib/crm/stitch-linked-project";
-import { fetchAndExtractBrandColors } from "@/lib/crm/brand-color-extract";
+import { fetchBrandAssetsFromUrl } from "@/lib/crm/brand-color-extract";
 import type {
   StitchProspectDesignPayload,
   StitchProspectDesignResult,
@@ -56,11 +56,13 @@ export async function runStitchProspectDesign(
       : payload.url?.trim() || null;
 
   let enrichedPayload = payload;
-  if (brandUrl && !payload.brandColors) {
-    const colors = await fetchAndExtractBrandColors(brandUrl, 4000).catch(() => null);
-    if (colors) {
-      enrichedPayload = { ...payload, brandColors: colors };
-    }
+  if (brandUrl && (!payload.brandColors || !payload.logoUrl)) {
+    const assets = await fetchBrandAssetsFromUrl(brandUrl, 4000).catch(() => ({ colors: null, logoUrl: null }));
+    enrichedPayload = {
+      ...payload,
+      brandColors: payload.brandColors ?? assets.colors ?? undefined,
+      logoUrl: payload.logoUrl ?? assets.logoUrl ?? undefined,
+    };
   }
 
   const { prompt, projectTitle, deviceType } = buildStitchProspectGenerationBundle(enrichedPayload);

@@ -239,6 +239,26 @@ function buildBrandColorDirective(colors: BrandColorResult | null | undefined): 
   return lines.join("\n");
 }
 
+/**
+ * Emits a mandatory block telling Stitch to render the real logo via `<img>`.
+ */
+function buildLogoDirective(logoUrl: string | null | undefined): string {
+  if (!logoUrl?.trim()) return "";
+  return [
+    "## Official Business Logo (MANDATORY)",
+    "",
+    `The business's official logo image is available at: ${logoUrl.trim()}`,
+    "",
+    "You **MUST** include this logo in the design using an `<img>` tag:",
+    "- **Navigation / header:** display the logo (`max-height: 40px; width: auto;`) on the left in place of text-only brand marks or initials.",
+    "- **Sidebar header** (web apps): place the logo image at the top of the sidebar above the nav links.",
+    "- **Mobile top bar:** show the logo (scaled to ~28–32px height) next to the business name.",
+    "- Do **NOT** substitute text initials, generic icons, or placeholder shapes when this real logo URL is provided.",
+    "- Use `object-fit: contain` so the logo is never stretched or cropped.",
+    "",
+  ].join("\n");
+}
+
 /** Creative director layer for marketing sites — precedes technical Task/CSS contract in the prompt. */
 const WEBSITE_CREATIVE_DIRECTIVE = `
 ## Creative direction (local business marketing site)
@@ -298,7 +318,7 @@ Never default to all-gray sidebars, interchangeable KPI cards, or **Inter / Robo
 
 ### Design rules (web app)
 - **Typography:** Distinctive UI pairing — characterful display or condensed for module titles (large, confident sizing) + readable sans for tables. Load 2+ distinct Google Fonts via \`<link>\`; **never** system defaults only. KPI numbers must use a display weight at **48px+ minimum** to create visual drama.
-- **Color:** Dominant surfaces + **semantic** accents (success / warning / danger or brand) — 2–4 colors executed brilliantly. Sidebar/nav must have a **strong tint, gradient, or dark background** that anchors the app shell and creates clear separation from the main canvas. At least one element must use a **CSS gradient** (header band, CTA button, or accent card).
+- **Color:** Dominant surfaces + **semantic** accents (success / warning / danger or brand) — 2–4 colors executed brilliantly. **When Brand Identity Colors are provided above, those hex values completely replace the aesthetic lane's color palette.** Use the prospect's primary brand color for sidebar active indicators, KPI accents, gradients, CTAs, chart bars, and status highlights. The design must look like it was built for **this specific brand**, not for a generic lane. Sidebar/nav must have a **strong tint, gradient, or dark background** that anchors the app shell and creates clear separation from the main canvas. At least one element must use a **CSS gradient** (header band, CTA button, or accent card).
 - **Layout:** Clear **app shell** (sidebar or top + tabs). **Asymmetry** required in the KPI band or dashboard grid — one card must be visually dominant (2x size, accent background, or hero treatment). Vary card heights and widths for editorial rhythm. Never three identical cards in a row.
 - **Density:** Match the vertical — scannable rows and clear hierarchy; don't drown tables in padding.
 - **Motion:** Subtle **CSS-only** feedback — row hover with background shift and shadow lift, card hover with \`transform: translateY(-2px)\` + shadow increase, focus rings, active nav indicator (colored bar, pill, or glow) — no JavaScript.
@@ -316,12 +336,13 @@ Never default to all-gray sidebars, interchangeable KPI cards, or **Inter / Robo
 7. **Table polish:** Data tables must have alternating row tints or clear dividers, colored status badges in pill format, hover state on rows, and action buttons with hover states. Minimum 5 realistic data rows.
 
 ### Required views (conceptual — technical ids below)
-Align with **Dashboard, Clients, Conversations, Schedule, Reviews** (\`#dash\`, \`#clients\`, \`#inbox\`, \`#schedule\`, \`#reviews\`):
+Align with **Dashboard, Pipeline, Clients, Conversations, Schedule, Reviews** (\`#dash\`, \`#pipeline\`, \`#clients\`, \`#inbox\`, \`#schedule\`, \`#reviews\`):
 1. **Dashboard** — The showpiece view. Personalized greeting header with date. Hero KPI card (oversized, accent treatment) flanked by supporting stat cards including **auto-reminders sent** and **no-show rate**. Below: a CSS-only chart or visualization, "follow-ups due today" mini-list, "needs attention" exception list with colored left-border severity indicators, and recent activity timeline (include entries like "SMS reminder sent", "New 5★ review", "Online booking confirmed"). **Realistic fake data for the vertical** — not placeholder text.
-2. **Clients** — **Simple CRM for repeat business.** Search/filter bar with filter chips (All, Active, Needs Follow-up). **Polished data table** with columns for name, last visit, next appointment, total visits, and follow-up status. Inline "Send Reminder" and "Book" action buttons per row. Avatar placeholder (circle with initial) per row. Minimum 5 realistic rows. Pagination or "showing X of Y" footer.
-3. **Conversations** — Unified inbox centralizing SMS, email, WhatsApp, website chatbot, Facebook, and Instagram messages. Channel filter tabs with unread counts. Conversation list with avatar, client name, channel icon, message preview, and timestamp. Chat-style message thread with channel-switching indicators. Reply composer with channel selector.
-4. **Schedule** — Week/day calendar with online booking integration. Color-coded by service type or status with a clear legend. Each appointment block shows client name, service, time, status badge, and SMS reminder icon. Include appointments labeled "Online booking". A "Share Booking Link" secondary button. Mini-calendar sidebar for date navigation.
-5. **Reviews** — Google Reviews management hub. Large aggregate rating display (4.8 ★) with total count. Star distribution bar chart. Growth metric ("Reviews this month: 14, +40%"). Recent review cards with author avatar, star rating, and realistic text. Prominent "Request a Review" CTA with SMS/WhatsApp send options.
+2. **Pipeline** — **Visual Kanban sales pipeline** with 5 columns (New Prospect → Contacted → Appointment Scheduled → Appointment Attended → Closed). Pipeline value hero metric, prospect cards with name/value/days-in-stage. Detailed spec in structure checklist below.
+3. **Clients** — **Simple CRM for repeat business.** Search/filter bar with filter chips (All, Active, Needs Follow-up). **Polished data table** with columns for name, last visit, next appointment, total visits, and follow-up status. Inline "Send Reminder" and "Book" action buttons per row. Avatar placeholder (circle with initial) per row. Minimum 5 realistic rows. Pagination or "showing X of Y" footer.
+4. **Conversations** — Unified inbox centralizing SMS, email, WhatsApp, website chatbot, Facebook, and Instagram messages. Channel filter tabs with unread counts. Conversation list with avatar, client name, channel icon, message preview, and timestamp. Chat-style message thread with channel-switching indicators. Reply composer with channel selector.
+5. **Schedule** — Week/day calendar with online booking integration. Color-coded by service type or status with a clear legend. Each appointment block shows client name, service, time, status badge, and SMS reminder icon. Include appointments labeled "Online booking". A "Share Booking Link" secondary button. Mini-calendar sidebar for date navigation.
+6. **Reviews** — Google Reviews management hub. Large aggregate rating display (4.8 ★) with total count. Star distribution bar chart. Growth metric ("Reviews this month: 14, +40%"). Recent review cards with author avatar, star rating, and realistic text. Prominent "Request a Review" CTA with SMS/WhatsApp send options.
 
 Design this so that when a business owner sees it, they immediately think: **"I need this. How much does it cost?"**
 `.trim();
@@ -457,10 +478,11 @@ export function buildStitchWebsitePrompt(payload: StitchProspectDesignPayload): 
     ? WEBSITE_REDESIGN_BRIEF
     : WEBSITE_NEW_PREMIUM_BRIEF;
   const brandDirective = buildBrandColorDirective(payload.brandColors);
+  const logoDirective = buildLogoDirective(payload.logoUrl);
 
   return `${block}
 
-${brandDirective}${situationBrief}
+${brandDirective}${logoDirective}${situationBrief}
 
 ${differentiation}
 
@@ -609,7 +631,7 @@ Each prospect's web app must look **nothing like a generic admin template**. For
 - **Data must be realistic**: use plausible names, dates, service types, prices, and statuses specific to this business vertical — not "User 1", "Item A", or placeholder lorem.
 - **Empty states** (if shown) must be category-specific with relevant illustration or icon, not a generic "no data" box.
 - The sidebar, nav, and chrome must express the assigned lane — color, type, and density should feel intentional, not default.
-- **Brand color override:** If a "Brand Identity Colors" section appears above, those extracted hex values **override** the lane's color suggestions. Keep the lane's layout and composition rules but re-skin the color palette to match the client's actual brand identity.
+- **Brand color override (CRITICAL):** If a "Brand Identity Colors" section appears above, those extracted hex values **completely override** the lane's color suggestions. Use the prospect's primary color for the sidebar active indicator, KPI card accent backgrounds, chart bar fills, gradient bands, CTA buttons, link colors, and status pill highlights. Use the secondary/accent color for hover states, chart secondary series, and border accents. Keep the lane's **layout, typography, and composition rules** but re-skin **every color surface** to match the client's actual brand identity. The prospect must look at this and instantly recognize their own brand — not a generic SaaS template.
 
 Design as if this were a **$50K custom SaaS product** — polished onboarding states, refined data visualization, intentional empty states, premium iconography, and a cohesive visual system throughout.
 
@@ -688,6 +710,7 @@ export function buildStitchWebAppPrompt(payload: StitchProspectDesignPayload): s
 
   const differentiation = buildWebAppAssignedDifferentiationBlock(payload);
   const brandDirective = buildBrandColorDirective(payload.brandColors);
+  const logoDirective = buildLogoDirective(payload.logoUrl);
 
   const gmb =
     payload.kind === "place"
@@ -696,7 +719,7 @@ export function buildStitchWebAppPrompt(payload: StitchProspectDesignPayload): s
 
   return `${block}
 
-${brandDirective}${differentiation}
+${brandDirective}${logoDirective}${differentiation}
 
 ${WEBAPP_CREATIVE_DIRECTIVE}
 
@@ -710,10 +733,11 @@ Each main **view** is a full main-area panel; **only one view visible at a time*
 
 **CRITICAL: You MUST use these EXACT section ids and sidebar labels. Do NOT rename, customize, or adapt them to the business type. The navigation depends on these exact strings.**
 
-Use a layout with a **sidebar** (\`<aside>\`) containing nav links and \`<main>\` containing exactly these five sections:
+Use a layout with a **sidebar** (\`<aside>\`) containing nav links and \`<main>\` containing exactly these six sections:
 
 \`\`\`html
 <section id="dash" class="page">...</section>
+<section id="pipeline" class="page">...</section>
 <section id="clients" class="page">...</section>
 <section id="inbox" class="page">...</section>
 <section id="schedule" class="page">...</section>
@@ -723,13 +747,13 @@ Use a layout with a **sidebar** (\`<aside>\`) containing nav links and \`<main>\
 CSS rules (copy exactly):
 - \`.page { display: none; min-height: calc(100vh - 64px); overflow-y: auto; }\`
 - \`body:not(:has(main .page:target)) #dash { display: block; }\` (default view)
-- \`#dash:target, #clients:target, #inbox:target, #schedule:target, #reviews:target { display: block; }\`
-- \`body:has(#clients:target) #dash, body:has(#inbox:target) #dash, body:has(#schedule:target) #dash, body:has(#reviews:target) #dash { display: none; }\`
-- Active sidebar styling: \`body:has(#clients:target) aside a[href="#clients"] { ... }\` (repeat per section: #clients, #inbox, #schedule, #reviews)
+- \`#dash:target, #pipeline:target, #clients:target, #inbox:target, #schedule:target, #reviews:target { display: block; }\`
+- \`body:has(#pipeline:target) #dash, body:has(#clients:target) #dash, body:has(#inbox:target) #dash, body:has(#schedule:target) #dash, body:has(#reviews:target) #dash { display: none; }\`
+- Active sidebar styling: \`body:has(#pipeline:target) aside a[href="#pipeline"] { ... }\` (repeat per section: #pipeline, #clients, #inbox, #schedule, #reviews)
 
-Sidebar labels MUST be exactly: **Dashboard**, **Clients**, **Conversations**, **Schedule**, **Reviews** → \`<a href="#dash">\`, \`<a href="#clients">\`, \`<a href="#inbox">\`, \`<a href="#schedule">\`, \`<a href="#reviews">\`.
+Sidebar labels MUST be exactly: **Dashboard**, **Pipeline**, **Clients**, **Conversations**, **Schedule**, **Reviews** → \`<a href="#dash">\`, \`<a href="#pipeline">\`, \`<a href="#clients">\`, \`<a href="#inbox">\`, \`<a href="#schedule">\`, \`<a href="#reviews">\`.
 
-**Do NOT rename these to business-specific names** (e.g. do NOT use "Concierge", "Guest Registry", "Spa Services", etc.). The labels Dashboard/Clients/Conversations/Schedule/Reviews are intentional and universal.
+**Do NOT rename these to business-specific names** (e.g. do NOT use "Concierge", "Guest Registry", "Spa Services", etc.). The labels Dashboard/Pipeline/Clients/Conversations/Schedule/Reviews are intentional and universal.
 
 ## Structure checklist (every view must feel like a finished product, not a wireframe)
 1. **#dash** — The **hero view** that sells the product — a data-rich command center:
@@ -744,15 +768,28 @@ Sidebar labels MUST be exactly: **Dashboard**, **Clients**, **Conversations**, *
    - **Follow-ups due:** A compact card titled "Follow-ups Due Today" showing 2–3 clients who haven’t visited recently, each with avatar initial, name, last visit date, and a small "Send SMS" accent button.
    - **Needs attention:** Exception list with 3–4 items, each with a **colored left-border** (4px) for severity (red = urgent, amber = warning, green = ready), avatar/icon, client name, service, and status badge as a colored pill. Include at least one "Pending review request" item.
    - **Activity timeline:** 3–5 recent activity items with timestamps and subtle icons. Include entries like "SMS reminder sent to [Client]", "New 5★ review from [Client]", "Online booking confirmed". Use a vertical line or dot timeline pattern.
-2. **#clients** — **Simple CRM for tracking repeat customers.** Search/filter bar with styled inputs and **filter chip pills** (All, Active, Needs Follow-up). **Premium data table** with: circular avatar placeholder (initial) per row, columns for **Name**, **Last Visit** (date), **Next Appt** (date or "—"), **Visits** (total count), **Follow-up** status (colored pill: "Due" in amber, "Sent" in green, "Scheduled" in blue), category-specific column (e.g. pet name for grooming, case type for legal). Alternating row tints, **colored status pill** badges, row hover with shadow lift. Inline action buttons: **"Send Reminder"** (SMS icon) and **"Book"** per row. Minimum **6 realistic rows** showing a mix of active, due-for-follow-up, and recently visited clients. Pagination footer showing "Showing 1–6 of 24". The table must communicate that most revenue comes from repeat customers, not new ones.
-3. **#inbox** — **Unified conversations — every message in one place:**
+2. **#pipeline** — **Visual sales pipeline (Kanban board):**
+   - **Pipeline hero metric:** Above the board, a full-width card or accent band showing the total pipeline value as a large display number (e.g. "$47,200 in pipeline") with a trend arrow and period label ("This month"). Use 48px+ display font for the number. Optionally include 2–3 smaller supporting stats: "New this week: 8", "Won this month: 5", "Conversion rate: 34%".
+   - **Compact filter/search bar:** A row with a search input, optional date range selector, and filter chips (e.g. "All", "This week", "High value").
+   - **5 Kanban columns** displayed as a horizontal scrollable board using CSS flexbox or grid:
+     - **New Prospect** — top accent border: blue (#3b82f6). Contains 3–4 cards.
+     - **Contacted** — top accent border: teal (#06b6d4). Contains 2–3 cards.
+     - **Appointment Scheduled** — top accent border: amber (#f59e0b). Contains 2–3 cards.
+     - **Appointment Attended** — top accent border: purple (#8b5cf6). Contains 1–2 cards.
+     - **Closed** — top accent border: green (#10b981). Contains 1–2 cards.
+   - **Column headers:** Each column has a header with the stage name (bold), a **count badge** (small rounded pill, e.g. "12"), and a 4px colored top border matching the stage color.
+   - **Prospect cards:** Each card inside a column shows: **client name** (bold, 14px), **company or service type** (muted text, 12px), **deal value** (e.g. "$2,400" in accent or bold), **days in stage** indicator (e.g. "3d" in a tiny muted badge), and a **small avatar circle** (colored background with white initials). Cards have rounded corners (12–16px), multi-layered box-shadow (3+ layers), and CSS :hover with translateY(-2px) + shadow increase.
+   - **Realistic data:** All names, services, and values must be realistic for this specific business vertical.
+   - **Visual polish:** The board must look like a premium CRM pipeline — not a wireframe. Use subtle column background tints (very light shade of the column's accent color at 5% opacity), card hover effects, and clear visual hierarchy.
+3. **#clients** — **Simple CRM for tracking repeat customers.** Search/filter bar with styled inputs and **filter chip pills** (All, Active, Needs Follow-up). **Premium data table** with: circular avatar placeholder (initial) per row, columns for **Name**, **Last Visit** (date), **Next Appt** (date or "—"), **Visits** (total count), **Follow-up** status (colored pill: "Due" in amber, "Sent" in green, "Scheduled" in blue), category-specific column (e.g. pet name for grooming, case type for legal). Alternating row tints, **colored status pill** badges, row hover with shadow lift. Inline action buttons: **"Send Reminder"** (SMS icon) and **"Book"** per row. Minimum **6 realistic rows** showing a mix of active, due-for-follow-up, and recently visited clients. Pagination footer showing "Showing 1–6 of 24". The table must communicate that most revenue comes from repeat customers, not new ones.
+4. **#inbox** — **Unified conversations — every message in one place:**
    - **Channel filter bar:** Horizontal tabs or filter chips for: **All**, **SMS**, **Email**, **WhatsApp**, **Website Chat**, **Facebook**, **Instagram**. Each chip has the channel icon and an unread count badge. The active filter has accent background/underline.
    - **Conversation list (left panel):** A vertical list of conversation threads, each showing: **circular avatar** (client initial or channel icon), **client name**, **channel icon** (small, color-coded: green for WhatsApp, blue for Facebook/Messenger, pink for Instagram, teal for SMS, gray for email, orange for website chat), **last message preview** (truncated, 1–2 lines), **timestamp** (relative: "2m ago", "1h", "Yesterday"), and an **unread dot** (accent color) for new messages. Sort by most recent. Minimum **6 conversation rows**. Include a mix of channels. Selected conversation highlighted with accent tint.
    - **Message thread (right panel):** A chat-style view showing the selected conversation. Messages styled as **chat bubbles** — incoming on the left (light background), outgoing on the right (accent or brand-colored background with white text). Each message shows: text content, timestamp below, and a small **channel badge** (e.g. "via WhatsApp", "via SMS") on the first message of a channel switch. Include 4–6 realistic messages in the thread, with at least one channel transition (e.g. started on website chat, continued on WhatsApp).
    - **Reply composer (bottom):** A text input bar with: message field (placeholder "Type a reply..."), **channel selector dropdown** (small icon showing current reply channel — the agent can reply via SMS, WhatsApp, or email from the same thread), and a **Send** button (accent color). Optionally an attachment icon.
    - **Quick stats header:** A compact bar above the conversation list: "12 unread · 3 need reply · 8 channels active" with small icons. Communicates volume at a glance.
-4. **#schedule** — **Full calendar view with online booking:** week or day layout with a mini-month calendar sidebar or header date picker. Time blocks **color-coded by service type** with a visible legend. Each appointment block shows: client name, service, time, duration, status badge, and a small **reminder icon** (✉ or bell) with tooltip "SMS reminder sent". Include 4+ realistic appointments — at least one labeled "Online booking" (from the self-service link). A **"+ New Appointment"** button styled as an accent CTA. Next to it, a **"Share Booking Link"** secondary button (link icon) for sharing the online booking page with clients. A small banner or badge: "Clients can book 24/7 — even after hours". The calendar must feel like a real scheduling tool that reduces phone-tag and no-shows.
-5. **#reviews** — **Google Reviews management — the growth engine for trust and inbound leads:**
+5. **#schedule** — **Full calendar view with online booking:** week or day layout with a mini-month calendar sidebar or header date picker. Time blocks **color-coded by service type** with a visible legend. Each appointment block shows: client name, service, time, duration, status badge, and a small **reminder icon** (✉ or bell) with tooltip "SMS reminder sent". Include 4+ realistic appointments — at least one labeled "Online booking" (from the self-service link). A **"+ New Appointment"** button styled as an accent CTA. Next to it, a **"Share Booking Link"** secondary button (link icon) for sharing the online booking page with clients. A small banner or badge: "Clients can book 24/7 — even after hours". The calendar must feel like a real scheduling tool that reduces phone-tag and no-shows.
+6. **#reviews** — **Google Reviews management — the growth engine for trust and inbound leads:**
    - **Aggregate rating hero:** Large display number (48px+) of the average rating (e.g. "4.8") with filled star icons and total review count ("127 reviews"). Accent background or gradient card.
    - **Star distribution:** Horizontal bar chart showing 5-star to 1-star breakdown with percentages and colored bars (green gradient for 5★, descending to red for 1★).
    - **Growth metric:** A card or badge: "Reviews this month: 14 (+40% vs last month)" with a trend arrow.
@@ -907,6 +944,7 @@ export function buildStitchMobilePrompt(payload: StitchProspectDesignPayload): s
 
   const differentiation = buildMobileAssignedDifferentiationBlock(payload);
   const brandDirective = buildBrandColorDirective(payload.brandColors);
+  const logoDirective = buildLogoDirective(payload.logoUrl);
 
   const gmb =
     payload.kind === "place"
@@ -915,7 +953,7 @@ export function buildStitchMobilePrompt(payload: StitchProspectDesignPayload): s
 
   return `${block}
 
-${brandDirective}${differentiation}
+${brandDirective}${logoDirective}${differentiation}
 
 ${MOBILE_CREATIVE_DIRECTIVE}
 

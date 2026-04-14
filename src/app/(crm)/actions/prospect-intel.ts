@@ -382,3 +382,68 @@ export async function createLeadFromProspectIntelAction(input: {
   revalidatePath("/prospecting/prospects");
   return res;
 }
+
+// ── Social enrichment ────────────────────────────────────────────────────────
+
+import {
+  discoverSocialProfileUrls,
+  fetchFacebookPageContacts,
+  fetchInstagramProfileContacts,
+  fetchYelpListingContacts,
+  type SocialEnrichmentResult,
+  type SocialPageContacts,
+} from "@/lib/crm/social-profile-scrape";
+
+export async function enrichProspectFromSocialAction(
+  place: PlacesSearchPlace,
+): Promise<SocialEnrichmentResult> {
+  await requireAgencyStaff();
+
+  try {
+    const city = place.formattedAddress?.split(",")[0]?.trim() ?? "";
+    const urls = await discoverSocialProfileUrls(
+      place.name,
+      city,
+      place.websiteUri,
+    );
+
+    const fetches: Promise<SocialPageContacts | null>[] = [];
+    if (urls.facebook) {
+      fetches.push(fetchFacebookPageContacts(urls.facebook).catch(() => null));
+    }
+    if (urls.instagram) {
+      fetches.push(fetchInstagramProfileContacts(urls.instagram).catch(() => null));
+    }
+    if (urls.yelp) {
+      fetches.push(fetchYelpListingContacts(urls.yelp).catch(() => null));
+    }
+
+    const results = (await Promise.all(fetches)).filter(
+      (r): r is SocialPageContacts => r !== null,
+    );
+
+    let email: string | null = null;
+    let phone: string | null = null;
+    let website: string | null = null;
+
+    for (const src of results) {
+      if (!email && src.email) email = src.email;
+      if (!phone && src.phone) phone = src.phone;
+      if (!website && src.website) website = src.website;
+    }
+
+    return {
+      ok: true,
+      email,
+      phone,
+      website,
+      facebookUrl: urls.facebook,
+      instagramUrl: urls.instagram,
+      yelpUrl: urls.yelp,
+      sources: results,
+    };
+  } catch (err) {
+    console.error("enrichProspectFromSocialAction error:", err);
+    return { ok: false, error: String(err) };
+  }
+}

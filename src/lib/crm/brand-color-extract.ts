@@ -198,14 +198,12 @@ export function extractBrandColors(html: string): BrandColorResult | null {
   };
 }
 
-/**
- * Fetches a URL and extracts brand colors from its HTML.
- * Returns null if fetch fails or no colors are found.
- */
-export async function fetchAndExtractBrandColors(
+// ── HTML fetch (shared) ──────────────────────────────────────────────────────
+
+export async function fetchPageHtml(
   url: string,
   timeoutMs = 8000,
-): Promise<BrandColorResult | null> {
+): Promise<string | null> {
   if (!url?.trim()) return null;
   const normalized = /^https?:\/\//i.test(url) ? url : `https://${url}`;
   try {
@@ -224,9 +222,113 @@ export async function fetchAndExtractBrandColors(
     if (!res.ok) return null;
     const ct = res.headers.get("content-type") ?? "";
     if (!ct.includes("html") && !ct.includes("xml")) return null;
-    const html = await res.text();
-    return extractBrandColors(html);
+    return await res.text();
   } catch {
     return null;
   }
+}
+
+/**
+ * Fetches a URL and extracts brand colors from its HTML.
+ * Returns null if fetch fails or no colors are found.
+ */
+export async function fetchAndExtractBrandColors(
+  url: string,
+  timeoutMs = 8000,
+): Promise<BrandColorResult | null> {
+  const html = await fetchPageHtml(url, timeoutMs);
+  if (!html) return null;
+  return extractBrandColors(html);
+}
+
+// ── Logo extraction ──────────────────────────────────────────────────────────
+
+function resolveUrl(raw: string, baseUrl: string): string | null {
+  try {
+    return new URL(raw, baseUrl).href;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Best-effort logo URL extraction from raw HTML.
+ * Priority: og:image → apple-touch-icon → large png favicon → <img> with "logo" in src/alt/class.
+ */
+export function extractLogoUrl(html: string, baseUrl: string): string | null {
+  if (!html || typeof html !== "string") return null;
+
+  let m: RegExpExecArray | null;
+
+  const ogRe = /<meta\s+[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/gi;
+  if ((m = ogRe.exec(html)) !== null) {
+    const u = resolveUrl(m[1].trim(), baseUrl);
+    if (u) return u;
+  }
+  const ogRev = /<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["']/gi;
+  if ((m = ogRev.exec(html)) !== null) {
+    const u = resolveUrl(m[1].trim(), baseUrl);
+    if (u) return u;
+  }
+
+  const touchRe = /<link\s+[^>]*rel=["']apple-touch-icon[^"']*["'][^>]*href=["']([^"']+)["']/gi;
+  if ((m = touchRe.exec(html)) !== null) {
+    const u = resolveUrl(m[1].trim(), baseUrl);
+    if (u) return u;
+  }
+
+  const iconRe = /<link\s+[^>]*rel=["']icon["'][^>]*type=["']image\/png["'][^>]*href=["']([^"']+)["']/gi;
+  let bestIcon: string | null = null;
+  let bestSize = 0;
+  while ((m = iconRe.exec(html)) !== null) {
+    const href = m[0];
+    const sizeMatch = href.match(/sizes=["'](\d+)x\d+["']/i);
+    const size = sizeMatch ? parseInt(sizeMatch[1]) : 16;
+    if (size > bestSize) {
+      bestSize = size;
+      const u = resolveUrl(m[1].trim(), baseUrl);
+      if (u) bestIcon = u;
+    }
+  }
+  if (bestIcon && bestSize >= 64) return bestIcon;
+
+  const imgRe = /<img\s+[^>]*(?:src|alt|class)=[^>]*>/gi;
+  while ((m = imgRe.exec(html)) !== null) {
+    const tag = m[0];
+    if (!/logo/i.test(tag)) continue;
+    const srcMatch = tag.match(/src=["']([^"']+)["']/i);
+    if (!srcMatch) continue;
+    const src = srcMatch[1].trim();
+    if (/\.svg$|\.png$|\.jpg$|\.jpeg$|\.webp$/i.test(src) || /^data:/i.test(src) === false) {
+      const u = resolveUrl(src, baseUrl);
+      if (u && !/^data:/i.test(u)) return u;
+    }
+  }
+
+  if (bestIcon) return bestIcon;
+
+  return null;
+}
+
+// ── Combined brand asset extraction ──────────────────────────────────────────
+
+export type BrandAssets = {
+  colors: BrandColorResult | null;
+  logoUrl: string | null;
+};
+
+/**
+ * Fetches a URL once and extracts both brand colors and logo URL.
+ */
+export async function fetchBrandAssetsFromUrl(
+  url: string,
+  timeoutMs = 8000,
+): Promise<BrandAssets> {
+  const html = await fetchPageHtml(url, timeoutMs);
+  if (!html) return { colors: null, logoUrl: null };
+  const normalized = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+  return {
+    colors: extractBrandColors(html),
+    logoUrl: extractLogoUrl(html, normalized),
+  };
 }

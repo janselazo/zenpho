@@ -45,6 +45,9 @@ import type { HomepageContactHints } from "@/app/(crm)/actions/prospect-intel";
 import { formatReportAsPlainNotes } from "@/lib/crm/prospect-intel-notes-format";
 import { mergeProspectSocialUrls } from "@/lib/crm/prospect-contact-extract";
 import { EMPTY_PROSPECT_SOCIAL_URLS } from "@/lib/crm/prospect-enrichment-types";
+import type { SocialEnrichmentResult } from "@/lib/crm/social-profile-scrape";
+
+type SocialEnrichmentOk = Extract<SocialEnrichmentResult, { ok: true }>;
 
 const cardClass =
   "rounded-2xl border border-border bg-white p-5 shadow-sm dark:border-zinc-800/70 dark:bg-zinc-900/60 dark:shadow-none";
@@ -312,6 +315,92 @@ function WebsiteScanLiveSnapshot({ siteUrl }: { siteUrl: string }) {
           loading="lazy"
           onError={() => setFailed(true)}
         />
+      )}
+    </div>
+  );
+}
+
+function SocialEnrichmentBadge({
+  loading,
+  result,
+  onPickEmail,
+  onPickPhone,
+}: {
+  loading: boolean;
+  result: SocialEnrichmentOk | null;
+  onPickEmail: (e: string) => void;
+  onPickPhone: (p: string) => void;
+}) {
+  if (!loading && !result) return null;
+
+  if (loading) {
+    return (
+      <div className="mt-2 flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300">
+        <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-blue-400 border-t-transparent" />
+        Searching social profiles (Facebook, Instagram, Yelp)…
+      </div>
+    );
+  }
+
+  if (!result) return null;
+
+  const found = result.sources.length > 0;
+  const items: { label: string; value: string; action?: () => void }[] = [];
+
+  if (result.email) {
+    items.push({
+      label: `Email via ${result.sources.find((s) => s.email === result.email)?.source ?? "social"}`,
+      value: result.email,
+      action: () => onPickEmail(result.email!),
+    });
+  }
+  if (result.phone) {
+    items.push({
+      label: `Phone via ${result.sources.find((s) => s.phone === result.phone)?.source ?? "social"}`,
+      value: result.phone,
+      action: () => onPickPhone(result.phone!),
+    });
+  }
+  if (result.facebookUrl) items.push({ label: "Facebook", value: result.facebookUrl });
+  if (result.instagramUrl) items.push({ label: "Instagram", value: result.instagramUrl });
+  if (result.yelpUrl) items.push({ label: "Yelp", value: result.yelpUrl });
+
+  return (
+    <div className="mt-2 rounded-lg border border-border bg-surface/40 px-3 py-2 dark:border-zinc-700/60 dark:bg-zinc-900/40">
+      <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-text-secondary/70 dark:text-zinc-500">
+        Social enrichment {found ? `· ${result.sources.length} source${result.sources.length > 1 ? "s" : ""}` : "· no results"}
+      </p>
+      {items.length > 0 ? (
+        <ul className="space-y-0.5">
+          {items.map((it) => (
+            <li key={it.label} className="flex items-center gap-1.5 text-xs text-text-secondary dark:text-zinc-400">
+              <span className="font-medium text-text dark:text-zinc-200">{it.label}:</span>
+              {it.value.startsWith("http") ? (
+                <a
+                  href={it.value}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="truncate text-blue-600 underline hover:text-blue-800 dark:text-blue-400"
+                >
+                  {it.value.replace(/^https?:\/\/(www\.)?/i, "").slice(0, 50)}
+                </a>
+              ) : (
+                <span className="truncate">{it.value}</span>
+              )}
+              {it.action && (
+                <button
+                  type="button"
+                  onClick={it.action}
+                  className="ml-auto shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30"
+                >
+                  Use
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-xs text-text-secondary/60 dark:text-zinc-500">No additional contact info found on social profiles.</p>
       )}
     </div>
   );
@@ -837,6 +926,9 @@ function ProspectsIntelligenceViewInner({
   const [websiteDeepStatus, setWebsiteDeepStatus] =
     useState<ProspectWebsiteDeepStatus>(INITIAL_WEBSITE_DEEP);
 
+  const [socialEnriching, setSocialEnriching] = useState(false);
+  const [socialEnrichResult, setSocialEnrichResult] = useState<SocialEnrichmentOk | null>(null);
+
   const activeReport = useMemo(() => {
     if (urlReport && urlMeta) {
       return { report: urlReport, kind: "url" as const, urlMeta };
@@ -900,16 +992,29 @@ function ProspectsIntelligenceViewInner({
     }
   }, [activeReport]);
 
+  const socialEnrichSocialUrls = useMemo(() => {
+    if (!socialEnrichResult) return EMPTY_PROSPECT_SOCIAL_URLS;
+    return {
+      ...EMPTY_PROSPECT_SOCIAL_URLS,
+      facebook: socialEnrichResult.facebookUrl,
+      instagram: socialEnrichResult.instagramUrl,
+    };
+  }, [socialEnrichResult]);
+
   const snapshotSocialUrls = useMemo(() => {
     const deep = websiteDeepStatus.contacts?.socialUrls;
     if (activeReport?.kind === "url" && urlHomepageHints) {
       return mergeProspectSocialUrls(
         urlHomepageHints.socialUrls,
-        deep ?? EMPTY_PROSPECT_SOCIAL_URLS
+        deep ?? EMPTY_PROSPECT_SOCIAL_URLS,
+        socialEnrichSocialUrls,
       );
     }
-    return deep ?? EMPTY_PROSPECT_SOCIAL_URLS;
-  }, [activeReport?.kind, urlHomepageHints, websiteDeepStatus.contacts?.socialUrls]);
+    return mergeProspectSocialUrls(
+      deep ?? EMPTY_PROSPECT_SOCIAL_URLS,
+      socialEnrichSocialUrls,
+    );
+  }, [activeReport?.kind, urlHomepageHints, websiteDeepStatus.contacts?.socialUrls, socialEnrichSocialUrls]);
 
   const snapshotContactEmail = useMemo(() => {
     const ranked = websiteDeepStatus.contacts?.emailsRanked;
@@ -917,12 +1022,14 @@ function ProspectsIntelligenceViewInner({
     if (websiteCrawlEmails.length > 0) return websiteCrawlEmails[0] ?? null;
     if (activeReport?.kind === "url" && urlHomepageHints?.emails?.length)
       return urlHomepageHints.emails[0] ?? null;
+    if (socialEnrichResult?.email) return socialEnrichResult.email;
     return null;
   }, [
     activeReport?.kind,
     urlHomepageHints?.emails,
     websiteCrawlEmails,
     websiteDeepStatus.contacts?.emailsRanked,
+    socialEnrichResult?.email,
   ]);
 
   useEffect(() => {
@@ -958,6 +1065,28 @@ function ProspectsIntelligenceViewInner({
     []
   );
 
+  const triggerSocialEnrich = useCallback((place: PlacesSearchPlace) => {
+    setSocialEnriching(true);
+    setSocialEnrichResult(null);
+    fetch("/api/prospecting/social-enrich", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ place }),
+    })
+      .then((r) => r.json())
+      .then((data: SocialEnrichmentResult) => {
+        if (data.ok) {
+          setSocialEnrichResult(data);
+          if (data.email) setLeadEmail((cur) => (cur.trim() ? cur : data.email!));
+          if (data.phone) setLeadPhone((cur) => (cur.trim() ? cur : data.phone!));
+          if (data.facebookUrl) setLeadFacebook((cur) => (cur.trim() ? cur : data.facebookUrl!));
+          if (data.instagramUrl) setLeadInstagram((cur) => (cur.trim() ? cur : data.instagramUrl!));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setSocialEnriching(false));
+  }, []);
+
   const applyPlaceReport = useCallback(
     (place: PlacesSearchPlace) => {
       const normalized = sanitizePlacesSearchPlace({
@@ -971,8 +1100,9 @@ function ProspectsIntelligenceViewInner({
       setUrlMeta(null);
       setUrlHomepageHints(null);
       syncLeadFormFromPlace(normalized, report);
+      triggerSocialEnrich(normalized);
     },
-    [syncLeadFormFromPlace]
+    [syncLeadFormFromPlace, triggerSocialEnrich]
   );
 
   const onPlacesAutocompleteResolved = useCallback(
@@ -1566,6 +1696,12 @@ function ProspectsIntelligenceViewInner({
                     websiteCrawlEmails={websiteCrawlEmails}
                     onPickEmail={(email) => setLeadEmail((cur) => cur.trim() || email)}
                     onPickPhone={(phone) => setLeadPhone((cur) => cur.trim() || phone)}
+                  />
+                  <SocialEnrichmentBadge
+                    loading={socialEnriching}
+                    result={socialEnrichResult}
+                    onPickEmail={(e) => setLeadEmail((cur) => cur.trim() || e)}
+                    onPickPhone={(p) => setLeadPhone((cur) => cur.trim() || p)}
                   />
                 </div>
               </div>
