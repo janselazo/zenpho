@@ -123,7 +123,8 @@ ${hasBrandColors
 - Do **not** produce the same hero → three equal cards → testimonial strip → footer pattern you would for an unrelated business.
 - Do **not** default to purple–blue gradients, generic “three feature icons,” or interchangeable SaaS marketing tropes unless the aesthetic lane explicitly demands neon/tech.
 - Vary **section backgrounds** (tint, subtle gradient, texture via CSS, or full-bleed contrast bands) so the page is not one white column wall-to-wall.
-- Mention the **business name** in real copy; make **services** specific to the Google category / URL context — not filler lorem.
+- Use the **exact business name** from context in the site title, nav, hero headline, and footer — do NOT rename, rebrand, or invent creative aliases. The prospect must immediately see their own business name.
+- Make **services** specific to the Google category / URL context — not filler lorem.
 
 **Lane + layout execution:** The **Layout motif**, **Hero structure**, and every band inside \`#home\` must express the assigned aesthetic lane — but **never** at the cost of **Layout safety** (see technical brief): headlines and paragraphs stay readable. Decorative overlap or collage is allowed **only** when the lane calls for it **and** copy sits on a scrim or dedicated panel, not under unmasked photos.
 
@@ -144,7 +145,7 @@ This business **already has a live website** (see "Listing website URL" in conte
 
 ### Redesign mandate
 - **Study the existing site URL** from context. Identify every weakness: generic templates, weak typography, poor visual hierarchy, stock-photo overuse, cramped or bland layout, inconsistent color, missing trust signals, lack of depth, no hover states, no visual rhythm.
-- **Preserve brand identity**: keep the business name, real services, location, and contact info. Do NOT invent a different business — show how the **same** content transforms when designed by a world-class team.
+- **Preserve brand identity**: keep the **exact business name** (as shown in context above), real services, location, and contact info. Do NOT rename the business, invent a creative alias, or use a tagline as the brand name — show how the **same** business transforms when designed by a world-class team.
 - **Elevate EVERYTHING dramatically:**
   - **Typography:** From generic system fonts → premium Google Font pairings with 64px+ display headlines, clear type scale, elegant letter-spacing.
   - **Color:** From random or bland colors → a refined, intentional palette with one confident accent. At least one CSS gradient usage.
@@ -185,8 +186,10 @@ function placeContext(p: PlacesSearchPlace, colorVibe?: string): string {
   const primary = primaryPlaceTypeLabel(p.types);
   const typesLine =
     p.types?.filter(Boolean).slice(0, 8).join(", ") || primary || "local business";
+  const bName = safe(p.name, 200) || "Unknown";
   const lines = [
-    `Business name: ${safe(p.name, 200) || "Unknown"}`,
+    `Business name (USE EXACTLY — do NOT rename or rebrand): ${bName}`,
+    `⚠️ MANDATORY: The site title, nav logo text, hero headline, footer, and all references MUST use "${bName}" as the business name. Do NOT invent a creative alias, tagline name, or "The [Something] Studio/Atelier/Sanctuary" replacement. The prospect must see THEIR OWN business name on every page.`,
     p.formattedAddress?.trim() ? `Address (Google Business Profile): ${safe(p.formattedAddress, 300)}` : null,
     primary ? `Primary Google category: ${primary}` : null,
     `Google Places types: ${safe(typesLine, 400)}`,
@@ -206,8 +209,10 @@ function urlContext(
   metaDescription?: string | null,
   colorVibe?: string
 ): string {
+  const bName = safe(pageTitle, 200) || "(none)";
   const lines = [
-    `Page / brand title: ${safe(pageTitle, 200) || "(none)"}`,
+    `Business / brand name (USE EXACTLY — do NOT rename or rebrand): ${bName}`,
+    bName !== "(none)" ? `⚠️ MANDATORY: The site title, nav logo text, hero headline, footer, and all references MUST use "${bName}" as the business name. Do NOT invent a creative alias, tagline name, or "The [Something] Studio/Atelier/Sanctuary" replacement. The prospect must see THEIR OWN business name on every page.` : null,
     `Source URL: ${safe(url, 500)}`,
     metaDescription?.trim() ? `Meta description: ${safe(metaDescription, 500)}` : null,
     colorVibe?.trim() ? `Visual direction: ${safe(colorVibe, 400)}` : null,
