@@ -57,15 +57,15 @@ export const PROSPECTING_SECTIONS: ProspectingSection[] = [
   },
   {
     slug: "creatives",
-    label: "Creatives",
+    label: "Content marketing",
     href: "/prospecting/creatives",
     icon: Palette,
     description:
-      "Ad creative library, templates, and brand-consistent assets for outbound and paid.",
+      "Images and videos for content marketing—libraries, templates, and brand-consistent assets for outbound, social, and paid.",
     soon: true,
     comingSoonFeatures: [
-      "Brand kits tied to your offer and ICP segments",
-      "Export presets for LinkedIn, Meta, and display placements",
+      "Image and video workspaces with brand kits tied to your offer and ICP",
+      "Export presets for LinkedIn, Meta, short-form video, and display",
       "Version history and approval before anything goes live",
       "Hooks into Playbook for one-click attach to sequences",
     ],
