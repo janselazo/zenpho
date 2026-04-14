@@ -103,6 +103,12 @@ function parseColorValue(val: string): RGBTuple | null {
   return null;
 }
 
+/**
+ * CSS variable names that are WordPress/platform defaults — NOT actual brand colors.
+ * These bloat priority extraction with generic palette values on every WP site.
+ */
+const WP_DEFAULT_VAR_RE = /^--wp-(?:admin-theme|block-synced|bound-block)|^--wp--preset--color--(?:black|white|cyan-bluish-gray|pale-pink|vivid-red|luminous-vivid-orange|luminous-vivid-amber|light-green-cyan|vivid-green-cyan|pale-cyan-blue|vivid-cyan-blue|vivid-purple)/i;
+
 /** Extracts colors from high-signal areas: CSS vars, meta tags, nav/header styles, brand classes. */
 function extractPriorityColors(html: string): RGBTuple[] {
   const priority: RGBTuple[] = [];
@@ -123,9 +129,12 @@ function extractPriorityColors(html: string): RGBTuple[] {
   // Match any CSS custom property containing "color", "primary", "brand", or "accent"
   // in its name. Covers Astra (--ast-global-color-*), Elementor (--e-global-color-*),
   // Wix (--color_N), Squarespace (--accent-*), WordPress (--wp--preset--color-*), etc.
-  const cssVarRe = /--(?:[a-z0-9_-]*(?:color|primary|brand|accent)[a-z0-9_-]*):\s*([^;}{]+)/gi;
+  // Skip known WordPress default variables that are generic palette colors, not brand.
+  const cssVarRe = /(--(?:[a-z0-9_-]*(?:color|primary|brand|accent)[a-z0-9_-]*)):\s*([^;}{]+)/gi;
   while ((m = cssVarRe.exec(html)) !== null) {
-    const rgb = parseColorValue(m[1].trim());
+    const varName = m[1];
+    if (WP_DEFAULT_VAR_RE.test(varName)) continue;
+    const rgb = parseColorValue(m[2].trim());
     if (rgb) priority.push(rgb);
   }
 
@@ -408,8 +417,9 @@ export type BrandAssets = {
 
 /**
  * Fetches a URL once and extracts both brand colors and logo URL.
- * When inline HTML yields no colors, follows up to 3 external stylesheets
- * (common for Wix, Squarespace, WordPress sites that deliver styles via JS/CSS bundles).
+ * Always merges external stylesheets (up to 5) because many WordPress/YooTheme/Elementor
+ * sites deliver the real brand colors only in external CSS bundles, while the inline HTML
+ * contains generic platform defaults.
  */
 export async function fetchBrandAssetsFromUrl(
   url: string,
@@ -419,17 +429,14 @@ export async function fetchBrandAssetsFromUrl(
   if (!html) return { colors: null, logoUrl: null };
   const normalized = normalizeUrl(url);
 
-  let colors = extractBrandColors(html);
-
-  if (!colors) {
-    const cssUrls = extractLinkedStylesheetUrls(html, normalized);
-    if (cssUrls.length > 0) {
-      const cssText = await fetchExternalCss(cssUrls, Math.min(timeoutMs, 4000));
-      if (cssText) {
-        colors = extractBrandColors(html + "\n" + cssText);
-      }
-    }
+  const cssUrls = extractLinkedStylesheetUrls(html, normalized);
+  let combined = html;
+  if (cssUrls.length > 0) {
+    const cssText = await fetchExternalCss(cssUrls, Math.min(timeoutMs, 4000), 5);
+    if (cssText) combined = html + "\n" + cssText;
   }
+
+  const colors = extractBrandColors(combined);
 
   return {
     colors,

@@ -5,7 +5,7 @@
  */
 
 import { fetchPageHtml } from "@/lib/crm/brand-color-extract";
-import { isJunkEmail } from "@/lib/crm/prospect-contact-extract";
+import { isJunkEmail, decodeCfEmail } from "@/lib/crm/prospect-contact-extract";
 
 export type SocialPageContacts = {
   source: "facebook" | "instagram" | "yelp";
@@ -45,6 +45,10 @@ function firstEmail(text: string): string | null {
   const matches = text.match(EMAIL_RE) ?? [];
   for (const m of matches) {
     if (!isJunkEmail(m)) return m.toLowerCase();
+  }
+  for (const m of text.matchAll(/data-cfemail=["']([0-9a-fA-F]+)["']/gi)) {
+    const decoded = decodeCfEmail(m[1]);
+    if (decoded && !isJunkEmail(decoded)) return decoded;
   }
   return null;
 }

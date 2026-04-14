@@ -119,6 +119,33 @@ function walkLdJson(
   visit(node);
 }
 
+/**
+ * Decode Cloudflare Email Protection obfuscated strings (data-cfemail attribute).
+ * Many WordPress/Cloudflare sites use this to hide emails from bots.
+ */
+export function decodeCfEmail(encoded: string): string | null {
+  if (!encoded || encoded.length < 4 || encoded.length % 2 !== 0) return null;
+  try {
+    const key = parseInt(encoded.substring(0, 2), 16);
+    let email = "";
+    for (let i = 2; i < encoded.length; i += 2) {
+      email += String.fromCharCode(parseInt(encoded.substring(i, i + 2), 16) ^ key);
+    }
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email.toLowerCase() : null;
+  } catch {
+    return null;
+  }
+}
+
+function extractCfEmails(html: string): string[] {
+  const out: string[] = [];
+  for (const m of html.matchAll(/data-cfemail=["']([0-9a-fA-F]+)["']/gi)) {
+    const decoded = decodeCfEmail(m[1]);
+    if (decoded && !isJunkEmail(decoded)) out.push(decoded);
+  }
+  return out;
+}
+
 export function extractPublicContactHints(html: string): {
   emails: string[];
   phones: string[];
@@ -135,6 +162,10 @@ export function extractPublicContactHints(html: string): {
   for (const m of html.matchAll(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi)) {
     const e = m[0];
     if (!isJunkEmail(e)) emails.add(e.toLowerCase());
+  }
+
+  for (const cf of extractCfEmails(html)) {
+    emails.add(cf);
   }
   for (const m of html.matchAll(/tel:([^\s'"<>]+)/gi)) {
     const n = normalizeTel(decodeURIComponent(m[1].split("?")[0]));
