@@ -18,7 +18,6 @@ export const DEFAULT_DEAL_PIPELINE_COLUMNS: PipelineColumnDef[] = [
 ];
 
 export const DEFAULT_LEAD_PIPELINE_COLUMNS: PipelineColumnDef[] = [
-  { slug: "new", label: "New Lead", color: "#ea580c" },
   { slug: "contacted", label: "Contacted", color: "#3b82f6" },
   { slug: "discoverycall_scheduled", label: "Appointment Scheduled", color: "#06b6d4" },
   { slug: "discoverycall_completed", label: "Appointment Completed", color: "#8b5cf6" },
@@ -141,13 +140,11 @@ export function ensureDealPipelineRequiredSlugs(
   return out;
 }
 
-/** Default new leads use stage `new`. */
+/** Lead pipeline saves as provided (no forced first column). */
 export function ensureLeadPipelineRequiredSlugs(
   cols: PipelineColumnDef[]
 ): PipelineColumnDef[] {
-  if (cols.some((c) => c.slug === "new")) return cols;
-  const n = DEFAULT_LEAD_PIPELINE_COLUMNS.find((c) => c.slug === "new");
-  return n ? [{ ...n }, ...cols] : cols;
+  return cols;
 }
 
 export function newPipelineColumnSlug(): string {
@@ -178,6 +175,9 @@ export function leadStageLabelColor(
 ): { label: string; color: string } {
   const hit = pipeline.find((c) => c.slug === stage);
   if (hit) return { label: hit.label, color: hit.color };
+  if (stage.toLowerCase() === "new") {
+    return { label: "New Lead", color: "#ea580c" };
+  }
   const legacy = DEFAULT_LEAD_PIPELINE_COLUMNS.find((c) => c.slug === stage);
   if (legacy) return { label: legacy.label, color: legacy.color };
   return {
@@ -191,26 +191,26 @@ export function normalizeLeadStageForPipeline(
   raw: string | null | undefined,
   pipeline: PipelineColumnDef[]
 ): string {
-  const t = (raw ?? "new").trim();
+  const t = (raw ?? "contacted").trim();
   const s = t.toLowerCase();
   if (s === "won") {
     const cw = pipeline.find((c) => c.slug === "closed_won");
     if (cw) return cw.slug;
     const q = pipeline.find((c) => c.slug === "qualified");
-    return q?.slug ?? pipeline[0]?.slug ?? "new";
+    return q?.slug ?? pipeline[0]?.slug ?? "contacted";
   }
   if (s === "lost") {
     const cl = pipeline.find((c) => c.slug === "closed_lost");
     if (cl) return cl.slug;
     const nq = pipeline.find((c) => c.slug === "not_qualified");
-    return nq?.slug ?? pipeline[0]?.slug ?? "new";
+    return nq?.slug ?? pipeline[0]?.slug ?? "contacted";
   }
   if (s === "qualified") {
     const exact = pipeline.find((c) => c.slug.toLowerCase() === "qualified");
     if (exact) return exact.slug;
     const dcc = pipeline.find((c) => c.slug === "discoverycall_completed");
     if (dcc) return dcc.slug;
-    return pipeline[0]?.slug ?? "new";
+    return pipeline[0]?.slug ?? "contacted";
   }
   if (s === "not_qualified") {
     const exact = pipeline.find((c) => c.slug.toLowerCase() === "not_qualified");
@@ -219,9 +219,16 @@ export function normalizeLeadStageForPipeline(
     if (cl) return cl.slug;
     const nur = pipeline.find((c) => c.slug === "nurture");
     if (nur) return nur.slug;
-    return pipeline[0]?.slug ?? "new";
+    return pipeline[0]?.slug ?? "contacted";
+  }
+  if (s === "new") {
+    const contacted = pipeline.find((c) => c.slug === "contacted");
+    if (contacted) return contacted.slug;
+    const newCol = pipeline.find((c) => c.slug === "new");
+    if (newCol) return newCol.slug;
+    return pipeline[0]?.slug ?? "contacted";
   }
   const hit = pipeline.find((c) => c.slug.toLowerCase() === s);
   if (hit) return hit.slug;
-  return t || (pipeline[0]?.slug ?? "new");
+  return t || (pipeline[0]?.slug ?? "contacted");
 }

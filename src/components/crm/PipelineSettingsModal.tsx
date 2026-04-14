@@ -87,7 +87,6 @@ export default function PipelineSettingsModal({
 
   function canDeleteSlug(slug: string): boolean {
     if (draft.length <= 1) return false;
-    if (kind === "lead" && slug === "new") return false;
     if (kind === "deal") {
       if (
         slug === "prospect" ||

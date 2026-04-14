@@ -549,21 +549,27 @@ export default function LeadsView({
 
   const leadStageCounts = leadsSnapshot.reduce<Record<string, number>>(
     (acc, l) => {
-      const s = (l.stage ?? "").trim() || "new";
+      const s = (l.stage ?? "").trim() || "contacted";
       acc[s] = (acc[s] ?? 0) + 1;
       return acc;
     },
     {}
   );
 
+  /** Pipeline Kanban hides the legacy "New Lead" column; those leads map to Contacted. */
+  const leadPipelineKanban = useMemo(
+    () => leadPipeline.filter((c) => c.slug !== "new"),
+    [leadPipeline]
+  );
+
   const pipelineColumns: KanbanColumn<Lead>[] = useMemo(() => {
-    const configuredSlugs = new Set(leadPipeline.map((c) => c.slug));
+    const configuredSlugs = new Set(leadPipelineKanban.map((c) => c.slug));
     const keys = new Set(
       filtered.map((l) => leadKanbanKey(l, leadPipeline))
     );
     const orphanSlugs = [...keys].filter((k) => !configuredSlugs.has(k));
     return [
-      ...leadPipeline.map((col) => ({
+      ...leadPipelineKanban.map((col) => ({
         id: col.slug,
         label: col.label,
         color: col.color,
@@ -583,7 +589,7 @@ export default function LeadsView({
         };
       }),
     ];
-  }, [filtered, leadPipeline]);
+  }, [filtered, leadPipeline, leadPipelineKanban]);
 
   function handlePipelineMove(
     itemId: string,

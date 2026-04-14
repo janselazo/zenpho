@@ -48,7 +48,7 @@ export default async function SettingsPage() {
     ]);
     const leadStageCounts: Record<string, number> = {};
     for (const row of leadsRes.data ?? []) {
-      const s = String((row as { stage?: string }).stage ?? "").trim() || "new";
+      const s = String((row as { stage?: string }).stage ?? "").trim() || "contacted";
       leadStageCounts[s] = (leadStageCounts[s] ?? 0) + 1;
     }
     const dealStageCounts: Record<string, number> = {};

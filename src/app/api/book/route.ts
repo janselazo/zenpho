@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
         phone: phone || null,
         company: company || null,
         source: "Website Booking",
-        stage: "new",
+        stage: "contacted",
         notes: message || null,
         owner_id: null,
       })

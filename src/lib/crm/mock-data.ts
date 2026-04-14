@@ -20,7 +20,6 @@ export type TaskStatus =
   | "completed";
 /** Kanban / pipeline column order (aligned with `DEFAULT_LEAD_PIPELINE_COLUMNS`). */
 export const LEAD_PIPELINE_STAGES = [
-  "new",
   "contacted",
   "discoverycall_scheduled",
   "discoverycall_completed",
@@ -35,7 +34,6 @@ export type LeadPipelineStage = (typeof LEAD_PIPELINE_STAGES)[number];
 export type LeadStage = LeadPipelineStage;
 
 export const LEAD_PIPELINE_COLUMN_COLORS: Record<LeadPipelineStage, string> = {
-  new: "#ea580c",
   contacted: "#3b82f6",
   discoverycall_scheduled: "#06b6d4",
   discoverycall_completed: "#8b5cf6",
@@ -49,15 +47,16 @@ export const LEAD_PIPELINE_COLUMN_COLORS: Record<LeadPipelineStage, string> = {
 export function parseLeadPipelineStage(
   value: string | null | undefined
 ): LeadPipelineStage {
-  const s = (value ?? "new").trim().toLowerCase();
+  const s = (value ?? "contacted").trim().toLowerCase();
   if (s === "won") return "closed_won";
   if (s === "lost") return "closed_lost";
   if (s === "qualified") return "discoverycall_completed";
   if (s === "not_qualified") return "closed_lost";
+  if (s === "new") return "contacted";
   if ((LEAD_PIPELINE_STAGES as readonly string[]).includes(s)) {
     return s as LeadPipelineStage;
   }
-  return "new";
+  return "contacted";
 }
 
 export interface MockProject {
@@ -222,7 +221,6 @@ export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
 };
 
 export const LEAD_STAGE_LABELS: Record<LeadStage, string> = {
-  new: "New Lead",
   contacted: "Contacted",
   discoverycall_scheduled: "Appointment Scheduled",
   discoverycall_completed: "Appointment Completed",

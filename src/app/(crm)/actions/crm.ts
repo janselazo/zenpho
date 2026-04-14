@@ -217,7 +217,7 @@ export async function createLead(formData: FormData) {
       notes: notes || null,
       project_type,
       contact_category,
-      stage: "new",
+      stage: "contacted",
       owner_id: user.id,
     })
     .select("id")
@@ -281,7 +281,7 @@ export async function updateLeadRow(formData: FormData) {
     }
   }
   const sourceRaw = String(formData.get("source") ?? "");
-  const stage = String(formData.get("stage") ?? "new").trim();
+  const stage = String(formData.get("stage") ?? "contacted").trim();
   const notes = String(formData.get("notes") ?? "").trim();
   const rawProjectType = String(formData.get("project_type") ?? "").trim();
   const project_type = parseProjectTypeForUpdate(

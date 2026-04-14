@@ -280,7 +280,7 @@ export default function LeadEditForm({
   const [projectModalOpen, setProjectModalOpen] = useState(false);
 
   const defaultStage =
-    (lead.stage ?? "").trim() || leadPipelineColumns[0]?.slug || "new";
+    (lead.stage ?? "").trim() || leadPipelineColumns[0]?.slug || "contacted";
   const [stagePreview, setStagePreview] = useState(defaultStage);
   const currentSource = (lead.source ?? "").trim();
   const [sourcePreview, setSourcePreview] = useState(currentSource);
