@@ -154,6 +154,7 @@ export const PROSPECTING_SECTIONS: ProspectingSection[] = [
     icon: Gift,
     description:
       "Public review links, referral touchpoints, and social proof for leads and partners.",
+    soon: true,
   },
   {
     slug: "partnerships",
@@ -192,6 +193,7 @@ export const PROSPECTING_SECTIONS: ProspectingSection[] = [
     icon: Network,
     description:
       "Find networking-style events in a city by date range—venues, organizers, and links (Ticketmaster catalog).",
+    soon: true,
   },
 ];
 

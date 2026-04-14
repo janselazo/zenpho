@@ -1,7 +1,7 @@
+"use client";
+
 import { Video } from "lucide-react";
 import ComingSoonModule from "@/components/crm/prospecting/ComingSoonModule";
-
-export const dynamic = "force-dynamic";
 
 const FEATURES = [
   "Templates for short-form (Reels, Shorts) and long-form explainers",

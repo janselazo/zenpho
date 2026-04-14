@@ -131,37 +131,13 @@ export default function AppSidebar() {
           </span>
         </Link>
 
-        {/* Dashboard, Playbook, Prospects */}
+        {/* Dashboard */}
         <div className="px-2 pt-4">
           <nav className="flex flex-col gap-0.5">
             <NavLink href="/dashboard" active={isActive(pathname, "/dashboard")}>
               <LayoutDashboard className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
               Dashboard
             </NavLink>
-            {playbookSection && PlaybookNavIcon ? (
-              <NavLink
-                href={playbookSection.href}
-                active={
-                  pathname === playbookSection.href ||
-                  pathname.startsWith(`${playbookSection.href}/`)
-                }
-              >
-                <PlaybookNavIcon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-                {playbookSection.label}
-              </NavLink>
-            ) : null}
-            {prospectsSection && ProspectsNavIcon ? (
-              <NavLink
-                href={prospectsSection.href}
-                active={
-                  pathname === prospectsSection.href ||
-                  pathname.startsWith(`${prospectsSection.href}/`)
-                }
-              >
-                <ProspectsNavIcon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-                {prospectsSection.label}
-              </NavLink>
-            ) : null}
           </nav>
         </div>
 
@@ -171,6 +147,18 @@ export default function AppSidebar() {
           open={opportunitiesOpen}
           onToggle={toggleOpportunities}
         >
+          {prospectsSection && ProspectsNavIcon ? (
+            <NavLink
+              href={prospectsSection.href}
+              active={
+                pathname === prospectsSection.href ||
+                pathname.startsWith(`${prospectsSection.href}/`)
+              }
+            >
+              <ProspectsNavIcon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+              {prospectsSection.label}
+            </NavLink>
+          ) : null}
           {opportunitiesNav.map(({ href, label, icon: Icon }) => (
             <NavLink key={href} href={href} active={isActive(pathname, href)}>
               <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
@@ -199,6 +187,18 @@ export default function AppSidebar() {
           open={prospectingOpen}
           onToggle={toggleProspecting}
         >
+          {playbookSection && PlaybookNavIcon ? (
+            <NavLink
+              href={playbookSection.href}
+              active={
+                pathname === playbookSection.href ||
+                pathname.startsWith(`${playbookSection.href}/`)
+              }
+            >
+              <PlaybookNavIcon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+              {playbookSection.label}
+            </NavLink>
+          ) : null}
           <NavLink
             href="/prospecting/product-led"
             active={
@@ -207,7 +207,8 @@ export default function AppSidebar() {
             }
           >
             <Layers className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-            Product-Led
+            <span className="min-w-0 flex-1 truncate">Product-Led</span>
+            <SoonBadge className="ml-auto" />
           </NavLink>
           {prospectingSectionsWithoutPlaybook.map(({ href, label, icon: Icon, soon }) => (
             <NavLink

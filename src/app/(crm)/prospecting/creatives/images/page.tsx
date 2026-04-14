@@ -1,7 +1,7 @@
+"use client";
+
 import { ImageIcon } from "lucide-react";
 import ComingSoonModule from "@/components/crm/prospecting/ComingSoonModule";
-
-export const dynamic = "force-dynamic";
 
 const FEATURES = [
   "Centralized image library with search by campaign, offer, and ICP segment",
