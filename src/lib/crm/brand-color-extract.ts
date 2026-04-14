@@ -120,9 +120,10 @@ function extractPriorityColors(html: string): RGBTuple[] {
     if (rgb) priority.push(rgb);
   }
 
-  // Standard CSS vars (--primary, --brand, --accent, etc.) plus
-  // Wix (--color_*), Squarespace (--accent-*, --site-*), WordPress (--wp--preset--color-*).
-  const cssVarRe = /--(?:primary|brand|accent|main|theme|color-primary|brand-color|logo|color_\d+|accent-[a-z]+|site-[a-z-]+|wp--preset--color-[a-z-]+)[^:]*:\s*([^;}{]+)/gi;
+  // Match any CSS custom property containing "color", "primary", "brand", or "accent"
+  // in its name. Covers Astra (--ast-global-color-*), Elementor (--e-global-color-*),
+  // Wix (--color_N), Squarespace (--accent-*), WordPress (--wp--preset--color-*), etc.
+  const cssVarRe = /--(?:[a-z0-9_-]*(?:color|primary|brand|accent)[a-z0-9_-]*):\s*([^;}{]+)/gi;
   while ((m = cssVarRe.exec(html)) !== null) {
     const rgb = parseColorValue(m[1].trim());
     if (rgb) priority.push(rgb);
@@ -366,15 +367,16 @@ export function extractLogoUrl(html: string, baseUrl: string): string | null {
   }
   if (bestIcon && bestSize >= 64) return bestIcon;
 
-  // <img> with "logo" in tag attributes (src, alt, class, id)
+  // <img> with "logo" in tag attributes (src, alt, class, id).
+  // Prioritize data-src/data-lazy-src (lazy-loaded real URL) over src (often a placeholder).
   const imgRe = /<img\s+[^>]*(?:src|alt|class|id)=[^>]*>/gi;
   while ((m = imgRe.exec(html)) !== null) {
     const tag = m[0];
     if (!/logo/i.test(tag)) continue;
-    const srcMatch = tag.match(/(?:src|data-src)=["']([^"']+)["']/i);
-    if (!srcMatch) continue;
-    const src = srcMatch[1].trim();
-    if (/^data:/i.test(src)) continue;
+    const lazySrc = tag.match(/data-(?:lazy-)?src=["']([^"']+)["']/i);
+    const plainSrc = tag.match(/\bsrc=["']([^"']+)["']/i);
+    const src = (lazySrc?.[1] ?? plainSrc?.[1] ?? "").trim();
+    if (!src || /^data:/i.test(src)) continue;
     const u = resolveUrl(src, baseUrl);
     if (u) return u;
   }
