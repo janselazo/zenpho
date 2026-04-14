@@ -20,8 +20,8 @@ export default function ToolsHubView() {
         </h2>
         <p className="mt-2 text-sm text-text-secondary dark:text-zinc-400">
           No live tools yet. When we launch a calculator, checker, or similar utility, it will
-          appear here and under <strong className="font-medium text-text-primary dark:text-zinc-200">Tools</strong>{" "}
-          in the sidebar.
+          appear here under{" "}
+          <strong className="font-medium text-text-primary dark:text-zinc-200">Product-Led → Tools</strong>.
         </p>
       </div>
 
@@ -30,8 +30,20 @@ export default function ToolsHubView() {
           How we add a tool
         </h2>
         <ul className="mt-3 list-inside list-disc space-y-1.5 text-sm text-text-secondary dark:text-zinc-400">
-          <li>Add a route (e.g. <code className="rounded bg-surface px-1 py-0.5 font-mono text-xs dark:bg-zinc-800">/tools/your-tool</code>).</li>
-          <li>Register it in <code className="rounded bg-surface px-1 py-0.5 font-mono text-xs dark:bg-zinc-800">src/lib/crm/tools-nav.ts</code> so it shows in the sidebar.</li>
+          <li>
+            Add a route (e.g.{" "}
+            <code className="rounded bg-surface px-1 py-0.5 font-mono text-xs dark:bg-zinc-800">
+              /prospecting/product-led/tools/your-tool
+            </code>
+            ).
+          </li>
+          <li>
+            Register it in{" "}
+            <code className="rounded bg-surface px-1 py-0.5 font-mono text-xs dark:bg-zinc-800">
+              src/lib/crm/tools-nav.ts
+            </code>{" "}
+            so it appears under the Product-Led Tools tab.
+          </li>
           <li>Ship the public marketing URL when ready so founders can find it without logging in.</li>
         </ul>
       </div>

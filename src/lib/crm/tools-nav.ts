@@ -2,9 +2,11 @@ import type { LucideIcon } from "lucide-react";
 import { Magnet, Wrench } from "lucide-react";
 
 /**
- * CRM sidebar entries under **Tools**. Each public free tool (calculator, checker, etc.)
- * should add a row here and a matching route under `/tools/...` when shipped.
+ * Product-Led hub tabs (Lead Magnets + Tools). Sidebar shows a single **Product-Led** link;
+ * each tool still ships under `/prospecting/product-led/tools/...` when applicable.
  */
+export const PRODUCT_LED_HUB = "/prospecting/product-led";
+
 export type ToolsNavItem = {
   href: string;
   label: string;
@@ -12,6 +14,6 @@ export type ToolsNavItem = {
 };
 
 export const toolsNav: ToolsNavItem[] = [
-  { href: "/tools", label: "Tools", icon: Wrench },
-  { href: "/lead-magnets", label: "Lead magnets", icon: Magnet },
+  { href: `${PRODUCT_LED_HUB}/tools`, label: "Tools", icon: Wrench },
+  { href: `${PRODUCT_LED_HUB}/lead-magnets`, label: "Lead magnets", icon: Magnet },
 ];

@@ -126,7 +126,7 @@ export async function saveLeadMagnetFromIdea(input: {
   });
 
   if (error) return { ok: false, error: error.message };
-  revalidatePath("/lead-magnets");
+  revalidatePath("/prospecting/product-led/lead-magnets");
   return { ok: true };
 }
 
@@ -169,7 +169,7 @@ export async function addManualSavedLeadMagnet(input: {
   });
 
   if (error) return { ok: false, error: error.message };
-  revalidatePath("/lead-magnets");
+  revalidatePath("/prospecting/product-led/lead-magnets");
   return { ok: true };
 }
 
@@ -193,6 +193,6 @@ export async function deleteSavedLeadMagnet(
 
   if (error) return { ok: false, error: error.message };
   if (!data?.length) return { ok: false, error: "Not found." };
-  revalidatePath("/lead-magnets");
+  revalidatePath("/prospecting/product-led/lead-magnets");
   return { ok: true };
 }

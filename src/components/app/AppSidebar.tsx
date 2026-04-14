@@ -13,6 +13,7 @@ import {
   FileBarChart,
   FileText,
   FolderKanban,
+  Layers,
   LayoutDashboard,
   LogOut,
   MessageSquare,
@@ -25,7 +26,6 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { PROSPECTING_SECTIONS } from "@/lib/crm/prospecting-nav";
 import SoonBadge from "@/components/crm/prospecting/SoonBadge";
-import { toolsNav } from "@/lib/crm/tools-nav";
 
 const opportunitiesNav: Array<{
   href: string;
@@ -199,24 +199,16 @@ export default function AppSidebar() {
           open={prospectingOpen}
           onToggle={toggleProspecting}
         >
-          {/* Product-Led: tools + lead magnets (above Creatives) */}
-          <div className="mb-1 mt-0 px-3 text-[10px] font-semibold uppercase tracking-wider text-text-secondary/40 dark:text-zinc-500">
+          <NavLink
+            href="/prospecting/product-led"
+            active={
+              pathname === "/prospecting/product-led" ||
+              pathname.startsWith("/prospecting/product-led/")
+            }
+          >
+            <Layers className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
             Product-Led
-          </div>
-          {toolsNav.map(({ href, label, icon: Icon }) => (
-            <NavLink
-              key={href}
-              href={href}
-              active={
-                href === "/tools"
-                  ? pathname === "/tools"
-                  : isActive(pathname, href)
-              }
-            >
-              <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-              {label}
-            </NavLink>
-          ))}
+          </NavLink>
           {prospectingSectionsWithoutPlaybook.map(({ href, label, icon: Icon, soon }) => (
             <NavLink
               key={href}
