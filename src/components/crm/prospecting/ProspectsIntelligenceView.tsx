@@ -30,7 +30,7 @@ import ProspectPreviewOutreachBlock, {
 } from "@/components/crm/prospecting/ProspectPreviewOutreachBlock";
 import { useRouter, useSearchParams } from "next/navigation";
 import { primaryPlaceTypeLabel } from "@/lib/crm/places-search-ui";
-import { Building2, ChevronLeft, ChevronRight, Rocket } from "lucide-react";
+import { Building2, ChevronLeft, ChevronRight, Rocket, ShoppingBag } from "lucide-react";
 import ProspectingPendingContent from "@/components/crm/prospecting/ProspectingPendingContent";
 import ProspectConversationPanel from "@/components/crm/prospecting/ProspectConversationPanel";
 import ProspectingTabbedShell from "@/components/crm/prospecting/ProspectingTabbedShell";
@@ -53,6 +53,13 @@ const TECH_STARTUPS_PENDING_FEATURES = [
   "Funding, stack, and hiring signals for SaaS and product teams",
   "Saved lists and outreach hooks tied to Playbook",
   "Integrations with startup data providers — wiring in a later phase",
+];
+
+const ECOM_BRANDS_PENDING_FEATURES = [
+  "Shopify, WooCommerce, and Magento store discovery and tech-stack signals",
+  "Revenue estimates, traffic trends, and conversion audit hooks",
+  "Saved lists and outreach templates tied to Playbook",
+  "Integrations with e-commerce data providers — wiring in a later phase",
 ];
 
 const cardClass =
@@ -1597,6 +1604,12 @@ function ProspectsIntelligenceViewInner({
         ariaLabel="Prospects"
         tabs={[
           {
+            id: "local-business",
+            label: "Local Business",
+            icon: Building2,
+            body: localBusinessTabBody,
+          },
+          {
             id: "tech-startups",
             label: "Tech Startups",
             icon: Rocket,
@@ -1611,10 +1624,18 @@ function ProspectsIntelligenceViewInner({
             ),
           },
           {
-            id: "local-business",
-            label: "Local Business",
-            icon: Building2,
-            body: localBusinessTabBody,
+            id: "ecom-brands",
+            label: "Ecom Brands",
+            icon: ShoppingBag,
+            body: (
+              <ProspectingPendingContent
+                title="Ecom Brands"
+                description="Discover and qualify e-commerce stores — platform detection, traffic signals, and conversion audit hooks will land here in a later phase."
+                features={ECOM_BRANDS_PENDING_FEATURES}
+                icon={ShoppingBag}
+                titleLevel="tab"
+              />
+            ),
           },
         ]}
       />

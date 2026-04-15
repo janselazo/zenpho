@@ -8,6 +8,9 @@ const nextConfig = {
   turbopack: {
     root: __dirname,
   },
+  serverActions: {
+    bodySizeLimit: "5mb",
+  },
   // Tree-shake icon/chart/animation barrels so each route ships less JS (Vercel / Next guidance).
   experimental: {
     optimizePackageImports: [

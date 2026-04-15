@@ -373,27 +373,41 @@ function ProfileTab({ initial }: { initial: SettingsInitial }) {
     e.target.value = "";
     if (!file) return;
     setAvatarPending(true);
-    const fd = new FormData();
-    fd.set("avatar", file);
-    const res = await uploadAvatar(fd);
-    setAvatarPending(false);
-    if ("error" in res && res.error) setProfileErr(res.error);
-    else if ("url" in res && res.url) {
-      setAvatarUrl(res.url);
-      setProfileMsg("Photo updated.");
-      setProfileErr(null);
+    setProfileErr(null);
+    try {
+      const fd = new FormData();
+      fd.set("avatar", file);
+      const res = await uploadAvatar(fd);
+      if ("error" in res && res.error) {
+        setProfileErr(res.error);
+      } else if ("url" in res && res.url) {
+        setAvatarUrl(`${res.url}?t=${Date.now()}`);
+        setProfileMsg("Photo updated.");
+        setProfileErr(null);
+      }
+    } catch {
+      setProfileErr("Upload failed. Try a smaller image (max 5 MB).");
+    } finally {
+      setAvatarPending(false);
     }
   }
 
   async function onRemoveAvatar() {
     setAvatarPending(true);
-    const res = await removeAvatar();
-    setAvatarPending(false);
-    if ("error" in res && res.error) setProfileErr(res.error);
-    else {
-      setAvatarUrl(null);
-      setProfileMsg("Photo removed.");
-      setProfileErr(null);
+    setProfileErr(null);
+    try {
+      const res = await removeAvatar();
+      if ("error" in res && res.error) {
+        setProfileErr(res.error);
+      } else {
+        setAvatarUrl(null);
+        setProfileMsg("Photo removed.");
+        setProfileErr(null);
+      }
+    } catch {
+      setProfileErr("Could not remove photo. Please try again.");
+    } finally {
+      setAvatarPending(false);
     }
   }
 
