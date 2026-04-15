@@ -1218,11 +1218,11 @@ export default function DashboardView({
         </div>
       </div>
 
-      {/* Revenue vs Expenses */}
+      {/* Daily Earnings vs Expenses */}
       {!hasErrors && chartData.length > 0 && (
         <div className={`${dashCard} p-6`}>
           <h2 className="text-sm font-semibold uppercase tracking-wider text-text-secondary dark:text-zinc-400">
-            Revenue vs expenses · {rangeLabel}
+            Daily earnings vs expenses · {rangeLabel}
           </h2>
           <div className="mt-4 h-[280px] w-full min-w-0">
             <ResponsiveContainer width="100%" height="100%">
@@ -1241,8 +1241,8 @@ export default function DashboardView({
                   }}
                 />
                 <Legend wrapperStyle={{ fontSize: 12, color: chartTheme.legendColor }} />
-                <Bar dataKey="revenue" name="Revenue" fill="#2563eb" radius={[4, 4, 0, 0]} maxBarSize={28} />
-                <Bar dataKey="expense" name="Expenses" fill="#0ea5e9" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                <Bar dataKey="revenue" name="Earnings" fill="#22c55e" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                <Bar dataKey="expense" name="Expenses" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={28} />
               </BarChart>
             </ResponsiveContainer>
           </div>

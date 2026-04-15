@@ -21,7 +21,7 @@ export default function DashboardCharts({ data }: { data: DailyMoneyPoint[] }) {
   return (
     <div className="mt-10 rounded-2xl border border-border bg-white p-6 shadow-sm">
       <h2 className="text-sm font-semibold uppercase tracking-wider text-text-secondary">
-        Revenue vs expenses (last 7 days)
+        Daily earnings vs expenses (last 7 days)
       </h2>
       <div className="mt-4 h-[280px] w-full min-w-0">
         <ResponsiveContainer width="100%" height="100%">
@@ -58,15 +58,15 @@ export default function DashboardCharts({ data }: { data: DailyMoneyPoint[] }) {
             <Legend wrapperStyle={{ fontSize: 12 }} />
             <Bar
               dataKey="revenue"
-              name="Revenue"
-              fill="#2563eb"
+              name="Earnings"
+              fill="#22c55e"
               radius={[4, 4, 0, 0]}
               maxBarSize={28}
             />
             <Bar
               dataKey="expense"
               name="Expenses"
-              fill="#0ea5e9"
+              fill="#ef4444"
               radius={[4, 4, 0, 0]}
               maxBarSize={28}
             />

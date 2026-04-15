@@ -10,6 +10,7 @@ import {
   Building2,
   Calendar,
   ChevronDown,
+  DollarSign,
   FileBarChart,
   FileText,
   FolderKanban,
@@ -44,6 +45,7 @@ const workNav = [
 ];
 
 const agencyNav = [
+  { href: "/finances", label: "Finances", icon: DollarSign },
   { href: "/team", label: "Team", icon: Users },
   { href: "/automations", label: "Automations", icon: Workflow },
   { href: "/reports", label: "Reports", icon: FileBarChart },
