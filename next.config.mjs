@@ -8,10 +8,6 @@ const nextConfig = {
   turbopack: {
     root: __dirname,
   },
-  serverActions: {
-    bodySizeLimit: "5mb",
-  },
-  // Tree-shake icon/chart/animation barrels so each route ships less JS (Vercel / Next guidance).
   experimental: {
     optimizePackageImports: [
       "lucide-react",
@@ -20,6 +16,9 @@ const nextConfig = {
       "@fullcalendar/react",
       "@fullcalendar/core",
     ],
+    serverActions: {
+      bodySizeLimit: "5mb",
+    },
   },
   async redirects() {
     return [
