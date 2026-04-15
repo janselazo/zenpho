@@ -93,7 +93,7 @@ export const developmentPricingOfferings: DevelopmentPricingOffering[] = [
     title: "Custom Websites",
     subtitle:
       "Marketing sites, landing pages, and company presence — fast to ship, on-brand, and built to convert.",
-    priceAmount: "$2,500",
+    priceAmount: "$1,000",
     priceSuffix: "starting",
     features: [
       "Discovery and IA scoped to your audience, goals, and primary calls to action",
@@ -133,6 +133,24 @@ export const developmentPricingOfferings: DevelopmentPricingOffering[] = [
     ],
   },
 ];
+
+/** Full-width row above the main 3-column pricing grid. */
+export const mvpDevelopmentPricingOffering: DevelopmentPricingOffering = {
+  id: "mvp-development",
+  title: "MVP Development",
+  subtitle:
+    "Go from idea to live product fast — we scope, design, and ship a focused first version so you can validate with real users before scaling.",
+  priceAmount: "$2,500",
+  priceSuffix: "starting",
+  features: [
+    "Scope-down workshop to define the core loop, key screens, and launch criteria",
+    "Lean tech stack chosen for speed-to-market and future extensibility",
+    "End-to-end build: auth, data, core features, and a polished enough UI to onboard real users",
+    "Deployment to production with CI pipeline and environment setup",
+    "Feedback-ready handoff: analytics hooks, error tracking, and a short iteration runway",
+    "Slack channel + post-launch support window",
+  ],
+};
 
 /** Full-width row below the main 3-column pricing grid. */
 export const aiAutomationsPricingOffering: DevelopmentPricingOffering = {

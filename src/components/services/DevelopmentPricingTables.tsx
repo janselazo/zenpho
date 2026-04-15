@@ -3,6 +3,7 @@ import type { DevelopmentPricingOffering } from "@/lib/data";
 import {
   aiAutomationsPricingOffering,
   developmentPricingOfferings,
+  mvpDevelopmentPricingOffering,
 } from "@/lib/data";
 
 /** Minimal list check — stroke only, no box (matches marketing reference). */
@@ -145,21 +146,25 @@ function HorizontalPricingOffering({ offering }: { offering: DevelopmentPricingO
 }
 
 export default function DevelopmentPricingTables({
+  topOffering = mvpDevelopmentPricingOffering,
   offerings = developmentPricingOfferings,
-  horizontalOffering = aiAutomationsPricingOffering,
+  bottomOffering = aiAutomationsPricingOffering,
 }: {
+  /** Optional full-width row above the grid; pass `null` to hide. */
+  topOffering?: DevelopmentPricingOffering | null;
   offerings?: DevelopmentPricingOffering[];
   /** Optional full-width row below the grid; pass `null` to hide. */
-  horizontalOffering?: DevelopmentPricingOffering | null;
+  bottomOffering?: DevelopmentPricingOffering | null;
 }) {
   return (
     <div className="mx-auto max-w-6xl space-y-8 lg:space-y-10">
+      {topOffering ? <HorizontalPricingOffering offering={topOffering} /> : null}
       <div className="grid gap-5 sm:gap-6 md:grid-cols-2 lg:grid-cols-3 xl:items-start xl:gap-5">
         {offerings.map((offering) => (
           <OfferingCard key={offering.id} offering={offering} />
         ))}
       </div>
-      {horizontalOffering ? <HorizontalPricingOffering offering={horizontalOffering} /> : null}
+      {bottomOffering ? <HorizontalPricingOffering offering={bottomOffering} /> : null}
     </div>
   );
 }
