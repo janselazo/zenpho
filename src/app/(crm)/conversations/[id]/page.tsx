@@ -28,7 +28,7 @@ export default async function ConversationThreadPage({
 
   const { data: conversations, error: listError } = await supabase
     .from("conversation")
-    .select("id, contact_name, channel, last_message_at, unread_count")
+    .select("id, contact_name, channel, contact_email, contact_phone, last_message_at, unread_count")
     .order("last_message_at", { ascending: false })
     .limit(200);
 
@@ -65,7 +65,7 @@ export default async function ConversationThreadPage({
   const { data: rawMessages, error: msgError } = await supabase
     .from("conversation_message")
     .select(
-      "id, conversation_id, kind, direction, body, sender_name, sender_avatar_url, attachment, created_at"
+      "id, conversation_id, kind, direction, body, sender_name, sender_avatar_url, attachment, created_at, email_subject, email_message_id"
     )
     .eq("conversation_id", id)
     .order("created_at", { ascending: true });
@@ -93,6 +93,8 @@ export default async function ConversationThreadPage({
     sender_avatar_url: m.sender_avatar_url,
     attachment: m.attachment as MessageRow["attachment"],
     created_at: m.created_at,
+    email_subject: (m as Record<string, unknown>).email_subject as string | null,
+    email_message_id: (m as Record<string, unknown>).email_message_id as string | null,
   }));
 
   return (
@@ -104,6 +106,8 @@ export default async function ConversationThreadPage({
           id: active.id,
           contact_name: active.contact_name,
           channel: active.channel,
+          contact_email: (active as Record<string, unknown>).contact_email as string | null,
+          contact_phone: (active as Record<string, unknown>).contact_phone as string | null,
         }}
         messages={messages}
       />

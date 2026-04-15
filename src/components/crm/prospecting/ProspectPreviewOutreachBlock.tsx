@@ -46,6 +46,7 @@ import {
   recordProspectPreviewScrollVideo,
   type PreviewDeviceTypeForVideo,
 } from "@/lib/crm/stitch-preview-scroll-video";
+import ProspectConversationPanel from "@/components/crm/prospecting/ProspectConversationPanel";
 
 /** Context for Google Stitch prompts (Local Business listing or URL research). */
 export type ProspectStitchContext =
@@ -1850,6 +1851,16 @@ export default function ProspectPreviewOutreachBlock({
             <p className="mt-4 text-[11px] text-text-secondary dark:text-zinc-400" role="status">
               {shareMsg}
             </p>
+          ) : null}
+
+          {emailTo?.trim() || smsTo?.trim() ? (
+            <div className="mt-6">
+              <ProspectConversationPanel
+                contactEmail={emailTo?.trim() || undefined}
+                contactPhone={smsTo?.trim() || undefined}
+                contactName={resolvedBusinessName}
+              />
+            </div>
           ) : null}
         </div>
       </div>

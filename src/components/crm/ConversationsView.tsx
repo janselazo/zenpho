@@ -53,6 +53,8 @@ export type MessageRow = {
     url?: string | null;
   } | null;
   created_at: string;
+  email_subject?: string | null;
+  email_message_id?: string | null;
 };
 
 type GroupRow =
@@ -66,7 +68,7 @@ const CHANNEL_DEFS: {
 }[] = [
   { id: "email", label: "Email", connected: true },
   { id: "whatsapp", label: "WhatsApp", connected: true },
-  { id: "sms", label: "SMS", connected: false },
+  { id: "sms", label: "SMS", connected: true },
   { id: "facebook_messenger", label: "Messenger", connected: false },
   { id: "instagram", label: "Instagram", connected: false },
   { id: "linkedin", label: "LinkedIn", connected: false },
@@ -168,6 +170,8 @@ export default function ConversationsView({
     id: string;
     contact_name: string;
     channel: string;
+    contact_email?: string | null;
+    contact_phone?: string | null;
   } | null;
   messages: MessageRow[];
 }) {
@@ -176,8 +180,18 @@ export default function ConversationsView({
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<TabId>("messages");
   const [body, setBody] = useState("");
+  const [emailSubject, setEmailSubject] = useState("");
   const [pending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
+
+  const isEmailChannel = activeConversation?.channel === "email";
+  const threadSubject = useMemo(() => {
+    if (!isEmailChannel) return null;
+    for (const m of messages) {
+      if (m.email_subject) return m.email_subject;
+    }
+    return null;
+  }, [messages, isEmailChannel]);
 
   useEffect(() => {
     if (!activeConversationId) return;
@@ -190,6 +204,7 @@ export default function ConversationsView({
   useEffect(() => {
     setTab("messages");
     setBody("");
+    setEmailSubject("");
     setFormError(null);
   }, [activeConversationId]);
 
@@ -221,6 +236,10 @@ export default function ConversationsView({
     fd.set("conversation_id", activeConversationId);
     fd.set("kind", composerKind);
     fd.set("body", body);
+    if (isEmailChannel && composerKind === "external") {
+      const subj = emailSubject.trim() || threadSubject || "";
+      if (subj) fd.set("email_subject", subj);
+    }
     startTransition(async () => {
       const res = await sendConversationMessage(fd);
       if ("error" in res && res.error) setFormError(res.error);
@@ -407,7 +426,19 @@ export default function ConversationsView({
                   <p className="truncate font-semibold text-text-primary">
                     {activeConversation.contact_name}
                   </p>
-                  <ChannelBadge channel={activeConversation.channel} />
+                  <div className="flex items-center gap-2">
+                    <ChannelBadge channel={activeConversation.channel} />
+                    {activeConversation.contact_email ? (
+                      <span className="truncate text-xs text-text-secondary">
+                        {activeConversation.contact_email}
+                      </span>
+                    ) : null}
+                    {activeConversation.contact_phone ? (
+                      <span className="truncate text-xs text-text-secondary">
+                        {activeConversation.contact_phone}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -465,6 +496,24 @@ export default function ConversationsView({
               {showComposer ? (
                 <div className="border-t border-border p-4 dark:border-zinc-800">
                   <form onSubmit={onSubmit} className="space-y-3">
+                    {isEmailChannel && composerKind === "external" ? (
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-text-secondary">
+                          Subject
+                        </label>
+                        <input
+                          type="text"
+                          value={emailSubject || threadSubject || ""}
+                          onChange={(e) => setEmailSubject(e.target.value)}
+                          placeholder="Email subject…"
+                          className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm shadow-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 dark:border-zinc-700 dark:bg-zinc-900"
+                          readOnly={!!threadSubject && !emailSubject}
+                          onFocus={() => {
+                            if (threadSubject && !emailSubject) setEmailSubject(threadSubject);
+                          }}
+                        />
+                      </div>
+                    ) : null}
                     <div className="relative rounded-2xl border border-border bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                       <textarea
                         name="body"
@@ -613,6 +662,11 @@ function MessageBubble({
               : "bg-emerald-100/80 text-text-primary dark:bg-emerald-500/15 dark:text-zinc-100"
           }`}
         >
+          {m.email_subject ? (
+            <p className="mb-1 text-xs font-semibold opacity-70">
+              {m.email_subject}
+            </p>
+          ) : null}
           {isVoice ? (
             <div className="flex items-center gap-3 py-1">
               <button

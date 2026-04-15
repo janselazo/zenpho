@@ -19,6 +19,8 @@ export async function sendSendGridMail(opts: {
   text: string;
   html: string;
   attachments?: SendGridAttachment[];
+  /** Custom headers for email threading (Message-ID, In-Reply-To, References). */
+  headers?: Record<string, string>;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const payload: Record<string, unknown> = {
     personalizations: [{ to: [{ email: opts.to.trim() }] }],
@@ -34,6 +36,10 @@ export async function sendSendGridMail(opts: {
 
   if (opts.replyTo?.trim()) {
     payload.reply_to = { email: opts.replyTo.trim() };
+  }
+
+  if (opts.headers && Object.keys(opts.headers).length > 0) {
+    payload.headers = opts.headers;
   }
 
   if (opts.attachments?.length) {

@@ -18,7 +18,7 @@ export default async function ConversationsPage() {
   const supabase = await createClient();
   const { data: conversations, error } = await supabase
     .from("conversation")
-    .select("id, contact_name, channel, last_message_at, unread_count")
+    .select("id, contact_name, channel, contact_email, contact_phone, last_message_at, unread_count")
     .order("last_message_at", { ascending: false })
     .limit(200);
 

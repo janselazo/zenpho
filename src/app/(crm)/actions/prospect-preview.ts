@@ -12,6 +12,15 @@ import { getAgencySendGridCredentials } from "@/lib/sendgrid/agency-credentials"
 import { sendSendGridMail } from "@/lib/sendgrid/mail-send";
 import { mergeProspectOutreachTemplate } from "@/lib/crm/prospect-outreach-template";
 import { requireAgencyStaff } from "@/app/(crm)/actions/prospect-preview-agency";
+import {
+  findOrCreateEmailConversation,
+  insertEmailMessage,
+  generateMessageId,
+} from "@/lib/crm/conversation-email";
+import {
+  findOrCreateSmsConversation,
+  insertSmsMessage,
+} from "@/lib/crm/conversation-sms";
 
 function normalizeHttpsImageUrl(raw: string | undefined): string | null {
   const t = raw?.trim() ?? "";
@@ -124,11 +133,18 @@ export async function sendProspectPreviewSmsAction(input: {
   }
 
   try {
-    await client.messages.create({
+    const smsResult = await client.messages.create({
       from: creds.fromPhone,
       to: input.to.trim(),
       body,
       ...(allMediaUrls.length ? { mediaUrl: allMediaUrls.slice(0, 10) } : {}),
+    });
+    await logProspectSmsToConversation(auth.supabase, {
+      to: input.to.trim(),
+      businessName: input.businessName,
+      body,
+      smsSid: smsResult.sid,
+      senderName: input.yourName ?? "You",
     });
     return { ok: true as const };
   } catch (e) {
@@ -141,10 +157,17 @@ export async function sendProspectPreviewSmsAction(input: {
       String((e as { message: string }).message).toLowerCase().includes("media");
     if (noMms) {
       try {
-        await client.messages.create({
+        const smsRetry = await client.messages.create({
           from: creds.fromPhone,
           to: input.to.trim(),
           body,
+        });
+        await logProspectSmsToConversation(auth.supabase, {
+          to: input.to.trim(),
+          businessName: input.businessName,
+          body,
+          smsSid: smsRetry.sid,
+          senderName: input.yourName ?? "You",
         });
         return { ok: true as const, warning: "MMS failed; sent SMS with link only." };
       } catch (e2) {
@@ -287,6 +310,10 @@ ${previewImageHtml}
         contentId: a.contentId,
       })) ?? [];
 
+    const emailMid = generateMessageId(
+      sendGridCreds.fromEmail.split("@")[1] ?? "zenpho.com"
+    );
+
     const sent = await sendSendGridMail({
       apiKey: sendGridCreds.apiKey,
       to: input.to.trim(),
@@ -295,11 +322,21 @@ ${previewImageHtml}
       subject: subj,
       text: plainText,
       html: htmlBody,
+      headers: { "Message-ID": emailMid },
       ...(sgAttachments.length ? { attachments: sgAttachments } : {}),
     });
     if (!sent.ok) {
       return { ok: false as const, error: sent.error };
     }
+
+    await logProspectEmailToConversation(auth.supabase, {
+      to: input.to.trim(),
+      businessName: input.businessName,
+      subject: subj,
+      body: textBody,
+      emailMessageId: emailMid,
+      senderName: input.yourName ?? "You",
+    });
     return { ok: true as const };
   }
 
@@ -320,6 +357,8 @@ ${previewImageHtml}
     };
   }
 
+  const emailMid = generateMessageId(resendFrom.split("@")[1] ?? "zenpho.com");
+
   const resend = new Resend(resendKey);
   const { error } = await resend.emails.send({
     from: resendFrom,
@@ -327,11 +366,79 @@ ${previewImageHtml}
     subject: subj,
     html: htmlBody,
     text: plainText,
+    headers: { "Message-ID": emailMid },
     ...(attachments?.length ? { attachments } : {}),
   });
 
   if (error) {
     return { ok: false as const, error: error.message };
   }
+
+  await logProspectEmailToConversation(auth.supabase, {
+    to: input.to.trim(),
+    businessName: input.businessName,
+    subject: subj,
+    body: textBody,
+    emailMessageId: emailMid,
+    senderName: input.yourName ?? "You",
+  });
   return { ok: true as const };
+}
+
+async function logProspectEmailToConversation(
+  supabase: import("@supabase/supabase-js").SupabaseClient,
+  opts: {
+    to: string;
+    businessName: string;
+    subject: string;
+    body: string;
+    emailMessageId: string;
+    senderName: string;
+  }
+) {
+  try {
+    const { conversationId } = await findOrCreateEmailConversation(supabase, {
+      contactEmail: opts.to,
+      contactName: opts.businessName || opts.to,
+    });
+
+    await insertEmailMessage(supabase, {
+      conversationId,
+      direction: "outbound",
+      body: opts.body,
+      senderName: opts.senderName,
+      emailSubject: opts.subject,
+      emailMessageId: opts.emailMessageId,
+    });
+  } catch {
+    // Non-blocking: email was sent, conversation logging is best-effort
+  }
+}
+
+async function logProspectSmsToConversation(
+  supabase: import("@supabase/supabase-js").SupabaseClient,
+  opts: {
+    to: string;
+    businessName: string;
+    body: string;
+    smsSid: string;
+    senderName: string;
+  }
+) {
+  try {
+    const { conversationId } = await findOrCreateSmsConversation(supabase, {
+      contactPhone: opts.to,
+      contactName: opts.businessName || opts.to,
+    });
+
+    await insertSmsMessage(supabase, {
+      conversationId,
+      direction: "outbound",
+      body: opts.body,
+      senderName: opts.senderName,
+      smsSid: opts.smsSid,
+    });
+  } catch {
+    // Non-blocking: SMS was sent, conversation logging is best-effort
+  }
 }

@@ -32,6 +32,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { primaryPlaceTypeLabel } from "@/lib/crm/places-search-ui";
 import { Building2, ChevronLeft, ChevronRight, Rocket } from "lucide-react";
 import ProspectingPendingContent from "@/components/crm/prospecting/ProspectingPendingContent";
+import ProspectConversationPanel from "@/components/crm/prospecting/ProspectConversationPanel";
 import ProspectingTabbedShell from "@/components/crm/prospecting/ProspectingTabbedShell";
 import PlacesBusinessAutocomplete from "@/components/crm/prospecting/PlacesBusinessAutocomplete";
 import PlacesCategoryAutocomplete from "@/components/crm/prospecting/PlacesCategoryAutocomplete";
@@ -1887,6 +1888,15 @@ function ProspectsIntelligenceViewInner({
                 >
                   {leadMessage}
                 </p>
+              ) : null}
+              {leadEmail?.trim() || leadPhone?.trim() ? (
+                <div className="mt-4">
+                  <ProspectConversationPanel
+                    contactEmail={leadEmail?.trim() || undefined}
+                    contactPhone={leadPhone?.trim() || undefined}
+                    contactName={leadName || leadCompany || leadEmail || leadPhone}
+                  />
+                </div>
               ) : null}
             </div>
             </div>
