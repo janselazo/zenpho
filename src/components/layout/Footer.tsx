@@ -102,10 +102,18 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 border-t border-border pt-8">
-          <p className="text-center text-xs text-text-secondary/70">
+        <div className="mt-12 flex flex-col items-center gap-3 border-t border-border pt-8 sm:flex-row sm:justify-between">
+          <p className="text-xs text-text-secondary/70">
             &copy; {new Date().getFullYear()} Zenpho. All rights reserved.
           </p>
+          <div className="flex gap-4">
+            <Link href="/privacy" className="text-xs text-text-secondary/70 transition-colors hover:text-accent">
+              Privacy
+            </Link>
+            <Link href="/terms" className="text-xs text-text-secondary/70 transition-colors hover:text-accent">
+              Terms
+            </Link>
+          </div>
         </div>
       </div>
     </footer>

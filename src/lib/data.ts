@@ -746,6 +746,4 @@ export const footerNavLinks: NavLinkItem[] = [
   { label: "Studio", href: "/studio" },
   { label: "Blog", href: "/blog" },
   { label: "Contact", href: "/contact" },
-  { label: "Privacy", href: "/privacy" },
-  { label: "Terms", href: "/terms" },
 ];
