@@ -10,7 +10,7 @@ type AgencyDocPreviewProps = {
   emptyLabel?: string;
 };
 
-const readingClass = `${AGENCY_DOC_TABLE_PROSE_CLASS} [&_code]:rounded [&_code]:bg-black/[0.06] [&_code]:px-1 [&_code]:text-sm [&_code]:dark:bg-white/10 [&_em]:italic [&_hr]:my-4 [&_hr]:border-border dark:[&_hr]:border-zinc-600 [&_li]:my-0.5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_u]:underline [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5`;
+const readingClass = `${AGENCY_DOC_TABLE_PROSE_CLASS} [&_code]:rounded [&_code]:bg-black/[0.06] [&_code]:px-1 [&_code]:text-sm [&_code]:dark:bg-white/10 [&_em]:italic [&_hr]:my-4 [&_hr]:border-border dark:[&_hr]:border-zinc-600 [&_li]:my-0.5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_u]:underline [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_img]:my-4 [&_img]:max-w-full [&_img]:rounded-lg`;
 
 /** Renders v2 JSON (HTML blocks) or legacy plain text from `blocksFromBody`. */
 export default function AgencyDocPreview({

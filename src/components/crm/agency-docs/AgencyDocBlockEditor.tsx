@@ -2,24 +2,30 @@
 
 import {
   forwardRef,
+  useCallback,
   useEffect,
   useImperativeHandle,
   useMemo,
   useRef,
+  useState,
   type ReactNode,
 } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import type { Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
+import Image from "@tiptap/extension-image";
 import { TableKit } from "@tiptap/extension-table";
 import { plainTextToTableHtml } from "@/lib/crm/agency-doc-paste-table";
 import { AGENCY_DOC_TABLE_PROSE_CLASS } from "@/lib/crm/agency-doc-body";
+import { uploadDocImage } from "@/app/(crm)/actions/agency-docs";
 import {
   Bold,
+  ImagePlus,
   Italic,
   List,
   ListOrdered,
+  Loader2,
   Minus,
   Underline as UnderlineIcon,
 } from "lucide-react";
@@ -32,14 +38,18 @@ type Props = {
   initialHtml: string;
   disabled?: boolean;
   autoFocus?: boolean;
+  /** Doc slug used for image uploads. Images disabled when omitted. */
+  slug?: string;
 };
 
 const AgencyDocBlockEditor = forwardRef<AgencyDocBlockEditorHandle, Props>(
   function AgencyDocBlockEditor(
-    { initialHtml, disabled = false, autoFocus = true },
+    { initialHtml, disabled = false, autoFocus = true, slug },
     ref
   ) {
     const editorRef = useRef<Editor | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [uploading, setUploading] = useState(false);
 
     const extensions = useMemo(
       () => [
@@ -47,6 +57,7 @@ const AgencyDocBlockEditor = forwardRef<AgencyDocBlockEditorHandle, Props>(
           heading: false,
         }),
         Underline,
+        Image.configure({ inline: false, allowBase64: false }),
         TableKit.configure({
           table: { resizable: false },
         }),
@@ -57,7 +68,7 @@ const AgencyDocBlockEditor = forwardRef<AgencyDocBlockEditorHandle, Props>(
     const editorProps = useMemo(
       () => ({
         attributes: {
-          class: `agency-doc-tiptap min-h-[120px] px-3 py-2 text-base leading-relaxed text-text-primary focus:outline-none dark:text-zinc-100 [&_hr]:my-4 [&_hr]:border-border dark:[&_hr]:border-zinc-600 [&_li]:my-0.5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 ${AGENCY_DOC_TABLE_PROSE_CLASS}`,
+          class: `agency-doc-tiptap min-h-[120px] px-3 py-2 text-base leading-relaxed text-text-primary focus:outline-none dark:text-zinc-100 [&_hr]:my-4 [&_hr]:border-border dark:[&_hr]:border-zinc-600 [&_li]:my-0.5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_img]:my-4 [&_img]:max-w-full [&_img]:rounded-lg ${AGENCY_DOC_TABLE_PROSE_CLASS}`,
         },
         handlePaste: (_view: unknown, event: ClipboardEvent) => {
           const ed = editorRef.current;
@@ -114,6 +125,38 @@ const AgencyDocBlockEditor = forwardRef<AgencyDocBlockEditorHandle, Props>(
         },
       }),
       [editor]
+    );
+
+    const handleImageUpload = useCallback(
+      async (file: File) => {
+        if (!slug || !editor) return;
+        setUploading(true);
+        try {
+          const fd = new FormData();
+          fd.append("file", file);
+          fd.append("slug", slug);
+          const res = await uploadDocImage(fd);
+          if ("error" in res && res.error) {
+            alert(res.error);
+            return;
+          }
+          if ("url" in res && res.url) {
+            editor.chain().focus().setImage({ src: res.url }).run();
+          }
+        } finally {
+          setUploading(false);
+        }
+      },
+      [slug, editor]
+    );
+
+    const onFileChange = useCallback(
+      (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) void handleImageUpload(file);
+        e.target.value = "";
+      },
+      [handleImageUpload]
     );
 
     if (!editor) {
@@ -181,6 +224,33 @@ const AgencyDocBlockEditor = forwardRef<AgencyDocBlockEditorHandle, Props>(
           >
             <Minus className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
           </ToolbarBtn>
+          {slug ? (
+            <>
+              <span
+                className="mx-1 h-6 w-px shrink-0 self-center bg-border dark:bg-zinc-600"
+                aria-hidden
+              />
+              <ToolbarBtn
+                editor={editor}
+                label="Insert image"
+                isActive={() => false}
+                onPress={() => fileInputRef.current?.click()}
+              >
+                {uploading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                ) : (
+                  <ImagePlus className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
+                )}
+              </ToolbarBtn>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="hidden"
+                onChange={onFileChange}
+              />
+            </>
+          ) : null}
         </div>
         <div className="max-w-full overflow-x-auto">
           <EditorContent editor={editor} />

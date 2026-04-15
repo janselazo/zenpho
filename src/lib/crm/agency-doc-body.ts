@@ -30,6 +30,7 @@ export function isEmptyBlockHtml(html: string): boolean {
   if (/<\s*ol\b/i.test(trimmed)) return false;
   if (/<\s*blockquote\b/i.test(trimmed)) return false;
   if (/<\s*table\b/i.test(trimmed)) return false;
+  if (/<\s*img\b/i.test(trimmed)) return false;
 
   // Remove paragraphs used only as vertical space (empty or br-only)
   const withoutSpacerPs = trimmed.replace(
@@ -121,7 +122,8 @@ export function sanitizeDocHtml(html: string): string {
       "tr",
       "th",
       "td",
+      "img",
     ],
-    ALLOWED_ATTR: ["class", "colspan", "rowspan"],
+    ALLOWED_ATTR: ["class", "colspan", "rowspan", "src", "alt", "title"],
   });
 }

@@ -256,6 +256,50 @@ export async function reorderAgencyDocHubCards(
   return { ok: true as const };
 }
 
+const DOC_IMAGE_BUCKET = "doc-images";
+const DOC_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+const DOC_IMAGE_ALLOWED_EXTS = ["jpg", "jpeg", "png", "webp", "gif"];
+
+export async function uploadDocImage(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" as const };
+
+  const file = formData.get("file") as File | null;
+  const slug = String(formData.get("slug") ?? "").trim();
+
+  if (!file || !(file instanceof File) || file.size === 0) {
+    return { error: "Choose an image file." as const };
+  }
+  if (file.size > DOC_IMAGE_MAX_BYTES) {
+    return { error: "Image must be 5 MB or smaller." as const };
+  }
+
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+  if (!DOC_IMAGE_ALLOWED_EXTS.includes(ext)) {
+    return { error: "Use JPG, PNG, WebP, or GIF." as const };
+  }
+
+  if (!slug || !(await isAllowedWorkspaceDocSlug(slug))) {
+    return { error: "Invalid document." as const };
+  }
+
+  const path = `docs/${slug}/${crypto.randomUUID()}.${ext}`;
+  const { error: upErr } = await supabase.storage
+    .from(DOC_IMAGE_BUCKET)
+    .upload(path, file, { contentType: file.type });
+
+  if (upErr) return { error: upErr.message };
+
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from(DOC_IMAGE_BUCKET).getPublicUrl(path);
+
+  return { ok: true as const, url: publicUrl };
+}
+
 export async function createAgencyCustomDoc(form: {
   title: string;
   description: string;
