@@ -810,7 +810,7 @@ function IncomeTab({
               className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent/90 dark:bg-blue-600 dark:hover:bg-blue-500"
             >
               <Plus className="h-3.5 w-3.5" />
-              Add Income
+              Income
             </button>
           )}
         </div>
@@ -1165,7 +1165,7 @@ function IncomeTab({
             className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent/90 dark:bg-blue-600 dark:hover:bg-blue-500"
           >
             <Plus className="h-3.5 w-3.5" />
-            Add Source
+            Source
           </button>
         </div>
 
@@ -1318,7 +1318,7 @@ function FixedExpensesTab({
           className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent/90 dark:bg-blue-600 dark:hover:bg-blue-500"
         >
           <Plus className="h-3.5 w-3.5" />
-          Add Expense
+          Expense
         </button>
       </div>
 
@@ -1609,7 +1609,7 @@ function VariableExpensesTab({
           className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent/90 dark:bg-blue-600 dark:hover:bg-blue-500"
         >
           <Plus className="h-3.5 w-3.5" />
-          Add Expense
+          Expense
         </button>
       </div>
 
