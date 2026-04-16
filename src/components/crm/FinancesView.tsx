@@ -16,10 +16,10 @@ import {
   X,
 } from "lucide-react";
 import {
-  Bar,
-  BarChart,
   CartesianGrid,
   Legend,
+  Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -41,6 +41,9 @@ import {
   updateVariableExpense,
   deleteVariableExpense,
   getMonthlyOverview,
+  getDailyIncomeLogs,
+  upsertDailyIncomeLog,
+  deleteDailyIncomeLog,
 } from "@/app/(crm)/actions/finances";
 
 // ---------------------------------------------------------------------------
@@ -92,6 +95,16 @@ type MonthlyOverview = {
   net: number;
 };
 
+type DailyIncomeLog = {
+  id: string;
+  income_source_id: string;
+  date: string;
+  amount: number;
+  hours: number;
+  notes: string | null;
+  income_source: { id: string; name: string; kind: string } | null;
+};
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -114,6 +127,11 @@ const KIND_COLORS: Record<string, string> = {
   freelance: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400",
   other: "bg-zinc-100 text-zinc-600 dark:bg-zinc-700/40 dark:text-zinc-400",
 };
+
+const SOURCE_LINE_COLORS = [
+  "#2563eb", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444",
+  "#06b6d4", "#ec4899", "#84cc16", "#f97316", "#6366f1",
+];
 
 const VARIABLE_CATEGORIES = [
   "FPL",
@@ -195,24 +213,27 @@ export default function FinancesView() {
   const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>([]);
   const [variableExpenses, setVariableExpenses] = useState<VariableExpenseEntry[]>([]);
   const [overview, setOverview] = useState<MonthlyOverview | null>(null);
+  const [dailyLogs, setDailyLogs] = useState<DailyIncomeLog[]>([]);
 
   const days = useMemo(() => daysInMonth(month), [month]);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [srcRes, entRes, fixRes, varRes, ovRes] = await Promise.all([
+      const [srcRes, entRes, fixRes, varRes, ovRes, dailyRes] = await Promise.all([
         getIncomeSources(),
         getIncomeEntries(month),
         getFixedExpenses(),
         getVariableExpenses(month),
         getMonthlyOverview(month),
+        getDailyIncomeLogs(month),
       ]);
       if (srcRes.data) setSources(srcRes.data as IncomeSource[]);
       if (entRes.data) setEntries(entRes.data as IncomeEntry[]);
       if (fixRes.data) setFixedExpenses(fixRes.data as FixedExpense[]);
       if (varRes.data) setVariableExpenses(varRes.data as VariableExpenseEntry[]);
       setOverview(ovRes as MonthlyOverview);
+      if (dailyRes.data) setDailyLogs(dailyRes.data as DailyIncomeLog[]);
     } catch {
       /* tables may not exist yet */
     } finally {
@@ -295,6 +316,9 @@ export default function FinancesView() {
               sources={sources}
               days={days}
               chartData={overviewChartData}
+              dailyLogs={dailyLogs}
+              month={month}
+              onReload={loadAll}
             />
           )}
           {tab === "Income" && (
@@ -337,13 +361,72 @@ function OverviewTab({
   sources,
   days,
   chartData,
+  dailyLogs,
+  month,
+  onReload,
 }: {
   overview: MonthlyOverview | null;
   entries: IncomeEntry[];
   sources: IncomeSource[];
   days: number;
   chartData: { name: string; amount: number }[];
+  dailyLogs: DailyIncomeLog[];
+  month: string;
+  onReload: () => Promise<void>;
 }) {
+  const [showAddDaily, setShowAddDaily] = useState(false);
+  const [savingDaily, setSavingDaily] = useState(false);
+
+  const activeSources = useMemo(
+    () => sources.filter((s) => s.is_active),
+    [sources]
+  );
+
+  const dailyChartData = useMemo(() => {
+    if (dailyLogs.length === 0) return [];
+    const dateMap = new Map<string, Record<string, number>>();
+    for (const log of dailyLogs) {
+      const dayKey = log.date;
+      const sourceName = log.income_source?.name ?? "Unknown";
+      const existing = dateMap.get(dayKey) ?? {};
+      existing[sourceName] = (existing[sourceName] ?? 0) + Number(log.amount);
+      dateMap.set(dayKey, existing);
+    }
+    return [...dateMap.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, amounts]) => ({
+        date: new Date(date + "T12:00:00").toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        }),
+        ...amounts,
+      }));
+  }, [dailyLogs]);
+
+  const dailySourceNames = useMemo(() => {
+    const names = new Set<string>();
+    for (const log of dailyLogs) {
+      names.add(log.income_source?.name ?? "Unknown");
+    }
+    return [...names];
+  }, [dailyLogs]);
+
+  async function handleAddDaily(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setSavingDaily(true);
+    const fd = new FormData(e.currentTarget);
+    await upsertDailyIncomeLog(fd);
+    setShowAddDaily(false);
+    await onReload();
+    setSavingDaily(false);
+  }
+
+  async function handleDeleteDaily(id: string) {
+    if (!confirm("Delete this daily entry?")) return;
+    await deleteDailyIncomeLog(id);
+    await onReload();
+  }
+
   if (!overview) {
     return (
       <p className="text-sm text-text-secondary dark:text-zinc-400">
@@ -433,7 +516,7 @@ function OverviewTab({
           </h2>
           <div className="mt-4 h-[260px] w-full min-w-0">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart
+              <LineChart
                 data={chartData}
                 margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
               >
@@ -464,18 +547,252 @@ function OverviewTab({
                     fontSize: 12,
                   }}
                 />
-                <Bar
+                <Line
+                  type="monotone"
                   dataKey="amount"
                   name="Amount"
-                  fill="#2563eb"
-                  radius={[6, 6, 0, 0]}
-                  maxBarSize={48}
+                  stroke="#2563eb"
+                  strokeWidth={2.5}
+                  dot={{ r: 5, fill: "#2563eb", strokeWidth: 2, stroke: "#fff" }}
+                  activeDot={{ r: 7, fill: "#2563eb", strokeWidth: 2, stroke: "#fff" }}
                 />
-              </BarChart>
+              </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
       )}
+
+      {/* Daily Income Tracker */}
+      <div className="rounded-2xl border border-border bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
+        <div className="flex items-center justify-between border-b border-border px-6 py-4 dark:border-zinc-800">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-text-secondary dark:text-zinc-400">
+            Daily Income by Business
+          </h2>
+          <button
+            type="button"
+            onClick={() => setShowAddDaily(!showAddDaily)}
+            className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent/90 dark:bg-blue-600 dark:hover:bg-blue-500"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Log Income
+          </button>
+        </div>
+
+        {showAddDaily && (
+          <form
+            onSubmit={handleAddDaily}
+            className="flex flex-wrap items-end gap-3 border-b border-border bg-surface/30 px-6 py-4 dark:border-zinc-800 dark:bg-zinc-950/30"
+          >
+            <div>
+              <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
+                Business
+              </label>
+              <select
+                name="income_source_id"
+                required
+                className="rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+              >
+                <option value="">Select…</option>
+                {activeSources.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
+                Date
+              </label>
+              <input
+                name="date"
+                type="date"
+                defaultValue={new Date().toISOString().slice(0, 10)}
+                className="rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
+                Amount ($)
+              </label>
+              <input
+                name="amount"
+                type="number"
+                step="0.01"
+                required
+                placeholder="0.00"
+                className="w-28 rounded-lg border border-border bg-white px-3 py-2 text-sm tabular-nums outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
+                Hours
+              </label>
+              <input
+                name="hours"
+                type="number"
+                step="0.25"
+                defaultValue={0}
+                className="w-20 rounded-lg border border-border bg-white px-3 py-2 text-sm tabular-nums outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
+                Notes
+              </label>
+              <input
+                name="notes"
+                placeholder="Optional"
+                className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={savingDaily}
+              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent/90 disabled:opacity-50 dark:bg-blue-600"
+            >
+              {savingDaily ? "Saving…" : "Save"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowAddDaily(false)}
+              className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:text-text-primary dark:text-zinc-400"
+            >
+              Cancel
+            </button>
+          </form>
+        )}
+
+        {dailyChartData.length > 0 ? (
+          <div className="p-6">
+            <div className="h-[300px] w-full min-w-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={dailyChartData}
+                  margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="#e8ecf1"
+                    vertical={false}
+                  />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 11, fill: "#5c6370" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: "#5c6370" }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(v: number) =>
+                      v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v}`
+                    }
+                  />
+                  <Tooltip
+                    formatter={(value: number) => fmt(Number(value ?? 0))}
+                    contentStyle={{
+                      borderRadius: 12,
+                      border: "1px solid #e8ecf1",
+                      fontSize: 12,
+                    }}
+                  />
+                  <Legend
+                    verticalAlign="top"
+                    height={36}
+                    iconType="circle"
+                    wrapperStyle={{ fontSize: 12 }}
+                  />
+                  {dailySourceNames.map((name, i) => (
+                    <Line
+                      key={name}
+                      type="monotone"
+                      dataKey={name}
+                      name={name}
+                      stroke={SOURCE_LINE_COLORS[i % SOURCE_LINE_COLORS.length]}
+                      strokeWidth={2.5}
+                      dot={{ r: 4, strokeWidth: 2, stroke: "#fff", fill: SOURCE_LINE_COLORS[i % SOURCE_LINE_COLORS.length] }}
+                      activeDot={{ r: 6, strokeWidth: 2, stroke: "#fff" }}
+                      connectNulls
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Daily log entries table */}
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border text-xs font-semibold uppercase tracking-wider text-text-secondary dark:border-zinc-800 dark:text-zinc-500">
+                    <th className="px-4 py-2">Date</th>
+                    <th className="px-4 py-2">Business</th>
+                    <th className="px-4 py-2 text-right">Amount</th>
+                    <th className="px-4 py-2 text-right">Hours</th>
+                    <th className="px-4 py-2">Notes</th>
+                    <th className="w-12 px-4 py-2" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {dailyLogs.map((log) => (
+                    <tr
+                      key={log.id}
+                      className="border-b border-border/50 dark:border-zinc-800/50"
+                    >
+                      <td className="px-4 py-2 text-text-secondary dark:text-zinc-400">
+                        {new Date(log.date + "T12:00:00").toLocaleDateString(
+                          "en-US",
+                          { month: "short", day: "numeric" }
+                        )}
+                      </td>
+                      <td className="px-4 py-2 font-medium text-text-primary dark:text-zinc-200">
+                        {log.income_source?.name ?? "Unknown"}
+                      </td>
+                      <td className="px-4 py-2 text-right tabular-nums text-emerald-600 dark:text-emerald-400">
+                        {fmt(Number(log.amount))}
+                      </td>
+                      <td className="px-4 py-2 text-right tabular-nums text-text-secondary dark:text-zinc-400">
+                        {Number(log.hours)}
+                      </td>
+                      <td className="px-4 py-2 text-text-secondary dark:text-zinc-400">
+                        {log.notes || "—"}
+                      </td>
+                      <td className="px-4 py-2 text-right">
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteDaily(log.id)}
+                          className="rounded-lg p-1 text-text-secondary hover:bg-red-50 hover:text-red-600 dark:text-zinc-500 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="font-semibold text-text-primary dark:text-zinc-100">
+                    <td className="px-4 py-2" colSpan={2}>
+                      Total
+                    </td>
+                    <td className="px-4 py-2 text-right tabular-nums text-emerald-600 dark:text-emerald-400">
+                      {fmt(dailyLogs.reduce((s, l) => s + Number(l.amount), 0))}
+                    </td>
+                    <td className="px-4 py-2 text-right tabular-nums">
+                      {dailyLogs.reduce((s, l) => s + Number(l.hours), 0)}
+                    </td>
+                    <td colSpan={2} />
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <p className="px-6 py-8 text-center text-sm text-text-secondary dark:text-zinc-400">
+            No daily income logged this month. Click &quot;Log Income&quot; to start tracking.
+          </p>
+        )}
+      </div>
 
       {/* Income sources quick glance */}
       {entries.length > 0 && (

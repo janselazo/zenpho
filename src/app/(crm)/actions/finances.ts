@@ -339,6 +339,65 @@ export async function getMonthlyOverview(month: string) {
 }
 
 // ---------------------------------------------------------------------------
+// Daily Income Log
+// ---------------------------------------------------------------------------
+
+export async function getDailyIncomeLogs(month: string) {
+  const supabase = await createClient();
+  const endOfMonth = lastDayOfMonth(month);
+  const { data, error } = await supabase
+    .from("daily_income_log")
+    .select("*, income_source:income_source_id(id, name, kind)")
+    .gte("date", month)
+    .lte("date", endOfMonth)
+    .order("date", { ascending: true });
+  if (error) return { data: null, error: error.message };
+  return { data, error: null };
+}
+
+export async function upsertDailyIncomeLog(fd: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const incomeSourceId = fd.get("income_source_id") as string;
+  const date = fd.get("date") as string;
+  if (!incomeSourceId || !date) return { error: "Source and date are required" };
+
+  const amount = Number(fd.get("amount") ?? 0);
+  const hours = Number(fd.get("hours") ?? 0);
+  const notes = (fd.get("notes") as string) || null;
+
+  const { error } = await supabase.from("daily_income_log").upsert(
+    {
+      user_id: user.id,
+      income_source_id: incomeSourceId,
+      date,
+      amount,
+      hours,
+      notes,
+    },
+    { onConflict: "income_source_id,date" }
+  );
+  if (error) return { error: error.message };
+  revalidatePath("/finances");
+  return { error: null };
+}
+
+export async function deleteDailyIncomeLog(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("daily_income_log")
+    .delete()
+    .eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath("/finances");
+  return { error: null };
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 

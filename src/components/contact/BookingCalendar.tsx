@@ -172,6 +172,7 @@ export default function BookingCalendar() {
           phone: fd.get("phone"),
           company: fd.get("company"),
           message: fd.get("message"),
+          sms_consent: fd.get("sms_consent") === "on",
           starts_at: selectedSlot.start.toISOString(),
           ends_at: selectedSlot.end.toISOString(),
         }),
@@ -459,6 +460,30 @@ export default function BookingCalendar() {
                   className={`${inputClass} resize-none`}
                   placeholder="Brief overview of your project or idea…"
                 />
+              </div>
+              <div className="flex items-start gap-2.5">
+                <input
+                  id="book-sms-consent"
+                  name="sms_consent"
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 rounded border-border text-accent accent-accent focus:ring-accent/30"
+                />
+                <label
+                  htmlFor="book-sms-consent"
+                  className="text-xs leading-relaxed text-text-secondary"
+                >
+                  I agree to receive SMS messages from Zenpho at the phone number
+                  provided, including links to design previews and project updates.
+                  Msg frequency varies. Msg &amp; data rates may apply. Reply STOP to
+                  opt out.{" "}
+                  <a href="/privacy" target="_blank" className="underline hover:text-accent">
+                    Privacy Policy
+                  </a>{" "}
+                  &amp;{" "}
+                  <a href="/terms" target="_blank" className="underline hover:text-accent">
+                    Terms
+                  </a>
+                </label>
               </div>
               <button
                 type="submit"

@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
   const phone = String(body.phone ?? "").trim();
   const company = String(body.company ?? "").trim();
   const message = String(body.message ?? "").trim();
+  const smsConsent = body.sms_consent === true;
   const startsAt = String(body.starts_at ?? "").trim();
   const endsAt = String(body.ends_at ?? "").trim();
 
@@ -86,6 +87,7 @@ export async function POST(req: NextRequest) {
         stage: "contacted",
         notes: message || null,
         owner_id: null,
+        sms_consent: smsConsent,
       })
       .select("id")
       .single();
