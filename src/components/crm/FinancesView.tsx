@@ -42,7 +42,6 @@ import {
   deleteVariableExpense,
   getMonthlyOverview,
   getDailyIncomeLogs,
-  upsertDailyIncomeLog,
   deleteDailyIncomeLog,
 } from "@/app/(crm)/actions/finances";
 
@@ -359,14 +358,6 @@ function OverviewTab({
   month: string;
   onReload: () => Promise<void>;
 }) {
-  const [showAddDaily, setShowAddDaily] = useState(false);
-  const [savingDaily, setSavingDaily] = useState(false);
-
-  const activeSources = useMemo(
-    () => sources.filter((s) => s.is_active),
-    [sources]
-  );
-
   const dailyChartData = useMemo(() => {
     if (dailyLogs.length === 0) return [];
     const dateMap = new Map<string, Record<string, number>>();
@@ -395,16 +386,6 @@ function OverviewTab({
     }
     return [...names];
   }, [dailyLogs]);
-
-  async function handleAddDaily(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setSavingDaily(true);
-    const fd = new FormData(e.currentTarget);
-    await upsertDailyIncomeLog(fd);
-    setShowAddDaily(false);
-    await onReload();
-    setSavingDaily(false);
-  }
 
   async function handleDeleteDaily(id: string) {
     if (!confirm("Delete this daily entry?")) return;
@@ -495,104 +476,11 @@ function OverviewTab({
 
       {/* Daily Income Tracker */}
       <div className="rounded-2xl border border-border bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
-        <div className="flex items-center justify-between border-b border-border px-6 py-4 dark:border-zinc-800">
+        <div className="border-b border-border px-6 py-4 dark:border-zinc-800">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-text-secondary dark:text-zinc-400">
             Daily Income by Business
           </h2>
-          <button
-            type="button"
-            onClick={() => setShowAddDaily(!showAddDaily)}
-            className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent/90 dark:bg-blue-600 dark:hover:bg-blue-500"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Income
-          </button>
         </div>
-
-        {showAddDaily && (
-          <form
-            onSubmit={handleAddDaily}
-            className="flex flex-wrap items-end gap-3 border-b border-border bg-surface/30 px-6 py-4 dark:border-zinc-800 dark:bg-zinc-950/30"
-          >
-            <div>
-              <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
-                Business
-              </label>
-              <select
-                name="income_source_id"
-                required
-                className="rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-              >
-                <option value="">Select…</option>
-                {activeSources.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
-                Date
-              </label>
-              <input
-                name="date"
-                type="date"
-                defaultValue={new Date().toISOString().slice(0, 10)}
-                className="rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
-                Amount ($)
-              </label>
-              <input
-                name="amount"
-                type="number"
-                step="0.01"
-                required
-                placeholder="0.00"
-                className="w-28 rounded-lg border border-border bg-white px-3 py-2 text-sm tabular-nums outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
-                Hours
-              </label>
-              <input
-                name="hours"
-                type="number"
-                step="0.25"
-                defaultValue={0}
-                className="w-20 rounded-lg border border-border bg-white px-3 py-2 text-sm tabular-nums outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-              />
-            </div>
-            <div className="flex-1">
-              <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
-                Notes
-              </label>
-              <input
-                name="notes"
-                placeholder="Optional"
-                className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={savingDaily}
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent/90 disabled:opacity-50 dark:bg-blue-600"
-            >
-              {savingDaily ? "Saving…" : "Save"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowAddDaily(false)}
-              className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:text-text-primary dark:text-zinc-400"
-            >
-              Cancel
-            </button>
-          </form>
-        )}
 
         {dailyChartData.length > 0 ? (
           <div className="p-6">
@@ -720,7 +608,7 @@ function OverviewTab({
           </div>
         ) : (
           <p className="px-6 py-8 text-center text-sm text-text-secondary dark:text-zinc-400">
-            No daily income logged this month. Click &quot;Log Income&quot; to start tracking.
+            No daily income logged this month.
           </p>
         )}
       </div>
@@ -891,9 +779,9 @@ function IncomeTab({
   }, [entries]);
 
   const [showAddEntry, setShowAddEntry] = useState(false);
-  const sourcesWithoutEntry = useMemo(
-    () => sources.filter((s) => s.is_active && !entryBySource.has(s.id)),
-    [sources, entryBySource]
+  const activeSources = useMemo(
+    () => sources.filter((s) => s.is_active),
+    [sources]
   );
 
   async function handleAddEntry(e: React.FormEvent<HTMLFormElement>) {
@@ -915,7 +803,7 @@ function IncomeTab({
           <h2 className="text-sm font-semibold uppercase tracking-wider text-text-secondary dark:text-zinc-400">
             Monthly Entries
           </h2>
-          {sourcesWithoutEntry.length > 0 && (
+          {activeSources.length > 0 && (
             <button
               type="button"
               onClick={() => setShowAddEntry(!showAddEntry)}
@@ -942,7 +830,7 @@ function IncomeTab({
                 className="rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
               >
                 <option value="">Select…</option>
-                {sourcesWithoutEntry.map((s) => (
+                {activeSources.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
                   </option>

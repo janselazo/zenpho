@@ -433,8 +433,10 @@ async function syncIncomeEntryFromDailyLogs(
     .gte("date", month)
     .lte("date", endOfMonth);
 
-  const totalRevenue = logs?.reduce((s, l) => s + Number(l.amount), 0) ?? 0;
-  const totalHours = logs?.reduce((s, l) => s + Number(l.hours), 0) ?? 0;
+  if (!logs || logs.length === 0) return;
+
+  const totalRevenue = logs.reduce((s, l) => s + Number(l.amount), 0);
+  const totalHours = logs.reduce((s, l) => s + Number(l.hours), 0);
 
   const { data: existing } = await supabase
     .from("income_entry")
