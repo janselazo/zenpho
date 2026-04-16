@@ -16,6 +16,8 @@ import {
   X,
 } from "lucide-react";
 import {
+  Bar,
+  BarChart,
   CartesianGrid,
   Legend,
   Line,
@@ -517,35 +519,72 @@ function OverviewTab({
           "Biz Expenses": "#8b5cf6",
           Net: overview!.net >= 0 ? "#10b981" : "#ef4444",
         };
-        const maxAmount = Math.max(...chartData.map((d) => Math.abs(d.amount)), 1);
 
         return (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {chartData.map((item) => {
               const color = ITEM_COLORS[item.name] ?? "#2563eb";
-              const pct = Math.min((Math.abs(item.amount) / maxAmount) * 100, 100);
+              const daily = item.amount / days;
+              const miniData = [
+                { label: "Daily", value: Math.abs(daily) },
+              ];
               return (
                 <div
                   key={item.name}
                   className="rounded-2xl border border-border bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80"
                 >
-                  <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary dark:text-zinc-500">
-                    {item.name}
-                  </p>
-                  <p
-                    className="mt-2 text-xl font-bold tabular-nums tracking-tight"
-                    style={{ color }}
-                  >
-                    {fmt(item.amount)}
-                  </p>
-                  <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-surface dark:bg-zinc-800">
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{ width: `${pct}%`, backgroundColor: color }}
-                    />
+                  <div className="flex items-baseline justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary dark:text-zinc-500">
+                      {item.name}
+                    </p>
+                    <p
+                      className="text-lg font-bold tabular-nums tracking-tight"
+                      style={{ color }}
+                    >
+                      {fmt(item.amount)}
+                    </p>
                   </div>
-                  <p className="mt-1.5 text-[11px] text-text-secondary dark:text-zinc-500">
-                    {fmt(item.amount / days)} / day
+                  <div className="mt-3 h-[120px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={miniData}
+                        margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
+                      >
+                        <XAxis
+                          dataKey="label"
+                          tick={{ fontSize: 11, fill: "#5c6370" }}
+                          axisLine={false}
+                          tickLine={false}
+                        />
+                        <YAxis
+                          tick={{ fontSize: 10, fill: "#5c6370" }}
+                          axisLine={false}
+                          tickLine={false}
+                          width={50}
+                          tickFormatter={(v: number) =>
+                            v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v}`
+                          }
+                        />
+                        <Tooltip
+                          formatter={(value) => fmt(Number(value ?? 0))}
+                          contentStyle={{
+                            borderRadius: 10,
+                            border: "1px solid #e8ecf1",
+                            fontSize: 12,
+                          }}
+                        />
+                        <Bar
+                          dataKey="value"
+                          name="Daily Income"
+                          fill={color}
+                          radius={[6, 6, 0, 0]}
+                          maxBarSize={56}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <p className="mt-1 text-center text-xs tabular-nums text-text-secondary dark:text-zinc-500">
+                    {fmt(daily)} / day
                   </p>
                 </div>
               );
