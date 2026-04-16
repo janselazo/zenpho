@@ -133,28 +133,6 @@ const SOURCE_LINE_COLORS = [
   "#06b6d4", "#ec4899", "#84cc16", "#f97316", "#6366f1",
 ];
 
-const VARIABLE_CATEGORIES = [
-  "FPL",
-  "Grocery",
-  "House Products",
-  "Gas & Air",
-  "Sunpass",
-  "Parking",
-  "Car Maintenance",
-  "Dining Out",
-  "Dentist",
-  "Education",
-  "Clothes",
-  "Haircut & Shaving",
-  "Amazon",
-  "Medicines",
-  "Facebook Ads",
-  "Zelle",
-  "Hostinger",
-  "Cash",
-  "Other",
-];
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -304,6 +282,8 @@ export default function FinancesView() {
               sources={sources}
               days={days}
               dailyLogs={dailyLogs}
+              fixedExpenses={fixedExpenses}
+              variableExpenses={variableExpenses}
               month={month}
               onReload={loadAll}
             />
@@ -348,6 +328,8 @@ function OverviewTab({
   sources,
   days,
   dailyLogs,
+  fixedExpenses,
+  variableExpenses,
   month,
   onReload,
 }: {
@@ -356,9 +338,54 @@ function OverviewTab({
   sources: IncomeSource[];
   days: number;
   dailyLogs: DailyIncomeLog[];
+  fixedExpenses: FixedExpense[];
+  variableExpenses: VariableExpenseEntry[];
   month: string;
   onReload: () => Promise<void>;
 }) {
+  const incomeVsExpenseData = useMemo(() => {
+    const totalFixedMonthly = fixedExpenses
+      .filter((e) => e.is_active)
+      .reduce((s, e) => s + Number(e.amount), 0);
+    const dailyFixed = totalFixedMonthly / days;
+
+    const varByDate = new Map<string, number>();
+    for (const v of variableExpenses) {
+      varByDate.set(v.date, (varByDate.get(v.date) ?? 0) + Number(v.amount));
+    }
+
+    const incByDate = new Map<string, number>();
+    for (const log of dailyLogs) {
+      incByDate.set(log.date, (incByDate.get(log.date) ?? 0) + Number(log.amount));
+    }
+
+    const allDates = new Set([...incByDate.keys(), ...varByDate.keys()]);
+    if (allDates.size === 0) return [];
+
+    let cumIncome = 0;
+    let cumExpense = 0;
+
+    const [y, m] = month.split("-").map(Number);
+    const result: { date: string; Income: number; Expenses: number }[] = [];
+    for (let d = 1; d <= days; d++) {
+      const dateStr = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      cumIncome += incByDate.get(dateStr) ?? 0;
+      cumExpense += dailyFixed + (varByDate.get(dateStr) ?? 0);
+
+      if (cumIncome > 0 || cumExpense > 0) {
+        result.push({
+          date: new Date(dateStr + "T12:00:00").toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          }),
+          Income: Math.round(cumIncome * 100) / 100,
+          Expenses: Math.round(cumExpense * 100) / 100,
+        });
+      }
+    }
+    return result;
+  }, [dailyLogs, fixedExpenses, variableExpenses, month, days]);
+
   const dailyChartData = useMemo(() => {
     if (dailyLogs.length === 0) return [];
     const dateMap = new Map<string, Record<string, number>>();
@@ -390,8 +417,7 @@ function OverviewTab({
 
   async function handleDeleteDaily(id: string) {
     if (!confirm("Delete this daily entry?")) return;
-    await deleteDailyIncomeLog(id);
-    await onReload();
+    void deleteDailyIncomeLog(id).then(onReload);
   }
 
   if (!overview) {
@@ -474,6 +500,79 @@ function OverviewTab({
           </div>
         ))}
       </div>
+
+      {/* Income vs Expenses cumulative chart */}
+      {incomeVsExpenseData.length > 0 && (
+        <div className="rounded-2xl border border-border bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
+          <div className="border-b border-border px-6 py-4 dark:border-zinc-800">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-text-secondary dark:text-zinc-400">
+              Income vs Expenses
+            </h2>
+          </div>
+          <div className="p-6">
+            <div className="h-[300px] w-full min-w-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={incomeVsExpenseData}
+                  margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="#e8ecf1"
+                    vertical={false}
+                  />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 11, fill: "#5c6370" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: "#5c6370" }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(v: number) =>
+                      v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v}`
+                    }
+                  />
+                  <Tooltip
+                    formatter={(value) => fmt(Number(value ?? 0))}
+                    contentStyle={{
+                      borderRadius: 12,
+                      border: "1px solid #e8ecf1",
+                      fontSize: 12,
+                    }}
+                  />
+                  <Legend
+                    verticalAlign="top"
+                    height={36}
+                    iconType="circle"
+                    wrapperStyle={{ fontSize: 12 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="Income"
+                    stroke="#10b981"
+                    strokeWidth={2.5}
+                    dot={{ r: 4, strokeWidth: 2, stroke: "#fff", fill: "#10b981" }}
+                    activeDot={{ r: 6, strokeWidth: 2, stroke: "#fff" }}
+                    connectNulls
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="Expenses"
+                    stroke="#ef4444"
+                    strokeWidth={2.5}
+                    dot={{ r: 4, strokeWidth: 2, stroke: "#fff", fill: "#ef4444" }}
+                    activeDot={{ r: 6, strokeWidth: 2, stroke: "#fff" }}
+                    connectNulls
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Daily Income Tracker */}
       <div className="rounded-2xl border border-border bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
@@ -746,16 +845,14 @@ function IncomeTab({
     e.preventDefault();
     setSaving(true);
     const fd = new FormData(e.currentTarget);
-    await createIncomeSource(fd);
     setShowAddSource(false);
-    await onReload();
     setSaving(false);
+    void createIncomeSource(fd).then(onReload);
   }
 
   async function handleDeleteSource(id: string) {
     if (!confirm("Delete this income source and all its entries?")) return;
-    await deleteIncomeSource(id);
-    await onReload();
+    void deleteIncomeSource(id).then(onReload);
   }
 
   async function handleSaveEntry(e: React.FormEvent<HTMLFormElement>) {
@@ -763,10 +860,9 @@ function IncomeTab({
     setSaving(true);
     const fd = new FormData(e.currentTarget);
     fd.set("month", month);
-    await upsertIncomeEntry(fd);
     setEditingEntry(null);
-    await onReload();
     setSaving(false);
+    void upsertIncomeEntry(fd).then(onReload);
   }
 
   const entryBySource = useMemo(() => {
@@ -792,11 +888,9 @@ function IncomeTab({
     dailyFd.set("amount", fd.get("revenue") as string);
     dailyFd.set("hours", "0");
     dailyFd.set("notes", fd.get("notes") as string);
-    await upsertDailyIncomeLog(dailyFd);
-
     setShowAddEntry(false);
-    await onReload();
     setSaving(false);
+    void upsertDailyIncomeLog(dailyFd).then(onReload);
   }
 
   return (
@@ -1273,26 +1367,22 @@ function FixedExpensesTab({
     e.preventDefault();
     setSaving(true);
     const fd = new FormData(e.currentTarget);
-    await createFixedExpense(fd);
     setShowAdd(false);
-    await onReload();
     setSaving(false);
+    void createFixedExpense(fd).then(onReload);
   }
 
   async function handleUpdate(e: React.FormEvent<HTMLFormElement>, id: string) {
     e.preventDefault();
-    setSaving(true);
     const fd = new FormData(e.currentTarget);
-    await updateFixedExpense(id, fd);
     setEditingId(null);
-    await onReload();
     setSaving(false);
+    void updateFixedExpense(id, fd).then(onReload);
   }
 
   async function handleDelete(id: string) {
     if (!confirm("Delete this fixed expense?")) return;
-    await deleteFixedExpense(id);
-    await onReload();
+    void deleteFixedExpense(id).then(onReload);
   }
 
   const totalAmount = expenses.reduce((s, ex) => s + Number(ex.amount), 0);
@@ -1529,62 +1619,40 @@ function VariableExpensesTab({
   const [showAdd, setShowAdd] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [groupByCategory, setGroupByCategory] = useState(false);
 
   async function handleAdd(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSaving(true);
     const fd = new FormData(e.currentTarget);
-    await addVariableExpense(fd);
+    fd.set("category", fd.get("name") as string);
     setShowAdd(false);
-    await onReload();
     setSaving(false);
+    void addVariableExpense(fd).then(onReload);
   }
 
   async function handleUpdate(e: React.FormEvent<HTMLFormElement>, id: string) {
     e.preventDefault();
-    setSaving(true);
     const fd = new FormData(e.currentTarget);
-    await updateVariableExpense(id, fd);
+    fd.set("category", fd.get("name") as string);
     setEditingId(null);
-    await onReload();
     setSaving(false);
+    void updateVariableExpense(id, fd).then(onReload);
   }
 
   async function handleDelete(id: string) {
     if (!confirm("Delete this expense?")) return;
-    await deleteVariableExpense(id);
-    await onReload();
+    void deleteVariableExpense(id).then(onReload);
   }
 
   const totalAmount = expenses.reduce((s, ex) => s + Number(ex.amount), 0);
-
-  const grouped = useMemo(() => {
-    const map = new Map<string, { items: VariableExpenseEntry[]; total: number }>();
-    for (const ex of expenses) {
-      const g = map.get(ex.category) ?? { items: [], total: 0 };
-      g.items.push(ex);
-      g.total += Number(ex.amount);
-      map.set(ex.category, g);
-    }
-    return [...map.entries()].sort((a, b) => b[1].total - a[1].total);
-  }, [expenses]);
+  const totalDaily = totalAmount / days;
 
   return (
     <div className="rounded-2xl border border-border bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
       <div className="flex items-center justify-between border-b border-border px-6 py-4 dark:border-zinc-800">
-        <div className="flex items-center gap-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-text-secondary dark:text-zinc-400">
-            Variable Expenses
-          </h2>
-          <button
-            type="button"
-            onClick={() => setGroupByCategory(!groupByCategory)}
-            className="rounded-lg border border-border px-2.5 py-1 text-[11px] font-medium text-text-secondary hover:bg-surface dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
-          >
-            {groupByCategory ? "Show flat list" : "Group by category"}
-          </button>
-        </div>
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-text-secondary dark:text-zinc-400">
+          Variable Expenses
+        </h2>
         <button
           type="button"
           onClick={() => setShowAdd(!showAdd)}
@@ -1600,22 +1668,16 @@ function VariableExpensesTab({
           onSubmit={handleAdd}
           className="flex flex-wrap items-end gap-3 border-b border-border bg-surface/30 px-6 py-4 dark:border-zinc-800 dark:bg-zinc-950/30"
         >
-          <div>
+          <div className="flex-1">
             <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
-              Category
+              Name
             </label>
-            <select
-              name="category"
+            <input
+              name="name"
               required
-              className="rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-            >
-              <option value="">Select…</option>
-              {VARIABLE_CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+              placeholder="e.g. Grocery"
+              className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+            />
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
@@ -1627,7 +1689,7 @@ function VariableExpensesTab({
               step="0.01"
               required
               placeholder="0.00"
-              className="w-28 rounded-lg border border-border bg-white px-3 py-2 text-sm tabular-nums outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+              className="w-32 rounded-lg border border-border bg-white px-3 py-2 text-sm tabular-nums outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
             />
           </div>
           <div>
@@ -1639,16 +1701,6 @@ function VariableExpensesTab({
               type="date"
               defaultValue={new Date().toISOString().slice(0, 10)}
               className="rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-            />
-          </div>
-          <div className="flex-1">
-            <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
-              Description
-            </label>
-            <input
-              name="description"
-              placeholder="Optional"
-              className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
             />
           </div>
           <button
@@ -1669,193 +1721,139 @@ function VariableExpensesTab({
       )}
 
       <div className="overflow-x-auto">
-        {groupByCategory ? (
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border text-xs font-semibold uppercase tracking-wider text-text-secondary dark:border-zinc-800 dark:text-zinc-500">
-                <th className="px-6 py-3">Category</th>
-                <th className="px-4 py-3 text-right">Total</th>
-                <th className="px-4 py-3 text-right">Daily</th>
-              </tr>
-            </thead>
-            <tbody>
-              {grouped.map(([cat, g]) => (
-                <tr
-                  key={cat}
-                  className="border-b border-border/50 dark:border-zinc-800/50"
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-border text-xs font-semibold uppercase tracking-wider text-text-secondary dark:border-zinc-800 dark:text-zinc-500">
+              <th className="px-6 py-3">Name</th>
+              <th className="px-4 py-3 text-center">Date</th>
+              <th className="px-4 py-3 text-right">Amount</th>
+              <th className="px-4 py-3 text-right">Daily Cost</th>
+              <th className="w-24 px-4 py-3" />
+            </tr>
+          </thead>
+          <tbody>
+            {expenses.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={5}
+                  className="px-6 py-8 text-center text-sm text-text-secondary dark:text-zinc-400"
                 >
-                  <td className="px-6 py-3 font-medium text-text-primary dark:text-zinc-200">
-                    {cat}
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums text-red-600 dark:text-red-400">
-                    {fmt(g.total)}
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums text-red-600/70 dark:text-red-400/70">
-                    {fmt(g.total / days)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
+                  No variable expenses this month.
+                </td>
+              </tr>
+            ) : (
+              expenses.map((ex) =>
+                editingId === ex.id ? (
+                  <tr
+                    key={ex.id}
+                    className="border-b border-border/50 bg-blue-50/40 dark:border-zinc-800/50 dark:bg-blue-500/5"
+                  >
+                    <td colSpan={5} className="px-6 py-3">
+                      <form
+                        onSubmit={(e) => handleUpdate(e, ex.id)}
+                        className="flex flex-wrap items-end gap-3"
+                      >
+                        <div className="flex-1">
+                          <input
+                            name="name"
+                            defaultValue={ex.category}
+                            required
+                            className="w-full rounded-lg border border-border bg-white px-3 py-1.5 text-sm outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                          />
+                        </div>
+                        <div>
+                          <input
+                            name="amount"
+                            type="number"
+                            step="0.01"
+                            defaultValue={ex.amount}
+                            className="w-28 rounded-lg border border-border bg-white px-3 py-1.5 text-sm tabular-nums outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                          />
+                        </div>
+                        <div>
+                          <input
+                            name="date"
+                            type="date"
+                            defaultValue={ex.date}
+                            className="rounded-lg border border-border bg-white px-3 py-1.5 text-sm outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                          />
+                        </div>
+                        <button
+                          type="submit"
+                          disabled={saving}
+                          className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accent/90 disabled:opacity-50 dark:bg-blue-600"
+                        >
+                          {saving ? "Saving…" : "Save"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingId(null)}
+                          className="rounded-lg p-1.5 text-text-secondary hover:text-text-primary dark:text-zinc-400"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                ) : (
+                  <tr
+                    key={ex.id}
+                    className="border-b border-border/50 dark:border-zinc-800/50"
+                  >
+                    <td className="px-6 py-3 font-medium text-text-primary dark:text-zinc-200">
+                      {ex.category}
+                    </td>
+                    <td className="px-4 py-3 text-center tabular-nums text-text-secondary dark:text-zinc-400">
+                      {new Date(ex.date + "T12:00:00").toLocaleDateString(
+                        "en-US",
+                        { month: "short", day: "numeric" }
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums text-red-600 dark:text-red-400">
+                      {fmt(Number(ex.amount))}
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums text-red-600/70 dark:text-red-400/70">
+                      {fmt(Number(ex.amount) / days)}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex justify-end gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setEditingId(ex.id)}
+                          className="rounded-lg p-1.5 text-text-secondary hover:bg-surface hover:text-accent dark:text-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-blue-400"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(ex.id)}
+                          className="rounded-lg p-1.5 text-text-secondary hover:bg-red-50 hover:text-red-600 dark:text-zinc-500 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              )
+            )}
+          </tbody>
+          {expenses.length > 0 && (
             <tfoot>
               <tr className="font-semibold text-text-primary dark:text-zinc-100">
                 <td className="px-6 py-3">Total Variable Expenses</td>
+                <td />
                 <td className="px-4 py-3 text-right tabular-nums text-red-600 dark:text-red-400">
                   {fmt(totalAmount)}
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums text-red-600/70 dark:text-red-400/70">
-                  {fmt(totalAmount / days)}
+                  {fmt(totalDaily)}
                 </td>
+                <td />
               </tr>
             </tfoot>
-          </table>
-        ) : (
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border text-xs font-semibold uppercase tracking-wider text-text-secondary dark:border-zinc-800 dark:text-zinc-500">
-                <th className="px-6 py-3">Category</th>
-                <th className="px-4 py-3 text-right">Amount</th>
-                <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Description</th>
-                <th className="w-24 px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {expenses.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="px-6 py-8 text-center text-sm text-text-secondary dark:text-zinc-400"
-                  >
-                    No variable expenses this month.
-                  </td>
-                </tr>
-              ) : (
-                expenses.map((ex) =>
-                  editingId === ex.id ? (
-                    <tr
-                      key={ex.id}
-                      className="border-b border-border/50 bg-blue-50/40 dark:border-zinc-800/50 dark:bg-blue-500/5"
-                    >
-                      <td colSpan={5} className="px-6 py-3">
-                        <form
-                          onSubmit={(e) => handleUpdate(e, ex.id)}
-                          className="flex flex-wrap items-end gap-3"
-                        >
-                          <div>
-                            <select
-                              name="category"
-                              defaultValue={ex.category}
-                              className="rounded-lg border border-border bg-white px-3 py-1.5 text-sm outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                            >
-                              {VARIABLE_CATEGORIES.map((c) => (
-                                <option key={c} value={c}>
-                                  {c}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div>
-                            <input
-                              name="amount"
-                              type="number"
-                              step="0.01"
-                              defaultValue={ex.amount}
-                              className="w-28 rounded-lg border border-border bg-white px-3 py-1.5 text-sm tabular-nums outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                            />
-                          </div>
-                          <div>
-                            <input
-                              name="date"
-                              type="date"
-                              defaultValue={ex.date}
-                              className="rounded-lg border border-border bg-white px-3 py-1.5 text-sm outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <input
-                              name="description"
-                              defaultValue={ex.description ?? ""}
-                              placeholder="Optional"
-                              className="w-full rounded-lg border border-border bg-white px-3 py-1.5 text-sm outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                            />
-                          </div>
-                          <button
-                            type="submit"
-                            disabled={saving}
-                            className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accent/90 disabled:opacity-50 dark:bg-blue-600"
-                          >
-                            {saving ? "Saving…" : "Save"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setEditingId(null)}
-                            className="rounded-lg p-1.5 text-text-secondary hover:text-text-primary dark:text-zinc-400"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </form>
-                      </td>
-                    </tr>
-                  ) : (
-                    <tr
-                      key={ex.id}
-                      className="border-b border-border/50 dark:border-zinc-800/50"
-                    >
-                      <td className="px-6 py-3 font-medium text-text-primary dark:text-zinc-200">
-                        {ex.category}
-                      </td>
-                      <td className="px-4 py-3 text-right tabular-nums text-red-600 dark:text-red-400">
-                        {fmt(Number(ex.amount))}
-                      </td>
-                      <td className="px-4 py-3 text-text-secondary dark:text-zinc-400">
-                        {new Date(ex.date + "T12:00:00").toLocaleDateString(
-                          "en-US",
-                          { month: "short", day: "numeric" }
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-text-secondary dark:text-zinc-400">
-                        {ex.description || "—"}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex justify-end gap-1">
-                          <button
-                            type="button"
-                            onClick={() => setEditingId(ex.id)}
-                            className="rounded-lg p-1.5 text-text-secondary hover:bg-surface hover:text-accent dark:text-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-blue-400"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(ex.id)}
-                            className="rounded-lg p-1.5 text-text-secondary hover:bg-red-50 hover:text-red-600 dark:text-zinc-500 dark:hover:bg-red-500/10 dark:hover:text-red-400"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                )
-              )}
-            </tbody>
-            {expenses.length > 0 && (
-              <tfoot>
-                <tr className="font-semibold text-text-primary dark:text-zinc-100">
-                  <td className="px-6 py-3">Total Variable Expenses</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-red-600 dark:text-red-400">
-                    {fmt(totalAmount)}
-                  </td>
-                  <td className="px-4 py-3 text-text-secondary/60 dark:text-zinc-500">
-                    {fmt(totalAmount / days)} / day
-                  </td>
-                  <td />
-                  <td />
-                </tr>
-              </tfoot>
-            )}
-          </table>
-        )}
+          )}
+        </table>
       </div>
     </div>
   );
