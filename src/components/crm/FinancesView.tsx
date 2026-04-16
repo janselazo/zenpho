@@ -691,7 +691,7 @@ function OverviewTab({
                     }
                   />
                   <Tooltip
-                    formatter={(value: number) => fmt(Number(value ?? 0))}
+                    formatter={(value) => fmt(Number(value ?? 0))}
                     contentStyle={{
                       borderRadius: 12,
                       border: "1px solid #e8ecf1",
