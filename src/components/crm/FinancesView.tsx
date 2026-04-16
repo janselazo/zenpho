@@ -899,7 +899,7 @@ function IncomeTab({
       <div className="rounded-2xl border border-border bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
         <div className="flex items-center justify-between border-b border-border px-6 py-4 dark:border-zinc-800">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-text-secondary dark:text-zinc-400">
-            Monthly Entries
+            Income
           </h2>
           {activeSources.length > 0 && (
             <button
@@ -989,12 +989,8 @@ function IncomeTab({
               <tr className="border-b border-border text-xs font-semibold uppercase tracking-wider text-text-secondary dark:border-zinc-800 dark:text-zinc-500">
                 <th className="px-6 py-3">Source</th>
                 <th className="px-4 py-3 text-right">Hours</th>
-                <th className="px-4 py-3 text-right">Revenue</th>
-                <th className="px-4 py-3 text-right">Daily Rev.</th>
-                <th className="px-4 py-3 text-right">Expenses</th>
-                <th className="px-4 py-3 text-right">Daily Exp.</th>
-                <th className="px-4 py-3 text-right">Profit</th>
-                <th className="px-4 py-3 text-right">Daily Profit</th>
+                <th className="px-4 py-3 text-right">Income</th>
+                <th className="px-4 py-3 text-right">Daily Income</th>
                 <th className="w-16 px-4 py-3" />
               </tr>
             </thead>
@@ -1015,7 +1011,7 @@ function IncomeTab({
                         key={s.id}
                         className="border-b border-border/50 bg-blue-50/40 dark:border-zinc-800/50 dark:bg-blue-500/5"
                       >
-                        <td colSpan={9} className="px-6 py-3">
+                        <td colSpan={5} className="px-6 py-3">
                           <form
                             onSubmit={handleSaveEntry}
                             className="flex flex-wrap items-end gap-3"
@@ -1049,29 +1045,7 @@ function IncomeTab({
                                 className="w-32 rounded-lg border border-border bg-white px-3 py-1.5 text-sm tabular-nums outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
                               />
                             </div>
-                            <div>
-                              <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
-                                Expenses
-                              </label>
-                              <input
-                                name="expenses"
-                                type="number"
-                                step="0.01"
-                                defaultValue={exp}
-                                className="w-32 rounded-lg border border-border bg-white px-3 py-1.5 text-sm tabular-nums outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                              />
-                            </div>
-                            <div className="flex-1">
-                              <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
-                                Notes
-                              </label>
-                              <input
-                                name="notes"
-                                defaultValue={entry?.notes ?? ""}
-                                placeholder="Optional notes"
-                                className="w-full rounded-lg border border-border bg-white px-3 py-1.5 text-sm outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                              />
-                            </div>
+                            
                             <button
                               type="submit"
                               disabled={saving}
@@ -1108,30 +1082,6 @@ function IncomeTab({
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums text-emerald-600/70 dark:text-emerald-400/70">
                         {fmt(rev / days)}
-                      </td>
-                      <td className="px-4 py-3 text-right tabular-nums text-red-600 dark:text-red-400">
-                        {fmt(exp)}
-                      </td>
-                      <td className="px-4 py-3 text-right tabular-nums text-red-600/70 dark:text-red-400/70">
-                        {fmt(exp / days)}
-                      </td>
-                      <td
-                        className={`px-4 py-3 text-right tabular-nums font-medium ${
-                          profit >= 0
-                            ? "text-emerald-600 dark:text-emerald-400"
-                            : "text-red-600 dark:text-red-400"
-                        }`}
-                      >
-                        {fmt(profit)}
-                      </td>
-                      <td
-                        className={`px-4 py-3 text-right tabular-nums ${
-                          profit >= 0
-                            ? "text-emerald-600/70 dark:text-emerald-400/70"
-                            : "text-red-600/70 dark:text-red-400/70"
-                        }`}
-                      >
-                        {fmt(profit / days)}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <button
@@ -1177,59 +1127,6 @@ function IncomeTab({
                       }, 0) / days
                   )}
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums text-red-600 dark:text-red-400">
-                  {fmt(
-                    sources
-                      .filter((s) => s.is_active)
-                      .reduce((s, src) => {
-                        const e = entryBySource.get(src.id);
-                        return s + (e ? Number(e.expenses) : 0);
-                      }, 0)
-                  )}
-                </td>
-                <td className="px-4 py-3 text-right tabular-nums text-red-600/70 dark:text-red-400/70">
-                  {fmt(
-                    sources
-                      .filter((s) => s.is_active)
-                      .reduce((s, src) => {
-                        const e = entryBySource.get(src.id);
-                        return s + (e ? Number(e.expenses) : 0);
-                      }, 0) / days
-                  )}
-                </td>
-                {(() => {
-                  const totalProfit = sources
-                    .filter((s) => s.is_active)
-                    .reduce((s, src) => {
-                      const e = entryBySource.get(src.id);
-                      return (
-                        s +
-                        (e ? Number(e.revenue) - Number(e.expenses) : 0)
-                      );
-                    }, 0);
-                  return (
-                    <>
-                      <td
-                        className={`px-4 py-3 text-right tabular-nums ${
-                          totalProfit >= 0
-                            ? "text-emerald-600 dark:text-emerald-400"
-                            : "text-red-600 dark:text-red-400"
-                        }`}
-                      >
-                        {fmt(totalProfit)}
-                      </td>
-                      <td
-                        className={`px-4 py-3 text-right tabular-nums ${
-                          totalProfit >= 0
-                            ? "text-emerald-600/70 dark:text-emerald-400/70"
-                            : "text-red-600/70 dark:text-red-400/70"
-                        }`}
-                      >
-                        {fmt(totalProfit / days)}
-                      </td>
-                    </>
-                  );
-                })()}
                 <td />
               </tr>
             </tfoot>
@@ -1383,6 +1280,10 @@ function FixedExpensesTab({
     void deleteFixedExpense(id).then(onReload);
   }
 
+  const sorted = useMemo(
+    () => [...expenses].sort((a, b) => Number(a.amount) - Number(b.amount)),
+    [expenses]
+  );
   const totalAmount = expenses.reduce((s, ex) => s + Number(ex.amount), 0);
   const totalDaily = totalAmount / days;
 
@@ -1483,7 +1384,7 @@ function FixedExpensesTab({
                 </td>
               </tr>
             ) : (
-              expenses.map((ex) =>
+              sorted.map((ex) =>
                 editingId === ex.id ? (
                   <tr
                     key={ex.id}
@@ -1642,6 +1543,10 @@ function VariableExpensesTab({
     void deleteVariableExpense(id).then(onReload);
   }
 
+  const sorted = useMemo(
+    () => [...expenses].sort((a, b) => Number(a.amount) - Number(b.amount)),
+    [expenses]
+  );
   const totalAmount = expenses.reduce((s, ex) => s + Number(ex.amount), 0);
   const totalDaily = totalAmount / days;
 
@@ -1729,7 +1634,7 @@ function VariableExpensesTab({
                 </td>
               </tr>
             ) : (
-              expenses.map((ex) =>
+              sorted.map((ex) =>
                 editingId === ex.id ? (
                   <tr
                     key={ex.id}
