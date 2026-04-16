@@ -794,20 +794,9 @@ function IncomeTab({
     dailyFd.set("income_source_id", fd.get("income_source_id") as string);
     dailyFd.set("date", fd.get("date") as string);
     dailyFd.set("amount", fd.get("revenue") as string);
-    dailyFd.set("hours", fd.get("hours") as string);
+    dailyFd.set("hours", "0");
     dailyFd.set("notes", fd.get("notes") as string);
     await upsertDailyIncomeLog(dailyFd);
-
-    const expenses = Number(fd.get("expenses") ?? 0);
-    if (expenses > 0) {
-      const expFd = new FormData();
-      expFd.set("income_source_id", fd.get("income_source_id") as string);
-      expFd.set("month", month);
-      expFd.set("hours", "0");
-      expFd.set("revenue", "0");
-      expFd.set("expenses", String(expenses));
-      await upsertIncomeEntry(expFd);
-    }
 
     setShowAddEntry(false);
     await onReload();
@@ -869,37 +858,14 @@ function IncomeTab({
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
-                Hours
-              </label>
-              <input
-                name="hours"
-                type="number"
-                step="0.01"
-                defaultValue={0}
-                className="w-24 rounded-lg border border-border bg-white px-3 py-2 text-sm tabular-nums outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
                 Revenue
               </label>
               <input
                 name="revenue"
                 type="number"
                 step="0.01"
-                defaultValue={0}
-                className="w-32 rounded-lg border border-border bg-white px-3 py-2 text-sm tabular-nums outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
-                Expenses
-              </label>
-              <input
-                name="expenses"
-                type="number"
-                step="0.01"
-                defaultValue={0}
+                required
+                placeholder="0.00"
                 className="w-32 rounded-lg border border-border bg-white px-3 py-2 text-sm tabular-nums outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
               />
             </div>

@@ -370,17 +370,35 @@ export async function upsertDailyIncomeLog(fd: FormData) {
   const hours = Number(fd.get("hours") ?? 0);
   const notes = (fd.get("notes") as string) || null;
 
-  const { error } = await supabase.from("daily_income_log").upsert(
-    {
+  const { data: existing } = await supabase
+    .from("daily_income_log")
+    .select("id, amount, hours")
+    .eq("income_source_id", incomeSourceId)
+    .eq("date", date)
+    .maybeSingle();
+
+  let error: string | null = null;
+  if (existing) {
+    const { error: upErr } = await supabase
+      .from("daily_income_log")
+      .update({
+        amount: Number(existing.amount) + amount,
+        hours: Number(existing.hours) + hours,
+        notes,
+      })
+      .eq("id", existing.id);
+    if (upErr) error = upErr.message;
+  } else {
+    const { error: insErr } = await supabase.from("daily_income_log").insert({
       user_id: user.id,
       income_source_id: incomeSourceId,
       date,
       amount,
       hours,
       notes,
-    },
-    { onConflict: "income_source_id,date" }
-  );
+    });
+    if (insErr) error = insErr.message;
+  }
   if (error) return { error: error.message };
 
   const month = date.slice(0, 7) + "-01";
