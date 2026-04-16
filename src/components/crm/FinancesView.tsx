@@ -508,59 +508,51 @@ function OverviewTab({
         ))}
       </div>
 
-      {/* Chart */}
-      {chartData.length > 0 && (
-        <div className="rounded-2xl border border-border bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-text-secondary dark:text-zinc-400">
-            Monthly Breakdown
-          </h2>
-          <div className="mt-4 h-[260px] w-full min-w-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={chartData}
-                margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
-              >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="#e8ecf1"
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="name"
-                  tick={{ fontSize: 11, fill: "#5c6370" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 11, fill: "#5c6370" }}
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={(v: number) =>
-                    v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`
-                  }
-                />
-                <Tooltip
-                  formatter={(value) => fmt(Number(value ?? 0))}
-                  contentStyle={{
-                    borderRadius: 12,
-                    border: "1px solid #e8ecf1",
-                    fontSize: 12,
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="amount"
-                  name="Amount"
-                  stroke="#2563eb"
-                  strokeWidth={2.5}
-                  dot={{ r: 5, fill: "#2563eb", strokeWidth: 2, stroke: "#fff" }}
-                  activeDot={{ r: 7, fill: "#2563eb", strokeWidth: 2, stroke: "#fff" }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+      {/* Individual breakdown charts */}
+      {chartData.length > 0 && (() => {
+        const ITEM_COLORS: Record<string, string> = {
+          Income: "#10b981",
+          "Fixed Exp.": "#ef4444",
+          "Variable Exp.": "#f59e0b",
+          "Biz Expenses": "#8b5cf6",
+          Net: overview!.net >= 0 ? "#10b981" : "#ef4444",
+        };
+        const maxAmount = Math.max(...chartData.map((d) => Math.abs(d.amount)), 1);
+
+        return (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            {chartData.map((item) => {
+              const color = ITEM_COLORS[item.name] ?? "#2563eb";
+              const pct = Math.min((Math.abs(item.amount) / maxAmount) * 100, 100);
+              return (
+                <div
+                  key={item.name}
+                  className="rounded-2xl border border-border bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80"
+                >
+                  <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary dark:text-zinc-500">
+                    {item.name}
+                  </p>
+                  <p
+                    className="mt-2 text-xl font-bold tabular-nums tracking-tight"
+                    style={{ color }}
+                  >
+                    {fmt(item.amount)}
+                  </p>
+                  <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-surface dark:bg-zinc-800">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${pct}%`, backgroundColor: color }}
+                    />
+                  </div>
+                  <p className="mt-1.5 text-[11px] text-text-secondary dark:text-zinc-500">
+                    {fmt(item.amount / days)} / day
+                  </p>
+                </div>
+              );
+            })}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Daily Income Tracker */}
       <div className="rounded-2xl border border-border bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
