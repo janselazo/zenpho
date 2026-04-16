@@ -109,7 +109,7 @@ type DailyIncomeLog = {
 // Constants
 // ---------------------------------------------------------------------------
 
-const TABS = ["Overview", "Income", "Fixed Expenses", "Variable Expenses"] as const;
+const TABS = ["Overview", "Income", "Expenses"] as const;
 type Tab = (typeof TABS)[number];
 
 const KIND_LABELS: Record<string, string> = {
@@ -317,20 +317,20 @@ export default function FinancesView() {
               onReload={loadAll}
             />
           )}
-          {tab === "Fixed Expenses" && (
-            <FixedExpensesTab
-              expenses={fixedExpenses}
-              days={days}
-              onReload={loadAll}
-            />
-          )}
-          {tab === "Variable Expenses" && (
-            <VariableExpensesTab
-              expenses={variableExpenses}
-              month={month}
-              days={days}
-              onReload={loadAll}
-            />
+          {tab === "Expenses" && (
+            <div className="space-y-6">
+              <FixedExpensesTab
+                expenses={fixedExpenses}
+                days={days}
+                onReload={loadAll}
+              />
+              <VariableExpensesTab
+                expenses={variableExpenses}
+                month={month}
+                days={days}
+                onReload={loadAll}
+              />
+            </div>
           )}
         </>
       )}
@@ -505,7 +505,7 @@ function OverviewTab({
             className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent/90 dark:bg-blue-600 dark:hover:bg-blue-500"
           >
             <Plus className="h-3.5 w-3.5" />
-            Log Income
+            Income
           </button>
         </div>
 
@@ -890,55 +890,110 @@ function IncomeTab({
     return map;
   }, [entries]);
 
+  const [showAddEntry, setShowAddEntry] = useState(false);
+  const sourcesWithoutEntry = useMemo(
+    () => sources.filter((s) => s.is_active && !entryBySource.has(s.id)),
+    [sources, entryBySource]
+  );
+
+  async function handleAddEntry(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setSaving(true);
+    const fd = new FormData(e.currentTarget);
+    fd.set("month", month);
+    await upsertIncomeEntry(fd);
+    setShowAddEntry(false);
+    await onReload();
+    setSaving(false);
+  }
+
   return (
     <div className="space-y-6">
-      {/* Source list */}
+      {/* Monthly entries table */}
       <div className="rounded-2xl border border-border bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
         <div className="flex items-center justify-between border-b border-border px-6 py-4 dark:border-zinc-800">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-text-secondary dark:text-zinc-400">
-            Income Sources
+            Monthly Entries
           </h2>
-          <button
-            type="button"
-            onClick={() => setShowAddSource(!showAddSource)}
-            className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent/90 dark:bg-blue-600 dark:hover:bg-blue-500"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Add Source
-          </button>
+          {sourcesWithoutEntry.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowAddEntry(!showAddEntry)}
+              className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent/90 dark:bg-blue-600 dark:hover:bg-blue-500"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add Income
+            </button>
+          )}
         </div>
 
-        {showAddSource && (
+        {showAddEntry && (
           <form
-            onSubmit={handleAddSource}
+            onSubmit={handleAddEntry}
             className="flex flex-wrap items-end gap-3 border-b border-border bg-surface/30 px-6 py-4 dark:border-zinc-800 dark:bg-zinc-950/30"
           >
-            <div className="flex-1">
+            <div>
               <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
-                Name
+                Source
+              </label>
+              <select
+                name="income_source_id"
+                required
+                className="rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+              >
+                <option value="">Select…</option>
+                {sourcesWithoutEntry.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
+                Hours
               </label>
               <input
-                name="name"
-                required
-                placeholder="e.g. Doral Acura"
-                className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-500"
+                name="hours"
+                type="number"
+                step="0.01"
+                defaultValue={0}
+                className="w-24 rounded-lg border border-border bg-white px-3 py-2 text-sm tabular-nums outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
               />
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
-                Type
+                Revenue
               </label>
-              <select
-                name="kind"
-                defaultValue="other"
-                className="rounded-lg border border-border bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-              >
-                {Object.entries(KIND_LABELS).map(([k, v]) => (
-                  <option key={k} value={k}>
-                    {v}
-                  </option>
-                ))}
-              </select>
+              <input
+                name="revenue"
+                type="number"
+                step="0.01"
+                defaultValue={0}
+                className="w-32 rounded-lg border border-border bg-white px-3 py-2 text-sm tabular-nums outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
+                Expenses
+              </label>
+              <input
+                name="expenses"
+                type="number"
+                step="0.01"
+                defaultValue={0}
+                className="w-32 rounded-lg border border-border bg-white px-3 py-2 text-sm tabular-nums outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
+                Notes
+              </label>
+              <input
+                name="notes"
+                placeholder="Optional"
+                className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+              />
             </div>
             <button
               type="submit"
@@ -949,60 +1004,13 @@ function IncomeTab({
             </button>
             <button
               type="button"
-              onClick={() => setShowAddSource(false)}
+              onClick={() => setShowAddEntry(false)}
               className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:text-text-primary dark:text-zinc-400"
             >
               Cancel
             </button>
           </form>
         )}
-
-        {sources.length === 0 ? (
-          <p className="px-6 py-8 text-center text-sm text-text-secondary dark:text-zinc-400">
-            No income sources yet. Add your first business or revenue stream.
-          </p>
-        ) : (
-          <div className="divide-y divide-border/50 dark:divide-zinc-800/50">
-            {sources.map((s) => (
-              <div
-                key={s.id}
-                className="flex items-center justify-between px-6 py-3"
-              >
-                <span className="flex items-center gap-2 text-sm font-medium text-text-primary dark:text-zinc-200">
-                  {s.name}
-                  <span
-                    className={`inline-block rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
-                      KIND_COLORS[s.kind] ?? KIND_COLORS.other
-                    }`}
-                  >
-                    {KIND_LABELS[s.kind] ?? s.kind}
-                  </span>
-                  {!s.is_active && (
-                    <span className="rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-500">
-                      Inactive
-                    </span>
-                  )}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleDeleteSource(s.id)}
-                  className="rounded-lg p-1.5 text-text-secondary hover:bg-red-50 hover:text-red-600 dark:text-zinc-500 dark:hover:bg-red-500/10 dark:hover:text-red-400"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Monthly entries table */}
-      <div className="rounded-2xl border border-border bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
-        <div className="border-b border-border px-6 py-4 dark:border-zinc-800">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-text-secondary dark:text-zinc-400">
-            Monthly Entries
-          </h2>
-        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
@@ -1255,6 +1263,110 @@ function IncomeTab({
             </tfoot>
           </table>
         </div>
+      </div>
+
+      {/* Source list */}
+      <div className="rounded-2xl border border-border bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
+        <div className="flex items-center justify-between border-b border-border px-6 py-4 dark:border-zinc-800">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-text-secondary dark:text-zinc-400">
+            Income Sources
+          </h2>
+          <button
+            type="button"
+            onClick={() => setShowAddSource(!showAddSource)}
+            className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent/90 dark:bg-blue-600 dark:hover:bg-blue-500"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add Source
+          </button>
+        </div>
+
+        {showAddSource && (
+          <form
+            onSubmit={handleAddSource}
+            className="flex flex-wrap items-end gap-3 border-b border-border bg-surface/30 px-6 py-4 dark:border-zinc-800 dark:bg-zinc-950/30"
+          >
+            <div className="flex-1">
+              <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
+                Name
+              </label>
+              <input
+                name="name"
+                required
+                placeholder="e.g. Doral Acura"
+                className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
+                Type
+              </label>
+              <select
+                name="kind"
+                defaultValue="other"
+                className="rounded-lg border border-border bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+              >
+                {Object.entries(KIND_LABELS).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              type="submit"
+              disabled={saving}
+              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent/90 disabled:opacity-50 dark:bg-blue-600"
+            >
+              {saving ? "Saving…" : "Save"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowAddSource(false)}
+              className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:text-text-primary dark:text-zinc-400"
+            >
+              Cancel
+            </button>
+          </form>
+        )}
+
+        {sources.length === 0 ? (
+          <p className="px-6 py-8 text-center text-sm text-text-secondary dark:text-zinc-400">
+            No income sources yet. Add your first business or revenue stream.
+          </p>
+        ) : (
+          <div className="divide-y divide-border/50 dark:divide-zinc-800/50">
+            {sources.map((s) => (
+              <div
+                key={s.id}
+                className="flex items-center justify-between px-6 py-3"
+              >
+                <span className="flex items-center gap-2 text-sm font-medium text-text-primary dark:text-zinc-200">
+                  {s.name}
+                  <span
+                    className={`inline-block rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
+                      KIND_COLORS[s.kind] ?? KIND_COLORS.other
+                    }`}
+                  >
+                    {KIND_LABELS[s.kind] ?? s.kind}
+                  </span>
+                  {!s.is_active && (
+                    <span className="rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-500">
+                      Inactive
+                    </span>
+                  )}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteSource(s.id)}
+                  className="rounded-lg p-1.5 text-text-secondary hover:bg-red-50 hover:text-red-600 dark:text-zinc-500 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

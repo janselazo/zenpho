@@ -382,17 +382,34 @@ export async function upsertDailyIncomeLog(fd: FormData) {
     { onConflict: "income_source_id,date" }
   );
   if (error) return { error: error.message };
+
+  const month = date.slice(0, 7) + "-01";
+  await syncIncomeEntryFromDailyLogs(supabase, incomeSourceId, month);
+
   revalidatePath("/finances");
   return { error: null };
 }
 
 export async function deleteDailyIncomeLog(id: string) {
   const supabase = await createClient();
+
+  const { data: log } = await supabase
+    .from("daily_income_log")
+    .select("income_source_id, date")
+    .eq("id", id)
+    .single();
+
   const { error } = await supabase
     .from("daily_income_log")
     .delete()
     .eq("id", id);
   if (error) return { error: error.message };
+
+  if (log) {
+    const month = log.date.slice(0, 7) + "-01";
+    await syncIncomeEntryFromDailyLogs(supabase, log.income_source_id, month);
+  }
+
   revalidatePath("/finances");
   return { error: null };
 }
@@ -400,6 +417,44 @@ export async function deleteDailyIncomeLog(id: string) {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
+
+async function syncIncomeEntryFromDailyLogs(
+  supabase: SupabaseClient,
+  incomeSourceId: string,
+  month: string
+) {
+  const endOfMonth = lastDayOfMonth(month);
+  const { data: logs } = await supabase
+    .from("daily_income_log")
+    .select("amount, hours")
+    .eq("income_source_id", incomeSourceId)
+    .gte("date", month)
+    .lte("date", endOfMonth);
+
+  const totalRevenue = logs?.reduce((s, l) => s + Number(l.amount), 0) ?? 0;
+  const totalHours = logs?.reduce((s, l) => s + Number(l.hours), 0) ?? 0;
+
+  const { data: existing } = await supabase
+    .from("income_entry")
+    .select("id, expenses, notes")
+    .eq("income_source_id", incomeSourceId)
+    .eq("month", month)
+    .maybeSingle();
+
+  await supabase.from("income_entry").upsert(
+    {
+      income_source_id: incomeSourceId,
+      month,
+      revenue: totalRevenue,
+      hours: totalHours,
+      expenses: existing?.expenses ?? 0,
+      notes: existing?.notes ?? null,
+    },
+    { onConflict: "income_source_id,month" }
+  );
+}
 
 function lastDayOfMonth(monthStr: string): string {
   const [y, m] = monthStr.split("-").map(Number);
