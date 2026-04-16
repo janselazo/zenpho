@@ -15,6 +15,7 @@ import {
   TrendingUp,
   X,
 } from "lucide-react";
+import DatePicker from "@/components/ui/DatePicker";
 import {
   CartesianGrid,
   Legend,
@@ -939,11 +940,9 @@ function IncomeTab({
               <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
                 Date
               </label>
-              <input
+              <DatePicker
                 name="date"
-                type="date"
                 defaultValue={new Date().toISOString().slice(0, 10)}
-                className="rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
               />
             </div>
             <div>
@@ -1692,17 +1691,7 @@ function VariableExpensesTab({
               className="w-32 rounded-lg border border-border bg-white px-3 py-2 text-sm tabular-nums outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
             />
           </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
-              Date
-            </label>
-            <input
-              name="date"
-              type="date"
-              defaultValue={new Date().toISOString().slice(0, 10)}
-              className="rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-            />
-          </div>
+          <input type="hidden" name="date" value={new Date().toISOString().slice(0, 10)} />
           <button
             type="submit"
             disabled={saving}
@@ -1725,7 +1714,6 @@ function VariableExpensesTab({
           <thead>
             <tr className="border-b border-border text-xs font-semibold uppercase tracking-wider text-text-secondary dark:border-zinc-800 dark:text-zinc-500">
               <th className="px-6 py-3">Name</th>
-              <th className="px-4 py-3 text-center">Date</th>
               <th className="px-4 py-3 text-right">Amount</th>
               <th className="px-4 py-3 text-right">Daily Cost</th>
               <th className="w-24 px-4 py-3" />
@@ -1735,7 +1723,7 @@ function VariableExpensesTab({
             {expenses.length === 0 ? (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={4}
                   className="px-6 py-8 text-center text-sm text-text-secondary dark:text-zinc-400"
                 >
                   No variable expenses this month.
@@ -1748,11 +1736,12 @@ function VariableExpensesTab({
                     key={ex.id}
                     className="border-b border-border/50 bg-blue-50/40 dark:border-zinc-800/50 dark:bg-blue-500/5"
                   >
-                    <td colSpan={5} className="px-6 py-3">
+                    <td colSpan={4} className="px-6 py-3">
                       <form
                         onSubmit={(e) => handleUpdate(e, ex.id)}
                         className="flex flex-wrap items-end gap-3"
                       >
+                        <input type="hidden" name="date" value={ex.date} />
                         <div className="flex-1">
                           <input
                             name="name"
@@ -1768,14 +1757,6 @@ function VariableExpensesTab({
                             step="0.01"
                             defaultValue={ex.amount}
                             className="w-28 rounded-lg border border-border bg-white px-3 py-1.5 text-sm tabular-nums outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                          />
-                        </div>
-                        <div>
-                          <input
-                            name="date"
-                            type="date"
-                            defaultValue={ex.date}
-                            className="rounded-lg border border-border bg-white px-3 py-1.5 text-sm outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
                           />
                         </div>
                         <button
@@ -1802,12 +1783,6 @@ function VariableExpensesTab({
                   >
                     <td className="px-6 py-3 font-medium text-text-primary dark:text-zinc-200">
                       {ex.category}
-                    </td>
-                    <td className="px-4 py-3 text-center tabular-nums text-text-secondary dark:text-zinc-400">
-                      {new Date(ex.date + "T12:00:00").toLocaleDateString(
-                        "en-US",
-                        { month: "short", day: "numeric" }
-                      )}
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums text-red-600 dark:text-red-400">
                       {fmt(Number(ex.amount))}
@@ -1842,7 +1817,6 @@ function VariableExpensesTab({
             <tfoot>
               <tr className="font-semibold text-text-primary dark:text-zinc-100">
                 <td className="px-6 py-3">Total Variable Expenses</td>
-                <td />
                 <td className="px-4 py-3 text-right tabular-nums text-red-600 dark:text-red-400">
                   {fmt(totalAmount)}
                 </td>
