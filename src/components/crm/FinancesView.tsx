@@ -13,6 +13,7 @@ import {
   Trash2,
   TrendingDown,
   TrendingUp,
+  Wallet,
   X,
 } from "lucide-react";
 import DatePicker from "@/components/ui/DatePicker";
@@ -428,6 +429,8 @@ function OverviewTab({
     );
   }
 
+  const totalExpenses = overview.totalFixedExpenses + overview.totalVariableExpenses;
+
   const cards = [
     {
       label: "Total Income",
@@ -436,6 +439,14 @@ function OverviewTab({
       color: "text-emerald-600 dark:text-emerald-400",
       bg: "bg-emerald-50 dark:bg-emerald-500/10",
       icon: <TrendingUp className="h-5 w-5" />,
+    },
+    {
+      label: "Total Expenses",
+      value: totalExpenses,
+      daily: totalExpenses / days,
+      color: "text-rose-600 dark:text-rose-400",
+      bg: "bg-rose-50 dark:bg-rose-500/10",
+      icon: <Wallet className="h-5 w-5" />,
     },
     {
       label: "Fixed Expenses",
@@ -477,7 +488,7 @@ function OverviewTab({
   return (
     <div className="space-y-6">
       {/* Summary cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {cards.map((c) => (
           <div
             key={c.label}
@@ -1281,7 +1292,7 @@ function FixedExpensesTab({
   }
 
   const sorted = useMemo(
-    () => [...expenses].sort((a, b) => Number(a.amount) - Number(b.amount)),
+    () => [...expenses].sort((a, b) => Number(b.amount) - Number(a.amount)),
     [expenses]
   );
   const totalAmount = expenses.reduce((s, ex) => s + Number(ex.amount), 0);
@@ -1544,7 +1555,7 @@ function VariableExpensesTab({
   }
 
   const sorted = useMemo(
-    () => [...expenses].sort((a, b) => Number(a.amount) - Number(b.amount)),
+    () => [...expenses].sort((a, b) => Number(b.amount) - Number(a.amount)),
     [expenses]
   );
   const totalAmount = expenses.reduce((s, ex) => s + Number(ex.amount), 0);
