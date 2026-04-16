@@ -550,7 +550,6 @@ function OverviewTab({
                     <th className="px-4 py-2">Business</th>
                     <th className="px-4 py-2 text-right">Amount</th>
                     <th className="px-4 py-2 text-right">Hours</th>
-                    <th className="px-4 py-2">Notes</th>
                     <th className="w-12 px-4 py-2" />
                   </tr>
                 </thead>
@@ -574,9 +573,6 @@ function OverviewTab({
                       </td>
                       <td className="px-4 py-2 text-right tabular-nums text-text-secondary dark:text-zinc-400">
                         {Number(log.hours)}
-                      </td>
-                      <td className="px-4 py-2 text-text-secondary dark:text-zinc-400">
-                        {log.notes || "—"}
                       </td>
                       <td className="px-4 py-2 text-right">
                         <button
@@ -1358,16 +1354,6 @@ function FixedExpensesTab({
               max={31}
               defaultValue={1}
               className="w-20 rounded-lg border border-border bg-white px-3 py-2 text-sm tabular-nums outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
-              Category
-            </label>
-            <input
-              name="category"
-              placeholder="Optional"
-              className="w-32 rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
             />
           </div>
           <button
