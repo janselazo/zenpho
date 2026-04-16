@@ -42,6 +42,7 @@ import {
   deleteVariableExpense,
   getMonthlyOverview,
   getDailyIncomeLogs,
+  upsertDailyIncomeLog,
   deleteDailyIncomeLog,
 } from "@/app/(crm)/actions/finances";
 
@@ -788,8 +789,26 @@ function IncomeTab({
     e.preventDefault();
     setSaving(true);
     const fd = new FormData(e.currentTarget);
-    fd.set("month", month);
-    await upsertIncomeEntry(fd);
+
+    const dailyFd = new FormData();
+    dailyFd.set("income_source_id", fd.get("income_source_id") as string);
+    dailyFd.set("date", fd.get("date") as string);
+    dailyFd.set("amount", fd.get("revenue") as string);
+    dailyFd.set("hours", fd.get("hours") as string);
+    dailyFd.set("notes", fd.get("notes") as string);
+    await upsertDailyIncomeLog(dailyFd);
+
+    const expenses = Number(fd.get("expenses") ?? 0);
+    if (expenses > 0) {
+      const expFd = new FormData();
+      expFd.set("income_source_id", fd.get("income_source_id") as string);
+      expFd.set("month", month);
+      expFd.set("hours", "0");
+      expFd.set("revenue", "0");
+      expFd.set("expenses", String(expenses));
+      await upsertIncomeEntry(expFd);
+    }
+
     setShowAddEntry(false);
     await onReload();
     setSaving(false);
@@ -836,6 +855,17 @@ function IncomeTab({
                   </option>
                 ))}
               </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
+                Date
+              </label>
+              <input
+                name="date"
+                type="date"
+                defaultValue={new Date().toISOString().slice(0, 10)}
+                className="rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+              />
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
