@@ -360,8 +360,9 @@ function OverviewTab({
       incByDate.set(log.date, (incByDate.get(log.date) ?? 0) + Number(log.amount));
     }
 
-    const allDates = new Set([...incByDate.keys(), ...varByDate.keys()]);
-    if (allDates.size === 0) return [];
+    const hasData =
+      dailyFixed > 0 || incByDate.size > 0 || varByDate.size > 0;
+    if (!hasData) return [];
 
     let cumIncome = 0;
     let cumExpense = 0;
@@ -373,16 +374,14 @@ function OverviewTab({
       cumIncome += incByDate.get(dateStr) ?? 0;
       cumExpense += dailyFixed + (varByDate.get(dateStr) ?? 0);
 
-      if (cumIncome > 0 || cumExpense > 0) {
-        result.push({
-          date: new Date(dateStr + "T12:00:00").toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-          }),
-          Income: Math.round(cumIncome * 100) / 100,
-          Expenses: Math.round(cumExpense * 100) / 100,
-        });
-      }
+      result.push({
+        date: new Date(dateStr + "T12:00:00").toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        }),
+        Income: Math.round(cumIncome * 100) / 100,
+        Expenses: Math.round(cumExpense * 100) / 100,
+      });
     }
     return result;
   }, [dailyLogs, fixedExpenses, variableExpenses, month, days]);
