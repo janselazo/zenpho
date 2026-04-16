@@ -399,7 +399,7 @@ export async function upsertDailyIncomeLog(fd: FormData) {
     });
     if (insErr) error = insErr.message;
   }
-  if (error) return { error: error.message };
+  if (error) return { error };
 
   const month = date.slice(0, 7) + "-01";
   await syncIncomeEntryFromDailyLogs(supabase, incomeSourceId, month);
