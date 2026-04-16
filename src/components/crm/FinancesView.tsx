@@ -16,8 +16,6 @@ import {
   X,
 } from "lucide-react";
 import {
-  Bar,
-  BarChart,
   CartesianGrid,
   Legend,
   Line,
@@ -247,18 +245,6 @@ export default function FinancesView() {
     void loadAll();
   }, [loadAll]);
 
-  // Chart data for overview
-  const overviewChartData = useMemo(() => {
-    if (!overview) return [];
-    return [
-      { name: "Income", amount: overview.totalIncome },
-      { name: "Fixed Exp.", amount: overview.totalFixedExpenses },
-      { name: "Variable Exp.", amount: overview.totalVariableExpenses },
-      { name: "Biz Expenses", amount: overview.totalIncomeExpenses },
-      { name: "Net", amount: overview.net },
-    ];
-  }, [overview]);
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -317,7 +303,6 @@ export default function FinancesView() {
               entries={entries}
               sources={sources}
               days={days}
-              chartData={overviewChartData}
               dailyLogs={dailyLogs}
               month={month}
               onReload={loadAll}
@@ -362,7 +347,6 @@ function OverviewTab({
   entries,
   sources,
   days,
-  chartData,
   dailyLogs,
   month,
   onReload,
@@ -371,7 +355,6 @@ function OverviewTab({
   entries: IncomeEntry[];
   sources: IncomeSource[];
   days: number;
-  chartData: { name: string; amount: number }[];
   dailyLogs: DailyIncomeLog[];
   month: string;
   onReload: () => Promise<void>;
@@ -509,89 +492,6 @@ function OverviewTab({
           </div>
         ))}
       </div>
-
-      {/* Individual breakdown charts */}
-      {chartData.length > 0 && (() => {
-        const ITEM_COLORS: Record<string, string> = {
-          Income: "#10b981",
-          "Fixed Exp.": "#ef4444",
-          "Variable Exp.": "#f59e0b",
-          "Biz Expenses": "#8b5cf6",
-          Net: overview!.net >= 0 ? "#10b981" : "#ef4444",
-        };
-
-        return (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {chartData.map((item) => {
-              const color = ITEM_COLORS[item.name] ?? "#2563eb";
-              const daily = item.amount / days;
-              const miniData = [
-                { label: "Daily", value: Math.abs(daily) },
-              ];
-              return (
-                <div
-                  key={item.name}
-                  className="rounded-2xl border border-border bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80"
-                >
-                  <div className="flex items-baseline justify-between">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary dark:text-zinc-500">
-                      {item.name}
-                    </p>
-                    <p
-                      className="text-lg font-bold tabular-nums tracking-tight"
-                      style={{ color }}
-                    >
-                      {fmt(item.amount)}
-                    </p>
-                  </div>
-                  <div className="mt-3 h-[120px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={miniData}
-                        margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
-                      >
-                        <XAxis
-                          dataKey="label"
-                          tick={{ fontSize: 11, fill: "#5c6370" }}
-                          axisLine={false}
-                          tickLine={false}
-                        />
-                        <YAxis
-                          tick={{ fontSize: 10, fill: "#5c6370" }}
-                          axisLine={false}
-                          tickLine={false}
-                          width={50}
-                          tickFormatter={(v: number) =>
-                            v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v}`
-                          }
-                        />
-                        <Tooltip
-                          formatter={(value) => fmt(Number(value ?? 0))}
-                          contentStyle={{
-                            borderRadius: 10,
-                            border: "1px solid #e8ecf1",
-                            fontSize: 12,
-                          }}
-                        />
-                        <Bar
-                          dataKey="value"
-                          name="Daily Income"
-                          fill={color}
-                          radius={[6, 6, 0, 0]}
-                          maxBarSize={56}
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <p className="mt-1 text-center text-xs tabular-nums text-text-secondary dark:text-zinc-500">
-                    {fmt(daily)} / day
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        );
-      })()}
 
       {/* Daily Income Tracker */}
       <div className="rounded-2xl border border-border bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
