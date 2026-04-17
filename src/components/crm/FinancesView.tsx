@@ -77,6 +77,7 @@ type FixedExpense = {
   due_day: number;
   category: string | null;
   is_active: boolean;
+  created_at?: string | null;
 };
 
 type VariableExpenseEntry = {
@@ -85,6 +86,7 @@ type VariableExpenseEntry = {
   amount: number;
   date: string;
   description: string | null;
+  created_at?: string | null;
 };
 
 type MonthlyOverview = {
@@ -104,6 +106,7 @@ type DailyIncomeLog = {
   hours: number;
   notes: string | null;
   income_source: { id: string; name: string; kind: string } | null;
+  created_at?: string | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -407,6 +410,19 @@ function OverviewTab({
       }));
   }, [dailyLogs]);
 
+  const lastUpdate = useMemo(() => {
+    let latest: number | null = null;
+    const consider = (ts: string | null | undefined) => {
+      if (!ts) return;
+      const t = new Date(ts).getTime();
+      if (Number.isFinite(t) && (latest === null || t > latest)) latest = t;
+    };
+    for (const l of dailyLogs) consider(l.created_at);
+    for (const v of variableExpenses) consider(v.created_at);
+    for (const f of fixedExpenses) consider(f.created_at);
+    return latest !== null ? new Date(latest) : null;
+  }, [dailyLogs, variableExpenses, fixedExpenses]);
+
   const dailySourceNames = useMemo(() => {
     const names = new Set<string>();
     for (const log of dailyLogs) {
@@ -514,10 +530,27 @@ function OverviewTab({
       {/* Income vs Expenses cumulative chart */}
       {incomeVsExpenseData.length > 0 && (
         <div className="rounded-2xl border border-border bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
-          <div className="border-b border-border px-6 py-4 dark:border-zinc-800">
+          <div className="flex items-center justify-between gap-3 border-b border-border px-6 py-4 dark:border-zinc-800">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-text-secondary dark:text-zinc-400">
               Income vs Expenses
             </h2>
+            {lastUpdate && (
+              <span
+                className="text-xs text-text-secondary dark:text-zinc-500"
+                title={lastUpdate.toLocaleString()}
+              >
+                <span className="font-semibold uppercase tracking-wider">
+                  Last Update:
+                </span>{" "}
+                <span className="tabular-nums text-text-primary dark:text-zinc-300">
+                  {lastUpdate.toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </span>
+              </span>
+            )}
           </div>
           <div className="p-6">
             <div className="h-[300px] w-full min-w-0">
