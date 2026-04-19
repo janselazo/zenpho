@@ -30,8 +30,10 @@ import ProspectPreviewOutreachBlock, {
 } from "@/components/crm/prospecting/ProspectPreviewOutreachBlock";
 import { useRouter, useSearchParams } from "next/navigation";
 import { primaryPlaceTypeLabel } from "@/lib/crm/places-search-ui";
-import { Building2, ChevronLeft, ChevronRight, Rocket, ShoppingBag } from "lucide-react";
+import { Building2, ChevronLeft, ChevronRight, MessagesSquare, Rocket, ShoppingBag } from "lucide-react";
 import ProspectingPendingContent from "@/components/crm/prospecting/ProspectingPendingContent";
+import TechStartupsTab from "@/components/crm/prospecting/TechStartupsTab";
+import RedditCommunitiesTab from "@/components/crm/prospecting/RedditCommunitiesTab";
 import ProspectConversationPanel from "@/components/crm/prospecting/ProspectConversationPanel";
 import ProspectingTabbedShell from "@/components/crm/prospecting/ProspectingTabbedShell";
 import PlacesBusinessAutocomplete from "@/components/crm/prospecting/PlacesBusinessAutocomplete";
@@ -48,12 +50,6 @@ import { EMPTY_PROSPECT_SOCIAL_URLS } from "@/lib/crm/prospect-enrichment-types"
 import type { SocialEnrichmentResult } from "@/lib/crm/social-profile-scrape";
 
 type SocialEnrichmentOk = Extract<SocialEnrichmentResult, { ok: true }>;
-
-const TECH_STARTUPS_PENDING_FEATURES = [
-  "Funding, stack, and hiring signals for SaaS and product teams",
-  "Saved lists and outreach hooks tied to Playbook",
-  "Integrations with startup data providers — wiring in a later phase",
-];
 
 const ECOM_BRANDS_PENDING_FEATURES = [
   "Shopify, WooCommerce, and Magento store discovery and tech-stack signals",
@@ -1613,15 +1609,13 @@ function ProspectsIntelligenceViewInner({
             id: "tech-startups",
             label: "Tech Startups",
             icon: Rocket,
-            body: (
-              <ProspectingPendingContent
-                title="Tech Startups"
-                description="Research and lists for funded product companies — discovery, signals, and tailored outreach will land here in a later phase."
-                features={TECH_STARTUPS_PENDING_FEATURES}
-                icon={Rocket}
-                titleLevel="tab"
-              />
-            ),
+            body: <TechStartupsTab />,
+          },
+          {
+            id: "reddit-communities",
+            label: "Reddit Communities",
+            icon: MessagesSquare,
+            body: <RedditCommunitiesTab />,
           },
           {
             id: "ecom-brands",

@@ -340,10 +340,15 @@ export async function createLeadFromProspectIntelAction(input: {
   website?: string;
   facebook?: string;
   instagram?: string;
+  linkedin?: string;
   notes: string;
   project_type: string;
   google_business_category?: string;
   google_place_types?: string[];
+  /** Optional CRM contact category (must be one of `LEAD_CONTACT_CATEGORY_OPTIONS`, e.g. "Tech Founder"). */
+  contact_category?: string;
+  /** Optional lead `source` override (defaults to "Prospects"). */
+  source?: string;
 }) {
   const auth = await requireAgencyStaff();
   if (auth.error) return { error: auth.error };
@@ -352,6 +357,10 @@ export async function createLeadFromProspectIntelAction(input: {
   const web = input.website?.trim();
   if (web && !notes.includes(web)) {
     notes = notes ? `${notes}\n\nWebsite: ${web}` : `Website: ${web}`;
+  }
+  const linked = input.linkedin?.trim();
+  if (linked && !notes.includes(linked)) {
+    notes = notes ? `${notes}\nLinkedIn: ${linked}` : `LinkedIn: ${linked}`;
   }
 
   const fd = new FormData();
@@ -367,7 +376,10 @@ export async function createLeadFromProspectIntelAction(input: {
   if (input.google_place_types?.length) {
     fd.set("google_place_types_json", JSON.stringify(input.google_place_types));
   }
-  fd.set("source", "Prospects");
+  if (input.contact_category?.trim()) {
+    fd.set("contact_category", input.contact_category.trim());
+  }
+  fd.set("source", input.source?.trim() || "Prospects");
   fd.set("notes", notes);
   fd.set("project_type", input.project_type.trim());
 

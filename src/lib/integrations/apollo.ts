@@ -2,11 +2,15 @@ import type {
   ApolloEnrichmentById,
   ApolloPersonEnrichDescriptor,
   ApolloPersonRow,
+  TechStartupOrgFilters,
+  TechStartupOrgRow,
 } from "@/lib/crm/prospect-enrichment-types";
 
 const APOLLO_PEOPLE_SEARCH_URL =
   "https://api.apollo.io/api/v1/mixed_people/api_search";
 const APOLLO_PEOPLE_MATCH_URL = "https://api.apollo.io/api/v1/people/match";
+const APOLLO_COMPANIES_SEARCH_URL =
+  "https://api.apollo.io/api/v1/mixed_companies/search";
 
 function pickPhoneFromEntry(entry: unknown): string | null {
   if (typeof entry === "string" && entry.trim()) return entry.trim();
@@ -365,4 +369,236 @@ export async function apolloEnrichPeopleById(
   }
 
   return { ok: true, byId };
+}
+
+// ── Organization search (mixed_companies/search) ─────────────────────────────
+
+function asStr(v: unknown): string | null {
+  return typeof v === "string" && v.trim() ? v.trim() : null;
+}
+
+function asNum(v: unknown): number | null {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string" && v.trim()) {
+    const n = Number(v);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+function extractDomain(org: Record<string, unknown>): string | null {
+  const direct =
+    asStr(org.primary_domain) ??
+    asStr(org.domain) ??
+    asStr((org.organization as Record<string, unknown> | undefined)?.primary_domain);
+  if (direct) return direct.replace(/^www\./i, "").toLowerCase();
+  const site = asStr(org.website_url) ?? asStr(org.url);
+  if (!site) return null;
+  try {
+    const u = new URL(/^https?:/i.test(site) ? site : `https://${site}`);
+    return u.hostname.replace(/^www\./i, "").toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+function extractTechnologies(org: Record<string, unknown>): string[] {
+  const out = new Set<string>();
+  const add = (v: unknown) => {
+    if (typeof v === "string" && v.trim()) out.add(v.trim());
+  };
+  const currentTech = org.current_technologies;
+  if (Array.isArray(currentTech)) {
+    for (const t of currentTech) {
+      if (typeof t === "string") add(t);
+      else if (t && typeof t === "object") {
+        const o = t as { name?: unknown; uid?: unknown };
+        add(o.name ?? o.uid);
+      }
+    }
+  }
+  const techNames = org.technology_names;
+  if (Array.isArray(techNames)) {
+    for (const t of techNames) add(t);
+  }
+  const keywords = org.keywords;
+  if (Array.isArray(keywords)) {
+    for (const k of keywords) add(k);
+  }
+  return [...out].slice(0, 30);
+}
+
+function extractIndustryTags(org: Record<string, unknown>): string[] {
+  const out = new Set<string>();
+  const arr = org.secondary_industries;
+  if (Array.isArray(arr)) {
+    for (const x of arr) {
+      if (typeof x === "string" && x.trim()) out.add(x.trim());
+    }
+  }
+  const indArr = org.industries;
+  if (Array.isArray(indArr)) {
+    for (const x of indArr) {
+      if (typeof x === "string" && x.trim()) out.add(x.trim());
+    }
+  }
+  return [...out].slice(0, 8);
+}
+
+function normalizeApolloOrg(raw: unknown): TechStartupOrgRow | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const name = asStr(o.name);
+  if (!name) return null;
+  const domain = extractDomain(o);
+  const websiteUrl = asStr(o.website_url);
+  const city = asStr(o.city);
+  const state = asStr(o.state);
+  const country = asStr(o.country);
+
+  return {
+    apolloOrgId: asStr(o.id),
+    name,
+    domain,
+    websiteUrl: websiteUrl ?? (domain ? `https://${domain}` : null),
+    industry: asStr(o.industry),
+    industryTags: extractIndustryTags(o),
+    employeeCount:
+      asNum(o.estimated_num_employees) ??
+      asNum(o.organization_num_employees) ??
+      asNum(o.num_employees),
+    linkedinUrl: asStr(o.linkedin_url),
+    twitterUrl: asStr(o.twitter_url),
+    facebookUrl: asStr(o.facebook_url),
+    city,
+    state,
+    country,
+    latestFundingStage:
+      asStr(o.latest_funding_stage) ?? asStr(o.latest_funding_round_stage),
+    latestFundingAmount:
+      asNum(o.latest_funding_amount) ?? asNum(o.latest_funding_round_amount),
+    latestFundedAt:
+      asStr(o.latest_funding_round_date) ?? asStr(o.last_funding_at),
+    totalFunding: asNum(o.total_funding),
+    foundedYear: asNum(o.founded_year),
+    technologies: extractTechnologies(o),
+    openJobsCount:
+      asNum(o.existing_open_jobs_count) ?? asNum(o.open_jobs_count),
+    shortDescription: asStr(o.short_description) ?? asStr(o.seo_description),
+    logoUrl: asStr(o.logo_url),
+  };
+}
+
+function buildOrganizationSearchBody(
+  filters: TechStartupOrgFilters,
+  perPage: number
+): Record<string, unknown> {
+  const body: Record<string, unknown> = {
+    page: Math.max(1, filters.page ?? 1),
+    per_page: Math.max(1, Math.min(100, perPage)),
+  };
+  const kw = filters.keyword?.trim();
+  if (kw) {
+    body.q_keywords = kw;
+    body.q_organization_keyword_tags = kw.split(/[,\s]+/).filter(Boolean);
+  }
+  const name = filters.organizationName?.trim();
+  if (name) body.q_organization_name = name;
+  if (filters.industries && filters.industries.length > 0) {
+    body.organization_industry_tag_hashes = filters.industries;
+    body.q_organization_keyword_tags = [
+      ...((body.q_organization_keyword_tags as string[]) ?? []),
+      ...filters.industries,
+    ];
+  }
+  if (filters.locations && filters.locations.length > 0) {
+    body.organization_locations = filters.locations;
+  }
+  if (filters.employeeRanges && filters.employeeRanges.length > 0) {
+    body.organization_num_employees_ranges = filters.employeeRanges;
+  }
+  if (filters.fundingStages && filters.fundingStages.length > 0) {
+    body.organization_latest_funding_stage_cd = filters.fundingStages;
+  }
+  if (filters.technologyUids && filters.technologyUids.length > 0) {
+    body.currently_using_any_of_technology_uids = filters.technologyUids;
+  }
+  return body;
+}
+
+/**
+ * Company search via Apollo's `mixed_companies/search` endpoint. Requires APOLLO_API_KEY
+ * with Master-key permissions (same constraint as `apolloSearchDecisionMakers`).
+ *
+ * @see https://docs.apollo.io/reference/organization-search
+ */
+export async function apolloSearchOrganizations(
+  filters: TechStartupOrgFilters,
+  limit = 25
+): Promise<
+  { ok: true; organizations: TechStartupOrgRow[] } | { ok: false; error: string }
+> {
+  const key = process.env.APOLLO_API_KEY?.trim();
+  if (!key) {
+    return { ok: false, error: "Set APOLLO_API_KEY in .env.local to use Apollo." };
+  }
+
+  const perPage = Math.max(1, Math.min(100, limit));
+  const body = buildOrganizationSearchBody(filters, perPage);
+
+  let res: Response;
+  try {
+    res = await fetch(APOLLO_COMPANIES_SEARCH_URL, {
+      method: "POST",
+      headers: {
+        "Cache-Control": "no-cache",
+        "Content-Type": "application/json",
+        "x-api-key": key,
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(45_000),
+    });
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Apollo request failed.",
+    };
+  }
+
+  const text = await res.text();
+  if (!res.ok) {
+    let hint = "";
+    try {
+      const err = JSON.parse(text) as { error?: string; message?: string };
+      const msg = String(err.error ?? err.message ?? "");
+      if (msg.includes("not accessible with this api_key")) {
+        hint =
+          " Create a Master API key in Apollo (Settings → API) — company search does not accept all key types.";
+      }
+    } catch {
+      /* ignore */
+    }
+    return {
+      ok: false,
+      error: `Apollo HTTP ${res.status}: ${text.slice(0, 280)}${hint}`,
+    };
+  }
+
+  let json: {
+    organizations?: unknown[];
+    accounts?: unknown[];
+  };
+  try {
+    json = JSON.parse(text) as typeof json;
+  } catch {
+    return { ok: false, error: "Apollo returned invalid JSON." };
+  }
+
+  const raw = [...(json.organizations ?? []), ...(json.accounts ?? [])];
+  const organizations = raw
+    .map(normalizeApolloOrg)
+    .filter((x): x is TechStartupOrgRow => x !== null)
+    .slice(0, limit);
+
+  return { ok: true, organizations };
 }

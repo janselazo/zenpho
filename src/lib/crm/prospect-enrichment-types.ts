@@ -97,3 +97,43 @@ export type HunterEmailRow = {
   confidence?: number;
   source: "hunter";
 };
+
+/** One organization row from Apollo's mixed_companies/search endpoint. */
+export type TechStartupOrgRow = {
+  apolloOrgId: string | null;
+  name: string;
+  domain: string | null;
+  websiteUrl: string | null;
+  industry: string | null;
+  /** Secondary industry tags (if Apollo returns them). */
+  industryTags: string[];
+  employeeCount: number | null;
+  linkedinUrl: string | null;
+  twitterUrl: string | null;
+  facebookUrl: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  latestFundingStage: string | null;
+  latestFundingAmount: number | null;
+  /** ISO date string from Apollo, if present. */
+  latestFundedAt: string | null;
+  totalFunding: number | null;
+  foundedYear: number | null;
+  technologies: string[];
+  /** Apollo `existing_open_jobs_count` when present. */
+  openJobsCount: number | null;
+  shortDescription: string | null;
+  logoUrl: string | null;
+};
+
+export type TechStartupOrgFilters = {
+  keyword?: string;
+  organizationName?: string;
+  industries?: string[];
+  locations?: string[];
+  employeeRanges?: string[];
+  fundingStages?: string[];
+  technologyUids?: string[];
+  page?: number;
+};
