@@ -10,6 +10,7 @@ import {
   Building2,
   Calendar,
   ChevronDown,
+  Compass,
   DollarSign,
   FileBarChart,
   FileText,
@@ -45,6 +46,7 @@ const workNav = [
 ];
 
 const agencyNav = [
+  { href: "/my-life", label: "My Life", icon: Compass },
   { href: "/finances", label: "Finances", icon: DollarSign },
   { href: "/team", label: "Team", icon: Users },
   { href: "/automations", label: "Automations", icon: Workflow },
