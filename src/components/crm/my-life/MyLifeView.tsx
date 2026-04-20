@@ -10,6 +10,10 @@ import {
   useTransition,
 } from "react";
 import {
+  listLifeAreaStatuses,
+  setLifeAreaStatusAction,
+} from "@/app/(crm)/actions/life-area";
+import {
   createLifeTaskAction,
   deleteLifeTaskAction,
   listLifeTasks,
@@ -30,16 +34,23 @@ import {
 
 export default function MyLifeView() {
   const [tasks, setTasks] = useState<LifeTaskRow[]>([]);
+  const [areaStatus, setAreaStatus] = useState<Record<LifeAreaKey, LifeStatus>>(
+    () => defaultAreaStatus()
+  );
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const res = await listLifeTasks();
+      const [tasksRes, statusRes] = await Promise.all([
+        listLifeTasks(),
+        listLifeAreaStatuses(),
+      ]);
       if (cancelled) return;
-      setLoadError(res.error);
-      setTasks(res.data);
+      setLoadError(tasksRes.error ?? statusRes.error ?? null);
+      setTasks(tasksRes.data);
+      setAreaStatus(statusRes.data);
       setLoading(false);
     })();
     return () => {
@@ -57,11 +68,11 @@ export default function MyLifeView() {
     return out;
   }, [tasks]);
 
-  const totalSummary = useMemo(() => {
+  const sectionSummary = useMemo(() => {
     const counts: Record<LifeStatus, number> = { green: 0, yellow: 0, red: 0 };
-    for (const t of tasks) counts[t.status] += 1;
+    for (const a of LIFE_AREAS) counts[areaStatus[a.key]] += 1;
     return counts;
-  }, [tasks]);
+  }, [areaStatus]);
 
   const upsertTask = useCallback((row: LifeTaskRow) => {
     setTasks((prev) => {
@@ -77,8 +88,12 @@ export default function MyLifeView() {
     setTasks((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
+  const setArea = useCallback((area: LifeAreaKey, status: LifeStatus) => {
+    setAreaStatus((prev) => ({ ...prev, [area]: status }));
+  }, []);
+
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-6">
+    <div className="mx-auto w-full max-w-4xl space-y-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
@@ -103,7 +118,7 @@ export default function MyLifeView() {
               <span className={`h-2 w-2 rounded-full ${STATUS_META[s].dotClass}`} aria-hidden />
               <span>{STATUS_META[s].label}</span>
               <span className="font-semibold tabular-nums text-text-primary dark:text-zinc-200">
-                {totalSummary[s]}
+                {sectionSummary[s]}
               </span>
             </span>
           ))}
@@ -112,7 +127,7 @@ export default function MyLifeView() {
 
       {loadError ? (
         <div className="rounded-2xl border border-red-500/30 bg-red-500/5 p-4 text-sm text-red-700 dark:text-red-300">
-          Could not load tasks: {loadError}
+          Could not load: {loadError}
         </div>
       ) : null}
 
@@ -122,7 +137,7 @@ export default function MyLifeView() {
           Loading your life areas…
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="flex flex-col gap-5">
           {LIFE_AREAS.map((area) => (
             <LifeAreaSection
               key={area.key}
@@ -130,9 +145,11 @@ export default function MyLifeView() {
               label={area.label}
               blurb={area.blurb}
               Icon={area.icon}
+              status={areaStatus[area.key]}
               tasks={byArea.get(area.key) ?? []}
-              onUpsert={upsertTask}
-              onRemove={removeTask}
+              onAreaStatusChange={(next) => setArea(area.key, next)}
+              onUpsertTask={upsertTask}
+              onRemoveTask={removeTask}
             />
           ))}
         </div>
@@ -142,7 +159,7 @@ export default function MyLifeView() {
 }
 
 // ---------------------------------------------------------------------------
-// Section
+// Section (one per life area, full width)
 // ---------------------------------------------------------------------------
 
 type LifeAreaSectionProps = {
@@ -150,9 +167,11 @@ type LifeAreaSectionProps = {
   label: string;
   blurb: string;
   Icon: (typeof LIFE_AREAS)[number]["icon"];
+  status: LifeStatus;
   tasks: LifeTaskRow[];
-  onUpsert: (row: LifeTaskRow) => void;
-  onRemove: (id: string) => void;
+  onAreaStatusChange: (next: LifeStatus) => void;
+  onUpsertTask: (row: LifeTaskRow) => void;
+  onRemoveTask: (id: string) => void;
 };
 
 function LifeAreaSection({
@@ -160,13 +179,17 @@ function LifeAreaSection({
   label,
   blurb,
   Icon,
+  status,
   tasks,
-  onUpsert,
-  onRemove,
+  onAreaStatusChange,
+  onUpsertTask,
+  onRemoveTask,
 }: LifeAreaSectionProps) {
   const [draftTitle, setDraftTitle] = useState("");
   const [creating, startCreate] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const [savingStatus, startSaveStatus] = useTransition();
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const counts = useMemo(() => {
@@ -175,46 +198,77 @@ function LifeAreaSection({
     return out;
   }, [tasks]);
 
+  const handleStatusChange = (next: LifeStatus) => {
+    if (next === status) return;
+    onAreaStatusChange(next);
+    setStatusError(null);
+    startSaveStatus(async () => {
+      const res = await setLifeAreaStatusAction({ area: areaKey, status: next });
+      if (res.error) setStatusError(res.error);
+    });
+  };
+
   const handleCreate = () => {
     const title = draftTitle.trim();
     if (!title || creating) return;
-    setError(null);
+    setCreateError(null);
     startCreate(async () => {
       const res = await createLifeTaskAction({ area: areaKey, title });
       if (res.error || !res.data) {
-        setError(res.error ?? "Could not add task");
+        setCreateError(res.error ?? "Could not add task");
         return;
       }
-      onUpsert(res.data);
+      onUpsertTask(res.data);
       setDraftTitle("");
-      // Refocus for rapid entry.
       requestAnimationFrame(() => inputRef.current?.focus());
     });
   };
 
+  const meta = STATUS_META[status];
+
   return (
-    <section className="flex flex-col rounded-2xl border border-border bg-white shadow-sm dark:border-zinc-800/70 dark:bg-zinc-900/60">
-      <header className="flex items-start justify-between gap-3 border-b border-border px-5 py-4 dark:border-zinc-800/70">
-        <div className="min-w-0">
-          <h2 className="heading-display flex items-center gap-2 text-base font-semibold text-text-primary dark:text-zinc-100">
-            <Icon className="h-4 w-4 text-text-secondary dark:text-zinc-500" aria-hidden />
-            {label}
-          </h2>
-          <p className="mt-0.5 truncate text-xs text-text-secondary dark:text-zinc-500">
-            {blurb}
-          </p>
+    <section
+      className={`overflow-hidden rounded-2xl border border-border bg-white shadow-sm ring-1 ring-inset ${meta.ringClass} dark:border-zinc-800/70 dark:bg-zinc-900/60`}
+    >
+      <header className="flex flex-col gap-4 border-b border-border px-5 py-4 dark:border-zinc-800/70 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-start gap-3">
+          <span
+            className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${meta.dotClass}`}
+            aria-hidden
+          />
+          <div className="min-w-0">
+            <h2 className="heading-display flex items-center gap-2 text-base font-semibold text-text-primary dark:text-zinc-100">
+              <Icon className="h-4 w-4 text-text-secondary dark:text-zinc-500" aria-hidden />
+              {label}
+              {savingStatus ? (
+                <Loader2 className="h-3 w-3 animate-spin text-text-secondary dark:text-zinc-500" aria-hidden />
+              ) : null}
+            </h2>
+            <p className="mt-0.5 text-xs text-text-secondary dark:text-zinc-500">
+              {blurb}
+            </p>
+          </div>
         </div>
-        <div
-          className="flex shrink-0 items-center gap-1.5 text-[11px] font-medium"
-          aria-label={`${counts.green} green, ${counts.yellow} yellow, ${counts.red} red`}
-        >
-          <CountPill status="green" count={counts.green} />
-          <CountPill status="yellow" count={counts.yellow} />
-          <CountPill status="red" count={counts.red} />
+        <div className="flex flex-wrap items-center gap-3">
+          <div
+            className="flex items-center gap-1 text-[11px] font-medium"
+            aria-label={`${counts.green} green tasks, ${counts.yellow} yellow, ${counts.red} red`}
+          >
+            <CountPill status="green" count={counts.green} />
+            <CountPill status="yellow" count={counts.yellow} />
+            <CountPill status="red" count={counts.red} />
+          </div>
+          <SectionStatusButtons current={status} onChange={handleStatusChange} />
         </div>
       </header>
 
-      <ul className="flex flex-1 flex-col divide-y divide-border/70 dark:divide-zinc-800/70">
+      {statusError ? (
+        <p className="border-b border-border px-5 py-2 text-xs text-red-600 dark:border-zinc-800/70 dark:text-red-400">
+          {statusError}
+        </p>
+      ) : null}
+
+      <ul className="flex flex-col divide-y divide-border/70 dark:divide-zinc-800/70">
         {tasks.length === 0 ? (
           <li className="px-5 py-4 text-xs italic text-text-secondary dark:text-zinc-500">
             No tasks yet — add one below.
@@ -224,8 +278,8 @@ function LifeAreaSection({
             <TaskRow
               key={task.id}
               task={task}
-              onUpsert={onUpsert}
-              onRemove={onRemove}
+              onUpsert={onUpsertTask}
+              onRemove={onRemoveTask}
             />
           ))
         )}
@@ -260,10 +314,51 @@ function LifeAreaSection({
           {creating ? "Adding…" : "Add"}
         </button>
       </form>
-      {error ? (
-        <p className="px-5 pb-3 text-xs text-red-600 dark:text-red-400">{error}</p>
+      {createError ? (
+        <p className="px-5 pb-3 text-xs text-red-600 dark:text-red-400">{createError}</p>
       ) : null}
     </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Section status chip picker (prominent, in section header)
+// ---------------------------------------------------------------------------
+
+function SectionStatusButtons({
+  current,
+  onChange,
+}: {
+  current: LifeStatus;
+  onChange: (next: LifeStatus) => void;
+}) {
+  return (
+    <div
+      className="flex items-center gap-1 rounded-xl border border-border bg-surface/60 p-1 dark:border-zinc-800/70 dark:bg-zinc-800/40"
+      role="radiogroup"
+      aria-label="Section status"
+    >
+      {LIFE_STATUSES.map((s) => {
+        const meta = STATUS_META[s];
+        const active = current === s;
+        return (
+          <button
+            key={s}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            onClick={() => onChange(s)}
+            title={`${meta.label} — ${meta.description}`}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors ${
+              active ? meta.chipActiveClass : meta.chipIdleClass
+            }`}
+          >
+            <span className={`h-2 w-2 rounded-full ${meta.dotClass}`} aria-hidden />
+            {meta.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -339,7 +434,7 @@ function TaskRow({ task, onUpsert, onRemove }: TaskRowProps) {
 
   return (
     <li className="group flex items-center gap-3 px-5 py-2.5 hover:bg-surface/60 dark:hover:bg-zinc-800/40">
-      <StatusPicker value={task.status} onChange={handleStatusChange} />
+      <TaskStatusPicker value={task.status} onChange={handleStatusChange} />
       <div className="flex min-w-0 flex-1 items-center gap-2">
         {editing ? (
           <input
@@ -391,10 +486,10 @@ function TaskRow({ task, onUpsert, onRemove }: TaskRowProps) {
 }
 
 // ---------------------------------------------------------------------------
-// Status picker (compact 3-dot segmented control)
+// Task-level status picker (compact 3-dot control)
 // ---------------------------------------------------------------------------
 
-function StatusPicker({
+function TaskStatusPicker({
   value,
   onChange,
 }: {
@@ -432,7 +527,7 @@ function StatusPicker({
 }
 
 // ---------------------------------------------------------------------------
-// Count pill (section header)
+// Count pill
 // ---------------------------------------------------------------------------
 
 function CountPill({ status, count }: { status: LifeStatus; count: number }) {
@@ -454,4 +549,10 @@ function CountPill({ status, count }: { status: LifeStatus; count: number }) {
       {count}
     </span>
   );
+}
+
+function defaultAreaStatus(): Record<LifeAreaKey, LifeStatus> {
+  const out = {} as Record<LifeAreaKey, LifeStatus>;
+  for (const a of LIFE_AREAS) out[a.key] = "yellow";
+  return out;
 }
