@@ -93,7 +93,12 @@ function pickAuthorWebsite(r: RedditSearchResult): string | null {
   return r.post.externalUrls[0] ?? null;
 }
 
-export default function RedditCommunitiesTab() {
+export default function RedditCommunitiesTab({
+  embedded = false,
+}: {
+  /** When true, hides the large page-style title row (used inside Tech Startups). */
+  embedded?: boolean;
+}) {
   const [subreddits, setSubreddits] = useState<string[]>(["SaaS", "indiehackers"]);
   const [customSub, setCustomSub] = useState("");
   const [query, setQuery] = useState("");
@@ -226,13 +231,17 @@ export default function RedditCommunitiesTab() {
   return (
     <div className="space-y-6">
       <div className="rounded-2xl border border-border bg-white p-5 shadow-sm dark:border-zinc-800/70 dark:bg-zinc-900/60">
-        <div className="flex items-center gap-2">
-          <MessagesSquare className="h-5 w-5 text-accent dark:text-blue-400" aria-hidden />
-          <h2 className="heading-display text-lg font-semibold text-text-primary dark:text-zinc-100">
-            Reddit Communities
-          </h2>
-        </div>
-        <p className="mt-1 text-xs text-text-secondary dark:text-zinc-500">
+        {embedded ? (
+          <h2 className="sr-only">Reddit Communities</h2>
+        ) : (
+          <div className="flex items-center gap-2">
+            <MessagesSquare className="h-5 w-5 text-accent dark:text-blue-400" aria-hidden />
+            <h2 className="heading-display text-lg font-semibold text-text-primary dark:text-zinc-100">
+              Reddit Communities
+            </h2>
+          </div>
+        )}
+        <p className={`text-xs text-text-secondary dark:text-zinc-500 ${embedded ? "" : "mt-1"}`}>
           Search founder-heavy subreddits with intent presets (needs dev, shipped on no-code,
           early MVP). Posts with strong intent + recent + engaging score higher. Enrich
           authors to add karma and profile URL to the score.

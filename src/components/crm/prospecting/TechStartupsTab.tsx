@@ -5,11 +5,14 @@ import {
   ExternalLink,
   Linkedin,
   Loader2,
+  MessagesSquare,
   Rocket,
   Search,
   Sparkles,
   Users,
 } from "lucide-react";
+import IconTabBar from "@/components/crm/prospecting/IconTabBar";
+import RedditCommunitiesTab from "@/components/crm/prospecting/RedditCommunitiesTab";
 import type {
   ApolloPersonRow,
   TechStartupOrgRow,
@@ -143,7 +146,10 @@ function tidyDomain(org: TechStartupOrgRow): string | null {
   return d.replace(/^https?:\/\//i, "").replace(/^www\./i, "").replace(/\/$/, "");
 }
 
+type TechStartupsSubTab = "companies" | "reddit";
+
 export default function TechStartupsTab() {
+  const [subTab, setSubTab] = useState<TechStartupsSubTab>("companies");
   const [keyword, setKeyword] = useState("");
   const [industries, setIndustries] = useState<string[]>([]);
   const [employeeRanges, setEmployeeRanges] = useState<string[]>(["1,10", "11,50"]);
@@ -251,12 +257,46 @@ export default function TechStartupsTab() {
   }
 
   return (
+    <div className="space-y-4">
+      <p className="text-xs text-text-secondary dark:text-zinc-500">
+        Discover tech founders via Apollo company data or Reddit community intent — both
+        score leads for a custom web app pitch.
+      </p>
+      <IconTabBar
+        tabs={[
+          { id: "tech-startups-companies", label: "Companies", icon: Rocket },
+          { id: "tech-startups-reddit", label: "Reddit Communities", icon: MessagesSquare },
+        ]}
+        activeTab={
+          subTab === "companies" ? "tech-startups-companies" : "tech-startups-reddit"
+        }
+        onTabChange={(id) =>
+          setSubTab(id === "tech-startups-reddit" ? "reddit" : "companies")
+        }
+        ariaLabel="Tech Startups sources"
+      />
+
+      <div
+        id="tech-startups-reddit-panel"
+        role="tabpanel"
+        aria-labelledby="tech-startups-reddit-tab"
+        hidden={subTab !== "reddit"}
+      >
+        <RedditCommunitiesTab embedded />
+      </div>
+
+      <div
+        id="tech-startups-companies-panel"
+        role="tabpanel"
+        aria-labelledby="tech-startups-companies-tab"
+        hidden={subTab !== "companies"}
+      >
     <div className="space-y-6">
       <div className="rounded-2xl border border-border bg-white p-5 shadow-sm dark:border-zinc-800/70 dark:bg-zinc-900/60">
         <div className="flex items-center gap-2">
           <Rocket className="h-5 w-5 text-accent dark:text-blue-400" aria-hidden />
           <h2 className="heading-display text-lg font-semibold text-text-primary dark:text-zinc-100">
-            Tech Startups
+            Companies (Apollo)
           </h2>
         </div>
         <p className="mt-1 text-xs text-text-secondary dark:text-zinc-500">
@@ -522,6 +562,8 @@ export default function TechStartupsTab() {
           );
         })}
       </ul>
+    </div>
+      </div>
     </div>
   );
 }

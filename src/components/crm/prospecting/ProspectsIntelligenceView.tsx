@@ -30,10 +30,9 @@ import ProspectPreviewOutreachBlock, {
 } from "@/components/crm/prospecting/ProspectPreviewOutreachBlock";
 import { useRouter, useSearchParams } from "next/navigation";
 import { primaryPlaceTypeLabel } from "@/lib/crm/places-search-ui";
-import { Building2, ChevronLeft, ChevronRight, MessagesSquare, Rocket, ShoppingBag } from "lucide-react";
+import { Building2, ChevronLeft, ChevronRight, Rocket, ShoppingBag } from "lucide-react";
 import ProspectingPendingContent from "@/components/crm/prospecting/ProspectingPendingContent";
 import TechStartupsTab from "@/components/crm/prospecting/TechStartupsTab";
-import RedditCommunitiesTab from "@/components/crm/prospecting/RedditCommunitiesTab";
 import ProspectConversationPanel from "@/components/crm/prospecting/ProspectConversationPanel";
 import ProspectingTabbedShell from "@/components/crm/prospecting/ProspectingTabbedShell";
 import PlacesBusinessAutocomplete from "@/components/crm/prospecting/PlacesBusinessAutocomplete";
@@ -1610,12 +1609,6 @@ function ProspectsIntelligenceViewInner({
             label: "Tech Startups",
             icon: Rocket,
             body: <TechStartupsTab />,
-          },
-          {
-            id: "reddit-communities",
-            label: "Reddit Communities",
-            icon: MessagesSquare,
-            body: <RedditCommunitiesTab />,
           },
           {
             id: "ecom-brands",
