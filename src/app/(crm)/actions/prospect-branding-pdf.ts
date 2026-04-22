@@ -1026,8 +1026,18 @@ export async function generateProspectBrandingPdfAction(input: {
     }
   | { ok: false; error: string }
 > {
+  const t0 = Date.now();
+  console.info(
+    `[branding-pdf] action start business="${input.businessName}" hasPlace=${Boolean(
+      input.place,
+    )} hasReport=${Boolean(input.report)}`,
+  );
+
   const auth = await requireAgencyStaff();
-  if (auth.error) return { ok: false, error: auth.error };
+  if (auth.error) {
+    console.warn(`[branding-pdf] auth failed: ${auth.error}`);
+    return { ok: false, error: auth.error };
+  }
 
   const businessName = input.businessName.trim() || "Business";
 
@@ -1036,6 +1046,9 @@ export async function generateProspectBrandingPdfAction(input: {
     place: input.place ?? null,
     report: input.report ?? null,
   });
+  console.info(
+    `[branding-pdf] spec ${specResult.ok ? "ok" : "fail"} (${Date.now() - t0}ms)`,
+  );
   if (!specResult.ok) {
     return {
       ok: false,
@@ -1047,7 +1060,6 @@ export async function generateProspectBrandingPdfAction(input: {
     brandName: specResult.data.brandName || businessName,
   };
 
-  // Image generation runs in parallel with PDF setup; failures are non-fatal.
   const imagesPromise = generateBrandingImages(spec);
 
   try {
@@ -1056,6 +1068,11 @@ export async function generateProspectBrandingPdfAction(input: {
     const ctx = buildContext(pdf, spec, fonts);
 
     const images = await imagesPromise;
+    console.info(
+      `[branding-pdf] images done (${Date.now() - t0}ms) failed=${Object.keys(
+        images.errors,
+      ).length}/7`,
+    );
     await composeBook(ctx, images);
 
     const bytes = await pdf.save();
@@ -1070,6 +1087,12 @@ export async function generateProspectBrandingPdfAction(input: {
       ([slot, err]) => `${slot}: ${err}`,
     );
 
+    console.info(
+      `[branding-pdf] done ${bytes.length} bytes, base64 ${pdfBase64.length} chars (${
+        Date.now() - t0
+      }ms)`,
+    );
+
     return {
       ok: true,
       pdfBase64,
@@ -1078,6 +1101,7 @@ export async function generateProspectBrandingPdfAction(input: {
     };
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Brand guidelines PDF could not be generated.";
+    console.error(`[branding-pdf] fail ${msg} (${Date.now() - t0}ms)`, e);
     return { ok: false, error: msg };
   }
 }

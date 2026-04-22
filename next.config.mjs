@@ -17,7 +17,8 @@ const nextConfig = {
       "@fullcalendar/core",
     ],
     serverActions: {
-      bodySizeLimit: "5mb",
+      // Brand guidelines PDF embeds 7 PNGs; response (base64) can reach ~15 MB.
+      bodySizeLimit: "25mb",
     },
   },
   async redirects() {
