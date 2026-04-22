@@ -135,6 +135,20 @@ function qualityFromEnv(): ImageQuality {
   return "medium";
 }
 
+function isModelUnavailableError(msg: string): boolean {
+  const m = msg.toLowerCase();
+  return (
+    m.includes("model") &&
+    (m.includes("does not exist") ||
+      m.includes("not found") ||
+      m.includes("no access") ||
+      m.includes("not supported") ||
+      m.includes("invalid model") ||
+      m.includes("must be verified") ||
+      m.includes("unknown model"))
+  );
+}
+
 async function generateOne(
   openai: OpenAI,
   model: string,
@@ -166,6 +180,26 @@ async function generateOne(
   }
 }
 
+/** Quick probe so we can decide up-front whether `gpt-image-2*` is actually usable
+ * on this OpenAI account. A tiny `low`-quality 1024² request is cheap and short-
+ * circuits 7 parallel failures with a clear log line. */
+async function probeModel(openai: OpenAI, model: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    await openai.images.generate({
+      model,
+      prompt: "A small neutral abstract shape on white.",
+      size: "1024x1024",
+      quality: "low",
+      n: 1,
+      output_format: "png",
+    });
+    return { ok: true };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Model probe failed.";
+    return { ok: false, error: msg };
+  }
+}
+
 /**
  * Generate all 7 brand-book images in parallel using OpenAI `gpt-image-2` (or the
  * model configured via `OPENAI_BRANDING_IMAGE_MODEL`). Any individual failure is
@@ -191,17 +225,47 @@ export async function generateBrandingImages(
   if (!apiKey) {
     const err = "OPENAI_API_KEY is not configured.";
     for (const plan of SLOTS) empty.errors[plan.slot] = err;
+    console.warn("[branding-images] " + err);
     return empty;
   }
 
-  const model =
+  const requested =
     process.env.OPENAI_BRANDING_IMAGE_MODEL?.trim() || DEFAULT_MODEL;
+  const fallback =
+    process.env.OPENAI_BRANDING_IMAGE_MODEL_FALLBACK?.trim() || "gpt-image-1";
   const openai = new OpenAI({ apiKey, timeout: timeoutMs() });
   const quality = qualityFromEnv();
+
+  // Probe the requested model first; if it's unavailable (not found / not
+  // verified / etc.) fall back to `gpt-image-1` before spending 7 parallel
+  // timeouts on the same root cause.
+  let model = requested;
+  const probe = await probeModel(openai, requested);
+  if (!probe.ok) {
+    console.warn(
+      `[branding-images] probe for ${requested} failed: ${probe.error}`,
+    );
+    if (fallback && fallback !== requested && isModelUnavailableError(probe.error)) {
+      console.warn(
+        `[branding-images] falling back to ${fallback} for brand imagery.`,
+      );
+      model = fallback;
+    }
+  } else {
+    console.info(`[branding-images] using model ${model}`);
+  }
 
   const results = await Promise.all(
     SLOTS.map((plan) => generateOne(openai, model, plan, spec, quality)),
   );
+
+  for (const r of results) {
+    if (r.error) {
+      console.warn(
+        `[branding-images] slot=${r.slot} model=${model} error=${r.error}`,
+      );
+    }
+  }
 
   const images: BrandingImages = {
     cover: null,

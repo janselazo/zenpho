@@ -1018,7 +1018,13 @@ export async function generateProspectBrandingPdfAction(input: {
   place?: PlacesSearchPlace | null;
   report?: MarketIntelReport | null;
 }): Promise<
-  { ok: true; pdfBase64: string; filename: string } | { ok: false; error: string }
+  | {
+      ok: true;
+      pdfBase64: string;
+      filename: string;
+      imageWarnings?: string[];
+    }
+  | { ok: false; error: string }
 > {
   const auth = await requireAgencyStaff();
   if (auth.error) return { ok: false, error: auth.error };
@@ -1059,10 +1065,16 @@ export async function generateProspectBrandingPdfAction(input: {
         .replace(/[^\w\-]+/g, "-")
         .replace(/^-|-$/g, "")
         .slice(0, 48) || "brand";
+
+    const imageWarnings = Object.entries(images.errors).map(
+      ([slot, err]) => `${slot}: ${err}`,
+    );
+
     return {
       ok: true,
       pdfBase64,
       filename: `${safeName.toLowerCase()}-brand-guidelines.pdf`,
+      ...(imageWarnings.length ? { imageWarnings } : {}),
     };
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Brand guidelines PDF could not be generated.";

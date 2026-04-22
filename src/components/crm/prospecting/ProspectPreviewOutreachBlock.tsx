@@ -1216,7 +1216,18 @@ export default function ProspectPreviewOutreachBlock({
         return;
       }
       setBrandingFilename(res.filename);
-      setBrandingMsg("Brand guidelines downloaded.");
+      if (res.imageWarnings && res.imageWarnings.length > 0) {
+        const head = res.imageWarnings.slice(0, 2).join("; ");
+        const extra =
+          res.imageWarnings.length > 2
+            ? ` (+${res.imageWarnings.length - 2} more)`
+            : "";
+        setBrandingMsg(
+          `Downloaded with placeholder imagery — ${res.imageWarnings.length}/7 image(s) failed: ${head}${extra}. See server logs for details.`,
+        );
+      } else {
+        setBrandingMsg("Brand guidelines downloaded.");
+      }
       try {
         const bin = atob(res.pdfBase64);
         const bytes = new Uint8Array(bin.length);
@@ -1580,7 +1591,7 @@ export default function ProspectPreviewOutreachBlock({
                 e.stopPropagation();
                 void generateBrandingPdf();
               }}
-              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-pink-500/40 bg-pink-500/10 px-3 py-2 text-xs font-semibold text-pink-800 hover:bg-pink-500/[0.14] disabled:opacity-50 dark:border-pink-400/35 dark:bg-pink-500/15 dark:text-pink-200 dark:hover:bg-pink-500/20"
+              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 hover:bg-blue-500/[0.14] disabled:opacity-50 dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200 dark:hover:bg-blue-500/20"
             >
               {brandingBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Palette className="h-3.5 w-3.5" aria-hidden />}
               {brandingBusy ? "Composing brand book…" : "Generate brand guidelines (PDF)"}
