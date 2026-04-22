@@ -14,6 +14,7 @@ import {
   MessageSquare,
   Monitor,
   Paperclip,
+  Palette,
   Plus,
   Smartphone,
   Video,
@@ -38,6 +39,7 @@ import {
   sendProspectPreviewSmsAction,
 } from "@/app/(crm)/actions/prospect-preview";
 import { generateProspectAutomationPdfAction } from "@/app/(crm)/actions/prospect-automation-report";
+import { generateProspectBrandingPdfAction } from "@/app/(crm)/actions/prospect-branding-pdf";
 import { mergeProspectOutreachTemplate } from "@/lib/crm/prospect-outreach-template";
 import {
   downloadBlob,
@@ -60,7 +62,7 @@ export type ProspectStitchContext =
 
 type StitchOk = Extract<StitchProspectDesignResult, { ok: true }>;
 type StitchTarget = "website" | "webapp" | "mobile";
-type SelectedOffer = StitchTarget | "automations";
+type SelectedOffer = StitchTarget | "automations" | "branding";
 
 type OutreachAttachment = {
   id: string;
@@ -166,6 +168,16 @@ function defaultShareTemplatesForOffer(offer: SelectedOffer): ShareTemplates {
         instagramBody:
           "Hi! AI audit draft for {{businessName}} — processes, cost hotspots, recommended tools/workflows, and a prioritized plan (implementation is a separate step). Want the PDF or a quick call?\n\n— {{yourName}}",
       };
+    case "branding":
+      return {
+        smsBody:
+          "Hi {{businessName}} — we put together a full Brand Guidelines book for you: story, logo direction, color palette, typography, tone of voice, merch ideas, do's & don'ts. Want the PDF?",
+        emailSubject: "Brand guidelines concept for {{businessName}}",
+        emailBody:
+          "Hi {{businessName}},\n\nWe drafted a complete Brand Guidelines book for your business — cover, brand story, logo direction, color palette (with ratios), typography specimen, imagery & pattern, tone-of-voice examples, merchandising, and do's & don'ts.\n\nIt's yours to keep. If you'd like to evolve the mark or roll it out to your storefront, signage, menus, or web, we can scope that separately.\n\nHablamos español también.\n\nBest,\n{{yourName}}",
+        instagramBody:
+          "Hi {{businessName}}! We drafted a Brand Guidelines PDF for your business — palette, type, logo direction, tone and merch. Want me to send it over?\n\n— {{yourName}}",
+      };
   }
 }
 
@@ -175,6 +187,7 @@ function createInitialShareTemplates(): Record<SelectedOffer, ShareTemplates> {
     webapp: defaultShareTemplatesForOffer("webapp"),
     mobile: defaultShareTemplatesForOffer("mobile"),
     automations: defaultShareTemplatesForOffer("automations"),
+    branding: defaultShareTemplatesForOffer("branding"),
   };
 }
 
@@ -697,6 +710,10 @@ export default function ProspectPreviewOutreachBlock({
   const [pdfMsg, setPdfMsg] = useState<string | null>(null);
   const [pdfFilename, setPdfFilename] = useState<string | null>(null);
 
+  const [brandingBusy, setBrandingBusy] = useState(false);
+  const [brandingMsg, setBrandingMsg] = useState<string | null>(null);
+  const [brandingFilename, setBrandingFilename] = useState<string | null>(null);
+
   const resolvedBusinessName = useMemo(() => {
     const t = businessNameProp.trim();
     if (t) return t;
@@ -1002,12 +1019,14 @@ export default function ProspectPreviewOutreachBlock({
   }, [selectedOffer, stitchWebResult, stitchWebAppResult, stitchMobileResult]);
 
   const canSharePreview =
-    selectedOffer !== "automations" && Boolean(hostedPreviewIdForSelection && resolvedBusinessName);
+    selectedOffer !== "automations" &&
+    selectedOffer !== "branding" &&
+    Boolean(hostedPreviewIdForSelection && resolvedBusinessName);
 
   const mergedInstagramMessage = useMemo(() => {
     const id = hostedPreviewIdForSelection;
     const previewUrl =
-      selectedOffer === "automations"
+      selectedOffer === "automations" || selectedOffer === "branding"
         ? ""
         : id
           ? buildClientPreviewLink(id, hostedPreviewSlugForSelection)
@@ -1027,7 +1046,9 @@ export default function ProspectPreviewOutreachBlock({
   ]);
 
   const canCopyInstagramMessage =
-    selectedOffer === "automations" || (Boolean(hostedPreviewIdForSelection) && Boolean(resolvedBusinessName));
+    selectedOffer === "automations" ||
+    selectedOffer === "branding" ||
+    (Boolean(hostedPreviewIdForSelection) && Boolean(resolvedBusinessName));
 
   const serializeAttachments = useCallback(async () => {
     const out: { name: string; base64: string; contentType: string }[] = [];
@@ -1181,6 +1202,42 @@ export default function ProspectPreviewOutreachBlock({
     }
   }, [marketIntelReport, resolvedBusinessName]);
 
+  const generateBrandingPdf = useCallback(async () => {
+    setBrandingBusy(true);
+    setBrandingMsg(null);
+    try {
+      const res = await generateProspectBrandingPdfAction({
+        businessName: resolvedBusinessName,
+        place: stitchContext?.kind === "place" ? stitchContext.place : null,
+        report: marketIntelReport ?? null,
+      });
+      if (!res.ok) {
+        setBrandingMsg(res.error);
+        return;
+      }
+      setBrandingFilename(res.filename);
+      setBrandingMsg("Brand guidelines downloaded.");
+      try {
+        const bin = atob(res.pdfBase64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        const blob = new Blob([bytes], { type: "application/pdf" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = res.filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch {
+        setBrandingMsg("Could not start download in this browser.");
+      }
+    } catch (e) {
+      setBrandingMsg(e instanceof Error ? e.message : "Brand guidelines PDF request failed.");
+    } finally {
+      setBrandingBusy(false);
+    }
+  }, [marketIntelReport, resolvedBusinessName, stitchContext]);
+
   /** Inset ring only — avoids `ring-offset-*` painting outside the card (some browsers composite that oddly). */
   const cardRing = (key: SelectedOffer) =>
     selectedOffer === key
@@ -1257,7 +1314,7 @@ export default function ProspectPreviewOutreachBlock({
           </p>
         ) : null}
 
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {/* Website */}
           <div
             className={`cursor-pointer rounded-lg border border-border/70 bg-white/50 p-3 text-left transition-shadow dark:border-zinc-700/80 dark:bg-zinc-900/50 ${cardRing("website")}`}
@@ -1498,12 +1555,51 @@ export default function ProspectPreviewOutreachBlock({
               </p>
             ) : null}
           </div>
+
+          {/* Brand guidelines (PDF) */}
+          <div
+            className={`cursor-pointer rounded-lg border border-border/70 bg-white/50 p-3 text-left dark:border-zinc-700/80 dark:bg-zinc-900/50 ${cardRing("branding")}`}
+            onClick={() => setSelectedOffer("branding")}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <h4 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500">
+                Brand guidelines
+              </h4>
+              <Palette className="h-4 w-4 shrink-0 text-text-secondary opacity-70 dark:text-zinc-500" aria-hidden />
+            </div>
+            <p className="mt-2 text-[11px] leading-snug text-text-secondary dark:text-zinc-400">
+              Landscape A4 brand book, LLM-composed from the Google listing and market intel: brand story, logo
+              direction, color palette with ratios, typography specimen, moodboard, pattern, tone of voice, merch ideas,
+              and do&apos;s &amp; don&apos;ts. Uses OpenAI gpt-image-2 for visuals; your org must be verified for image
+              generation. Not a Stitch screen.
+            </p>
+            <button
+              type="button"
+              disabled={brandingBusy}
+              onClick={(e) => {
+                e.stopPropagation();
+                void generateBrandingPdf();
+              }}
+              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-pink-500/40 bg-pink-500/10 px-3 py-2 text-xs font-semibold text-pink-800 hover:bg-pink-500/[0.14] disabled:opacity-50 dark:border-pink-400/35 dark:bg-pink-500/15 dark:text-pink-200 dark:hover:bg-pink-500/20"
+            >
+              {brandingBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Palette className="h-3.5 w-3.5" aria-hidden />}
+              {brandingBusy ? "Composing brand book…" : "Generate brand guidelines (PDF)"}
+            </button>
+            {brandingMsg ? (
+              <p className="mt-2 text-[11px] text-text-secondary dark:text-zinc-400" role="status">
+                {brandingMsg}
+                {brandingFilename ? <span className="ml-1 font-mono text-[10px]">{brandingFilename}</span> : null}
+              </p>
+            ) : null}
+          </div>
         </div>
 
         <div className="mt-6 border-t border-border/60 pt-4 dark:border-zinc-700/60">
           <p className="text-[11px] font-medium text-text-secondary dark:text-zinc-400">
             Share outreach
-            {selectedOffer !== "automations" ? (
+            {selectedOffer === "website" ||
+            selectedOffer === "webapp" ||
+            selectedOffer === "mobile" ? (
               <>
                 {" "}
                 · templates for{" "}
@@ -1515,11 +1611,17 @@ export default function ProspectPreviewOutreachBlock({
                       : "Mobile app design"}
                 </span>
               </>
-            ) : (
+            ) : selectedOffer === "automations" ? (
               <>
                 {" "}
                 · templates for <span className="text-text-primary dark:text-zinc-200">AI audit</span> (hosted link send
                 requires Website, Web app, or Mobile)
+              </>
+            ) : (
+              <>
+                {" "}
+                · templates for <span className="text-text-primary dark:text-zinc-200">Brand guidelines</span> (hosted
+                link send requires Website, Web app, or Mobile)
               </>
             )}
           </p>
@@ -1550,7 +1652,7 @@ export default function ProspectPreviewOutreachBlock({
               <p className="mt-2 text-[10px] leading-snug text-text-secondary dark:text-zinc-500">
                 Merge tags: <span className="font-mono">{"{{previewUrl}}"}</span>,{" "}
                 <span className="font-mono">{"{{businessName}}"}</span>
-                {selectedOffer === "automations" ? (
+                {selectedOffer === "automations" || selectedOffer === "branding" ? (
                   <> — <span className="font-mono">{"{{previewUrl}}"}</span> usually omitted (PDF follow-up).</>
                 ) : (
                   <> — optional <span className="font-mono">{"{{yourName}}"}</span> (typical in email sign-off).</>
