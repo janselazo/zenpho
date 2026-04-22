@@ -8,6 +8,7 @@ const nextConfig = {
   turbopack: {
     root: __dirname,
   },
+  serverExternalPackages: ["pdf-lib", "@pdf-lib/fontkit"],
   experimental: {
     optimizePackageImports: [
       "lucide-react",
