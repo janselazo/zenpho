@@ -327,40 +327,74 @@ export async function fetchAndExtractBrandColors(
 
 /**
  * Best-effort logo URL extraction from raw HTML.
- * Priority: og:image → apple-touch-icon → large favicon → <img> with "logo" →
- * Wix wix-image/data-pin-media with "logo" → any favicon as last resort.
+ * Priority: <img> with "logo" (data-src/data-srcset/src) → <a class="logo">
+ * wrapper → Wix wix-image/data-pin-media → apple-touch-icon → large favicon →
+ * og:image (fallback — often a social banner) → any favicon.
  */
 export function extractLogoUrl(html: string, baseUrl: string): string | null {
   if (!html || typeof html !== "string") return null;
 
   let m: RegExpExecArray | null;
 
-  // og:image (both attribute orders)
-  const ogRe = /<meta\s+[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/gi;
-  if ((m = ogRe.exec(html)) !== null) {
-    const u = resolveUrl(m[1].trim(), baseUrl);
-    if (u) return u;
-  }
-  const ogRev = /<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["']/gi;
-  if ((m = ogRev.exec(html)) !== null) {
-    const u = resolveUrl(m[1].trim(), baseUrl);
+  // ── 1. <img> with "logo" in tag attributes — the strongest signal ──────
+  // Many sites lazy-load with data-src, data-lazy-src, or data-srcset while
+  // using a transparent placeholder in src. Check all data-* variants first.
+  const imgRe = /<img\s+[^>]*(?:src|alt|class|id)=[^>]*>/gi;
+  while ((m = imgRe.exec(html)) !== null) {
+    const tag = m[0];
+    if (!/logo/i.test(tag)) continue;
+    const dataSrc = tag.match(/data-(?:lazy-)?src=["']([^"']+)["']/i);
+    const dataSrcset = tag.match(/data-srcset=["']([^"'\s,]+)/i);
+    const plainSrc = tag.match(/\bsrc=["']([^"']+)["']/i);
+    const src = (
+      dataSrc?.[1] ?? dataSrcset?.[1] ?? plainSrc?.[1] ?? ""
+    ).trim();
+    if (!src || /^data:/i.test(src)) continue;
+    const u = resolveUrl(src, baseUrl);
     if (u) return u;
   }
 
-  // apple-touch-icon
+  // ── 2. <a> with "logo" class/id wrapping an <img> or <source> ──────────
+  // YooTheme / WordPress themes: <a class="uk-logo"><picture><source data-srcset="...">
+  const logoAnchorRe = /<a\s+[^>]*(?:class|id)=["'][^"']*logo[^"']*["'][^>]*>[\s\S]*?<\/a>/gi;
+  while ((m = logoAnchorRe.exec(html)) !== null) {
+    const block = m[0];
+    const srcsetMatch = block.match(/data-srcset=["']([^"'\s,]+)/i);
+    const imgSrcMatch = block.match(/data-(?:lazy-)?src=["']([^"']+)["']/i);
+    const plainSrcMatch = block.match(/\bsrc=["']([^"']+)["']/i);
+    const candidate = (
+      srcsetMatch?.[1] ?? imgSrcMatch?.[1] ?? plainSrcMatch?.[1] ?? ""
+    ).trim();
+    if (candidate && !/^data:/i.test(candidate)) {
+      const u = resolveUrl(candidate, baseUrl);
+      if (u) return u;
+    }
+  }
+
+  // ── 3. Wix: wix:image or data-pin-media with "logo" nearby ────────────
+  const wixImgRe = /(?:wix:image|data-pin-media)=["']([^"']+)["']/gi;
+  while ((m = wixImgRe.exec(html)) !== null) {
+    const ctx = html.slice(Math.max(0, m.index - 200), m.index + m[0].length + 200);
+    if (!/logo/i.test(ctx)) continue;
+    const raw = m[1].trim();
+    if (/^https?:\/\//i.test(raw)) return raw;
+    const u = resolveUrl(raw, baseUrl);
+    if (u) return u;
+  }
+
+  // ── 4. apple-touch-icon ────────────────────────────────────────────────
   const touchRe = /<link\s+[^>]*rel=["']apple-touch-icon[^"']*["'][^>]*href=["']([^"']+)["']/gi;
   if ((m = touchRe.exec(html)) !== null) {
     const u = resolveUrl(m[1].trim(), baseUrl);
     if (u) return u;
   }
-  // apple-touch-icon (href before rel)
   const touchRev = /<link\s+[^>]*href=["']([^"']+)["'][^>]*rel=["']apple-touch-icon[^"']*["']/gi;
   if ((m = touchRev.exec(html)) !== null) {
     const u = resolveUrl(m[1].trim(), baseUrl);
     if (u) return u;
   }
 
-  // Large png/svg favicon (rel="icon")
+  // ── 5. Large favicon (>= 64px, rel="icon") ────────────────────────────
   const iconRe = /<link\s+[^>]*rel=["'](?:shortcut )?icon["'][^>]*href=["']([^"']+)["']/gi;
   let bestIcon: string | null = null;
   let bestSize = 0;
@@ -376,35 +410,21 @@ export function extractLogoUrl(html: string, baseUrl: string): string | null {
   }
   if (bestIcon && bestSize >= 64) return bestIcon;
 
-  // <img> with "logo" in tag attributes (src, alt, class, id).
-  // Prioritize data-src/data-lazy-src (lazy-loaded real URL) over src (often a placeholder).
-  const imgRe = /<img\s+[^>]*(?:src|alt|class|id)=[^>]*>/gi;
-  while ((m = imgRe.exec(html)) !== null) {
-    const tag = m[0];
-    if (!/logo/i.test(tag)) continue;
-    const lazySrc = tag.match(/data-(?:lazy-)?src=["']([^"']+)["']/i);
-    const plainSrc = tag.match(/\bsrc=["']([^"']+)["']/i);
-    const src = (lazySrc?.[1] ?? plainSrc?.[1] ?? "").trim();
-    if (!src || /^data:/i.test(src)) continue;
-    const u = resolveUrl(src, baseUrl);
+  // ── 6. og:image (fallback — often a social banner, not a logo) ─────────
+  const ogRe = /<meta\s+[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/gi;
+  if ((m = ogRe.exec(html)) !== null) {
+    const u = resolveUrl(m[1].trim(), baseUrl);
+    if (u) return u;
+  }
+  const ogRev = /<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["']/gi;
+  if ((m = ogRev.exec(html)) !== null) {
+    const u = resolveUrl(m[1].trim(), baseUrl);
     if (u) return u;
   }
 
-  // Wix: look for wix:image or data-pin-media with "logo" nearby
-  const wixImgRe = /(?:wix:image|data-pin-media)=["']([^"']+)["']/gi;
-  while ((m = wixImgRe.exec(html)) !== null) {
-    const ctx = html.slice(Math.max(0, m.index - 200), m.index + m[0].length + 200);
-    if (!/logo/i.test(ctx)) continue;
-    const raw = m[1].trim();
-    if (/^https?:\/\//i.test(raw)) return raw;
-    const u = resolveUrl(raw, baseUrl);
-    if (u) return u;
-  }
-
-  // Any favicon as last resort
+  // ── 7. Any favicon as last resort ──────────────────────────────────────
   if (bestIcon) return bestIcon;
 
-  // Absolute last resort: /favicon.ico
   return resolveUrl("/favicon.ico", baseUrl);
 }
 

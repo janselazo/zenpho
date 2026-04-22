@@ -149,6 +149,18 @@ function isModelUnavailableError(msg: string): boolean {
   );
 }
 
+function extract429WaitSecs(msg: string): number | null {
+  const m = msg.match(/try again in (\d+)s/i);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+function is429(msg: string): boolean {
+  return msg.includes("429") || /rate.?limit/i.test(msg);
+}
+
+const MAX_RETRIES = 3;
+const DEFAULT_429_WAIT_MS = 15_000;
+
 async function generateOne(
   openai: OpenAI,
   model: string,
@@ -156,58 +168,60 @@ async function generateOne(
   spec: BrandingSpec,
   quality: ImageQuality,
 ): Promise<{ slot: BrandingImageSlot; buffer: Buffer | null; error?: string }> {
-  try {
-    const res = await openai.images.generate({
-      model,
-      prompt: plan.prompt(spec),
-      size: plan.size,
-      quality,
-      n: 1,
-      output_format: "png",
-    });
-    const b64 = res.data?.[0]?.b64_json;
-    if (!b64) {
-      return {
-        slot: plan.slot,
-        buffer: null,
-        error: "OpenAI returned no image data.",
-      };
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const res = await openai.images.generate({
+        model,
+        prompt: plan.prompt(spec),
+        size: plan.size,
+        quality,
+        n: 1,
+        output_format: "png",
+      });
+      const b64 = res.data?.[0]?.b64_json;
+      if (!b64) {
+        return {
+          slot: plan.slot,
+          buffer: null,
+          error: "OpenAI returned no image data.",
+        };
+      }
+      return { slot: plan.slot, buffer: Buffer.from(b64, "base64") };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Image generation failed.";
+
+      if (is429(msg) && attempt < MAX_RETRIES) {
+        const secs = extract429WaitSecs(msg) ?? DEFAULT_429_WAIT_MS / 1000;
+        const waitMs = (secs + 2) * 1000;
+        console.warn(
+          `[branding-images] slot=${plan.slot} 429 hit (attempt ${attempt + 1}/${MAX_RETRIES + 1}), waiting ${waitMs}ms`,
+        );
+        await new Promise((r) => setTimeout(r, waitMs));
+        continue;
+      }
+
+      if (isModelUnavailableError(msg) && attempt === 0) {
+        return { slot: plan.slot, buffer: null, error: msg };
+      }
+
+      return { slot: plan.slot, buffer: null, error: msg };
     }
-    return { slot: plan.slot, buffer: Buffer.from(b64, "base64") };
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "Image generation failed.";
-    return { slot: plan.slot, buffer: null, error: msg };
   }
+  return { slot: plan.slot, buffer: null, error: "Max retries exceeded." };
 }
 
-/** Quick probe so we can decide up-front whether `gpt-image-2*` is actually usable
- * on this OpenAI account. A tiny `low`-quality 1024² request is cheap and short-
- * circuits 7 parallel failures with a clear log line. */
-async function probeModel(openai: OpenAI, model: string): Promise<{ ok: true } | { ok: false; error: string }> {
-  try {
-    await openai.images.generate({
-      model,
-      prompt: "A small neutral abstract shape on white.",
-      size: "1024x1024",
-      quality: "low",
-      n: 1,
-      output_format: "png",
-    });
-    return { ok: true };
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "Model probe failed.";
-    return { ok: false, error: msg };
-  }
-}
+/** Minimum pause between sequential image requests (ms). Keeps us under most
+ * org-level rate limits (typically 5/min). */
+const INTER_REQUEST_DELAY_MS = 13_000;
 
 /**
- * Generate all 7 brand-book images in parallel using OpenAI `gpt-image-2` (or the
- * model configured via `OPENAI_BRANDING_IMAGE_MODEL`). Any individual failure is
- * reported via `errors[slot]` and surfaces as a vector placeholder in the PDF, so
- * one bad image never kills the whole book.
+ * Generate all 7 brand-book images **sequentially** using OpenAI image models.
+ * Sequential + inter-request delay avoids 429 rate limits (most orgs have a
+ * 5 images/min cap). Each call retries up to 3× on 429 with the server-
+ * suggested wait time.
  *
- * Defaults: model `gpt-image-2-latest`, quality `medium`, 180 s per-request timeout.
- * Requires the OpenAI org to be verified for `gpt-image-2` access.
+ * If the primary model fails on the first image with a "model unavailable"
+ * error, all remaining images fall back to OPENAI_BRANDING_IMAGE_MODEL_FALLBACK.
  */
 export async function generateBrandingImages(
   spec: BrandingSpec,
@@ -236,34 +250,32 @@ export async function generateBrandingImages(
   const openai = new OpenAI({ apiKey, timeout: timeoutMs() });
   const quality = qualityFromEnv();
 
-  // Probe the requested model first; if it's unavailable (not found / not
-  // verified / etc.) fall back to `gpt-image-1` before spending 7 parallel
-  // timeouts on the same root cause.
   let model = requested;
-  const probe = await probeModel(openai, requested);
-  if (!probe.ok) {
-    console.warn(
-      `[branding-images] probe for ${requested} failed: ${probe.error}`,
-    );
-    if (fallback && fallback !== requested && isModelUnavailableError(probe.error)) {
-      console.warn(
-        `[branding-images] falling back to ${fallback} for brand imagery.`,
-      );
-      model = fallback;
+  console.info(`[branding-images] starting sequential generation with model=${model} quality=${quality}`);
+
+  const results: { slot: BrandingImageSlot; buffer: Buffer | null; error?: string }[] = [];
+
+  for (let i = 0; i < SLOTS.length; i++) {
+    const plan = SLOTS[i];
+
+    if (i > 0) {
+      console.info(`[branding-images] waiting ${INTER_REQUEST_DELAY_MS}ms before slot=${plan.slot}`);
+      await new Promise((r) => setTimeout(r, INTER_REQUEST_DELAY_MS));
     }
-  } else {
-    console.info(`[branding-images] using model ${model}`);
-  }
 
-  const results = await Promise.all(
-    SLOTS.map((plan) => generateOne(openai, model, plan, spec, quality)),
-  );
+    console.info(`[branding-images] generating slot=${plan.slot} (${i + 1}/${SLOTS.length}) model=${model}`);
+    const r = await generateOne(openai, model, plan, spec, quality);
+    results.push(r);
 
-  for (const r of results) {
     if (r.error) {
-      console.warn(
-        `[branding-images] slot=${r.slot} model=${model} error=${r.error}`,
-      );
+      console.warn(`[branding-images] slot=${r.slot} model=${model} error=${r.error}`);
+
+      if (i === 0 && r.error && isModelUnavailableError(r.error) && fallback && fallback !== model) {
+        console.warn(`[branding-images] switching from ${model} to ${fallback} for remaining images`);
+        model = fallback;
+      }
+    } else {
+      console.info(`[branding-images] slot=${r.slot} ok`);
     }
   }
 

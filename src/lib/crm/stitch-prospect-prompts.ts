@@ -101,24 +101,23 @@ function buildWebsiteAssignedDifferentiationBlock(
 
   const hasBrandColors = !!payload.brandColors?.primary;
 
-  // Strip example hex codes from the lane when real brand colors exist,
-  // so the model doesn't treat lane hex suggestions as binding.
-  if (hasBrandColors) {
-    lane = lane.replace(/#[0-9a-fA-F]{3,8}\b/g, "").replace(/\(\s*\)/g, "").replace(/\s{2,}/g, " ");
-  }
+  // Always strip example hex codes from the lane so the model never treats
+  // lane-level color suggestions as binding — whether or not we have real brand
+  // colors. The lane defines mood, composition, and typography only.
+  lane = lane.replace(/#[0-9a-fA-F]{3,8}\b/g, "").replace(/\(\s*\)/g, "").replace(/\s{2,}/g, " ");
 
   return `
 ## Assigned differentiation (mandatory — follow exactly)
 
 Each prospect must look **nothing like a default Stitch/Gemini marketing page**. For **this** business, you MUST commit to:
 
-1. **Aesthetic lane:** ${lane}
+1. **Aesthetic lane (MOOD & COMPOSITION ONLY — NOT colors):** ${lane}
 2. **Layout motif:** ${layout}
 3. **Typography direction:** ${typeDir} — load distinct faces via \`<link>\` to Google Fonts (or similar); **do not** use Inter, Roboto, or Arial as the only fonts.
 4. **Hero structure:** ${hero}
 ${hasBrandColors
-    ? `\n**CRITICAL — Brand color override (HIGHEST PRIORITY):** A "Brand Identity Colors" section appears earlier in this prompt with the prospect's **real hex values** extracted from their actual website. Those colors are the client's **real brand identity** — customers already associate those colors with this business. You **MUST** use those exact brand hex values as the primary and accent colors throughout the entire design. The aesthetic lane above defines the **mood, composition, typography, and design philosophy** only — **all specific color choices MUST come from the "Brand Identity Colors" section**, not from the lane description. Derive tints, shades, and gradients from the real brand palette. The prospect must instantly see their own brand when viewing the design.\n`
-    : `\n**Brand color override:** If a "Brand Identity Colors" section appears above, those extracted hex values **override** the lane's color suggestions. Keep the lane's layout, typography, and composition rules but re-skin the color palette to match the client's actual brand. The prospect must instantly recognize their own brand identity in the design.\n`}
+    ? `\n**CRITICAL — Brand color override (HIGHEST PRIORITY):** A "Brand Identity Colors" section appears earlier in this prompt with the prospect's **real hex values** extracted from their actual website. Those colors are the client's **real brand identity** — customers already associate those colors with this business. You **MUST** use those exact brand hex values as the primary and accent colors throughout the entire design. The aesthetic lane above defines the **mood, composition, typography, and design philosophy** only — **all specific color choices MUST come from the "Brand Identity Colors" section**, not from the lane description. Derive tints, shades, and gradients from the real brand palette. The prospect must instantly see their own brand when viewing the design. **DO NOT substitute green, purple, teal, or any other color family that does not appear in the Brand Identity Colors section.**\n`
+    : `\n**Brand color override:** If a "Brand Identity Colors" section appears above, those extracted hex values **override** all lane color suggestions. Keep the lane's layout, typography, and composition rules but re-skin the **entire** color palette to match the client's actual brand. The prospect must instantly recognize their own brand identity in the design. **If the brand is blue, the site must be blue. If the brand is red, the site must be red. NEVER substitute a different color family (green, purple, teal, etc.) when the brand's real colors are provided.**\n`}
 **Anti-sameness (hard rules):**
 - Do **not** produce the same hero → three equal cards → testimonial strip → footer pattern you would for an unrelated business.
 - Do **not** default to purple–blue gradients, generic “three feature icons,” or interchangeable SaaS marketing tropes unless the aesthetic lane explicitly demands neon/tech.
@@ -241,13 +240,14 @@ function buildBrandColorDirective(colors: BrandColorResult | null | undefined): 
     lines.push(`**Full extracted palette:** ${colors.palette.join(", ")}`);
   }
   lines.push("");
-  lines.push("**Rules:**");
-  lines.push("- Use the **primary brand color** as the dominant accent throughout \u2014 nav highlights, CTAs, headers/hero backgrounds, link colors, active states, and badge accents.");
+  lines.push("**Rules (MANDATORY \u2014 violation = failed design):**");
+  lines.push("- Use the **primary brand color** as the dominant accent throughout \u2014 hero background/gradient, nav highlights, CTAs, headers, link colors, active states, badge accents, and section accent bands. The primary color must be **the most visually prominent hue on every page**.");
   lines.push("- Use the **secondary color** (if present) for supporting elements \u2014 hover states, secondary buttons, borders, chart accents, or gradient endpoints.");
-  lines.push("- Derive tints and shades from the brand palette for backgrounds, card tints, and subtle accents (e.g. 10% opacity of primary for card backgrounds).");
-  lines.push("- **Do NOT ignore these colors** and substitute a generic blue/purple/teal. The prospect must instantly recognize their own brand in the design.");
+  lines.push("- Derive tints and shades **exclusively** from the brand palette for backgrounds, card tints, and subtle accents (e.g. 10% opacity of primary for card backgrounds).");
+  lines.push("- **NEVER ignore these colors.** Do NOT substitute green, purple, teal, orange, or ANY color family that is not in the palette above. If the brand is blue, the entire site must be blue. If the brand is red, the site must be red. The aesthetic lane defines mood and composition \u2014 NOT colors.");
   lines.push("- Neutrals (backgrounds, text, borders) should complement the brand palette \u2014 warm neutrals for warm brands, cool neutrals for cool brands.");
-  lines.push("- If the extracted palette is dark/saturated, you may lighten it for backgrounds but keep the hue family consistent.");
+  lines.push("- If the extracted palette is dark/saturated, you may lighten it for backgrounds but keep the **exact hue family** consistent.");
+  lines.push("- **Verification test:** A business owner looking at this design must immediately think \"those are MY brand colors.\" If a different color family is more prominent than the extracted brand colors, the design has failed.");
   lines.push("");
   return lines.join("\n");
 }
@@ -550,21 +550,27 @@ Nav links: \`<a href="#home">\`, \`#services\`, \`#about\`, \`#gallery\`, \`#boo
 
    **HOMEPAGE LENGTH RULE:** The \`#home\` section must contain enough content to scroll for **at least 8 full viewport heights**. If you find yourself finishing the homepage in under 6 blocks or under 5 viewport heights of scroll, you are cutting corners. Add more detail to each section \u2014 longer descriptions, more service cards, more review quotes, more FAQ items \u2014 until the homepage feels like a **complete, standalone marketing website**.
 
-2. **#services** — A **different** layout than home: multi-column **priced menu**, categorized lists, or tiered packages (columns or sections with headings). Industry-specific service names and price cues; not the same three cards repeated from \`#home\`. Include a prominent **Book Now** CTA at the top and bottom of the page.
+2. **#services** — A **different** layout than home: multi-column **priced menu**, categorized lists, or tiered packages (columns or sections with headings). Industry-specific service names and price cues; not the same three cards repeated from \`#home\`. Include a prominent **Book Now** CTA at the top and bottom of the page. **Every service must have a real name, 2–3 sentence description, and a price hint — NEVER "coming soon".**
 
-3. **#about** — **About Us / Our Story page:** A dedicated page telling the business’s story. Include: founder/team story with a warm narrative tone, mission/values section, team photo placeholders with names and roles, credentials/certifications/awards, years in business, and a “why choose us” value proposition section. Use a two-column layout (story text + image placeholder) for the main block. Distinct from \`#services\` and \`#reviews\`. This replaces the old \`#expertise\` page with richer, more personal content.
+3. **#about** — **About Us / Our Story page:** A dedicated page telling the business’s story. Include: founder/team story with a warm narrative tone, mission/values section, team photo placeholders with names and roles, credentials/certifications/awards, years in business, and a “why choose us” value proposition section. Use a two-column layout (story text + image placeholder) for the main block. Distinct from \`#services\` and \`#reviews\`. This replaces the old \`#expertise\` page with richer, more personal content. **Write real narrative copy (4+ paragraphs) — NEVER "editorial content coming soon".**
 
-4. **#gallery** — **Portfolio / Gallery page:** A full-page visual showcase. Use a **masonry or bento grid** layout with 8–12 image placeholders of varying aspect ratios. Each image should have a hover overlay with a caption or service tag. Include a brief intro paragraph at the top (“Our Work” / “Portfolio” / “Gallery”). The layout must feel premium and editorial — not a flat grid of equal squares. Optional: categorized filter tabs (CSS only) for different service types.
+4. **#gallery** — **Portfolio / Gallery page:** A full-page visual showcase. Use a **masonry or bento grid** layout with 8–12 image placeholders of varying aspect ratios. Each image should have a hover overlay with a caption or service tag. Include a brief intro paragraph at the top (“Our Work” / “Portfolio” / “Gallery”). The layout must feel premium and editorial — not a flat grid of equal squares. Optional: categorized filter tabs (CSS only) for different service types. **Render all 8–12 image placeholders with styled aspect-ratio boxes, captions, and hover overlays — NEVER "bento grid coming soon".**
 
 5. **#book** — **Booking / Appointment page:** A dedicated scheduling page with:
    - A **visual weekly calendar** showing the current week with day columns (Mon–Sun) and time slots. Style time slots as tappable/selectable chips or cards (e.g. “9:00 AM”, “10:30 AM”, “2:00 PM”). Show 3–5 available slots per day with some marked as “Booked” (greyed out) for realism.
    - A **service type selector** above or beside the calendar (dropdown or styled radio/chip group with the business’s actual services).
    - A **booking form** below the calendar: name, phone, email, selected service (pre-filled from selector), preferred date/time, and optional notes. Prominent “Request Appointment” submit button.
-   - This is purely visual / static (no JS logic) but must **look and feel like a real booking system**. Use \`tel:\` or \`mailto:\` on the submit button as a fallback action.
+   - This is purely visual / static (no JS logic) but must **look and feel like a real booking system**. Use \`tel:\` or \`mailto:\` on the submit button as a fallback action. **Build the full visual calendar + form UI — NEVER "scheduling UI coming soon".**
 
-6. **#reviews** — **Extended testimonial gallery** — all reviews in a card grid (4+ quotes) plus aggregate summary, author initials, role, or neighborhood. Layout must differ from the homepage reviews (e.g. masonry grid vs. carousel-style cards). This page is the deep-dive; the homepage already shows the key reviews.
+6. **#reviews** — **Extended testimonial gallery** — all reviews in a card grid (4+ quotes) plus aggregate summary, author initials, role, or neighborhood. Layout must differ from the homepage reviews (e.g. masonry grid vs. carousel-style cards). This page is the deep-dive; the homepage already shows the key reviews. **Show 4+ fully styled review cards with star ratings and realistic quotes — NEVER "testimonials coming soon".**
 
 7. **#location** — **Full-page location experience:** Large map or map-style placeholder at the top, complete address and hours in a polished two-column layout, phone with click-to-call, **Get directions** and **Book** CTA buttons, optional nearby landmarks or parking notes. This is the expanded version of the homepage location section — must feel more spacious and detailed.
+
+## ANTI-PLACEHOLDER RULE (ABSOLUTE — ZERO TOLERANCE)
+
+**NEVER** output "coming soon", "content coming soon", "detailed menu coming soon", "bento grid coming soon", "editorial content coming soon", "scheduling UI coming soon", "testimonials coming soon", or ANY variation of placeholder / stub text on ANY page or section. Every section on every page (\`#home\`, \`#services\`, \`#about\`, \`#gallery\`, \`#book\`, \`#reviews\`, \`#location\`) must contain **fully realized, substantive HTML content** — real service names with descriptions and prices, real narrative text for the About page, real styled image placeholders in the gallery, a real visual booking calendar, real review cards with quotes, and a real location section with hours and address.
+
+If you find yourself writing a one-line "coming soon" stub, **STOP** and fill the section with real, industry-specific content. A $20,000+ website has ZERO empty sections. Every page must feel complete and finished — a business owner reviewing this site should never see a placeholder.
 
 ## Navigation chrome
 - **Transparent overlay nav:** The navigation must sit **on top of the hero** with a transparent or semi-transparent background (\`background: rgba(0,0,0,0.1)\` or \`backdrop-filter: blur(12px)\` glassmorphism). Do **not** create a separate opaque dark bar that pushes the hero down — the hero background must extend behind the nav.
@@ -634,17 +640,17 @@ function buildWebAppAssignedDifferentiationBlock(
       stablePickIndex(seed, "webapp-type", WEBAPP_ASSIGNED_TYPE_DIRECTIONS.length)
     ];
 
+  // Always strip lane hex codes — the lane defines mood and composition only.
+  lane = lane.replace(/#[0-9a-fA-F]{3,8}\b/g, "").replace(/\(\s*\)/g, "").replace(/\s{2,}/g, " ");
+
   const hasBrandColors = !!payload.brandColors?.primary;
-  if (hasBrandColors) {
-    lane = lane.replace(/#[0-9a-fA-F]{3,8}\b/g, "").replace(/\(\s*\)/g, "").replace(/\s{2,}/g, " ");
-  }
 
   return `
 ## Assigned differentiation (mandatory — follow exactly)
 
 Each prospect's web app must look **nothing like a generic admin template**. For **this** business, you MUST commit to:
 
-1. **Aesthetic lane:** ${lane}
+1. **Aesthetic lane (MOOD & COMPOSITION ONLY — NOT colors):** ${lane}
 2. **Layout motif:** ${layout}
 3. **Typography direction:** ${typeDir} — load distinct faces via \`<link>\` to Google Fonts; **do not** use Inter, Roboto, or Arial as the only fonts.
 
@@ -879,17 +885,17 @@ function buildMobileAssignedDifferentiationBlock(
       stablePickIndex(seed, "mobile-type", MOBILE_ASSIGNED_TYPE_DIRECTIONS.length)
     ];
 
+  // Always strip lane hex codes — the lane defines mood and composition only.
+  lane = lane.replace(/#[0-9a-fA-F]{3,8}\b/g, "").replace(/\(\s*\)/g, "").replace(/\s{2,}/g, " ");
+
   const hasBrandColors = !!payload.brandColors?.primary;
-  if (hasBrandColors) {
-    lane = lane.replace(/#[0-9a-fA-F]{3,8}\b/g, "").replace(/\(\s*\)/g, "").replace(/\s{2,}/g, " ");
-  }
 
   return `
 ## Assigned differentiation (mandatory — follow exactly)
 
 Each prospect’s mobile app must look **nothing like a generic mobile template**. For **this** business, you MUST commit to:
 
-1. **Aesthetic lane:** ${lane}
+1. **Aesthetic lane (MOOD & COMPOSITION ONLY — NOT colors):** ${lane}
 2. **Layout motif:** ${layout}
 3. **Typography direction:** ${typeDir} — load distinct faces via \`<link>\` to Google Fonts; **do not** use Inter, Roboto, or Arial as the only fonts.
 
