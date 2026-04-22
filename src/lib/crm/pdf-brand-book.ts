@@ -1,6 +1,5 @@
 import path from "node:path";
 import { promises as fs } from "node:fs";
-import fontkit from "@pdf-lib/fontkit";
 import {
   PDFDocument,
   PDFFont,
@@ -177,7 +176,10 @@ export async function embedBrandBookFonts(
   pdf: PDFDocument,
   pairingId: string,
 ): Promise<BrandBookFonts> {
-  pdf.registerFontkit(fontkit);
+  // Dynamic require — @pdf-lib/fontkit is CJS/UMD and fails Turbopack static analysis.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const fontkit = require("@pdf-lib/fontkit");
+  pdf.registerFontkit(fontkit.default ?? fontkit);
   const pairing = getBrandingFontPairing(pairingId);
   const [displayBytes, bodyBytes] = await Promise.all([
     readFontBytes(pairing.displayFile),
