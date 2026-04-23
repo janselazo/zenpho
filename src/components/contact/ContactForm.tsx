@@ -199,7 +199,7 @@ export default function ContactForm() {
         />
       </div>
 
-      <div className="flex items-start gap-2.5">
+      <div className="flex items-start gap-2.5 rounded-xl border border-border bg-white/70 px-3 py-2.5">
         <input
           id="contact-sms-consent"
           name="sms_consent"
@@ -210,17 +210,23 @@ export default function ContactForm() {
           htmlFor="contact-sms-consent"
           className="text-xs leading-relaxed text-text-secondary"
         >
-          I agree to receive SMS messages from Zenpho at the phone number
-          provided, including links to design previews and project updates.
-          Msg frequency varies. Msg &amp; data rates may apply. Reply STOP to
-          opt out.{" "}
-          <a href="/privacy" target="_blank" className="underline hover:text-accent">
+          By checking this box, I agree to receive SMS text messages from{" "}
+          <span className="font-medium text-text-primary">Zenpho</span> at the
+          phone number I provided above, including links to design previews and
+          project updates. Message frequency is low — typically 1–5 messages per
+          engagement. Message and data rates may apply. Reply{" "}
+          <span className="font-medium text-text-primary">STOP</span> to
+          unsubscribe. Reply{" "}
+          <span className="font-medium text-text-primary">HELP</span> for help.
+          See our{" "}
+          <a href="/privacy" target="_blank" rel="noopener" className="underline hover:text-accent">
             Privacy Policy
           </a>{" "}
-          &amp;{" "}
-          <a href="/terms" target="_blank" className="underline hover:text-accent">
-            Terms
+          and{" "}
+          <a href="/terms" target="_blank" rel="noopener" className="underline hover:text-accent">
+            SMS Terms
           </a>
+          .
         </label>
       </div>
 

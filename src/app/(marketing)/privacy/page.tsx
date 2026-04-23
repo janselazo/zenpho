@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   openGraph: { url: "https://zenpho.com/privacy" },
 };
 
-const effective = "April 6, 2026";
+const effective = "April 22, 2026";
 
 export default function PrivacyPage() {
   return (
@@ -77,21 +77,55 @@ export default function PrivacyPage() {
             </ul>
           </section>
 
-          <section className="space-y-3">
+          <section id="sms" className="space-y-3">
             <h2 className="text-lg font-semibold text-text-primary">
               4. SMS and text messages
             </h2>
             <p>
-              If you provide a mobile number and consent to text messages from Zenpho, we may send
-              SMS related to your request or project (for example, a link to a preview or follow-up).
-              Message frequency varies. Message and data rates may apply. You can opt out as
-              described in our{" "}
-              <Link href="/terms" className="font-medium text-accent underline-offset-2 hover:underline">
-                Terms
+              <span className="font-medium text-text-primary">Program name:</span> Zenpho.{" "}
+              <span className="font-medium text-text-primary">Program purpose:</span> business
+              conversation and project communication (for example, links to design previews,
+              scheduling confirmations, and follow-up about our services).
+            </p>
+            <p>
+              If you provide a mobile number on our{" "}
+              <Link href="/contact" className="font-medium text-accent underline-offset-2 hover:underline">
+                Contact
               </Link>{" "}
-              (including{" "}
-              <span className="font-medium text-text-primary">STOP</span> and{" "}
-              <span className="font-medium text-text-primary">HELP</span>).
+              or{" "}
+              <Link href="/booking" className="font-medium text-accent underline-offset-2 hover:underline">
+                Booking
+              </Link>{" "}
+              form and check the SMS consent box, you agree to receive SMS text messages from
+              Zenpho at that number. Message frequency is low — typically{" "}
+              <span className="font-medium text-text-primary">1–5 messages per engagement</span>.
+              Message and data rates may apply.
+            </p>
+            <p>
+              You can opt out at any time by replying{" "}
+              <span className="font-medium text-text-primary">STOP</span> to any message. Reply{" "}
+              <span className="font-medium text-text-primary">HELP</span> for help, or email{" "}
+              <a
+                href="mailto:hello@zenpho.com"
+                className="font-medium text-accent underline-offset-2 hover:underline"
+              >
+                hello@zenpho.com
+              </a>
+              . Full SMS program details are in our{" "}
+              <Link href="/terms#sms" className="font-medium text-accent underline-offset-2 hover:underline">
+                SMS Terms
+              </Link>
+              .
+            </p>
+            <p className="rounded-xl border border-border bg-surface/60 px-4 py-3 text-sm">
+              <span className="font-medium text-text-primary">
+                No mobile information will be shared with third parties or affiliates for
+                marketing or promotional purposes.
+              </span>{" "}
+              All categories of data exclude text messaging originator opt-in data and consent;
+              this information will not be shared with any third parties. Information sharing is
+              limited to subcontractors supporting delivery of the service (for example, our SMS
+              delivery provider), and only to the extent necessary to operate the service.
             </p>
           </section>
 
@@ -107,8 +141,14 @@ export default function PrivacyPage() {
             <p>
               We do <span className="font-medium text-text-primary">not</span> sell your personal
               information. We do <span className="font-medium text-text-primary">not</span> share
-              phone numbers or contact details with unaffiliated third parties for their own
-              marketing purposes.
+              phone numbers, SMS opt-in status, or other contact details with unaffiliated third
+              parties or affiliates for their own marketing or promotional purposes.
+            </p>
+            <p>
+              <span className="font-medium text-text-primary">
+                Text messaging originator opt-in data and consent will not be shared with any
+                third parties.
+              </span>
             </p>
             <p>
               We may disclose information if required by law, to enforce our terms, or to protect

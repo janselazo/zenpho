@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   openGraph: { url: "https://zenpho.com/terms" },
 };
 
-const effective = "April 6, 2026";
+const effective = "April 22, 2026";
 
 export default function TermsPage() {
   return (
@@ -46,28 +46,55 @@ export default function TermsPage() {
             </p>
           </section>
 
-          <section className="space-y-3">
+          <section id="sms" className="space-y-3">
             <h2 className="text-lg font-semibold text-text-primary">
-              3. SMS text message program
+              3. SMS text message program (SMS Terms)
             </h2>
-            <p className="font-medium text-text-primary">Program name</p>
-            <p>Zenpho — business SMS (previews, project follow-up, and related communication).</p>
 
-            <p className="font-medium text-text-primary">Description</p>
+            <p className="font-medium text-text-primary">Program name</p>
+            <p>Zenpho.</p>
+
+            <p className="font-medium text-text-primary">Program description</p>
             <p>
-              If you provide a mobile number and agree to receive texts, we may send SMS messages
-              related to your inquiry or engagement — for example, links to hosted design previews,
-              scheduling, or follow-up about our services. Content is conversational and tied to
-              your relationship with Zenpho, not bulk unsolicited marketing to purchased lists.
+              Business conversation and project communication. If you provide a mobile number on
+              our{" "}
+              <Link href="/contact" className="font-medium text-accent underline-offset-2 hover:underline">
+                Contact
+              </Link>{" "}
+              or{" "}
+              <Link href="/booking" className="font-medium text-accent underline-offset-2 hover:underline">
+                Booking
+              </Link>{" "}
+              form and check the SMS consent box, you agree to receive SMS text messages from
+              Zenpho at that number — for example, links to hosted design previews, scheduling
+              confirmations, and follow-up about our services. Messages are conversational and
+              tied to your relationship with Zenpho, not bulk marketing to purchased lists.
+            </p>
+
+            <p className="font-medium text-text-primary">How to opt in</p>
+            <p>
+              Submit our{" "}
+              <Link href="/contact" className="font-medium text-accent underline-offset-2 hover:underline">
+                Contact
+              </Link>{" "}
+              or{" "}
+              <Link href="/booking" className="font-medium text-accent underline-offset-2 hover:underline">
+                Booking
+              </Link>{" "}
+              form with a valid mobile number and check the SMS consent box. By checking that box,
+              you confirm you are the subscriber or authorized user of the mobile number and
+              consent to receive SMS text messages from Zenpho.
             </p>
 
             <p className="font-medium text-text-primary">Message frequency &amp; rates</p>
             <p>
-              Message frequency varies based on our conversation and your requests. Message and data
-              rates may apply depending on your carrier plan.
+              Message frequency is low — typically{" "}
+              <span className="font-medium text-text-primary">1–5 messages per engagement</span>,
+              based on our conversation and your requests. Message and data rates may apply
+              depending on your carrier plan.
             </p>
 
-            <p className="font-medium text-text-primary">Opt-out</p>
+            <p className="font-medium text-text-primary">Opt-out (STOP)</p>
             <p>
               You can cancel SMS messages at any time by replying{" "}
               <strong className="text-text-primary">STOP</strong> to any message. After you send{" "}
@@ -76,9 +103,10 @@ export default function TermsPage() {
               with applicable law.
             </p>
 
-            <p className="font-medium text-text-primary">Help</p>
+            <p className="font-medium text-text-primary">Help (HELP)</p>
             <p>
-              For help, reply <strong className="text-text-primary">HELP</strong> or email{" "}
+              For help, reply <strong className="text-text-primary">HELP</strong> to any message,
+              or email{" "}
               <a
                 href="mailto:hello@zenpho.com"
                 className="font-medium text-accent underline-offset-2 hover:underline"
@@ -88,10 +116,25 @@ export default function TermsPage() {
               .
             </p>
 
-            <p className="font-medium text-text-primary">Carriers</p>
+            <p className="font-medium text-text-primary">Supported carriers</p>
             <p>
-              Carriers are not liable for delayed or undelivered messages. Availability may vary by
-              carrier and device.
+              All major U.S. mobile carriers, including AT&amp;T, T-Mobile, Verizon Wireless,
+              Sprint, Boost Mobile, U.S. Cellular, and Metro by T-Mobile. Carriers are not liable
+              for delayed or undelivered messages. Availability may vary by carrier and device.
+            </p>
+
+            <p className="font-medium text-text-primary">Privacy</p>
+            <p>
+              <span className="font-medium text-text-primary">
+                No mobile information will be shared with third parties or affiliates for
+                marketing or promotional purposes.
+              </span>{" "}
+              Text messaging originator opt-in data and consent will not be shared with any third
+              parties. See our{" "}
+              <Link href="/privacy#sms" className="font-medium text-accent underline-offset-2 hover:underline">
+                Privacy Policy
+              </Link>{" "}
+              for more detail.
             </p>
           </section>
 
