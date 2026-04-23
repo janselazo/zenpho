@@ -74,7 +74,7 @@ function matchGenerator(html: string): string | null {
   return m?.[1]?.trim() ?? null;
 }
 
-function classify(
+export function classifyStackFromResponse(
   hostname: string,
   html: string,
   headers: Headers
@@ -275,7 +275,7 @@ export async function fingerprintSiteStack(rawUrl: string): Promise<StackFingerp
   }
   try {
     const host = new URL(normalized).hostname;
-    return classify(host, resp.html, resp.headers);
+    return classifyStackFromResponse(host, resp.html, resp.headers);
   } catch {
     return {
       kind: "unknown",

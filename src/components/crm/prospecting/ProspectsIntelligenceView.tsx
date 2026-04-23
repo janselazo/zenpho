@@ -24,7 +24,12 @@ import {
   saveProspectIntelReportAction,
   createLeadFromProspectIntelAction,
   createLeadFromPlacesListingAction,
+  fingerprintProspectSiteAction,
 } from "@/app/(crm)/actions/prospect-intel";
+import {
+  stackLabel,
+  type StackFingerprint,
+} from "@/lib/crm/tech-stack-fingerprint";
 import ProspectPreviewOutreachBlock, {
   type ProspectStitchContext,
 } from "@/components/crm/prospecting/ProspectPreviewOutreachBlock";
@@ -168,13 +173,20 @@ function googleListingStatusGlance(status: string | null | undefined): string | 
   return map[status] ?? status.replace(/_/g, " ").toLowerCase();
 }
 
+function cmsValueForStack(stack: StackFingerprint | null | "loading"): string | null {
+  if (stack === "loading") return "Detecting…";
+  if (!stack) return null;
+  return stackLabel(stack.kind);
+}
+
 function buildIntelGlanceFacts(
   ar:
     | {
         kind: "url";
         urlMeta: { url: string; pageTitle: string | null; metaDescription: string | null };
       }
-    | { kind: "place"; place: PlacesSearchPlace }
+    | { kind: "place"; place: PlacesSearchPlace },
+  stack: StackFingerprint | null | "loading" = null
 ): IntelGlanceFact[] {
   if (ar.kind === "place") {
     const p = ar.place;
@@ -192,6 +204,11 @@ function buildIntelGlanceFacts(
       out.push({ label: "Google rating", value: `${p.rating.toFixed(1)} ★` });
     } else if (p.userRatingCount != null) {
       out.push({ label: "Reviews", value: String(p.userRatingCount) });
+    }
+    const hasSite = Boolean(p.websiteUri?.trim());
+    if (hasSite) {
+      const cms = cmsValueForStack(stack);
+      if (cms) out.push({ label: "CMS", value: cms });
     }
     if (p.types.length > 0) {
       out.push({ label: "Categories", value: primaryPlaceTypes(p.types) });
@@ -223,6 +240,8 @@ function buildIntelGlanceFacts(
   const out: IntelGlanceFact[] = [
     { label: "Fetched URL", value: https ? "HTTPS" : "HTTP" },
   ];
+  const cms = cmsValueForStack(stack);
+  if (cms) out.push({ label: "CMS", value: cms });
   const title = m.pageTitle?.trim();
   if (title) {
     const short = title.length > 72 ? `${title.slice(0, 70)}…` : title;
@@ -901,6 +920,7 @@ function ProspectsIntelligenceViewInner({
     url: string;
     pageTitle: string | null;
     metaDescription: string | null;
+    stack: StackFingerprint | null;
   } | null>(null);
   const [urlHomepageHints, setUrlHomepageHints] = useState<HomepageContactHints | null>(null);
 
@@ -908,6 +928,7 @@ function ProspectsIntelligenceViewInner({
     place: PlacesSearchPlace;
     report: MarketIntelReport;
   } | null>(null);
+  const [placeStack, setPlaceStack] = useState<StackFingerprint | null | "loading">(null);
 
   const [projectType, setProjectType] = useState<string>(defaultProjectType);
 
@@ -954,10 +975,12 @@ function ProspectsIntelligenceViewInner({
       : `url:${activeReport.urlMeta.url}`;
   }, [activeReport]);
 
-  const intelGlanceFacts = useMemo(
-    () => (activeReport ? buildIntelGlanceFacts(activeReport) : []),
-    [activeReport]
-  );
+  const intelGlanceFacts = useMemo(() => {
+    if (!activeReport) return [];
+    const stack: StackFingerprint | null | "loading" =
+      activeReport.kind === "place" ? placeStack : (activeReport.urlMeta.stack ?? null);
+    return buildIntelGlanceFacts(activeReport, stack);
+  }, [activeReport, placeStack]);
 
   const intelHighlightSignalTags = useMemo(
     () =>
@@ -1095,6 +1118,8 @@ function ProspectsIntelligenceViewInner({
       .finally(() => setSocialEnriching(false));
   }, []);
 
+  const placeStackRequestIdRef = useRef(0);
+
   const applyPlaceReport = useCallback(
     (place: PlacesSearchPlace) => {
       const normalized = sanitizePlacesSearchPlace({
@@ -1109,6 +1134,23 @@ function ProspectsIntelligenceViewInner({
       setUrlHomepageHints(null);
       syncLeadFormFromPlace(normalized, report);
       triggerSocialEnrich(normalized);
+
+      const siteUrl = normalized.websiteUri?.trim();
+      const requestId = ++placeStackRequestIdRef.current;
+      if (siteUrl) {
+        setPlaceStack("loading");
+        fingerprintProspectSiteAction(siteUrl)
+          .then((res) => {
+            if (placeStackRequestIdRef.current !== requestId) return;
+            setPlaceStack(res.ok ? res.stack : null);
+          })
+          .catch(() => {
+            if (placeStackRequestIdRef.current !== requestId) return;
+            setPlaceStack(null);
+          });
+      } else {
+        setPlaceStack(null);
+      }
     },
     [syncLeadFormFromPlace, triggerSocialEnrich]
   );
@@ -1239,6 +1281,8 @@ function ProspectsIntelligenceViewInner({
     setUrlMeta(null);
     setUrlHomepageHints(null);
     setPlaceReport(null);
+    placeStackRequestIdRef.current++;
+    setPlaceStack(null);
     try {
       const result = await researchProspectFromUrl(urlInput);
       if (!result.ok) {
@@ -1250,6 +1294,7 @@ function ProspectsIntelligenceViewInner({
         url: result.url,
         pageTitle: result.pageTitle,
         metaDescription: result.metaDescription,
+        stack: result.stack,
       });
       setUrlHomepageHints(result.homepageContactHints);
       const domain = (() => {

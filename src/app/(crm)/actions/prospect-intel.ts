@@ -34,6 +34,11 @@ import type { PlacesSearchPlace } from "@/lib/crm/places-types";
 import { primaryPlaceTypeLabel } from "@/lib/crm/places-search-ui";
 import { signalsFromPlace } from "@/lib/crm/prospect-intel-place-signals";
 import { formatReportAsPlainNotes } from "@/lib/crm/prospect-intel-notes-format";
+import {
+  classifyStackFromResponse,
+  fingerprintSiteStack,
+  type StackFingerprint,
+} from "@/lib/crm/tech-stack-fingerprint";
 
 async function requireAgencyStaff() {
   const supabase = await createClient();
@@ -92,6 +97,7 @@ export type UrlResearchResult = {
   report: ReturnType<typeof buildMarketIntelReport>;
   signals: IntelSignals;
   homepageContactHints: HomepageContactHints;
+  stack: StackFingerprint;
 };
 
 export async function researchProspectFromUrl(
@@ -132,6 +138,17 @@ export async function researchProspectFromUrl(
 
   const urlObj = new URL(normalized);
   const https = urlObj.protocol === "https:";
+  let stack: StackFingerprint;
+  try {
+    stack = classifyStackFromResponse(urlObj.hostname, html, res.headers);
+  } catch {
+    stack = {
+      kind: "unknown",
+      isNoCode: false,
+      evidence: ["classify failed"],
+      generator: null,
+    };
+  }
   const signals: IntelSignals = {
     name: pageTitle || urlObj.hostname.replace(/^www\./, ""),
     hasWebsite: true,
@@ -155,7 +172,25 @@ export async function researchProspectFromUrl(
     report,
     signals,
     homepageContactHints: { ...hints, socialUrls },
+    stack,
   };
+}
+
+export async function fingerprintProspectSiteAction(
+  rawUrl: string
+): Promise<{ ok: true; stack: StackFingerprint } | { ok: false; error: string }> {
+  const auth = await requireAgencyStaff();
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const trimmed = rawUrl?.trim();
+  if (!trimmed) return { ok: false, error: "Missing URL." };
+
+  try {
+    const stack = await fingerprintSiteStack(trimmed);
+    return { ok: true, stack };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Fingerprint failed." };
+  }
 }
 
 const MAX_CONTACT_PAGES = 5;
