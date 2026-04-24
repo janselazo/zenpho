@@ -1338,7 +1338,8 @@ export default function ProspectPreviewOutreachBlock({
               <Monitor className="h-4 w-4 shrink-0 text-text-secondary opacity-70 dark:text-zinc-500" aria-hidden />
             </div>
             <p className="mt-2 text-[11px] leading-snug text-text-secondary dark:text-zinc-400">
-              Marketing / brochure-style multi-page website concept (desktop). {placeVsUrlIntro}
+              Premium custom website concept with real sections, booking, reviews, services, and contact blocks.{" "}
+              {placeVsUrlIntro}
             </p>
             <p className="mt-2 text-[10px] text-text-secondary/90 dark:text-zinc-500">
               Generation can take a few minutes — do not double-click.
@@ -1410,8 +1411,8 @@ export default function ProspectPreviewOutreachBlock({
               <LayoutDashboard className="h-4 w-4 shrink-0 text-text-secondary opacity-70 dark:text-zinc-500" aria-hidden />
             </div>
             <p className="mt-2 text-[11px] leading-snug text-text-secondary dark:text-zinc-400">
-              Desktop <span className="font-medium text-text-primary dark:text-zinc-200">web application</span> UI —
-              dashboard, sidebar, tables (operator tool, not a marketing site). {placeVsUrlIntro}
+              Premium desktop operator dashboard with pipeline, clients, inbox, schedule, and reviews.{" "}
+              {placeVsUrlIntro}
             </p>
             <p className="mt-2 text-[10px] text-text-secondary/90 dark:text-zinc-500">
               Generation can take a few minutes — do not double-click.
@@ -1476,7 +1477,8 @@ export default function ProspectPreviewOutreachBlock({
               <Smartphone className="h-4 w-4 shrink-0 text-text-secondary opacity-70 dark:text-zinc-500" aria-hidden />
             </div>
             <p className="mt-2 text-[11px] leading-snug text-text-secondary dark:text-zinc-400">
-              Phone-sized operator app UI. Gemini 3.1 Pro for mobile generation. {placeVsUrlIntro}
+              Premium phone-sized owner app with bookings, clients, inbox, schedule snapshots, and review growth.{" "}
+              {placeVsUrlIntro}
             </p>
             <p className="mt-2 text-[10px] text-text-secondary/90 dark:text-zinc-500">
               Generation can take a few minutes — do not double-click.

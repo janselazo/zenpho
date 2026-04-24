@@ -487,105 +487,70 @@ export function buildStitchWebsitePrompt(payload: StitchProspectDesignPayload): 
       : urlContext(payload.url, payload.pageTitle, payload.metaDescription, payload.colorVibe);
 
   const differentiation = buildWebsiteAssignedDifferentiationBlock(payload);
-  const situationBrief = hasExistingWebsite(payload)
-    ? WEBSITE_REDESIGN_BRIEF
-    : WEBSITE_NEW_PREMIUM_BRIEF;
   const brandDirective = buildBrandColorDirective(payload.brandColors);
   const logoDirective = buildLogoDirective(payload.logoUrl);
+  const projectBrief = hasExistingWebsite(payload)
+    ? "This is a redesign upsell. The business already has a website, so the new design must feel dramatically more premium, organized, modern, and conversion-focused while preserving the existing brand identity."
+    : "This is a first premium website. The design must make the business look established, trustworthy, and ready to win customers from search and Google Maps traffic.";
 
   return `${block}
 
-${brandDirective}${logoDirective}${situationBrief}
+${brandDirective}${logoDirective}
+## Project brief
+
+${projectBrief}
 
 ${differentiation}
 
-${WEBSITE_CREATIVE_DIRECTIVE}
+## Task
 
-Task: Output **one complete HTML5 document** (desktop-width marketing **multi-page** experience) for this business. Each “page” is a **separate full-viewport screen** inside the same file: **only one page is visible at a time** — **no long single scroll** stacking all eight sections in one document flow. **No** separate HTTP URLs, **no** JS router, **no inline \`<script>\`** (Tailwind CDN \`<script src>\` OK). Interaction = **click nav → swap visible page** using **CSS only** (\`:target\` + \`:has\`).
+Output **one complete HTML5 document** for a desktop-width, responsive, public marketing website concept for this exact business. This is a sales asset Zenpho can send to the prospect as "your upgraded website." It must look like a premium custom agency build, not a Stitch default, not a wireframe, and not a generic hero-only landing page.
 
-**Note on \`#home\`:** The home **screen** is still a single \`section#home.page\`, but it must read like a **full, content-rich marketing homepage**: stack **all** of the bands below (minimum **twelve** content blocks including footer), with **internal scrolling** via \`overflow-y: auto\` on that section. Reviews, about, location, FAQ, and process sections must all appear in full on the homepage (not just teasers). Deeper expanded versions exist on \`#services\`, \`#about\`, \`#gallery\`, \`#book\`, \`#reviews\`, and \`#location\` — but **do not** leave \`#home\` as a thin hero + 2 sections. **The homepage must scroll for at least 8 full viewport heights of content.**
+Build a **single scrollable website** with anchor navigation. Use normal document flow: all sections are visible in sequence and nav links jump to anchors. Do **not** hide pages with \`:target\`, do **not** create tiny embedded mockups, do **not** simulate a phone screen, and do **not** place the site inside a scaled preview frame.
 
 ${WEBSITE_LAYOUT_SAFETY}
 
-${WEBSITE_REFERENCE_PATTERNS}
+## Required website structure
 
-## Page switch pattern (required — copy this behavior in \`<style>\`)
-Wrap all page \`<section>\`s in \`<main>\` (or one clear wrapper). Each page: \`<section id="home" class="page">\` … \`</section>\` (ids exactly: \`home\`, \`services\`, \`about\`, \`gallery\`, \`book\`, \`reviews\`, \`location\`).
+Use these exact anchor ids and build each section with complete, realistic content:
 
-Use CSS equivalent to:
+1. \`#home\` — immersive premium hero, at least 85vh, filling the whole desktop viewport. Include overlay/glass nav, exact business name, one specific value proposition, dual CTAs (\`#book\` and \`#services\`), Google rating/review count when provided, phone/address when provided, and a visual device/card/map/booking composition that feels custom to the business category.
+2. \`#trust\` — credibility strip with 4-5 proof points derived from the Google profile/category: rating, reviews, local service area, convenient booking, guarantees, licensed/certified, same-day/appointment availability where plausible.
+3. \`#services\` — 5-7 specific service cards with descriptions, price cues, durations, or "from" estimates. Use one featured service tile. Content must match the Google category and business name.
+4. \`#about\` — story/why-us section with 2-3 paragraphs, values, and a visual card. Make the copy sound like this exact local business, not generic filler.
+5. \`#gallery\` — premium bento gallery or portfolio grid with 6-9 CSS image placeholders, captions, hover overlays, and service/category tags. Do not use blank boxes.
+6. \`#process\` — 3-5 step customer journey from booking to completion. Include clear steps, icons, and a connector/timeline treatment.
+7. \`#reviews\` — large aggregate rating and at least 4 realistic testimonial cards with initials/avatars, stars, neighborhood/service references, and quotes that fit the business.
+8. \`#book\` — functional-looking booking section: service selector chips, visual weekly availability grid, form fields, phone CTA, and "Request appointment" button. Static HTML is fine, but it must look usable.
+9. \`#faq\` — 4-6 business-specific FAQ items using styled \`details\`/\`summary\` or cards.
+10. \`#location\` — address, phone, hours table, map-style panel, directions CTA, and nearby/service-area notes. If a real address or phone is in context, use it exactly.
+11. \`#contact\` — polished contact form and direct phone/email CTAs.
+12. Footer — substantial multi-column footer with business name, nav links, hours summary, contact details, service areas/social placeholders, and copyright.
 
-- Hide every \`.page\` by default; **\`min-height: 100vh\`** per page; **\`overflow-y: auto\`** inside a page if its content is tall (so the **outer document** does not become one giant scroll of all pages).
-- **Initial view:** \`body:not(:has(main .page:target)) #home\` **and** \`#home:target\` → \`display: block\` (or flex).
-- When \`#services\`, \`#about\`, \`#gallery\`, \`#book\`, \`#reviews\`, or \`#location\` matches \`:target\`, show that section the same way.
-- When a **non-home** page is \`:target\`, hide \`#home\` via \`body:has(#services:target) #home\`, \`body:has(#about:target) #home\`, \`body:has(#gallery:target) #home\`, \`body:has(#book:target) #home\`, etc.
-- **Active nav styling (no JS):** e.g. \`body:has(#services:target) nav a[href="#services"] { font-weight: 700; border-bottom: … }\` (repeat per tab: \`#home\`, \`#clients\`, \`#inbox\`, \`#book\`, \`#reviews\`).
+## Visual standard
 
-Nav links: \`<a href="#home">\`, \`#services\`, \`#about\`, \`#gallery\`, \`#book\`, \`#reviews\`, \`#location\`. **Do not** rely on \`scroll-behavior\` or stacked \`min-height:100vh\` sections in one scroll — use **show/hide** as above.
+- Fill the desktop canvas at full width. First screenshot must show a complete premium hero, not a tiny centered page preview.
+- Use CSS variables for brand colors. If Brand Identity Colors are provided, they are mandatory and must dominate CTAs, gradients, nav accents, section bands, cards, and hover states.
+- Use at least two distinctive Google Font families via \`<link>\`; never rely on only Arial, Roboto, Inter, or system fonts.
+- Use premium layout techniques: asymmetry, bento grids, split sections, glass panels, gradient mesh backgrounds, tasteful decorative CSS shapes, and varied section backgrounds.
+- Every card/form/panel needs visible depth: multi-layer shadows, 16-28px border radius, generous padding, and hover lift.
+- Include at least 3 gradient uses and 2 glassmorphic surfaces.
+- Text must be readable with strong contrast. Do not layer unmasked images or shapes over headings/body copy.
+- The site must be responsive, but desktop is the primary target for this generated preview.
 
-## Structure checklist (required \`id\`s on \`<section class="page">\`)
+## Copy and conversion rules
 
-1. **#home** \u2014 One \`section#home.page\` with **twelve mandatory homepage blocks** in order (scroll inside this section). Each block must be visually distinct and use **real copy** for this business. Obey **Layout safety** throughout. The homepage must feel **complete and content-rich** \u2014 a visitor should be able to read reviews, see the address and hours, and contact the business **without leaving the homepage**.
-   - **(1) Principal banner / hero — THE MOST IMPORTANT ELEMENT ON THE PAGE:**
-     This is the first thing the prospect sees — it must be **dramatic, immersive, and impossible to ignore**. Minimum requirements:
-     - **Height:** At least **80vh** (80% of viewport height). Never a thin strip or bar. The hero must dominate the entire screen above the fold.
-     - **Background:** Full-bleed **gradient**, **dark atmospheric wash**, or **bold brand-color treatment** spanning the entire hero area. Use multi-stop CSS gradients (2–3 colors), dark overlays with luminous text, or rich brand tones. **Never** a flat gray, plain white, or thin solid-color strip.
-     - **Headline:** Business name or main tagline in **display typography at 64–100px+**, bold or medium weight. This must be the largest, most visually striking text on the entire page. Use a characterful Google Font (Playfair Display, Cormorant, DM Serif Display, etc.) — not system defaults.
-     - **Subheadline/tagline:** A compelling one-liner below the headline (20–24px), conveying what makes this business special.
-     - **Dual CTAs:** Primary **“Book Now”** button (large, filled/gradient, linking to \`#book\`, min 48px tall, with hover glow or shadow) + secondary **“Our Services”** ghost/outline button (linking to \`#services\`). Both with generous padding.
-     - **Trust signal:** A floating rating badge or proof strip (e.g. “4.8 ★ from 127 reviews”, “Serving [City] since 2005”) positioned as an overlay or below the CTAs — social proof within the first viewport.
-     - **Visual richness:** Include at least ONE of: decorative CSS shapes/blobs, gradient mesh background, frosted glass panel (backdrop-filter), overlapping composition where content cards cross the hero boundary, abstract pattern, or luminous text glow (text-shadow with accent color). The hero must have **visual depth** — not just text on a flat color.
-     - **Navigation overlay:** The top nav must be **transparent or semi-transparent**, overlaying the hero background — not a separate opaque bar that pushes the hero down. Use \`position: fixed\` or \`sticky\` with glassmorphism or transparent styling. The hero gradient/image must extend behind the navigation area.
-     **ANTI-PATTERNS (never do these):** No thin 50–100px dark bars with small centered text. No plain solid-color rectangles with 16px body-sized font. No hero that looks like a navigation bar or a footer. No empty white space with a small heading. The hero must be an **immersive, full-screen visual experience** that makes the prospect stop scrolling and think “this looks expensive.”
-   - **(2) Trust / credibility bar:** A horizontal band immediately after the hero showing trust signals \u2014 3\u20135 badges or stats in a row. Examples: \u201c10+ Years Experience\u201d, \u201c2,900+ Happy Customers\u201d, \u201cLicensed & Insured\u201d, \u201c4.9\u2605 Google Rating\u201d, \u201cSame-Day Service\u201d. Use icons or styled pills. This section must have a **distinct background** (tinted, dark band, or gradient) from the hero and the next section. The purpose is to build immediate credibility before the visitor scrolls further.
-   - **(3) Services:** **Services overview** \u2014 4\u20136 cards or categorized rows (industry-specific names, **2\u20133 sentence descriptions** per service, and \u201cfrom $\u201d pricing hints). Each card must have an icon or colored accent, a clear heading, body text, and a subtle CTA (\u201cLearn More\u201d linking to \`#services\`). Use a grid with one featured/highlighted card. This is a major section \u2014 not just 3 tiny cards with one-word labels.
-   - **(4) About / Why us:** **Why choose this business** \u2014 a substantial 50/50 split or full-width section with a heading like \u201cWhy Choose [Business Name]\u201d or \u201cOur Story\u201d. Include: 2\u20133 paragraphs of warm narrative copy specific to this business type, 3\u20134 value cards (e.g. \u201cCertified Professionals\u201d, \u201cConvenient Mobile Service\u201d, \u201cEco-Friendly Products\u201d), and an image placeholder. This section tells the story and builds emotional connection. Link to \`#about\` for the full page.
-   - **(5) Gallery:** **Gallery** \u2014 bento or grid of 4\u20136 images (placeholders + captions OK); use grid + \`aspect-ratio\`, no text/image overlap. Include a section heading (\u201cOur Work\u201d / \u201cRecent Transformations\u201d) and a \u201cView Full Gallery\u201d CTA linking to \`#gallery\`.
-   - **(6) Process / How it works:** A **step-by-step section** explaining the customer journey \u2014 3\u20135 numbered or icon-driven steps (e.g. \u201c1. Book Online\u201d \u2192 \u201c2. We Come to You\u201d \u2192 \u201c3. Enjoy the Results\u201d). Use a horizontal flow layout with connecting lines, arrows, or numbered circles. Each step has a heading and 1\u20132 sentence description. Distinct background from adjacent sections.
-   - **(7) Reviews:** **Customer reviews** \u2014 a **full reviews section** on the homepage (not just a teaser). Show the aggregate rating (large star + number, e.g. \u201c4.8 \u2605 from 127 reviews\u201d) prominently, then at least **four** styled review cards with author name/initial avatar, star rating, and a realistic review quote specific to this business type (2\u20133 sentences each). This must look like a premium social-proof section that builds trust immediately. Optional \`<a href="#reviews">\` to see all reviews.
-   - **(8) FAQ or features:** A styled FAQ section (CSS-only \`<details>\`/\`<summary>\` elements or styled list) with 4\u20136 common questions specific to this business type. Each answer should be 2\u20133 sentences. Alternatively, a features/benefits grid with 4\u20136 icon cards explaining unique selling points. This section adds depth and answers visitor objections.
-   - **(9) Contact us:** **Contact** \u2014 section title \u201cContact us\u201d / \u201cGet in touch\u201d: static form fields (name, email, phone, message) **without** JS submit \u2014 use \`mailto:\` / \`tel:\` on buttons or labels, or purely visual form chrome. Include phone number and email as styled clickable links beside the form.
-   - **(10) Visit us / Location:** **Full location section** on the homepage \u2014 not a brief address line. Include: a styled heading (\u201cVisit Us\u201d / \u201cFind Us\u201d), the **complete address** on its own visual block, **business hours** as a clean table or day-by-day list, **phone number** with \`tel:\` link, and a **map-style placeholder or styled directions panel**. Include a \u201cGet Directions\u201d CTA button. This section must be visually rich and feel like a proper Location page embedded in the homepage.
-   - **(11) Booking / CTA band:** A visually distinct call-to-action band \u2014 \u201cReady to book?\u201d / \u201cSchedule your visit\u201d with a prominent **Book Now** button linking to \`#book\` and a secondary phone CTA. **Full-bleed contrasting background** (brand color gradient, dark band, or bold accent) from surrounding sections. Include a compelling one-liner about convenience or value.
-   - **(12) Footer:** **Site footer** \u2014 multi-column layout with: business name and tagline, quick-links nav (\`#services\`, \`#about\`, \`#gallery\`, \`#book\`, \`#reviews\`, \`#location\`), business hours summary, contact info (phone + email), social media icon placeholders, and **\u00a9 year + business name**. Footer must have a **dark or branded background** and feel substantial \u2014 not a single line of text. This is the last impression.
+- Use the exact business name everywhere. Do not rename the brand or invent a studio/atelier-style alias.
+- Use the Google Business Profile details as source of truth: category, address, rating, review count, phone, website URL, and business type.
+- Infer services, FAQs, booking options, and testimonials from the category when exact services are not provided.
+- Avoid placeholder text entirely. Never write "coming soon", "lorem ipsum", "placeholder", "sample service", "service one", or empty stub sections.
+- This should feel like an upsell-ready website a business owner would want to replace their current site with today.
 
-   **HOMEPAGE LENGTH RULE:** The \`#home\` section must contain enough content to scroll for **at least 8 full viewport heights**. If you find yourself finishing the homepage in under 6 blocks or under 5 viewport heights of scroll, you are cutting corners. Add more detail to each section \u2014 longer descriptions, more service cards, more review quotes, more FAQ items \u2014 until the homepage feels like a **complete, standalone marketing website**.
+## Technical output
 
-2. **#services** — A **different** layout than home: multi-column **priced menu**, categorized lists, or tiered packages (columns or sections with headings). Industry-specific service names and price cues; not the same three cards repeated from \`#home\`. Include a prominent **Book Now** CTA at the top and bottom of the page. **Every service must have a real name, 2–3 sentence description, and a price hint — NEVER "coming soon".**
+Return only a complete HTML5 document with inline CSS in \`<style>\`. No inline \`<script>\`, no external JS, and no separate files. External font links are allowed. External logo image is allowed only when provided above; otherwise create a premium text/initial brand mark with CSS.
 
-3. **#about** — **About Us / Our Story page:** A dedicated page telling the business’s story. Include: founder/team story with a warm narrative tone, mission/values section, team photo placeholders with names and roles, credentials/certifications/awards, years in business, and a “why choose us” value proposition section. Use a two-column layout (story text + image placeholder) for the main block. Distinct from \`#services\` and \`#reviews\`. This replaces the old \`#expertise\` page with richer, more personal content. **Write real narrative copy (4+ paragraphs) — NEVER "editorial content coming soon".**
-
-4. **#gallery** — **Portfolio / Gallery page:** A full-page visual showcase. Use a **masonry or bento grid** layout with 8–12 image placeholders of varying aspect ratios. Each image should have a hover overlay with a caption or service tag. Include a brief intro paragraph at the top (“Our Work” / “Portfolio” / “Gallery”). The layout must feel premium and editorial — not a flat grid of equal squares. Optional: categorized filter tabs (CSS only) for different service types. **Render all 8–12 image placeholders with styled aspect-ratio boxes, captions, and hover overlays — NEVER "bento grid coming soon".**
-
-5. **#book** — **Booking / Appointment page:** A dedicated scheduling page with:
-   - A **visual weekly calendar** showing the current week with day columns (Mon–Sun) and time slots. Style time slots as tappable/selectable chips or cards (e.g. “9:00 AM”, “10:30 AM”, “2:00 PM”). Show 3–5 available slots per day with some marked as “Booked” (greyed out) for realism.
-   - A **service type selector** above or beside the calendar (dropdown or styled radio/chip group with the business’s actual services).
-   - A **booking form** below the calendar: name, phone, email, selected service (pre-filled from selector), preferred date/time, and optional notes. Prominent “Request Appointment” submit button.
-   - This is purely visual / static (no JS logic) but must **look and feel like a real booking system**. Use \`tel:\` or \`mailto:\` on the submit button as a fallback action. **Build the full visual calendar + form UI — NEVER "scheduling UI coming soon".**
-
-6. **#reviews** — **Extended testimonial gallery** — all reviews in a card grid (4+ quotes) plus aggregate summary, author initials, role, or neighborhood. Layout must differ from the homepage reviews (e.g. masonry grid vs. carousel-style cards). This page is the deep-dive; the homepage already shows the key reviews. **Show 4+ fully styled review cards with star ratings and realistic quotes — NEVER "testimonials coming soon".**
-
-7. **#location** — **Full-page location experience:** Large map or map-style placeholder at the top, complete address and hours in a polished two-column layout, phone with click-to-call, **Get directions** and **Book** CTA buttons, optional nearby landmarks or parking notes. This is the expanded version of the homepage location section — must feel more spacious and detailed.
-
-## ANTI-PLACEHOLDER RULE (ABSOLUTE — ZERO TOLERANCE)
-
-**NEVER** output "coming soon", "content coming soon", "detailed menu coming soon", "bento grid coming soon", "editorial content coming soon", "scheduling UI coming soon", "testimonials coming soon", or ANY variation of placeholder / stub text on ANY page or section. Every section on every page (\`#home\`, \`#services\`, \`#about\`, \`#gallery\`, \`#book\`, \`#reviews\`, \`#location\`) must contain **fully realized, substantive HTML content** — real service names with descriptions and prices, real narrative text for the About page, real styled image placeholders in the gallery, a real visual booking calendar, real review cards with quotes, and a real location section with hours and address.
-
-If you find yourself writing a one-line "coming soon" stub, **STOP** and fill the section with real, industry-specific content. A $20,000+ website has ZERO empty sections. Every page must feel complete and finished — a business owner reviewing this site should never see a placeholder.
-
-## Navigation chrome
-- **Transparent overlay nav:** The navigation must sit **on top of the hero** with a transparent or semi-transparent background (\`background: rgba(0,0,0,0.1)\` or \`backdrop-filter: blur(12px)\` glassmorphism). Do **not** create a separate opaque dark bar that pushes the hero down — the hero background must extend behind the nav.
-- **Sticky behavior:** \`position: fixed\` or \`sticky\` top. On scroll (if applicable), the nav can gain a solid/frosted background.
-- **Logo/brand mark** on the left (business name in a styled font or initial mark).
-- **Section links** centered or right-aligned: \`<a href="#home">\`, \`#services\`, \`#about\`, \`#gallery\`, \`#book\`, \`#reviews\`, \`#location\`. Links styled in light/white text if over a dark hero, with hover underline or accent color transition.
-- **Book Now CTA** as \`<a href="#book">\` — always visible, **filled/accent style** with contrasting background, right-aligned in nav. This is the primary conversion button — it must stand out from the other nav links.
-- **Active nav styling (no JS):** e.g. \`body:has(#services:target) nav a[href="#services"] { font-weight: 700; border-bottom: 2px solid currentColor; }\` (repeat per section).
-- **NEVER** make the nav a wide opaque dark band that looks bigger than the hero content below it. The nav must be lightweight and elegant — the hero dominates, not the navigation.
-## Copy
-Each section must have **unique, substantive copy** tied to the business name, category, and location — **not** repeated placeholder paragraphs across sections.
-
-${WEBSITE_VISUAL_CHECKLIST}
-
-Output: polished, pitch-ready HTML document suitable for a prospect preview.`.trim();
+Output: polished, pitch-ready HTML document suitable for a hosted prospect preview.`.trim();
 }
 
 const WEBAPP_ASSIGNED_AESTHETIC_LANES = [
@@ -756,83 +721,53 @@ ${WEBAPP_CREATIVE_DIRECTIVE}
 
 ${WEBAPP_LAYOUT_SAFETY}
 
-Task: ${gmb}Output **one complete HTML5 document** for a **desktop web application** (browser-width product UI) for staff/operators of this business — **not** a public marketing site and **not** a phone mockup. Think **SaaS-style dashboard**: sidebar navigation, main canvas with tables and metrics.
+## Task
 
-Each main **view** is a full main-area panel; **only one view visible at a time** in the content region. **No** JS router, **no inline \`<script>\`**.
+${gmb}Output **one complete HTML5 document** for a desktop SaaS-style operator web app that this business owner could buy as an operational upgrade. It must look like a premium custom product, not a gray admin template, not a wireframe, and not a marketing website.
 
-## Page switch pattern (CSS only) — EXACT IDS REQUIRED
+Build a browser-width app shell with a strong branded sidebar and a polished main canvas. The first screenshot must show the dashboard at full desktop scale with an impressive KPI/header area, real data cards, charts, activity, and workflow value.
 
-**CRITICAL: You MUST use these EXACT section ids and sidebar labels. Do NOT rename, customize, or adapt them to the business type. The navigation depends on these exact strings.**
+## Navigation and views
 
-Use a layout with a **sidebar** (\`<aside>\`) containing nav links and \`<main>\` containing exactly these six sections:
+Use CSS-only hash navigation. No inline \`<script>\`. Keep these exact ids and sidebar labels:
 
-\`\`\`html
-<section id="dash" class="page">...</section>
-<section id="pipeline" class="page">...</section>
-<section id="clients" class="page">...</section>
-<section id="inbox" class="page">...</section>
-<section id="schedule" class="page">...</section>
-<section id="reviews" class="page">...</section>
-\`\`\`
+- \`#dash\` — Dashboard
+- \`#pipeline\` — Pipeline
+- \`#clients\` — Clients
+- \`#inbox\` — Conversations
+- \`#schedule\` — Schedule
+- \`#reviews\` — Reviews
 
-CSS rules (copy exactly):
-- \`.page { display: none; min-height: calc(100vh - 64px); overflow-y: auto; }\`
-- \`body:not(:has(main .page:target)) #dash { display: block; }\` (default view)
-- \`#dash:target, #pipeline:target, #clients:target, #inbox:target, #schedule:target, #reviews:target { display: block; }\`
-- \`body:has(#pipeline:target) #dash, body:has(#clients:target) #dash, body:has(#inbox:target) #dash, body:has(#schedule:target) #dash, body:has(#reviews:target) #dash { display: none; }\`
-- Active sidebar styling: \`body:has(#pipeline:target) aside a[href="#pipeline"] { ... }\` (repeat per section: #pipeline, #clients, #inbox, #schedule, #reviews)
+Default to \`#dash\` when no hash is present. Only one view should be visible at a time. Sidebar links must use \`href="#dash"\`, \`#pipeline\`, \`#clients\`, \`#inbox\`, \`#schedule\`, and \`#reviews\`.
 
-Sidebar labels MUST be exactly: **Dashboard**, **Pipeline**, **Clients**, **Conversations**, **Schedule**, **Reviews** → \`<a href="#dash">\`, \`<a href="#pipeline">\`, \`<a href="#clients">\`, \`<a href="#inbox">\`, \`<a href="#schedule">\`, \`<a href="#reviews">\`.
+## Required product content
 
-**Do NOT rename these to business-specific names** (e.g. do NOT use "Concierge", "Guest Registry", "Spa Services", etc.). The labels Dashboard/Pipeline/Clients/Conversations/Schedule/Reviews are intentional and universal.
+1. \`#dash\` — showpiece command center with personalized greeting, date, branded header band, oversized hero KPI, 3 supporting KPI cards, CSS-only revenue chart, bookings/no-shows trend, follow-ups due, needs-attention list, and recent activity timeline.
+2. \`#pipeline\` — visual 5-column Kanban pipeline: New Prospect, Contacted, Appointment Scheduled, Appointment Attended, Closed. Include pipeline value, search/filter chips, realistic deal cards, stage counts, values, and days-in-stage.
+3. \`#clients\` — CRM table for repeat customers with search, filters, avatars, last visit, next appointment, visit count, follow-up status pills, category-specific column, and inline Send Reminder / Book buttons. Minimum 6 realistic rows.
+4. \`#inbox\` — unified inbox for SMS, Email, WhatsApp, Website Chat, Facebook, and Instagram with unread counts, conversation list, selected thread, channel badges, chat bubbles, and reply composer.
+5. \`#schedule\` — week/day calendar with service-colored appointment blocks, online booking label, SMS reminder indicator, legend, mini-calendar/date controls, New Appointment CTA, and Share Booking Link CTA.
+6. \`#reviews\` — Google reviews growth hub with aggregate rating, review count from context when available, star distribution bars, monthly growth metric, recent review cards, and Request a Review CTA for SMS/WhatsApp.
 
-## Structure checklist (every view must feel like a finished product, not a wireframe)
-1. **#dash** — The **hero view** that sells the product — a data-rich command center:
-   - **Greeting header:** "Good morning, [Business Name]" with today’s date, styled as a branded banner or accent band (gradient, tinted background, or dark header with light text). Include a circular avatar placeholder and notification bell icon.
-   - **KPI band (4 cards):** One **hero metric card** (2x width, 48–64px display number, trend arrow + percentage, accent background or gradient) for today’s revenue. Three supporting stat cards: **Today’s Bookings** (number + trend), **Auto-Reminders Sent** (e.g. "12 sent · 0 no-shows" with green check), and **Review Score** (e.g. "4.8 ★ · 127 reviews" linking to #reviews). Each card with its own trend indicator.
-   - **Charts row (2 side-by-side CSS-only graphs):**
-     1. **Weekly Revenue bar chart** — 7 vertical bars (Mon–Sun) using CSS flexbox/grid with realistic dollar amounts, axis labels, and a total. Bars colored with brand accent gradient. The current day’s bar highlighted or pulsing. Must look like a real analytics chart — not a placeholder.
-     2. **Bookings vs No-Shows line/area chart** — A 7-day trend showing bookings (accent color, filled area) vs no-shows (red, thin line near zero). Use CSS-only shapes (stacked divs, clip-path, or border tricks). Include axis labels and a legend. Communicates the impact of automated reminders.
-   - **Additional mini-charts (below the main row):**
-     3. **New vs Returning Clients donut/ring** — A CSS-only ring chart (conic-gradient or stacked borders) showing e.g. "72% returning, 28% new" with a label in the center. Reinforces that repeat business drives revenue.
-     4. **Review Growth sparkline** — A compact horizontal trend (CSS bars or stepped divs) showing monthly review counts for the last 6 months with the current month highlighted. Small and compact, not full-width.
-   - **Follow-ups due:** A compact card titled "Follow-ups Due Today" showing 2–3 clients who haven’t visited recently, each with avatar initial, name, last visit date, and a small "Send SMS" accent button.
-   - **Needs attention:** Exception list with 3–4 items, each with a **colored left-border** (4px) for severity (red = urgent, amber = warning, green = ready), avatar/icon, client name, service, and status badge as a colored pill. Include at least one "Pending review request" item.
-   - **Activity timeline:** 3–5 recent activity items with timestamps and subtle icons. Include entries like "SMS reminder sent to [Client]", "New 5★ review from [Client]", "Online booking confirmed". Use a vertical line or dot timeline pattern.
-2. **#pipeline** — **Visual sales pipeline (Kanban board):**
-   - **Pipeline hero metric:** Above the board, a full-width card or accent band showing the total pipeline value as a large display number (e.g. "$47,200 in pipeline") with a trend arrow and period label ("This month"). Use 48px+ display font for the number. Optionally include 2–3 smaller supporting stats: "New this week: 8", "Won this month: 5", "Conversion rate: 34%".
-   - **Compact filter/search bar:** A row with a search input, optional date range selector, and filter chips (e.g. "All", "This week", "High value").
-   - **5 Kanban columns** displayed as a horizontal scrollable board using CSS flexbox or grid:
-     - **New Prospect** — top accent border: blue (#3b82f6). Contains 3–4 cards.
-     - **Contacted** — top accent border: teal (#06b6d4). Contains 2–3 cards.
-     - **Appointment Scheduled** — top accent border: amber (#f59e0b). Contains 2–3 cards.
-     - **Appointment Attended** — top accent border: purple (#8b5cf6). Contains 1–2 cards.
-     - **Closed** — top accent border: green (#10b981). Contains 1–2 cards.
-   - **Column headers:** Each column has a header with the stage name (bold), a **count badge** (small rounded pill, e.g. "12"), and a 4px colored top border matching the stage color.
-   - **Prospect cards:** Each card inside a column shows: **client name** (bold, 14px), **company or service type** (muted text, 12px), **deal value** (e.g. "$2,400" in accent or bold), **days in stage** indicator (e.g. "3d" in a tiny muted badge), and a **small avatar circle** (colored background with white initials). Cards have rounded corners (12–16px), multi-layered box-shadow (3+ layers), and CSS :hover with translateY(-2px) + shadow increase.
-   - **Realistic data:** All names, services, and values must be realistic for this specific business vertical.
-   - **Visual polish:** The board must look like a premium CRM pipeline — not a wireframe. Use subtle column background tints (very light shade of the column's accent color at 5% opacity), card hover effects, and clear visual hierarchy.
-3. **#clients** — **Simple CRM for tracking repeat customers.** Search/filter bar with styled inputs and **filter chip pills** (All, Active, Needs Follow-up). **Premium data table** with: circular avatar placeholder (initial) per row, columns for **Name**, **Last Visit** (date), **Next Appt** (date or "—"), **Visits** (total count), **Follow-up** status (colored pill: "Due" in amber, "Sent" in green, "Scheduled" in blue), category-specific column (e.g. pet name for grooming, case type for legal). Alternating row tints, **colored status pill** badges, row hover with shadow lift. Inline action buttons: **"Send Reminder"** (SMS icon) and **"Book"** per row. Minimum **6 realistic rows** showing a mix of active, due-for-follow-up, and recently visited clients. Pagination footer showing "Showing 1–6 of 24". The table must communicate that most revenue comes from repeat customers, not new ones.
-4. **#inbox** — **Unified conversations — every message in one place:**
-   - **Channel filter bar:** Horizontal tabs or filter chips for: **All**, **SMS**, **Email**, **WhatsApp**, **Website Chat**, **Facebook**, **Instagram**. Each chip has the channel icon and an unread count badge. The active filter has accent background/underline.
-   - **Conversation list (left panel):** A vertical list of conversation threads, each showing: **circular avatar** (client initial or channel icon), **client name**, **channel icon** (small, color-coded: green for WhatsApp, blue for Facebook/Messenger, pink for Instagram, teal for SMS, gray for email, orange for website chat), **last message preview** (truncated, 1–2 lines), **timestamp** (relative: "2m ago", "1h", "Yesterday"), and an **unread dot** (accent color) for new messages. Sort by most recent. Minimum **6 conversation rows**. Include a mix of channels. Selected conversation highlighted with accent tint.
-   - **Message thread (right panel):** A chat-style view showing the selected conversation. Messages styled as **chat bubbles** — incoming on the left (light background), outgoing on the right (accent or brand-colored background with white text). Each message shows: text content, timestamp below, and a small **channel badge** (e.g. "via WhatsApp", "via SMS") on the first message of a channel switch. Include 4–6 realistic messages in the thread, with at least one channel transition (e.g. started on website chat, continued on WhatsApp).
-   - **Reply composer (bottom):** A text input bar with: message field (placeholder "Type a reply..."), **channel selector dropdown** (small icon showing current reply channel — the agent can reply via SMS, WhatsApp, or email from the same thread), and a **Send** button (accent color). Optionally an attachment icon.
-   - **Quick stats header:** A compact bar above the conversation list: "12 unread · 3 need reply · 8 channels active" with small icons. Communicates volume at a glance.
-5. **#schedule** — **Full calendar view with online booking:** week or day layout with a mini-month calendar sidebar or header date picker. Time blocks **color-coded by service type** with a visible legend. Each appointment block shows: client name, service, time, duration, status badge, and a small **reminder icon** (✉ or bell) with tooltip "SMS reminder sent". Include 4+ realistic appointments — at least one labeled "Online booking" (from the self-service link). A **"+ New Appointment"** button styled as an accent CTA. Next to it, a **"Share Booking Link"** secondary button (link icon) for sharing the online booking page with clients. A small banner or badge: "Clients can book 24/7 — even after hours". The calendar must feel like a real scheduling tool that reduces phone-tag and no-shows.
-6. **#reviews** — **Google Reviews management — the growth engine for trust and inbound leads:**
-   - **Aggregate rating hero:** Large display number (48px+) of the average rating (e.g. "4.8") with filled star icons and total review count ("127 reviews"). Accent background or gradient card.
-   - **Star distribution:** Horizontal bar chart showing 5-star to 1-star breakdown with percentages and colored bars (green gradient for 5★, descending to red for 1★).
-   - **Growth metric:** A card or badge: "Reviews this month: 14 (+40% vs last month)" with a trend arrow.
-   - **Recent reviews:** 3+ review cards, each with: circular author avatar (colored initial), star rating (filled/empty stars), realistic review text specific to this business type, date. Mix of 5-star and 4-star reviews.
-   - **Request a Review CTA:** Prominent accent card at the bottom: "Request a Review" with SMS and WhatsApp icons, a note like "Send a review link via SMS or WhatsApp after each appointment. Going from a few reviews to 100+ boosts trust and inbound leads." Styled as a primary action, not an afterthought.
+## Visual standard
 
-## Copy
-Unique copy per view, tied to business name and vertical — not generic lorem repeated everywhere.
+- Use the exact business name in the app shell, dashboard greeting, and account/avatar area.
+- Use CSS variables for brand colors. If Brand Identity Colors are provided, those colors must dominate the sidebar, active states, KPI accents, chart fills, gradients, CTAs, links, and status highlights.
+- Use at least two distinctive Google Font families via \`<link>\`; never rely only on system fonts, Arial, Roboto, or Inter.
+- Sidebar must feel branded and premium: dark/tinted/gradient surface, logo or real logo, grouped nav, polished active indicator, and strong separation from the main canvas.
+- Dashboard must have one unmistakable wow moment: gradient header band with glass KPI cards, oversized metric, or bento dashboard composition.
+- Every card/table/panel must have rounded corners, multi-layer shadows, generous spacing, and hover states.
+- Include CSS-only charts that look intentional, not placeholder rectangles.
+- Use realistic vertical-specific data: client names, services, values, appointments, statuses, and message previews that fit the business category.
+- Avoid placeholder text entirely. Never write "lorem ipsum", "coming soon", "sample user", "User 1", "Service A", or empty panels.
 
 ${WEBAPP_VISUAL_CHECKLIST}
 
 ${WEBAPP_PITCH_MOMENTS}
+
+## Technical output
+
+Return only a complete HTML5 document with inline CSS in \`<style>\`. External font links and the official logo image are allowed when provided. No inline \`<script>\`, no external JS, and no separate files.
 
 Output: polished desktop web-app mockup in one HTML file for a client pitch.`.trim();
 }
@@ -995,59 +930,50 @@ ${brandDirective}${logoDirective}${differentiation}
 
 ${MOBILE_CREATIVE_DIRECTIVE}
 
-Task: ${gmb}Output **one complete HTML5 document** for a **phone-width operator / owner app** (not a consumer marketing site). Each tab is a **separate full-screen** — **only one screen visible at a time** (no one long scroll through all tabs). Same file, **no JS router**, **no inline \`<script>\`**.
+## Task
 
-## Page switch pattern (required — CSS only)
-Use \`<section id="home" class="page">\`, \`id="clients"\`, \`id="inbox"\`, \`id="book"\`, \`id="reviews"\` inside \`<main>\`. CSS same idea as the website prompt:
+${gmb}Output **one complete HTML5 document** for a phone-width owner/operator app concept this business could use to manage customers, bookings, messages, and reviews. It must look like a polished native mobile app that could appear in an App Store feature story, not a generic prototype, not a consumer marketing page, and not a wireframe.
 
-- All \`.page\` hidden by default; **\`min-height: 100vh\`** (minus fixed chrome); **\`overflow-y: auto\`** on the active page content so **only that tab scrolls**, not the whole document stacked.
-- **Default:** show \`#home\` when no hash: \`body:not(:has(main .page:target)) #home\` and \`#home:target\` → visible.
-- Show \`#clients\`, \`#inbox\`, \`#book\`, \`#reviews\` when those ids are \`:target\`; when any of those is targeted, **hide** \`#home\` via \`body:has(#clients:target) #home\`, \`body:has(#inbox:target) #home\`, \`body:has(#book:target) #home\`, \`body:has(#reviews:target) #home\`.
-- **Bottom tab active state:** \`body:has(#book:target) nav.bottom-tabs a[href="#book"] { … }\` (repeat per tab: \`#home\`, \`#clients\`, \`#inbox\`, \`#book\`, \`#reviews\`). Fixed **bottom** nav with five tabs: \`<a href="#home">\`, \`#clients\`, \`#inbox\`, \`#book\`, \`#reviews\`.
+Build the experience inside a premium phone canvas sized for mobile. The first screenshot must show the Home screen at full phone scale with an immersive branded header, glass cards, KPI data, schedule cards, and a clear bottom tab bar.
 
-## Structure checklist (every screen must feel like a polished, published app)
-1. **#home** (dashboard) — The **hero screen** that sells the product — a data-rich snapshot:
-   - **Immersive header area:** Gradient, pattern, or dark banner (140px+ tall) with personalized greeting ("Good morning, [Business Name]"), today’s date, and circular avatar placeholder. This header IS the brand moment.
-   - **KPI hero:** One oversized metric (40px+ display font) for today’s revenue with trend indicator (arrow + percentage). Flanked by 2 supporting stat pills: **"Reminders Sent: 8"** (green check icon) and **"No-Shows: 0"** (showing the impact of automated reminders).
-   - **Mini charts (2 side-by-side compact graphs):**
-     1. **Weekly Revenue bar chart** — 7 compact vertical bars (M–S) using CSS flexbox, accent-colored, with the current day highlighted. Dollar total below. Fits in a card width.
-     2. **New vs Returning donut** — A small CSS-only ring chart (conic-gradient) showing e.g. "72% returning" with a centered label. Reinforces repeat-business value. Both charts in a single horizontal row of 2 cards.
-   - **Today’s schedule:** 3+ appointment cards, each with: circular avatar placeholder (colored initial), client name, service type, time, **colored status badge** (pill: "Confirmed" green, "Pending" amber), and a small **bell icon** indicating "SMS reminder sent". Cards must have shadow, rounded corners, and a service-type color accent. At least one card labeled "Via online booking".
-   - **Primary CTA:** "+ Book Now" as \`<a href="#book">\` — styled as a **gradient or filled accent button** (full-width or floating), not a plain text link.
-   - **Follow-ups due:** A notification-style card: "2 clients due for follow-up" with client initials and a "Send SMS" accent button. Reinforces that most revenue comes from repeat business.
-   - **Review nudge:** A small accent card or banner: "★ 4.8 · 127 reviews · Request a review" linking to \`#reviews\`.
+## Navigation and screens
 
-2. **#clients** — **Simple CRM for tracking repeat customers.** Search bar with styled input (rounded, icon). **Filter chips** at top: "All", "Active", "Needs Follow-up". **Vertical list** with: **circular avatar** (colored initial), client name, **last visit date**, **total visits count**, and **follow-up status badge** (colored pill: "Due" in amber, "Sent" in green, "Scheduled" in blue). Each row includes a small **SMS icon** button to send a reminder. Minimum 4 realistic rows with subtle card separation (shadow or divider) showing a mix of active and follow-up-due clients. **"Add Client"** floating action button (accent color, circular, bottom-right corner with shadow). Each row: chevron, 48px+ tap target height. The list must communicate that tracking repeat customers and following up drives most revenue.
+Use CSS-only hash navigation. No inline \`<script>\`. Keep these exact ids and bottom tab labels:
 
-3. **#inbox** — **Conversations — every message, one screen:**
-   - **Channel tabs:** Horizontal scrollable tab bar at top: **All** (with total unread badge), **SMS**, **Email**, **WhatsApp**, **Chat** (website chatbot), **FB**, **IG**. Each tab has a small channel-colored icon and unread count. Active tab has accent underline or filled background. Fits mobile width with horizontal scroll.
-   - **Conversation list:** Vertical list of threads, each card showing: **circular avatar** (client initial or channel icon with channel-colored ring), **client name** (bold if unread), **channel icon** (tiny, color-coded: green WhatsApp, blue Facebook, pink Instagram, teal SMS, gray email, orange chat), **message preview** (1 line, truncated), **timestamp** (relative: "2m", "1h", "Yesterday"), and an **unread dot** on the left edge. Minimum **5 conversation cards** with a mix of channels. Tapping opens the thread (simulate with visual cue).
-   - **Compose FAB:** A floating action button (accent color, bottom-right, circular with a message/pen icon, with shadow) for starting a new conversation.
-   - **Unread summary banner:** A compact accent-tinted banner at top or below tabs: "4 unread · 2 need reply" with small icons.
+- \`#home\` — Home
+- \`#clients\` — Clients
+- \`#inbox\` — Inbox
+- \`#book\` — Book
+- \`#reviews\` — Reviews
 
-4. **#book** — **Easy online booking — no more phone-tag:**
-   - **Header banner:** A small accent banner: "Clients can book 24/7 — even after hours" with a link/share icon.
-   - **Calendar strip:** Horizontal scrollable days (7-day strip) with the selected day highlighted (accent background, bold). Show day name + date number.
-   - **Time slots:** Available times as **styled chip cards** (rounded pill shape, 48px+ height) — available slots have accent-tinted border or subtle background; booked slots are greyed/muted with "Booked" overlay. Show 4–6 slots per day.
-   - **Service selector:** Styled chips or segmented control above the calendar for service types (with service-specific icons or colors).
-   - **Booking summary card:** Below slots — selected service, date, time, with a prominent "Confirm Booking" gradient/accent button. Below the button, a **"Share Booking Link"** secondary action (link icon + "Copy link" or "Share via SMS") so the business can send the booking page to clients. Must feel like a **real booking system** that increases conversions by letting people book without calling.
+Default to \`#home\` when no hash is present. Only one screen should be visible at a time. Bottom tabs must use \`href="#home"\`, \`#clients\`, \`#inbox\`, \`#book\`, and \`#reviews\`.
 
-5. **#reviews** — **Google Reviews — the growth engine for trust and inbound leads:**
-   - **Aggregate rating hero:** Large display number (48px+) of the average rating (e.g. "4.8") with filled star icons and total review count ("127 reviews"). Accent background card or gradient.
-   - **Growth metric:** A pill or card: "This month: 14 new reviews (+40%)" with a green trend arrow. Communicates momentum.
-   - **Star distribution:** Visual bar chart (5-star to 1-star with horizontal bars, colored green-to-red gradient).
-   - **Recent reviews:** 3+ review cards: circular author avatar (colored initial), star rating (filled/empty stars), realistic review text specific to this business type, date. Mix of 5-star and 4-star.
-   - **Request a Review CTA:** Prominent accent card at the bottom: "Request a Review" with **SMS and WhatsApp icons** and send buttons. A note: "Going from a few reviews to 100+ boosts trust and brings in new customers automatically." Styled as a primary action — this is the single most impactful feature for inbound lead generation.
-## Chrome
-- **Fixed top bar** (avatar, business name, bell).
-- **Fixed bottom** tab bar: Home, Clients, Inbox, Book, Reviews → \`<a href="#home">\`, \`#clients\`, \`#inbox\`, \`#book\`, \`#reviews\` with inline SVG or icon \`<link>\` (e.g. Google Fonts / Material icons).
+## Required app content
 
-## Copy
-Unique copy per section, tied to the business name and vertical — not the same paragraph repeated.
+1. \`#home\` — showpiece dashboard with immersive gradient/pattern header, business avatar/logo, greeting, date, oversized KPI, reminders/no-show stat pills, compact CSS charts, today's schedule with 3+ appointment cards, follow-up card, Book CTA, and review nudge.
+2. \`#clients\` — repeat-customer CRM with search, filter chips, 4+ realistic client cards, avatars, last visit, visit count, follow-up status pill, SMS reminder action, chevrons, and Add Client floating action button.
+3. \`#inbox\` — unified conversations screen with channel tabs for All, SMS, Email, WhatsApp, Chat, FB, and IG; unread summary; 5+ mixed-channel conversation cards; unread dots; timestamps; and compose FAB.
+4. \`#book\` — online booking flow with 24/7 booking banner, service selector chips, 7-day calendar strip, available/booked time slot chips, booking summary card, Confirm Booking CTA, and Share Booking Link action.
+5. \`#reviews\` — Google reviews growth screen with aggregate rating, review count from context when available, monthly growth metric, star distribution bars, 3+ recent review cards, and Request a Review CTA with SMS/WhatsApp actions.
+
+## Visual standard
+
+- Use the exact business name in the top bar, Home greeting, and account/avatar area.
+- Use CSS variables for brand colors. If Brand Identity Colors are provided, those colors must dominate header gradients, active tabs, CTA buttons, card accents, status badges, review stars, and chart fills.
+- Use at least two distinctive Google Font families via \`<link>\`; never rely only on system fonts, Arial, Roboto, or Inter.
+- Phone frame should feel premium: realistic rounded device container, safe-area spacing, fixed top app bar, and fixed glass bottom tab bar.
+- Home must have one unmistakable wow moment: gradient header with glass KPI cards overlapping it, oversized metric, or bold bento card composition.
+- Every card/list item/form control must have rounded corners, multi-layer shadows, clear touch targets, icons/avatars/status badges, and active/pressed states.
+- Use realistic vertical-specific data: client names, services, times, appointment statuses, review text, and message previews that fit the business category.
+- Avoid placeholder text entirely. Never write "lorem ipsum", "coming soon", "sample user", "User 1", "Service A", or empty screens.
 
 ${MOBILE_VISUAL_CHECKLIST}
 
 ${MOBILE_PITCH_MOMENTS}
+
+## Technical output
+
+Return only a complete HTML5 document with inline CSS in \`<style>\`. External font links and the official logo image are allowed when provided. No inline \`<script>\`, no external JS, and no separate files.
 
 Output: polished multi-screen mobile mockup in one HTML file, suitable for a client pitch.`.trim();
 }
