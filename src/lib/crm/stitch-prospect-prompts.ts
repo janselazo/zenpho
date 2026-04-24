@@ -1,7 +1,7 @@
 import type { PlacesSearchPlace } from "@/lib/crm/places-types";
 import { primaryPlaceTypeLabel } from "@/lib/crm/places-search-ui";
 import type { StitchProspectDesignPayload } from "@/lib/crm/stitch-prospect-design-types";
-import type { BrandColorResult } from "@/lib/crm/brand-color-extract";
+import type { BrandColorResult, WebsiteBrandFacts } from "@/lib/crm/brand-color-extract";
 
 /** Stable hash for picking variation axes (same business → same axes on regenerate). */
 function stablePickIndex(seed: string, salt: string, modulo: number): number {
@@ -81,6 +81,22 @@ const WEBSITE_ASSIGNED_HERO_STRUCTURES = [
 function buildWebsiteAssignedDifferentiationBlock(
   payload: StitchProspectDesignPayload
 ): string {
+  if (hasExistingWebsite(payload)) {
+    return `
+## Existing website redesign guard (mandatory)
+
+This is a **brand-faithful redesign**, not a rebrand. Preserve the original website's:
+- Logo and visual identity.
+- Core color family.
+- Navigation topics and section themes.
+- Service language, customer promise, and booking/contact intent.
+
+You may modernize layout, typography, spacing, cards, and conversion flow, but you must not invent an unrelated concept name, theme, or persona. Do **not** rename the business, do **not** use "atelier", "craft", "industrial", "studio", "luxe", or other new positioning words unless the original site uses them. The prospect should immediately recognize this as an upgraded version of their current website.
+
+Use the assigned visual standards later in the prompt for polish only. The original brand and source-site content always win.
+`.trim();
+  }
+
   const seed = prospectUniquenessSeed(payload);
   let lane: string =
     WEBSITE_ASSIGNED_AESTHETIC_LANES[
@@ -243,6 +259,7 @@ function buildBrandColorDirective(colors: BrandColorResult | null | undefined): 
   lines.push("**Rules (MANDATORY \u2014 violation = failed design):**");
   lines.push("- Use the **primary brand color** as the dominant accent throughout \u2014 hero background/gradient, nav highlights, CTAs, headers, link colors, active states, badge accents, and section accent bands. The primary color must be **the most visually prominent hue on every page**.");
   lines.push("- Use the **secondary color** (if present) for supporting elements \u2014 hover states, secondary buttons, borders, chart accents, or gradient endpoints.");
+  lines.push("- Use the **full extracted palette** visibly. If the palette contains both blue and orange, blue and orange are co-brand colors and both must appear prominently in the hero, navigation, CTA system, cards, and section accents.");
   lines.push("- Derive tints and shades **exclusively** from the brand palette for backgrounds, card tints, and subtle accents (e.g. 10% opacity of primary for card backgrounds).");
   lines.push("- **NEVER ignore these colors.** Do NOT substitute green, purple, teal, orange, or ANY color family that is not in the palette above. If the brand is blue, the entire site must be blue. If the brand is red, the site must be red. The aesthetic lane defines mood and composition \u2014 NOT colors.");
   lines.push("- Neutrals (backgrounds, text, borders) should complement the brand palette \u2014 warm neutrals for warm brands, cool neutrals for cool brands.");
@@ -264,12 +281,34 @@ function buildLogoDirective(logoUrl: string | null | undefined): string {
     "",
     "You **MUST** include this logo in the design using an `<img>` tag:",
     "- **Navigation / header:** display the logo (`max-height: 40px; width: auto;`) on the left in place of text-only brand marks or initials.",
+    "- **Color fidelity:** visually inspect the logo and use its recognizable colors as the final brand authority. If the logo is blue/orange, the generated design must be blue/orange.",
     "- **Sidebar header** (web apps): place the logo image at the top of the sidebar above the nav links.",
     "- **Mobile top bar:** show the logo (scaled to ~28–32px height) next to the business name.",
     "- Do **NOT** substitute text initials, generic icons, or placeholder shapes when this real logo URL is provided.",
     "- Use `object-fit: contain` so the logo is never stretched or cropped.",
     "",
   ].join("\n");
+}
+
+function buildSourceWebsiteFactsDirective(facts: WebsiteBrandFacts | null | undefined): string {
+  if (!facts) return "";
+  const lines = [
+    "## Original Website Content & Brand Facts (MANDATORY)",
+    "",
+    "These facts were extracted from the prospect's current website. The generated website must feel like a premium upgrade of this source, not a new unrelated brand.",
+  ];
+  if (facts.title) lines.push(`- Original page title: ${facts.title}`);
+  if (facts.navLabels.length > 0) lines.push(`- Original navigation/topics: ${facts.navLabels.join(" | ")}`);
+  if (facts.headings.length > 0) lines.push(`- Original section headings: ${facts.headings.join(" | ")}`);
+  if (facts.keyPhrases.length > 0) lines.push(`- Original key copy/themes: ${facts.keyPhrases.join(" / ")}`);
+  if (facts.imageUrls.length > 0) lines.push(`- Original image/logo references to reuse when useful: ${facts.imageUrls.join(" | ")}`);
+  lines.push("");
+  lines.push("Rules:");
+  lines.push("- Preserve these topics and customer promises. For example, if the source focuses on mobile dog grooming, in-home care, booking appointments, services, FAQ, blog, and contact, the redesign must include those same themes.");
+  lines.push("- Preserve the original language direction when obvious. If source copy is Spanish or bilingual, use Spanish or bilingual copy instead of replacing everything with unrelated English-only copy.");
+  lines.push("- Do not invent unrelated positioning such as atelier, industrial craft, luxury portraiture, human barber imagery, or unrelated visual topics unless the source website clearly supports them.");
+  lines.push("");
+  return lines.join("\n");
 }
 
 /** Creative director layer for marketing sites — precedes technical Task/CSS contract in the prompt. */
@@ -489,13 +528,14 @@ export function buildStitchWebsitePrompt(payload: StitchProspectDesignPayload): 
   const differentiation = buildWebsiteAssignedDifferentiationBlock(payload);
   const brandDirective = buildBrandColorDirective(payload.brandColors);
   const logoDirective = buildLogoDirective(payload.logoUrl);
+  const sourceFactsDirective = buildSourceWebsiteFactsDirective(payload.sourceWebsiteFacts);
   const projectBrief = hasExistingWebsite(payload)
     ? "This is a redesign upsell. The business already has a website, so the new design must feel dramatically more premium, organized, modern, and conversion-focused while preserving the existing brand identity."
     : "This is a first premium website. The design must make the business look established, trustworthy, and ready to win customers from search and Google Maps traffic.";
 
   return `${block}
 
-${brandDirective}${logoDirective}
+${brandDirective}${logoDirective}${sourceFactsDirective}
 ## Project brief
 
 ${projectBrief}

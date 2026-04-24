@@ -1,5 +1,5 @@
 import type { PlacesSearchPlace } from "@/lib/crm/places-types";
-import type { BrandColorResult } from "@/lib/crm/brand-color-extract";
+import type { BrandColorResult, WebsiteBrandFacts } from "@/lib/crm/brand-color-extract";
 
 /** POST /api/prospecting/stitch-design — same shape as generate-preview plus `target`. */
 export type StitchProspectDesignPayload =
@@ -13,6 +13,8 @@ export type StitchProspectDesignPayload =
       brandColors?: BrandColorResult | null;
       /** Official logo image URL scraped from the business's website. */
       logoUrl?: string | null;
+      /** Extracted source-site copy/sections/images used to keep redesigns brand-faithful. */
+      sourceWebsiteFacts?: WebsiteBrandFacts | null;
     }
   | {
       target: "website" | "webapp" | "mobile";
@@ -26,6 +28,8 @@ export type StitchProspectDesignPayload =
       brandColors?: BrandColorResult | null;
       /** Official logo image URL scraped from the provided URL. */
       logoUrl?: string | null;
+      /** Extracted source-site copy/sections/images used to keep redesigns brand-faithful. */
+      sourceWebsiteFacts?: WebsiteBrandFacts | null;
     };
 
 export type StitchProspectDesignResult =

@@ -233,6 +233,128 @@ function normalizeUrl(url: string): string {
   return /^https?:\/\//i.test(url) ? url : `https://${url}`;
 }
 
+function decodeHtmlEntities(value: string): string {
+  return value
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#039;|&apos;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&#(\d+);/g, (_, n: string) => {
+      const code = Number(n);
+      return Number.isFinite(code) ? String.fromCharCode(code) : "";
+    })
+    .replace(/&#x([0-9a-f]+);/gi, (_, n: string) => {
+      const code = parseInt(n, 16);
+      return Number.isFinite(code) ? String.fromCharCode(code) : "";
+    });
+}
+
+function cleanText(value: string, max = 240): string {
+  const text = decodeHtmlEntities(value)
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
+function uniquePush(out: string[], value: string, maxItems: number): void {
+  const cleaned = cleanText(value);
+  if (!cleaned || cleaned.length < 2) return;
+  if (out.some((existing) => existing.toLowerCase() === cleaned.toLowerCase())) return;
+  if (out.length < maxItems) out.push(cleaned);
+}
+
+function extractTitle(html: string): string | null {
+  const title = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1];
+  return title ? cleanText(title, 160) || null : null;
+}
+
+function extractHeadingTexts(html: string): string[] {
+  const out: string[] = [];
+  const re = /<h[1-4][^>]*>([\s\S]*?)<\/h[1-4]>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null) uniquePush(out, m[1], 12);
+  return out;
+}
+
+function extractAnchorTexts(html: string): string[] {
+  const out: string[] = [];
+  const re = /<a\s+[^>]*>([\s\S]*?)<\/a>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null) {
+    const text = cleanText(m[1], 80);
+    if (!text || text.length > 48) continue;
+    if (/^(x|menu|leer más|read more)$/i.test(text)) continue;
+    uniquePush(out, text, 12);
+  }
+  return out;
+}
+
+function extractKeyPhrases(html: string): string[] {
+  const out: string[] = [];
+  const text = cleanText(html, 5000);
+  const sentenceRe = /([^.!?。！？\n]{45,220}[.!?。！？])/g;
+  let m: RegExpExecArray | null;
+  while ((m = sentenceRe.exec(text)) !== null) {
+    const phrase = m[1].trim();
+    if (/cookie|privacy|derechos de autor|all rights reserved/i.test(phrase)) continue;
+    uniquePush(out, phrase, 8);
+  }
+  return out;
+}
+
+function extractBrandImageUrls(html: string, baseUrl: string): string[] {
+  const out: string[] = [];
+  const re = /<img\s+[^>]*>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null) {
+    const tag = m[0];
+    if (!/(logo|brand|hero|groom|pet|dog|cat|canin|mascot|mascota)/i.test(tag)) continue;
+    const src =
+      tag.match(/data-(?:lazy-)?src=["']([^"']+)["']/i)?.[1] ??
+      tag.match(/data-srcset=["']([^"'\s,]+)/i)?.[1] ??
+      tag.match(/\bsrc=["']([^"']+)["']/i)?.[1] ??
+      "";
+    if (!src || /^data:/i.test(src)) continue;
+    const u = resolveUrl(src, baseUrl);
+    if (u && !out.includes(u) && out.length < 8) out.push(u);
+  }
+  return out;
+}
+
+export type WebsiteBrandFacts = {
+  title: string | null;
+  headings: string[];
+  navLabels: string[];
+  keyPhrases: string[];
+  imageUrls: string[];
+};
+
+export function extractWebsiteBrandFacts(html: string, baseUrl: string): WebsiteBrandFacts | null {
+  if (!html || typeof html !== "string") return null;
+  const facts: WebsiteBrandFacts = {
+    title: extractTitle(html),
+    headings: extractHeadingTexts(html),
+    navLabels: extractAnchorTexts(html),
+    keyPhrases: extractKeyPhrases(html),
+    imageUrls: extractBrandImageUrls(html, baseUrl),
+  };
+  if (
+    !facts.title &&
+    facts.headings.length === 0 &&
+    facts.navLabels.length === 0 &&
+    facts.keyPhrases.length === 0 &&
+    facts.imageUrls.length === 0
+  ) {
+    return null;
+  }
+  return facts;
+}
+
 export async function fetchPageHtml(
   url: string,
   timeoutMs = 8000,
@@ -433,6 +555,7 @@ export function extractLogoUrl(html: string, baseUrl: string): string | null {
 export type BrandAssets = {
   colors: BrandColorResult | null;
   logoUrl: string | null;
+  sourceFacts: WebsiteBrandFacts | null;
 };
 
 /**
@@ -446,7 +569,7 @@ export async function fetchBrandAssetsFromUrl(
   timeoutMs = 8000,
 ): Promise<BrandAssets> {
   const html = await fetchPageHtml(url, timeoutMs);
-  if (!html) return { colors: null, logoUrl: null };
+  if (!html) return { colors: null, logoUrl: null, sourceFacts: null };
   const normalized = normalizeUrl(url);
 
   const cssUrls = extractLinkedStylesheetUrls(html, normalized);
@@ -461,5 +584,6 @@ export async function fetchBrandAssetsFromUrl(
   return {
     colors,
     logoUrl: extractLogoUrl(html, normalized),
+    sourceFacts: extractWebsiteBrandFacts(html, normalized),
   };
 }

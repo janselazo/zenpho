@@ -56,16 +56,17 @@ export async function runStitchProspectDesign(
       : payload.url?.trim() || null;
 
   let enrichedPayload = payload;
-  if (brandUrl && (!payload.brandColors || !payload.logoUrl)) {
+  if (brandUrl && (!payload.brandColors || !payload.logoUrl || !payload.sourceWebsiteFacts)) {
     const assets = await fetchBrandAssetsFromUrl(brandUrl, 6000).catch((e) => {
       console.warn("[stitch-design] brand asset fetch failed:", e instanceof Error ? e.message : e);
-      return { colors: null, logoUrl: null };
+      return { colors: null, logoUrl: null, sourceFacts: null };
     });
     console.info("[stitch-design] brand extraction for", brandUrl, "→ colors:", assets.colors, "logo:", assets.logoUrl);
     enrichedPayload = {
       ...payload,
       brandColors: payload.brandColors ?? assets.colors ?? undefined,
       logoUrl: payload.logoUrl ?? assets.logoUrl ?? undefined,
+      sourceWebsiteFacts: payload.sourceWebsiteFacts ?? assets.sourceFacts ?? undefined,
     };
   }
 
