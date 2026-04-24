@@ -1083,7 +1083,11 @@ export default function ProspectPreviewOutreachBlock({
     });
     setShareBusy(null);
     if (res.ok) {
-      setShareMsg("warning" in res && res.warning ? res.warning : "SMS sent.");
+      const details =
+        "sid" in res && res.sid
+          ? `Twilio ${res.status ? res.status : "accepted"} (${res.sid}) to ${res.to}.`
+          : "SMS request accepted.";
+      setShareMsg("warning" in res && res.warning ? `${details} ${res.warning}` : details);
     } else {
       setShareMsg(res.error);
     }

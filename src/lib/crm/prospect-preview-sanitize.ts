@@ -226,6 +226,88 @@ const bodyFragmentOptions: IOptions = {
   },
 };
 
+function textFromHtmlFragment(value: string): string {
+  return value
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function collectSectionIds(html: string): Set<string> {
+  const ids = new Set<string>();
+  const re = /<section\b[^>]*\bid=["']([^"']+)["'][^>]*>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null) ids.add(m[1].trim().toLowerCase());
+  return ids;
+}
+
+function sectionTargetForLabel(label: string, sectionIds: Set<string>): string | null {
+  const key = label
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  const candidatesByLabel: Record<string, string[]> = {
+    home: ["home"],
+    inicio: ["home"],
+    services: ["services"],
+    service: ["services"],
+    servicios: ["services"],
+    gallery: ["gallery"],
+    galeria: ["gallery"],
+    galería: ["gallery"],
+    pricing: ["pricing", "services", "book"],
+    prices: ["pricing", "services", "book"],
+    testimonials: ["testimonials", "reviews"],
+    testimonial: ["testimonials", "reviews"],
+    reviews: ["reviews", "testimonials"],
+    reseñas: ["reviews", "testimonials"],
+    book: ["book"],
+    booking: ["book"],
+    appointments: ["book"],
+    cita: ["book"],
+    faq: ["faq"],
+    faqs: ["faq"],
+    "preguntas frecuentes": ["faq"],
+    location: ["location"],
+    contacto: ["contact"],
+    contact: ["contact"],
+  };
+  const candidates = candidatesByLabel[key];
+  if (!candidates) return null;
+  const found = candidates.find((candidate) => sectionIds.has(candidate));
+  return found ? `#${found}` : null;
+}
+
+function repairBrokenSectionNavigation(html: string): string {
+  const sectionIds = collectSectionIds(html);
+  if (sectionIds.size === 0) return html;
+
+  let out = html.replace(
+    /<a\b([^>]*)\bhref=["'](?:#|javascript:void\(0\)|)["']([^>]*)>([\s\S]*?)<\/a>/gi,
+    (full: string, before: string, after: string, inner: string) => {
+      const target = sectionTargetForLabel(textFromHtmlFragment(inner), sectionIds);
+      return target ? `<a${before} href="${target}"${after}>${inner}</a>` : full;
+    },
+  );
+
+  out = out.replace(
+    /<button\b([^>]*)>([\s\S]*?)<\/button>/gi,
+    (full: string, attrs: string, inner: string) => {
+      const target = sectionTargetForLabel(textFromHtmlFragment(inner), sectionIds);
+      if (!target) return full;
+      const safeAttrs = attrs
+        .replace(/\s*type=["'][^"']*["']/gi, "")
+        .replace(/\s*onclick=["'][\s\S]*?["']/gi, "");
+      return `<a${safeAttrs} href="${target}" role="button">${inner}</a>`;
+    },
+  );
+
+  return out;
+}
+
 /**
  * Sanitize a full HTML document from the model (allows &lt;style&gt;, vetted &lt;link&gt;, and
  * vetted external &lt;script src&gt; for Tailwind CDN — no inline script).
@@ -236,6 +318,7 @@ export function sanitizeProspectPreviewFullDocumentHtml(html: string): string {
     dirty =
       "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"/><title>Preview</title></head><body><p>Preview</p></body></html>";
   }
+  dirty = repairBrokenSectionNavigation(dirty);
   const purified = sanitizeHtml(dirty, fullDocumentOptions);
   const out = purified.trim();
   if (/^<!DOCTYPE/i.test(out)) return out;

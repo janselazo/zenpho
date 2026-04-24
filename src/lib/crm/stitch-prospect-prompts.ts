@@ -548,13 +548,23 @@ Output **one complete HTML5 document** for a desktop-width, responsive, public m
 
 Build a **single scrollable website** with anchor navigation. Use normal document flow: all sections are visible in sequence and nav links jump to anchors. Do **not** hide pages with \`:target\`, do **not** create tiny embedded mockups, do **not** simulate a phone screen, and do **not** place the site inside a scaled preview frame.
 
+## Navigation must work in the hosted preview
+
+The hosted preview removes inline JavaScript for security, so navigation must be **real HTML anchors only**:
+
+- Use \`<a href="#home">\`, \`<a href="#services">\`, \`<a href="#gallery">\`, \`<a href="#book">\`, \`<a href="#reviews">\`, \`<a href="#faq">\`, \`<a href="#location">\`, and \`<a href="#contact">\` for website navigation.
+- Every nav \`href="#..."\` must have a matching visible \`<section id="...">\` in the document.
+- Do **not** use \`<button>\` elements, tabs, onclick handlers, JavaScript state, or hidden panels for primary website sections.
+- Do **not** add nav labels for sections that do not exist. For example, do not show “Pricing” unless there is a complete visible \`<section id="pricing">\`; prefer “Book” or “Services” for appointment-based local businesses.
+- Clicking any nav item must scroll to the corresponding section in normal document flow. No section should require JavaScript to appear.
+
 ${WEBSITE_LAYOUT_SAFETY}
 
 ## Required website structure
 
 Use these exact anchor ids and build each section with complete, realistic content:
 
-1. \`#home\` — immersive premium hero, at least 85vh, filling the whole desktop viewport. Include overlay/glass nav, exact business name, one specific value proposition, dual CTAs (\`#book\` and \`#services\`), Google rating/review count when provided, phone/address when provided, and a visual device/card/map/booking composition that feels custom to the business category.
+1. \`#home\` — immersive premium hero, at least 85vh, filling the whole desktop viewport. Include overlay/glass nav with **working anchor links**, exact business name, one specific value proposition, dual CTAs (\`#book\` and \`#services\`), Google rating/review count when provided, phone/address when provided, and a visual device/card/map/booking composition that feels custom to the business category.
 2. \`#trust\` — credibility strip with 4-5 proof points derived from the Google profile/category: rating, reviews, local service area, convenient booking, guarantees, licensed/certified, same-day/appointment availability where plausible.
 3. \`#services\` — 5-7 specific service cards with descriptions, price cues, durations, or "from" estimates. Use one featured service tile. Content must match the Google category and business name.
 4. \`#about\` — story/why-us section with 2-3 paragraphs, values, and a visual card. Make the copy sound like this exact local business, not generic filler.

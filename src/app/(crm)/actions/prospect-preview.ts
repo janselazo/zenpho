@@ -21,10 +21,36 @@ import {
   findOrCreateSmsConversation,
   insertSmsMessage,
 } from "@/lib/crm/conversation-sms";
+import { getPublicAppOrigin } from "@/lib/crm/prospect-preview-public-url";
 
 function normalizeHttpsImageUrl(raw: string | undefined): string | null {
   const t = raw?.trim() ?? "";
   return t.startsWith("https://") ? t : null;
+}
+
+function normalizeOutboundSmsPhone(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith("+")) {
+    const digits = trimmed.replace(/[^\d]/g, "");
+    return digits.length >= 8 && digits.length <= 15 ? `+${digits}` : null;
+  }
+  const digits = trimmed.replace(/[^\d]/g, "");
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  return null;
+}
+
+function twilioErrorMessage(e: unknown): string {
+  if (!e || typeof e !== "object") return "SMS failed.";
+  const obj = e as { message?: unknown; code?: unknown; moreInfo?: unknown; status?: unknown };
+  const parts = [
+    typeof obj.message === "string" ? obj.message : "SMS failed.",
+    obj.code ? `Code: ${String(obj.code)}` : "",
+    obj.status ? `HTTP: ${String(obj.status)}` : "",
+    typeof obj.moreInfo === "string" ? obj.moreInfo : "",
+  ].filter(Boolean);
+  return parts.join(" ");
 }
 
 export type OutreachFileAttachment = {
@@ -74,6 +100,13 @@ export async function sendProspectPreviewSmsAction(input: {
   if (!creds.fromPhone) {
     return { ok: false as const, error: "Set a From phone number in Twilio integration settings." };
   }
+  const toPhone = normalizeOutboundSmsPhone(input.to);
+  if (!toPhone) {
+    return {
+      ok: false as const,
+      error: "Enter the recipient phone in a valid SMS format, e.g. +17869070227.",
+    };
+  }
 
   const { data: row, error: rowErr } = await auth.supabase
     .from("prospect_preview")
@@ -95,6 +128,7 @@ export async function sendProspectPreviewSmsAction(input: {
   });
 
   const client = twilio(creds.accountSid, creds.authToken);
+  const statusCallback = `${getPublicAppOrigin()}/api/webhooks/twilio`;
 
   let mediaUrl: string | undefined;
   if (input.includeMmsImage) {
@@ -135,18 +169,28 @@ export async function sendProspectPreviewSmsAction(input: {
   try {
     const smsResult = await client.messages.create({
       from: creds.fromPhone,
-      to: input.to.trim(),
+      to: toPhone,
       body,
+      statusCallback,
       ...(allMediaUrls.length ? { mediaUrl: allMediaUrls.slice(0, 10) } : {}),
     });
     await logProspectSmsToConversation(auth.supabase, {
-      to: input.to.trim(),
+      to: toPhone,
       businessName: input.businessName,
       body,
       smsSid: smsResult.sid,
       senderName: input.yourName ?? "You",
     });
-    return { ok: true as const };
+    return {
+      ok: true as const,
+      sid: smsResult.sid,
+      status: smsResult.status,
+      to: toPhone,
+      warning:
+        smsResult.status === "queued" || smsResult.status === "accepted"
+          ? "Twilio accepted the SMS. Final carrier delivery can still fail later; check Twilio logs if the prospect does not receive it."
+          : undefined,
+    };
   } catch (e) {
     const hasMedia = allMediaUrls.length > 0;
     const noMms =
@@ -159,30 +203,29 @@ export async function sendProspectPreviewSmsAction(input: {
       try {
         const smsRetry = await client.messages.create({
           from: creds.fromPhone,
-          to: input.to.trim(),
+          to: toPhone,
           body,
+          statusCallback,
         });
         await logProspectSmsToConversation(auth.supabase, {
-          to: input.to.trim(),
+          to: toPhone,
           businessName: input.businessName,
           body,
           smsSid: smsRetry.sid,
           senderName: input.yourName ?? "You",
         });
-        return { ok: true as const, warning: "MMS failed; sent SMS with link only." };
+        return {
+          ok: true as const,
+          sid: smsRetry.sid,
+          status: smsRetry.status,
+          to: toPhone,
+          warning: `MMS failed; sent SMS with link only. Twilio SID ${smsRetry.sid}, status ${smsRetry.status}.`,
+        };
       } catch (e2) {
-        const msg =
-          e2 && typeof e2 === "object" && "message" in e2
-            ? String((e2 as { message: string }).message)
-            : "SMS failed.";
-        return { ok: false as const, error: msg };
+        return { ok: false as const, error: twilioErrorMessage(e2) };
       }
     }
-    const msg =
-      e && typeof e === "object" && "message" in e
-        ? String((e as { message: string }).message)
-        : "SMS failed.";
-    return { ok: false as const, error: msg };
+    return { ok: false as const, error: twilioErrorMessage(e) };
   }
 }
 

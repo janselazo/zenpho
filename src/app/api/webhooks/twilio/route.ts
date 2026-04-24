@@ -21,6 +21,16 @@ export async function POST(req: NextRequest) {
   const from = params.From?.trim() ?? "";
   const body = params.Body?.trim() ?? "";
   const messageSid = params.MessageSid?.trim() ?? "";
+  const deliveryStatus = params.MessageStatus?.trim() || params.SmsStatus?.trim() || "";
+
+  // Outbound status callbacks share this endpoint. They confirm queued/sent/delivered/failed
+  // states but are not inbound messages, so do not create blank conversation entries.
+  if (deliveryStatus && !body) {
+    return new NextResponse(EMPTY_TWIML, {
+      status: 200,
+      headers: { "Content-Type": "text/xml; charset=utf-8" },
+    });
+  }
 
   if (!from) {
     return new NextResponse(EMPTY_TWIML, {
