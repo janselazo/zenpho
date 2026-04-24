@@ -41,6 +41,23 @@ export type SocialEnrichmentResult =
 const EMAIL_RE = /\b[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}\b/gi;
 const PHONE_RE = /(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g;
 
+function normalizePhoneCandidate(raw: string): string | null {
+  let digits = raw.replace(/\D/g, "");
+  if (digits.length === 11 && digits.startsWith("1")) digits = digits.slice(1);
+  if (digits.length !== 10) return null;
+
+  // NANP numbers cannot have area/exchange codes starting with 0 or 1.
+  // This rejects Facebook profile ids like profile.php?id=100091937615009.
+  if (!/^[2-9]\d{2}[2-9]\d{6}$/.test(digits)) return null;
+  return digits;
+}
+
+function textWithoutUrls(text: string): string {
+  return text
+    .replace(/https?:\/\/\S+/gi, " ")
+    .replace(/\b(?:profile\.php\?id|id)=\d+\b/gi, " ");
+}
+
 function firstEmail(text: string): string | null {
   const matches = text.match(EMAIL_RE) ?? [];
   for (const m of matches) {
@@ -54,10 +71,12 @@ function firstEmail(text: string): string | null {
 }
 
 function firstPhone(text: string): string | null {
-  const m = text.match(PHONE_RE);
-  if (!m?.[0]) return null;
-  const digits = m[0].replace(/\D/g, "");
-  return digits.length >= 10 ? digits : null;
+  const matches = textWithoutUrls(text).match(PHONE_RE) ?? [];
+  for (const match of matches) {
+    const normalized = normalizePhoneCandidate(match);
+    if (normalized) return normalized;
+  }
+  return null;
 }
 
 function metaContent(html: string, property: string): string | null {
@@ -87,8 +106,8 @@ function extractMailtoEmails(html: string): string[] {
 function extractTelPhones(html: string): string[] {
   const out: string[] = [];
   for (const m of html.matchAll(/tel:([^\s'"<>?]+)/gi)) {
-    const digits = decodeURIComponent(m[1]).replace(/\D/g, "");
-    if (digits.length >= 10) out.push(digits);
+    const normalized = normalizePhoneCandidate(decodeURIComponent(m[1]));
+    if (normalized) out.push(normalized);
   }
   return out;
 }
@@ -243,8 +262,7 @@ export async function fetchYelpListingContacts(
     if (!ld || typeof ld !== "object") continue;
     const obj = ld as Record<string, unknown>;
     if (typeof obj.telephone === "string") {
-      const digits = obj.telephone.replace(/\D/g, "");
-      if (digits.length >= 10) result.phone = digits;
+      result.phone = normalizePhoneCandidate(obj.telephone);
     }
     if (typeof obj.url === "string" && !obj.url.includes("yelp.com")) {
       result.website = result.website || obj.url;

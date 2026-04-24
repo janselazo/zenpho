@@ -128,7 +128,7 @@ export async function sendProspectPreviewSmsAction(input: {
   });
 
   const client = twilio(creds.accountSid, creds.authToken);
-  const statusCallback = `${getPublicAppOrigin()}/api/webhooks/twilio`;
+  const statusCallback = `${getPublicAppOrigin()}/api/webhooks/twilio/status`;
 
   let mediaUrl: string | undefined;
   if (input.includeMmsImage) {
