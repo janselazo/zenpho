@@ -36,8 +36,8 @@ import ProspectPreviewOutreachBlock, {
 import { useRouter, useSearchParams } from "next/navigation";
 import { primaryPlaceTypeLabel } from "@/lib/crm/places-search-ui";
 import { Building2, ChevronLeft, ChevronRight, Rocket, ShoppingBag } from "lucide-react";
-import ProspectingPendingContent from "@/components/crm/prospecting/ProspectingPendingContent";
 import TechStartupsTab from "@/components/crm/prospecting/TechStartupsTab";
+import EcomBrandsTab from "@/components/crm/prospecting/EcomBrandsTab";
 import ProspectConversationPanel from "@/components/crm/prospecting/ProspectConversationPanel";
 import ProspectingTabbedShell from "@/components/crm/prospecting/ProspectingTabbedShell";
 import PlacesBusinessAutocomplete from "@/components/crm/prospecting/PlacesBusinessAutocomplete";
@@ -54,13 +54,6 @@ import { EMPTY_PROSPECT_SOCIAL_URLS } from "@/lib/crm/prospect-enrichment-types"
 import type { SocialEnrichmentResult } from "@/lib/crm/social-profile-scrape";
 
 type SocialEnrichmentOk = Extract<SocialEnrichmentResult, { ok: true }>;
-
-const ECOM_BRANDS_PENDING_FEATURES = [
-  "Shopify, WooCommerce, and Magento store discovery and tech-stack signals",
-  "Revenue estimates, traffic trends, and conversion audit hooks",
-  "Saved lists and outreach templates tied to Playbook",
-  "Integrations with e-commerce data providers — wiring in a later phase",
-];
 
 const cardClass =
   "rounded-2xl border border-border bg-white p-5 shadow-sm dark:border-zinc-800/70 dark:bg-zinc-900/60 dark:shadow-none";
@@ -1659,15 +1652,7 @@ function ProspectsIntelligenceViewInner({
             id: "ecom-brands",
             label: "Ecom Brands",
             icon: ShoppingBag,
-            body: (
-              <ProspectingPendingContent
-                title="Ecom Brands"
-                description="Discover and qualify e-commerce stores — platform detection, traffic signals, and conversion audit hooks will land here in a later phase."
-                features={ECOM_BRANDS_PENDING_FEATURES}
-                icon={ShoppingBag}
-                titleLevel="tab"
-              />
-            ),
+            body: <EcomBrandsTab fieldOptions={fieldOptions} />,
           },
         ]}
       />

@@ -264,8 +264,8 @@ export default function TechStartupsTab() {
       </p>
       <IconTabBar
         tabs={[
-          { id: "tech-startups-companies", label: "Companies", icon: Rocket },
-          { id: "tech-startups-reddit", label: "Reddit Communities", icon: MessagesSquare },
+          { id: "tech-startups-companies", label: "Apollo", icon: Rocket },
+          { id: "tech-startups-reddit", label: "Reddit", icon: MessagesSquare },
         ]}
         activeTab={
           subTab === "companies" ? "tech-startups-companies" : "tech-startups-reddit"
@@ -296,7 +296,7 @@ export default function TechStartupsTab() {
         <div className="flex items-center gap-2">
           <Rocket className="h-5 w-5 text-accent dark:text-blue-400" aria-hidden />
           <h2 className="heading-display text-lg font-semibold text-text-primary dark:text-zinc-100">
-            Companies (Apollo)
+            Apollo
           </h2>
         </div>
         <p className="mt-1 text-xs text-text-secondary dark:text-zinc-500">
