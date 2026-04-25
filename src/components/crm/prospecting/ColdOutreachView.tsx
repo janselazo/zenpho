@@ -89,8 +89,10 @@ import {
   saveMonthlyGoalTargets,
 } from "@/lib/crm/monthly-goals-targets";
 import {
+  loadCustomMonthlyGoals,
   loadNorthStarGoalIds,
   pruneNorthStarGoalIds,
+  saveCustomMonthlyGoals,
   saveNorthStarGoalIds,
 } from "@/lib/crm/monthly-goals-store";
 import {
@@ -315,6 +317,10 @@ const DEFAULT_MONTHLY_TARGETS = {
   revenue: standardMonthlyGoals[1].target,
 };
 
+function isStandardMonthlyGoalId(id: string): boolean {
+  return standardMonthlyGoals.some((goal) => goal.id === id);
+}
+
 export default function ColdOutreachView() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("playbook");
   const [currentDate, setCurrentDate] = useState(() => new Date());
@@ -328,9 +334,11 @@ export default function ColdOutreachView() {
   useEffect(() => {
     const ym = monthKeyFromDate(new Date());
     const t = loadMonthlyGoalTargets(ym, DEFAULT_MONTHLY_TARGETS);
+    const customGoals = loadCustomMonthlyGoals(ym);
     setGoals([
       { ...standardMonthlyGoals[0], target: t.clients },
       { ...standardMonthlyGoals[1], target: t.revenue },
+      ...customGoals,
     ]);
     setNorthStarGoalIds(loadNorthStarGoalIds());
   }, []);
@@ -389,6 +397,10 @@ export default function ColdOutreachView() {
       next.find((x) => x.id === "mg-revenue")?.target ??
       DEFAULT_MONTHLY_TARGETS.revenue;
     saveMonthlyGoalTargets(ym, { clients: clientsT, revenue: revenueT });
+    saveCustomMonthlyGoals(
+      ym,
+      next.filter((goal) => !isStandardMonthlyGoalId(goal.id))
+    );
   }
 
   function toggleNorthStarGoal(goalId: string) {
@@ -466,6 +478,7 @@ function GoalRow({
   onStartEditTarget,
   onConfirmTargetEdit,
   onCancelTargetEdit,
+  onDeleteGoal,
 }: {
   goal: MonthlyGoal;
   isNorthStar: boolean;
@@ -476,6 +489,7 @@ function GoalRow({
   onStartEditTarget: (goal: MonthlyGoal) => void;
   onConfirmTargetEdit: (goal: MonthlyGoal) => void;
   onCancelTargetEdit: () => void;
+  onDeleteGoal?: (goalId: string) => void;
 }) {
   const pct = Math.min((goal.current / Math.max(goal.target, 1)) * 100, 100);
   const GoalIcon = goal.icon === "users" ? UsersRound : DollarSign;
@@ -559,6 +573,17 @@ function GoalRow({
             >
               <Star className={`h-3.5 w-3.5 ${isNorthStar ? "fill-current" : ""}`} />
             </button>
+            {onDeleteGoal ? (
+              <button
+                type="button"
+                onClick={() => onDeleteGoal(goal.id)}
+                className="rounded p-0.5 text-text-secondary/40 transition-colors hover:text-red-500"
+                title="Delete goal"
+                aria-label="Delete goal"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
           </div>
         )}
       </div>
@@ -643,6 +668,10 @@ function MonthlyGoalsCard({
 }) {
   const [editingTargetId, setEditingTargetId] = useState<string | null>(null);
   const [targetDraft, setTargetDraft] = useState(0);
+  const [isAddingGoal, setIsAddingGoal] = useState(false);
+  const [newGoalTitle, setNewGoalTitle] = useState("");
+  const [newGoalTarget, setNewGoalTarget] = useState(1);
+  const [newGoalUnit, setNewGoalUnit] = useState<MonthlyGoal["unit"]>("count");
   const northStarIdSet = useMemo(
     () => new Set(northStarGoalIds),
     [northStarGoalIds]
@@ -664,6 +693,34 @@ function MonthlyGoalsCard({
     const val = Math.max(1, Math.floor(targetDraft));
     onChange(goals.map((goal) => (goal.id === g.id ? { ...goal, target: val } : goal)));
     setEditingTargetId(null);
+  }
+
+  function addGoal() {
+    const title = newGoalTitle.trim();
+    if (!title) return;
+    const cleanTarget = Math.max(1, Math.floor(newGoalTarget));
+    const id = `mg-custom-${Date.now().toString(36)}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`;
+    onChange([
+      ...goals,
+      {
+        id,
+        title,
+        current: 0,
+        target: cleanTarget,
+        unit: newGoalUnit,
+        icon: newGoalUnit === "currency" ? "dollar" : "target",
+      },
+    ]);
+    setNewGoalTitle("");
+    setNewGoalTarget(1);
+    setNewGoalUnit("count");
+    setIsAddingGoal(false);
+  }
+
+  function deleteGoal(goalId: string) {
+    onChange(goals.filter((goal) => goal.id !== goalId));
   }
 
   const now = new Date();
@@ -707,12 +764,71 @@ function MonthlyGoalsCard({
         icon={<Target className="h-4 w-4" aria-hidden />}
         color="#7c3aed"
         right={
-          <span className="flex items-center gap-1.5 rounded-full border border-violet-200/90 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/15 dark:text-violet-200">
-            <Calendar className="h-3 w-3 text-violet-600 dark:text-violet-400" aria-hidden />
-            {monthLabel}
-          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsAddingGoal((v) => !v)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs font-medium text-text-primary transition-colors hover:bg-surface dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-800"
+            >
+              <Plus className="h-3 w-3" aria-hidden />
+              Add goal
+            </button>
+            <span className="flex items-center gap-1.5 rounded-full border border-violet-200/90 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/15 dark:text-violet-200">
+              <Calendar className="h-3 w-3 text-violet-600 dark:text-violet-400" aria-hidden />
+              {monthLabel}
+            </span>
+          </div>
         }
       >
+        {isAddingGoal ? (
+          <div className="border-b border-border bg-surface/40 px-5 py-4 dark:border-zinc-800 dark:bg-zinc-900/40">
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_8rem_8rem_auto]">
+              <input
+                value={newGoalTitle}
+                onChange={(e) => setNewGoalTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") addGoal();
+                  if (e.key === "Escape") setIsAddingGoal(false);
+                }}
+                placeholder="Goal name"
+                autoFocus
+                className="rounded-lg border border-border bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+              />
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={newGoalTarget}
+                onChange={(e) => setNewGoalTarget(Number(e.target.value))}
+                className="rounded-lg border border-border bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+              />
+              <select
+                value={newGoalUnit}
+                onChange={(e) => setNewGoalUnit(e.target.value as MonthlyGoal["unit"])}
+                className="rounded-lg border border-border bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+              >
+                <option value="count">Count</option>
+                <option value="currency">Currency</option>
+              </select>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={addGoal}
+                  className="rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-white hover:bg-accent-hover"
+                >
+                  Add
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsAddingGoal(false)}
+                  className="rounded-lg px-2 py-2 text-xs font-medium text-text-secondary hover:text-text-primary"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
         {goals.map((goal) => (
           <GoalRow
             key={goal.id}
@@ -725,6 +841,7 @@ function MonthlyGoalsCard({
             onStartEditTarget={startEditTarget}
             onConfirmTargetEdit={confirmTargetEdit}
             onCancelTargetEdit={() => setEditingTargetId(null)}
+            onDeleteGoal={isStandardMonthlyGoalId(goal.id) ? undefined : deleteGoal}
           />
         ))}
       </GoalsSectionCard>

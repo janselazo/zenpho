@@ -1,4 +1,7 @@
+import type { MonthlyGoal } from "@/lib/crm/mock-data";
+
 const MONTHLY_GOAL_NORTH_STAR_IDS_KEY = "monthly-goal-north-star-ids";
+const CUSTOM_MONTHLY_GOALS_KEY = "custom-monthly-goals-v1";
 
 function parseGoalIdsJson(parsed: unknown): string[] | null {
   if (!Array.isArray(parsed)) return null;
@@ -39,4 +42,46 @@ export function pruneNorthStarGoalIds(
 ): string[] {
   const valid = new Set(existingGoalIds);
   return goalIds.filter((id) => valid.has(id));
+}
+
+function isMonthlyGoal(v: unknown): v is MonthlyGoal {
+  if (!v || typeof v !== "object") return false;
+  const o = v as Record<string, unknown>;
+  return (
+    typeof o.id === "string" &&
+    typeof o.title === "string" &&
+    typeof o.current === "number" &&
+    typeof o.target === "number" &&
+    (o.unit === "count" || o.unit === "currency") &&
+    typeof o.icon === "string"
+  );
+}
+
+function parseMonthlyGoalsJson(parsed: unknown): MonthlyGoal[] | null {
+  if (!Array.isArray(parsed)) return null;
+  return parsed.filter(isMonthlyGoal);
+}
+
+export function loadCustomMonthlyGoals(ym: string): MonthlyGoal[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(CUSTOM_MONTHLY_GOALS_KEY);
+    if (!raw) return [];
+    const all = JSON.parse(raw) as Record<string, unknown>;
+    return parseMonthlyGoalsJson(all[ym]) ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveCustomMonthlyGoals(ym: string, goals: MonthlyGoal[]) {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = localStorage.getItem(CUSTOM_MONTHLY_GOALS_KEY);
+    const all = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+    all[ym] = goals;
+    localStorage.setItem(CUSTOM_MONTHLY_GOALS_KEY, JSON.stringify(all));
+  } catch {
+    // ignore quota / private mode
+  }
 }
