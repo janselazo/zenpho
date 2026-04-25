@@ -8,6 +8,7 @@ import type {
 } from "@/lib/crm/project-workspace-types";
 import type { ProductMilestoneMeta } from "@/lib/crm/product-project-metadata";
 import { formatISODate } from "@/lib/crm/project-date-utils";
+import CrmPopoverDateField from "@/components/crm/CrmPopoverDateField";
 import { Loader2, Pencil, Star, Trash2, ListPlus } from "lucide-react";
 
 type Props = {
@@ -385,24 +386,30 @@ export default function ProductSprintsTab({
                   ))}
                 </datalist>
               </label>
-              <label className="block text-sm text-text-secondary">
-                Start
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-border px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800"
-                />
-              </label>
-              <label className="block text-sm text-text-secondary">
-                End
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-border px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800"
-                />
-              </label>
+              <div>
+                <span className="block text-sm text-text-secondary">Start</span>
+                <div className="mt-1">
+                  <CrmPopoverDateField
+                    id="product-sprint-start"
+                    value={startDate}
+                    onChange={setStartDate}
+                    displayFormat="numeric"
+                    triggerClassName="w-full"
+                  />
+                </div>
+              </div>
+              <div>
+                <span className="block text-sm text-text-secondary">End</span>
+                <div className="mt-1">
+                  <CrmPopoverDateField
+                    id="product-sprint-end"
+                    value={endDate}
+                    onChange={setEndDate}
+                    displayFormat="numeric"
+                    triggerClassName="w-full"
+                  />
+                </div>
+              </div>
             </div>
             <div className="mt-6 flex justify-end gap-2">
               <button

@@ -5,7 +5,6 @@ import {
   useLayoutEffect,
   useRef,
   useState,
-  type CSSProperties,
 } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -23,6 +22,12 @@ import {
   defaultDashboardRange,
   formatDashboardRangeLabel,
 } from "@/lib/crm/dashboard-range";
+import {
+  crmFormatters,
+  crmRangeDayClassNames,
+  crmRangeDayModifiers,
+  crmRangeRdpCssVars,
+} from "@/lib/crm/crm-day-picker-shared";
 
 function toYmd(d: Date): string {
   const y = d.getFullYear();
@@ -298,6 +303,9 @@ export default function DashboardRangePicker({
             startMonth={new Date(2018, 0)}
             endMonth={new Date(2035, 11)}
             className="crm-rdp mx-auto w-max max-w-full text-text-primary dark:text-zinc-100"
+            formatters={crmFormatters}
+            classNames={crmRangeDayClassNames}
+            modifiersClassNames={crmRangeDayModifiers}
             components={{
               Chevron: ({ className, size, orientation }) => {
                 const dim = size ?? 20;
@@ -341,38 +349,7 @@ export default function DashboardRangePicker({
                 );
               },
             }}
-            classNames={{
-              months: "flex flex-col gap-4 sm:flex-row sm:gap-6",
-              month: "space-y-2",
-              button_previous:
-                "inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800",
-              button_next:
-                "inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800",
-              day_button:
-                "m-0 rounded-lg border-2 border-transparent text-sm font-medium outline-none transition-colors hover:bg-zinc-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 dark:hover:bg-zinc-800",
-            }}
-            modifiersClassNames={{
-              today:
-                "[&_button]:font-semibold [&_button]:text-blue-700 [&_button]:ring-1 [&_button]:ring-inset [&_button]:ring-blue-200/90 dark:[&_button]:text-blue-300 dark:[&_button]:ring-blue-800/70",
-              range_start:
-                "[&_button]:!bg-blue-600 [&_button]:!text-white [&_button]:hover:!bg-blue-600 [&_button]:!font-semibold",
-              range_end:
-                "[&_button]:!bg-blue-600 [&_button]:!text-white [&_button]:hover:!bg-blue-600 [&_button]:!font-semibold",
-              range_middle:
-                "[&_button]:!bg-blue-100 [&_button]:!text-blue-900 dark:[&_button]:!bg-blue-950/50 dark:[&_button]:!text-blue-100",
-              outside: "text-zinc-400 opacity-55 dark:text-zinc-500",
-            }}
-            style={
-              {
-                "--rdp-accent-color": "#2563eb",
-                "--rdp-accent-background-color": "rgba(37, 99, 235, 0.14)",
-                "--rdp-day_button-height": "2.35rem",
-                "--rdp-day_button-width": "2.35rem",
-                "--rdp-nav-height": "2.5rem",
-                "--rdp-selected-border": "2px solid transparent",
-                "--rdp-day_button-border": "2px solid transparent",
-              } as CSSProperties
-            }
+            style={crmRangeRdpCssVars}
           />
         </div>
       </div>
@@ -402,7 +379,7 @@ export default function DashboardRangePicker({
         aria-expanded={open}
         aria-haspopup="dialog"
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-3 py-2 text-sm font-medium text-text-primary shadow-sm transition-colors hover:bg-surface dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-800/80"
+        className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50/95 px-3 py-2 text-sm font-medium text-text-primary shadow-sm transition-colors hover:bg-zinc-100/80 dark:border-zinc-600 dark:bg-zinc-800/60 dark:text-zinc-100 dark:hover:bg-zinc-800"
       >
         <Calendar className="h-4 w-4 shrink-0 text-text-secondary/70 dark:text-zinc-400" aria-hidden />
         <span className="max-w-[14rem] truncate tabular-nums">{triggerLabel}</span>

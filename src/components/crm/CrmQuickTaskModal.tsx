@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Calendar,
   ChevronDown,
   Clock,
   ListTodo,
@@ -16,6 +15,7 @@ import {
   listLeadFollowUpAppointments,
 } from "@/app/(crm)/actions/crm";
 import type { LeadFollowUpAppointment } from "@/lib/crm/lead-follow-up-appointment";
+import CrmPopoverDateField from "@/components/crm/CrmPopoverDateField";
 
 function toLocalYMD(d: Date): string {
   const y = d.getFullYear();
@@ -33,15 +33,6 @@ function addCalendarDaysFromYMD(ymd: string, days: number): string {
   const dt = parseLocalYMD(ymd);
   dt.setDate(dt.getDate() + days);
   return toLocalYMD(dt);
-}
-
-function formatLongWeekday(ymd: string): string {
-  return parseLocalYMD(ymd).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
 }
 
 function combineLocalDateTime(ymd: string, hm: string): Date {
@@ -295,26 +286,16 @@ export default function CrmQuickTaskModal({
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className={fieldShell}>
-              <Calendar
-                className="h-4 w-4 shrink-0 text-zinc-400"
-                aria-hidden
-              />
-              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                  {formatLongWeekday(dateStr)}
-                </span>
-                <input
-                  type="date"
-                  value={dateStr}
-                  onChange={(e) => {
-                    setDateStr(e.target.value);
-                    setQuickPreset(null);
-                  }}
-                  className="w-full min-w-0 border-0 bg-transparent p-0 text-sm font-medium text-text-primary outline-none dark:text-zinc-100"
-                />
-              </div>
-            </div>
+            <CrmPopoverDateField
+              id="quick-task-date"
+              value={dateStr}
+              onChange={(v) => {
+                setDateStr(v);
+                setQuickPreset(null);
+              }}
+              triggerClassName="w-full"
+              showFooter
+            />
             <div className={fieldShell}>
               <Clock className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
               <div className="relative min-w-0 flex-1">

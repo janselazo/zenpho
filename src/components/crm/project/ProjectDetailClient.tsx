@@ -262,8 +262,7 @@ export function ProjectDetailClient({
     ? sprints.filter((s) => s.milestone === currentSprint.milestone).length
     : 0;
 
-  const sprintDateTriggerClass =
-    "mt-1 w-full rounded-lg border border-border px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 relative flex min-h-[2.625rem] items-center text-left";
+  const sprintDateTriggerClass = "mt-1 w-full";
 
   function resetSprintFormDefaults() {
     setSprintName("");

@@ -2,8 +2,23 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DayPicker } from "react-day-picker";
-import "react-day-picker/src/style.css";
-import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import "react-day-picker/style.css";
+import { Calendar, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  crmDatePlaceholder,
+  crmDateTriggerClassName,
+  crmFormatters,
+  crmRdpCssVars,
+  crmSingleDayClassNames,
+  crmSingleDayModifiers,
+  formatCrmDateTrigger,
+} from "@/lib/crm/crm-day-picker-shared";
+
+function parseYmdLocal(iso: string): Date | undefined {
+  if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return undefined;
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
 
 interface DatePickerProps {
   value?: string;
@@ -21,12 +36,12 @@ export default function DatePicker({
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Date | undefined>(() => {
     const v = value ?? defaultValue;
-    return v ? new Date(v + "T12:00:00") : undefined;
+    return v ? parseYmdLocal(v) : undefined;
   });
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (value) setSelected(new Date(value + "T12:00:00"));
+    if (value) setSelected(parseYmdLocal(value));
   }, [value]);
 
   useEffect(() => {
@@ -54,68 +69,75 @@ export default function DatePicker({
     ? `${selected.getFullYear()}-${String(selected.getMonth() + 1).padStart(2, "0")}-${String(selected.getDate()).padStart(2, "0")}`
     : "";
 
-  const displayValue = selected
-    ? selected.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })
-    : "Pick a date";
+  const displayValue = isoValue
+    ? formatCrmDateTrigger(isoValue, "presentation")
+    : null;
+  const placeholder = crmDatePlaceholder("presentation");
+  const triggerClass = [crmDateTriggerClassName, "w-full min-w-0"]
+    .filter(Boolean)
+    .join(" ");
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative w-full min-w-0">
       {name && <input type="hidden" name={name} value={isoValue} />}
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-sm text-text-primary outline-none transition-colors hover:border-zinc-400 focus:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:border-zinc-500 dark:focus:border-blue-500"
+        className={triggerClass}
+        aria-expanded={open}
+        aria-haspopup="dialog"
       >
-        <Calendar className="h-3.5 w-3.5 text-text-secondary dark:text-zinc-400" />
-        <span className={selected ? "" : "text-text-secondary dark:text-zinc-500"}>
-          {displayValue}
+        <Calendar
+          className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary/55"
+          aria-hidden
+        />
+        <span
+          className={`block w-full pl-10 pr-3 text-left text-sm tabular-nums ${
+            displayValue ? "text-text-primary" : "text-text-secondary/50"
+          }`}
+        >
+          {displayValue ?? placeholder}
         </span>
+        <ChevronDown
+          className={`pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary/55 transition-transform ${
+            open ? "rotate-180" : ""
+          }`}
+          aria-hidden
+        />
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 rounded-xl border border-border bg-white p-3 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-          <DayPicker
-            mode="single"
-            selected={selected}
-            onSelect={handleSelect}
-            defaultMonth={selected ?? new Date()}
-            showOutsideDays
-            classNames={{
-              root: "rdp-custom",
-              months: "flex flex-col",
-              month_caption: "flex items-center justify-center py-1",
-              caption_label: "text-sm font-semibold text-text-primary dark:text-zinc-100",
-              nav: "flex items-center justify-between absolute inset-x-0 top-3 px-1",
-              button_previous: "rounded-lg p-1 text-text-secondary hover:bg-surface dark:text-zinc-400 dark:hover:bg-zinc-800",
-              button_next: "rounded-lg p-1 text-text-secondary hover:bg-surface dark:text-zinc-400 dark:hover:bg-zinc-800",
-              weekdays: "grid grid-cols-7 mt-2",
-              weekday: "text-[11px] font-medium text-text-secondary dark:text-zinc-500 text-center w-9",
-              weeks: "mt-1",
-              week: "grid grid-cols-7",
-              day: "text-center",
-              day_button:
-                "inline-flex h-9 w-9 items-center justify-center rounded-lg text-sm transition-colors hover:bg-surface dark:hover:bg-zinc-800 focus:outline-none",
-              selected:
-                "!bg-accent !text-white dark:!bg-blue-600 rounded-lg",
-              today:
-                "font-bold text-accent dark:text-blue-400",
-              outside:
-                "text-text-secondary/40 dark:text-zinc-600",
-              disabled: "opacity-30",
-            }}
-            components={{
-              Chevron: ({ orientation }) =>
-                orientation === "left" ? (
-                  <ChevronLeft className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
-                ),
-            }}
-          />
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-2xl border border-border bg-white shadow-lg ring-1 ring-black/5 dark:border-zinc-600 dark:bg-zinc-900 dark:ring-white/10 sm:right-auto sm:w-[min(100%,21rem)]">
+          <div className="p-1 pt-3">
+            <DayPicker
+              mode="single"
+              selected={selected}
+              onSelect={handleSelect}
+              defaultMonth={selected ?? new Date()}
+              showOutsideDays
+              weekStartsOn={0}
+              captionLayout="label"
+              startMonth={new Date(2000, 0)}
+              endMonth={new Date(2040, 11)}
+              className="crm-rdp w-full min-w-0 text-text-primary dark:text-zinc-100"
+              formatters={crmFormatters}
+              classNames={crmSingleDayClassNames}
+              modifiersClassNames={crmSingleDayModifiers}
+              components={{
+                Chevron: ({ className, size, orientation }) => {
+                  const dim = size ?? 20;
+                  if (orientation === "left") {
+                    return <ChevronLeft className={className} size={dim} strokeWidth={2} aria-hidden />;
+                  }
+                  if (orientation === "right") {
+                    return <ChevronRight className={className} size={dim} strokeWidth={2} aria-hidden />;
+                  }
+                  return <ChevronDown className={className} size={dim} strokeWidth={2} aria-hidden />;
+                },
+              }}
+              style={crmRdpCssVars}
+            />
+          </div>
         </div>
       )}
     </div>

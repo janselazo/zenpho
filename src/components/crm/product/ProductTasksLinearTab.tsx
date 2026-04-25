@@ -31,6 +31,7 @@ import {
 } from "@/lib/crm/crm-label-presets";
 import type { ProductMilestoneMeta } from "@/lib/crm/product-project-metadata";
 import { PriorityFlagIcon } from "@/components/crm/product/PriorityFlagIcon";
+import CrmPopoverDateField from "@/components/crm/CrmPopoverDateField";
 import ProductTaskStatusModal from "@/components/crm/product/ProductTaskStatusModal";
 import {
   AlignLeft,
@@ -1029,11 +1030,12 @@ export default function ProductTasksLinearTab({
                   Due date
                 </p>
                 <div className="px-3 py-2">
-                  <input
-                    type="date"
+                  <CrmPopoverDateField
+                    id="linear-new-task-due"
                     value={newDueDate}
-                    onChange={(e) => setNewDueDate(e.target.value)}
-                    className="w-full rounded-lg border border-border px-2 py-1.5 text-sm dark:border-zinc-600 dark:bg-zinc-800"
+                    onChange={setNewDueDate}
+                    displayFormat="numeric"
+                    triggerClassName="w-full"
                   />
                 </div>
                 <div className="border-t border-border px-1 py-1 dark:border-zinc-800">
@@ -1265,13 +1267,12 @@ export default function ProductTasksLinearTab({
                     />
                   </td>
                   <td className="px-2 py-2 align-middle">
-                    <input
-                      type="date"
+                    <CrmPopoverDateField
+                      id={`linear-task-due-${task.id}`}
                       value={task.endDate}
-                      onChange={(e) =>
-                        updateTask(task.id, { endDate: e.target.value })
-                      }
-                      className="w-full rounded-lg border border-border bg-white px-2 py-1 text-xs dark:border-zinc-600 dark:bg-zinc-800"
+                      onChange={(v) => updateTask(task.id, { endDate: v })}
+                      displayFormat="numeric"
+                      triggerClassName="w-full min-w-0 !min-h-9 text-xs"
                     />
                   </td>
                   <td className="px-2 py-2 align-middle">

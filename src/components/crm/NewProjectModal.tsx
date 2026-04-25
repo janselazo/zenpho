@@ -555,7 +555,7 @@ export default function NewProjectModal({
                 id="np-end"
                 value={endDate}
                 onChange={setEndDate}
-                triggerClassName={`${fieldClass} relative flex min-h-[2.625rem] items-center`}
+                triggerClassName="w-full"
               />
               <p className="mt-1.5 text-xs text-text-secondary">
                 Optional. If you skip this, the project shows as{" "}

@@ -21,6 +21,12 @@ import {
 } from "lucide-react";
 import "react-day-picker/style.css";
 import type { NetworkingEvent } from "@/lib/crm/networking-events";
+import {
+  crmFormatters,
+  crmRangeDayClassNames,
+  crmRangeDayModifiers,
+  crmRangeRdpCssVars,
+} from "@/lib/crm/crm-day-picker-shared";
 
 function toYmd(d: Date): string {
   const y = d.getFullYear();
@@ -277,7 +283,7 @@ export default function NetworkingEventsView({
               <button
                 type="button"
                 onClick={() => setDateOpen((o) => !o)}
-                className="flex w-full items-center justify-between gap-2 rounded-xl border border-border bg-white px-3 py-2.5 text-left text-sm shadow-sm transition-colors hover:bg-surface/50 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 dark:border-zinc-700 dark:bg-zinc-950 dark:hover:bg-zinc-800/80 dark:focus:border-blue-500 dark:focus:ring-blue-500/20"
+                className="flex w-full items-center justify-between gap-2 rounded-xl border border-zinc-200 bg-zinc-50/95 px-3 py-2.5 text-left text-sm font-medium text-text-primary shadow-sm transition-colors hover:bg-zinc-100/80 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-600 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 dark:focus:border-blue-500 dark:focus:ring-blue-500/20"
                 aria-expanded={dateOpen}
                 aria-haspopup="dialog"
               >
@@ -320,6 +326,10 @@ export default function NetworkingEventsView({
                     defaultMonth={range?.from ?? range?.to ?? new Date()}
                     captionLayout="label"
                     className="crm-rdp mx-auto w-max max-w-full text-text-primary dark:text-zinc-100"
+                    formatters={crmFormatters}
+                    classNames={crmRangeDayClassNames}
+                    modifiersClassNames={crmRangeDayModifiers}
+                    style={crmRangeRdpCssVars}
                     components={{
                       Chevron: ({ className, size, orientation }) => {
                         const dim = size ?? 18;

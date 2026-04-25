@@ -365,7 +365,8 @@ export default function ProjectTasksView({
   const remainingHours = Math.max(0, estimate - loggedHours);
   const barFilled = Math.round(progressPct / 10);
 
-  const taskDateTriggerClass =
+  const taskDateTriggerClass = "mt-1 w-full";
+  const taskTimeTriggerClass =
     "mt-1 w-full rounded-xl border border-border px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 relative flex min-h-[2.625rem] items-center text-left";
 
   const assigneePickList = teamMembers.filter((m) => {
@@ -686,7 +687,7 @@ export default function ProjectTasksView({
                         id="task-start-time"
                         value={draftStartTime}
                         onChange={setDraftStartTime}
-                        triggerClassName={taskDateTriggerClass}
+                        triggerClassName={taskTimeTriggerClass}
                       />
                     </div>
                     <div>
@@ -700,7 +701,7 @@ export default function ProjectTasksView({
                         id="task-end-time"
                         value={draftEndTime}
                         onChange={setDraftEndTime}
-                        triggerClassName={taskDateTriggerClass}
+                        triggerClassName={taskTimeTriggerClass}
                       />
                     </div>
                   </div>

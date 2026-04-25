@@ -20,6 +20,7 @@ import {
   formatProposalId,
   PROPOSAL_STATUSES,
 } from "@/lib/crm/proposal-types";
+import CrmPopoverDateField from "@/components/crm/CrmPopoverDateField";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 
 const STEPS = ["Client", "Addresses", "Services", "Review"] as const;
@@ -511,26 +512,34 @@ export default function ProposalBuilderView({
               </FieldGroup>
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block text-xs font-semibold uppercase text-text-secondary dark:text-zinc-500">
-                  Issued
-                  <input
-                    type="date"
-                    className={`${inputClass} mt-1`}
-                    value={issuedAt}
-                    disabled={readOnly}
-                    onChange={(e) => setIssuedAt(e.target.value)}
-                  />
-                </label>
-                <label className="block text-xs font-semibold uppercase text-text-secondary dark:text-zinc-500">
-                  Valid until
-                  <input
-                    type="date"
-                    className={`${inputClass} mt-1`}
-                    value={validUntil}
-                    disabled={readOnly}
-                    onChange={(e) => setValidUntil(e.target.value)}
-                  />
-                </label>
+                <div>
+                  <span className="block text-xs font-semibold uppercase text-text-secondary dark:text-zinc-500">
+                    Issued
+                  </span>
+                  <div className="mt-1">
+                    <CrmPopoverDateField
+                      id="proposal-issued"
+                      value={issuedAt}
+                      onChange={setIssuedAt}
+                      disabled={readOnly}
+                      triggerClassName="w-full"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <span className="block text-xs font-semibold uppercase text-text-secondary dark:text-zinc-500">
+                    Valid until
+                  </span>
+                  <div className="mt-1">
+                    <CrmPopoverDateField
+                      id="proposal-valid-until"
+                      value={validUntil}
+                      onChange={setValidUntil}
+                      disabled={readOnly}
+                      triggerClassName="w-full"
+                    />
+                  </div>
+                </div>
               </div>
             </section>
           )}

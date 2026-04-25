@@ -7,6 +7,7 @@ import type { ProductMilestoneMeta } from "@/lib/crm/product-project-metadata";
 import { formatISODate, parseISODate } from "@/lib/crm/project-date-utils";
 import { useProjectWorkspace } from "@/lib/crm/use-project-workspace";
 import { TASK_STATUS_LABELS } from "@/lib/crm/mock-data";
+import CrmPopoverDateField from "@/components/crm/CrmPopoverDateField";
 import { MilestoneProgressRing } from "@/components/crm/product/MilestoneProgressRing";
 import { Loader2, ListTodo, Plus, Trash2, X } from "lucide-react";
 
@@ -187,22 +188,20 @@ export default function ProductMilestonesTab({
                         Due date
                       </span>
                       <div className="flex items-center gap-2">
-                        <input
-                          type="date"
+                        <CrmPopoverDateField
+                          id={`milestone-due-${m.id}`}
                           value={m.targetDate ?? ""}
-                          onChange={(e) =>
+                          onChange={(v) =>
                             setItems((prev) =>
                               prev.map((x, i) =>
                                 i === idx
-                                  ? {
-                                      ...x,
-                                      targetDate: e.target.value || null,
-                                    }
+                                  ? { ...x, targetDate: v || null }
                                   : x
                               )
                             )
                           }
-                          className="max-w-[9.5rem] rounded-md border border-border px-2 py-1 text-xs dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                          displayFormat="medium"
+                          triggerClassName="max-w-[9.5rem] w-full text-xs !min-h-[2.25rem]"
                           aria-label={`Due date for ${m.title}`}
                         />
                         <span

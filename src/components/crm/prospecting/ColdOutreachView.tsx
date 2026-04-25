@@ -334,6 +334,8 @@ export default function ColdOutreachView() {
     ...standardMonthlyGoals,
   ]);
   const [northStarGoalIds, setNorthStarGoalIds] = useState<string[]>([]);
+  /** Prevents pruning North Star ids before custom goals for the month are loaded (avoids wiping stars on refresh). */
+  const [goalsHydrated, setGoalsHydrated] = useState(false);
   const [clientsActual, setClientsActual] = useState(0);
   const [revenueActual, setRevenueActual] = useState(0);
 
@@ -350,9 +352,11 @@ export default function ColdOutreachView() {
       { ...standardMonthlyGoals[1], target: t.revenue },
       ...customGoals,
     ]);
+    setGoalsHydrated(true);
   }, [goalsMonthDate]);
 
   useEffect(() => {
+    if (!goalsHydrated) return;
     setNorthStarGoalIds((prev) => {
       const next = pruneNorthStarGoalIds(
         prev,
@@ -361,7 +365,7 @@ export default function ColdOutreachView() {
       if (next.length !== prev.length) saveNorthStarGoalIds(next);
       return next;
     });
-  }, [goals]);
+  }, [goals, goalsHydrated]);
 
   useEffect(() => {
     if (!isSupabaseConfigured()) {
@@ -3136,8 +3140,7 @@ function AddTaskModal({
   const [dueDateIso, setDueDateIso] = useState(() => ymdLocal(new Date()));
   const inputClass =
     "w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/15 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100";
-  const dueDateTriggerClass =
-    "relative flex w-full min-h-[2.625rem] items-center rounded-xl border border-border bg-white text-left outline-none focus:border-accent focus:ring-2 focus:ring-accent/15 dark:border-zinc-600 dark:bg-zinc-800";
+  const dueDateTriggerClass = "w-full";
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

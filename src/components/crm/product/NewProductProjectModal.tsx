@@ -22,6 +22,7 @@ import {
   type ChildDeliveryStatus,
   type ChildProjectPriority,
 } from "@/lib/crm/product-project-metadata";
+import CrmPopoverDateField from "@/components/crm/CrmPopoverDateField";
 import { PriorityFlagIcon } from "@/components/crm/product/PriorityFlagIcon";
 import { getMembersForTeam, teamMembers } from "@/lib/crm/mock-data";
 import {
@@ -584,11 +585,12 @@ export default function NewProductProjectModal({
                     Start date
                   </p>
                   <div className="px-3 py-2">
-                    <input
-                      type="date"
+                    <CrmPopoverDateField
+                      id="new-product-start-date"
                       value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full rounded-lg border border-border px-2 py-1.5 text-sm dark:border-zinc-600 dark:bg-zinc-800"
+                      onChange={setStartDate}
+                      displayFormat="numeric"
+                      triggerClassName="w-full"
                     />
                   </div>
                   <div className="border-t border-border px-1 py-1 dark:border-zinc-800">
@@ -633,11 +635,12 @@ export default function NewProductProjectModal({
                     Target date
                   </p>
                   <div className="px-3 py-2">
-                    <input
-                      type="date"
+                    <CrmPopoverDateField
+                      id="new-product-target-date"
                       value={targetDate}
-                      onChange={(e) => setTargetDate(e.target.value)}
-                      className="w-full rounded-lg border border-border px-2 py-1.5 text-sm dark:border-zinc-600 dark:bg-zinc-800"
+                      onChange={setTargetDate}
+                      displayFormat="numeric"
+                      triggerClassName="w-full"
                     />
                   </div>
                   <div className="border-t border-border px-1 py-1 dark:border-zinc-800">
