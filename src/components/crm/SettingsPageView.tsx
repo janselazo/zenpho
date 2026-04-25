@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { User, Plug, Upload, Trash2, KeyRound, Zap, ListTree } from "lucide-react";
 import type { MergedCrmFieldOptions } from "@/lib/crm/field-options";
 import type { CrmPipelineSettings } from "@/lib/crm/fetch-pipeline-settings";
@@ -339,6 +339,7 @@ function IntegrationsTab() {
 }
 
 function ProfileTab({ initial }: { initial: SettingsInitial }) {
+  const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [profilePending, startProfile] = useTransition();
   const [pwdPending, startPwd] = useTransition();
@@ -399,6 +400,7 @@ function ProfileTab({ initial }: { initial: SettingsInitial }) {
         setAvatarUrl(`${res.url}?t=${Date.now()}`);
         setProfileMsg("Photo updated.");
         setProfileErr(null);
+        router.refresh();
       } else {
         setProfileErr("Upload did not complete. Please try again.");
       }
@@ -407,8 +409,19 @@ function ProfileTab({ initial }: { initial: SettingsInitial }) {
       const msg = e instanceof Error ? e.message : String(e);
       if (/failed to fetch|networkerror|load failed/i.test(msg)) {
         setProfileErr("Network error — check your connection and try again.");
+      } else if (
+        /Server Components render|digest property/i.test(msg) ||
+        /body.*limit|1\s*mb|2\s*mb|exceed/i.test(msg)
+      ) {
+        setProfileErr(
+          "Upload could not complete (server limit or cache refresh). Try a smaller image or hard-refresh the page, and confirm the avatars storage bucket exists in Supabase."
+        );
       } else if (msg && msg !== "undefined") {
-        setProfileErr(`Upload failed: ${msg}`);
+        setProfileErr(
+          /Server Components render/i.test(msg)
+            ? "Upload could not finish. Try again with a JPG, PNG, or WebP under 5 MB, or check Supabase Storage (avatars bucket and policies)."
+            : `Upload failed: ${msg}`
+        );
       } else {
         setProfileErr(
           "Upload failed. If the problem continues, confirm the avatars storage bucket exists in Supabase and try a JPG, PNG, or WebP file (max 5 MB)."
@@ -430,6 +443,7 @@ function ProfileTab({ initial }: { initial: SettingsInitial }) {
         setAvatarUrl(null);
         setProfileMsg("Photo removed.");
         setProfileErr(null);
+        router.refresh();
       }
     } catch {
       setProfileErr("Could not remove photo. Please try again.");

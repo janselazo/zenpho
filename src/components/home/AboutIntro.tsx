@@ -21,8 +21,8 @@ export default function AboutIntro() {
             <span className="font-semibold text-accent-warm">tech</span>
             {" "}and{" "}
             <span className="font-semibold text-accent-warm">non-tech</span>{" "}
-            founders in the U.S., Latin America, and Europe who have an idea and
-            need a software product built fast and at an affordable price.
+            founders who have an idea and need a software product built fast and
+            at an affordable price.
           </p>
         </div>
       </motion.div>
