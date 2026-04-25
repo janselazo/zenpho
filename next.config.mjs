@@ -17,8 +17,8 @@ const nextConfig = {
       "@fullcalendar/react",
       "@fullcalendar/core",
     ],
+    // Default Server Action body limit is 1mb; see nextjs.org/docs/app/api-reference/config/next-config-js/serverActions
     serverActions: {
-      // Brand guidelines PDF embeds 7 PNGs; response (base64) can reach ~15 MB.
       bodySizeLimit: "25mb",
     },
   },
