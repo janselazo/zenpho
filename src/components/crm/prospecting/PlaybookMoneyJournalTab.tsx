@@ -10,7 +10,6 @@ import {
   ExternalLink,
   FolderOpen,
   Loader2,
-  Target,
   TimerReset,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -20,10 +19,7 @@ import {
   EMPTY_MONEY_JOURNAL_GOALS,
   MONEY_JOURNAL_TAG,
   type MoneyJournalEntryPayload,
-  type MoneyJournalGoals,
   hasHourSpecificContent,
-  loadMoneyJournalGoalsForDate,
-  saveMoneyJournalGoalsFull,
 } from "@/lib/crm/money-journal-types";
 import MoneyJournalTimer, {
   type MoneyJournalLogRange,
@@ -74,9 +70,6 @@ const sectionClass =
 type Props = { today: Date };
 
 export default function PlaybookMoneyJournalTab({ today }: Props) {
-  const [goals, setGoals] = useState<MoneyJournalGoals>(() => ({
-    ...EMPTY_MONEY_JOURNAL_GOALS,
-  }));
   const [prospectingDone, setProspectingDone] = useState("");
   const [moneyPurpose, setMoneyPurpose] = useState("");
   const [workDetail60m, setWorkDetail60m] = useState("");
@@ -109,7 +102,6 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
     billable,
     projectId,
     taskId,
-    goals,
   });
   formRef.current = {
     prospectingDone,
@@ -121,20 +113,9 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
     billable,
     projectId,
     taskId,
-    goals,
   };
   const nextHourNRef = useRef(nextHourN);
   nextHourNRef.current = nextHourN;
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    setGoals(loadMoneyJournalGoalsForDate(today));
-  }, [today]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    saveMoneyJournalGoalsFull(goals, today);
-  }, [goals, today]);
 
   const tasksForProject = useMemo(() => {
     if (!projectId.trim()) return tasks;
@@ -254,7 +235,7 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
         billable: f.billable,
         projectId: f.projectId.trim() || null,
         taskId: f.taskId.trim() || null,
-        goalsSnapshot: { ...f.goals },
+        goalsSnapshot: { ...EMPTY_MONEY_JOURNAL_GOALS },
       };
       const res = await logMoneyJournalEntry({
         startedAtIso: new Date(range.startMs).toISOString(),
@@ -400,202 +381,35 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
 
         <div className="grid gap-5 p-4 sm:p-6 lg:grid-cols-[minmax(0,1fr)_25rem] lg:p-8">
           <div className="space-y-5">
-            <section className={sectionClass}>
-              <div className="mb-4 flex items-center gap-2">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/10 text-accent ring-1 ring-accent/15 dark:bg-blue-500/15 dark:text-blue-300 dark:ring-blue-500/25">
-                  <Target className="h-4 w-4" />
-                </span>
-                <div>
-                  <h3 className="text-sm font-semibold text-text-primary dark:text-zinc-100">
-                    Purpose and targets
-                  </h3>
-                  <p className="text-xs text-text-secondary dark:text-zinc-500">
-                    These stay filled in for the day so each hour is faster.
-                  </p>
-                </div>
-              </div>
-
-              <label>
-                <span className={labelClass}>Major definite purpose</span>
-                <textarea
-                  className={areaClass + " min-h-[4.25rem]"}
-                  value={goals.majorDefinitePurpose}
-                  onChange={(e) =>
-                    setGoals((g) => ({
-                      ...g,
-                      majorDefinitePurpose: e.target.value,
-                    }))
-                  }
-                  placeholder="What is your one main goal by the end of 2026?"
-                  rows={2}
-                />
-              </label>
-
-              <div className="mt-4 grid gap-3 md:grid-cols-3">
-                <label>
-                  <span className={labelClass}>North goal</span>
-                  <input
-                    className={inputClass}
-                    value={goals.northGoalAmount}
-                    onChange={(e) =>
-                      setGoals((g) => ({
-                        ...g,
-                        northGoalAmount: e.target.value,
-                      }))
-                    }
-                    placeholder="Make..."
-                  />
-                </label>
-                <label>
-                  <span className={labelClass}>Project</span>
-                  <input
-                    className={inputClass}
-                    value={goals.northGoalProject}
-                    onChange={(e) =>
-                      setGoals((g) => ({
-                        ...g,
-                        northGoalProject: e.target.value,
-                      }))
-                    }
-                    placeholder="Project"
-                  />
-                </label>
-                <label>
-                  <span className={labelClass}>Target date</span>
-                  <input
-                    className={inputClass}
-                    value={goals.northGoalDate}
-                    onChange={(e) =>
-                      setGoals((g) => ({
-                        ...g,
-                        northGoalDate: e.target.value,
-                      }))
-                    }
-                    placeholder="Dec 31, 2026"
-                  />
-                </label>
-              </div>
-
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
-                <label>
-                  <span className={labelClass}>Quarter goal</span>
-                  <input
-                    className={inputClass}
-                    value={goals.quarterGoalAmount}
-                    onChange={(e) =>
-                      setGoals((g) => ({
-                        ...g,
-                        quarterGoalAmount: e.target.value,
-                      }))
-                    }
-                    placeholder="Make by Mar 31"
-                  />
-                </label>
-                <label>
-                  <span className={labelClass}>Day goal</span>
-                  <input
-                    className={inputClass}
-                    value={goals.dayGoal}
-                    onChange={(e) =>
-                      setGoals((g) => ({ ...g, dayGoal: e.target.value }))
-                    }
-                    placeholder="Today's target"
-                  />
-                </label>
-              </div>
-
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                <label>
-                  <span className={labelClass}>Progress</span>
-                  <input
-                    className={inputClass}
-                    value={goals.progressDone}
-                    onChange={(e) =>
-                      setGoals((g) => ({
-                        ...g,
-                        progressDone: e.target.value,
-                      }))
-                    }
-                    placeholder="Done"
-                  />
-                </label>
-                <label>
-                  <span className={labelClass}>Of</span>
-                  <input
-                    className={inputClass}
-                    value={goals.progressTotal}
-                    onChange={(e) =>
-                      setGoals((g) => ({
-                        ...g,
-                        progressTotal: e.target.value,
-                      }))
-                    }
-                    placeholder="Total"
-                  />
-                </label>
-                <label>
-                  <span className={labelClass}>Make today</span>
-                  <input
-                    className={inputClass}
-                    value={goals.makeToday}
-                    onChange={(e) =>
-                      setGoals((g) => ({ ...g, makeToday: e.target.value }))
-                    }
-                    placeholder="$ / result"
-                  />
-                </label>
-                <label>
-                  <span className={labelClass}>Money made</span>
-                  <input
-                    className={inputClass}
-                    value={goals.moneyMadeToday}
-                    onChange={(e) =>
-                      setGoals((g) => ({
-                        ...g,
-                        moneyMadeToday: e.target.value,
-                      }))
-                    }
-                    placeholder="$"
-                  />
-                </label>
-                <label>
-                  <span className={labelClass}>Hours</span>
-                  <input
-                    className={inputClass}
-                    value={goals.hoursWorkedToday}
-                    onChange={(e) =>
-                      setGoals((g) => ({
-                        ...g,
-                        hoursWorkedToday: e.target.value,
-                      }))
-                    }
-                    placeholder="0"
-                  />
-                </label>
-              </div>
-            </section>
-
-            <section className={sectionClass}>
-              <div className="mb-4 flex items-center justify-between gap-3">
+            <section
+              className={`${sectionClass} overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.08),transparent_32%),linear-gradient(180deg,#ffffff,#f8fafc)] dark:bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.14),transparent_32%),linear-gradient(180deg,rgba(24,24,27,0.95),rgba(9,9,11,0.86))]`}
+            >
+              <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 ring-1 ring-zinc-200 dark:bg-zinc-800/80 dark:text-zinc-300 dark:ring-zinc-700">
-                    <TimerReset className="h-4 w-4" />
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent ring-1 ring-accent/15 dark:bg-blue-500/15 dark:text-blue-300 dark:ring-blue-500/25">
+                    <TimerReset className="h-5 w-5" />
                   </span>
                   <div>
-                    <h3 className="text-sm font-semibold text-text-primary dark:text-zinc-100">
-                      Hour {nextHourN} reflection
+                    <h3 className="text-lg font-semibold tracking-tight text-text-primary dark:text-zinc-100">
+                      Hour {nextHourN}: what moved forward?
                     </h3>
-                    <p className="text-xs text-text-secondary dark:text-zinc-500">
-                      Fill this while or after the timer runs.
+                    <p className="mt-1 text-sm text-text-secondary dark:text-zinc-500">
+                      Capture the work, your focus, and the adjustment for the
+                      next block.
                     </p>
                   </div>
                 </div>
-                <span className="rounded-full border border-border bg-zinc-50 px-3 py-1 text-xs font-semibold text-text-secondary dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
-                  60 min
-                </span>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="rounded-full border border-border bg-white px-3 py-1.5 text-xs font-semibold text-text-secondary shadow-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
+                    60 min block
+                  </span>
+                  <span className="rounded-full border border-accent/15 bg-accent/10 px-3 py-1.5 text-xs font-semibold text-accent dark:border-blue-500/20 dark:bg-blue-500/15 dark:text-blue-300">
+                    Auto-saves at 0:00
+                  </span>
+                </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+              <div className="grid gap-4 md:grid-cols-2">
                 <label>
                   <span className={labelClass}>Prospecting done</span>
                   <input
@@ -621,11 +435,11 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
                   What did you do during this 60 minutes?
                 </span>
                 <textarea
-                  className={areaClass + " min-h-[8rem]"}
+                  className={areaClass + " min-h-[12rem] text-base"}
                   value={workDetail60m}
                   onChange={(e) => setWorkDetail60m(e.target.value)}
                   placeholder="Be specific: tasks completed, people contacted, deliverables moved, blockers removed..."
-                  rows={5}
+                  rows={7}
                 />
               </label>
 
