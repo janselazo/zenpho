@@ -3,12 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
-const ROLE_LABELS: Record<string, string> = {
-  agency_admin: "Agency admin",
-  agency_member: "Agency member",
-  client: "Client",
-};
-
 export async function updateProfile(formData: FormData) {
   const supabase = await createClient();
   const {
@@ -227,5 +221,3 @@ export async function uploadAvatar(formData: FormData) {
     };
   }
 }
-
-export { ROLE_LABELS };

@@ -33,33 +33,40 @@ export default async function CrmLayout({
   } | null = null;
 
   if (configured) {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (user) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name, avatar_url")
-        .eq("id", user.id)
-        .maybeSingle();
-      const rawName = profile?.full_name;
-      const rawAvatar = profile?.avatar_url;
-      topBarUser = {
-        email: user.email ?? null,
-        fullName:
-          typeof rawName === "string"
-            ? rawName
-            : rawName == null
-              ? null
-              : String(rawName),
-        avatarUrl:
-          typeof rawAvatar === "string"
-            ? rawAvatar
-            : rawAvatar == null
-              ? null
-              : String(rawAvatar),
-      };
+    try {
+      const supabase = await createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name, avatar_url")
+          .eq("id", user.id)
+          .maybeSingle();
+        const rawName = profile?.full_name;
+        const rawAvatar = profile?.avatar_url;
+        topBarUser = {
+          email: user.email ?? null,
+          fullName:
+            typeof rawName === "string"
+              ? rawName
+              : rawName == null
+                ? null
+                : String(rawName),
+          avatarUrl:
+            typeof rawAvatar === "string"
+              ? rawAvatar
+              : rawAvatar == null
+                ? null
+                : String(rawAvatar),
+        };
+      }
+    } catch (e) {
+      // Never let a Supabase / cookie hiccup crash the CRM layout — would surface
+      // as a masked "Server Components render" digest error to clients (e.g. on
+      // Vercel) and break unrelated pages like Settings after an avatar upload.
+      console.error("CrmLayout: profile load failed", e);
     }
   }
 

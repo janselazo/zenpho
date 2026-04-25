@@ -13,8 +13,8 @@ import {
   updatePassword,
   uploadAvatar,
   removeAvatar,
-  ROLE_LABELS,
 } from "@/app/(crm)/actions/settings";
+import { ROLE_LABELS } from "@/lib/crm/role-labels";
 
 export type SettingsInitial = {
   configured: boolean;
@@ -419,11 +419,19 @@ function ProfileTab({ initial }: { initial: SettingsInitial }) {
         setProfileErr("Upload did not complete. Please try again.");
       }
     } catch (e) {
-      console.error("uploadAvatar threw:", e);
+      const digest =
+        e && typeof e === "object" && "digest" in e
+          ? String((e as { digest?: unknown }).digest ?? "")
+          : "";
+      console.error("uploadAvatar threw:", e, digest ? `digest=${digest}` : "");
       const msg = e instanceof Error ? e.message : String(e);
       if (/failed to fetch|networkerror|load failed/i.test(msg)) {
+        setProfileErr("Network error — check your connection and try again.");
+      } else if (/Server Components render|digest property/i.test(msg)) {
         setProfileErr(
-          "Network error — check your connection and try again."
+          digest
+            ? `The photo was likely saved, but the page failed to refresh (digest ${digest}). Reload to verify.`
+            : "The photo was likely saved, but the page failed to refresh. Reload to verify."
         );
       } else if (msg && msg !== "undefined") {
         setProfileErr(`Upload failed: ${msg}`);
