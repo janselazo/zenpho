@@ -1,0 +1,27 @@
+---
+description: Prefer Supabase MCP over Supabase CLI for database work
+alwaysApply: true
+---
+
+# Supabase: MCP first, not CLI
+
+For **any** Supabase task (schema, SQL, migrations status, advisors, storage metadata, etc.), use the **Supabase MCP** configured in this repo — not the Supabase CLI.
+
+## What to use
+
+- **Server:** `supabase-zenpho` (see [`.cursor/mcp.json`](.cursor/mcp.json); URL includes `project_ref=lyvmiueigkksozyvvxpy`).
+- **How:** Before calling a tool, read that tool’s schema in the Cursor **MCP filesystem** (`mcps/.../tools/*.json`) and follow it. If the MCP server exposes `mcp_auth`, complete auth when prompted.
+- **Default:** Prefer MCP `execute_sql`, schema/listing, and project tools over shell commands.
+
+## What to avoid
+
+- Do **not** run `npx supabase …`, `supabase db push`, `supabase db query`, or other CLI database commands **when the same outcome is achievable via MCP**, unless the user **explicitly** asks for the CLI or MCP is unavailable / broken.
+- Do not tell the user to “run `supabase link`” or `db push` as the default path; point them to MCP or the Supabase Dashboard SQL editor when agent-side CLI is wrong for the workflow.
+
+## Repo files (still fine)
+
+- Creating or editing files under [`supabase/migrations/`](supabase/migrations/) is normal. Applying those changes to the hosted DB should be described as **user via Dashboard SQL**, **MCP SQL/migration tools when available**, or **user runs their chosen deploy** — not an automatic `db push` from the agent unless they ask.
+
+## Conflict with other docs
+
+If older notes in the repo mention CLI first, **this rule wins** for agent behavior.

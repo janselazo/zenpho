@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  BookOpen,
   Briefcase,
   CalendarDays,
   ChevronLeft,
@@ -17,6 +18,10 @@ import {
   Timer,
   Trash2,
 } from "lucide-react";
+import {
+  MONEY_JOURNAL_TAG,
+  type MoneyJournalEntryPayload,
+} from "@/lib/crm/money-journal-types";
 import { createClient } from "@/lib/supabase/client";
 import {
   deleteTimeEntry,
@@ -77,6 +82,7 @@ export type TimeEntryRow = {
   tags: string[];
   project_id: string | null;
   task_id: string | null;
+  journal_data: MoneyJournalEntryPayload | null;
 };
 
 function weekMonday(d: Date): Date {
@@ -184,6 +190,7 @@ export default function TimeTrackingView() {
   const [actionBusy, setActionBusy] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [journalDetail, setJournalDetail] = useState<TimeEntryRow | null>(null);
 
   const monday = useMemo(() => weekMonday(selectedDate), [selectedDate]);
   const weekDays = useMemo(() => {
@@ -240,7 +247,7 @@ export default function TimeTrackingView() {
       supabase
         .from("time_entry")
         .select(
-          "id, description, started_at, ended_at, billable, tags, project_id, task_id"
+          "id, description, started_at, ended_at, billable, tags, project_id, task_id, journal_data"
         )
         .eq("user_id", user.id)
         .gte("started_at", rangeStart.toISOString())
@@ -249,7 +256,7 @@ export default function TimeTrackingView() {
       supabase
         .from("time_entry")
         .select(
-          "id, description, started_at, ended_at, billable, tags, project_id, task_id"
+          "id, description, started_at, ended_at, billable, tags, project_id, task_id, journal_data"
         )
         .eq("user_id", user.id)
         .is("ended_at", null)
@@ -289,7 +296,16 @@ export default function TimeTrackingView() {
 
     setProjects(projectsFromQuery(pRes.data as ProjectQueryRow[] | null));
     setTasks((tRes.data ?? []) as TaskRow[]);
-    setEntries(list);
+    setEntries(
+      list.map((row) => ({
+        ...row,
+        journal_data:
+          (row as { journal_data?: unknown }).journal_data != null
+            ? ((row as { journal_data: unknown })
+                .journal_data as MoneyJournalEntryPayload)
+            : null,
+      }))
+    );
     setLoading(false);
   }, [monday]);
 
@@ -735,10 +751,21 @@ export default function TimeTrackingView() {
                     : undefined;
                   const t = e.task_id ? taskById.get(e.task_id) : undefined;
                   const dur = durationSeconds(e, nowMs);
+                  const isJournal = Boolean(e.journal_data);
+                  const tagPills = (e.tags ?? []).filter(
+                    (t) => t.toLowerCase() !== MONEY_JOURNAL_TAG
+                  );
                   return (
                     <tr
                       key={e.id}
-                      className="hover:bg-surface/40 dark:hover:bg-zinc-900/40"
+                      onClick={() => {
+                        if (isJournal) setJournalDetail(e);
+                      }}
+                      className={`hover:bg-surface/40 dark:hover:bg-zinc-900/40 ${
+                        isJournal
+                          ? "cursor-pointer"
+                          : ""
+                      }`}
                     >
                       <td className="px-4 py-3 align-top">
                         <div className="flex flex-wrap items-center gap-2">
@@ -748,10 +775,19 @@ export default function TimeTrackingView() {
                               aria-label="Billable"
                             />
                           ) : null}
+                          {isJournal ? (
+                            <span
+                              className="inline-flex items-center gap-0.5 rounded-md bg-indigo-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-indigo-700 ring-1 ring-indigo-500/25 dark:bg-indigo-500/20 dark:text-indigo-200"
+                              title="Money Journal"
+                            >
+                              <BookOpen className="h-3 w-3" />
+                              Journal
+                            </span>
+                          ) : null}
                           <span className="font-medium text-text-primary dark:text-zinc-100">
                             {e.description || "—"}
                           </span>
-                          {e.tags?.map((tag) => (
+                          {tagPills.map((tag) => (
                             <span
                               key={tag}
                               className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white"
@@ -823,6 +859,71 @@ export default function TimeTrackingView() {
           </table>
         </div>
       </div>
+
+      {journalDetail?.journal_data ? (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Money Journal entry"
+          onClick={() => setJournalDetail(null)}
+        >
+          <div
+            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-white p-5 shadow-2xl dark:border-zinc-700 dark:bg-zinc-900"
+            onClick={(ev) => ev.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-lg font-semibold text-text-primary dark:text-zinc-100">
+                Money Journal · hour {journalDetail.journal_data.hourNumber}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setJournalDetail(null)}
+                className="rounded-lg px-2 py-1 text-sm text-text-secondary hover:bg-surface dark:hover:bg-zinc-800"
+              >
+                Close
+              </button>
+            </div>
+            {(() => {
+              const j = journalDetail.journal_data;
+              if (!j) return null;
+              return (
+                <div className="mt-4 space-y-3 text-sm text-text-primary dark:text-zinc-200">
+                  <p className="text-text-secondary dark:text-zinc-400">
+                    {j.startTimeLabel} – {j.stopTimeLabel}
+                  </p>
+                  <p>
+                    <span className="font-medium">Prospecting: </span>
+                    {j.prospectingDone || "—"}
+                  </p>
+                  <p>
+                    <span className="font-medium">I will use the money for: </span>
+                    {j.moneyPurpose || "—"}
+                  </p>
+                  <div>
+                    <p className="font-medium">This 60 minutes</p>
+                    <p className="mt-1 whitespace-pre-wrap text-text-secondary dark:text-zinc-400">
+                      {j.workDetail60m || "—"}
+                    </p>
+                  </div>
+                  <p>
+                    <span className="font-medium">Focus & effort: </span>
+                    {j.focusEffortRating || "—"}
+                  </p>
+                  <p>
+                    <span className="font-medium">Next hour: </span>
+                    {j.improveNextHour || "—"}
+                  </p>
+                  <p>
+                    <span className="font-medium">Promise: </span>
+                    {j.promiseKeepGoing || "—"}
+                  </p>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

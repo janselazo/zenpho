@@ -58,6 +58,7 @@ import {
   BookOpen,
   CalendarDays,
   ListTodo,
+  NotebookText,
   UsersRound,
   GripVertical,
   Briefcase,
@@ -68,6 +69,7 @@ import {
 } from "lucide-react";
 import CrmPopoverDateField from "@/components/crm/CrmPopoverDateField";
 import IconTabBar from "@/components/crm/prospecting/IconTabBar";
+import PlaybookMoneyJournalTab from "@/components/crm/prospecting/PlaybookMoneyJournalTab";
 import {
   playbookCategories,
   standardMonthlyGoals,
@@ -307,10 +309,11 @@ function DateNavigator({
 
 // ── Main Component ──────────────────────────────────────────────────────────
 
-type ActiveTab = "playbook" | "goals" | "agenda" | "tasks";
+type ActiveTab = "playbook" | "journal" | "goals" | "agenda" | "tasks";
 
 const TABS = [
   { id: "playbook", label: "Playbook", icon: BookOpen },
+  { id: "journal", label: "Journal", icon: NotebookText },
   { id: "goals", label: "Goals", icon: Target },
   { id: "agenda", label: "Agenda", icon: CalendarDays },
   { id: "tasks", label: "Tasks", icon: ListTodo },
@@ -456,6 +459,7 @@ export default function ColdOutreachView() {
 
       <div className="mt-6">
         {activeTab === "playbook" && <PlaybookTab />}
+        {activeTab === "journal" && <PlaybookMoneyJournalTab today={currentDate} />}
         {activeTab === "goals" && (
           <GoalsTab
             goals={goalsWithActuals}
