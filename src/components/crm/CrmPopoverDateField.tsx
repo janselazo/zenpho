@@ -127,7 +127,7 @@ export default function CrmPopoverDateField({
   const popoverContent = open && popoverPos && (
     <div
       ref={popoverRef}
-      className="z-[280] w-[min(calc(100vw-1.5rem),20.5rem)] overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-[0_10px_40px_-10px_rgba(0,0,0,0.25)] dark:border-zinc-600 dark:bg-zinc-900 dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)]"
+      className="z-[280] w-[min(calc(100vw-1.5rem),21rem)] overflow-hidden rounded-2xl border border-border bg-white shadow-lg ring-1 ring-black/5 dark:border-zinc-600 dark:bg-zinc-900 dark:ring-white/10"
       style={{
         position: "fixed",
         left: Math.max(12, Math.min(popoverPos.left, window.innerWidth - 12 - 328)),
@@ -141,7 +141,7 @@ export default function CrmPopoverDateField({
       role="dialog"
       aria-label="Choose date"
     >
-      <div className="p-3 pb-2">
+      <div className="p-1 pt-3">
         <DayPicker
           mode="single"
           selected={selected}
@@ -157,7 +157,25 @@ export default function CrmPopoverDateField({
           captionLayout="label"
           startMonth={new Date(2000, 0)}
           endMonth={new Date(2040, 11)}
-          className="crm-rdp text-text-primary dark:text-zinc-100"
+          className="crm-rdp w-full min-w-0 text-text-primary dark:text-zinc-100"
+          classNames={{
+            months: "relative w-full",
+            month: "relative w-full space-y-0 px-2 pb-1",
+            month_caption: "relative z-[1] mb-2 flex h-9 items-center justify-center px-10",
+            caption_label: "text-sm font-semibold tabular-nums text-text-primary dark:text-zinc-100",
+            nav: "absolute inset-x-2 top-3 flex items-center justify-between",
+            button_previous:
+              "inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800",
+            button_next:
+              "inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800",
+            weekdays: "mb-1 flex w-full border-b border-zinc-100 px-0.5 pb-2 dark:border-zinc-700/80",
+            weekday:
+              "h-7 w-9 p-0 text-center text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-text-secondary/80 dark:text-zinc-500",
+            week: "mt-0 flex w-full",
+            day: "p-0 text-center",
+            day_button:
+              "m-0 rounded-lg border-2 border-transparent text-sm font-medium outline-none transition-colors hover:bg-zinc-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:ring-offset-0 dark:hover:bg-zinc-800",
+          }}
           components={{
             Chevron: ({ className, size, orientation }) => {
               const dim = size ?? 20;
@@ -201,19 +219,11 @@ export default function CrmPopoverDateField({
               );
             },
           }}
-          classNames={{
-            button_previous:
-              "inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800",
-            button_next:
-              "inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800",
-            day_button:
-              "m-0 rounded-lg border-2 border-transparent text-sm font-medium outline-none transition-colors hover:bg-zinc-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:ring-offset-0 dark:hover:bg-zinc-800",
-          }}
           modifiersClassNames={{
             today:
-              "[&_button]:rounded-lg [&_button]:font-semibold [&_button]:text-blue-700 [&_button]:ring-1 [&_button]:ring-inset [&_button]:ring-blue-200/90 dark:[&_button]:text-blue-300 dark:[&_button]:ring-blue-800/70",
+              "[&_button]:rounded-lg [&_button]:font-semibold [&_button]:text-[var(--color-accent)] [&_button]:ring-1 [&_button]:ring-inset [&_button]:ring-[var(--color-accent)]/25 dark:[&_button]:text-blue-300 dark:[&_button]:ring-blue-800/70",
             selected:
-              "[&_button]:!border-transparent [&_button]:!bg-blue-600 [&_button]:!text-white [&_button]:hover:!bg-blue-600 [&_button]:focus:!bg-blue-600 [&_button]:!font-semibold [&_button]:!shadow-none [&_button]:!ring-0 [&_button]:focus-visible:!ring-2 [&_button]:focus-visible:!ring-white/60",
+              "[&_button]:!border-transparent [&_button]:!bg-[var(--color-accent)] [&_button]:!text-white [&_button]:hover:!bg-[var(--color-accent-hover)] [&_button]:focus:!bg-[var(--color-accent)] [&_button]:!font-semibold [&_button]:!shadow-sm [&_button]:!ring-0 [&_button]:focus-visible:!ring-2 [&_button]:focus-visible:!ring-white/50",
             outside: "text-zinc-400 opacity-55 dark:text-zinc-500",
           }}
           style={
@@ -229,10 +239,10 @@ export default function CrmPopoverDateField({
           }
         />
       </div>
-      <div className="flex items-center justify-between border-t border-zinc-200 px-3 py-2.5 dark:border-zinc-700">
+      <div className="flex gap-2 border-t border-border bg-surface/60 px-3 py-2.5 dark:border-zinc-700 dark:bg-zinc-800/50">
         <button
           type="button"
-          className="text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+          className="flex-1 rounded-xl border border-border bg-white py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface hover:text-text-primary dark:border-zinc-600 dark:bg-zinc-900 dark:hover:bg-zinc-800"
           onClick={() => {
             onChange("");
             setOpen(false);
@@ -242,7 +252,7 @@ export default function CrmPopoverDateField({
         </button>
         <button
           type="button"
-          className="text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+          className="flex-1 rounded-xl bg-[var(--color-accent)] py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--color-accent-hover)]"
           onClick={() => {
             onChange(toIso(new Date()));
             setOpen(false);

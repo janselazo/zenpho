@@ -66,6 +66,7 @@ import {
   Sparkles,
   Star,
 } from "lucide-react";
+import CrmPopoverDateField from "@/components/crm/CrmPopoverDateField";
 import IconTabBar from "@/components/crm/prospecting/IconTabBar";
 import {
   playbookCategories,
@@ -89,10 +90,13 @@ import {
   saveMonthlyGoalTargets,
 } from "@/lib/crm/monthly-goals-targets";
 import {
+  GOALS_SECTION_IDS,
   loadCustomMonthlyGoals,
+  loadGoalsSectionCollapsed,
   loadNorthStarGoalIds,
   pruneNorthStarGoalIds,
   saveCustomMonthlyGoals,
+  saveGoalsSectionCollapsed,
   saveNorthStarGoalIds,
 } from "@/lib/crm/monthly-goals-store";
 import {
@@ -324,6 +328,8 @@ function isStandardMonthlyGoalId(id: string): boolean {
 export default function ColdOutreachView() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("playbook");
   const [currentDate, setCurrentDate] = useState(() => new Date());
+  /** Month shown in Playbook → Goals; targets and custom goals are keyed by this month. */
+  const [goalsMonthDate, setGoalsMonthDate] = useState(() => new Date());
   const [goals, setGoals] = useState<MonthlyGoal[]>(() => [
     ...standardMonthlyGoals,
   ]);
@@ -332,7 +338,11 @@ export default function ColdOutreachView() {
   const [revenueActual, setRevenueActual] = useState(0);
 
   useEffect(() => {
-    const ym = monthKeyFromDate(new Date());
+    setNorthStarGoalIds(loadNorthStarGoalIds());
+  }, []);
+
+  useEffect(() => {
+    const ym = monthKeyFromDate(goalsMonthDate);
     const t = loadMonthlyGoalTargets(ym, DEFAULT_MONTHLY_TARGETS);
     const customGoals = loadCustomMonthlyGoals(ym);
     setGoals([
@@ -340,8 +350,7 @@ export default function ColdOutreachView() {
       { ...standardMonthlyGoals[1], target: t.revenue },
       ...customGoals,
     ]);
-    setNorthStarGoalIds(loadNorthStarGoalIds());
-  }, []);
+  }, [goalsMonthDate]);
 
   useEffect(() => {
     setNorthStarGoalIds((prev) => {
@@ -362,10 +371,11 @@ export default function ColdOutreachView() {
     }
     let cancelled = false;
     const supabase = createClient();
+    const anchor = goalsMonthDate;
     void (async () => {
       const [c, r] = await Promise.all([
-        fetchMonthlyClientsWonCount(supabase),
-        fetchMonthlyRevenueFromWonClientProjects(supabase),
+        fetchMonthlyClientsWonCount(supabase, anchor),
+        fetchMonthlyRevenueFromWonClientProjects(supabase, anchor),
       ]);
       if (!cancelled) {
         setClientsActual(c);
@@ -375,7 +385,7 @@ export default function ColdOutreachView() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [goalsMonthDate]);
 
   const goalsWithActuals = useMemo(
     () =>
@@ -389,7 +399,7 @@ export default function ColdOutreachView() {
 
   function handleGoalsChange(next: MonthlyGoal[]) {
     setGoals(next);
-    const ym = monthKeyFromDate(new Date());
+    const ym = monthKeyFromDate(goalsMonthDate);
     const clientsT =
       next.find((x) => x.id === "mg-clients")?.target ??
       DEFAULT_MONTHLY_TARGETS.clients;
@@ -448,6 +458,8 @@ export default function ColdOutreachView() {
             onChange={handleGoalsChange}
             northStarGoalIds={northStarGoalIds}
             onToggleNorthStarGoal={toggleNorthStarGoal}
+            goalsMonthDate={goalsMonthDate}
+            onGoalsMonthDateChange={setGoalsMonthDate}
           />
         )}
         {activeTab === "agenda" && (
@@ -554,14 +566,6 @@ function GoalRow({
             </span>
             <button
               type="button"
-              onClick={() => onStartEditTarget(goal)}
-              className="rounded p-0.5 text-text-secondary/40 transition-colors hover:text-accent dark:hover:text-violet-400"
-              title="Edit monthly target"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </button>
-            <button
-              type="button"
               onClick={() => onToggleNorthStar(goal.id)}
               className={`rounded p-0.5 transition-colors ${
                 isNorthStar
@@ -572,6 +576,14 @@ function GoalRow({
               aria-label={isNorthStar ? "Remove from North Star" : "Add to North Star"}
             >
               <Star className={`h-3.5 w-3.5 ${isNorthStar ? "fill-current" : ""}`} />
+            </button>
+            <button
+              type="button"
+              onClick={() => onStartEditTarget(goal)}
+              className="rounded p-0.5 text-text-secondary/40 transition-colors hover:text-accent dark:hover:text-violet-400"
+              title="Edit monthly target"
+            >
+              <Pencil className="h-3.5 w-3.5" />
             </button>
             {onDeleteGoal ? (
               <button
@@ -615,7 +627,7 @@ function GoalRow({
           <p className="mt-1 text-right text-xs text-text-secondary dark:text-zinc-500">
             {goal.current >= goal.target
               ? "Goal reached"
-              : `${formatCompactUsd(Math.max(0, goal.target - goal.current))} more!`}
+              : `${formatCompactUsd(Math.max(0, goal.target - goal.current))} more`}
           </p>
         </div>
       )}
@@ -629,28 +641,47 @@ function GoalsSectionCard({
   color,
   children,
   right,
+  isOpen,
+  onToggleCollapse,
 }: {
   title: string;
   icon: ReactNode;
   color: string;
   children: ReactNode;
   right?: ReactNode;
+  isOpen: boolean;
+  onToggleCollapse: () => void;
 }) {
   return (
     <div className="rounded-2xl border border-border bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950/40">
-      <div className="flex items-center gap-2 px-5 py-4 sm:gap-3">
+      <div className="group/goals-sec flex items-center gap-2 px-5 py-4 sm:gap-3">
         <div
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white"
           style={{ backgroundColor: color }}
         >
           {icon}
         </div>
+        <button
+          type="button"
+          onClick={onToggleCollapse}
+          aria-expanded={isOpen}
+          aria-label={isOpen ? "Collapse section" : "Expand section"}
+          className="flex shrink-0 items-center rounded-lg p-1 text-text-secondary transition-colors hover:bg-surface hover:text-text-primary dark:hover:bg-zinc-800"
+        >
+          <ChevronDown
+            className={`h-4 w-4 transition-transform ${
+              isOpen ? "" : "-rotate-90"
+            }`}
+          />
+        </button>
         <span className="min-w-0 flex-1 truncate text-sm font-semibold text-text-primary dark:text-zinc-100">
           {title}
         </span>
         {right}
       </div>
-      <div className="border-t border-border dark:border-zinc-800">{children}</div>
+      {isOpen ? (
+        <div className="border-t border-border dark:border-zinc-800">{children}</div>
+      ) : null}
     </div>
   );
 }
@@ -660,11 +691,15 @@ function MonthlyGoalsCard({
   onChange,
   northStarGoalIds,
   onToggleNorthStarGoal,
+  goalsMonthDate,
+  onGoalsMonthDateChange,
 }: {
   goals: MonthlyGoal[];
   onChange: (goals: MonthlyGoal[]) => void;
   northStarGoalIds: string[];
   onToggleNorthStarGoal: (goalId: string) => void;
+  goalsMonthDate: Date;
+  onGoalsMonthDateChange: (d: Date) => void;
 }) {
   const [editingTargetId, setEditingTargetId] = useState<string | null>(null);
   const [targetDraft, setTargetDraft] = useState(0);
@@ -672,6 +707,11 @@ function MonthlyGoalsCard({
   const [newGoalTitle, setNewGoalTitle] = useState("");
   const [newGoalTarget, setNewGoalTarget] = useState(1);
   const [newGoalUnit, setNewGoalUnit] = useState<MonthlyGoal["unit"]>("count");
+  const goalsMonthKey = monthKeyFromDate(goalsMonthDate);
+  const [goalsSectionCollapsed, setGoalsSectionCollapsed] = useState<
+    Record<string, boolean>
+  >({});
+  const goalsCollapsedHydrated = useRef(false);
   const northStarIdSet = useMemo(
     () => new Set(northStarGoalIds),
     [northStarGoalIds]
@@ -723,8 +763,29 @@ function MonthlyGoalsCard({
     onChange(goals.filter((goal) => goal.id !== goalId));
   }
 
-  const now = new Date();
-  const monthLabel = now.toLocaleDateString("en-US", {
+  function toggleGoalsSection(sectionId: string) {
+    setGoalsSectionCollapsed((prev) => ({
+      ...prev,
+      [sectionId]: !prev[sectionId],
+    }));
+  }
+
+  useEffect(() => {
+    setGoalsSectionCollapsed(loadGoalsSectionCollapsed());
+    goalsCollapsedHydrated.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (!goalsCollapsedHydrated.current) return;
+    saveGoalsSectionCollapsed(goalsSectionCollapsed);
+  }, [goalsSectionCollapsed]);
+
+  useEffect(() => {
+    setIsAddingGoal(false);
+    setEditingTargetId(null);
+  }, [goalsMonthKey]);
+
+  const monthLabel = goalsMonthDate.toLocaleDateString("en-US", {
     month: "long",
     year: "numeric",
   });
@@ -736,6 +797,10 @@ function MonthlyGoalsCard({
           title="North Star"
           icon={<Star className="h-4 w-4 fill-current" aria-hidden />}
           color="#f59e0b"
+          isOpen={!goalsSectionCollapsed[GOALS_SECTION_IDS.northStar]}
+          onToggleCollapse={() =>
+            toggleGoalsSection(GOALS_SECTION_IDS.northStar)
+          }
           right={
             <span className="text-xs tabular-nums text-text-secondary">
               {northStarGoals.length}/{goals.length}
@@ -763,6 +828,8 @@ function MonthlyGoalsCard({
         title="Monthly Goals"
         icon={<Target className="h-4 w-4" aria-hidden />}
         color="#7c3aed"
+        isOpen={!goalsSectionCollapsed[GOALS_SECTION_IDS.monthly]}
+        onToggleCollapse={() => toggleGoalsSection(GOALS_SECTION_IDS.monthly)}
         right={
           <div className="flex items-center gap-2">
             <button
@@ -773,10 +840,25 @@ function MonthlyGoalsCard({
               <Plus className="h-3 w-3" aria-hidden />
               Add goal
             </button>
-            <span className="flex items-center gap-1.5 rounded-full border border-violet-200/90 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/15 dark:text-violet-200">
+            <label
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-violet-200/90 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/15 dark:text-violet-200"
+              title="View or edit goals for another month"
+            >
               <Calendar className="h-3 w-3 text-violet-600 dark:text-violet-400" aria-hidden />
-              {monthLabel}
-            </span>
+              <span className="tabular-nums">{monthLabel}</span>
+              <input
+                type="month"
+                value={goalsMonthKey}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (!v) return;
+                  const [y, m] = v.split("-").map(Number);
+                  onGoalsMonthDateChange(new Date(y, m - 1, 1));
+                }}
+                className="sr-only"
+                aria-label="Select month for monthly goals"
+              />
+            </label>
           </div>
         }
       >
@@ -854,11 +936,15 @@ function GoalsTab({
   onChange,
   northStarGoalIds,
   onToggleNorthStarGoal,
+  goalsMonthDate,
+  onGoalsMonthDateChange,
 }: {
   goals: MonthlyGoal[];
   onChange: (goals: MonthlyGoal[]) => void;
   northStarGoalIds: string[];
   onToggleNorthStarGoal: (goalId: string) => void;
+  goalsMonthDate: Date;
+  onGoalsMonthDateChange: (d: Date) => void;
 }) {
   return (
     <div className="space-y-4">
@@ -875,6 +961,8 @@ function GoalsTab({
         onChange={onChange}
         northStarGoalIds={northStarGoalIds}
         onToggleNorthStarGoal={onToggleNorthStarGoal}
+        goalsMonthDate={goalsMonthDate}
+        onGoalsMonthDateChange={onGoalsMonthDateChange}
       />
     </div>
   );
@@ -3031,6 +3119,13 @@ function MiniKpi({
 
 // ── Add Task Modal ──────────────────────────────────────────────────────────
 
+function ymdLocal(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 function AddTaskModal({
   onClose,
   onAdd,
@@ -3038,8 +3133,11 @@ function AddTaskModal({
   onClose: () => void;
   onAdd: (task: ProspectingTask) => void;
 }) {
+  const [dueDateIso, setDueDateIso] = useState(() => ymdLocal(new Date()));
   const inputClass =
-    "w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/15";
+    "w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/15 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100";
+  const dueDateTriggerClass =
+    "relative flex w-full min-h-[2.625rem] items-center rounded-xl border border-border bg-white text-left outline-none focus:border-accent focus:ring-2 focus:ring-accent/15 dark:border-zinc-600 dark:bg-zinc-800";
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -3049,7 +3147,7 @@ function AddTaskModal({
       title: (fd.get("title") as string) || "Untitled Task",
       type: (fd.get("type") as ProspectingTaskType) || "other",
       status: "pending",
-      dueDate: (fd.get("dueDate") as string) || new Date().toISOString().slice(0, 10),
+      dueDate: dueDateIso || ymdLocal(new Date()),
       linkedLead: (fd.get("linkedLead") as string) || undefined,
     });
   }
@@ -3096,15 +3194,24 @@ function AddTaskModal({
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-text-primary">
+              <label
+                htmlFor="add-task-due"
+                className="mb-1 block text-sm font-medium text-text-primary"
+              >
                 Due Date
               </label>
-              <input name="dueDate" type="date" className={inputClass} />
+              <CrmPopoverDateField
+                id="add-task-due"
+                value={dueDateIso}
+                onChange={setDueDateIso}
+                displayFormat="numeric"
+                triggerClassName={dueDateTriggerClass}
+              />
             </div>
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-text-primary">
-              Linked opportunity / company
+              Company
             </label>
             <input
               name="linkedLead"

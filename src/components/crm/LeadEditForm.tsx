@@ -72,8 +72,8 @@ const inputClass =
 
 const LEAD_TABS = [
   { id: "contact", label: "Contact", icon: UserCircle },
-  { id: "tasks", label: "Tasks", icon: ListTodo },
   { id: "projects", label: "Projects", icon: FolderKanban },
+  { id: "tasks", label: "Tasks", icon: ListTodo },
 ] as const;
 
 function formatFollowUpWhen(iso: string): string {
@@ -575,57 +575,6 @@ export default function LeadEditForm({
             </div>
 
             <div
-              className={activeTab === "tasks" ? "space-y-6" : "hidden"}
-              id="tasks-panel"
-              role="tabpanel"
-              aria-hidden={activeTab !== "tasks"}
-            >
-              <div>
-                <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
-                  <ListTodo className="h-3.5 w-3.5" aria-hidden />
-                  Follow-ups
-                </h2>
-                <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-                  Scheduled calls and reminders tied to this lead appear on your{" "}
-                  <Link
-                    href="/calendar"
-                    className="inline-flex items-center gap-1 font-medium text-blue-600 hover:underline dark:text-blue-400"
-                  >
-                    <CalendarDays className="h-3.5 w-3.5" aria-hidden />
-                    Calendar
-                  </Link>
-                  .
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setQuickTaskOpen(true)}
-                className="rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500"
-              >
-                + Schedule follow-up
-              </button>
-              {followUpAppointments.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/80 px-4 py-6 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800/40 dark:text-zinc-400">
-                  No follow-ups yet. Add one to block time and keep the pipeline
-                  moving.
-                </p>
-              ) : (
-                <ul className="divide-y divide-zinc-100 rounded-xl border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-700">
-                  {followUpAppointments.map((t) => (
-                    <li key={t.id} className="px-4 py-3">
-                      <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                        {t.title}
-                      </p>
-                      <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-                        {formatFollowUpWhen(t.starts_at)}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            <div
               className={activeTab === "projects" ? "space-y-5" : "hidden"}
               id="projects-panel"
               role="tabpanel"
@@ -685,6 +634,57 @@ export default function LeadEditForm({
                   No client record yet. Creating a project from this lead sets
                   up the client and links everything automatically.
                 </p>
+              )}
+            </div>
+
+            <div
+              className={activeTab === "tasks" ? "space-y-6" : "hidden"}
+              id="tasks-panel"
+              role="tabpanel"
+              aria-hidden={activeTab !== "tasks"}
+            >
+              <div>
+                <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                  <ListTodo className="h-3.5 w-3.5" aria-hidden />
+                  Follow-ups
+                </h2>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                  Scheduled calls and reminders tied to this lead appear on your{" "}
+                  <Link
+                    href="/calendar"
+                    className="inline-flex items-center gap-1 font-medium text-blue-600 hover:underline dark:text-blue-400"
+                  >
+                    <CalendarDays className="h-3.5 w-3.5" aria-hidden />
+                    Calendar
+                  </Link>
+                  .
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setQuickTaskOpen(true)}
+                className="rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500"
+              >
+                + Schedule follow-up
+              </button>
+              {followUpAppointments.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/80 px-4 py-6 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800/40 dark:text-zinc-400">
+                  No follow-ups yet. Add one to block time and keep the pipeline
+                  moving.
+                </p>
+              ) : (
+                <ul className="divide-y divide-zinc-100 rounded-xl border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-700">
+                  {followUpAppointments.map((t) => (
+                    <li key={t.id} className="px-4 py-3">
+                      <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                        {t.title}
+                      </p>
+                      <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                        {formatFollowUpWhen(t.starts_at)}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
           </div>
