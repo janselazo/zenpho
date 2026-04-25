@@ -2,17 +2,23 @@
 
 import { useState } from "react";
 import {
+  BadgeDollarSign,
+  Bell,
   ExternalLink,
   Linkedin,
   Loader2,
-  MessagesSquare,
+  Newspaper,
+  Radio,
   Rocket,
   Search,
   Sparkles,
   Users,
 } from "lucide-react";
 import IconTabBar from "@/components/crm/prospecting/IconTabBar";
-import RedditCommunitiesTab from "@/components/crm/prospecting/RedditCommunitiesTab";
+import FundingSignalsTab from "@/components/crm/prospecting/startup-signals/FundingSignalsTab";
+import LaunchSignalsTab from "@/components/crm/prospecting/startup-signals/LaunchSignalsTab";
+import LinkedInActivitySignalsTab from "@/components/crm/prospecting/startup-signals/LinkedInActivitySignalsTab";
+import SocialIntentSignalsTab from "@/components/crm/prospecting/startup-signals/SocialIntentSignalsTab";
 import type {
   ApolloPersonRow,
   TechStartupOrgRow,
@@ -146,7 +152,28 @@ function tidyDomain(org: TechStartupOrgRow): string | null {
   return d.replace(/^https?:\/\//i, "").replace(/^www\./i, "").replace(/\/$/, "");
 }
 
-type TechStartupsSubTab = "companies" | "reddit";
+type TechStartupsSubTab =
+  | "companies"
+  | "funding"
+  | "launches"
+  | "social-intent"
+  | "linkedin-activity";
+
+const TECH_STARTUP_TAB_BY_ID: Record<string, TechStartupsSubTab> = {
+  "tech-startups-companies": "companies",
+  "tech-startups-funding": "funding",
+  "tech-startups-launches": "launches",
+  "tech-startups-social-intent": "social-intent",
+  "tech-startups-linkedin-activity": "linkedin-activity",
+};
+
+const TECH_STARTUP_ID_BY_TAB: Record<TechStartupsSubTab, string> = {
+  companies: "tech-startups-companies",
+  funding: "tech-startups-funding",
+  launches: "tech-startups-launches",
+  "social-intent": "tech-startups-social-intent",
+  "linkedin-activity": "tech-startups-linkedin-activity",
+};
 
 export default function TechStartupsTab() {
   const [subTab, setSubTab] = useState<TechStartupsSubTab>("companies");
@@ -259,30 +286,57 @@ export default function TechStartupsTab() {
   return (
     <div className="space-y-4">
       <p className="text-xs text-text-secondary dark:text-zinc-500">
-        Discover tech founders via Apollo company data or Reddit community intent — both
-        score leads for a custom web app pitch.
+        Discover tech founders via Apollo company data and multi-channel signal
+        monitoring — funding, launches, social intent, and LinkedIn activity — then
+        score the moment for a custom web app pitch.
       </p>
       <IconTabBar
         tabs={[
           { id: "tech-startups-companies", label: "Apollo", icon: Rocket },
-          { id: "tech-startups-reddit", label: "Reddit", icon: MessagesSquare },
+          { id: "tech-startups-funding", label: "Funding", icon: BadgeDollarSign },
+          { id: "tech-startups-launches", label: "Launches", icon: Newspaper },
+          { id: "tech-startups-social-intent", label: "Social Intent", icon: Radio },
+          { id: "tech-startups-linkedin-activity", label: "LinkedIn Activity", icon: Bell },
         ]}
-        activeTab={
-          subTab === "companies" ? "tech-startups-companies" : "tech-startups-reddit"
-        }
-        onTabChange={(id) =>
-          setSubTab(id === "tech-startups-reddit" ? "reddit" : "companies")
-        }
+        activeTab={TECH_STARTUP_ID_BY_TAB[subTab]}
+        onTabChange={(id) => setSubTab(TECH_STARTUP_TAB_BY_ID[id] ?? "companies")}
         ariaLabel="Tech Startups sources"
       />
 
       <div
-        id="tech-startups-reddit-panel"
+        id="tech-startups-funding-panel"
         role="tabpanel"
-        aria-labelledby="tech-startups-reddit-tab"
-        hidden={subTab !== "reddit"}
+        aria-labelledby="tech-startups-funding-tab"
+        hidden={subTab !== "funding"}
       >
-        <RedditCommunitiesTab embedded />
+        <FundingSignalsTab />
+      </div>
+
+      <div
+        id="tech-startups-launches-panel"
+        role="tabpanel"
+        aria-labelledby="tech-startups-launches-tab"
+        hidden={subTab !== "launches"}
+      >
+        <LaunchSignalsTab />
+      </div>
+
+      <div
+        id="tech-startups-social-intent-panel"
+        role="tabpanel"
+        aria-labelledby="tech-startups-social-intent-tab"
+        hidden={subTab !== "social-intent"}
+      >
+        <SocialIntentSignalsTab />
+      </div>
+
+      <div
+        id="tech-startups-linkedin-activity-panel"
+        role="tabpanel"
+        aria-labelledby="tech-startups-linkedin-activity-tab"
+        hidden={subTab !== "linkedin-activity"}
+      >
+        <LinkedInActivitySignalsTab />
       </div>
 
       <div
