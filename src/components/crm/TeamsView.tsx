@@ -38,6 +38,7 @@ import {
   writeStoredTeamMembers,
 } from "@/lib/crm/team-members-storage";
 import { readStoredProjects } from "@/lib/crm/projects-storage";
+import { createClient } from "@/lib/supabase/client";
 
 const INVITE_ROLE_OPTIONS = [
   "Owner",
@@ -48,15 +49,6 @@ const INVITE_ROLE_OPTIONS = [
   "Finance",
   "QA",
 ] as const;
-
-const DEMO_LOCATIONS = [
-  "Miami, FL, USA",
-  "Paris, France",
-  "Berlin, Germany",
-  "Lisbon, Portugal",
-  "Austin, TX, USA",
-  "Toronto, Canada",
-];
 
 function hashId(id: string) {
   let h = 0;
@@ -69,7 +61,7 @@ function hashId(id: string) {
 function displayLocation(m: MockTeamMember) {
   const loc = m.location?.trim();
   if (loc) return loc;
-  return DEMO_LOCATIONS[hashId(m.id) % DEMO_LOCATIONS.length];
+  return "—";
 }
 
 const projectTeamOptions = getProjectTeamSelectOptions();
@@ -189,6 +181,57 @@ export default function TeamsView({
     }
     writeStoredTeamMembers(members);
   }, [members]);
+
+  /** Merge approximate location from signed-in user’s request IP (stored on `profiles.ip_location`). */
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user?.email) return;
+
+        const apply = (ipLocation: string) => {
+          if (cancelled || !ipLocation.trim()) return;
+          setMembers((prev) => {
+            const hasRow = prev.some(
+              (m) => m.id === user.id || m.email === user.email
+            );
+            if (!hasRow) return prev;
+            return prev.map((m) =>
+              m.id === user.id || m.email === user.email
+                ? { ...m, location: ipLocation }
+                : m
+            );
+          });
+        };
+
+        const getRes = await fetch("/api/crm/profile-ip-location", {
+          credentials: "include",
+        });
+        if (getRes.ok) {
+          const j = (await getRes.json()) as { ipLocation?: string | null };
+          if (j.ipLocation) apply(j.ipLocation);
+        }
+
+        const postRes = await fetch("/api/crm/profile-ip-location", {
+          method: "POST",
+          credentials: "include",
+        });
+        if (postRes.ok) {
+          const j = (await postRes.json()) as { ipLocation?: string | null };
+          if (j.ipLocation) apply(j.ipLocation);
+        }
+      } catch {
+        /* offline / not configured */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const tagsInUse = useMemo(() => {
     const s = new Set<string>();

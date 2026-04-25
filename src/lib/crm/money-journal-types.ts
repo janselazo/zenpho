@@ -165,12 +165,15 @@ export function saveMoneyJournalGoalsFull(goals: MoneyJournalGoals, d: Date): vo
 }
 
 export function hasHourSpecificContent(values: {
-  prospectingDone: string;
+  prospectingDone: boolean;
   moneyPurpose: string;
   workDetail60m: string;
   focusEffortRating: string;
   improveNextHour: string;
   promiseKeepGoing: string;
 }): boolean {
-  return Object.values(values).some((v) => String(v).trim().length > 0);
+  if (values.prospectingDone) return true;
+  return Object.entries(values)
+    .filter(([k]) => k !== "prospectingDone")
+    .some(([, v]) => String(v).trim().length > 0);
 }

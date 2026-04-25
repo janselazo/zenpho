@@ -19,6 +19,7 @@ import "react-day-picker/style.css";
 import {
   crmDatePlaceholder,
   crmDateTriggerClassName,
+  CRM_SINGLE_DATE_PICKER_START_MONTH,
   crmFormatters,
   crmRdpCssVars,
   crmSingleDayClassNames,
@@ -161,8 +162,7 @@ export default function CrmPopoverDateField({
           }}
           defaultMonth={selected ?? new Date()}
           captionLayout="label"
-          startMonth={new Date(2000, 0)}
-          endMonth={new Date(2040, 11)}
+          startMonth={CRM_SINGLE_DATE_PICKER_START_MONTH}
           className="crm-rdp w-full min-w-0 text-text-primary dark:text-zinc-100"
           formatters={crmFormatters}
           classNames={crmSingleDayClassNames}

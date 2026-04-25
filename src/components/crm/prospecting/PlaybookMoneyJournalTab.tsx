@@ -6,9 +6,11 @@ import {
   BookOpen,
   Briefcase,
   CheckCircle2,
+  ChevronDown,
   DollarSign,
   ExternalLink,
   FolderOpen,
+  Layers,
   Loader2,
   TimerReset,
 } from "lucide-react";
@@ -34,6 +36,8 @@ type ProjectRow = {
 
 type TaskRow = { id: string; title: string; project_id: string };
 
+type PhaseRow = { id: string; title: string; parent_project_id: string };
+
 type ProjectQueryRow = {
   id: string;
   title: string;
@@ -58,6 +62,24 @@ function projectsFromQuery(rows: ProjectQueryRow[] | null): ProjectRow[] {
   });
 }
 
+/** Map Journal "phase or task" value to time_entry project_id / task_id. */
+function resolveTimeEntryProjectTask(
+  workLink: string,
+  tasks: TaskRow[]
+): { projectId: string; taskId: string } {
+  if (!workLink) return { projectId: "", taskId: "" };
+  if (workLink.startsWith("task:")) {
+    const tid = workLink.slice(5);
+    const task = tasks.find((t) => t.id === tid);
+    if (task) return { projectId: task.project_id, taskId: tid };
+    return { projectId: "", taskId: "" };
+  }
+  if (workLink.startsWith("proj:")) {
+    return { projectId: workLink.slice(5), taskId: "" };
+  }
+  return { projectId: "", taskId: "" };
+}
+
 const inputClass =
   "w-full min-w-0 rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-text-primary shadow-sm outline-none transition placeholder:text-zinc-400 focus:border-accent focus:bg-white focus:ring-2 focus:ring-accent/15 dark:border-zinc-700 dark:bg-zinc-900/80 dark:text-zinc-100 dark:placeholder:text-zinc-600";
 const areaClass =
@@ -67,24 +89,151 @@ const labelClass =
 const sectionClass =
   "rounded-2xl border border-border bg-white p-4 shadow-sm ring-1 ring-black/[0.03] dark:border-zinc-800 dark:bg-zinc-950/70 dark:ring-white/[0.04] sm:p-5";
 
+type JournalPamphletRow = {
+  id: string;
+  started_at: string;
+  ended_at: string | null;
+  journal: MoneyJournalEntryPayload;
+};
+
+function parseJournalPayload(v: unknown): MoneyJournalEntryPayload | null {
+  if (!v || typeof v !== "object") return null;
+  const o = v as Record<string, unknown>;
+  if (typeof o.hourNumber !== "number" || typeof o.workDetail60m !== "string")
+    return null;
+  return v as MoneyJournalEntryPayload;
+}
+
+function previewLine(text: string, max: number) {
+  const t = text.trim().replace(/\s+/g, " ");
+  if (t.length <= max) return t;
+  return `${t.slice(0, max)}…`;
+}
+
+function JournalPergaminoLeaves({ entries }: { entries: JournalPamphletRow[] }) {
+  if (entries.length === 0) {
+    return (
+      <p className="text-sm text-text-secondary/90 dark:text-zinc-500">
+        Finished hours will appear here as parchment leaves, newest on top, so
+        you can open any past block and re-read it.
+      </p>
+    );
+  }
+
+  return (
+    <ul className="space-y-2.5">
+      {entries.map((row, index) => {
+        const j = row.journal;
+        const d = new Date(row.started_at);
+        const dateStr = d.toLocaleDateString("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          ...(d.getFullYear() !== new Date().getFullYear()
+            ? { year: "numeric" as const }
+            : {}),
+        });
+        const stackZ = entries.length - index;
+        return (
+          <li
+            key={row.id}
+            style={{ zIndex: stackZ }}
+            className={`relative ${
+              index % 2 === 0 ? "sm:pl-0" : "sm:pl-3"
+            } transition-transform hover:sm:translate-x-0.5`}
+          >
+            <details
+              className="group rounded-lg border border-amber-200/90 bg-gradient-to-b from-amber-50/98 via-amber-50/90 to-amber-100/85 text-amber-950 shadow-[0_1px_0_0_rgba(255,255,255,0.5),inset_0_1px_0_0_rgba(255,255,255,0.35),2px_3px_8px_rgba(120,83,20,0.12)] dark:border-amber-900/50 dark:from-amber-950/50 dark:via-zinc-900/70 dark:to-zinc-950/80 dark:text-amber-50/95 dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]"
+            >
+              <summary className="cursor-pointer list-none px-3 py-2.5 pr-8 text-left [&::-webkit-details-marker]:hidden">
+                <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
+                  <span className="font-serif text-sm font-semibold tracking-tight text-amber-950/95 dark:text-amber-100">
+                    Hour {j.hourNumber}
+                    <span className="font-sans text-[11px] font-normal text-amber-800/80 dark:text-amber-200/70">
+                      {" "}
+                      · {dateStr}
+                    </span>
+                  </span>
+                  <span className="font-sans text-[11px] text-amber-800/80 dark:text-amber-300/80">
+                    {j.startTimeLabel} – {j.stopTimeLabel}
+                  </span>
+                </div>
+                <p className="mt-1.5 line-clamp-2 font-sans text-xs leading-snug text-amber-900/90 dark:text-amber-100/80">
+                  {previewLine(j.workDetail60m, 200)}
+                </p>
+                <ChevronDown
+                  className="pointer-events-none absolute right-2.5 top-3 h-3.5 w-3.5 text-amber-700/50 transition group-open:rotate-180 dark:text-amber-400/45"
+                  aria-hidden
+                />
+              </summary>
+              <div className="space-y-2.5 border-t border-amber-200/60 px-3 py-3 text-xs leading-relaxed text-amber-950/95 dark:border-amber-800/50 dark:text-amber-50/90">
+                <PergField label="Prospecting" value={j.prospectingDone || "—"} />
+                <PergField label="Money for" value={j.moneyPurpose || "—"} />
+                <PergField label="This hour" value={j.workDetail60m || "—"} multiline />
+                <PergField label="Focus" value={j.focusEffortRating || "—"} multiline />
+                <PergField label="Next hour" value={j.improveNextHour || "—"} multiline />
+                <PergField label="Promise" value={j.promiseKeepGoing || "—"} />
+                <p className="pt-0.5 text-[11px] text-amber-800/70 dark:text-amber-400/60">
+                  {j.billable ? "Billable" : "Non-billable"}
+                </p>
+              </div>
+            </details>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function PergField({
+  label,
+  value,
+  multiline,
+}: {
+  label: string;
+  value: string;
+  multiline?: boolean;
+}) {
+  return (
+    <div>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-800/70 dark:text-amber-400/60">
+        {label}
+      </p>
+      <p
+        className={`mt-0.5 whitespace-pre-wrap text-[13px] ${
+          multiline ? "" : ""
+        }`}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
 type Props = { today: Date };
 
 export default function PlaybookMoneyJournalTab({ today }: Props) {
-  const [prospectingDone, setProspectingDone] = useState("");
+  const [prospectingDone, setProspectingDone] = useState(false);
   const [moneyPurpose, setMoneyPurpose] = useState("");
   const [workDetail60m, setWorkDetail60m] = useState("");
   const [focusEffortRating, setFocusEffortRating] = useState("");
   const [improveNextHour, setImproveNextHour] = useState("");
   const [promiseKeepGoing, setPromiseKeepGoing] = useState("");
   const [billable, setBillable] = useState(true);
-  const [projectId, setProjectId] = useState("");
-  const [taskId, setTaskId] = useState("");
+  /** Root product (Work → Products). */
+  const [productId, setProductId] = useState("");
+  /** `proj:uuid` = phase or entire product; `task:uuid` = task. */
+  const [workLink, setWorkLink] = useState("");
 
-  const [projects, setProjects] = useState<ProjectRow[]>([]);
+  const [products, setProducts] = useState<ProjectRow[]>([]);
+  const [phases, setPhases] = useState<PhaseRow[]>([]);
   const [tasks, setTasks] = useState<TaskRow[]>([]);
   const [completedToday, setCompletedToday] = useState(0);
   const [nextHourN, setNextHourN] = useState(1);
   const [runningTt, setRunningTt] = useState(false);
+  const [pamphletEntries, setPamphletEntries] = useState<JournalPamphletRow[]>(
+    []
+  );
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -100,9 +249,13 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
     improveNextHour,
     promiseKeepGoing,
     billable,
-    projectId,
-    taskId,
+    projectId: "",
+    taskId: "",
   });
+  const timeEntryIds = useMemo(
+    () => resolveTimeEntryProjectTask(workLink, tasks),
+    [workLink, tasks]
+  );
   formRef.current = {
     prospectingDone,
     moneyPurpose,
@@ -111,16 +264,31 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
     improveNextHour,
     promiseKeepGoing,
     billable,
-    projectId,
-    taskId,
+    projectId: timeEntryIds.projectId,
+    taskId: timeEntryIds.taskId,
   };
   const nextHourNRef = useRef(nextHourN);
   nextHourNRef.current = nextHourN;
 
-  const tasksForProject = useMemo(() => {
-    if (!projectId.trim()) return tasks;
-    return tasks.filter((t) => t.project_id === projectId);
-  }, [tasks, projectId]);
+  const phasesForProduct = useMemo(() => {
+    if (!productId) return [];
+    return phases
+      .filter((p) => p.parent_project_id === productId)
+      .sort((a, b) => a.title.localeCompare(b.title));
+  }, [phases, productId]);
+
+  const tasksForProduct = useMemo(() => {
+    if (!productId) return [];
+    const allowed = new Set<string>([productId, ...phasesForProduct.map((p) => p.id)]);
+    return tasks
+      .filter((t) => allowed.has(t.project_id))
+      .sort((a, b) => a.title.localeCompare(b.title));
+  }, [tasks, productId, phasesForProduct]);
+
+  const selectedProductTitle = useMemo(
+    () => products.find((p) => p.id === productId)?.title ?? "Product",
+    [products, productId]
+  );
 
   const refreshMeta = useCallback(async () => {
     if (!isSupabaseConfigured()) {
@@ -142,14 +310,28 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
     const d1 = new Date(today);
     d1.setHours(23, 59, 59, 999);
 
-    const [pRes, tRes, dayRes, runRes] = await Promise.all([
+    const lookback = new Date();
+    lookback.setDate(lookback.getDate() - 120);
+    lookback.setHours(0, 0, 0, 0);
+
+    const [pRoot, pPhases, tRes, dayRes, runRes, histRes] = await Promise.all([
       supabase
         .from("project")
         .select("id, title, client:client_id ( name, company, email )")
-        .not("parent_project_id", "is", null)
+        .is("parent_project_id", null)
         .order("title")
         .limit(300),
-      supabase.from("task").select("id, title, project_id").order("title").limit(500),
+      supabase
+        .from("project")
+        .select("id, title, parent_project_id")
+        .not("parent_project_id", "is", null)
+        .order("title")
+        .limit(500),
+      supabase
+        .from("task")
+        .select("id, title, project_id")
+        .order("title")
+        .limit(1000),
       supabase
         .from("time_entry")
         .select("id, tags, journal_data, started_at")
@@ -162,12 +344,22 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
         .eq("user_id", user.id)
         .is("ended_at", null)
         .maybeSingle(),
+      supabase
+        .from("time_entry")
+        .select("id, started_at, ended_at, journal_data")
+        .eq("user_id", user.id)
+        .not("journal_data", "is", null)
+        .gte("started_at", lookback.toISOString())
+        .order("started_at", { ascending: false })
+        .limit(100),
     ]);
 
-    if (pRes.error) setLoadErr(pRes.error.message);
+    if (pRoot.error) setLoadErr(pRoot.error.message);
+    else if (pPhases.error) setLoadErr(pPhases.error.message);
     else if (tRes.error) setLoadErr(tRes.error.message);
     else {
-      setProjects(projectsFromQuery(pRes.data as ProjectQueryRow[] | null));
+      setProducts(projectsFromQuery(pRoot.data as ProjectQueryRow[] | null));
+      setPhases((pPhases.data ?? []) as PhaseRow[]);
       setTasks((tRes.data ?? []) as TaskRow[]);
     }
     if (dayRes.error) setLoadErr(dayRes.error.message);
@@ -182,6 +374,28 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
       setCompletedToday(n);
       setNextHourN(n + 1);
     }
+
+    if (!histRes.error && histRes.data) {
+      const rows = histRes.data as {
+        id: string;
+        started_at: string;
+        ended_at: string | null;
+        journal_data: unknown;
+      }[];
+      const list: JournalPamphletRow[] = [];
+      for (const r of rows) {
+        const journal = parseJournalPayload(r.journal_data);
+        if (journal) {
+          list.push({
+            id: r.id,
+            started_at: r.started_at,
+            ended_at: r.ended_at,
+            journal,
+          });
+        }
+      }
+      setPamphletEntries(list);
+    }
   }, [today]);
 
   useEffect(() => {
@@ -189,7 +403,7 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
   }, [refreshMeta]);
 
   const clearHourFields = useCallback(() => {
-    setProspectingDone("");
+    setProspectingDone(false);
     setMoneyPurpose("");
     setWorkDetail60m("");
     setFocusEffortRating("");
@@ -197,6 +411,8 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
     setPromiseKeepGoing("");
     setNeedPrompt(false);
     autoLogDoneRef.current = false;
+    setProductId("");
+    setWorkLink("");
   }, []);
 
   const doLog = useCallback(
@@ -224,7 +440,7 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
       setErr(null);
       const payload: MoneyJournalEntryPayload = {
         hourNumber: nextHourNRef.current,
-        prospectingDone: f.prospectingDone.trim(),
+        prospectingDone: f.prospectingDone ? "Yes" : "",
         startTimeLabel: range.startLabel,
         stopTimeLabel: range.stopLabel,
         moneyPurpose: f.moneyPurpose.trim(),
@@ -291,7 +507,7 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
     );
   }
 
-  if (loadErr && !projects.length) {
+  if (loadErr && !products.length) {
     return <p className="text-sm text-red-600 dark:text-red-400">{loadErr}</p>;
   }
 
@@ -303,7 +519,7 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
 
   return (
     <div className="space-y-5">
-      {loadErr && projects.length > 0 ? (
+      {loadErr && products.length > 0 ? (
         <p className="rounded-xl border border-red-500/30 bg-red-500/5 px-4 py-2 text-sm text-red-800 dark:text-red-200/90">
           {loadErr}
         </p>
@@ -409,16 +625,22 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
                 </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <label>
+              <div className="grid gap-4 md:grid-cols-2 md:items-start">
+                <div>
                   <span className={labelClass}>Prospecting done</span>
-                  <input
-                    className={inputClass}
-                    value={prospectingDone}
-                    onChange={(e) => setProspectingDone(e.target.value)}
-                    placeholder="Calls, DMs, follow-ups..."
-                  />
-                </label>
+                  <label className="mt-2 flex cursor-pointer items-start gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-3 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900/80 dark:hover:bg-zinc-800/80">
+                    <input
+                      type="checkbox"
+                      checked={prospectingDone}
+                      onChange={(e) => setProspectingDone(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-zinc-300 text-accent focus:ring-2 focus:ring-accent/30 dark:border-zinc-600 dark:bg-zinc-900 dark:focus:ring-blue-500/30"
+                    />
+                    <span className="text-sm leading-snug text-text-primary dark:text-zinc-100">
+                      I completed prospecting this hour (calls, DMs, follow-ups,
+                      etc.)
+                    </span>
+                  </label>
+                </div>
                 <label>
                   <span className={labelClass}>I will use the money for</span>
                   <input
@@ -523,18 +745,18 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
               <div className="mt-4 space-y-3">
                 <label>
                   <span className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-secondary/80 dark:text-zinc-500">
-                    <Briefcase className="h-3.5 w-3.5" /> Project
+                    <Briefcase className="h-3.5 w-3.5" /> Product
                   </span>
                   <select
-                    value={projectId}
+                    value={productId}
                     onChange={(e) => {
-                      setProjectId(e.target.value);
-                      setTaskId("");
+                      setProductId(e.target.value);
+                      setWorkLink("");
                     }}
                     className={inputClass}
                   >
-                    <option value="">Select phase...</option>
-                    {projects.map((p) => (
+                    <option value="">Select product…</option>
+                    {products.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.title}
                       </option>
@@ -543,20 +765,40 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
                 </label>
                 <label>
                   <span className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-secondary/80 dark:text-zinc-500">
-                    <FolderOpen className="h-3.5 w-3.5" /> Task
+                    <FolderOpen className="h-3.5 w-3.5" /> Phase or task
                   </span>
                   <select
-                    value={taskId}
-                    onChange={(e) => setTaskId(e.target.value)}
-                    disabled={!projectId}
+                    value={workLink}
+                    onChange={(e) => setWorkLink(e.target.value)}
+                    disabled={!productId}
                     className={inputClass + " disabled:cursor-not-allowed disabled:opacity-50"}
                   >
-                    <option value="">Select task...</option>
-                    {tasksForProject.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.title}
-                      </option>
-                    ))}
+                    <option value="">
+                      {productId
+                        ? "Select phase, whole product, or task…"
+                        : "Select a product first…"}
+                    </option>
+                    {productId ? (
+                      <optgroup label="Product and phases">
+                        <option value={`proj:${productId}`}>
+                          {selectedProductTitle} (whole product)
+                        </option>
+                        {phasesForProduct.map((ph) => (
+                          <option key={ph.id} value={`proj:${ph.id}`}>
+                            {ph.title}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ) : null}
+                    {productId && tasksForProduct.length > 0 ? (
+                      <optgroup label="Tasks">
+                        {tasksForProduct.map((t) => (
+                          <option key={t.id} value={`task:${t.id}`}>
+                            {t.title}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ) : null}
                   </select>
                 </label>
               </div>
@@ -572,6 +814,27 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
               </button>
             </section>
           </aside>
+        </div>
+
+        <div className="border-t border-border bg-[linear-gradient(180deg,rgba(249,250,251,0.5),rgba(255,255,255,0.96))] px-4 py-5 dark:border-zinc-800 dark:bg-[linear-gradient(180deg,rgba(9,9,11,0.4),rgba(24,24,27,0.75))] sm:px-6 lg:px-8">
+          <div className="mb-3 flex items-start gap-2.5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100/90 text-amber-900 ring-1 ring-amber-200/80 dark:bg-amber-950/50 dark:text-amber-200 dark:ring-amber-800/60">
+              <Layers className="h-4 w-4" aria-hidden />
+            </span>
+            <div>
+              <h3 className="font-serif text-base font-medium tracking-tight text-text-primary dark:text-amber-50/95">
+                Journal leaves
+              </h3>
+              <p className="mt-0.5 max-w-2xl text-xs leading-relaxed text-text-secondary dark:text-zinc-500">
+                A stack of past hours (like folded pamphlets). Newest on top. Open
+                a leaf to read the full entry—saved when you log the hour to Time
+                Tracking.
+              </p>
+            </div>
+          </div>
+          <div className="max-h-[min(22rem,52vh)] overflow-y-auto overflow-x-hidden pr-1">
+            <JournalPergaminoLeaves entries={pamphletEntries} />
+          </div>
         </div>
       </div>
     </div>

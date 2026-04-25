@@ -4,6 +4,14 @@ import type { ClassNames, ModifiersClassNames, Formatters } from "react-day-pick
 /** Reference design: #3B82F6 (Tailwind blue-500) */
 export const CRM_CALENDAR_SELECT_BLUE = "bg-blue-500 hover:bg-blue-500 focus:bg-blue-500";
 
+/**
+ * Single-date `DayPicker` navigation lower bound. Do not set a matching
+ * `endMonth` for deadline / expected-end fields: react-day-picker v9 uses
+ * `endOfMonth(endMonth)` as an internal `maxDate` for the day grid, which can
+ * incorrectly clamp later days in the view if combined with the nav range.
+ */
+export const CRM_SINGLE_DATE_PICKER_START_MONTH = new Date(2000, 0, 1);
+
 const WEEKDAY_2: Record<number, string> = {
   0: "Su",
   1: "Mo",
