@@ -364,10 +364,14 @@ const MoneyJournalTimer = forwardRef<MoneyJournalTimerHandle, MoneyJournalTimerP
     const display = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 
     return (
-      <div className="flex flex-col items-center rounded-2xl border border-teal-500/20 bg-zinc-900/90 px-6 py-8 shadow-inner sm:px-10">
-        <p className="text-sm font-medium tracking-wide text-zinc-100">Flow</p>
+      <div className="relative overflow-hidden rounded-3xl border border-teal-400/20 bg-[#151718] px-6 py-7 text-center shadow-2xl shadow-black/30 ring-1 ring-white/[0.04]">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(45,212,191,0.16),transparent_45%)]" />
+        <div className="relative">
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
+          Flow block
+        </p>
         <p
-          className="mt-2 font-mono text-5xl font-semibold tabular-nums tracking-tight text-white sm:text-6xl"
+          className="mt-3 font-mono text-5xl font-semibold tabular-nums tracking-tight text-white sm:text-6xl"
           aria-live="polite"
         >
           {display}
@@ -388,12 +392,12 @@ const MoneyJournalTimer = forwardRef<MoneyJournalTimerHandle, MoneyJournalTimerP
             />
           ))}
         </div>
-        <div className="mt-8 flex items-center justify-center gap-3">
+        <div className="mt-7 flex items-center justify-center gap-3">
           {status === "running" ? (
             <button
               type="button"
               onClick={onPause}
-              className="inline-flex h-16 w-16 items-center justify-center rounded-full border-2 border-teal-500/50 text-teal-400/90 transition hover:border-teal-400 hover:bg-teal-500/10"
+              className="inline-flex h-14 w-14 items-center justify-center rounded-full border-2 border-teal-400/50 bg-teal-400/10 text-teal-300 transition hover:border-teal-300 hover:bg-teal-400/15"
               aria-label="Pause"
             >
               <div className="h-3.5 w-3.5 rounded-sm bg-current" />
@@ -403,16 +407,16 @@ const MoneyJournalTimer = forwardRef<MoneyJournalTimerHandle, MoneyJournalTimerP
               type="button"
               onClick={onPlay}
               disabled={status === "complete"}
-              className="inline-flex h-16 w-16 items-center justify-center rounded-full border-2 border-teal-500/50 text-teal-400/90 transition hover:border-teal-400 enabled:hover:bg-teal-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex h-14 w-14 items-center justify-center rounded-full border-2 border-teal-400/50 bg-teal-400/10 text-teal-300 transition hover:border-teal-300 enabled:hover:bg-teal-400/15 disabled:cursor-not-allowed disabled:opacity-40"
               aria-label={status === "idle" ? "Start" : "Resume"}
             >
-              <Play className="h-6 w-6 translate-x-0.5 fill-current" />
+              <Play className="h-5 w-5 translate-x-0.5 fill-current" />
             </button>
           )}
           <button
             type="button"
             onClick={onReset}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-zinc-600 text-zinc-400 transition hover:border-zinc-500 hover:text-zinc-200"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-zinc-400 transition hover:border-white/20 hover:text-zinc-200"
             aria-label="Reset timer"
           >
             <RotateCcw className="h-4 w-4" />
@@ -421,17 +425,18 @@ const MoneyJournalTimer = forwardRef<MoneyJournalTimerHandle, MoneyJournalTimerP
             <button
               type="button"
               onClick={onReset}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-rose-500/40 text-rose-300/80 transition hover:bg-rose-500/10"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-rose-400/30 bg-rose-400/5 text-rose-300/80 transition hover:bg-rose-400/10"
               aria-label="Stop and clear"
             >
               <Square className="h-4 w-4 fill-current" />
             </button>
           )}
         </div>
-        <p className="mt-4 max-w-sm text-center text-xs text-zinc-500">
+        <p className="mx-auto mt-4 max-w-xs text-xs leading-relaxed text-zinc-500">
           60:00 work block. You’ll get a chime and (if allowed) a notification
           at 0:00.
         </p>
+        </div>
       </div>
     );
   }
