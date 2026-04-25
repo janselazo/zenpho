@@ -1,6 +1,21 @@
 "use client";
 
-import { Compass, Loader2, Plus, Trash2 } from "lucide-react";
+import {
+  DndContext,
+  type DragEndEvent,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Compass, GripVertical, Loader2, Plus, Trash2 } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -8,6 +23,7 @@ import {
   useRef,
   useState,
   useTransition,
+  type ReactNode,
 } from "react";
 import {
   listLifeAreaStatuses,
@@ -28,6 +44,8 @@ import {
   type LifeStatus,
 } from "@/lib/crm/life-areas";
 
+const LIFE_AREA_ORDER_STORAGE_KEY = "zenpho:my-life:area-order:v1";
+
 // ---------------------------------------------------------------------------
 // Root view
 // ---------------------------------------------------------------------------
@@ -37,8 +55,21 @@ export default function MyLifeView() {
   const [areaStatus, setAreaStatus] = useState<Record<LifeAreaKey, LifeStatus>>(
     () => defaultAreaStatus()
   );
+  const [areaOrder, setAreaOrder] = useState<LifeAreaKey[]>(() =>
+    LIFE_AREAS.map((area) => area.key)
+  );
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(LIFE_AREA_ORDER_STORAGE_KEY);
+      const parsed = raw ? (JSON.parse(raw) as unknown) : null;
+      if (Array.isArray(parsed)) setAreaOrder(normalizeAreaOrder(parsed));
+    } catch {
+      /* ignore bad local order */
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -68,6 +99,13 @@ export default function MyLifeView() {
     return out;
   }, [tasks]);
 
+  const orderedAreas = useMemo(() => {
+    const byKey = new Map(LIFE_AREAS.map((area) => [area.key, area]));
+    return normalizeAreaOrder(areaOrder)
+      .map((key) => byKey.get(key))
+      .filter((area): area is (typeof LIFE_AREAS)[number] => Boolean(area));
+  }, [areaOrder]);
+
   const sectionSummary = useMemo(() => {
     const counts: Record<LifeStatus, number> = { green: 0, yellow: 0, red: 0 };
     for (const a of LIFE_AREAS) counts[areaStatus[a.key]] += 1;
@@ -90,6 +128,33 @@ export default function MyLifeView() {
 
   const setArea = useCallback((area: LifeAreaKey, status: LifeStatus) => {
     setAreaStatus((prev) => ({ ...prev, [area]: status }));
+  }, []);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 6 },
+    })
+  );
+
+  const handleAreaDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setAreaOrder((prev) => {
+      const normalized = normalizeAreaOrder(prev);
+      const oldIndex = normalized.indexOf(active.id as LifeAreaKey);
+      const newIndex = normalized.indexOf(over.id as LifeAreaKey);
+      if (oldIndex < 0 || newIndex < 0) return normalized;
+      const next = arrayMove(normalized, oldIndex, newIndex);
+      try {
+        window.localStorage.setItem(
+          LIFE_AREA_ORDER_STORAGE_KEY,
+          JSON.stringify(next)
+        );
+      } catch {
+        /* ignore local persistence failures */
+      }
+      return next;
+    });
   }, []);
 
   return (
@@ -137,23 +202,90 @@ export default function MyLifeView() {
           Loading your life areas…
         </div>
       ) : (
-        <div className="flex flex-col gap-5">
-          {LIFE_AREAS.map((area) => (
-            <LifeAreaSection
-              key={area.key}
-              areaKey={area.key}
-              label={area.label}
-              blurb={area.blurb}
-              Icon={area.icon}
-              status={areaStatus[area.key]}
-              tasks={byArea.get(area.key) ?? []}
-              onAreaStatusChange={(next) => setArea(area.key, next)}
-              onUpsertTask={upsertTask}
-              onRemoveTask={removeTask}
-            />
-          ))}
-        </div>
+        <DndContext
+          id="my-life-area-sections"
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleAreaDragEnd}
+        >
+          <SortableContext
+            items={orderedAreas.map((area) => area.key)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="flex flex-col gap-5">
+              {orderedAreas.map((area) => (
+                <SortableLifeAreaSection
+                  key={area.key}
+                  areaKey={area.key}
+                  label={area.label}
+                  blurb={area.blurb}
+                  Icon={area.icon}
+                  status={areaStatus[area.key]}
+                  tasks={byArea.get(area.key) ?? []}
+                  onAreaStatusChange={(next) => setArea(area.key, next)}
+                  onUpsertTask={upsertTask}
+                  onRemoveTask={removeTask}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
+    </div>
+  );
+}
+
+function normalizeAreaOrder(values: unknown[]): LifeAreaKey[] {
+  const known = new Set(LIFE_AREAS.map((area) => area.key));
+  const out: LifeAreaKey[] = [];
+  for (const value of values) {
+    if (
+      typeof value === "string" &&
+      known.has(value as LifeAreaKey) &&
+      !out.includes(value as LifeAreaKey)
+    ) {
+      out.push(value as LifeAreaKey);
+    }
+  }
+  for (const area of LIFE_AREAS) {
+    if (!out.includes(area.key)) out.push(area.key);
+  }
+  return out;
+}
+
+function SortableLifeAreaSection(props: LifeAreaSectionProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: props.areaKey });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.55 : 1,
+    zIndex: isDragging ? 20 : undefined,
+  };
+
+  const dragHandle = (
+    <button
+      type="button"
+      className="flex cursor-grab touch-none rounded-md p-1 text-text-secondary/70 transition-colors hover:bg-surface hover:text-text-primary active:cursor-grabbing dark:text-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+      {...attributes}
+      {...listeners}
+      aria-label={`Drag ${props.label} to reorder`}
+      title="Drag to reorder section"
+    >
+      <GripVertical className="h-4 w-4" aria-hidden />
+    </button>
+  );
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <LifeAreaSection {...props} dragHandle={dragHandle} />
     </div>
   );
 }
@@ -172,6 +304,7 @@ type LifeAreaSectionProps = {
   onAreaStatusChange: (next: LifeStatus) => void;
   onUpsertTask: (row: LifeTaskRow) => void;
   onRemoveTask: (id: string) => void;
+  dragHandle?: ReactNode;
 };
 
 function LifeAreaSection({
@@ -184,6 +317,7 @@ function LifeAreaSection({
   onAreaStatusChange,
   onUpsertTask,
   onRemoveTask,
+  dragHandle,
 }: LifeAreaSectionProps) {
   const [draftTitle, setDraftTitle] = useState("");
   const [creating, startCreate] = useTransition();
@@ -232,6 +366,7 @@ function LifeAreaSection({
     >
       <header className="flex flex-col gap-4 border-b border-border px-5 py-4 dark:border-zinc-800/70 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-start gap-3">
+          {dragHandle}
           <span
             className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${meta.dotClass}`}
             aria-hidden

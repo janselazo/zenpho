@@ -8,8 +8,15 @@ import Button from "@/components/ui/Button";
 const inputClass =
   "w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-text-primary placeholder:text-text-secondary/40 outline-none shadow-sm transition-all focus:border-accent focus:ring-2 focus:ring-accent/15";
 
+const PROJECT_TYPES: { value: string; label: string }[] = [
+  { value: "Website", label: "Website" },
+  { value: "Web App", label: "Web App" },
+  { value: "Mobile App", label: "Mobile App" },
+  { value: "AI Automation", label: "AI Automation" },
+];
+
 export default function ContactForm() {
-  const [projectType, setProjectType] = useState("websites-development");
+  const [projectType, setProjectType] = useState<string>(PROJECT_TYPES[0].value);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -157,15 +164,7 @@ export default function ContactForm() {
           Project type
         </label>
         <div className="flex flex-wrap gap-2">
-          {[
-            {
-              value: "websites-development",
-              label: "Custom Websites",
-            },
-            { value: "web-apps", label: "Web Apps" },
-            { value: "mobile-apps", label: "Mobile Apps" },
-            { value: "ai-automations", label: "AI Automations" },
-          ].map((type) => (
+          {PROJECT_TYPES.map((type) => (
             <button
               key={type.value}
               type="button"
