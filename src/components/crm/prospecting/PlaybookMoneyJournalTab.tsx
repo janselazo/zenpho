@@ -63,13 +63,13 @@ function projectsFromQuery(rows: ProjectQueryRow[] | null): ProjectRow[] {
 }
 
 const inputClass =
-  "w-full min-w-0 rounded-xl border border-white/10 bg-white/[0.045] px-3 py-2.5 text-sm text-white shadow-inner outline-none transition placeholder:text-zinc-600 focus:border-teal-400/50 focus:bg-white/[0.07] focus:ring-2 focus:ring-teal-400/10";
+  "w-full min-w-0 rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-text-primary shadow-sm outline-none transition placeholder:text-zinc-400 focus:border-accent focus:bg-white focus:ring-2 focus:ring-accent/15 dark:border-zinc-700 dark:bg-zinc-900/80 dark:text-zinc-100 dark:placeholder:text-zinc-600";
 const areaClass =
-  "w-full min-w-0 resize-y rounded-xl border border-white/10 bg-white/[0.045] px-3 py-2.5 text-sm leading-relaxed text-white shadow-inner outline-none transition placeholder:text-zinc-600 focus:border-teal-400/50 focus:bg-white/[0.07] focus:ring-2 focus:ring-teal-400/10";
+  "w-full min-w-0 resize-y rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm leading-relaxed text-text-primary shadow-sm outline-none transition placeholder:text-zinc-400 focus:border-accent focus:bg-white focus:ring-2 focus:ring-accent/15 dark:border-zinc-700 dark:bg-zinc-900/80 dark:text-zinc-100 dark:placeholder:text-zinc-600";
 const labelClass =
-  "mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500";
+  "mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-text-secondary/80 dark:text-zinc-500";
 const sectionClass =
-  "rounded-2xl border border-white/10 bg-white/[0.035] p-4 shadow-sm ring-1 ring-white/[0.03] sm:p-5";
+  "rounded-2xl border border-border bg-white p-4 shadow-sm ring-1 ring-black/[0.03] dark:border-zinc-800 dark:bg-zinc-950/70 dark:ring-white/[0.04] sm:p-5";
 
 type Props = { today: Date };
 
@@ -353,44 +353,44 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
         </p>
       ) : null}
 
-      <div className="overflow-hidden rounded-[1.75rem] border border-zinc-800 bg-[#050505] text-white shadow-2xl ring-1 ring-white/[0.04]">
-        <div className="border-b border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(20,184,166,0.22),transparent_32%),linear-gradient(135deg,rgba(255,255,255,0.08),transparent_45%)] px-5 py-6 sm:px-7 lg:px-8">
+      <div className="overflow-hidden rounded-[1.75rem] border border-border bg-zinc-50/80 text-text-primary shadow-sm ring-1 ring-black/[0.03] dark:border-zinc-800 dark:bg-zinc-950/70 dark:text-zinc-100 dark:ring-white/[0.04]">
+        <div className="border-b border-border bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.14),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(248,250,252,0.82))] px-5 py-6 dark:border-zinc-800 dark:bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_34%),linear-gradient(135deg,rgba(24,24,27,0.95),rgba(9,9,11,0.84))] sm:px-7 lg:px-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-teal-400/25 bg-teal-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-teal-200">
+              <div className="inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-accent dark:border-blue-400/25 dark:bg-blue-400/10 dark:text-blue-300">
                 <BookOpen className="h-3.5 w-3.5" />
                 Money Journal
               </div>
-              <h2 className="mt-4 font-serif text-3xl font-normal tracking-tight text-white sm:text-4xl">
+              <h2 className="mt-4 font-serif text-3xl font-normal tracking-tight text-text-primary dark:text-zinc-50 sm:text-4xl">
                 Track the hour, capture the lesson.
               </h2>
-              <p className="mt-3 max-w-xl text-sm leading-relaxed text-zinc-400">
+              <p className="mt-3 max-w-xl text-sm leading-relaxed text-text-secondary dark:text-zinc-400">
                 Work in focused 60-minute blocks, then log exactly what moved
                 you forward. Your completed hours sync to Time Tracking.
               </p>
             </div>
             <div className="grid grid-cols-3 gap-2 text-center sm:min-w-[24rem]">
-              <div className="rounded-2xl border border-white/10 bg-black/35 px-3 py-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+              <div className="rounded-2xl border border-border bg-white/85 px-3 py-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/70">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-secondary/80 dark:text-zinc-500">
                   Today
                 </p>
-                <p className="mt-1 text-sm font-semibold text-zinc-100">
+                <p className="mt-1 text-sm font-semibold text-text-primary dark:text-zinc-100">
                   {todayLabel}
                 </p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-black/35 px-3 py-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+              <div className="rounded-2xl border border-border bg-white/85 px-3 py-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/70">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-secondary/80 dark:text-zinc-500">
                   Logged
                 </p>
-                <p className="mt-1 text-xl font-semibold tabular-nums text-teal-200">
+                <p className="mt-1 text-xl font-semibold tabular-nums text-accent dark:text-blue-300">
                   {completedToday}/5
                 </p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-black/35 px-3 py-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+              <div className="rounded-2xl border border-border bg-white/85 px-3 py-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/70">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-secondary/80 dark:text-zinc-500">
                   Next
                 </p>
-                <p className="mt-1 text-xl font-semibold tabular-nums text-white">
+                <p className="mt-1 text-xl font-semibold tabular-nums text-text-primary dark:text-zinc-50">
                   Hour {nextHourN}
                 </p>
               </div>
@@ -402,14 +402,14 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
           <div className="space-y-5">
             <section className={sectionClass}>
               <div className="mb-4 flex items-center gap-2">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-400/10 text-teal-300 ring-1 ring-teal-400/20">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/10 text-accent ring-1 ring-accent/15 dark:bg-blue-500/15 dark:text-blue-300 dark:ring-blue-500/25">
                   <Target className="h-4 w-4" />
                 </span>
                 <div>
-                  <h3 className="text-sm font-semibold text-white">
+                  <h3 className="text-sm font-semibold text-text-primary dark:text-zinc-100">
                     Purpose and targets
                   </h3>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-text-secondary dark:text-zinc-500">
                     These stay filled in for the day so each hour is faster.
                   </p>
                 </div>
@@ -578,19 +578,19 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
             <section className={sectionClass}>
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/8 text-zinc-200 ring-1 ring-white/10">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 ring-1 ring-zinc-200 dark:bg-zinc-800/80 dark:text-zinc-300 dark:ring-zinc-700">
                     <TimerReset className="h-4 w-4" />
                   </span>
                   <div>
-                    <h3 className="text-sm font-semibold text-white">
+                    <h3 className="text-sm font-semibold text-text-primary dark:text-zinc-100">
                       Hour {nextHourN} reflection
                     </h3>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-text-secondary dark:text-zinc-500">
                       Fill this while or after the timer runs.
                     </p>
                   </div>
                 </div>
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-zinc-300">
+                <span className="rounded-full border border-border bg-zinc-50 px-3 py-1 text-xs font-semibold text-text-secondary dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
                   60 min
                 </span>
               </div>
@@ -652,8 +652,8 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
                 </label>
               </div>
 
-              <div className="mt-4 rounded-2xl border border-teal-400/15 bg-teal-400/[0.06] p-4">
-                <p className="text-sm leading-relaxed text-teal-50/85">
+              <div className="mt-4 rounded-2xl border border-accent/15 bg-accent/5 p-4 dark:border-blue-500/20 dark:bg-blue-500/10">
+                <p className="text-sm leading-relaxed text-text-primary dark:text-blue-50/85">
                   With every hour you complete, you are rewiring your brain and
                   becoming someone capable of getting 10x as much done as you
                   used to.
@@ -680,14 +680,14 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
 
             <section className={sectionClass}>
               <div className="mb-4 flex items-center gap-2">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-400/20">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/25">
                   <CheckCircle2 className="h-4 w-4" />
                 </span>
                 <div>
-                  <h3 className="text-sm font-semibold text-white">
+                  <h3 className="text-sm font-semibold text-text-primary dark:text-zinc-100">
                     Save to Time Tracking
                   </h3>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-text-secondary dark:text-zinc-500">
                     Link the hour to work before logging.
                   </p>
                 </div>
@@ -698,8 +698,8 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
                 onClick={() => setBillable((b) => !b)}
                 className={`flex w-full items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${
                   billable
-                    ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-200 shadow-[0_0_0_1px_rgba(52,211,153,0.08)]"
-                    : "border-white/10 bg-white/[0.04] text-zinc-400 hover:bg-white/[0.07]"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-800 shadow-sm dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
+                    : "border-border bg-white text-text-secondary hover:bg-surface dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800"
                 }`}
               >
                 <DollarSign className="h-4 w-4" />
@@ -708,7 +708,7 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
 
               <div className="mt-4 space-y-3">
                 <label>
-                  <span className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                  <span className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-secondary/80 dark:text-zinc-500">
                     <Briefcase className="h-3.5 w-3.5" /> Project
                   </span>
                   <select
@@ -728,7 +728,7 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
                   </select>
                 </label>
                 <label>
-                  <span className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                  <span className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-secondary/80 dark:text-zinc-500">
                     <FolderOpen className="h-3.5 w-3.5" /> Task
                   </span>
                   <select
@@ -751,7 +751,7 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
                 type="button"
                 disabled={saving}
                 onClick={onManualLog}
-                className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black shadow-lg shadow-white/5 transition hover:bg-zinc-200 disabled:opacity-50"
+                className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-accent-hover disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-400"
               >
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                 Log this hour
