@@ -89,6 +89,11 @@ import {
   saveMonthlyGoalTargets,
 } from "@/lib/crm/monthly-goals-targets";
 import {
+  loadNorthStarGoalIds,
+  pruneNorthStarGoalIds,
+  saveNorthStarGoalIds,
+} from "@/lib/crm/monthly-goals-store";
+import {
   getCompletions,
   saveCompletions,
   loadPlaybookCategories,
@@ -296,10 +301,11 @@ function DateNavigator({
 
 // ── Main Component ──────────────────────────────────────────────────────────
 
-type ActiveTab = "playbook" | "agenda" | "tasks";
+type ActiveTab = "playbook" | "goals" | "agenda" | "tasks";
 
 const TABS = [
   { id: "playbook", label: "Playbook", icon: BookOpen },
+  { id: "goals", label: "Goals", icon: Target },
   { id: "agenda", label: "Agenda", icon: CalendarDays },
   { id: "tasks", label: "Tasks", icon: ListTodo },
 ];
@@ -315,6 +321,7 @@ export default function ColdOutreachView() {
   const [goals, setGoals] = useState<MonthlyGoal[]>(() => [
     ...standardMonthlyGoals,
   ]);
+  const [northStarGoalIds, setNorthStarGoalIds] = useState<string[]>([]);
   const [clientsActual, setClientsActual] = useState(0);
   const [revenueActual, setRevenueActual] = useState(0);
 
@@ -325,7 +332,19 @@ export default function ColdOutreachView() {
       { ...standardMonthlyGoals[0], target: t.clients },
       { ...standardMonthlyGoals[1], target: t.revenue },
     ]);
+    setNorthStarGoalIds(loadNorthStarGoalIds());
   }, []);
+
+  useEffect(() => {
+    setNorthStarGoalIds((prev) => {
+      const next = pruneNorthStarGoalIds(
+        prev,
+        goals.map((goal) => goal.id)
+      );
+      if (next.length !== prev.length) saveNorthStarGoalIds(next);
+      return next;
+    });
+  }, [goals]);
 
   useEffect(() => {
     if (!isSupabaseConfigured()) {
@@ -372,6 +391,16 @@ export default function ColdOutreachView() {
     saveMonthlyGoalTargets(ym, { clients: clientsT, revenue: revenueT });
   }
 
+  function toggleNorthStarGoal(goalId: string) {
+    setNorthStarGoalIds((prev) => {
+      const next = prev.includes(goalId)
+        ? prev.filter((id) => id !== goalId)
+        : [...prev, goalId];
+      saveNorthStarGoalIds(next);
+      return next;
+    });
+  }
+
   return (
     <div>
       <div>
@@ -383,9 +412,6 @@ export default function ColdOutreachView() {
           opportunities, appointments, and deals
         </p>
       </div>
-
-      {/* Monthly Goals */}
-      <MonthlyGoalsCard goals={goalsWithActuals} onChange={handleGoalsChange} />
 
       {/* Date navigator */}
       <div className="mt-6">
@@ -404,6 +430,14 @@ export default function ColdOutreachView() {
 
       <div className="mt-6">
         {activeTab === "playbook" && <PlaybookTab />}
+        {activeTab === "goals" && (
+          <GoalsTab
+            goals={goalsWithActuals}
+            onChange={handleGoalsChange}
+            northStarGoalIds={northStarGoalIds}
+            onToggleNorthStarGoal={toggleNorthStarGoal}
+          />
+        )}
         {activeTab === "agenda" && (
           <AgendaTab date={currentDate} />
         )}
@@ -422,15 +456,204 @@ function formatCompactUsd(n: number) {
   return formatCurrency(n);
 }
 
+function GoalRow({
+  goal,
+  isNorthStar,
+  onToggleNorthStar,
+  editingTargetId,
+  targetDraft,
+  setTargetDraft,
+  onStartEditTarget,
+  onConfirmTargetEdit,
+  onCancelTargetEdit,
+}: {
+  goal: MonthlyGoal;
+  isNorthStar: boolean;
+  onToggleNorthStar: (goalId: string) => void;
+  editingTargetId: string | null;
+  targetDraft: number;
+  setTargetDraft: (value: number) => void;
+  onStartEditTarget: (goal: MonthlyGoal) => void;
+  onConfirmTargetEdit: (goal: MonthlyGoal) => void;
+  onCancelTargetEdit: () => void;
+}) {
+  const pct = Math.min((goal.current / Math.max(goal.target, 1)) * 100, 100);
+  const GoalIcon = goal.icon === "users" ? UsersRound : DollarSign;
+  const isEditingTarget = editingTargetId === goal.id;
+  const displayDots = Math.min(goal.target, 40);
+  const filledDots =
+    goal.target > 0
+      ? Math.min(displayDots, Math.floor((goal.current / goal.target) * displayDots))
+      : 0;
+
+  return (
+    <div className="border-t border-border px-5 py-4 first:border-t-0 dark:border-zinc-800">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-2.5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800/90">
+            <GoalIcon className="h-4 w-4 text-zinc-600 dark:text-zinc-400" aria-hidden />
+          </span>
+          <span className="truncate text-sm font-medium text-text-primary dark:text-zinc-100">
+            {goal.title}
+          </span>
+        </div>
+
+        {isEditingTarget ? (
+          <div className="flex shrink-0 items-center gap-1.5">
+            {goal.unit === "currency" && (
+              <span className="text-sm text-text-secondary dark:text-zinc-500">$</span>
+            )}
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={targetDraft}
+              onChange={(e) => setTargetDraft(Number(e.target.value))}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") onConfirmTargetEdit(goal);
+                if (e.key === "Escape") onCancelTargetEdit();
+              }}
+              autoFocus
+              className="w-24 rounded-lg border border-accent bg-white px-2 py-1 text-right text-sm font-semibold text-text-primary outline-none ring-2 ring-accent/15 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+            />
+            <button
+              type="button"
+              onClick={() => onConfirmTargetEdit(goal)}
+              className="flex h-7 w-7 items-center justify-center rounded-full text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/50"
+              aria-label="Save monthly target"
+            >
+              <CheckCircle2 className="h-5 w-5" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex shrink-0 items-center gap-1.5">
+            <span className="text-sm font-semibold tabular-nums text-text-primary dark:text-zinc-100">
+              {goal.unit === "currency" ? (
+                <>
+                  {formatCompactUsd(goal.current)} / {formatCompactUsd(goal.target)}
+                </>
+              ) : (
+                <>
+                  {goal.current} / {goal.target}
+                </>
+              )}
+            </span>
+            <button
+              type="button"
+              onClick={() => onStartEditTarget(goal)}
+              className="rounded p-0.5 text-text-secondary/40 transition-colors hover:text-accent dark:hover:text-violet-400"
+              title="Edit monthly target"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onToggleNorthStar(goal.id)}
+              className={`rounded p-0.5 transition-colors ${
+                isNorthStar
+                  ? "text-amber-500 hover:text-amber-600"
+                  : "text-text-secondary/40 hover:text-amber-500"
+              }`}
+              title={isNorthStar ? "Remove from North Star" : "Add to North Star"}
+              aria-label={isNorthStar ? "Remove from North Star" : "Add to North Star"}
+            >
+              <Star className={`h-3.5 w-3.5 ${isNorthStar ? "fill-current" : ""}`} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {goal.unit === "count" ? (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-11">
+          {Array.from({ length: displayDots }).map((_, i) => (
+            <span
+              key={i}
+              className={`h-2.5 w-2.5 rounded-full ${
+                i < filledDots ? "bg-emerald-500" : "bg-gray-200 dark:bg-zinc-700"
+              }`}
+            />
+          ))}
+          {goal.target > 40 ? (
+            <span className="text-[10px] text-text-secondary dark:text-zinc-500">
+              ({goal.target} total)
+            </span>
+          ) : null}
+        </div>
+      ) : (
+        <div className="mt-2 pl-11">
+          <div className="h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-zinc-800">
+            <div
+              className="h-full rounded-full bg-amber-400 transition-all dark:bg-amber-500/90"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <p className="mt-1 text-right text-xs text-text-secondary dark:text-zinc-500">
+            {goal.current >= goal.target
+              ? "Goal reached"
+              : `${formatCompactUsd(Math.max(0, goal.target - goal.current))} more!`}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GoalsSectionCard({
+  title,
+  icon,
+  color,
+  children,
+  right,
+}: {
+  title: string;
+  icon: ReactNode;
+  color: string;
+  children: ReactNode;
+  right?: ReactNode;
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950/40">
+      <div className="flex items-center gap-2 px-5 py-4 sm:gap-3">
+        <div
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white"
+          style={{ backgroundColor: color }}
+        >
+          {icon}
+        </div>
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-text-primary dark:text-zinc-100">
+          {title}
+        </span>
+        {right}
+      </div>
+      <div className="border-t border-border dark:border-zinc-800">{children}</div>
+    </div>
+  );
+}
+
 function MonthlyGoalsCard({
   goals,
   onChange,
+  northStarGoalIds,
+  onToggleNorthStarGoal,
 }: {
   goals: MonthlyGoal[];
   onChange: (goals: MonthlyGoal[]) => void;
+  northStarGoalIds: string[];
+  onToggleNorthStarGoal: (goalId: string) => void;
 }) {
   const [editingTargetId, setEditingTargetId] = useState<string | null>(null);
   const [targetDraft, setTargetDraft] = useState(0);
+  const northStarIdSet = useMemo(
+    () => new Set(northStarGoalIds),
+    [northStarGoalIds]
+  );
+  const northStarGoals = useMemo(
+    () =>
+      northStarGoalIds
+        .map((id) => goals.find((goal) => goal.id === id))
+        .filter((goal): goal is MonthlyGoal => Boolean(goal)),
+    [northStarGoalIds, goals]
+  );
 
   function startEditTarget(g: MonthlyGoal) {
     setEditingTargetId(g.id);
@@ -450,134 +673,92 @@ function MonthlyGoalsCard({
   });
 
   return (
-    <div className="mt-6 rounded-2xl border border-border bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/40">
-      <div className="flex items-center justify-between">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/60 dark:text-zinc-500">
-          Monthly Goals
+    <div className="space-y-4">
+      {northStarGoals.length > 0 ? (
+        <GoalsSectionCard
+          title="North Star"
+          icon={<Star className="h-4 w-4 fill-current" aria-hidden />}
+          color="#f59e0b"
+          right={
+            <span className="text-xs tabular-nums text-text-secondary">
+              {northStarGoals.length}/{goals.length}
+            </span>
+          }
+        >
+          {northStarGoals.map((goal) => (
+            <GoalRow
+              key={`north-star-${goal.id}`}
+              goal={goal}
+              isNorthStar
+              onToggleNorthStar={onToggleNorthStarGoal}
+              editingTargetId={editingTargetId}
+              targetDraft={targetDraft}
+              setTargetDraft={setTargetDraft}
+              onStartEditTarget={startEditTarget}
+              onConfirmTargetEdit={confirmTargetEdit}
+              onCancelTargetEdit={() => setEditingTargetId(null)}
+            />
+          ))}
+        </GoalsSectionCard>
+      ) : null}
+
+      <GoalsSectionCard
+        title="Monthly Goals"
+        icon={<Target className="h-4 w-4" aria-hidden />}
+        color="#7c3aed"
+        right={
+          <span className="flex items-center gap-1.5 rounded-full border border-violet-200/90 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/15 dark:text-violet-200">
+            <Calendar className="h-3 w-3 text-violet-600 dark:text-violet-400" aria-hidden />
+            {monthLabel}
+          </span>
+        }
+      >
+        {goals.map((goal) => (
+          <GoalRow
+            key={goal.id}
+            goal={goal}
+            isNorthStar={northStarIdSet.has(goal.id)}
+            onToggleNorthStar={onToggleNorthStarGoal}
+            editingTargetId={editingTargetId}
+            targetDraft={targetDraft}
+            setTargetDraft={setTargetDraft}
+            onStartEditTarget={startEditTarget}
+            onConfirmTargetEdit={confirmTargetEdit}
+            onCancelTargetEdit={() => setEditingTargetId(null)}
+          />
+        ))}
+      </GoalsSectionCard>
+    </div>
+  );
+}
+
+function GoalsTab({
+  goals,
+  onChange,
+  northStarGoalIds,
+  onToggleNorthStarGoal,
+}: {
+  goals: MonthlyGoal[];
+  onChange: (goals: MonthlyGoal[]) => void;
+  northStarGoalIds: string[];
+  onToggleNorthStarGoal: (goalId: string) => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="heading-display text-lg font-semibold text-text-primary dark:text-zinc-100">
+          Goals
+        </h2>
+        <p className="mt-1 text-sm text-text-secondary dark:text-zinc-400">
+          Track your monthly targets and star the goals that matter most right now.
         </p>
-        <span className="flex items-center gap-1.5 rounded-full border border-violet-200/90 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/15 dark:text-violet-200">
-          <Calendar className="h-3 w-3 text-violet-600 dark:text-violet-400" aria-hidden />
-          {monthLabel}
-        </span>
       </div>
-      <div className="mt-4 space-y-5">
-        {goals.map((g) => {
-          const pct = Math.min(
-            (g.current / Math.max(g.target, 1)) * 100,
-            100
-          );
-          const GoalIcon =
-            g.icon === "users" ? UsersRound : DollarSign;
-          const isEditingTarget = editingTargetId === g.id;
-          const displayDots = Math.min(g.target, 40);
-          const filledDots =
-            g.target > 0
-              ? Math.min(
-                  displayDots,
-                  Math.floor((g.current / g.target) * displayDots)
-                )
-              : 0;
-
-          return (
-            <div key={g.id}>
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800/90">
-                    <GoalIcon className="h-4 w-4 text-zinc-600 dark:text-zinc-400" aria-hidden />
-                  </span>
-                  <span className="truncate text-sm font-medium text-text-primary dark:text-zinc-100">
-                    {g.title}
-                  </span>
-                </div>
-
-                {isEditingTarget ? (
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    {g.unit === "currency" && (
-                      <span className="text-sm text-text-secondary dark:text-zinc-500">$</span>
-                    )}
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={targetDraft}
-                      onChange={(e) => setTargetDraft(Number(e.target.value))}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") confirmTargetEdit(g);
-                        if (e.key === "Escape") setEditingTargetId(null);
-                      }}
-                      autoFocus
-                      className="w-24 rounded-lg border border-accent bg-white px-2 py-1 text-right text-sm font-semibold text-text-primary outline-none ring-2 ring-accent/15 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => confirmTargetEdit(g)}
-                      className="flex h-7 w-7 items-center justify-center rounded-full text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/50"
-                    >
-                      <CheckCircle2 className="h-5 w-5" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    <span className="text-sm font-semibold tabular-nums text-text-primary dark:text-zinc-100">
-                      {g.unit === "currency" ? (
-                        <>
-                          {formatCompactUsd(g.current)} / {formatCompactUsd(g.target)}
-                        </>
-                      ) : (
-                        <>
-                          {g.current} / {g.target}
-                        </>
-                      )}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => startEditTarget(g)}
-                      className="rounded p-0.5 text-text-secondary/40 transition-colors hover:text-accent dark:hover:text-violet-400"
-                      title="Edit monthly target"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {g.unit === "count" ? (
-                <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                  {Array.from({ length: displayDots }).map((_, i) => (
-                    <span
-                      key={i}
-                      className={`h-2.5 w-2.5 rounded-full ${
-                        i < filledDots
-                          ? "bg-emerald-500"
-                          : "bg-gray-200 dark:bg-zinc-700"
-                      }`}
-                    />
-                  ))}
-                  {g.target > 40 ? (
-                    <span className="text-[10px] text-text-secondary dark:text-zinc-500">
-                      ({g.target} total)
-                    </span>
-                  ) : null}
-                </div>
-              ) : (
-                <div className="mt-2">
-                  <div className="h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-zinc-800">
-                    <div
-                      className="h-full rounded-full bg-amber-400 transition-all dark:bg-amber-500/90"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                  <p className="mt-1 text-right text-xs text-text-secondary dark:text-zinc-500">
-                    {g.current >= g.target
-                      ? "Goal reached"
-                      : `${formatCompactUsd(Math.max(0, g.target - g.current))} more!`}
-                  </p>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+      <MonthlyGoalsCard
+        goals={goals}
+        onChange={onChange}
+        northStarGoalIds={northStarGoalIds}
+        onToggleNorthStarGoal={onToggleNorthStarGoal}
+      />
     </div>
   );
 }
