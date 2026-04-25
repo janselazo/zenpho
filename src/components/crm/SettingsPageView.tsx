@@ -388,6 +388,20 @@ function ProfileTab({ initial }: { initial: SettingsInitial }) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setProfileErr(
+        `Image is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Use a JPG, PNG, or WebP under 5 MB.`
+      );
+      return;
+    }
+    if (!/^image\/(jpeg|jpg|png|webp)$/i.test(file.type)) {
+      setProfileErr(
+        "Use a JPG, PNG, or WebP image. Other formats (HEIC, GIF, BMP, etc.) aren't supported."
+      );
+      return;
+    }
+
     setAvatarPending(true);
     setProfileErr(null);
     try {
@@ -405,27 +419,16 @@ function ProfileTab({ initial }: { initial: SettingsInitial }) {
         setProfileErr("Upload did not complete. Please try again.");
       }
     } catch (e) {
-      console.error("uploadAvatar:", e);
+      console.error("uploadAvatar threw:", e);
       const msg = e instanceof Error ? e.message : String(e);
       if (/failed to fetch|networkerror|load failed/i.test(msg)) {
-        setProfileErr("Network error — check your connection and try again.");
-      } else if (
-        /Server Components render|digest property/i.test(msg) ||
-        /body.*limit|1\s*mb|2\s*mb|exceed/i.test(msg)
-      ) {
         setProfileErr(
-          "Upload could not complete (server limit or cache refresh). Try a smaller image or hard-refresh the page, and confirm the avatars storage bucket exists in Supabase."
+          "Network error — check your connection and try again."
         );
       } else if (msg && msg !== "undefined") {
-        setProfileErr(
-          /Server Components render/i.test(msg)
-            ? "Upload could not finish. Try again with a JPG, PNG, or WebP under 5 MB, or check Supabase Storage (avatars bucket and policies)."
-            : `Upload failed: ${msg}`
-        );
+        setProfileErr(`Upload failed: ${msg}`);
       } else {
-        setProfileErr(
-          "Upload failed. If the problem continues, confirm the avatars storage bucket exists in Supabase and try a JPG, PNG, or WebP file (max 5 MB)."
-        );
+        setProfileErr("Upload failed. See browser console for details.");
       }
     } finally {
       setAvatarPending(false);

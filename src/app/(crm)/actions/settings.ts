@@ -98,8 +98,13 @@ export async function uploadAvatar(formData: FormData) {
     const supabase = await createClient();
     const {
       data: { user },
+      error: authErr,
     } = await supabase.auth.getUser();
-    if (!user) return { error: "Unauthorized" };
+    if (authErr) {
+      console.error("uploadAvatar: auth error", authErr);
+      return { error: `Auth failed: ${authErr.message}` };
+    }
+    if (!user) return { error: "Not signed in. Refresh the page and try again." };
 
     const raw = formData.get("avatar");
     if (raw == null || typeof raw !== "object") {
@@ -122,8 +127,7 @@ export async function uploadAvatar(formData: FormData) {
     } catch (readErr) {
       console.error("uploadAvatar: read file", readErr);
       return {
-        error:
-          "Could not read the image file. Try another file or a smaller size.",
+        error: "Could not read the image file. Try another file or a smaller size.",
       };
     }
     if (bytes.length === 0) {
@@ -167,15 +171,30 @@ export async function uploadAvatar(formData: FormData) {
     }
 
     const path = `${user.id}/avatar.${ext}`;
+    console.log(
+      `uploadAvatar: uploading ${bytes.length} bytes (${contentType}) to avatars/${path}`
+    );
+
     const { error: upErr } = await supabase.storage
       .from("avatars")
       .upload(path, bytes, { upsert: true, contentType });
 
     if (upErr) {
-      return {
-        error:
-          upErr.message || "Storage upload failed. Check the avatars bucket and policies in Supabase.",
-      };
+      console.error("uploadAvatar: storage upload failed", upErr);
+      const m = upErr.message || "";
+      if (/row-level security|rls|new row violates|policy/i.test(m)) {
+        return {
+          error:
+            "Storage RLS denied this upload. In Supabase Storage policies for `avatars`, allow authenticated INSERT/UPDATE where the path's first folder equals auth.uid()::text.",
+        };
+      }
+      if (/bucket.*not.*found|no such bucket/i.test(m)) {
+        return {
+          error:
+            "The `avatars` storage bucket was not found. Create a public bucket named `avatars` in Supabase Storage.",
+        };
+      }
+      return { error: m || "Storage upload failed (no message returned)." };
     }
 
     const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
@@ -183,7 +202,7 @@ export async function uploadAvatar(formData: FormData) {
     if (!publicUrl) {
       return {
         error:
-          "Upload succeeded but public URL is missing. Check Supabase Storage for the `avatars` bucket.",
+          "Upload finished but the public URL was empty. Make sure the `avatars` bucket is public.",
       };
     }
 
@@ -193,24 +212,18 @@ export async function uploadAvatar(formData: FormData) {
       .eq("id", user.id);
 
     if (dbErr) {
-      return { error: dbErr.message };
+      console.error("uploadAvatar: profile update failed", dbErr);
+      return { error: `Profile save failed: ${dbErr.message}` };
     }
-    // Client calls router.refresh() to update the shell avatar (see SettingsPageView).
     return { ok: true as const, url: publicUrl };
   } catch (e) {
-    console.error("uploadAvatar:", e);
+    console.error("uploadAvatar: unexpected", e);
     const raw = e instanceof Error ? e.message : String(e);
-    if (/Server Components render|digest/i.test(raw)) {
-      return {
-        error:
-          "Upload may have failed during page refresh. Check your photo, then hard-refresh. Ensure Supabase has an `avatars` bucket and RLS allows authenticated uploads to your user folder.",
-      };
-    }
     return {
       error:
-        raw && raw.length < 200
-          ? raw
-          : "Upload failed. Try a JPG, PNG, or WebP under 5MB, or check server logs.",
+        raw && raw.length < 300
+          ? `Unexpected error: ${raw}`
+          : "Unexpected error. See server logs.",
     };
   }
 }
