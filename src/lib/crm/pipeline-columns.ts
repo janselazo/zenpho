@@ -21,11 +21,11 @@ export const DEFAULT_LEAD_PIPELINE_COLUMNS: PipelineColumnDef[] = [
   { slug: "contacted", label: "Contacted", color: "#3b82f6" },
   { slug: "discoverycall_scheduled", label: "Appointment Scheduled", color: "#06b6d4" },
   { slug: "discoverycall_completed", label: "Appointment Completed", color: "#8b5cf6" },
-  { slug: "proposal_sent", label: "Proposal Sent", color: "#a855f7" },
+  { slug: "proposal_sent", label: "Proposal Sent", color: "#92400e" },
   { slug: "negotiation", label: "Negotiation", color: "#f59e0b" },
+  { slug: "nurture", label: "Nurture", color: "#94a3b8" },
   { slug: "closed_won", label: "Won", color: "#10b981" },
   { slug: "closed_lost", label: "Lost", color: "#ef4444" },
-  { slug: "nurture", label: "Nurture", color: "#94a3b8" },
 ];
 
 const SLUG_RE = /^[a-z][a-z0-9_]{0,63}$/;
@@ -187,6 +187,19 @@ export function leadStageLabelColor(
 }
 
 /** Map legacy / unknown lead stages onto a configured slug for Kanban grouping. */
+/** True when `stageSlug` is the pipeline's Lost outcome column (default `closed_lost`, or any column labeled "Lost"). */
+export function isLeadLostStage(
+  stageSlug: string,
+  pipeline: PipelineColumnDef[]
+): boolean {
+  const s = stageSlug.trim();
+  if (!s) return false;
+  if (s === "closed_lost") return true;
+  const col = pipeline.find((c) => c.slug === s);
+  if (!col) return false;
+  return col.label.trim().toLowerCase() === "lost";
+}
+
 export function normalizeLeadStageForPipeline(
   raw: string | null | undefined,
   pipeline: PipelineColumnDef[]

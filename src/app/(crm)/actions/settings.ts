@@ -100,24 +100,58 @@ export async function uploadAvatar(formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized" };
 
-  const file = formData.get("avatar") as File | null;
-  if (!file || !(file instanceof File) || file.size === 0) {
+  const raw = formData.get("avatar");
+  if (!raw || typeof raw !== "object") {
     return { error: "Choose an image file." };
   }
-  if (file.size > 5 * 1024 * 1024) {
+  const blob = raw as Blob;
+  if (!(blob instanceof Blob) || blob.size === 0) {
+    return { error: "Choose an image file." };
+  }
+  if (blob.size > 5 * 1024 * 1024) {
     return { error: "Image must be 5MB or smaller." };
   }
 
-  const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-  const allowed = ["jpg", "jpeg", "png", "webp"];
-  if (!allowed.includes(ext)) {
-    return { error: "Use JPG, PNG, or WebP." };
+  const fileName = raw instanceof File ? raw.name : "";
+  const mime = (blob.type || "").toLowerCase();
+  const nameTail = (fileName.split(".").pop() || "").toLowerCase();
+  const nameExt =
+    nameTail === "jpeg"
+      ? "jpg"
+      : nameTail === "jpg" || nameTail === "png" || nameTail === "webp"
+        ? nameTail
+        : null;
+
+  let ext: string;
+  let contentType: string;
+  if (mime === "image/jpeg" || mime === "image/jpg") {
+    ext = "jpg";
+    contentType = "image/jpeg";
+  } else if (mime === "image/png") {
+    ext = "png";
+    contentType = "image/png";
+  } else if (mime === "image/webp") {
+    ext = "webp";
+    contentType = "image/webp";
+  } else if (nameExt) {
+    ext = nameExt;
+    contentType =
+      nameExt === "png"
+        ? "image/png"
+        : nameExt === "webp"
+          ? "image/webp"
+          : "image/jpeg";
+  } else {
+    return {
+      error:
+        "Use a JPG, PNG, or WebP image. If this file is one of those, rename it to end in .jpg, .png, or .webp.",
+    };
   }
 
   const path = `${user.id}/avatar.${ext}`;
   const { error: upErr } = await supabase.storage
     .from("avatars")
-    .upload(path, file, { upsert: true, contentType: file.type });
+    .upload(path, blob, { upsert: true, contentType });
 
   if (upErr) return { error: upErr.message };
 

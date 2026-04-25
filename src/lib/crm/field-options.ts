@@ -28,12 +28,20 @@ export const MAX_PRODUCT_PLAN_STAGES = 15;
 export const PLAN_STAGE_SLUG_PATTERN = /^[a-z][a-z0-9_]{0,31}$/;
 
 function defaultLabelForPlanSlug(slug: string): string {
-  if ((PLAN_STAGE_ORDER as readonly string[]).includes(slug)) {
-    return PLAN_LABELS[slug as PlanStage];
+  const s = String(slug ?? "").trim();
+  if (!s) return "Stage";
+  if ((PLAN_STAGE_ORDER as readonly string[]).includes(s)) {
+    const L = PLAN_LABELS[s as PlanStage];
+    if (typeof L === "string" && L.length > 0) return L;
   }
-  return slug
+  return s
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/** Ensures plain JSON shape for RSC / Flight serialization (no odd prototypes). */
+function cloneMergedForFlight(m: MergedCrmFieldOptions): MergedCrmFieldOptions {
+  return JSON.parse(JSON.stringify(m)) as MergedCrmFieldOptions;
 }
 
 /** Raw JSON from `crm_settings.crm_field_options`. */
@@ -93,6 +101,31 @@ function normalizeStringList(
   }
   if (out.length > 0) return out;
   return [...fallback];
+}
+
+/** Order-independent signature for comparing saved picklists to legacy defaults. */
+function picklistSignature(arr: readonly string[]): string {
+  return [...arr]
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean)
+    .sort()
+    .join("\0");
+}
+
+/**
+ * Older CRM defaults used Retail/SaaS personas. Map those stored picklists to the
+ * current canonical list so UI matches product defaults without manual Settings edits.
+ */
+const LEGACY_LEAD_CONTACT_CATEGORY_PICKLIST_SIGS = new Set([
+  picklistSignature([
+    "Retail / DTC Founder",
+    "Tech Founder",
+    "SaaS Founder",
+  ]),
+]);
+
+function shouldUseCanonicalLeadContactCategories(arr: string[]): boolean {
+  return LEGACY_LEAD_CONTACT_CATEGORY_PICKLIST_SIGS.has(picklistSignature(arr));
 }
 
 function parseProductPlanLabelsRaw(raw: unknown): Record<string, string> {
@@ -172,7 +205,7 @@ export function mergeFieldOptionsFromDb(
       productPlanStageOrder,
       planPartial
     );
-    return {
+    return cloneMergedForFlight({
       leadProjectTypes: normalizeStringList(
         r.leadProjectTypes,
         LEAD_PROJECT_TYPE_OPTIONS
@@ -181,16 +214,22 @@ export function mergeFieldOptionsFromDb(
         r.leadSources,
         LEAD_SOURCE_DEFAULT_OPTIONS
       ),
-      leadContactCategories: normalizeStringList(
-        r.leadContactCategories,
-        LEAD_CONTACT_CATEGORY_OPTIONS
-      ),
+      leadContactCategories: (() => {
+        const fromDb = normalizeStringList(r.leadContactCategories, []);
+        if (shouldUseCanonicalLeadContactCategories(fromDb)) {
+          return [...LEAD_CONTACT_CATEGORY_OPTIONS];
+        }
+        return normalizeStringList(
+          r.leadContactCategories,
+          LEAD_CONTACT_CATEGORY_OPTIONS
+        );
+      })(),
       productPlanStageOrder,
       productPlanLabels,
-    };
+    });
   } catch {
     const fallbackOrder = [...PLAN_STAGE_ORDER];
-    return {
+    return cloneMergedForFlight({
       leadProjectTypes: normalizeStringList(
         undefined,
         LEAD_PROJECT_TYPE_OPTIONS
@@ -202,7 +241,7 @@ export function mergeFieldOptionsFromDb(
       ),
       productPlanStageOrder: fallbackOrder,
       productPlanLabels: finalizeProductPlanLabelsForOrder(fallbackOrder, {}),
-    };
+    });
   }
 }
 
@@ -298,7 +337,8 @@ export function validateFieldOptionsForSave(
       continue;
     }
     const t = v.trim().slice(0, MAX_FIELD_OPTION_STRING_LEN);
-    productPlanLabels[slug] = t.length > 0 ? t : defaultLabelForPlanSlug(slug);
+    const fallback = defaultLabelForPlanSlug(slug);
+    productPlanLabels[slug] = t.length > 0 ? t : fallback;
   }
 
   return {

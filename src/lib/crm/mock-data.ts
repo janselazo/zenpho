@@ -25,9 +25,9 @@ export const LEAD_PIPELINE_STAGES = [
   "discoverycall_completed",
   "proposal_sent",
   "negotiation",
+  "nurture",
   "closed_won",
   "closed_lost",
-  "nurture",
 ] as const;
 
 export type LeadPipelineStage = (typeof LEAD_PIPELINE_STAGES)[number];
@@ -37,7 +37,7 @@ export const LEAD_PIPELINE_COLUMN_COLORS: Record<LeadPipelineStage, string> = {
   contacted: "#3b82f6",
   discoverycall_scheduled: "#06b6d4",
   discoverycall_completed: "#8b5cf6",
-  proposal_sent: "#a855f7",
+  proposal_sent: "#92400e",
   negotiation: "#f59e0b",
   closed_won: "#10b981",
   closed_lost: "#ef4444",
@@ -247,9 +247,9 @@ export const DEFAULT_LEAD_PROJECT_TYPE: LeadProjectType =
 
 /** Lead "Contact category" dropdown (stored as-display on `lead.contact_category`) */
 export const LEAD_CONTACT_CATEGORY_OPTIONS = [
-  "Tech Founder",
-  "SaaS Founder",
   "Local Business Owner",
+  "Tech Founder",
+  "Ecommerce Founder",
 ] as const;
 
 export type LeadContactCategory =

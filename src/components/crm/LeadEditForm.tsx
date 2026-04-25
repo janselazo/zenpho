@@ -6,11 +6,13 @@ import { useEffect, useState } from "react";
 import {
   Briefcase,
   Building2,
+  CalendarDays,
   ChevronDown,
   Facebook,
   FolderKanban,
   Instagram,
   Layers,
+  ListTodo,
   Loader2,
   Mail,
   Phone,
@@ -22,6 +24,8 @@ import type { LucideIcon } from "lucide-react";
 import { setLeadTagAssigned, updateLeadRow } from "@/app/(crm)/actions/crm";
 import type { MergedCrmFieldOptions } from "@/lib/crm/field-options";
 import CrmNewProjectFromLeadModal from "@/components/crm/CrmNewProjectFromLeadModal";
+import CrmQuickTaskModal from "@/components/crm/CrmQuickTaskModal";
+import type { LeadFollowUpAppointment } from "@/lib/crm/lead-follow-up-appointment";
 import {
   DEFAULT_LEAD_PIPELINE_COLUMNS,
   leadStageLabelColor,
@@ -68,8 +72,21 @@ const inputClass =
 
 const LEAD_TABS = [
   { id: "contact", label: "Contact", icon: UserCircle },
+  { id: "tasks", label: "Tasks", icon: ListTodo },
   { id: "projects", label: "Projects", icon: FolderKanban },
 ] as const;
+
+function formatFollowUpWhen(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
 
 type Lead = {
   id: string;
@@ -262,6 +279,7 @@ export default function LeadEditForm({
   leadPipelineColumns = DEFAULT_LEAD_PIPELINE_COLUMNS,
   leadTagCatalog = [],
   leadTagIds = [],
+  followUpAppointments = [],
 }: {
   lead: Lead;
   clientProjects: ClientProjectRow[];
@@ -270,6 +288,7 @@ export default function LeadEditForm({
   leadPipelineColumns?: PipelineColumnDef[];
   leadTagCatalog?: { id: string; name: string; color: string }[];
   leadTagIds?: string[];
+  followUpAppointments?: LeadFollowUpAppointment[];
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -278,6 +297,7 @@ export default function LeadEditForm({
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [projectModalOpen, setProjectModalOpen] = useState(false);
+  const [quickTaskOpen, setQuickTaskOpen] = useState(false);
 
   const defaultStage =
     (lead.stage ?? "").trim() || leadPipelineColumns[0]?.slug || "contacted";
@@ -312,6 +332,7 @@ export default function LeadEditForm({
   useEffect(() => {
     const tab = searchParams.get("tab");
     if (tab === "deal" || tab === "projects") setActiveTab("projects");
+    else if (tab === "tasks") setActiveTab("tasks");
   }, [searchParams]);
 
   useEffect(() => {
@@ -551,6 +572,57 @@ export default function LeadEditForm({
               >
                 {pending ? "Saving…" : "Save changes"}
               </button>
+            </div>
+
+            <div
+              className={activeTab === "tasks" ? "space-y-6" : "hidden"}
+              id="tasks-panel"
+              role="tabpanel"
+              aria-hidden={activeTab !== "tasks"}
+            >
+              <div>
+                <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                  <ListTodo className="h-3.5 w-3.5" aria-hidden />
+                  Follow-ups
+                </h2>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                  Scheduled calls and reminders tied to this lead appear on your{" "}
+                  <Link
+                    href="/calendar"
+                    className="inline-flex items-center gap-1 font-medium text-blue-600 hover:underline dark:text-blue-400"
+                  >
+                    <CalendarDays className="h-3.5 w-3.5" aria-hidden />
+                    Calendar
+                  </Link>
+                  .
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setQuickTaskOpen(true)}
+                className="rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500"
+              >
+                + Schedule follow-up
+              </button>
+              {followUpAppointments.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/80 px-4 py-6 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800/40 dark:text-zinc-400">
+                  No follow-ups yet. Add one to block time and keep the pipeline
+                  moving.
+                </p>
+              ) : (
+                <ul className="divide-y divide-zinc-100 rounded-xl border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-700">
+                  {followUpAppointments.map((t) => (
+                    <li key={t.id} className="px-4 py-3">
+                      <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                        {t.title}
+                      </p>
+                      <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                        {formatFollowUpWhen(t.starts_at)}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             <div
@@ -798,8 +870,16 @@ export default function LeadEditForm({
                       aria-hidden
                     />
                     <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                      Tasks, emails, and meeting notes will appear here as
-                      integrations roll out.
+                      Open the{" "}
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("tasks")}
+                        className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+                      >
+                        Tasks
+                      </button>{" "}
+                      tab for follow-ups; more activity types will appear here
+                      later.
                     </p>
                   </li>
                 </ul>
@@ -814,6 +894,17 @@ export default function LeadEditForm({
           fieldOptions={fieldOptions}
           onClose={() => {
             setProjectModalOpen(false);
+            router.refresh();
+          }}
+        />
+      ) : null}
+      {quickTaskOpen ? (
+        <CrmQuickTaskModal
+          leadId={lead.id}
+          contextLabel={displayName}
+          resetKey={lead.id}
+          onClose={() => {
+            setQuickTaskOpen(false);
             router.refresh();
           }}
         />

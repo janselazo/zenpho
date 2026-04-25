@@ -41,6 +41,7 @@ import LeadNotesGlyphIcon from "@/components/crm/LeadNotesGlyphIcon";
 import LeadsPipelineSummary from "@/components/crm/LeadsPipelineSummary";
 import PipelineSettingsModal from "@/components/crm/PipelineSettingsModal";
 import {
+  isLeadLostStage,
   leadStageLabelColor,
   normalizeLeadStageForPipeline,
   normalizePipelineHexColor,
@@ -273,11 +274,13 @@ function getProjectTypePillClass(_projectType: string) {
 }
 
 const contactCategoryTextClasses: Record<string, string> = {
+  "local business owner": "text-amber-800 dark:text-amber-400",
   "tech founder": "text-indigo-700 dark:text-indigo-400",
+  "ecommerce founder": "text-rose-700 dark:text-rose-400",
+  /** Legacy values still on some lead rows */
   "saas founder": "text-fuchsia-700 dark:text-fuchsia-400",
   "ecommerce owner": "text-rose-700 dark:text-rose-400",
   "retail / dtc founder": "text-rose-700 dark:text-rose-400",
-  "local business owner": "text-amber-800 dark:text-amber-400",
 };
 
 function getContactCategoryTextClass(category: string) {
@@ -509,6 +512,11 @@ export default function LeadsView({
     useState<PipelineColumnDef[]>(leadPipelineColumns);
   const [pipelineSettingsOpen, setPipelineSettingsOpen] = useState(false);
   const [manageTagsOpen, setManageTagsOpen] = useState(false);
+  const [lostReasonPrompt, setLostReasonPrompt] = useState<null | {
+    lead: Lead;
+    previousStageRaw: string | null;
+    toStage: string;
+  }>(null);
 
   useEffect(() => {
     setLeadsSnapshot(leads);
@@ -591,27 +599,6 @@ export default function LeadsView({
     ];
   }, [filtered, leadPipeline, leadPipelineKanban]);
 
-  function handlePipelineMove(
-    itemId: string,
-    fromCol: string,
-    toCol: string
-  ) {
-    setLeadsSnapshot((prev) =>
-      prev.map((l) => (l.id === itemId ? { ...l, stage: toCol } : l))
-    );
-    void (async () => {
-      const res = await updateLeadStage(itemId, toCol);
-      if ("error" in res && res.error) {
-        window.alert(res.error);
-        setLeadsSnapshot((prev) =>
-          prev.map((l) => (l.id === itemId ? { ...l, stage: fromCol } : l))
-        );
-        return;
-      }
-      router.refresh();
-    })();
-  }
-
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [quickPatchLeadId, setQuickPatchLeadId] = useState<string | null>(null);
   const [tagPickerLeadId, setTagPickerLeadId] = useState<string | null>(null);
@@ -638,6 +625,71 @@ export default function LeadsView({
       setPipelineEditLeadId(null);
     }
   }, [pipelineEditLeadId, leadsSnapshot]);
+
+  function handlePipelineMove(
+    itemId: string,
+    fromCol: string,
+    toCol: string
+  ) {
+    if (fromCol === toCol) return;
+    const lead = leadsSnapshot.find((l) => l.id === itemId);
+    const currentNorm = lead
+      ? normalizeLeadStageForPipeline(lead.stage, leadPipeline)
+      : fromCol;
+    if (
+      lead &&
+      isLeadLostStage(toCol, leadPipeline) &&
+      !isLeadLostStage(currentNorm, leadPipeline)
+    ) {
+      setLostReasonPrompt({
+        lead,
+        previousStageRaw: lead.stage,
+        toStage: toCol,
+      });
+      return;
+    }
+    setLeadsSnapshot((prev) =>
+      prev.map((l) => (l.id === itemId ? { ...l, stage: toCol } : l))
+    );
+    void (async () => {
+      const res = await updateLeadStage(itemId, toCol);
+      if ("error" in res && res.error) {
+        window.alert(res.error);
+        setLeadsSnapshot((prev) =>
+          prev.map((l) => (l.id === itemId ? { ...l, stage: fromCol } : l))
+        );
+        return;
+      }
+      router.refresh();
+    })();
+  }
+
+  async function confirmMoveToLost(reason: string) {
+    if (!lostReasonPrompt) return;
+    const { lead, previousStageRaw, toStage } = lostReasonPrompt;
+    const trimmed = reason.trim();
+    if (!trimmed) return;
+    setQuickPatchLeadId(lead.id);
+    setLeadsSnapshot((prev) =>
+      prev.map((l) => (l.id === lead.id ? { ...l, stage: toStage } : l))
+    );
+    const res = await updateLeadStage(lead.id, toStage, {
+      lostReason: trimmed,
+    });
+    if ("error" in res && res.error) {
+      window.alert(res.error);
+      setLeadsSnapshot((prev) =>
+        prev.map((l) =>
+          l.id === lead.id ? { ...l, stage: previousStageRaw } : l
+        )
+      );
+      setQuickPatchLeadId(null);
+      return;
+    }
+    setLostReasonPrompt(null);
+    router.refresh();
+    setQuickPatchLeadId(null);
+  }
 
   function startEdit(lead: Lead) {
     setPipelineEditLeadId(null);
@@ -701,6 +753,17 @@ export default function LeadsView({
     if (editingId) return;
     const current = normalizeLeadStageForPipeline(lead.stage, leadPipeline);
     if (newStage === current) return;
+    if (
+      isLeadLostStage(newStage, leadPipeline) &&
+      !isLeadLostStage(current, leadPipeline)
+    ) {
+      setLostReasonPrompt({
+        lead,
+        previousStageRaw: lead.stage,
+        toStage: newStage,
+      });
+      return;
+    }
     const previousStage = lead.stage;
     setQuickPatchLeadId(lead.id);
     setLeadsSnapshot((prev) =>
@@ -989,6 +1052,13 @@ export default function LeadsView({
       {notesLead && (
         <LeadNotesModal lead={notesLead} onClose={() => setNotesLead(null)} />
       )}
+      {lostReasonPrompt && (
+        <LeadLostReasonModal
+          lead={lostReasonPrompt.lead}
+          onCancel={() => setLostReasonPrompt(null)}
+          onConfirm={(reason) => void confirmMoveToLost(reason)}
+        />
+      )}
       {newProjectLeadId ? (
         <CrmNewProjectFromLeadModal
           leadId={newProjectLeadId}
@@ -1086,6 +1156,11 @@ type LeadsTableProps = {
   chrome?: LeadsTableChrome;
 };
 
+/** Won / Lost columns can collapse to a narrow strip (persisted in localStorage). */
+const LEAD_OUTCOME_COLLAPSIBLE_IDS = new Set(["closed_won", "closed_lost"]);
+const LEAD_PIPELINE_OUTCOME_COLLAPSED_KEY =
+  "zenpho_leads_pipeline_outcome_collapsed";
+
 function LeadsPipelineBoard({
   columns,
   onMove,
@@ -1114,11 +1189,55 @@ function LeadsPipelineBoard({
     e.stopPropagation();
   };
 
+  const [collapsedOutcomeColumns, setCollapsedOutcomeColumns] = useState<
+    Set<string>
+  >(() => new Set());
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(LEAD_PIPELINE_OUTCOME_COLLAPSED_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as unknown;
+      if (!Array.isArray(parsed)) return;
+      setCollapsedOutcomeColumns(
+        new Set(
+          parsed.filter(
+            (x): x is string =>
+              typeof x === "string" && LEAD_OUTCOME_COLLAPSIBLE_IDS.has(x)
+          )
+        )
+      );
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  function toggleOutcomeColumn(columnId: string) {
+    if (!LEAD_OUTCOME_COLLAPSIBLE_IDS.has(columnId)) return;
+    setCollapsedOutcomeColumns((prev) => {
+      const next = new Set(prev);
+      if (next.has(columnId)) next.delete(columnId);
+      else next.add(columnId);
+      try {
+        localStorage.setItem(
+          LEAD_PIPELINE_OUTCOME_COLLAPSED_KEY,
+          JSON.stringify([...next])
+        );
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }
+
   return (
     <KanbanBoard<Lead>
       columns={columns}
       emptyColumnLabel="No leads"
       onMove={onMove}
+      collapsibleColumnIds={LEAD_OUTCOME_COLLAPSIBLE_IDS}
+      collapsedColumnIds={collapsedOutcomeColumns}
+      onToggleColumnCollapse={toggleOutcomeColumn}
       renderCard={(lead) => {
         const deleteLabel =
           lead.name?.trim() || lead.email?.trim() || "this lead";
@@ -1878,13 +1997,13 @@ function LeadsTable({
                           type="button"
                           disabled={savePending}
                           onClick={() => void saveEdit(lead.id)}
-                          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-emerald-600 text-white shadow-sm transition hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:opacity-55 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+                          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-emerald-600 transition hover:bg-emerald-50 hover:text-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:opacity-55 dark:text-emerald-400 dark:hover:bg-emerald-950/35 dark:hover:text-emerald-300"
                           aria-label="Save changes"
                           title="Save"
                         >
                           {savePending ? (
                             <Loader2
-                              className="h-3.5 w-3.5 shrink-0 animate-spin"
+                              className="h-3.5 w-3.5 shrink-0 animate-spin text-emerald-600 dark:text-emerald-400"
                               aria-hidden
                             />
                           ) : (
@@ -2359,6 +2478,128 @@ function PipelineLeadEditModal({
 
   if (!mounted) return null;
   return createPortal(modal, document.body);
+}
+
+function LeadLostReasonModal({
+  lead,
+  onCancel,
+  onConfirm,
+}: {
+  lead: Lead;
+  onCancel: () => void;
+  onConfirm: (reason: string) => void | Promise<void>;
+}) {
+  const label = lead.name?.trim() || lead.email?.trim() || "Lead";
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    setReason("");
+    setError(null);
+  }, [lead.id]);
+
+  async function handleSubmit() {
+    const t = reason.trim();
+    if (!t) {
+      setError("Please enter a lost reason.");
+      return;
+    }
+    setError(null);
+    setPending(true);
+    try {
+      await onConfirm(t);
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-4 backdrop-blur-sm sm:items-center"
+      onClick={() => !pending && onCancel()}
+      onKeyDown={(e) => e.key === "Escape" && !pending && onCancel()}
+      role="presentation"
+    >
+      <div
+        className="w-full max-w-lg overflow-hidden rounded-2xl border border-border bg-white shadow-xl dark:border-zinc-700 dark:bg-zinc-950"
+        role="dialog"
+        onClick={(e) => e.stopPropagation()}
+        aria-modal="true"
+        aria-labelledby="lead-lost-reason-title"
+      >
+        <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-4 dark:border-zinc-700">
+          <div className="min-w-0">
+            <h2
+              id="lead-lost-reason-title"
+              className="text-lg font-bold text-text-primary dark:text-zinc-50"
+            >
+              Mark as lost
+            </h2>
+            <p className="mt-0.5 truncate text-sm text-text-secondary dark:text-zinc-400">
+              {label}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={pending}
+            className="shrink-0 rounded-lg p-1 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-800 disabled:opacity-50 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5" aria-hidden />
+          </button>
+        </div>
+        <div className="px-5 py-4">
+          <p className="mb-3 text-sm text-text-secondary dark:text-zinc-400">
+            Add a short reason so your notes stay useful when you review this
+            lead later.
+          </p>
+          {error && (
+            <p
+              className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-200"
+              role="alert"
+            >
+              {error}
+            </p>
+          )}
+          <label htmlFor="lead-lost-reason-input" className="sr-only">
+            Lost reason for {label}
+          </label>
+          <textarea
+            id="lead-lost-reason-input"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            rows={4}
+            placeholder="e.g. Budget, timing, chose another vendor…"
+            disabled={pending}
+            className={`${inlineInputClass} min-h-[6rem] w-full resize-y`}
+          />
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border px-5 py-3 dark:border-zinc-700">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={pending}
+            className="rounded-xl border border-border bg-white px-4 py-2 text-sm font-semibold text-text-primary hover:bg-surface disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => void handleSubmit()}
+            className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-60"
+          >
+            {pending ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : null}
+            Save &amp; move to Lost
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function LeadNotesModal({

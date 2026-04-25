@@ -18,6 +18,7 @@ import {
   validatePipelineColumnArrayForSave,
   type PipelineColumnDef,
 } from "@/lib/crm/pipeline-columns";
+import type { LeadFollowUpAppointment } from "@/lib/crm/lead-follow-up-appointment";
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>;
 
@@ -431,8 +432,27 @@ export async function updateLeadNotes(leadId: string, notes: string) {
   return { ok: true };
 }
 
+function appendLostReasonToLeadNotes(
+  existing: string | null | undefined,
+  reason: string
+): string {
+  const stamp = new Date().toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  const block = `Lost reason (${stamp}): ${reason}`;
+  const prev = (existing ?? "").trim();
+  if (!prev) return block;
+  return `${prev}\n\n${block}`;
+}
+
 /** Updates only `lead.stage` (e.g. Kanban drag). Does not touch linked deal rows. */
-export async function updateLeadStage(leadId: string, stage: string) {
+export async function updateLeadStage(
+  leadId: string,
+  stage: string,
+  options?: { lostReason?: string }
+) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -448,7 +468,25 @@ export async function updateLeadStage(leadId: string, stage: string) {
     return { error: "Invalid stage" };
   }
 
-  const { error } = await supabase.from("lead").update({ stage: s }).eq("id", id);
+  const lostReason = String(options?.lostReason ?? "").trim();
+  let notesPayload: string | null | undefined;
+  if (lostReason) {
+    const { data: row, error: fetchErr } = await supabase
+      .from("lead")
+      .select("notes")
+      .eq("id", id)
+      .maybeSingle();
+    if (fetchErr) return { error: fetchErr.message };
+    notesPayload = appendLostReasonToLeadNotes(
+      row?.notes as string | null | undefined,
+      lostReason
+    );
+  }
+
+  const updateBody: { stage: string; notes?: string | null } = { stage: s };
+  if (notesPayload !== undefined) updateBody.notes = notesPayload;
+
+  const { error } = await supabase.from("lead").update(updateBody).eq("id", id);
 
   if (error) return { error: error.message };
 
@@ -1110,6 +1148,32 @@ export async function createAppointmentAction(input: {
   return { ok: true };
 }
 
+/** Calendar follow-ups linked to a lead (Quick Task). */
+export async function listLeadFollowUpAppointments(leadId: string): Promise<
+  { data: LeadFollowUpAppointment[] } | { error: string }
+> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const id = String(leadId ?? "").trim();
+  if (!id) return { error: "Missing lead id" };
+
+  const { data, error } = await supabase
+    .from("appointment")
+    .select("id, title, starts_at, ends_at")
+    .eq("lead_id", id)
+    .order("starts_at", { ascending: true });
+
+  if (error) return { error: error.message };
+
+  return {
+    data: (data ?? []) as LeadFollowUpAppointment[],
+  };
+}
+
 /** Follow-up block on the calendar, linked to a lead (Quick Task from leads table). */
 export async function createLeadQuickTask(input: {
   lead_id: string;
@@ -1137,16 +1201,32 @@ export async function createLeadQuickTask(input: {
   }
   if (ends <= starts) return { error: "End must be after start" };
 
-  const { error } = await supabase.from("appointment").insert({
-    title,
-    description: null,
-    starts_at: starts.toISOString(),
-    ends_at: ends.toISOString(),
-    lead_id: leadId,
-    created_by: user.id,
-  });
+  const { data: inserted, error } = await supabase
+    .from("appointment")
+    .insert({
+      title,
+      description: null,
+      starts_at: starts.toISOString(),
+      ends_at: ends.toISOString(),
+      lead_id: leadId,
+      created_by: user.id,
+    })
+    .select("id")
+    .single();
 
-  if (error) return { error: error.message };
+  if (error) {
+    return {
+      error:
+        error.message ||
+        "Could not save the task. Ensure you are signed in as agency staff.",
+    };
+  }
+  if (!inserted?.id) {
+    return {
+      error:
+        "Task was not created. Check CRM permissions and the appointment table.",
+    };
+  }
 
   revalidatePath("/leads");
   revalidatePath(`/leads/${leadId}`);

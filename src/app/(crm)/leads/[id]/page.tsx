@@ -5,6 +5,7 @@ import { fetchMergedCrmFieldOptions } from "@/lib/crm/fetch-crm-field-options";
 import { fetchCrmPipelineSettings } from "@/lib/crm/fetch-pipeline-settings";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
+import type { LeadFollowUpAppointment } from "@/lib/crm/lead-follow-up-appointment";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -73,6 +74,16 @@ export default async function LeadDetailPage({ params }: Props) {
       ? assignRes.data.map((r) => r.tag_id as string)
       : [];
 
+  const followUpsRes = await supabase
+    .from("appointment")
+    .select("id, title, starts_at, ends_at")
+    .eq("lead_id", id)
+    .order("starts_at", { ascending: true });
+  const followUpAppointments: LeadFollowUpAppointment[] =
+    !followUpsRes.error && followUpsRes.data
+      ? (followUpsRes.data as LeadFollowUpAppointment[])
+      : [];
+
   return (
     <div className="min-h-full bg-zinc-50/90 px-4 py-6 sm:px-8 sm:py-8 dark:bg-zinc-950">
       <Suspense
@@ -91,6 +102,7 @@ export default async function LeadDetailPage({ params }: Props) {
           leadPipelineColumns={pipeline.lead}
           leadTagCatalog={leadTagCatalog}
           leadTagIds={leadTagIds}
+          followUpAppointments={followUpAppointments}
         />
       </Suspense>
     </div>

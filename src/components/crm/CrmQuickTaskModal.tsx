@@ -1,9 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, ChevronDown, Clock, Loader2, Plus, X } from "lucide-react";
-import { createLeadQuickTask } from "@/app/(crm)/actions/crm";
+import {
+  Calendar,
+  ChevronDown,
+  Clock,
+  ListTodo,
+  Loader2,
+  Plus,
+  X,
+} from "lucide-react";
+import {
+  createLeadQuickTask,
+  listLeadFollowUpAppointments,
+} from "@/app/(crm)/actions/crm";
+import type { LeadFollowUpAppointment } from "@/lib/crm/lead-follow-up-appointment";
 
 function toLocalYMD(d: Date): string {
   const y = d.getFullYear();
@@ -82,6 +94,22 @@ export default function CrmQuickTaskModal({
   );
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tasks, setTasks] = useState<LeadFollowUpAppointment[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(true);
+  const [tasksError, setTasksError] = useState<string | null>(null);
+
+  const refreshTasks = useCallback(async () => {
+    setTasksLoading(true);
+    setTasksError(null);
+    const res = await listLeadFollowUpAppointments(leadId);
+    setTasksLoading(false);
+    if ("error" in res && res.error) {
+      setTasksError(res.error);
+      setTasks([]);
+      return;
+    }
+    if ("data" in res) setTasks(res.data);
+  }, [leadId]);
 
   useEffect(() => {
     setTitle("");
@@ -90,6 +118,10 @@ export default function CrmQuickTaskModal({
     setQuickPreset("tomorrow");
     setError(null);
   }, [resetKey, leadId]);
+
+  useEffect(() => {
+    void refreshTasks();
+  }, [resetKey, refreshTasks]);
 
   const todayYmd = toLocalYMD(new Date());
 
@@ -121,6 +153,7 @@ export default function CrmQuickTaskModal({
       setError(res.error);
       return;
     }
+    await refreshTasks();
     router.refresh();
     onClose();
   }
@@ -171,6 +204,58 @@ export default function CrmQuickTaskModal({
             {label}
           </span>
         </p>
+
+        <div className="mt-5 rounded-xl border border-zinc-200 bg-zinc-50/90 p-4 dark:border-zinc-700 dark:bg-zinc-900/50">
+          <div className="flex items-center gap-2 text-sm font-semibold text-text-primary dark:text-zinc-100">
+            <ListTodo className="h-4 w-4 text-zinc-500" aria-hidden />
+            Follow-ups for this lead
+          </div>
+          {tasksLoading ? (
+            <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+              Loading…
+            </p>
+          ) : tasksError ? (
+            <p
+              className="mt-3 text-xs text-red-600 dark:text-red-400"
+              role="alert"
+            >
+              {tasksError}
+            </p>
+          ) : tasks.length === 0 ? (
+            <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+              No follow-ups yet. Creating a task adds it to your calendar and
+              here.
+            </p>
+          ) : (
+            <ul className="mt-3 max-h-40 space-y-2 overflow-y-auto pr-1 text-sm">
+              {tasks.map((t) => {
+                const start = new Date(t.starts_at);
+                const when = Number.isNaN(start.getTime())
+                  ? "—"
+                  : start.toLocaleString("en-US", {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    });
+                return (
+                  <li
+                    key={t.id}
+                    className="rounded-lg border border-zinc-200/80 bg-white px-3 py-2 dark:border-zinc-600 dark:bg-zinc-950"
+                  >
+                    <p className="font-medium text-text-primary dark:text-zinc-100">
+                      {t.title}
+                    </p>
+                    <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                      {when}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
 
         {error && (
           <p className="mt-3 text-sm text-red-700 dark:text-red-400" role="alert">

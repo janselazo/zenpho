@@ -65,9 +65,11 @@ function SettingsPageSkeleton() {
 function SettingsPageViewInner({
   initial,
   crmFields,
+  crmFieldsError,
 }: {
   initial: SettingsInitial;
   crmFields: SettingsCrmFieldsPack | null;
+  crmFieldsError: string | null;
 }) {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<string>("profile");
@@ -122,12 +124,19 @@ function SettingsPageViewInner({
       <div className="mt-8">
         {activeTab === "profile" && <ProfileTab initial={initial} />}
         {activeTab === "fields" && crmFields ? (
-          <SettingsFieldsTab
-            initialFieldOptions={crmFields.fieldOptions}
-            pipeline={crmFields.pipeline}
-            leadStageCounts={crmFields.leadStageCounts}
-            dealStageCounts={crmFields.dealStageCounts}
-          />
+          <div className="space-y-6">
+            {crmFieldsError ? (
+              <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/35 dark:text-amber-100">
+                {crmFieldsError}
+              </p>
+            ) : null}
+            <SettingsFieldsTab
+              initialFieldOptions={crmFields.fieldOptions}
+              pipeline={crmFields.pipeline}
+              leadStageCounts={crmFields.leadStageCounts}
+              dealStageCounts={crmFields.dealStageCounts}
+            />
+          </div>
         ) : null}
         {activeTab === "integrations" && <IntegrationsTab />}
       </div>
@@ -138,13 +147,19 @@ function SettingsPageViewInner({
 export default function SettingsPageView({
   initial,
   crmFields = null,
+  crmFieldsError = null,
 }: {
   initial: SettingsInitial;
   crmFields?: SettingsCrmFieldsPack | null;
+  crmFieldsError?: string | null;
 }) {
   return (
     <Suspense fallback={<SettingsPageSkeleton />}>
-      <SettingsPageViewInner initial={initial} crmFields={crmFields} />
+      <SettingsPageViewInner
+        initial={initial}
+        crmFields={crmFields}
+        crmFieldsError={crmFieldsError}
+      />
     </Suspense>
   );
 }
@@ -384,9 +399,21 @@ function ProfileTab({ initial }: { initial: SettingsInitial }) {
         setAvatarUrl(`${res.url}?t=${Date.now()}`);
         setProfileMsg("Photo updated.");
         setProfileErr(null);
+      } else {
+        setProfileErr("Upload did not complete. Please try again.");
       }
-    } catch {
-      setProfileErr("Upload failed. Try a smaller image (max 5 MB).");
+    } catch (e) {
+      console.error("uploadAvatar:", e);
+      const msg = e instanceof Error ? e.message : String(e);
+      if (/failed to fetch|networkerror|load failed/i.test(msg)) {
+        setProfileErr("Network error — check your connection and try again.");
+      } else if (msg && msg !== "undefined") {
+        setProfileErr(`Upload failed: ${msg}`);
+      } else {
+        setProfileErr(
+          "Upload failed. If the problem continues, confirm the avatars storage bucket exists in Supabase and try a JPG, PNG, or WebP file (max 5 MB)."
+        );
+      }
     } finally {
       setAvatarPending(false);
     }

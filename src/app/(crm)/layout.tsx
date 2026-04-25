@@ -43,10 +43,22 @@ export default async function CrmLayout({
         .select("full_name, avatar_url")
         .eq("id", user.id)
         .maybeSingle();
+      const rawName = profile?.full_name;
+      const rawAvatar = profile?.avatar_url;
       topBarUser = {
         email: user.email ?? null,
-        fullName: profile?.full_name ?? null,
-        avatarUrl: profile?.avatar_url ?? null,
+        fullName:
+          typeof rawName === "string"
+            ? rawName
+            : rawName == null
+              ? null
+              : String(rawName),
+        avatarUrl:
+          typeof rawAvatar === "string"
+            ? rawAvatar
+            : rawAvatar == null
+              ? null
+              : String(rawAvatar),
       };
     }
   }
