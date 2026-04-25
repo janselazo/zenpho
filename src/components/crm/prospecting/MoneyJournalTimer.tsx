@@ -368,7 +368,7 @@ const MoneyJournalTimer = forwardRef<MoneyJournalTimerHandle, MoneyJournalTimerP
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(59,130,246,0.14),transparent_45%)] dark:bg-[radial-gradient(circle_at_50%_0%,rgba(45,212,191,0.14),transparent_45%)]" />
         <div className="relative">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-text-secondary/80 dark:text-zinc-500">
-          Flow block
+          Timer
         </p>
         <p
           className="mt-3 font-mono text-5xl font-semibold tabular-nums tracking-tight text-text-primary dark:text-zinc-50 sm:text-6xl"

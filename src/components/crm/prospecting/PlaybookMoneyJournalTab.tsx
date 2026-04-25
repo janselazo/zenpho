@@ -600,47 +600,22 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
             <section
               className={`${sectionClass} overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.08),transparent_32%),linear-gradient(180deg,#ffffff,#f8fafc)] dark:bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.14),transparent_32%),linear-gradient(180deg,rgba(24,24,27,0.95),rgba(9,9,11,0.86))]`}
             >
-              <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent ring-1 ring-accent/15 dark:bg-blue-500/15 dark:text-blue-300 dark:ring-blue-500/25">
-                    <TimerReset className="h-5 w-5" />
-                  </span>
-                  <div>
-                    <h3 className="text-lg font-semibold tracking-tight text-text-primary dark:text-zinc-100">
-                      Hour {nextHourN}: what moved forward?
-                    </h3>
-                    <p className="mt-1 text-sm text-text-secondary dark:text-zinc-500">
-                      Capture the work, your focus, and the adjustment for the
-                      next block.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <span className="rounded-full border border-border bg-white px-3 py-1.5 text-xs font-semibold text-text-secondary shadow-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
-                    60 min block
-                  </span>
-                  <span className="rounded-full border border-accent/15 bg-accent/10 px-3 py-1.5 text-xs font-semibold text-accent dark:border-blue-500/20 dark:bg-blue-500/15 dark:text-blue-300">
-                    Auto-saves at 0:00
-                  </span>
+              <div className="mb-5 flex items-start gap-2">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent ring-1 ring-accent/15 dark:bg-blue-500/15 dark:text-blue-300 dark:ring-blue-500/25">
+                  <TimerReset className="h-5 w-5" />
+                </span>
+                <div>
+                  <h3 className="text-lg font-semibold tracking-tight text-text-primary dark:text-zinc-100">
+                    Hour {nextHourN}: what moved forward?
+                  </h3>
+                  <p className="mt-1 text-sm text-text-secondary dark:text-zinc-500">
+                    Capture the work, your focus, and the adjustment for the
+                    next block.
+                  </p>
                 </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2 md:items-start">
-                <div>
-                  <span className={labelClass}>Prospecting done</span>
-                  <label className="mt-2 flex cursor-pointer items-start gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-3 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900/80 dark:hover:bg-zinc-800/80">
-                    <input
-                      type="checkbox"
-                      checked={prospectingDone}
-                      onChange={(e) => setProspectingDone(e.target.checked)}
-                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-zinc-300 text-accent focus:ring-2 focus:ring-accent/30 dark:border-zinc-600 dark:bg-zinc-900 dark:focus:ring-blue-500/30"
-                    />
-                    <span className="text-sm leading-snug text-text-primary dark:text-zinc-100">
-                      I completed prospecting this hour (calls, DMs, follow-ups,
-                      etc.)
-                    </span>
-                  </label>
-                </div>
                 <label>
                   <span className={labelClass}>I will use the money for</span>
                   <input
@@ -650,6 +625,21 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
                     placeholder="Why this hour matters"
                   />
                 </label>
+                <div>
+                  <span className={labelClass}>Prospecting done</span>
+                  <label className="mt-2 flex cursor-pointer items-start gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-3 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900/80 dark:hover:bg-zinc-800/80">
+                    <input
+                      type="checkbox"
+                      checked={prospectingDone}
+                      onChange={(e) => setProspectingDone(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-zinc-300 accent-emerald-600 focus:ring-2 focus:ring-emerald-500/35 dark:border-zinc-600 dark:bg-zinc-900 dark:accent-emerald-500 dark:focus:ring-emerald-500/30"
+                    />
+                    <span className="text-sm leading-snug text-text-primary dark:text-zinc-100">
+                      I completed prospecting this hour (calls, DMs, follow-ups,
+                      etc.)
+                    </span>
+                  </label>
+                </div>
               </div>
 
               <label className="mt-4 block">
