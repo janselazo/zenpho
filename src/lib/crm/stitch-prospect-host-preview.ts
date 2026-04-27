@@ -5,6 +5,7 @@ import { captureProspectPreviewScreenshot } from "@/lib/crm/prospect-preview-scr
 import { prospectPreviewPageUrl } from "@/lib/crm/prospect-preview-public-url";
 import {
   ensureProspectPreviewRequiredSections,
+  repairWebAppDashboardNavigation,
   sanitizeProspectPreviewFullDocumentHtml,
   type ProspectPreviewSectionMeta,
 } from "@/lib/crm/prospect-preview-sanitize";
@@ -127,7 +128,15 @@ export async function persistStitchHtmlAsProspectPreview(params: {
 
   let safe: string;
   try {
-    const completed = ensureProspectPreviewRequiredSections(raw, sectionMeta);
+    // Web-app previews need the dashboard sidebar repaired before the
+    // marketing-section safety net runs, so its nav rewrites operate on the
+    // canonical hash IDs and do not synthesize marketing stubs into a
+    // dashboard shell.
+    const repaired =
+      params.payload.target === "webapp"
+        ? repairWebAppDashboardNavigation(raw, sectionMeta)
+        : raw;
+    const completed = ensureProspectPreviewRequiredSections(repaired, sectionMeta);
     safe = sanitizeProspectPreviewFullDocumentHtml(completed);
   } catch (e) {
     console.warn("[stitch host preview] sanitize failed", e);

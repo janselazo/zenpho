@@ -1,6 +1,11 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { prospectPreviewHtmlResponseHeaders } from "@/lib/crm/prospect-preview-frame-ancestors";
-import { injectProspectPreviewFooterLinkStyles } from "@/lib/crm/prospect-preview-sanitize";
+import {
+  injectProspectPreviewFooterLinkStyles,
+  repairWebAppDashboardNavigation,
+  sanitizeProspectPreviewFullDocumentHtml,
+  type ProspectPreviewSectionMeta,
+} from "@/lib/crm/prospect-preview-sanitize";
 import { buildMobilePreviewFrameDocument } from "@/lib/crm/prospect-preview-mobile-frame";
 
 const UUID_RE =
@@ -35,7 +40,11 @@ export async function GET(
     return new Response("Not found", { status: 404 });
   }
 
-  const base = admin.from("prospect_preview").select("html, preview_device_type");
+  const base = admin
+    .from("prospect_preview")
+    .select(
+      "id, html, preview_device_type, business_name, business_address, primary_category",
+    );
   const { data, error } = isUuid
     ? await base.eq("id", segment).maybeSingle()
     : await base.eq("slug", segment).maybeSingle();
@@ -44,7 +53,52 @@ export async function GET(
     return new Response("Not found", { status: 404 });
   }
 
-  const htmlOut = injectProspectPreviewFooterLinkStyles(data.html as string);
+  // Lazy self-heal for previously stored web-app dashboards whose sidebar
+  // links pointed at non-existent panels. The repair is gated by structural
+  // heuristics inside `repairWebAppDashboardNavigation`, so it is a no-op for
+  // marketing-style previews.
+  let storedHtml = data.html as string;
+  const looksLikeWebAppShell =
+    /<(nav|aside)\b[^>]*>/i.test(storedHtml) &&
+    /<a\b[^>]*\bhref=["']#/i.test(storedHtml);
+  const alreadyRepaired = /\bclass=["'][^"']*\bpage\b[^"']*["']/i.test(storedHtml);
+  if (looksLikeWebAppShell && !alreadyRepaired) {
+    try {
+      const meta: ProspectPreviewSectionMeta = {
+        businessName:
+          typeof data.business_name === "string" ? data.business_name : null,
+        businessAddress:
+          typeof data.business_address === "string" ? data.business_address : null,
+        primaryCategory:
+          typeof data.primary_category === "string" ? data.primary_category : null,
+      };
+      const repaired = repairWebAppDashboardNavigation(storedHtml, meta);
+      if (repaired !== storedHtml) {
+        const sanitized = sanitizeProspectPreviewFullDocumentHtml(repaired);
+        storedHtml = sanitized;
+        const rowId =
+          typeof data.id === "string" && data.id.trim()
+            ? data.id
+            : isUuid
+              ? segment
+              : null;
+        if (rowId) {
+          void admin
+            .from("prospect_preview")
+            .update({ html: sanitized })
+            .eq("id", rowId)
+            .then(
+              () => undefined,
+              () => undefined,
+            );
+        }
+      }
+    } catch {
+      // Self-heal is best-effort; fall back to serving the original html.
+    }
+  }
+
+  const htmlOut = injectProspectPreviewFooterLinkStyles(storedHtml);
 
   const deviceType =
     typeof data.preview_device_type === "string" ? data.preview_device_type.trim() : "";

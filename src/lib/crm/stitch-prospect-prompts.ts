@@ -796,18 +796,52 @@ ${gmb}Output **one complete HTML5 document** for a desktop SaaS-style operator w
 
 Build a browser-width app shell with a strong branded sidebar and a polished main canvas. The first screenshot must show the dashboard at full desktop scale with an impressive KPI/header area, real data cards, charts, activity, and workflow value.
 
-## Navigation and views
+## Navigation and views (HARD CONTRACT — links must work)
 
-Use CSS-only hash navigation. No inline \`<script>\`. Keep these exact ids and sidebar labels:
+Use CSS-only \`:target\` hash navigation. No inline \`<script>\`. The sidebar MUST contain **exactly these six items, in this exact order, with these exact ids and labels**:
 
-- \`#dash\` — Dashboard
-- \`#pipeline\` — Pipeline
-- \`#clients\` — Clients
-- \`#inbox\` — Conversations
-- \`#schedule\` — Schedule
-- \`#reviews\` — Reviews
+1. \`<a href="#dash">Dashboard</a>\`
+2. \`<a href="#pipeline">Pipeline</a>\`
+3. \`<a href="#clients">Clients</a>\`
+4. \`<a href="#inbox">Conversations</a>\`
+5. \`<a href="#schedule">Schedule</a>\`
+6. \`<a href="#reviews">Reviews</a>\`
 
-Default to \`#dash\` when no hash is present. Only one view should be visible at a time. Sidebar links must use \`href="#dash"\`, \`#pipeline\`, \`#clients\`, \`#inbox\`, \`#schedule\`, and \`#reviews\`.
+Do **NOT** add Settings, Support, Help, Analytics, Reports, Inventory, Operations, Profile, Logout, or any other sidebar item. Six items, no more, no less.
+
+**View structure (mandatory):** Each top-level view MUST be a \`<section>\` (not a \`<div>\`) with the corresponding id and \`class="page"\`, placed inside a single \`<main>\` container. Sidebar \`<a>\` count MUST equal \`<section class="page">\` count, and every sidebar \`href\` MUST match exactly one \`section id\`. \`#dash\` MUST be the first \`<section class="page">\` in the document so it shows by default.
+
+Required example skeleton:
+
+\`\`\`html
+<aside class="sidebar"><nav><ul>
+  <li><a href="#dash">Dashboard</a></li>
+  <li><a href="#pipeline">Pipeline</a></li>
+  <li><a href="#clients">Clients</a></li>
+  <li><a href="#inbox">Conversations</a></li>
+  <li><a href="#schedule">Schedule</a></li>
+  <li><a href="#reviews">Reviews</a></li>
+</ul></nav></aside>
+<main>
+  <section id="dash" class="page">…</section>
+  <section id="pipeline" class="page">…</section>
+  <section id="clients" class="page">…</section>
+  <section id="inbox" class="page">…</section>
+  <section id="schedule" class="page">…</section>
+  <section id="reviews" class="page">…</section>
+</main>
+\`\`\`
+
+**Required CSS** (place inside the \`<style>\` block — do not skip):
+
+\`\`\`css
+.page { display: none; }
+.page:target { display: block; }
+body:not(:has(.page:target)) .page:first-of-type,
+main:not(:has(.page:target)) .page:first-of-type { display: block; }
+\`\`\`
+
+**Forbidden in sidebar:** \`href="#"\`, \`href="javascript:void(0)"\`, \`href=""\`, \`target="_blank"\`, hashes that do not match an existing section id, anchors outside the canonical six, and \`<button>\` or \`<div onclick>\` used in place of \`<a>\`.
 
 ## Required product content
 
@@ -837,6 +871,14 @@ ${WEBAPP_PITCH_MOMENTS}
 ## Technical output
 
 Return only a complete HTML5 document with inline CSS in \`<style>\`. External font links and the official logo image are allowed when provided. No inline \`<script>\`, no external JS, and no separate files.
+
+## Pre-flight self-check (must all be true before returning)
+
+1. Sidebar has exactly six \`<a>\` items in the order Dashboard, Pipeline, Clients, Conversations, Schedule, Reviews — no Settings/Support/Analytics/Inventory/etc.
+2. Every sidebar \`href\` is one of \`#dash\`, \`#pipeline\`, \`#clients\`, \`#inbox\`, \`#schedule\`, \`#reviews\`.
+3. There is exactly one \`<section class="page">\` for each of those six ids, and \`#dash\` is the first one in document order.
+4. No anchor in the document uses \`href="#"\`, \`href="javascript:void(0)"\`, \`href=""\`, or \`target="_blank"\`.
+5. The required \`.page { display: none; } .page:target { display: block; }\` CSS rules are present inside \`<style>\`.
 
 Output: polished desktop web-app mockup in one HTML file for a client pitch.`.trim();
 }

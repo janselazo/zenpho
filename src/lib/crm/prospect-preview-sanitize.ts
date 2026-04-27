@@ -670,6 +670,402 @@ export function ensureProspectPreviewRequiredSections(
   return injectStubsIntoHtml(input, stubs);
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+ * Web-app dashboard navigation repair
+ *
+ * Stitch's web-app prompt asks for CSS-only `:target` view switching with
+ * canonical ids (`#dash`, `#pipeline`, `#clients`, `#inbox`, `#schedule`,
+ * `#reviews`). In practice the model often:
+ *   1. emits sidebar items with valid hashes but no matching panel,
+ *   2. uses `<div id="X">` instead of `<section id="X" class="page">`,
+ *   3. leaves "Settings" / "Support" with `href="#"` or `href="javascript:".
+ * Either way, clicking the sidebar changes the URL hash but nothing visible
+ * happens. The functions below post-process the document so every sidebar
+ * link maps to a real `class="page"` panel.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+type WebAppNavSlug = string;
+
+type WebAppSidebarItem = { slug: WebAppNavSlug; label: string };
+
+/**
+ * Canonical web-app sidebar slugs. The repair only triggers when at least
+ * a couple of these are detected so it stays a no-op on marketing pages.
+ */
+const CANONICAL_WEBAPP_SLUGS: ReadonlySet<string> = new Set([
+  "dash",
+  "pipeline",
+  "clients",
+  "inbox",
+  "schedule",
+  "reviews",
+  "inventory",
+  "analytics",
+  "settings",
+  "support",
+]);
+
+const WEBAPP_NAV_LABEL_RULES: Array<{
+  patterns: RegExp[];
+  slug: WebAppNavSlug;
+}> = [
+  { patterns: [/\bdashboard\b/i, /\bhome\b/i, /\boverview\b/i, /\bdash\b/i], slug: "dash" },
+  {
+    patterns: [
+      /\boperations?\b/i,
+      /\bworkflow\b/i,
+      /\bops\b/i,
+      /\bproduction\b/i,
+      /\bpipeline\b/i,
+      /\bdeals?\b/i,
+      /\bsales\b/i,
+      /\bfulfillment\b/i,
+    ],
+    slug: "pipeline",
+  },
+  { patterns: [/\binventory\b/i, /\bstock\b/i, /\bcatalog\b/i, /\bproducts?\b/i], slug: "inventory" },
+  {
+    patterns: [
+      /\bclients?\b/i,
+      /\bcustomers?\b/i,
+      /\bpatients?\b/i,
+      /\bmembers?\b/i,
+      /\bcontacts?\b/i,
+    ],
+    slug: "clients",
+  },
+  {
+    patterns: [/\binbox\b/i, /\bconversations?\b/i, /\bmessages?\b/i, /\bmail\b/i, /\bchat\b/i],
+    slug: "inbox",
+  },
+  {
+    patterns: [
+      /\bschedule\b/i,
+      /\bcalendar\b/i,
+      /\bappointments?\b/i,
+      /\bbookings?\b/i,
+      /\bagenda\b/i,
+    ],
+    slug: "schedule",
+  },
+  {
+    patterns: [/\breviews?\b/i, /\breputation\b/i, /\bratings?\b/i, /\bfeedback\b/i],
+    slug: "reviews",
+  },
+  {
+    patterns: [
+      /\banalytics?\b/i,
+      /\breports?\b/i,
+      /\binsights?\b/i,
+      /\bmetrics?\b/i,
+      /\bstats?\b/i,
+    ],
+    slug: "analytics",
+  },
+  {
+    patterns: [/\bsettings?\b/i, /\bpreferences?\b/i, /\baccount\b/i, /\bconfiguration\b/i],
+    slug: "settings",
+  },
+  { patterns: [/\bsupport\b/i, /\bhelp\b/i, /\bassistance\b/i], slug: "support" },
+];
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Strip Material Symbols / SVG icons and tags so we can read the sidebar's visible label. */
+function extractSidebarLabel(inner: string): string {
+  let s = inner
+    .replace(
+      /<span\b[^>]*class=["'][^"']*material-symbols[^"']*["'][^>]*>[\s\S]*?<\/span>/gi,
+      " ",
+    )
+    .replace(/<svg\b[\s\S]*?<\/svg>/gi, " ")
+    .replace(/<script\b[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style\b[\s\S]*?<\/style>/gi, " ");
+  s = s.replace(/<[^>]+>/g, " ");
+  s = s
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">");
+  return s.replace(/\s+/g, " ").trim();
+}
+
+/** Return a canonical web-app slug for a sidebar label, or null when none matches. */
+function deriveCanonicalSlugFromLabel(label: string): WebAppNavSlug | null {
+  const t = label.trim();
+  if (!t) return null;
+  for (const rule of WEBAPP_NAV_LABEL_RULES) {
+    if (rule.patterns.some((p) => p.test(t))) return rule.slug;
+  }
+  return null;
+}
+
+function isAlreadyValidWebAppSlug(hash: string): WebAppNavSlug | null {
+  const trimmed = hash.replace(/^#/, "").trim();
+  if (!trimmed) return null;
+  if (!/^[a-z][a-z0-9_-]{0,40}$/i.test(trimmed)) return null;
+  return trimmed.toLowerCase();
+}
+
+function appendClassToOpenTag(openTag: string, className: string): string {
+  const classRe = /\bclass=("|')([^"']*)\1/i;
+  if (classRe.test(openTag)) {
+    return openTag.replace(classRe, (_full, quote: string, value: string) => {
+      const tokens = String(value).split(/\s+/).filter(Boolean);
+      if (tokens.includes(className)) return `class=${quote}${value}${quote}`;
+      tokens.push(className);
+      return `class=${quote}${tokens.join(" ")}${quote}`;
+    });
+  }
+  return openTag.replace(/^<(\w+)/, `<$1 class="${className}"`);
+}
+
+function findMatchingCloseAfterOpen(
+  html: string,
+  openTagStartIdx: number,
+  tagName: string,
+): number {
+  let i = html.indexOf(">", openTagStartIdx);
+  if (i === -1) return -1;
+  i += 1;
+  const openRe = new RegExp(`<${escapeRegex(tagName)}\\b`, "gi");
+  const closeRe = new RegExp(`</${escapeRegex(tagName)}\\s*>`, "gi");
+  let depth = 1;
+  let pos = i;
+  while (depth > 0 && pos < html.length) {
+    openRe.lastIndex = pos;
+    closeRe.lastIndex = pos;
+    const oNext = openRe.exec(html);
+    const cNext = closeRe.exec(html);
+    if (!cNext) return -1;
+    if (oNext && oNext.index < cNext.index) {
+      depth += 1;
+      pos = oNext.index + oNext[0].length;
+    } else {
+      depth -= 1;
+      pos = cNext.index + cNext[0].length;
+      if (depth === 0) return pos;
+    }
+  }
+  return -1;
+}
+
+function findElementById(
+  html: string,
+  id: string,
+): { startIdx: number; endIdx: number; tagName: string; openTag: string } | null {
+  const re = new RegExp(
+    `<([a-zA-Z][a-zA-Z0-9]*)\\b[^>]*\\bid=["']${escapeRegex(id)}["'][^>]*>`,
+    "i",
+  );
+  const match = re.exec(html);
+  if (!match) return null;
+  const tagName = match[1];
+  const startIdx = match.index;
+  const endIdx = findMatchingCloseAfterOpen(html, startIdx, tagName);
+  if (endIdx === -1) return null;
+  return { startIdx, endIdx, tagName, openTag: match[0] };
+}
+
+function buildWebAppPagePanelStub(
+  slug: WebAppNavSlug,
+  label: string,
+  meta: ProspectPreviewSectionMeta,
+): string {
+  const business = escapeHtml((meta.businessName ?? "this business").trim() || "this business");
+  const safeLabel = escapeHtml(label || slug.replace(/[-_]/g, " "));
+  const lower = safeLabel.toLowerCase();
+  const tone =
+    "rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md p-6 shadow-[0_10px_32px_-12px_rgba(0,0,0,0.4)]";
+  return `
+<section id="${escapeHtml(slug)}" class="page max-w-7xl mx-auto space-y-8">
+  <header class="flex flex-wrap items-end justify-between gap-6">
+    <div>
+      <span class="inline-block text-[10px] font-semibold tracking-[0.3em] uppercase opacity-60">${business}</span>
+      <h2 class="mt-3 text-3xl md:text-4xl font-semibold tracking-tight">${safeLabel}</h2>
+      <p class="mt-3 text-sm opacity-70 max-w-2xl">A focused workspace for ${lower}. Live data, quick actions, and the controls your team uses every day will live here.</p>
+    </div>
+    <a href="#dash" class="inline-flex items-center gap-2 rounded-full border border-current/30 px-5 py-2 text-xs font-semibold uppercase tracking-widest opacity-80 hover:opacity-100">Back to dashboard <span aria-hidden="true">&rarr;</span></a>
+  </header>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="${tone}">
+      <div class="text-[11px] uppercase tracking-widest opacity-60">Status</div>
+      <div class="mt-3 text-2xl font-semibold">Live</div>
+      <p class="mt-2 text-sm opacity-70">${safeLabel} is online and routing in real time.</p>
+    </div>
+    <div class="${tone}">
+      <div class="text-[11px] uppercase tracking-widest opacity-60">Owner</div>
+      <div class="mt-3 text-2xl font-semibold">${business}</div>
+      <p class="mt-2 text-sm opacity-70">Permissions and data scoped to your team.</p>
+    </div>
+    <div class="${tone}">
+      <div class="text-[11px] uppercase tracking-widest opacity-60">Last update</div>
+      <div class="mt-3 text-2xl font-semibold">Today</div>
+      <p class="mt-2 text-sm opacity-70">All ${lower} activity from this session is captured.</p>
+    </div>
+  </div>
+  <div class="${tone}">
+    <h3 class="text-lg font-semibold">${safeLabel} workspace</h3>
+    <p class="mt-2 text-sm opacity-70">This panel is a placeholder. The production build of this view will surface filters, tables, and inline actions tailored to ${business}'s ${lower} workflow.</p>
+  </div>
+</section>
+`.trim();
+}
+
+const WEBAPP_HASH_ANCHOR_RE =
+  /<a\b([^>]*?)\bhref=(["'])([^"']*)\2([^>]*)>([\s\S]*?)<\/a>/gi;
+
+/**
+ * Detect, fix, and back-fill sidebar nav links so the produced web-app preview
+ * actually navigates between views via CSS `:target`.
+ */
+export function repairWebAppDashboardNavigation(
+  html: string,
+  meta: ProspectPreviewSectionMeta,
+): string {
+  if (typeof html !== "string" || !html.trim()) return html;
+
+  // Cheap structural gate so this is safe to call from the route-handler
+  // self-heal path even on marketing-style previews.
+  const hasSidebar = /<(nav|aside)\b[^>]*>/i.test(html);
+  if (!hasSidebar) return html;
+  const hasHashLink = /<a\b[^>]*\bhref=["']#/i.test(html);
+  if (!hasHashLink) return html;
+
+  // First, scan anchors WITHOUT mutating to count canonical sidebar items.
+  // This keeps the repair a hard no-op on marketing pages (which have hash
+  // anchors like `#services`, `#about`, etc. that are not canonical).
+  const canonicalAnchors: Array<{ slug: WebAppNavSlug; label: string }> = [];
+  for (const m of html.matchAll(WEBAPP_HASH_ANCHOR_RE)) {
+    const hrefRaw = m[3] ?? "";
+    const inner = m[5] ?? "";
+    const href = hrefRaw.trim();
+    const looksHash =
+      href === "" ||
+      href === "#" ||
+      /^javascript:/i.test(href) ||
+      href.startsWith("#");
+    if (!looksHash) continue;
+    const label = extractSidebarLabel(inner);
+    const existingSlug = href.startsWith("#")
+      ? isAlreadyValidWebAppSlug(href)
+      : null;
+    const labelSlug = deriveCanonicalSlugFromLabel(label);
+    let slug: WebAppNavSlug | null = null;
+    if (existingSlug && CANONICAL_WEBAPP_SLUGS.has(existingSlug)) {
+      slug = existingSlug;
+    } else if (labelSlug) {
+      slug = labelSlug;
+    }
+    if (!slug) continue;
+    canonicalAnchors.push({ slug, label: label || slug });
+  }
+
+  // Require at least 3 canonical sidebar items so we don't false-positive on
+  // marketing pages that happen to have a `<nav>` with hash links.
+  if (canonicalAnchors.length < 3) return html;
+
+  const itemSlugs = new Set(canonicalAnchors.map((a) => a.slug));
+
+  // Pass 1: walk hash anchors and rewrite bad/empty hrefs (and strip
+  // `target="_blank"` / `onX=`) for the anchors that map to canonical slugs.
+  const items = new Map<WebAppNavSlug, WebAppSidebarItem>();
+  const rewritten = html.replace(
+    WEBAPP_HASH_ANCHOR_RE,
+    (full, before: string, _quote: string, hrefRaw: string, after: string, inner: string) => {
+      const href = (hrefRaw ?? "").trim();
+      const looksHash =
+        href === "" ||
+        href === "#" ||
+        /^javascript:/i.test(href) ||
+        href.startsWith("#");
+      if (!looksHash) return full;
+
+      const label = extractSidebarLabel(inner);
+      const existingSlug = href.startsWith("#")
+        ? isAlreadyValidWebAppSlug(href)
+        : null;
+      const labelSlug = deriveCanonicalSlugFromLabel(label);
+      let slug: WebAppNavSlug | null = null;
+      if (existingSlug && CANONICAL_WEBAPP_SLUGS.has(existingSlug)) {
+        slug = existingSlug;
+      } else if (labelSlug) {
+        slug = labelSlug;
+      }
+      if (!slug) return full;
+
+      if (!items.has(slug)) {
+        items.set(slug, { slug, label: label || slug });
+      }
+
+      const cleanedBefore = before
+        .replace(/\s+target=["'][^"']*["']/gi, "")
+        .replace(/\s+on[a-z]+=["'][^"']*["']/gi, "")
+        .replace(/\s+$/u, "");
+      const cleanedAfter = after
+        .replace(/\s+target=["'][^"']*["']/gi, "")
+        .replace(/\s+on[a-z]+=["'][^"']*["']/gi, "");
+      return `<a${cleanedBefore} href="#${slug}"${cleanedAfter}>${inner}</a>`;
+    },
+  );
+
+  if (items.size === 0 || itemSlugs.size === 0) return rewritten;
+
+  // Pass 2: ensure every slug has a `class="page"` panel. Add the class to
+  // existing panels and synthesize stubs for missing ones.
+  let withPanels = rewritten;
+  const missing: WebAppSidebarItem[] = [];
+  let dashCloseIdx = -1;
+
+  for (const item of items.values()) {
+    const located = findElementById(withPanels, item.slug);
+    if (located) {
+      const newOpenTag = appendClassToOpenTag(located.openTag, "page");
+      if (newOpenTag !== located.openTag) {
+        withPanels =
+          withPanels.slice(0, located.startIdx) +
+          newOpenTag +
+          withPanels.slice(located.startIdx + located.openTag.length);
+      }
+      if (item.slug === "dash") {
+        const refreshed = findElementById(withPanels, "dash");
+        if (refreshed) dashCloseIdx = refreshed.endIdx;
+      }
+    } else {
+      missing.push(item);
+    }
+  }
+
+  if (missing.length === 0) return withPanels;
+
+  const stubs = missing
+    .map((item) => buildWebAppPagePanelStub(item.slug, item.label, meta))
+    .filter(Boolean)
+    .join("\n");
+  if (!stubs) return withPanels;
+
+  if (dashCloseIdx > 0) {
+    return (
+      withPanels.slice(0, dashCloseIdx) + "\n" + stubs + withPanels.slice(dashCloseIdx)
+    );
+  }
+
+  const lower = withPanels.toLowerCase();
+  const mainClose = lower.lastIndexOf("</main>");
+  if (mainClose !== -1) {
+    return withPanels.slice(0, mainClose) + "\n" + stubs + withPanels.slice(mainClose);
+  }
+  const bodyClose = lower.lastIndexOf("</body>");
+  if (bodyClose !== -1) {
+    return withPanels.slice(0, bodyClose) + "\n" + stubs + withPanels.slice(bodyClose);
+  }
+  return withPanels + "\n" + stubs;
+}
+
 /**
  * Sanitize a full HTML document from the model (allows &lt;style&gt;, vetted &lt;link&gt;, and
  * vetted external &lt;script src&gt; for Tailwind CDN — no inline script).
@@ -714,13 +1110,24 @@ ${safe}
 }
 
 /**
- * Defensive fallback: if the model used non-standard page IDs (e.g. #concierge instead of #dash),
- * the CSS :target default-show rule won't match and ALL .page sections stay hidden.
- * This ensures the first .page child is visible when no hash target is active.
+ * CSS-only view switching for web-app dashboard previews. Hides every `.page`
+ * panel by default and shows the one whose id matches the URL hash. When no
+ * hash is active (or it points outside the document), the canonical `#dash`
+ * panel is shown; if that doesn't exist, the first `.page` child of `<main>`
+ * (or `<body>`) is shown as a final fallback.
+ *
+ * Marketing-website previews have no `.page` elements, so these rules are
+ * inert there.
  */
 const PREVIEW_PAGE_FALLBACK_STYLE = `<style id="zenpho-page-target-fallback">
-  body:not(:has(.page:target)) .page:first-of-type,
-  main:not(:has(.page:target)) > .page:first-of-type {
+  .page { display: none; }
+  .page:target { display: block; }
+  body:not(:has(.page:target)) #dash.page,
+  main:not(:has(.page:target)) #dash.page,
+  body:not(:has(.page:target)) #dash,
+  main:not(:has(.page:target)) #dash,
+  body:not(:has(:target)) main > .page:first-child,
+  body:not(:has(:target)) > .page:first-child {
     display: block !important;
     opacity: 1 !important;
     visibility: visible !important;
