@@ -50,6 +50,10 @@ import ProspectIntelBusinessSnapshot from "@/components/crm/prospecting/Prospect
 import type { HomepageContactHints } from "@/app/(crm)/actions/prospect-intel";
 import { formatReportAsPlainNotes } from "@/lib/crm/prospect-intel-notes-format";
 import { mergeProspectSocialUrls } from "@/lib/crm/prospect-contact-extract";
+import {
+  firstUsableContactEmailInOrder,
+  isPlaceholderOrExampleEmail,
+} from "@/lib/crm/prospect-email-heuristics";
 import { EMPTY_PROSPECT_SOCIAL_URLS } from "@/lib/crm/prospect-enrichment-types";
 import type { SocialEnrichmentResult } from "@/lib/crm/social-profile-scrape";
 
@@ -941,6 +945,12 @@ function ProspectsIntelligenceViewInner({
   const [leadNotes, setLeadNotes] = useState("");
   const [leadPending, setLeadPending] = useState(false);
   const [leadMessage, setLeadMessage] = useState<string | null>(null);
+  /** When true, we stop auto-prefilling that field from research (user edited). Reset per report. */
+  const [leadContactTouched, setLeadContactTouched] = useState({
+    email: false,
+    facebook: false,
+    instagram: false,
+  });
 
   const [savePending, setSavePending] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -967,6 +977,16 @@ function ProspectsIntelligenceViewInner({
       ? `place:${activeReport.place.id}`
       : `url:${activeReport.urlMeta.url}`;
   }, [activeReport]);
+
+  useEffect(() => {
+    if (!outreachPreviewKey) return;
+    setLeadContactTouched({ email: false, facebook: false, instagram: false });
+  }, [outreachPreviewKey]);
+
+  const applyPickedEmail = useCallback((email: string) => {
+    setLeadEmail((cur) => cur.trim() || email);
+    setLeadContactTouched((p) => ({ ...p, email: true }));
+  }, []);
 
   const intelGlanceFacts = useMemo(() => {
     if (!activeReport) return [];
@@ -1041,13 +1061,16 @@ function ProspectsIntelligenceViewInner({
   }, [activeReport?.kind, urlHomepageHints, websiteDeepStatus.contacts?.socialUrls, socialEnrichSocialUrls]);
 
   const snapshotContactEmail = useMemo(() => {
-    const ranked = websiteDeepStatus.contacts?.emailsRanked;
-    if (ranked && ranked.length > 0) return ranked[0] ?? null;
-    if (websiteCrawlEmails.length > 0) return websiteCrawlEmails[0] ?? null;
-    if (activeReport?.kind === "url" && urlHomepageHints?.emails?.length)
-      return urlHomepageHints.emails[0] ?? null;
-    if (socialEnrichResult?.email) return socialEnrichResult.email;
-    return null;
+    const socialEmail =
+      socialEnrichResult?.email != null
+        ? [socialEnrichResult.email]
+        : undefined;
+    return firstUsableContactEmailInOrder(
+      websiteDeepStatus.contacts?.emailsRanked,
+      websiteCrawlEmails,
+      activeReport?.kind === "url" ? urlHomepageHints?.emails : undefined,
+      socialEmail
+    );
   }, [
     activeReport?.kind,
     urlHomepageHints?.emails,
@@ -1057,13 +1080,28 @@ function ProspectsIntelligenceViewInner({
   ]);
 
   useEffect(() => {
-    const s = websiteDeepStatus.contacts?.socialUrls;
+    if (leadContactTouched.email) return;
+    const e = snapshotContactEmail;
+    if (!e) return;
+    setLeadEmail(e);
+  }, [leadContactTouched.email, snapshotContactEmail]);
+
+  useEffect(() => {
+    if (leadContactTouched.facebook && leadContactTouched.instagram) return;
+    const s = snapshotSocialUrls;
     if (!s) return;
-    if (s.facebook)
-      setLeadFacebook((cur) => (cur.trim() ? cur : s.facebook ?? ""));
-    if (s.instagram)
-      setLeadInstagram((cur) => (cur.trim() ? cur : s.instagram ?? ""));
-  }, [websiteDeepStatus.contacts?.socialUrls]);
+    if (!leadContactTouched.facebook && s.facebook) {
+      setLeadFacebook(s.facebook);
+    }
+    if (!leadContactTouched.instagram && s.instagram) {
+      setLeadInstagram(s.instagram);
+    }
+  }, [
+    leadContactTouched.facebook,
+    leadContactTouched.instagram,
+    snapshotSocialUrls.facebook,
+    snapshotSocialUrls.instagram,
+  ]);
 
   const syncLeadFormFromPlace = useCallback(
     (place: PlacesSearchPlace, report: MarketIntelReport) => {
@@ -1101,7 +1139,9 @@ function ProspectsIntelligenceViewInner({
       .then((data: SocialEnrichmentResult) => {
         if (data.ok) {
           setSocialEnrichResult(data);
-          if (data.email) setLeadEmail((cur) => (cur.trim() ? cur : data.email!));
+          if (data.email && !isPlaceholderOrExampleEmail(data.email)) {
+            setLeadEmail((cur) => (cur.trim() ? cur : data.email!));
+          }
           if (data.phone) setLeadPhone((cur) => (cur.trim() ? cur : data.phone!));
           if (data.facebookUrl) setLeadFacebook((cur) => (cur.trim() ? cur : data.facebookUrl!));
           if (data.instagramUrl) setLeadInstagram((cur) => (cur.trim() ? cur : data.instagramUrl!));
@@ -1290,6 +1330,7 @@ function ProspectsIntelligenceViewInner({
         stack: result.stack,
       });
       setUrlHomepageHints(result.homepageContactHints);
+      setLeadContactTouched({ email: false, facebook: false, instagram: false });
       const domain = (() => {
         try {
           return new URL(result.url).hostname.replace(/^www\./, "");
@@ -1311,7 +1352,7 @@ function ProspectsIntelligenceViewInner({
           contactLines.join("\n") || undefined
         )
       );
-      setLeadEmail(h.emails[0] ?? "");
+      setLeadEmail(firstUsableContactEmailInOrder(h.emails) ?? "");
       setLeadPhone(h.phones[0] ?? "");
       setLeadFacebook(h.socialUrls.facebook ?? "");
       setLeadInstagram(h.socialUrls.instagram ?? "");
@@ -1736,7 +1777,7 @@ function ProspectsIntelligenceViewInner({
                     contactEmail={snapshotContactEmail}
                     socialUrls={snapshotSocialUrls}
                     onPickPhone={(phone) => setLeadPhone((cur) => cur.trim() || phone)}
-                    onPickEmail={(email) => setLeadEmail((cur) => cur.trim() || email)}
+                    onPickEmail={applyPickedEmail}
                   />
                   <IntelContactHintsPanel
                     embedded
@@ -1746,13 +1787,13 @@ function ProspectsIntelligenceViewInner({
                     homepageHints={activeReport.kind === "url" ? urlHomepageHints : null}
                     websiteDeep={websiteDeepStatus}
                     websiteCrawlEmails={websiteCrawlEmails}
-                    onPickEmail={(email) => setLeadEmail((cur) => cur.trim() || email)}
+                    onPickEmail={applyPickedEmail}
                     onPickPhone={(phone) => setLeadPhone((cur) => cur.trim() || phone)}
                   />
                   <SocialEnrichmentBadge
                     loading={socialEnriching}
                     result={socialEnrichResult}
-                    onPickEmail={(e) => setLeadEmail((cur) => cur.trim() || e)}
+                    onPickEmail={applyPickedEmail}
                     onPickPhone={(p) => setLeadPhone((cur) => cur.trim() || p)}
                   />
                 </div>
@@ -1835,7 +1876,10 @@ function ProspectsIntelligenceViewInner({
                   <input
                     type="email"
                     value={leadEmail}
-                    onChange={(e) => setLeadEmail(e.target.value)}
+                    onChange={(e) => {
+                      setLeadEmail(e.target.value);
+                      setLeadContactTouched((p) => ({ ...p, email: true }));
+                    }}
                     className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
                   />
                 </div>
@@ -1859,7 +1903,10 @@ function ProspectsIntelligenceViewInner({
                     inputMode="url"
                     placeholder="https://facebook.com/…"
                     value={leadFacebook}
-                    onChange={(e) => setLeadFacebook(e.target.value)}
+                    onChange={(e) => {
+                      setLeadFacebook(e.target.value);
+                      setLeadContactTouched((p) => ({ ...p, facebook: true }));
+                    }}
                     className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
                   />
                 </div>
@@ -1872,7 +1919,10 @@ function ProspectsIntelligenceViewInner({
                     inputMode="url"
                     placeholder="https://instagram.com/…"
                     value={leadInstagram}
-                    onChange={(e) => setLeadInstagram(e.target.value)}
+                    onChange={(e) => {
+                      setLeadInstagram(e.target.value);
+                      setLeadContactTouched((p) => ({ ...p, instagram: true }));
+                    }}
                     className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
                   />
                 </div>
@@ -1974,7 +2024,7 @@ function ProspectsIntelligenceViewInner({
                     activeReport.kind === "place" ? activeReport.place.formattedAddress : null
                   }
                   homepageContactHints={activeReport.kind === "url" ? urlHomepageHints : null}
-                  onPickEmail={(email) => setLeadEmail((cur) => cur.trim() || email)}
+                  onPickEmail={applyPickedEmail}
                   onPickPhone={(phone) => setLeadPhone((cur) => cur.trim() || phone)}
                   onWebsiteEmailsChange={setWebsiteCrawlEmails}
                   onWebsiteDeepStatusChange={setWebsiteDeepStatus}
