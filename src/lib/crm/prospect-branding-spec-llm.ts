@@ -10,6 +10,13 @@ import {
   BRANDING_FONT_PAIRINGS,
   type BrandingFontPairingId,
 } from "@/lib/crm/branding-font-pairings";
+import type { ProspectVertical } from "@/lib/crm/prospect-vertical-classify";
+
+export type ExtractedBrandPalette = {
+  primary: string;
+  accent: string | null;
+  palette: string[];
+};
 
 const ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages";
 const DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-20250514";
@@ -179,9 +186,73 @@ function toneExamples(raw: unknown): {
   };
 }
 
-function coerceBrandingSpec(o: Record<string, unknown>): BrandingSpec {
-  const primary = colorArray(o.primaryColors ?? o.primary_colors);
-  const secondary = colorArray(o.secondaryColors ?? o.secondary_colors);
+function applyExtractedPalette(
+  primary: BrandingColor[],
+  secondary: BrandingColor[],
+  extracted: ExtractedBrandPalette | null,
+): { primary: BrandingColor[]; secondary: BrandingColor[] } {
+  if (!extracted) return { primary, secondary };
+
+  const extractedHexes = new Set<string>();
+  const ensure = (hex: string | null | undefined): string | null => {
+    const norm = normalizeHex(hex);
+    if (norm) extractedHexes.add(norm);
+    return norm;
+  };
+
+  const primHex = ensure(extracted.primary);
+  const accHex = ensure(extracted.accent);
+  for (const h of extracted.palette) ensure(h);
+
+  // Force the first primary color to the extracted brand primary. Keep the
+  // LLM-supplied name (cleaner than "Color 1") when available.
+  const nextPrimary: BrandingColor[] = [];
+  if (primHex) {
+    const name = primary[0]?.name?.trim() || "Brand primary";
+    nextPrimary.push({ name, hex: primHex });
+  }
+  // Second primary slot prefers the extracted accent (otherwise next palette
+  // hex) so the running PDF "accent" feels native to the brand.
+  if (accHex && accHex !== primHex) {
+    const name = primary[1]?.name?.trim() || "Brand accent";
+    nextPrimary.push({ name, hex: accHex });
+  } else {
+    const fallback = extracted.palette
+      .map((h) => normalizeHex(h))
+      .filter((h): h is string => Boolean(h && h !== primHex))
+      .find(Boolean);
+    if (fallback) {
+      const name = primary[1]?.name?.trim() || "Brand accent";
+      nextPrimary.push({ name, hex: fallback });
+    } else if (primary[1]) {
+      nextPrimary.push(primary[1]);
+    }
+  }
+  // Keep any additional LLM-suggested primaries that don't collide.
+  for (const p of primary.slice(nextPrimary.length)) {
+    if (!extractedHexes.has(p.hex)) nextPrimary.push(p);
+    if (nextPrimary.length >= 3) break;
+  }
+
+  // Secondary: keep LLM neutrals/supports but drop hexes that already appear
+  // in the primary list.
+  const usedPrimary = new Set(nextPrimary.map((p) => p.hex));
+  const nextSecondary = secondary.filter((s) => !usedPrimary.has(s.hex));
+
+  return { primary: nextPrimary, secondary: nextSecondary };
+}
+
+function coerceBrandingSpec(
+  o: Record<string, unknown>,
+  extractedPalette: ExtractedBrandPalette | null = null,
+): BrandingSpec {
+  const primaryRaw = colorArray(o.primaryColors ?? o.primary_colors);
+  const secondaryRaw = colorArray(o.secondaryColors ?? o.secondary_colors);
+  const { primary, secondary } = applyExtractedPalette(
+    primaryRaw,
+    secondaryRaw,
+    extractedPalette,
+  );
   return {
     brandName: strField(o, "brandName", "brand_name", 120),
     tagline: strField(o, "tagline", undefined, 180),
@@ -207,14 +278,17 @@ function coerceBrandingSpec(o: Record<string, unknown>): BrandingSpec {
   };
 }
 
-function parseSpecJson(raw: string): BrandingSpec | null {
+function parseSpecJson(
+  raw: string,
+  extractedPalette: ExtractedBrandPalette | null = null,
+): BrandingSpec | null {
   let t = raw.trim();
   const fence = /^```(?:json)?\s*([\s\S]*?)```$/m.exec(t);
   if (fence) t = fence[1].trim();
   const tryParse = (s: string): BrandingSpec | null => {
     try {
       const o = JSON.parse(s) as Record<string, unknown>;
-      return coerceBrandingSpec(o);
+      return coerceBrandingSpec(o, extractedPalette);
     } catch {
       return null;
     }
@@ -268,20 +342,57 @@ function reportContext(
   );
 }
 
+function verticalGuidance(v: ProspectVertical | null): string {
+  switch (v) {
+    case "ecommerce":
+      return `\nProspect vertical: ECOMMERCE BRAND.
+- Bias merch ideas to packaging, unboxing, hangtags, and product photography.
+- Imagery direction: product still life + lifestyle in-context, bright editorial styling.
+- Tone is confident and conversion-aware without being pushy.`;
+    case "tech-startup":
+      return `\nProspect vertical: TECH STARTUP / SaaS.
+- Bias merch ideas to founder swag, conference goods, dev-friendly stickers.
+- Imagery direction: clean product fragments, abstract dashboard surfaces, soft gradients, modern editorial.
+- Tone is precise, technically literate, and ambitious.`;
+    case "local-business":
+      return `\nProspect vertical: LOCAL BUSINESS / SERVICE.
+- Bias merch ideas to signage, menus, uniforms, vehicle wraps, neighborhood print.
+- Imagery direction: warm storefront detail, real human moments, golden-hour lighting.
+- Tone is welcoming and trustworthy, neighbor-to-neighbor.`;
+    default:
+      return "";
+  }
+}
+
 function buildPrompts(
   businessName: string,
   placeJson: string,
   reportJson: string,
+  extractedPalette: ExtractedBrandPalette | null,
+  vertical: ProspectVertical | null,
 ): { system: string; user: string } {
   const pairingList = BRANDING_FONT_PAIRING_IDS.map((id) => {
     const p = BRANDING_FONT_PAIRINGS[id];
     return `  - "${id}" — ${p.label} — ${p.vibe} (${p.displayFamily} / ${p.bodyFamily})`;
   }).join("\n");
 
+  const paletteBlock = extractedPalette
+    ? `\nExtracted brand palette (from the prospect's live website — USE THESE EXACT HEXES):
+- primary: ${extractedPalette.primary}
+- accent: ${extractedPalette.accent ?? "(none — choose a complementary brand accent from the palette below if useful)"}
+- full palette: ${extractedPalette.palette.length ? extractedPalette.palette.join(", ") : "(none)"}\n
+HARD RULE: When you populate "primaryColors", set the FIRST entry's "hex" EXACTLY to "${extractedPalette.primary}".${
+        extractedPalette.accent
+          ? ` The SECOND entry's "hex" must be EXACTLY "${extractedPalette.accent}".`
+          : ""
+      } You may invent the "name" labels, but never invent the hex values. The post-processor will overwrite invented hexes with these anyway, so save effort and use them directly.`
+    : "";
+
   const system =
     "You are a senior brand strategist. You output only valid JSON. No markdown fences, no commentary before or after the JSON object.";
 
-  const user = `You are drafting a professional Brand Guidelines book for a local business prospect: "${businessName}". The JSON you return drives a printable brand-book PDF, so treat it like real strategic work, not marketing filler.
+  const user = `You are drafting a professional Brand Guidelines book for a business prospect: "${businessName}". The JSON you return drives a printable brand-book PDF, so treat it like real strategic work, not marketing filler.
+${verticalGuidance(vertical)}${paletteBlock}
 
 Ground your recommendations in the provided context only. Do not invent addresses, review counts, or claims you can't infer from the inputs. If the inputs are thin, make sensible choices appropriate for the industry and audience and keep the tone neutral.
 
@@ -328,6 +439,8 @@ async function generateWithAnthropic(
   businessName: string,
   placeJson: string,
   reportJson: string,
+  extractedPalette: ExtractedBrandPalette | null,
+  vertical: ProspectVertical | null,
 ): Promise<
   { ok: true; data: BrandingSpec } | { ok: false; error: string }
 > {
@@ -336,7 +449,13 @@ async function generateWithAnthropic(
 
   const model =
     process.env.ANTHROPIC_BRANDING_MODEL?.trim() || DEFAULT_ANTHROPIC_MODEL;
-  const { system, user } = buildPrompts(businessName, placeJson, reportJson);
+  const { system, user } = buildPrompts(
+    businessName,
+    placeJson,
+    reportJson,
+    extractedPalette,
+    vertical,
+  );
   const llmMs = automationReportLlmTimeoutMs();
   const maxTokens = automationReportMaxOutputTokens();
 
@@ -373,7 +492,7 @@ async function generateWithAnthropic(
 
     const block = data.content?.find((c) => c.type === "text");
     const raw = block?.text?.trim() ?? "";
-    const parsed = parseSpecJson(raw);
+    const parsed = parseSpecJson(raw, extractedPalette);
     if (!parsed) {
       return { ok: false, error: "Anthropic returned invalid JSON for branding spec." };
     }
@@ -391,6 +510,8 @@ async function generateWithOpenAI(
   businessName: string,
   placeJson: string,
   reportJson: string,
+  extractedPalette: ExtractedBrandPalette | null,
+  vertical: ProspectVertical | null,
 ): Promise<
   { ok: true; data: BrandingSpec } | { ok: false; error: string }
 > {
@@ -399,7 +520,13 @@ async function generateWithOpenAI(
 
   const model =
     process.env.OPENAI_BRANDING_TEXT_MODEL?.trim() || DEFAULT_OPENAI_MODEL;
-  const { system, user } = buildPrompts(businessName, placeJson, reportJson);
+  const { system, user } = buildPrompts(
+    businessName,
+    placeJson,
+    reportJson,
+    extractedPalette,
+    vertical,
+  );
   const llmMs = automationReportLlmTimeoutMs();
   const maxTokens = automationReportMaxOutputTokens();
 
@@ -416,7 +543,7 @@ async function generateWithOpenAI(
       ],
     });
     const raw = completion.choices[0]?.message?.content?.trim() ?? "";
-    const parsed = parseSpecJson(raw);
+    const parsed = parseSpecJson(raw, extractedPalette);
     if (!parsed) {
       return { ok: false, error: "OpenAI returned invalid JSON for branding spec." };
     }
@@ -438,12 +565,16 @@ export async function generateBrandingSpec(input: {
   businessName: string;
   place?: PlacesSearchPlace | null;
   report?: MarketIntelReport | null;
+  extractedPalette?: ExtractedBrandPalette | null;
+  vertical?: ProspectVertical | null;
 }): Promise<
   { ok: true; data: BrandingSpec } | { ok: false; error: string }
 > {
   const businessName = input.businessName.trim() || "Business";
   const placeJson = placeContext(input.place ?? null);
   const reportJson = reportContext(input.report ?? null);
+  const extractedPalette = input.extractedPalette ?? null;
+  const vertical = input.vertical ?? null;
 
   const hasAnthropic = Boolean(process.env.ANTHROPIC_API_KEY?.trim());
   const hasOpenAI = Boolean(process.env.OPENAI_API_KEY?.trim());
@@ -453,14 +584,32 @@ export async function generateBrandingSpec(input: {
   }
 
   if (hasAnthropic) {
-    const r = await generateWithAnthropic(businessName, placeJson, reportJson);
+    const r = await generateWithAnthropic(
+      businessName,
+      placeJson,
+      reportJson,
+      extractedPalette,
+      vertical,
+    );
     if (r.ok) return r;
     if (hasOpenAI) {
       console.warn("[brandingSpec] Anthropic failed, falling back to OpenAI:", r.error);
-      return generateWithOpenAI(businessName, placeJson, reportJson);
+      return generateWithOpenAI(
+        businessName,
+        placeJson,
+        reportJson,
+        extractedPalette,
+        vertical,
+      );
     }
     return r;
   }
 
-  return generateWithOpenAI(businessName, placeJson, reportJson);
+  return generateWithOpenAI(
+    businessName,
+    placeJson,
+    reportJson,
+    extractedPalette,
+    vertical,
+  );
 }

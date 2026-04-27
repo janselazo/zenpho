@@ -235,16 +235,16 @@ function defaultShareTemplatesForOffer(offer: SelectedOffer): ShareTemplates {
     case "branding":
       return {
         smsBody:
-          "Hi {{businessName}} — we put together a full Brand Guidelines book for you: story, logo direction, color palette, typography, tone of voice, merch ideas, do's & don'ts. Want the PDF?",
-        emailSubject: "Brand guidelines concept for {{businessName}}",
+          "Hi {{businessName}} — we built a complete Brand Kit + paid-ads Sales Funnel for you: real palette + logo, full brand book, landing page mockup, Facebook/Instagram/Google ad creatives + copy. Want the PDF?",
+        emailSubject: "Brand kit + paid-ads funnel for {{businessName}}",
         emailBody:
-          "Hi {{businessName}},\n\nWe drafted a complete Brand Guidelines book for your business — cover, brand story, logo direction, color palette (with ratios), typography specimen, imagery & pattern, tone-of-voice examples, merchandising, and do's & don'ts.\n\nIt's yours to keep. If you'd like to evolve the mark or roll it out to your storefront, signage, menus, or web, we can scope that separately.\n\nHablamos español también.\n\nBest,\n{{yourName}}",
+          "Hi {{businessName}},\n\nWe drafted a complete Brand Kit + Sales Funnel for your business — the full brand book (story, logo, palette pulled from your real site, typography, tone of voice, imagery, merch, do's & don'ts) AND a paid-ads funnel section: audience strategy, an AI landing-page mockup, plus Facebook feed, Instagram feed, Instagram Story, Google Display and a hero banner — with platform-specific copy, suggested daily budget and KPIs.\n\nIt's yours to keep. If you want to launch the funnel or evolve the brand to storefront/web, we can scope that separately.\n\nHablamos español también.\n\nBest,\n{{yourName}}",
         instagramBody:
-          "Hi {{businessName}}! We drafted a Brand Guidelines PDF for your business — palette, type, logo direction, tone and merch. Want me to send it over?\n\n— {{yourName}}",
+          "Hi {{businessName}}! We drafted a Brand Kit + Sales Funnel PDF — palette/logo from your real site, plus FB/IG/Google ad creatives + landing page mockup. Want me to send it over?\n\n— {{yourName}}",
         whatsappBody:
-          "Hi {{businessName}}! We drafted a Brand Guidelines PDF for your business — palette, type, logo direction, tone and merch. Want me to send it over?\n\n— {{yourName}}",
+          "Hi {{businessName}}! We drafted a Brand Kit + Sales Funnel PDF — palette/logo from your real site, plus FB/IG/Google ad creatives + landing page mockup. Want me to send it over?\n\n— {{yourName}}",
         facebookBody:
-          "Hi {{businessName}}! We drafted a Brand Guidelines PDF for your business — palette, type, logo direction, tone and merch. Want me to send it over?\n\n— {{yourName}}",
+          "Hi {{businessName}}! We drafted a Brand Kit + Sales Funnel PDF — palette/logo from your real site, plus FB/IG/Google ad creatives + landing page mockup. Want me to send it over?\n\n— {{yourName}}",
       };
   }
 }
@@ -1745,22 +1745,23 @@ export default function ProspectPreviewOutreachBlock({
             ) : null}
           </div>
 
-          {/* Brand guidelines (PDF) */}
+          {/* Brand kit + sales funnel (PDF) */}
           <div
             className={`cursor-pointer rounded-lg border border-border/70 bg-white/50 p-3 text-left dark:border-zinc-700/80 dark:bg-zinc-900/50 ${cardRing("branding")}`}
             onClick={() => setSelectedOffer("branding")}
           >
             <div className="flex items-center justify-between gap-2">
               <h4 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500">
-                Brand guidelines
+                Brand kit + sales funnel
               </h4>
               <Palette className="h-4 w-4 shrink-0 text-text-secondary opacity-70 dark:text-zinc-500" aria-hidden />
             </div>
             <p className="mt-2 text-[11px] leading-snug text-text-secondary dark:text-zinc-400">
-              Landscape A4 brand book, LLM-composed from the Google listing and market intel: brand story, logo
-              direction, color palette with ratios, typography specimen, moodboard, pattern, tone of voice, merch ideas,
-              and do&apos;s &amp; don&apos;ts. Uses OpenAI gpt-image-2 for visuals; your org must be verified for image
-              generation. Not a Stitch screen.
+              Landscape A4 brand book using the prospect&apos;s real palette and logo extracted from their site, plus a
+              full Sales Funnel section: audience strategy, an AI landing page mockup, and Facebook, Instagram (feed +
+              story), Google Display and hero banner ad creatives with platform-specific copy, suggested daily budget
+              and KPIs. Visuals via OpenAI gpt-image-2; copy is biased to local-business / tech-startup / ecommerce.
+              Not a Stitch screen.
             </p>
             <button
               type="button"
@@ -1772,8 +1773,13 @@ export default function ProspectPreviewOutreachBlock({
               className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 hover:bg-blue-500/[0.14] disabled:opacity-50 dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200 dark:hover:bg-blue-500/20"
             >
               {brandingBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Palette className="h-3.5 w-3.5" aria-hidden />}
-              {brandingBusy ? "Composing brand book…" : "Generate brand guidelines (PDF)"}
+              {brandingBusy ? "Composing brand kit + funnel…" : "Generate brand kit & funnel (PDF)"}
             </button>
+            {brandingBusy ? (
+              <p className="mt-2 text-[11px] text-text-secondary/80 dark:text-zinc-500" aria-live="polite">
+                Generating… this can take 2–3 minutes (13 AI images + brand & funnel copy).
+              </p>
+            ) : null}
             {brandingMsg ? (
               <p className="mt-2 text-[11px] text-text-secondary dark:text-zinc-400" role="status">
                 {brandingMsg}

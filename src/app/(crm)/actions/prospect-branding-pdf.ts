@@ -7,11 +7,26 @@ import { requireAgencyStaff } from "@/app/(crm)/actions/prospect-preview-agency"
 import {
   generateBrandingSpec,
   type BrandingSpec,
+  type ExtractedBrandPalette,
 } from "@/lib/crm/prospect-branding-spec-llm";
 import {
   generateBrandingImages,
   type BrandingImages,
 } from "@/lib/crm/prospect-branding-image-gen";
+import {
+  generateAdsFunnelSpec,
+  type AdsFunnelSpec,
+} from "@/lib/crm/prospect-ads-funnel-spec-llm";
+import {
+  generateAdsFunnelImages,
+  type AdsImages,
+} from "@/lib/crm/prospect-ads-image-gen";
+import { resolveProspectBrandAssets } from "@/lib/crm/prospect-branding-asset-resolve";
+import {
+  classifyProspectVertical,
+  verticalLabel,
+  type ProspectVertical,
+} from "@/lib/crm/prospect-vertical-classify";
 import {
   PAGE_W,
   PAGE_H,
@@ -42,6 +57,13 @@ import {
   type BrandBookContext,
   type Rgb,
 } from "@/lib/crm/pdf-brand-book";
+
+/**
+ * Vercel function timeout. Branding PDF now generates 7 brand images + 6 ad
+ * images sequentially with a 13s gap, so we need substantial headroom over
+ * the previous 180s limit.
+ */
+export const maxDuration = 300;
 
 // ----------------------------------------------------------------------------
 // Page builders
@@ -168,12 +190,876 @@ function drawPersonalityPage(ctx: BrandBookContext, pageNumber: number): void {
 }
 
 // ----------------------------------------------------------------------------
+// Sales Funnel section
+// ----------------------------------------------------------------------------
+
+type FunnelComposeInput = {
+  spec: AdsFunnelSpec;
+  images: AdsImages;
+  vertical: ProspectVertical;
+};
+
+/** Draws a small platform pill (e.g. "Facebook" / "Instagram" / "Google"). */
+function drawPlatformPill(
+  page: import("pdf-lib").PDFPage,
+  ctx: BrandBookContext,
+  { x, y, label, color }: { x: number; y: number; label: string; color?: Rgb },
+): { width: number; height: number } {
+  const text = sanitizeForBrandBook(label.toUpperCase());
+  const size = 8.5;
+  const padX = 10;
+  const height = 18;
+  const w = ctx.fonts.body.widthOfTextAtSize(text, size);
+  const width = w + padX * 2;
+  const fill = color ?? ctx.primary;
+  page.drawRectangle({
+    x,
+    y,
+    width,
+    height,
+    color: rgbColor(fill),
+  });
+  page.drawText(text, {
+    x: x + padX,
+    y: y + 5,
+    size,
+    font: ctx.fonts.body,
+    color: rgbColor([1, 1, 1]),
+  });
+  return { width, height };
+}
+
+/** Filled CTA chip (used for ad mocks + landing page). */
+function drawCtaChip(
+  page: import("pdf-lib").PDFPage,
+  ctx: BrandBookContext,
+  { x, y, label, color }: { x: number; y: number; label: string; color?: Rgb },
+): number {
+  const text = sanitizeForBrandBook(label || "Learn more");
+  const size = 10;
+  const padX = 14;
+  const height = 26;
+  const w = ctx.fonts.body.widthOfTextAtSize(text, size);
+  const width = w + padX * 2;
+  page.drawRectangle({
+    x,
+    y,
+    width,
+    height,
+    color: rgbColor(color ?? ctx.primary),
+  });
+  page.drawText(text, {
+    x: x + padX,
+    y: y + 8,
+    size,
+    font: ctx.fonts.body,
+    color: rgbColor([1, 1, 1]),
+  });
+  return width;
+}
+
+/** Renders an ad image inside a phone-style mock frame. Falls back to a
+ *  placeholder when the image is missing. */
+async function drawAdMock(
+  ctx: BrandBookContext,
+  page: import("pdf-lib").PDFPage,
+  buf: Buffer | null,
+  rect: { x: number; y: number; width: number; height: number },
+  label: string,
+): Promise<void> {
+  page.drawRectangle({
+    x: rect.x - 6,
+    y: rect.y - 6,
+    width: rect.width + 12,
+    height: rect.height + 12,
+    color: rgbColor([0.97, 0.96, 0.94]),
+    borderColor: rgbColor([0.85, 0.84, 0.82]),
+    borderWidth: 0.5,
+  });
+  const img = await embedPngIfAny(ctx.pdf, buf);
+  if (img) {
+    drawImageFit(page, img, rect, "cover");
+  } else {
+    drawImagePlaceholder(page, ctx, { ...rect, label });
+  }
+}
+
+async function drawFunnelSection(
+  ctx: BrandBookContext,
+  funnel: FunnelComposeInput,
+  nextPage: (label: string) => number,
+): Promise<void> {
+  const { spec: f, images, vertical } = funnel;
+  const accent = ctx.accent;
+
+  // ---- 1. Section divider -------------------------------------------------
+  {
+    const pageNum = nextPage("Sales funnel");
+    const page = addBlankPage(ctx.pdf, ctx.primary);
+    const fg = [0.98, 0.97, 0.94] as Rgb;
+
+    drawSectionEyebrow(page, ctx, {
+      x: SAFE_MARGIN,
+      y: PAGE_H - SAFE_MARGIN,
+      label: "06 · Sales funnel",
+      color: fg,
+    });
+    drawPageTitle(page, ctx, {
+      x: SAFE_MARGIN,
+      y: PAGE_H - SAFE_MARGIN - 28,
+      text: "From awareness\nto revenue.",
+      size: 64,
+      color: fg,
+      maxWidth: CONTENT_W * 0.85,
+    });
+
+    drawWrappedText(page, f.funnelStrategy.awareness || "", {
+      x: SAFE_MARGIN,
+      y: SAFE_MARGIN + 140,
+      size: 13,
+      font: ctx.fonts.body,
+      color: fg,
+      maxWidth: CONTENT_W * 0.7,
+      lineGap: 6,
+      opacity: 0.92,
+    });
+
+    drawSectionEyebrow(page, ctx, {
+      x: SAFE_MARGIN,
+      y: SAFE_MARGIN + 60,
+      label: `Vertical · ${verticalLabel(vertical)}`,
+      color: fg,
+    });
+
+    drawRunningFooter(page, ctx, {
+      pageNumber: pageNum,
+      sectionLabel: "Sales funnel",
+      onDark: true,
+    });
+  }
+
+  // ---- 2. Strategy spread (3 cards: awareness/consideration/conversion) ---
+  {
+    const pageNum = nextPage("Funnel strategy");
+    const page = addBlankPage(ctx.pdf, [0.99, 0.98, 0.96]);
+    drawSectionEyebrow(page, ctx, {
+      x: SAFE_MARGIN,
+      y: PAGE_H - SAFE_MARGIN,
+      label: "06.1 · Strategy",
+    });
+    drawPageTitle(page, ctx, {
+      x: SAFE_MARGIN,
+      y: PAGE_H - SAFE_MARGIN - 18,
+      text: "Three plays, one customer.",
+      size: 36,
+    });
+
+    const stages: { label: string; title: string; body: string; tone: Rgb }[] = [
+      {
+        label: "Top of funnel",
+        title: "Awareness",
+        body: f.funnelStrategy.awareness || "",
+        tone: ctx.primary,
+      },
+      {
+        label: "Middle of funnel",
+        title: "Consideration",
+        body: f.funnelStrategy.consideration || "",
+        tone: accent,
+      },
+      {
+        label: "Bottom of funnel",
+        title: "Conversion",
+        body: f.funnelStrategy.conversion || "",
+        tone: mixRgb(ctx.primary, accent, 0.5),
+      },
+    ];
+
+    const gutter = 18;
+    const cardW = (CONTENT_W - gutter * 2) / 3;
+    const cardH = 320;
+    const cardY = SAFE_MARGIN + 60;
+    stages.forEach((s, i) => {
+      drawCard(page, ctx, {
+        x: SAFE_MARGIN + i * (cardW + gutter),
+        y: cardY,
+        width: cardW,
+        height: cardH,
+        eyebrow: s.label,
+        title: s.title,
+        body: s.body,
+        accent: s.tone,
+      });
+    });
+
+    drawRunningFooter(page, ctx, {
+      pageNumber: pageNum,
+      sectionLabel: "Funnel strategy",
+    });
+  }
+
+  // ---- 3. Audiences page --------------------------------------------------
+  {
+    const pageNum = nextPage("Audiences");
+    const page = addBlankPage(ctx.pdf, [1, 1, 1]);
+    drawSectionEyebrow(page, ctx, {
+      x: SAFE_MARGIN,
+      y: PAGE_H - SAFE_MARGIN,
+      label: "06.2 · Audiences",
+    });
+    drawPageTitle(page, ctx, {
+      x: SAFE_MARGIN,
+      y: PAGE_H - SAFE_MARGIN - 18,
+      text: "Who buys, and why.",
+      size: 36,
+    });
+
+    const audiences = f.audiences.slice(0, 3);
+    const fallback = [
+      { name: "Primary buyer", description: "" },
+      { name: "Niche buyer", description: "" },
+      { name: "Retargeting pool", description: "" },
+    ];
+    while (audiences.length < 3) audiences.push(fallback[audiences.length]);
+
+    const gutter = 18;
+    const cardW = (CONTENT_W - gutter * 2) / 3;
+    const cardH = 280;
+    const cardY = SAFE_MARGIN + 60;
+    audiences.forEach((a, i) => {
+      drawCard(page, ctx, {
+        x: SAFE_MARGIN + i * (cardW + gutter),
+        y: cardY,
+        width: cardW,
+        height: cardH,
+        eyebrow: `Audience ${i + 1}`,
+        title: a.name,
+        body: a.description,
+        accent: i === 0 ? ctx.primary : i === 1 ? accent : mixRgb(ctx.primary, accent, 0.5),
+      });
+    });
+
+    drawRunningFooter(page, ctx, {
+      pageNumber: pageNum,
+      sectionLabel: "Audiences",
+    });
+  }
+
+  // ---- 4. Landing page sample --------------------------------------------
+  {
+    const pageNum = nextPage("Landing page");
+    const page = addBlankPage(ctx.pdf, [1, 1, 1]);
+    drawSectionEyebrow(page, ctx, {
+      x: SAFE_MARGIN,
+      y: PAGE_H - SAFE_MARGIN,
+      label: "06.3 · Landing page",
+    });
+
+    // Hero image takes the top 55% of the content area.
+    const heroH = 280;
+    const heroY = PAGE_H - SAFE_MARGIN - 30 - heroH;
+    const heroRect = {
+      x: SAFE_MARGIN,
+      y: heroY,
+      width: CONTENT_W,
+      height: heroH,
+    };
+    const heroImg = await embedPngIfAny(ctx.pdf, images.landingHero);
+    if (heroImg) {
+      drawImageFit(page, heroImg, heroRect, "cover");
+    } else {
+      drawImagePlaceholder(page, ctx, {
+        ...heroRect,
+        label: "Landing page hero (image unavailable)",
+      });
+    }
+
+    // Hero copy overlay block on the lower-left of the image.
+    const overlayPad = 20;
+    const overlayW = CONTENT_W * 0.55;
+    const overlayH = 120;
+    const overlayX = SAFE_MARGIN + overlayPad;
+    const overlayY = heroY + overlayPad;
+    page.drawRectangle({
+      x: overlayX,
+      y: overlayY,
+      width: overlayW,
+      height: overlayH,
+      color: rgbColor([1, 1, 1]),
+      opacity: 0.92,
+    });
+    drawWrappedText(page, f.landingPage.hero || "Landing headline.", {
+      x: overlayX + 16,
+      y: overlayY + overlayH - 22,
+      size: 22,
+      font: ctx.fonts.display,
+      color: ctx.ink,
+      maxWidth: overlayW - 32,
+      lineGap: 4,
+    });
+    drawWrappedText(page, f.landingPage.subhero || "", {
+      x: overlayX + 16,
+      y: overlayY + overlayH - 70,
+      size: 10.5,
+      font: ctx.fonts.body,
+      color: ctx.ink,
+      maxWidth: overlayW - 32,
+      lineGap: 3,
+    });
+    drawCtaChip(page, ctx, {
+      x: overlayX + 16,
+      y: overlayY + 12,
+      label: f.landingPage.ctaPrimary || "Get started",
+    });
+
+    // Below-the-hero zone: value props in two columns + sections list right.
+    const belowY = heroY - 22;
+    const colGutter = 24;
+    const colW = (CONTENT_W * 0.6 - colGutter) / 2;
+    const valueProps = f.landingPage.valueProps.slice(0, 4);
+    let yp = belowY;
+    drawSectionEyebrow(page, ctx, {
+      x: SAFE_MARGIN,
+      y: yp,
+      label: "Value props",
+    });
+    yp -= 18;
+    valueProps.forEach((vp, i) => {
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      const xx = SAFE_MARGIN + col * (colW + colGutter);
+      const yy = yp - row * 50;
+      page.drawRectangle({
+        x: xx,
+        y: yy - 8,
+        width: 4,
+        height: 32,
+        color: rgbColor(ctx.primary),
+      });
+      drawWrappedText(page, vp, {
+        x: xx + 12,
+        y: yy + 14,
+        size: 10.5,
+        font: ctx.fonts.body,
+        color: ctx.ink,
+        maxWidth: colW - 16,
+        lineGap: 3,
+      });
+    });
+
+    // Sections list on the right.
+    const rightX = SAFE_MARGIN + CONTENT_W * 0.62;
+    const rightW = CONTENT_W - (rightX - SAFE_MARGIN);
+    drawSectionEyebrow(page, ctx, {
+      x: rightX,
+      y: belowY,
+      label: "Page sections",
+    });
+    let rightY = belowY - 18;
+    f.landingPage.sections.slice(0, 5).forEach((s, i) => {
+      page.drawText(`${i + 1}.  ${sanitizeForBrandBook(s)}`, {
+        x: rightX,
+        y: rightY,
+        size: 10.5,
+        font: ctx.fonts.body,
+        color: rgbColor(ctx.ink),
+        maxWidth: rightW,
+      });
+      rightY -= 18;
+    });
+
+    drawRunningFooter(page, ctx, {
+      pageNumber: pageNum,
+      sectionLabel: "Landing page",
+    });
+  }
+
+  // ---- 5. Facebook ads page ----------------------------------------------
+  {
+    const pageNum = nextPage("Facebook ads");
+    const page = addBlankPage(ctx.pdf, [1, 1, 1]);
+    drawSectionEyebrow(page, ctx, {
+      x: SAFE_MARGIN,
+      y: PAGE_H - SAFE_MARGIN,
+      label: "06.4 · Paid ads · Meta",
+    });
+    drawPageTitle(page, ctx, {
+      x: SAFE_MARGIN,
+      y: PAGE_H - SAFE_MARGIN - 18,
+      text: "Facebook feed.",
+      size: 32,
+    });
+
+    const adW = 280;
+    const adH = 280;
+    const adX = SAFE_MARGIN;
+    const adY = SAFE_MARGIN + 60;
+    await drawAdMock(
+      ctx,
+      page,
+      images.adFbFeed,
+      { x: adX, y: adY, width: adW, height: adH },
+      "Facebook feed creative",
+    );
+
+    const copyX = adX + adW + 32;
+    const copyW = CONTENT_W - (copyX - SAFE_MARGIN);
+    let cy = adY + adH;
+
+    drawPlatformPill(page, ctx, {
+      x: copyX,
+      y: cy - 24,
+      label: `Facebook · ${f.facebook.objective || "Leads"}`,
+      color: hexToRgb("#1877F2"),
+    });
+    cy -= 40;
+
+    drawSectionEyebrow(page, ctx, {
+      x: copyX,
+      y: cy,
+      label: "Targeting",
+    });
+    cy -= 16;
+    cy = drawWrappedText(page, f.facebook.targeting || "", {
+      x: copyX,
+      y: cy,
+      size: 9.5,
+      font: ctx.fonts.body,
+      color: ctx.ink,
+      maxWidth: copyW,
+      lineGap: 3,
+    });
+    cy -= 18;
+
+    drawSectionEyebrow(page, ctx, {
+      x: copyX,
+      y: cy,
+      label: "Primary text",
+    });
+    cy -= 16;
+    cy = drawWrappedText(page, f.facebook.primaryText || "", {
+      x: copyX,
+      y: cy,
+      size: 11,
+      font: ctx.fonts.body,
+      color: ctx.ink,
+      maxWidth: copyW,
+      lineGap: 4,
+    });
+    cy -= 14;
+
+    drawSectionEyebrow(page, ctx, {
+      x: copyX,
+      y: cy,
+      label: "Headline",
+    });
+    cy -= 18;
+    cy = drawWrappedText(page, f.facebook.headline || "", {
+      x: copyX,
+      y: cy,
+      size: 14,
+      font: ctx.fonts.display,
+      color: ctx.ink,
+      maxWidth: copyW,
+      lineGap: 4,
+    });
+    cy -= 6;
+    cy = drawWrappedText(page, f.facebook.description || "", {
+      x: copyX,
+      y: cy,
+      size: 9.5,
+      font: ctx.fonts.body,
+      color: ctx.ink,
+      maxWidth: copyW,
+      lineGap: 3,
+      opacity: 0.7,
+    });
+    cy -= 14;
+
+    drawCtaChip(page, ctx, {
+      x: copyX,
+      y: cy - 24,
+      label: f.facebook.cta || "Learn more",
+      color: hexToRgb("#1877F2"),
+    });
+
+    drawRunningFooter(page, ctx, {
+      pageNumber: pageNum,
+      sectionLabel: "Facebook ads",
+    });
+  }
+
+  // ---- 6. Instagram ads page (feed + story) -------------------------------
+  {
+    const pageNum = nextPage("Instagram ads");
+    const page = addBlankPage(ctx.pdf, [1, 1, 1]);
+    drawSectionEyebrow(page, ctx, {
+      x: SAFE_MARGIN,
+      y: PAGE_H - SAFE_MARGIN,
+      label: "06.5 · Paid ads · Instagram",
+    });
+    drawPageTitle(page, ctx, {
+      x: SAFE_MARGIN,
+      y: PAGE_H - SAFE_MARGIN - 18,
+      text: "Feed + Story.",
+      size: 32,
+    });
+
+    const igPink: Rgb = hexToRgb("#E1306C");
+
+    // Left: IG feed (square)
+    const feedW = 240;
+    const feedH = 240;
+    const feedX = SAFE_MARGIN;
+    const feedY = SAFE_MARGIN + 70;
+    await drawAdMock(
+      ctx,
+      page,
+      images.adIgFeed,
+      { x: feedX, y: feedY, width: feedW, height: feedH },
+      "Instagram feed creative",
+    );
+
+    drawPlatformPill(page, ctx, {
+      x: feedX,
+      y: feedY + feedH + 14,
+      label: "Instagram · Feed",
+      color: igPink,
+    });
+
+    let lcy = feedY - 12;
+    lcy = drawWrappedText(page, f.instagram.feedHeadline || "", {
+      x: feedX,
+      y: lcy,
+      size: 13,
+      font: ctx.fonts.display,
+      color: ctx.ink,
+      maxWidth: feedW,
+      lineGap: 3,
+    });
+    lcy = drawWrappedText(page, f.instagram.feedPrimaryText || "", {
+      x: feedX,
+      y: lcy - 4,
+      size: 9.5,
+      font: ctx.fonts.body,
+      color: ctx.ink,
+      maxWidth: feedW,
+      lineGap: 3,
+    });
+    drawCtaChip(page, ctx, {
+      x: feedX,
+      y: lcy - 26,
+      label: f.instagram.feedCta || "Learn more",
+      color: igPink,
+    });
+
+    // Right: IG Story (9:16 portrait)
+    const storyW = 200;
+    const storyH = 320;
+    const storyX = SAFE_MARGIN + CONTENT_W - storyW;
+    const storyY = SAFE_MARGIN + 30;
+    await drawAdMock(
+      ctx,
+      page,
+      images.adIgStory,
+      { x: storyX, y: storyY, width: storyW, height: storyH },
+      "Instagram story creative",
+    );
+
+    // Hook overlay near the top of the story image.
+    if (f.instagram.storyHook) {
+      const overlayY2 = storyY + storyH - 50;
+      page.drawRectangle({
+        x: storyX + 10,
+        y: overlayY2 - 4,
+        width: storyW - 20,
+        height: 36,
+        color: rgbColor([1, 1, 1]),
+        opacity: 0.88,
+      });
+      drawWrappedText(page, f.instagram.storyHook, {
+        x: storyX + 16,
+        y: overlayY2 + 22,
+        size: 11,
+        font: ctx.fonts.display,
+        color: ctx.ink,
+        maxWidth: storyW - 32,
+        lineGap: 2,
+      });
+    }
+    // CTA on the bottom of the story image.
+    drawCtaChip(page, ctx, {
+      x: storyX + 12,
+      y: storyY + 12,
+      label: f.instagram.storyCta || "Swipe up",
+      color: igPink,
+    });
+
+    drawPlatformPill(page, ctx, {
+      x: storyX,
+      y: storyY + storyH + 14,
+      label: "Instagram · Story",
+      color: igPink,
+    });
+
+    drawRunningFooter(page, ctx, {
+      pageNumber: pageNum,
+      sectionLabel: "Instagram ads",
+    });
+  }
+
+  // ---- 7. Google ads page (Search RSA + Display) --------------------------
+  {
+    const pageNum = nextPage("Google ads");
+    const page = addBlankPage(ctx.pdf, [1, 1, 1]);
+    drawSectionEyebrow(page, ctx, {
+      x: SAFE_MARGIN,
+      y: PAGE_H - SAFE_MARGIN,
+      label: "06.6 · Paid ads · Google",
+    });
+    drawPageTitle(page, ctx, {
+      x: SAFE_MARGIN,
+      y: PAGE_H - SAFE_MARGIN - 18,
+      text: "Search + Display.",
+      size: 32,
+    });
+
+    const googleBlue: Rgb = hexToRgb("#4285F4");
+
+    // Top half: Responsive Search Ad mock card.
+    const rsaY = PAGE_H / 2 + 14;
+    const rsaH = PAGE_H - SAFE_MARGIN - 60 - rsaY;
+    const rsaX = SAFE_MARGIN;
+    const rsaW = CONTENT_W;
+    page.drawRectangle({
+      x: rsaX,
+      y: rsaY,
+      width: rsaW,
+      height: rsaH,
+      color: rgbColor([0.99, 0.99, 0.99]),
+      borderColor: rgbColor([0.86, 0.86, 0.88]),
+      borderWidth: 0.5,
+    });
+    page.drawText("Sponsored", {
+      x: rsaX + 16,
+      y: rsaY + rsaH - 22,
+      size: 9,
+      font: ctx.fonts.body,
+      color: rgbColor([0.4, 0.4, 0.42]),
+    });
+
+    let rsaCy = rsaY + rsaH - 44;
+    const headlines = f.google.searchHeadlines.slice(0, 3);
+    headlines.forEach((h, i) => {
+      page.drawText(sanitizeForBrandBook(h), {
+        x: rsaX + 16,
+        y: rsaCy,
+        size: 14,
+        font: ctx.fonts.display,
+        color: rgbColor(googleBlue),
+      });
+      if (i < headlines.length - 1) {
+        page.drawText("|", {
+          x:
+            rsaX +
+            16 +
+            ctx.fonts.display.widthOfTextAtSize(sanitizeForBrandBook(h), 14) +
+            8,
+          y: rsaCy,
+          size: 14,
+          font: ctx.fonts.display,
+          color: rgbColor([0.7, 0.7, 0.74]),
+        });
+      }
+      rsaCy -= 24;
+    });
+    rsaCy -= 4;
+    f.google.searchDescriptions.slice(0, 2).forEach((d) => {
+      rsaCy = drawWrappedText(page, d, {
+        x: rsaX + 16,
+        y: rsaCy,
+        size: 10.5,
+        font: ctx.fonts.body,
+        color: [0.25, 0.25, 0.27],
+        maxWidth: rsaW - 32,
+        lineGap: 3,
+      });
+      rsaCy -= 4;
+    });
+
+    // Bottom half: Display creative + hero banner thumbnail
+    const dispW = 220;
+    const dispH = 220;
+    const dispX = SAFE_MARGIN;
+    const dispY = SAFE_MARGIN + 30;
+    await drawAdMock(
+      ctx,
+      page,
+      images.adGoogleDisplay,
+      { x: dispX, y: dispY, width: dispW, height: dispH },
+      "Google Display creative",
+    );
+    drawPlatformPill(page, ctx, {
+      x: dispX,
+      y: dispY + dispH + 8,
+      label: "Google · Display",
+      color: googleBlue,
+    });
+
+    const banW = CONTENT_W - dispW - 32;
+    const banH = 160;
+    const banX = dispX + dispW + 32;
+    const banY = dispY + dispH - banH;
+    await drawAdMock(
+      ctx,
+      page,
+      images.adHeroBanner,
+      { x: banX, y: banY, width: banW, height: banH },
+      "Hero / display banner",
+    );
+
+    // Display copy below the hero banner.
+    let dy = banY - 18;
+    dy = drawWrappedText(page, f.google.displayHeadline || "", {
+      x: banX,
+      y: dy,
+      size: 14,
+      font: ctx.fonts.display,
+      color: ctx.ink,
+      maxWidth: banW,
+      lineGap: 3,
+    });
+    dy = drawWrappedText(page, f.google.displayDescription || "", {
+      x: banX,
+      y: dy - 2,
+      size: 10,
+      font: ctx.fonts.body,
+      color: ctx.ink,
+      maxWidth: banW,
+      lineGap: 3,
+    });
+    drawCtaChip(page, ctx, {
+      x: banX,
+      y: dy - 28,
+      label: f.google.displayCta || "Learn more",
+      color: googleBlue,
+    });
+
+    drawRunningFooter(page, ctx, {
+      pageNumber: pageNum,
+      sectionLabel: "Google ads",
+    });
+  }
+
+  // ---- 8. Budget + KPIs ---------------------------------------------------
+  {
+    const pageNum = nextPage("Budget & KPIs");
+    const page = addBlankPage(ctx.pdf, [0.99, 0.98, 0.96]);
+    drawSectionEyebrow(page, ctx, {
+      x: SAFE_MARGIN,
+      y: PAGE_H - SAFE_MARGIN,
+      label: "06.7 · Budget & KPIs",
+    });
+    drawPageTitle(page, ctx, {
+      x: SAFE_MARGIN,
+      y: PAGE_H - SAFE_MARGIN - 18,
+      text: "Spend smart, track tight.",
+      size: 36,
+    });
+
+    const cardW = CONTENT_W * 0.55;
+    const cardH = 280;
+    const cardX = SAFE_MARGIN;
+    const cardY = SAFE_MARGIN + 60;
+    page.drawRectangle({
+      x: cardX,
+      y: cardY,
+      width: cardW,
+      height: cardH,
+      color: rgbColor(ctx.primary),
+    });
+    const fg = [0.98, 0.97, 0.94] as Rgb;
+    drawSectionEyebrow(page, ctx, {
+      x: cardX + 22,
+      y: cardY + cardH - 24,
+      label: "Daily ad spend (USD)",
+      color: fg,
+    });
+    const range = `$${f.budgetGuidance.dailyMin} – $${f.budgetGuidance.dailyMax}`;
+    page.drawText(sanitizeForBrandBook(range), {
+      x: cardX + 22,
+      y: cardY + cardH - 86,
+      size: 56,
+      font: ctx.fonts.display,
+      color: rgbColor(fg),
+    });
+    drawWrappedText(page, "Combined across Meta + Google. Scale once a CAC target is locked.", {
+      x: cardX + 22,
+      y: cardY + cardH - 110,
+      size: 11,
+      font: ctx.fonts.body,
+      color: fg,
+      maxWidth: cardW - 44,
+      lineGap: 4,
+      opacity: 0.85,
+    });
+    drawWrappedText(page, f.budgetGuidance.rationale || "", {
+      x: cardX + 22,
+      y: cardY + cardH - 160,
+      size: 11,
+      font: ctx.fonts.body,
+      color: fg,
+      maxWidth: cardW - 44,
+      lineGap: 4,
+      opacity: 0.92,
+    });
+
+    // KPIs column on the right.
+    const kpiX = cardX + cardW + 32;
+    const kpiW = CONTENT_W - (kpiX - SAFE_MARGIN);
+    let kpiY = cardY + cardH - 16;
+    drawSectionEyebrow(page, ctx, {
+      x: kpiX,
+      y: kpiY,
+      label: "Track these KPIs",
+    });
+    kpiY -= 24;
+    f.kpis.slice(0, 6).forEach((k) => {
+      page.drawRectangle({
+        x: kpiX,
+        y: kpiY - 4,
+        width: 4,
+        height: 16,
+        color: rgbColor(ctx.primary),
+      });
+      kpiY = drawWrappedText(page, k, {
+        x: kpiX + 12,
+        y: kpiY + 8,
+        size: 11,
+        font: ctx.fonts.body,
+        color: ctx.ink,
+        maxWidth: kpiW - 16,
+        lineGap: 3,
+      });
+      kpiY -= 12;
+    });
+
+    drawRunningFooter(page, ctx, {
+      pageNumber: pageNum,
+      sectionLabel: "Budget & KPIs",
+    });
+  }
+}
+
+// ----------------------------------------------------------------------------
 // Main composition
 // ----------------------------------------------------------------------------
 
 async function composeBook(
   ctx: BrandBookContext,
   images: BrandingImages,
+  realLogoPng: Buffer | null,
+  funnel: FunnelComposeInput | null,
 ): Promise<void> {
   const pdf = ctx.pdf;
 
@@ -230,9 +1116,13 @@ async function composeBook(
       borderDashArray: [2, 3],
       color: rgbColor([1, 1, 1]),
     });
-    const wordmark = await embedPngIfAny(pdf, images.logos[0]);
-    if (wordmark) {
-      drawImageFit(pg, wordmark, { x: boxX, y: boxY, width: boxW, height: boxH });
+    const realMark = await embedPngIfAny(pdf, realLogoPng);
+    const aiWordmark = realMark
+      ? null
+      : await embedPngIfAny(pdf, images.logos[0]);
+    const mark = realMark ?? aiWordmark;
+    if (mark) {
+      drawImageFit(pg, mark, { x: boxX, y: boxY, width: boxW, height: boxH });
     } else {
       drawImagePlaceholder(pg, ctx, {
         x: boxX,
@@ -243,7 +1133,9 @@ async function composeBook(
       });
     }
     const notes = sanitizeForBrandBook(
-      "Minimum size: 40 px digital / 20 mm print. Always leave clearspace equal to the height of a capital letter around the mark. Prefer the primary color on white; inverse version on dark imagery.",
+      realMark
+        ? "This is the prospect's actual mark, captured from their live website. Always leave clearspace equal to the height of a capital letter around it. Prefer the primary color on white; inverse version on dark imagery."
+        : "Minimum size: 40 px digital / 20 mm print. Always leave clearspace equal to the height of a capital letter around the mark. Prefer the primary color on white; inverse version on dark imagery.",
     );
     drawWrappedText(pg, notes, {
       x: SAFE_MARGIN,
@@ -888,7 +1780,12 @@ async function composeBook(
     drawRunningFooter(pg, ctx, { pageNumber: pageNum, sectionLabel: "Do's & Don'ts" });
   }
 
-  // 19. Back cover
+  // 19. Sales funnel section (only when we have a funnel spec)
+  if (funnel) {
+    await drawFunnelSection(ctx, funnel, nextPage);
+  }
+
+  // 20. Back cover
   {
     const pageNum = nextPage("Back cover");
     const bg = mixRgb(ctx.primary, [0, 0, 0], 0.4);
@@ -1041,10 +1938,42 @@ export async function generateProspectBrandingPdfAction(input: {
 
   const businessName = input.businessName.trim() || "Business";
 
+  // Resolve real brand assets (palette + logo) from the prospect's website
+  // BEFORE invoking any LLM, so the brand spec and PDF wash use the real
+  // identity instead of LLM-invented colors.
+  const effectiveWebsiteUrl =
+    input.place?.websiteUri?.trim() ||
+    input.report?.customWebsites?.[0]?.trim() ||
+    null;
+  const realAssets = await resolveProspectBrandAssets({
+    websiteUrl: effectiveWebsiteUrl,
+  });
+  const extractedPalette: ExtractedBrandPalette | null =
+    realAssets.primary
+      ? {
+          primary: realAssets.primary,
+          accent: realAssets.accent,
+          palette: realAssets.palette,
+        }
+      : null;
+  console.info(
+    `[branding-pdf] real-assets palette=${realAssets.palette.length} primary=${
+      realAssets.primary ?? "none"
+    } logoSource=${realAssets.logoSourceUrl ?? "none"} (${Date.now() - t0}ms)`,
+  );
+
+  const vertical: ProspectVertical = classifyProspectVertical({
+    place: input.place ?? null,
+    signals: null,
+  });
+  console.info(`[branding-pdf] vertical=${verticalLabel(vertical)}`);
+
   const specResult = await generateBrandingSpec({
     businessName,
     place: input.place ?? null,
     report: input.report ?? null,
+    extractedPalette,
+    vertical,
   });
   console.info(
     `[branding-pdf] spec ${specResult.ok ? "ok" : "fail"} (${Date.now() - t0}ms)`,
@@ -1060,20 +1989,57 @@ export async function generateProspectBrandingPdfAction(input: {
     brandName: specResult.data.brandName || businessName,
   };
 
+  // Run brand images and the funnel pipeline in parallel. The funnel pipeline
+  // is itself sequential (spec -> images), but it can overlap with brand image
+  // generation because they share no inputs and only touch the same OpenAI
+  // rate-limit bucket.
   const imagesPromise = generateBrandingImages(spec);
+  const funnelPromise: Promise<{
+    spec: AdsFunnelSpec;
+    images: AdsImages;
+  } | null> = (async () => {
+    const funnelSpecRes = await generateAdsFunnelSpec({
+      spec,
+      vertical,
+      place: input.place ?? null,
+      report: input.report ?? null,
+    });
+    if (!funnelSpecRes.ok) {
+      console.warn(`[branding-pdf] funnel spec failed: ${funnelSpecRes.error}`);
+      return null;
+    }
+    const funnelImages = await generateAdsFunnelImages(
+      spec,
+      funnelSpecRes.data,
+      vertical,
+    );
+    return { spec: funnelSpecRes.data, images: funnelImages };
+  })();
 
   try {
     const pdf = await PDFDocument.create();
     const fonts = await embedBrandBookFonts(pdf, spec.fontPairingId);
     const ctx = buildContext(pdf, spec, fonts);
 
-    const images = await imagesPromise;
+    const [images, funnelResult] = await Promise.all([
+      imagesPromise,
+      funnelPromise,
+    ]);
     console.info(
       `[branding-pdf] images done (${Date.now() - t0}ms) failed=${Object.keys(
         images.errors,
-      ).length}/7`,
+      ).length}/7 funnel=${funnelResult ? "ok" : "skipped"}`,
     );
-    await composeBook(ctx, images);
+
+    const funnelInput: FunnelComposeInput | null = funnelResult
+      ? {
+          spec: funnelResult.spec,
+          images: funnelResult.images,
+          vertical,
+        }
+      : null;
+
+    await composeBook(ctx, images, realAssets.logoPng, funnelInput);
 
     const bytes = await pdf.save();
     const pdfBase64 = Buffer.from(bytes).toString("base64");
@@ -1083,9 +2049,15 @@ export async function generateProspectBrandingPdfAction(input: {
         .replace(/^-|-$/g, "")
         .slice(0, 48) || "brand";
 
-    const imageWarnings = Object.entries(images.errors).map(
-      ([slot, err]) => `${slot}: ${err}`,
-    );
+    const imageWarnings: string[] = [];
+    for (const [slot, err] of Object.entries(images.errors)) {
+      imageWarnings.push(`${slot}: ${err}`);
+    }
+    if (funnelResult) {
+      for (const [slot, err] of Object.entries(funnelResult.images.errors)) {
+        imageWarnings.push(`funnel.${slot}: ${err}`);
+      }
+    }
 
     console.info(
       `[branding-pdf] done ${bytes.length} bytes, base64 ${pdfBase64.length} chars (${
