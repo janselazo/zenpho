@@ -198,6 +198,36 @@ type FunnelComposeInput = {
   vertical: ProspectVertical;
 };
 
+function emptyBrandingImages(reason?: string): BrandingImages {
+  const errors: BrandingImages["errors"] = reason
+    ? {
+        cover: reason,
+        "logo-wordmark": reason,
+        "logo-icon": reason,
+        "logo-emblem": reason,
+        moodboard: reason,
+        pattern: reason,
+        merch: reason,
+      }
+    : {};
+  return {
+    cover: null,
+    logos: [null, null, null],
+    moodboard: null,
+    pattern: null,
+    merch: null,
+    errors,
+  };
+}
+
+function shouldGenerateLegacyBrandImages(): boolean {
+  return (
+    (process.env.BRANDING_GENERATE_LEGACY_IMAGES || "")
+      .trim()
+      .toLowerCase() === "true"
+  );
+}
+
 /** Draws a small platform pill (e.g. "Facebook" / "Instagram" / "Google"). */
 function drawPlatformPill(
   page: import("pdf-lib").PDFPage,
@@ -1991,11 +2021,18 @@ export async function generateProspectBrandingPdfAction(input: {
     brandName: specResult.data.brandName || businessName,
   };
 
-  // Run brand images and the funnel pipeline in parallel. The funnel pipeline
-  // is itself sequential (spec -> images), but it can overlap with brand image
-  // generation because they share no inputs and only touch the same OpenAI
-  // rate-limit bucket.
-  const imagesPromise = generateBrandingImages(spec);
+  // The original brand-book visuals add 7 image generations on top of the new
+  // 6 sales-funnel visuals. On Vercel this can exceed maxDuration, so the
+  // default production path keeps the full brand book layout and real logo but
+  // uses placeholders for decorative legacy image slots. Set
+  // BRANDING_GENERATE_LEGACY_IMAGES=true for slower, all-image exports.
+  const imagesPromise = shouldGenerateLegacyBrandImages()
+    ? generateBrandingImages(spec)
+    : Promise.resolve(
+        emptyBrandingImages(
+          "Legacy brand-book image generation skipped to keep the sales-funnel PDF within function timeout.",
+        ),
+      );
   const funnelPromise: Promise<{
     spec: AdsFunnelSpec;
     images: AdsImages;

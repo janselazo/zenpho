@@ -1453,7 +1453,7 @@ export default function ProspectPreviewOutreachBlock({
             ? ` (+${res.imageWarnings.length - 2} more)`
             : "";
         setBrandingMsg(
-          `Downloaded with placeholder imagery — ${res.imageWarnings.length}/7 image(s) failed: ${head}${extra}. See server logs for details.`,
+          `Downloaded with placeholder imagery — ${res.imageWarnings.length} image slot(s) used fallbacks: ${head}${extra}. See server logs for details.`,
         );
       } else {
         setBrandingMsg("Brand guidelines downloaded.");

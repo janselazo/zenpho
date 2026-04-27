@@ -250,6 +250,42 @@ async function generateOne(
   return { slot: plan.slot, buffer: null, error: "Max retries exceeded." };
 }
 
+async function generateOneFast(
+  openai: OpenAI,
+  model: string,
+  plan: SlotPlan,
+  ctx: PromptCtx,
+  quality: ImageQuality,
+): Promise<{ slot: AdsImageSlot; buffer: Buffer | null; error?: string }> {
+  try {
+    const res = await openai.images.generate({
+      model,
+      prompt: plan.prompt(ctx),
+      size: plan.size,
+      quality,
+      n: 1,
+      output_format: "png",
+    });
+    const b64 = res.data?.[0]?.b64_json;
+    if (!b64) {
+      return {
+        slot: plan.slot,
+        buffer: null,
+        error: "OpenAI returned no image data.",
+      };
+    }
+    return { slot: plan.slot, buffer: Buffer.from(b64, "base64") };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Image generation failed.";
+    return { slot: plan.slot, buffer: null, error: msg };
+  }
+}
+
+function useFastMode(): boolean {
+  const raw = (process.env.OPENAI_ADS_IMAGE_FAST_MODE || "").trim().toLowerCase();
+  return raw !== "false";
+}
+
 /**
  * Generate all 6 ad-funnel images sequentially. Per-slot failures fall back
  * to `null` and the PDF renders a placeholder.
@@ -287,39 +323,51 @@ export async function generateAdsFunnelImages(
 
   let model = requested;
   console.info(
-    `[ads-images] starting sequential generation with model=${model} quality=${quality} vertical=${vertical}`,
+    `[ads-images] starting generation with model=${model} quality=${quality} vertical=${vertical} fast=${useFastMode()}`,
   );
 
-  const results: { slot: AdsImageSlot; buffer: Buffer | null; error?: string }[] = [];
+  let results: { slot: AdsImageSlot; buffer: Buffer | null; error?: string }[];
 
-  for (let i = 0; i < SLOTS.length; i++) {
-    const plan = SLOTS[i];
-
-    if (i > 0) {
-      console.info(`[ads-images] waiting ${INTER_REQUEST_DELAY_MS}ms before slot=${plan.slot}`);
-      await new Promise((r) => setTimeout(r, INTER_REQUEST_DELAY_MS));
-    }
-
-    console.info(
-      `[ads-images] generating slot=${plan.slot} (${i + 1}/${SLOTS.length}) model=${model}`,
+  if (useFastMode()) {
+    results = await Promise.all(
+      SLOTS.map((plan, i) => {
+        console.info(
+          `[ads-images] fast generating slot=${plan.slot} (${i + 1}/${SLOTS.length}) model=${model}`,
+        );
+        return generateOneFast(openai, model, plan, ctx, quality);
+      }),
     );
-    const r = await generateOne(openai, model, plan, ctx, quality);
-    results.push(r);
+  } else {
+    results = [];
+    for (let i = 0; i < SLOTS.length; i++) {
+      const plan = SLOTS[i];
 
-    if (r.error) {
-      console.warn(`[ads-images] slot=${r.slot} model=${model} error=${r.error}`);
-      if (
-        i === 0 &&
-        r.error &&
-        isModelUnavailableError(r.error) &&
-        fallback &&
-        fallback !== model
-      ) {
-        console.warn(`[ads-images] switching from ${model} to ${fallback} for remaining images`);
-        model = fallback;
+      if (i > 0) {
+        console.info(`[ads-images] waiting ${INTER_REQUEST_DELAY_MS}ms before slot=${plan.slot}`);
+        await new Promise((r) => setTimeout(r, INTER_REQUEST_DELAY_MS));
       }
-    } else {
-      console.info(`[ads-images] slot=${r.slot} ok`);
+
+      console.info(
+        `[ads-images] generating slot=${plan.slot} (${i + 1}/${SLOTS.length}) model=${model}`,
+      );
+      const r = await generateOne(openai, model, plan, ctx, quality);
+      results.push(r);
+
+      if (r.error) {
+        console.warn(`[ads-images] slot=${r.slot} model=${model} error=${r.error}`);
+        if (
+          i === 0 &&
+          r.error &&
+          isModelUnavailableError(r.error) &&
+          fallback &&
+          fallback !== model
+        ) {
+          console.warn(`[ads-images] switching from ${model} to ${fallback} for remaining images`);
+          model = fallback;
+        }
+      } else {
+        console.info(`[ads-images] slot=${r.slot} ok`);
+      }
     }
   }
 
