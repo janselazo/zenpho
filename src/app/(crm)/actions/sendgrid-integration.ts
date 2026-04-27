@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { sendSendGridMail } from "@/lib/sendgrid/mail-send";
+import { getPublicOriginFromHeaders } from "@/lib/site-public-url";
 import {
   encryptIntegrationSecret,
   decryptIntegrationSecret,
@@ -53,7 +54,7 @@ export type SendGridIntegrationFormState = {
 };
 
 export type LoadSendGridIntegrationPageResult =
-  | { status: "ok"; initial: SendGridIntegrationFormState }
+  | { status: "ok"; initial: SendGridIntegrationFormState; inboundWebhookUrl: string }
   | { status: "no_user" }
   | { status: "forbidden" };
 
@@ -85,7 +86,10 @@ export async function loadSendGridIntegrationPage(): Promise<LoadSendGridIntegra
         hasApiKey: Boolean(data.api_key_encrypted),
       };
 
-  return { status: "ok", initial };
+  const origin = (await getPublicOriginFromHeaders()).replace(/\/$/, "");
+  const inboundWebhookUrl = `${origin}/api/webhooks/sendgrid/inbound?token=YOUR_SENDGRID_INBOUND_WEBHOOK_SECRET`;
+
+  return { status: "ok", initial, inboundWebhookUrl };
 }
 
 export async function saveSendGridIntegration(formData: FormData) {

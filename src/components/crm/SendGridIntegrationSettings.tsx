@@ -31,12 +31,16 @@ const cardClass =
 
 const SENDGRID_API_KEYS = "https://app.sendgrid.com/settings/api_keys";
 const SENDGRID_SENDER = "https://app.sendgrid.com/settings/sender_auth";
+const SENDGRID_INBOUND_PARSE =
+  "https://docs.sendgrid.com/for-developers/parsing-email/setting-up-the-inbound-parse-webhook";
 
 type Props = {
   initial: SendGridIntegrationFormState;
+  /** Example POST URL for SendGrid Inbound Parse (token must match SENDGRID_INBOUND_WEBHOOK_SECRET). */
+  inboundWebhookUrl: string;
 };
 
-export default function SendGridIntegrationSettings({ initial }: Props) {
+export default function SendGridIntegrationSettings({ initial, inboundWebhookUrl }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
   const [showKey, setShowKey] = useState(false);
   const [savePending, startSave] = useTransition();
@@ -220,8 +224,13 @@ export default function SendGridIntegrationSettings({ initial }: Props) {
                 autoComplete="off"
                 defaultValue={initial.replyTo}
                 className={inputClass}
-                placeholder="replies@yourdomain.com"
+                placeholder="replies@inbound.yourdomain.com"
               />
+              <p className={helperClass}>
+                For prospect replies to show in the Conversations inbox, this should usually be an address on a
+                subdomain you route through SendGrid Inbound Parse (same hostname you configure in SendGrid), not a
+                personal inbox. The recipient&apos;s mail client uses this header for Reply when it is set.
+              </p>
             </div>
 
             <div>
@@ -265,6 +274,39 @@ export default function SendGridIntegrationSettings({ initial }: Props) {
 
         <section className={cardClass}>
           <h2 className="text-base font-semibold text-text-primary dark:text-zinc-100">
+            Inbound email (replies in Conversations)
+          </h2>
+          <p className="mt-2 text-sm text-text-secondary dark:text-zinc-400">
+            Outbound email is only half of the thread. To ingest prospect replies into the CRM, enable{" "}
+            <a
+              href={SENDGRID_INBOUND_PARSE}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-accent hover:underline"
+            >
+              SendGrid Inbound Parse
+            </a>{" "}
+            and point the POST URL to the webhook below. Set{" "}
+            <code className="rounded bg-surface px-1 py-0.5 text-xs dark:bg-zinc-800">SENDGRID_INBOUND_WEBHOOK_SECRET</code>{" "}
+            in your server environment, then use the <strong>same</strong> value in place of{" "}
+            <code className="rounded bg-surface px-1 py-0.5 text-xs dark:bg-zinc-800">YOUR_SENDGRID_INBOUND_WEBHOOK_SECRET</code>{" "}
+            in the query string (Vercel → Environment Variables).
+          </p>
+          <div className="mt-4">
+            <p className={labelClass}>Webhook URL for SendGrid Inbound Parse</p>
+            <div className="mt-1.5 break-all rounded-xl border border-border bg-surface/60 px-3.5 py-2.5 font-mono text-xs text-text-primary dark:border-zinc-700 dark:bg-zinc-900/60 dark:text-zinc-200">
+              {inboundWebhookUrl}
+            </div>
+            <p className={helperClass}>
+          Also configure the receiving host’s DNS (MX) as SendGrid documents. Without Inbound Parse hitting this
+          app, or if replies go only to Gmail and never through your parse address, they will not appear in
+          Conversations.
+            </p>
+          </div>
+        </section>
+
+        <section className={cardClass}>
+          <h2 className="text-base font-semibold text-text-primary dark:text-zinc-100">
             What SendGrid enables
           </h2>
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -301,7 +343,8 @@ export default function SendGridIntegrationSettings({ initial }: Props) {
           If SendGrid is not saved in the CRM, prospect emails still use{" "}
           <span className="font-mono text-xs">RESEND_API_KEY</span> and{" "}
           <span className="font-mono text-xs">RESEND_FROM_EMAIL</span> from the server environment when set. Configure
-          SendGrid here to prefer it over Resend.
+          SendGrid here to prefer it over Resend.           Replies to those Resend messages are not imported into this app’s Conversations; use SendGrid and Inbound
+          Parse above for a two-way email thread in the CRM.
         </p>
       </section>
     </div>

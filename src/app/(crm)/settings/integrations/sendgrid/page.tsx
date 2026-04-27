@@ -21,7 +21,10 @@ export default async function SendGridIntegrationPage() {
 
   return (
     <div className="p-8">
-      <SendGridIntegrationSettings initial={result.initial} />
+      <SendGridIntegrationSettings
+        initial={result.initial}
+        inboundWebhookUrl={result.inboundWebhookUrl}
+      />
     </div>
   );
 }

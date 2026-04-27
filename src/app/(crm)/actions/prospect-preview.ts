@@ -380,7 +380,7 @@ ${previewImageHtml}
       emailMessageId: emailMid,
       senderName: input.yourName ?? "You",
     });
-    return { ok: true as const };
+    return { ok: true as const, emailChannel: "sendgrid" as const };
   }
 
   const resendKey = process.env.RESEND_API_KEY?.trim();
@@ -425,7 +425,7 @@ ${previewImageHtml}
     emailMessageId: emailMid,
     senderName: input.yourName ?? "You",
   });
-  return { ok: true as const };
+  return { ok: true as const, emailChannel: "resend" as const };
 }
 
 async function logProspectEmailToConversation(

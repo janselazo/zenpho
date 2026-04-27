@@ -1124,7 +1124,11 @@ export default function ProspectPreviewOutreachBlock({
     });
     setShareBusy(null);
     if (res.ok) {
-      setShareMsg("Email sent.");
+      setShareMsg(
+        res.emailChannel === "resend"
+          ? "Email sent. Replies are not shown in Conversations when using the Resend integration—connect SendGrid and Inbound Parse under Settings → Integrations → SendGrid for reply ingestion."
+          : "Email sent.",
+      );
     } else {
       setShareMsg(res.error);
     }
