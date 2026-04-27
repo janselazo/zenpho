@@ -198,11 +198,81 @@ export function extractPublicContactHints(html: string): {
   };
 }
 
-const CONTACT_PATH = /\/(contact|contact-us|about|about-us|team|location|locations)(\/|$|\?)/i;
-const CONTACT_HINT = /contact|about|team|location|kontakt|contatti/i;
+/**
+ * Slugs that hint at a contact / about / team / locations page. Match against a single path
+ * segment so we accept Wix-style numbered slugs like `/contact-8`, `/contact-1`, `/about-us-2`,
+ * Squarespace / WordPress variants like `/our-team`, `/meet-the-team`, and i18n equivalents.
+ */
+const CONTACT_SLUG_KEYWORDS: readonly string[] = [
+  "contact",
+  "contacts",
+  "contact-us",
+  "contactus",
+  "get-in-touch",
+  "getintouch",
+  "say-hello",
+  "reach-us",
+  "reachus",
+  "talk",
+  "lets-talk",
+  "inquiry",
+  "inquiries",
+  "enquiries",
+  "booking",
+  "bookings",
+  "book-now",
+  "book",
+  "appointment",
+  "appointments",
+  "about",
+  "about-us",
+  "aboutus",
+  "our-story",
+  "story",
+  "who-we-are",
+  "team",
+  "teams",
+  "our-team",
+  "ourteam",
+  "meet-the-team",
+  "meet",
+  "staff",
+  "leadership",
+  "people",
+  "company",
+  "location",
+  "locations",
+  "where-we-are",
+  "find-us",
+  "kontakt",
+  "kontakto",
+  "contatti",
+  "contattaci",
+  "contacto",
+  "contactanos",
+  "contactenos",
+  "nous-contacter",
+  "contactez-nous",
+  "contactez",
+];
+
+/** Word-content hint (used against link text + raw href for soft scoring). */
+const CONTACT_HINT =
+  /\b(contact|about|team|location|locations|staff|leadership|kontakt|contatti|contacto|inquiry|inquiries|booking|reach|hello|talk|story)\b/i;
+
+/** True when any path segment starts with a contact-style keyword. */
+function pathHasContactSlug(path: string): boolean {
+  const segments = path.toLowerCase().split("/").filter(Boolean);
+  if (segments.length === 0) return false;
+  return segments.some((seg) =>
+    CONTACT_SLUG_KEYWORDS.some(
+      (kw) => seg === kw || seg.startsWith(`${kw}-`) || seg.startsWith(`${kw}_`),
+    ),
+  );
+}
 
 /** Same registrable host only; scored internal links for contact-style pages. */
-export function discoverContactPageUrls(html: string, baseUrl: string, max = 5): string[] {
+export function discoverContactPageUrls(html: string, baseUrl: string, max = 8): string[] {
   let base: URL;
   try {
     base = new URL(baseUrl);
@@ -231,7 +301,7 @@ export function discoverContactPageUrls(html: string, baseUrl: string, max = 5):
     if (path === "/" || path === base.pathname) continue;
 
     let score = 0;
-    if (CONTACT_PATH.test(path + abs.search)) score += 4;
+    if (pathHasContactSlug(path)) score += 4;
     if (CONTACT_HINT.test(inner)) score += 2;
     if (CONTACT_HINT.test(href)) score += 1;
 
@@ -243,6 +313,40 @@ export function discoverContactPageUrls(html: string, baseUrl: string, max = 5):
 
   scored.sort((a, b) => b.score - a.score);
   return scored.slice(0, max).map((s) => s.url);
+}
+
+/**
+ * When in-page link discovery finds nothing (SPA navs / hidden mobile menus), guess common
+ * paths so we still try a contact page. Tried in order; caller can de-dup against discovered URLs.
+ */
+const FALLBACK_CONTACT_PATHS: readonly string[] = [
+  "/contact",
+  "/contact-us",
+  "/contact-1",
+  "/contact-8",
+  "/about",
+  "/about-us",
+  "/our-team",
+  "/team",
+  "/locations",
+  "/booking",
+  "/get-in-touch",
+];
+
+export function fallbackContactPageGuesses(baseUrl: string): string[] {
+  let base: URL;
+  try {
+    base = new URL(baseUrl);
+  } catch {
+    return [];
+  }
+  return FALLBACK_CONTACT_PATHS.map((p) => {
+    try {
+      return new URL(p, base).toString();
+    } catch {
+      return null;
+    }
+  }).filter((u): u is string => Boolean(u));
 }
 
 function emailRankScore(email: string): number {

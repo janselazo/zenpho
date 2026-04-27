@@ -13,6 +13,7 @@ import {
   discoverContactPageUrls,
   extractProspectSocialUrls,
   extractPublicContactHints,
+  fallbackContactPageGuesses,
   mergeProspectSocialUrls,
   pageLabelFromUrl,
   rankEmailsUnique,
@@ -193,7 +194,7 @@ export async function fingerprintProspectSiteAction(
   }
 }
 
-const MAX_CONTACT_PAGES = 5;
+const MAX_CONTACT_PAGES = 8;
 
 export async function enrichWebsiteContactsDeepAction(
   rawUrl: string
@@ -218,7 +219,16 @@ export async function enrichWebsiteContactsDeepAction(
     founderName: h0.founderName,
   });
 
-  const extra = discoverContactPageUrls(first.html, root, MAX_CONTACT_PAGES);
+  // Discover linked contact-style pages first; if discovery yields nothing (SPA navs / hidden
+  // mobile menus where the contact link only exists in JS), fall back to common guessed paths.
+  const linked = discoverContactPageUrls(first.html, root, MAX_CONTACT_PAGES);
+  const fallbackTargets = linked.length === 0 ? fallbackContactPageGuesses(root) : [];
+  const seen = new Set<string>([root, ...linked]);
+  const extra = [
+    ...linked,
+    ...fallbackTargets.filter((u) => !seen.has(u)),
+  ].slice(0, MAX_CONTACT_PAGES);
+
   const extraResults = await Promise.allSettled(extra.map((u) => fetchHtmlSafe(u)));
   for (let i = 0; i < extra.length; i++) {
     const result = extraResults[i];

@@ -55,7 +55,12 @@ export function normalizeUrlForFetch(raw: string): string | null {
   return url.toString();
 }
 
-export const MAX_FETCH_BYTES = 500_000;
+/**
+ * Maximum HTML size we'll parse from a public site. Wix pages routinely ship 500–700 KB of
+ * inline runtime + content; the social/email footer often lives near the bottom. Raised from
+ * 500_000 → 1_500_000 so we don't truncate Wix/Squarespace/Webflow pages mid-document.
+ */
+export const MAX_FETCH_BYTES = 1_500_000;
 export const FETCH_TIMEOUT_MS = 15_000;
 
 export function extractPageSignals(html: string): {
