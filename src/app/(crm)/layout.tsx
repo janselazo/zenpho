@@ -10,9 +10,11 @@ export const dynamic = "force-dynamic";
 /**
  * Prospect preview (and other CRM server actions) call external LLMs; default Vercel/server
  * timeouts are often too short and surface as opaque “digest” errors in production.
+ * Bumped to 300s so the Brand Kit + Sales Funnel PDF action (7 brand images +
+ * 6 ad images sequentially with 13s gaps + 2 LLM round-trips) can complete.
  * @see https://vercel.com/docs/functions/runtimes#max-duration
  */
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 export const metadata = {
   title: "AI Product Studio",

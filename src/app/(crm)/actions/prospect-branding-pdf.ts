@@ -58,12 +58,10 @@ import {
   type Rgb,
 } from "@/lib/crm/pdf-brand-book";
 
-/**
- * Vercel function timeout. Branding PDF now generates 7 brand images + 6 ad
- * images sequentially with a 13s gap, so we need substantial headroom over
- * the previous 180s limit.
- */
-export const maxDuration = 300;
+// NOTE: `export const maxDuration = 300` cannot live in a "use server" file —
+// Next.js only allows async function exports, so we configure the timeout in
+// `vercel.json` (function pattern matches this action's compiled output) and
+// at the route level for any page that invokes this action.
 
 // ----------------------------------------------------------------------------
 // Page builders
