@@ -16,6 +16,7 @@ const RAW = [
   "auto repair",
   "auto window tinting service",
   "bakery",
+  "banquet hall",
   "bank",
   "bar",
   "barber shop",
