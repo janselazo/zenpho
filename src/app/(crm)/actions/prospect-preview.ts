@@ -345,13 +345,16 @@ ${previewImageHtml}
   const sendGridCreds = await getAgencySendGridCredentials();
   if (sendGridCreds) {
     const sgAttachments =
-      attachments?.map((a) => ({
-        contentBase64: a.content.toString("base64"),
-        filename: a.filename,
-        type: a.contentType ?? "application/octet-stream",
-        disposition: "inline" as const,
-        contentId: a.contentId,
-      })) ?? [];
+      attachments?.map((a) => {
+        const hasCid = Boolean(a.contentId?.trim());
+        return {
+          contentBase64: a.content.toString("base64"),
+          filename: a.filename,
+          type: a.contentType ?? "application/octet-stream",
+          disposition: hasCid ? ("inline" as const) : ("attachment" as const),
+          ...(hasCid ? { contentId: a.contentId } : {}),
+        };
+      }) ?? [];
 
     const emailMid = generateMessageId(
       sendGridCreds.fromEmail.split("@")[1] ?? "zenpho.com"
