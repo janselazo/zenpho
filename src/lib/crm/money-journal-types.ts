@@ -3,6 +3,7 @@
  */
 
 export const MONEY_JOURNAL_STORAGE_PREFIX = "zenpho-money-journal:" as const;
+/** Persisted via `localStorage` so the timer is shared across all same-origin tabs. */
 export const MONEY_JOURNAL_TIMER_KEY = "zenpho-money-journal:timer" as const;
 
 /**

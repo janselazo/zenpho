@@ -10,6 +10,11 @@ import {
 } from "react";
 import { Play, RotateCcw, Square } from "lucide-react";
 import { MONEY_JOURNAL_TIMER_KEY } from "@/lib/crm/money-journal-types";
+import {
+  clearMoneyJournalTimerStorage,
+  readMoneyJournalTimerRaw,
+  writeMoneyJournalTimerRaw,
+} from "@/lib/crm/money-journal-timer-storage";
 
 const DURATION_MS = 60 * 60 * 1000;
 const TICK_MS = 250;
@@ -68,9 +73,9 @@ function playChime() {
 }
 
 function loadPersisted(): PersistedTimer | null {
-  if (typeof sessionStorage === "undefined") return null;
+  if (typeof window === "undefined") return null;
   try {
-    const raw = sessionStorage.getItem(MONEY_JOURNAL_TIMER_KEY);
+    const raw = readMoneyJournalTimerRaw();
     if (!raw) return null;
     const p = JSON.parse(raw) as PersistedTimer;
     if (p.v !== 1) return null;
@@ -82,7 +87,6 @@ function loadPersisted(): PersistedTimer | null {
 }
 
 function savePartial(p: Partial<PersistedTimer>): void {
-  if (typeof sessionStorage === "undefined") return;
   try {
     const prev = loadPersisted();
     const next: PersistedTimer = {
@@ -95,19 +99,14 @@ function savePartial(p: Partial<PersistedTimer>): void {
       completeLogRange: p.completeLogRange ?? prev?.completeLogRange ?? null,
       completedChime: p.completedChime ?? prev?.completedChime ?? false,
     };
-    sessionStorage.setItem(MONEY_JOURNAL_TIMER_KEY, JSON.stringify(next));
+    writeMoneyJournalTimerRaw(JSON.stringify(next));
   } catch {
     // ignore
   }
 }
 
 function clearPersisted(): void {
-  if (typeof sessionStorage === "undefined") return;
-  try {
-    sessionStorage.removeItem(MONEY_JOURNAL_TIMER_KEY);
-  } catch {
-    // ignore
-  }
+  clearMoneyJournalTimerStorage();
 }
 
 export type MoneyJournalTimerProps = {
@@ -177,6 +176,24 @@ const MoneyJournalTimer = forwardRef<MoneyJournalTimerHandle, MoneyJournalTimerP
 
     markComplete.current = (endMs: number) => {
       if (completedOnceRef.current) return;
+      const already = loadPersisted();
+      if (already?.status === "complete" && already.completeLogRange) {
+        // Another tab (or a race) already wrote completion; sync UI, skip chime/callbacks.
+        completedOnceRef.current = true;
+        setStatus("complete");
+        setFirstStartMs(already.firstStartMs);
+        setCompleteLogRange(already.completeLogRange);
+        setRemainingMs(0);
+        firstStartMsRef.current = already.firstStartMs;
+        targetEndAtRef.current = null;
+        pausedRemainingRef.current = null;
+        setUserSessionStopAtMs(null);
+        userSessionStopAtRef.current = null;
+        completedChimeRef.current = already.completedChime;
+        onCompleteFiredRef.current = already.completedChime;
+        completeStopNotifiedRef.current = true;
+        return;
+      }
       completedOnceRef.current = true;
       const startMs = endMs - DURATION_MS;
       setStatus("complete");
@@ -218,7 +235,22 @@ const MoneyJournalTimer = forwardRef<MoneyJournalTimerHandle, MoneyJournalTimerP
 
     const hydrate = useCallback(() => {
       const p = loadPersisted();
-      if (!p) return;
+      if (!p) {
+        targetEndAtRef.current = null;
+        pausedRemainingRef.current = null;
+        setUserSessionStopAtMs(null);
+        userSessionStopAtRef.current = null;
+        setStatus("idle");
+        setRemainingMs(DURATION_MS);
+        setFirstStartMs(null);
+        firstStartMsRef.current = null;
+        setCompleteLogRange(null);
+        completedChimeRef.current = false;
+        onCompleteFiredRef.current = false;
+        completedOnceRef.current = false;
+        completeStopNotifiedRef.current = false;
+        return;
+      }
       if (p.status === "complete" && p.completeLogRange) {
         setStatus("complete");
         setFirstStartMs(p.firstStartMs);
@@ -267,6 +299,16 @@ const MoneyJournalTimer = forwardRef<MoneyJournalTimerHandle, MoneyJournalTimerP
 
     useEffect(() => {
       hydrate();
+    }, [hydrate]);
+
+    useEffect(() => {
+      const onStorage = (e: StorageEvent) => {
+        if (e.key !== MONEY_JOURNAL_TIMER_KEY) return;
+        if (e.storageArea && e.storageArea !== window.localStorage) return;
+        hydrate();
+      };
+      window.addEventListener("storage", onStorage);
+      return () => window.removeEventListener("storage", onStorage);
     }, [hydrate]);
 
     useEffect(() => {

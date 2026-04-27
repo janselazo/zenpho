@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { MONEY_JOURNAL_TIMER_KEY } from "@/lib/crm/money-journal-types";
 import { getMoneyJournalTimerSnapshot } from "@/lib/crm/money-journal-timer-snapshot";
 
 /**
@@ -30,6 +31,16 @@ export default function MoneyJournalTopBarPip() {
       setTick((n) => n + 1);
     }, 500);
     return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== MONEY_JOURNAL_TIMER_KEY) return;
+      if (e.storageArea && e.storageArea !== window.localStorage) return;
+      setTick((n) => n + 1);
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
   const live = getMoneyJournalTimerSnapshot();
   void tick;

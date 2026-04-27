@@ -1,4 +1,4 @@
-import { MONEY_JOURNAL_TIMER_KEY } from "@/lib/crm/money-journal-types";
+import { readMoneyJournalTimerRaw } from "@/lib/crm/money-journal-timer-storage";
 
 const DURATION_MS = 60 * 60 * 1000;
 
@@ -31,14 +31,14 @@ function fmtMmss(remainingMs: number): string {
 }
 
 /**
- * Read Money Journal timer state from session storage (must match
+ * Read Money Journal timer state from `localStorage` (must match
  * `MoneyJournalTimer` persist shape). Works with no Playbook view mounted: uses
- * `targetEndAt - Date.now()` for running.
+ * `targetEndAt - Date.now()` for running. Syncs across same-origin tabs.
  */
 export function getMoneyJournalTimerSnapshot(): MoneyJournalTimerTopBarSnapshot | null {
-  if (typeof window === "undefined" || !window.sessionStorage) return null;
+  if (typeof window === "undefined") return null;
   try {
-    const raw = window.sessionStorage.getItem(MONEY_JOURNAL_TIMER_KEY);
+    const raw = readMoneyJournalTimerRaw();
     if (!raw) return null;
     const p = JSON.parse(raw) as PersistedTimerV1;
     if (p.v !== 1) return null;
