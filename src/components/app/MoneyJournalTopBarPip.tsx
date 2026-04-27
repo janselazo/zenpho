@@ -4,13 +4,24 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getMoneyJournalTimerSnapshot } from "@/lib/crm/money-journal-timer-snapshot";
 
-const R = 5;
-const C = 2 * Math.PI * R;
-
-function timerRingPath(progress: number) {
+/**
+ * Same geometry as the outline: bottom triangle = base at y=14.5, apex at waist (8, 6.2).
+ * Sand “fills” upward as progress → 1 (hour completes).
+ */
+function sandPath(progress: number): string {
   const p = Math.min(1, Math.max(0, progress));
-  return C * (1 - p);
+  const yBase = 14.5;
+  const yApex = 6.2;
+  const h = yBase - yApex;
+  const yTop = yBase - p * h;
+  const xL = 3 + 5 * p;
+  const xR = 13 - 5 * p;
+  return `M 3 ${yBase} L 13 ${yBase} L ${xR} ${yTop} L ${xL} ${yTop} Z`;
 }
+
+/** Hourglass outline: matches sand apex so fill aligns with the glass. */
+const HOURGLASS_OUTLINE_D =
+  "M 3 1.5 L 13 1.5 L 8.2 6.2 L 13 14.5 L 3 14.5 L 7.8 6.2 Z";
 
 export default function MoneyJournalTopBarPip() {
   const [tick, setTick] = useState(0);
@@ -26,7 +37,6 @@ export default function MoneyJournalTopBarPip() {
   }
   void tick;
 
-  const dashOffset = timerRingPath(live.progress);
   const label =
     live.status === "complete"
       ? "Money Journal hour complete — add notes and log"
@@ -45,24 +55,18 @@ export default function MoneyJournalTopBarPip() {
         fill="none"
         aria-hidden
       >
-        <circle
-          cx="8"
-          cy="8"
-          r={R}
-          className="stroke-zinc-200/90 dark:stroke-zinc-600/90"
-          strokeWidth="1.4"
+        {/* Sand (bottom chamber fills until the hour is done) */}
+        <path
+          d={sandPath(live.progress)}
+          className="fill-current text-text-secondary/55 dark:text-zinc-400/50"
+          style={{ transition: "d 0.35s ease" }}
         />
-        <circle
-          cx="8"
-          cy="8"
-          r={R}
+        <path
+          d={HOURGLASS_OUTLINE_D}
           className="stroke-current"
-          strokeWidth="1.4"
-          strokeLinecap="round"
-          transform="rotate(-90 8 8)"
-          strokeDasharray={C}
-          strokeDashoffset={dashOffset}
-          style={{ transition: "stroke-dashoffset 0.35s ease" }}
+          strokeWidth="1.1"
+          strokeLinejoin="round"
+          fill="none"
         />
       </svg>
     </Link>
