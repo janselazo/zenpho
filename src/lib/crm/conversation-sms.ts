@@ -126,6 +126,8 @@ export type SendConversationSmsResult =
 export async function sendConversationSms(opts: {
   to: string;
   body: string;
+  /** Optional public URLs of media attachments (Twilio MMS). Up to 10 entries. */
+  mediaUrl?: string[];
 }): Promise<SendConversationSmsResult> {
   const creds = await getAgencyTwilioCredentials();
   if (!creds) {
@@ -142,19 +144,46 @@ export async function sendConversationSms(opts: {
     };
   }
 
+  const media = (opts.mediaUrl ?? []).filter((u) => !!u?.trim()).slice(0, 10);
+
   try {
     const client = twilio(creds.accountSid, creds.authToken);
     const message = await client.messages.create({
       from: creds.fromPhone,
       to: opts.to.trim(),
       body: opts.body,
+      ...(media.length ? { mediaUrl: media } : {}),
     });
     return { ok: true, smsSid: message.sid };
   } catch (e) {
-    const msg =
+    const errMsg =
       e && typeof e === "object" && "message" in e
         ? String((e as { message: string }).message)
         : "SMS send failed.";
-    return { ok: false, error: msg };
+
+    // If MMS was rejected by carrier/account, retry without media so the
+    // text still reaches the prospect.
+    if (
+      media.length > 0 &&
+      errMsg.toLowerCase().includes("media")
+    ) {
+      try {
+        const client = twilio(creds.accountSid, creds.authToken);
+        const retry = await client.messages.create({
+          from: creds.fromPhone,
+          to: opts.to.trim(),
+          body: opts.body,
+        });
+        return { ok: true, smsSid: retry.sid };
+      } catch (e2) {
+        const m2 =
+          e2 && typeof e2 === "object" && "message" in e2
+            ? String((e2 as { message: string }).message)
+            : errMsg;
+        return { ok: false, error: m2 };
+      }
+    }
+
+    return { ok: false, error: errMsg };
   }
 }

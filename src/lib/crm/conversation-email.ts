@@ -181,6 +181,12 @@ export type SendConversationEmailResult =
 /**
  * Send an email via SendGrid (preferred) or Resend (fallback), returning the generated Message-ID.
  */
+export type ConversationEmailAttachment = {
+  filename: string;
+  contentBase64: string;
+  contentType: string;
+};
+
 export async function sendConversationEmail(opts: {
   to: string;
   subject: string;
@@ -188,6 +194,7 @@ export async function sendConversationEmail(opts: {
   html: string;
   inReplyTo?: string | null;
   references?: string | null;
+  attachments?: ConversationEmailAttachment[];
 }): Promise<SendConversationEmailResult> {
   const sgCreds = await getAgencySendGridCredentials();
   const messageId = generateMessageId(
@@ -212,6 +219,12 @@ export async function sendConversationEmail(opts: {
       text: opts.text,
       html: opts.html,
       headers: threadingHeaders,
+      attachments: opts.attachments?.map((a) => ({
+        contentBase64: a.contentBase64,
+        filename: a.filename,
+        type: a.contentType || "application/octet-stream",
+        disposition: "attachment" as const,
+      })),
     });
     if (!result.ok) return { ok: false, error: result.error };
     return { ok: true, messageId };
@@ -235,6 +248,11 @@ export async function sendConversationEmail(opts: {
     html: opts.html,
     text: opts.text,
     headers: threadingHeaders,
+    attachments: opts.attachments?.map((a) => ({
+      filename: a.filename,
+      content: a.contentBase64,
+      contentType: a.contentType || "application/octet-stream",
+    })),
   });
 
   if (error) return { ok: false, error: error.message };

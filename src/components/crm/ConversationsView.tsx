@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -23,6 +30,9 @@ import {
   Instagram,
   Linkedin,
   Megaphone,
+  X,
+  StopCircle,
+  FileText,
 } from "lucide-react";
 import {
   markConversationRead,
@@ -211,6 +221,24 @@ export default function ConversationsView({
   const [pending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
 
+  // Composer attachments + recorder + emoji picker state.
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const recordingChunksRef = useRef<BlobPart[]>([]);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const [attachment, setAttachment] = useState<{
+    base64: string;
+    name: string;
+    contentType: string;
+    sizeBytes: number;
+    isVoice: boolean;
+  } | null>(null);
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+
   const isEmailChannel = activeConversation?.channel === "email";
   const threadSubject = useMemo(() => {
     if (!isEmailChannel) return null;
@@ -233,7 +261,212 @@ export default function ConversationsView({
     setBody("");
     setEmailSubject("");
     setFormError(null);
+    setAttachment(null);
+    setEmojiOpen(false);
   }, [activeConversationId]);
+
+  // Tear down any active recording when leaving the conversation or unmounting.
+  useEffect(() => {
+    return () => {
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
+      const rec = recorderRef.current;
+      if (rec && rec.state !== "inactive") {
+        try {
+          rec.stop();
+        } catch {
+          /* ignore */
+        }
+      }
+      rec?.stream?.getTracks().forEach((t) => t.stop());
+      recorderRef.current = null;
+      recordingChunksRef.current = [];
+    };
+  }, [activeConversationId]);
+
+  function readFileAsBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(reader.error ?? new Error("Read failed"));
+      reader.onload = () => {
+        const result = reader.result;
+        if (typeof result !== "string") {
+          reject(new Error("Unexpected file reader result"));
+          return;
+        }
+        const comma = result.indexOf(",");
+        resolve(comma >= 0 ? result.slice(comma + 1) : result);
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleFilePicked(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.size > 25 * 1024 * 1024) {
+      setFormError("Attachment exceeds 25 MB.");
+      return;
+    }
+    try {
+      const base64 = await readFileAsBase64(file);
+      setAttachment({
+        base64,
+        name: file.name,
+        contentType: file.type || "application/octet-stream",
+        sizeBytes: file.size,
+        isVoice: false,
+      });
+      setFormError(null);
+    } catch (err) {
+      setFormError(
+        err instanceof Error ? err.message : "Could not read the selected file."
+      );
+    }
+  }
+
+  const insertEmoji = useCallback((emoji: string) => {
+    const ta = textareaRef.current;
+    if (!ta) {
+      setBody((prev) => (prev + emoji).slice(0, 1000));
+      return;
+    }
+    const start = ta.selectionStart ?? ta.value.length;
+    const end = ta.selectionEnd ?? ta.value.length;
+    const next = (ta.value.slice(0, start) + emoji + ta.value.slice(end)).slice(
+      0,
+      1000
+    );
+    setBody(next);
+    requestAnimationFrame(() => {
+      ta.focus();
+      const caret = Math.min(start + emoji.length, next.length);
+      ta.setSelectionRange(caret, caret);
+    });
+  }, []);
+
+  async function startRecording() {
+    if (recording) return;
+    setFormError(null);
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      setFormError("Voice recording is not supported in this browser.");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mime = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find(
+        (m) =>
+          typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(m)
+      );
+      const recorder = new MediaRecorder(
+        stream,
+        mime ? { mimeType: mime } : undefined
+      );
+      recordingChunksRef.current = [];
+      recorder.ondataavailable = (ev) => {
+        if (ev.data && ev.data.size > 0) {
+          recordingChunksRef.current.push(ev.data);
+        }
+      };
+      recorder.onstop = async () => {
+        const chunks = recordingChunksRef.current;
+        recordingChunksRef.current = [];
+        stream.getTracks().forEach((t) => t.stop());
+        const type = recorder.mimeType || "audio/webm";
+        const blob = new Blob(chunks, { type });
+        if (blob.size === 0) {
+          setFormError("No audio captured. Try again.");
+          return;
+        }
+        try {
+          const buf = await blob.arrayBuffer();
+          let binary = "";
+          const bytes = new Uint8Array(buf);
+          const chunkSize = 0x8000;
+          for (let i = 0; i < bytes.length; i += chunkSize) {
+            binary += String.fromCharCode.apply(
+              null,
+              Array.from(bytes.subarray(i, i + chunkSize))
+            );
+          }
+          const base64 =
+            typeof btoa === "function"
+              ? btoa(binary)
+              : Buffer.from(buf).toString("base64");
+          const ext =
+            type.includes("mp4") ? "m4a" : type.includes("webm") ? "webm" : "ogg";
+          setAttachment({
+            base64,
+            name: `voice-message-${new Date().toISOString().replace(/[:.]/g, "-")}.${ext}`,
+            contentType: type,
+            sizeBytes: blob.size,
+            isVoice: true,
+          });
+        } catch (err) {
+          setFormError(
+            err instanceof Error
+              ? err.message
+              : "Could not encode voice recording."
+          );
+        }
+      };
+      recorderRef.current = recorder;
+      recorder.start();
+      setRecording(true);
+      setRecordingSeconds(0);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingSeconds((s) => {
+          const next = s + 1;
+          if (next >= 120) {
+            // Hard cap at 2 minutes.
+            const r = recorderRef.current;
+            if (r && r.state !== "inactive") {
+              try {
+                r.stop();
+              } catch {
+                /* ignore */
+              }
+            }
+            if (recordingTimerRef.current) {
+              clearInterval(recordingTimerRef.current);
+              recordingTimerRef.current = null;
+            }
+            setRecording(false);
+          }
+          return next;
+        });
+      }, 1000);
+    } catch (err) {
+      setFormError(
+        err instanceof Error
+          ? err.message
+          : "Microphone access was blocked or unavailable."
+      );
+    }
+  }
+
+  function stopRecording() {
+    const rec = recorderRef.current;
+    if (rec && rec.state !== "inactive") {
+      try {
+        rec.stop();
+      } catch {
+        /* ignore */
+      }
+    }
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    setRecording(false);
+  }
+
+  function clearAttachment() {
+    setAttachment(null);
+  }
 
   const filtered = useMemo(() => {
     if (!search.trim()) return conversations;
@@ -258,6 +491,7 @@ export default function ConversationsView({
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!activeConversationId) return;
+    if (recording) return;
     setFormError(null);
     const fd = new FormData();
     fd.set("conversation_id", activeConversationId);
@@ -267,11 +501,19 @@ export default function ConversationsView({
       const subj = emailSubject.trim() || threadSubject || "";
       if (subj) fd.set("email_subject", subj);
     }
+    if (attachment) {
+      fd.set("attachment_base64", attachment.base64);
+      fd.set("attachment_name", attachment.name);
+      fd.set("attachment_type", attachment.contentType);
+      if (attachment.isVoice) fd.set("is_voice", "1");
+    }
     startTransition(async () => {
       const res = await sendConversationMessage(fd);
       if ("error" in res && res.error) setFormError(res.error);
       else {
         setBody("");
+        setAttachment(null);
+        setEmojiOpen(false);
         router.refresh();
       }
     });
@@ -523,6 +765,7 @@ export default function ConversationsView({
                     ) : null}
                     <div className="relative rounded-2xl border border-border bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                       <textarea
+                        ref={textareaRef}
                         name="body"
                         value={body}
                         onChange={(e) =>
@@ -538,22 +781,106 @@ export default function ConversationsView({
                       />
                       <button
                         type="submit"
-                        disabled={pending || !body.trim()}
+                        disabled={
+                          pending ||
+                          recording ||
+                          (!body.trim() && !attachment)
+                        }
                         className="absolute bottom-3 right-3 rounded-xl p-2 text-accent hover:bg-accent/10 disabled:opacity-40"
                         aria-label="Send"
                       >
                         <Send className="h-5 w-5" />
                       </button>
                     </div>
-                    <div className="flex flex-wrap items-center justify-between gap-2">
+
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      className="hidden"
+                      onChange={handleFilePicked}
+                    />
+
+                    {attachment ? (
+                      <div className="flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-xs text-text-primary dark:border-zinc-700 dark:bg-zinc-800/50">
+                        {attachment.isVoice ? (
+                          <Mic className="h-4 w-4 text-text-secondary" />
+                        ) : attachment.contentType.startsWith("image/") ? (
+                          <Paperclip className="h-4 w-4 text-text-secondary" />
+                        ) : (
+                          <FileText className="h-4 w-4 text-text-secondary" />
+                        )}
+                        <span className="min-w-0 flex-1 truncate">
+                          {attachment.name}
+                        </span>
+                        <span className="shrink-0 text-text-secondary">
+                          {Math.max(1, Math.round(attachment.sizeBytes / 1024))} KB
+                        </span>
+                        <button
+                          type="button"
+                          onClick={clearAttachment}
+                          className="shrink-0 rounded-md p-1 text-text-secondary hover:bg-white hover:text-text-primary dark:hover:bg-zinc-700"
+                          aria-label="Remove attachment"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ) : null}
+
+                    {recording ? (
+                      <div className="flex items-center gap-3 rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-900 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
+                        <span className="relative flex h-2.5 w-2.5">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-500/60" />
+                          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-rose-600" />
+                        </span>
+                        <span className="font-medium">
+                          Recording… {Math.floor(recordingSeconds / 60)}:
+                          {String(recordingSeconds % 60).padStart(2, "0")}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={stopRecording}
+                          className="ml-auto inline-flex items-center gap-1 rounded-lg bg-rose-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-rose-700"
+                        >
+                          <StopCircle className="h-3.5 w-3.5" />
+                          Stop
+                        </button>
+                      </div>
+                    ) : null}
+
+                    <div className="relative flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-1">
-                        <ToolbarBtn icon={<Smile className="h-4 w-4" />} label="Emoji" />
-                        <ToolbarBtn icon={<Paperclip className="h-4 w-4" />} label="Attach" />
-                        <ToolbarBtn icon={<Mic className="h-4 w-4" />} label="Voice" />
+                        <ToolbarBtn
+                          icon={<Smile className="h-4 w-4" />}
+                          label="Emoji"
+                          active={emojiOpen}
+                          onClick={() => setEmojiOpen((v) => !v)}
+                          disabled={pending}
+                          dataAttr="data-emoji-toggle"
+                        />
+                        <ToolbarBtn
+                          icon={<Paperclip className="h-4 w-4" />}
+                          label="Attach"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={pending || recording}
+                        />
+                        <ToolbarBtn
+                          icon={<Mic className="h-4 w-4" />}
+                          label={recording ? "Stop" : "Voice"}
+                          active={recording}
+                          onClick={recording ? stopRecording : startRecording}
+                          disabled={pending}
+                        />
                       </div>
                       <span className="text-[11px] text-text-secondary">
                         {body.length}/1000
                       </span>
+
+                      {emojiOpen ? (
+                        <EmojiPickerPopover
+                          onPick={(em) => insertEmoji(em)}
+                          onClose={() => setEmojiOpen(false)}
+                        />
+                      ) : null}
                     </div>
                     {formError ? (
                       <p className="text-sm text-red-600 dark:text-red-400">
@@ -604,18 +931,97 @@ export default function ConversationsView({
 function ToolbarBtn({
   icon,
   label,
+  onClick,
+  active,
+  disabled,
+  dataAttr,
 }: {
   icon: React.ReactNode;
   label: string;
+  onClick?: () => void;
+  active?: boolean;
+  disabled?: boolean;
+  dataAttr?: string;
 }) {
   return (
     <button
       type="button"
-      className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface hover:text-text-primary dark:hover:bg-zinc-800"
+      onClick={onClick}
+      disabled={disabled}
+      aria-pressed={active}
+      {...(dataAttr ? { [dataAttr]: "true" } : {})}
+      className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+        active
+          ? "bg-accent/10 text-accent"
+          : "text-text-secondary hover:bg-surface hover:text-text-primary dark:hover:bg-zinc-800"
+      }`}
     >
       {icon}
       {label}
     </button>
+  );
+}
+
+const QUICK_EMOJI = [
+  "😀", "😄", "😅", "😂", "🤣", "😊", "😍", "🥰",
+  "😎", "🤔", "🙄", "😉", "🥳", "🤩", "😢", "🙏",
+  "👍", "👏", "🙌", "💪", "🔥", "💯", "✨", "🎉",
+  "❤️", "💙", "💚", "💛", "✅", "❌", "⚠️", "📌",
+  "📞", "📧", "⏰", "💰",
+];
+
+function EmojiPickerPopover({
+  onPick,
+  onClose,
+}: {
+  onPick: (emoji: string) => void;
+  onClose: () => void;
+}) {
+  const popRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    function handlePointerDown(e: MouseEvent | TouchEvent) {
+      const t = e.target as HTMLElement | null;
+      if (!t) return;
+      if (popRef.current && popRef.current.contains(t)) return;
+      // Re-clicking the toolbar Emoji button must toggle, not close+reopen.
+      if (t.closest && t.closest("[data-emoji-toggle]")) return;
+      onClose();
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      ref={popRef}
+      role="dialog"
+      aria-label="Insert emoji"
+      className="absolute bottom-9 left-0 z-30 w-[260px] rounded-xl border border-border bg-white p-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+    >
+      <div className="grid grid-cols-8 gap-1">
+        {QUICK_EMOJI.map((em) => (
+          <button
+            key={em}
+            type="button"
+            onClick={() => onPick(em)}
+            className="rounded-md p-1.5 text-lg leading-none hover:bg-surface dark:hover:bg-zinc-800"
+            aria-label={`Insert ${em}`}
+          >
+            {em}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
