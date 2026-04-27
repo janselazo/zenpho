@@ -202,6 +202,9 @@ export async function createLead(formData: FormData) {
     return { error: "Please select a project type." };
   }
 
+  const leadStages = await leadStageSlugSet(supabase);
+  const initialStage = leadStages.has("open") ? "open" : "contacted";
+
   const { data: created, error } = await supabase
     .from("lead")
     .insert({
@@ -218,7 +221,7 @@ export async function createLead(formData: FormData) {
       notes: notes || null,
       project_type,
       contact_category,
-      stage: "contacted",
+      stage: initialStage,
       owner_id: user.id,
     })
     .select("id")

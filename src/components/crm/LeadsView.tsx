@@ -43,6 +43,7 @@ import PipelineSettingsModal from "@/components/crm/PipelineSettingsModal";
 import {
   isLeadLostStage,
   leadStageLabelColor,
+  mapLeadStageForPipelineKanban,
   normalizeLeadStageForPipeline,
   normalizePipelineHexColor,
   type PipelineColumnDef,
@@ -418,7 +419,7 @@ function leadKanbanKey(
   lead: Lead,
   pipeline: PipelineColumnDef[]
 ): string {
-  return normalizeLeadStageForPipeline(lead.stage, pipeline);
+  return mapLeadStageForPipelineKanban(lead.stage, pipeline);
 }
 
 function formatLeadPhone(phone: string | null | undefined): string {
@@ -564,9 +565,13 @@ export default function LeadsView({
     {}
   );
 
-  /** Pipeline Kanban hides the legacy "New Lead" column; those leads map to Contacted. */
+  /**
+   * Pipeline Kanban: hide legacy "New Lead" (folds into Contacted) and "Open"
+   * (Leads table / detail only; those cards sit in the Contacted column).
+   */
   const leadPipelineKanban = useMemo(
-    () => leadPipeline.filter((c) => c.slug !== "new"),
+    () =>
+      leadPipeline.filter((c) => c.slug !== "new" && c.slug !== "open"),
     [leadPipeline]
   );
 

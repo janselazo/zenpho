@@ -18,6 +18,8 @@ export const DEFAULT_DEAL_PIPELINE_COLUMNS: PipelineColumnDef[] = [
 ];
 
 export const DEFAULT_LEAD_PIPELINE_COLUMNS: PipelineColumnDef[] = [
+  /** Shown in the Leads table + detail; hidden from the Pipeline Kanban (grouped with Contacted there). */
+  { slug: "open", label: "Open", color: "#64748b" },
   { slug: "contacted", label: "Contacted", color: "#3b82f6" },
   { slug: "discoverycall_scheduled", label: "Appointment Scheduled", color: "#06b6d4" },
   { slug: "discoverycall_completed", label: "Appointment Completed", color: "#8b5cf6" },
@@ -120,9 +122,27 @@ export function mergeDealPipelineFromDb(raw: unknown): PipelineColumnDef[] {
   return parsed ?? DEFAULT_DEAL_PIPELINE_COLUMNS;
 }
 
+/**
+ * Ensures an "open" column exists before "contacted" so new inquiries can be tracked
+ * in the Leads list without a dedicated Kanban column (see `mapLeadStageForPipelineKanban`).
+ */
+export function ensureOpenStageBeforeContacted(
+  cols: PipelineColumnDef[]
+): PipelineColumnDef[] {
+  if (cols.length === 0) return [...DEFAULT_LEAD_PIPELINE_COLUMNS];
+  if (cols.some((c) => c.slug === "open")) return cols;
+  const openCol: PipelineColumnDef = { slug: "open", label: "Open", color: "#64748b" };
+  const contactedIdx = cols.findIndex((c) => c.slug === "contacted");
+  if (contactedIdx >= 0) {
+    return [...cols.slice(0, contactedIdx), openCol, ...cols.slice(contactedIdx)];
+  }
+  return [openCol, ...cols];
+}
+
 export function mergeLeadPipelineFromDb(raw: unknown): PipelineColumnDef[] {
   const parsed = parsePipelineColumnArray(raw);
-  return parsed ?? DEFAULT_LEAD_PIPELINE_COLUMNS;
+  const base = parsed ?? DEFAULT_LEAD_PIPELINE_COLUMNS;
+  return ensureOpenStageBeforeContacted(base);
 }
 
 /** Keep outcome stages so client conversion + reporting stay consistent. */
@@ -244,4 +264,21 @@ export function normalizeLeadStageForPipeline(
   const hit = pipeline.find((c) => c.slug.toLowerCase() === s);
   if (hit) return hit.slug;
   return t || (pipeline[0]?.slug ?? "contacted");
+}
+
+/**
+ * Kanban (Pipeline tab) has no "Open" column: leads in `open` are shown under **Contacted**.
+ * The Leads table and lead detail still use the real `open` stage from storage.
+ */
+export function mapLeadStageForPipelineKanban(
+  raw: string | null | undefined,
+  pipeline: PipelineColumnDef[]
+): string {
+  const normalized = normalizeLeadStageForPipeline(raw, pipeline);
+  if (normalized === "open") {
+    const contacted = pipeline.find((c) => c.slug === "contacted");
+    if (contacted) return contacted.slug;
+    return pipeline.find((c) => c.slug !== "open")?.slug ?? normalized;
+  }
+  return normalized;
 }

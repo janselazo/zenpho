@@ -20,6 +20,7 @@ export type TaskStatus =
   | "completed";
 /** Kanban / pipeline column order (aligned with `DEFAULT_LEAD_PIPELINE_COLUMNS`). */
 export const LEAD_PIPELINE_STAGES = [
+  "open",
   "contacted",
   "discoverycall_scheduled",
   "discoverycall_completed",
@@ -34,6 +35,7 @@ export type LeadPipelineStage = (typeof LEAD_PIPELINE_STAGES)[number];
 export type LeadStage = LeadPipelineStage;
 
 export const LEAD_PIPELINE_COLUMN_COLORS: Record<LeadPipelineStage, string> = {
+  open: "#64748b",
   contacted: "#3b82f6",
   discoverycall_scheduled: "#06b6d4",
   discoverycall_completed: "#8b5cf6",
@@ -221,6 +223,7 @@ export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
 };
 
 export const LEAD_STAGE_LABELS: Record<LeadStage, string> = {
+  open: "Open",
   contacted: "Contacted",
   discoverycall_scheduled: "Appointment Scheduled",
   discoverycall_completed: "Appointment Completed",
