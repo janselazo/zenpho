@@ -8,14 +8,20 @@ import {
   Building2,
   CalendarDays,
   ChevronDown,
+  ExternalLink,
   Facebook,
+  FileDown,
   FolderKanban,
   Instagram,
+  Globe,
+  LayoutDashboard,
   Layers,
   ListTodo,
   Loader2,
   Mail,
+  Monitor,
   Phone,
+  Smartphone,
   Sparkles,
   User,
   UserCircle,
@@ -26,6 +32,7 @@ import type { MergedCrmFieldOptions } from "@/lib/crm/field-options";
 import CrmNewProjectFromLeadModal from "@/components/crm/CrmNewProjectFromLeadModal";
 import CrmQuickTaskModal from "@/components/crm/CrmQuickTaskModal";
 import type { LeadFollowUpAppointment } from "@/lib/crm/lead-follow-up-appointment";
+import { prospectPreviewPageUrl } from "@/lib/crm/prospect-preview-public-url";
 import {
   DEFAULT_LEAD_PIPELINE_COLUMNS,
   leadStageLabelColor,
@@ -104,6 +111,9 @@ type Lead = {
   project_type: string | null;
   contact_category: string | null;
   created_at?: string | null;
+  prospect_preview_id?: string | null;
+  branding_funnel_pdf_path?: string | null;
+  branding_funnel_pdf_created_at?: string | null;
 };
 
 export type ClientProjectRow = {
@@ -271,6 +281,22 @@ function LeadDetailTagsField({
   );
 }
 
+function previewTargetBadge(target: string | null | undefined): string {
+  const t = target?.trim() ?? "";
+  if (t === "website") return "Marketing website preview";
+  if (t === "webapp") return "Web app preview";
+  if (t === "mobile") return "Mobile app preview";
+  return "Hosted preview";
+}
+
+function previewTargetIcon(t: string | null | undefined) {
+  const x = t?.trim() ?? "";
+  if (x === "webapp") return LayoutDashboard;
+  if (x === "mobile") return Smartphone;
+  if (x === "website") return Monitor;
+  return Globe;
+}
+
 export default function LeadEditForm({
   lead,
   clientProjects,
@@ -280,6 +306,10 @@ export default function LeadEditForm({
   leadTagCatalog = [],
   leadTagIds = [],
   followUpAppointments = [],
+  hostedProspectPreviewId,
+  hostedProspectPreviewMeta,
+  brandingFunnelPdfUrl,
+  brandingFunnelPdfCreatedAt,
 }: {
   lead: Lead;
   clientProjects: ClientProjectRow[];
@@ -289,6 +319,11 @@ export default function LeadEditForm({
   leadTagCatalog?: { id: string; name: string; color: string }[];
   leadTagIds?: string[];
   followUpAppointments?: LeadFollowUpAppointment[];
+  /** Resolved from `prospect_preview` when linking a hosted Stitch preview. */
+  hostedProspectPreviewId?: string | null;
+  hostedProspectPreviewMeta?: { slug: string | null; preview_target: string | null } | null;
+  brandingFunnelPdfUrl?: string | null;
+  brandingFunnelPdfCreatedAt?: string | null;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -328,6 +363,19 @@ export default function LeadEditForm({
 
   const stageMeta = leadStageLabelColor(stagePreview, leadPipelineColumns);
   const sourceTint = sourceTintClass(sourcePreview || " ");
+
+  const effectiveHostedPreviewId =
+    (hostedProspectPreviewId?.trim() || lead.prospect_preview_id?.trim()) ?? "";
+  const previewSlug =
+    hostedProspectPreviewMeta?.slug != null &&
+    hostedProspectPreviewMeta.slug.trim()
+      ? hostedProspectPreviewMeta.slug.trim()
+      : null;
+  const previewTarget = hostedProspectPreviewMeta?.preview_target ?? null;
+  const HostedPreviewIcon = previewTargetIcon(previewTarget);
+  const hostedPreviewHref = effectiveHostedPreviewId
+    ? prospectPreviewPageUrl(effectiveHostedPreviewId, previewSlug)
+    : "";
 
   useEffect(() => {
     const tab = searchParams.get("tab");
@@ -544,6 +592,52 @@ export default function LeadEditForm({
                       placeholder="https://instagram.com/…"
                     />
                   </FieldRow>
+                  {hostedPreviewHref ? (
+                    <FieldRow icon={HostedPreviewIcon} label="Hosted preview">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-sm font-medium text-zinc-700 dark:text-zinc-200">
+                          {previewTargetBadge(previewTarget)}
+                        </p>
+                        <a
+                          href={hostedPreviewHref}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500/35 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 hover:bg-blue-500/[0.14] dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200 dark:hover:bg-blue-500/20"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                          Open preview
+                        </a>
+                      </div>
+                      <p className="mt-2 text-[11px] text-zinc-400 dark:text-zinc-500">
+                        Prospect website, web app, or mobile Stitch preview saved when this lead was
+                        created from Prospecting.
+                      </p>
+                    </FieldRow>
+                  ) : null}
+                  {brandingFunnelPdfUrl ? (
+                    <FieldRow icon={FileDown} label="Brand kit + Sales funnel PDF">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-sm text-zinc-600 dark:text-zinc-300">
+                          {brandingFunnelPdfCreatedAt
+                            ? `Saved ${new Date(brandingFunnelPdfCreatedAt).toLocaleString("en-US", {
+                                dateStyle: "medium",
+                                timeStyle: "short",
+                              })}`
+                            : "Generated deliverable"}
+                        </p>
+                        <a
+                          href={brandingFunnelPdfUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          download
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-semibold text-zinc-800 hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700/70"
+                        >
+                          <FileDown className="h-3.5 w-3.5" aria-hidden />
+                          Download PDF
+                        </a>
+                      </div>
+                    </FieldRow>
+                  ) : null}
                 </div>
               </div>
 

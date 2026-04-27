@@ -27,6 +27,7 @@ import {
   verticalLabel,
   type ProspectVertical,
 } from "@/lib/crm/prospect-vertical-classify";
+import { uploadBrandingFunnelPdf } from "@/lib/crm/branding-funnel-pdf-storage";
 import {
   PAGE_W,
   PAGE_H,
@@ -1912,10 +1913,13 @@ export async function generateProspectBrandingPdfAction(input: {
   businessName: string;
   place?: PlacesSearchPlace | null;
   report?: MarketIntelReport | null;
+  /** When set (e.g. lead detail later), uploads the PDF to storage and attaches to the lead. */
+  leadId?: string | null;
 }): Promise<
   | {
       ok: true;
-      pdfBase64: string;
+      pdfUrl: string;
+      pdfPath: string;
       filename: string;
       imageWarnings?: string[];
     }
@@ -2040,12 +2044,39 @@ export async function generateProspectBrandingPdfAction(input: {
     await composeBook(ctx, images, realAssets.logoPng, funnelInput);
 
     const bytes = await pdf.save();
-    const pdfBase64 = Buffer.from(bytes).toString("base64");
     const safeName =
       spec.brandName
         .replace(/[^\w\-]+/g, "-")
         .replace(/^-|-$/g, "")
         .slice(0, 48) || "brand";
+
+    const filename = `${safeName.toLowerCase()}-brand-guidelines.pdf`;
+    const lid = input.leadId?.trim();
+    const uploaded = await uploadBrandingFunnelPdf({
+      bytes: Buffer.from(bytes),
+      filename,
+      leadId: lid || null,
+      userId: auth.user?.id ?? null,
+    });
+    if (!uploaded.ok) {
+      return {
+        ok: false,
+        error: `Brand guidelines PDF generated but could not be stored: ${uploaded.error}`,
+      };
+    }
+
+    if (lid && auth.supabase) {
+      const { error: linkErr } = await auth.supabase
+        .from("lead")
+        .update({
+          branding_funnel_pdf_path: uploaded.path,
+          branding_funnel_pdf_created_at: new Date().toISOString(),
+        })
+        .eq("id", lid);
+      if (linkErr) {
+        console.warn("[branding-pdf] persist to lead failed:", linkErr.message);
+      }
+    }
 
     const imageWarnings: string[] = [];
     for (const [slot, err] of Object.entries(images.errors)) {
@@ -2058,15 +2089,16 @@ export async function generateProspectBrandingPdfAction(input: {
     }
 
     console.info(
-      `[branding-pdf] done ${bytes.length} bytes, base64 ${pdfBase64.length} chars (${
+      `[branding-pdf] done ${bytes.length} bytes, stored=${uploaded.path} (${
         Date.now() - t0
       }ms)`,
     );
 
     return {
       ok: true,
-      pdfBase64,
-      filename: `${safeName.toLowerCase()}-brand-guidelines.pdf`,
+      pdfUrl: uploaded.publicUrl,
+      pdfPath: uploaded.path,
+      filename,
       ...(imageWarnings.length ? { imageWarnings } : {}),
     };
   } catch (e) {

@@ -394,6 +394,8 @@ export async function createLeadFromProspectIntelAction(input: {
   contact_category?: string;
   /** Optional lead `source` override (defaults to "Prospects"). */
   source?: string;
+  /** Hosted prospect_preview row to attach (website / web app / mobile Stitch preview). */
+  prospectPreviewId?: string | null;
 }) {
   const auth = await requireAgencyStaff();
   if (auth.error) return { error: auth.error };
@@ -427,6 +429,8 @@ export async function createLeadFromProspectIntelAction(input: {
   fd.set("source", input.source?.trim() || "Prospects");
   fd.set("notes", notes);
   fd.set("project_type", input.project_type.trim());
+  const pid = input.prospectPreviewId?.trim();
+  if (pid) fd.set("prospect_preview_id", pid);
 
   const res = await createLead(fd);
   if ("error" in res && res.error) return res;

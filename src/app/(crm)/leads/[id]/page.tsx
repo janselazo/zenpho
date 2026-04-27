@@ -24,12 +24,52 @@ export default async function LeadDetailPage({ params }: Props) {
   const { data: lead, error } = await supabase
     .from("lead")
     .select(
-      "id, name, email, company, phone, facebook, instagram, google_business_category, google_place_types, source, stage, notes, project_type, contact_category, created_at, converted_client_id"
+      "id, name, email, company, phone, facebook, instagram, google_business_category, google_place_types, source, stage, notes, project_type, contact_category, created_at, converted_client_id, prospect_preview_id, branding_funnel_pdf_path, branding_funnel_pdf_created_at"
     )
     .eq("id", id)
     .maybeSingle();
 
   if (error || !lead) notFound();
+
+  const pvId =
+    typeof lead.prospect_preview_id === "string" && lead.prospect_preview_id.trim()
+      ? lead.prospect_preview_id.trim()
+      : null;
+  let previewMeta: {
+    slug: string | null;
+    preview_target: string | null;
+  } | null = null;
+  if (pvId) {
+    const { data: pv } = await supabase
+      .from("prospect_preview")
+      .select("slug, preview_target")
+      .eq("id", pvId)
+      .maybeSingle();
+    if (pv && typeof pv === "object") {
+      previewMeta = {
+        slug:
+          typeof (pv as { slug?: unknown }).slug === "string"
+            ? (pv as { slug: string }).slug
+            : null,
+        preview_target:
+          typeof (pv as { preview_target?: unknown }).preview_target === "string"
+            ? (pv as { preview_target: string }).preview_target
+            : null,
+      };
+    }
+  }
+
+  let brandingPdfPublicUrl: string | null = null;
+  const bPath =
+    typeof lead.branding_funnel_pdf_path === "string"
+      ? lead.branding_funnel_pdf_path.trim()
+      : "";
+  if (bPath) {
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("prospect-attachments").getPublicUrl(bPath);
+    brandingPdfPublicUrl = publicUrl || null;
+  }
 
   const cid = (lead.converted_client_id as string | null)?.trim() ?? null;
   let clientProjects: { id: string; title: string | null }[] = [];
@@ -103,6 +143,14 @@ export default async function LeadDetailPage({ params }: Props) {
           leadTagCatalog={leadTagCatalog}
           leadTagIds={leadTagIds}
           followUpAppointments={followUpAppointments}
+          hostedProspectPreviewId={pvId}
+          hostedProspectPreviewMeta={previewMeta}
+          brandingFunnelPdfUrl={brandingPdfPublicUrl}
+          brandingFunnelPdfCreatedAt={
+            typeof lead.branding_funnel_pdf_created_at === "string"
+              ? lead.branding_funnel_pdf_created_at
+              : null
+          }
         />
       </Suspense>
     </div>

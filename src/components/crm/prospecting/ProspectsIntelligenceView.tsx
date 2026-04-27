@@ -26,6 +26,7 @@ import {
   createLeadFromPlacesListingAction,
   fingerprintProspectSiteAction,
 } from "@/app/(crm)/actions/prospect-intel";
+import { saveLeadBrandingFunnelPdfAction } from "@/app/(crm)/actions/crm";
 import {
   stackLabel,
   type StackFingerprint,
@@ -954,6 +955,15 @@ function ProspectsIntelligenceViewInner({
   const [leadNotes, setLeadNotes] = useState("");
   const [leadPending, setLeadPending] = useState(false);
   const [leadMessage, setLeadMessage] = useState<string | null>(null);
+  /** Most recently hosted Stitch preview id — linked on Create Lead when set. */
+  const [lastHostedProspectPreviewId, setLastHostedProspectPreviewId] =
+    useState<string | null>(null);
+  /** Latest Brand Kit + funnel PDF generated this session — attached after lead create if set. */
+  const [lastBrandingPdf, setLastBrandingPdf] = useState<{
+    pdfPath: string;
+    pdfUrl: string;
+    filename: string;
+  } | null>(null);
   /** When true, we stop auto-prefilling that field from research (user edited). Reset per report. */
   const [leadContactTouched, setLeadContactTouched] = useState({
     email: false,
@@ -990,7 +1000,23 @@ function ProspectsIntelligenceViewInner({
   useEffect(() => {
     if (!outreachPreviewKey) return;
     setLeadContactTouched({ email: false, facebook: false, instagram: false });
+    setLastHostedProspectPreviewId(null);
+    setLastBrandingPdf(null);
   }, [outreachPreviewKey]);
+
+  const onHostedPreviewReady = useCallback(
+    (info: { previewId: string }) => {
+      setLastHostedProspectPreviewId(info.previewId);
+    },
+    [],
+  );
+
+  const onBrandingPdfReady = useCallback(
+    (info: { pdfPath: string; pdfUrl: string; filename: string }) => {
+      setLastBrandingPdf(info);
+    },
+    [],
+  );
 
   const applyPickedEmail = useCallback((email: string) => {
     setLeadEmail((cur) => cur.trim() || email);
@@ -1470,12 +1496,31 @@ function ProspectsIntelligenceViewInner({
         project_type: projectType,
         google_business_category: leadGoogleBusinessCategory.trim() || undefined,
         google_place_types: googlePlaceTypes,
+        prospectPreviewId: lastHostedProspectPreviewId ?? undefined,
       });
       if ("error" in res && res.error) {
         setLeadMessage(res.error);
         return;
       }
-      setLeadMessage("Lead created.");
+      let attachNote = "";
+      if (
+        "ok" in res &&
+        res.ok === true &&
+        typeof (res as { id?: string }).id === "string" &&
+        lastBrandingPdf
+      ) {
+        const leadId = (res as { id: string }).id;
+        const attach = await saveLeadBrandingFunnelPdfAction({
+          leadId,
+          existingPath: lastBrandingPdf.pdfPath,
+          filename: lastBrandingPdf.filename,
+        });
+        setLastBrandingPdf(null);
+        if (!attach.ok) {
+          attachNote = ` (brand kit PDF not saved: ${attach.error})`;
+        }
+      }
+      setLeadMessage(`Lead created.${attachNote}`);
       router.refresh();
     } catch (e) {
       setLeadMessage(
@@ -1843,6 +1888,8 @@ function ProspectsIntelligenceViewInner({
                 contactWhatsapp={snapshotSocialUrls.whatsapp ?? leadPhone}
                 contactFacebook={leadFacebook}
                 marketIntelReport={activeReport?.report ?? null}
+                onHostedPreviewReady={onHostedPreviewReady}
+                onBrandingPdfReady={onBrandingPdfReady}
               />
             </div>
           </ReportSection>

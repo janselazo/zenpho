@@ -700,6 +700,20 @@ type Props = {
   contactFacebook?: string;
   yourName?: string;
   marketIntelReport?: MarketIntelReport | null;
+  /** Latest hosted Stitch preview (for linking on create lead). */
+  onHostedPreviewReady?: (info: {
+    target: StitchTarget;
+    previewId: string;
+    slug: string | null;
+  }) => void;
+  /** Stored Brand Kit PDF for attaching after lead create. */
+  onBrandingPdfReady?: (info: {
+    pdfPath: string;
+    pdfUrl: string;
+    filename: string;
+  }) => void;
+  /** Persist generated PDF straight to this lead row (Lead detail flows). */
+  linkedLeadId?: string | null;
 };
 
 export default function ProspectPreviewOutreachBlock({
@@ -713,6 +727,9 @@ export default function ProspectPreviewOutreachBlock({
   contactFacebook = "",
   yourName = "",
   marketIntelReport = null,
+  onHostedPreviewReady,
+  onBrandingPdfReady,
+  linkedLeadId = null,
 }: Props) {
   const copyMsgTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -1056,6 +1073,13 @@ export default function ProspectPreviewOutreachBlock({
             setStitchApiConfigured(true);
             setResultForTarget(target, r);
             setSelectedOffer(target);
+            if (r.hostedPreviewId?.trim()) {
+              onHostedPreviewReady?.({
+                target,
+                previewId: r.hostedPreviewId.trim(),
+                slug: r.hostedPreviewSlug?.trim() ?? null,
+              });
+            }
             return;
           } catch (e) {
             clearTimeout(timer);
@@ -1081,7 +1105,7 @@ export default function ProspectPreviewOutreachBlock({
         setBusyForTarget(target, false);
       }
     },
-    [buildStitchPayload]
+    [buildStitchPayload, onHostedPreviewReady]
   );
 
   const hostedPreviewIdForSelection = useMemo(() => {
@@ -1384,6 +1408,7 @@ export default function ProspectPreviewOutreachBlock({
         businessName: resolvedBusinessName,
         place: stitchContext?.kind === "place" ? stitchContext.place : null,
         report: marketIntelReport ?? null,
+        leadId: linkedLeadId?.trim() || null,
       });
       if (!res.ok) {
         setBrandingMsg(res.error);
@@ -1402,17 +1427,20 @@ export default function ProspectPreviewOutreachBlock({
       } else {
         setBrandingMsg("Brand guidelines downloaded.");
       }
+      if (!linkedLeadId?.trim()) {
+        onBrandingPdfReady?.({
+          pdfPath: res.pdfPath,
+          pdfUrl: res.pdfUrl,
+          filename: res.filename,
+        });
+      }
       try {
-        const bin = atob(res.pdfBase64);
-        const bytes = new Uint8Array(bin.length);
-        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-        const blob = new Blob([bytes], { type: "application/pdf" });
-        const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
-        a.href = url;
+        a.href = res.pdfUrl;
         a.download = res.filename;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
         a.click();
-        URL.revokeObjectURL(url);
       } catch {
         setBrandingMsg("Could not start download in this browser.");
       }
@@ -1421,7 +1449,13 @@ export default function ProspectPreviewOutreachBlock({
     } finally {
       setBrandingBusy(false);
     }
-  }, [marketIntelReport, resolvedBusinessName, stitchContext]);
+  }, [
+    marketIntelReport,
+    resolvedBusinessName,
+    stitchContext,
+    linkedLeadId,
+    onBrandingPdfReady,
+  ]);
 
   /** Inset ring only — avoids `ring-offset-*` painting outside the card (some browsers composite that oddly). */
   const cardRing = (key: SelectedOffer) =>

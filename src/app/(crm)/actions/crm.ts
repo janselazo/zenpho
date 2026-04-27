@@ -19,6 +19,7 @@ import {
   type PipelineColumnDef,
 } from "@/lib/crm/pipeline-columns";
 import type { LeadFollowUpAppointment } from "@/lib/crm/lead-follow-up-appointment";
+import { uploadBrandingFunnelPdf } from "@/lib/crm/branding-funnel-pdf-storage";
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>;
 
@@ -194,6 +195,14 @@ export async function createLead(formData: FormData) {
   if ("error" in srcRes) return { error: srcRes.error };
   const source = srcRes.source;
 
+  const prospectPreviewIdRaw = String(formData.get("prospect_preview_id") ?? "").trim();
+  let prospect_preview_id: string | null = null;
+  const uuidPat =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (prospectPreviewIdRaw && uuidPat.test(prospectPreviewIdRaw)) {
+    prospect_preview_id = prospectPreviewIdRaw.toLowerCase();
+  }
+
   if (!name && !email) {
     return { error: "Add at least a name or email." };
   }
@@ -204,6 +213,16 @@ export async function createLead(formData: FormData) {
 
   const leadStages = await leadStageSlugSet(supabase);
   const initialStage = leadStages.has("open") ? "open" : "contacted";
+
+  let validatedPreviewFk: string | null = prospect_preview_id;
+  if (prospect_preview_id) {
+    const { data: pv } = await supabase
+      .from("prospect_preview")
+      .select("id")
+      .eq("id", prospect_preview_id)
+      .maybeSingle();
+    if (!pv) validatedPreviewFk = null;
+  }
 
   const { data: created, error } = await supabase
     .from("lead")
@@ -223,6 +242,7 @@ export async function createLead(formData: FormData) {
       contact_category,
       stage: initialStage,
       owner_id: user.id,
+      ...(validatedPreviewFk ? { prospect_preview_id: validatedPreviewFk } : {}),
     })
     .select("id")
     .single();
@@ -1472,4 +1492,80 @@ export async function reassignLeadsFromStage(fromSlug: string, toSlug: string) {
   revalidatePath("/leads");
   revalidatePath("/dashboard");
   return { ok: true };
+}
+
+/**
+ * Uploads a Brand Kit + Sales Funnel PDF to `prospect-attachments` and links it
+ * on the lead row. Used after generation in Prospecting or when passing `leadId`
+ * into the branding PDF action.
+ */
+export async function saveLeadBrandingFunnelPdfAction(input: {
+  leadId: string;
+  pdfBase64?: string;
+  existingPath?: string;
+  filename?: string;
+}): Promise<
+  | { ok: true; publicUrl: string; path: string }
+  | { ok: false; error: string }
+> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Unauthorized" };
+
+  const leadId = input.leadId.trim();
+  if (!leadId) return { ok: false, error: "Missing lead id." };
+
+  const { data: leadRow, error: leadErr } = await supabase
+    .from("lead")
+    .select("id")
+    .eq("id", leadId)
+    .maybeSingle();
+  if (leadErr || !leadRow) {
+    return { ok: false, error: "Lead not found or access denied." };
+  }
+
+  let path = input.existingPath?.trim() || "";
+  let publicUrl = "";
+  if (!path) {
+    if (!input.pdfBase64) return { ok: false, error: "Missing PDF data." };
+    let buf: Buffer;
+    try {
+      buf = Buffer.from(input.pdfBase64, "base64");
+    } catch {
+      return { ok: false, error: "Invalid PDF data." };
+    }
+    const uploaded = await uploadBrandingFunnelPdf({
+      bytes: buf,
+      filename: input.filename,
+      leadId,
+      userId: user.id,
+    });
+    if (!uploaded.ok) return uploaded;
+    path = uploaded.path;
+    publicUrl = uploaded.publicUrl;
+  } else {
+    const {
+      data: { publicUrl: existingPublicUrl },
+    } = supabase.storage.from("prospect-attachments").getPublicUrl(path);
+    publicUrl = existingPublicUrl;
+  }
+
+  const now = new Date().toISOString();
+  const { error: updErr } = await supabase
+    .from("lead")
+    .update({
+      branding_funnel_pdf_path: path,
+      branding_funnel_pdf_created_at: now,
+    })
+    .eq("id", leadId);
+
+  if (updErr) {
+    return { ok: false, error: updErr.message || "Could not link PDF to lead." };
+  }
+
+  revalidatePath("/leads");
+  revalidatePath(`/leads/${leadId}`);
+  return { ok: true, publicUrl, path };
 }
