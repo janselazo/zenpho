@@ -1816,6 +1816,8 @@ function ProspectsIntelligenceViewInner({
                 contactPhone={leadPhone}
                 contactEmail={leadEmail}
                 contactInstagram={leadInstagram}
+                contactWhatsapp={snapshotSocialUrls.whatsapp ?? leadPhone}
+                contactFacebook={leadFacebook}
                 marketIntelReport={activeReport?.report ?? null}
               />
             </div>

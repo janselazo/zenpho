@@ -5,12 +5,14 @@ import {
   ArrowRight,
   Copy,
   ExternalLink,
+  Facebook,
   FileDown,
   ImageDown,
   Instagram,
   LayoutDashboard,
   Loader2,
   Mail,
+  MessageCircle,
   MessageSquare,
   Monitor,
   Paperclip,
@@ -41,6 +43,7 @@ import {
 import { generateProspectAutomationPdfAction } from "@/app/(crm)/actions/prospect-automation-report";
 import { generateProspectBrandingPdfAction } from "@/app/(crm)/actions/prospect-branding-pdf";
 import { mergeProspectOutreachTemplate } from "@/lib/crm/prospect-outreach-template";
+import { messengerHandoffUrlFromFacebook } from "@/lib/crm/social-handoff-urls";
 import {
   downloadBlob,
   PROSPECT_PREVIEW_VIDEO_DURATION_SEC,
@@ -94,6 +97,47 @@ function buildClientPreviewLink(previewId: string, slug: string | null | undefin
   return `${origin}/preview/${encodeURIComponent(previewId)}`;
 }
 
+/**
+ * Click-to-chat WhatsApp deep link from a phone number / wa.me URL.
+ * Accepts: `+1 (555) 123-4567`, `15551234567`, `wa.me/15551234567`, `https://wa.me/15551234567`.
+ * Returns digits-only suitable for `https://wa.me/<digits>` (8–15 digits, country code expected).
+ */
+function normalizeWhatsappDigits(raw: string): string | null {
+  const t = raw.trim();
+  if (!t) return null;
+  if (/wa\.me/i.test(t) || /whatsapp\.com/i.test(t)) {
+    try {
+      const u = new URL(/^https?:\/\//i.test(t) ? t : `https://${t}`);
+      const digits =
+        u.pathname.replace(/\D/g, "") ||
+        (u.searchParams.get("phone") ?? "").replace(/\D/g, "");
+      if (digits.length >= 8 && digits.length <= 15) return digits;
+    } catch {
+      /* fall through */
+    }
+  }
+  const digits = t.replace(/\D/g, "");
+  if (digits.length >= 8 && digits.length <= 15) return digits;
+  return null;
+}
+
+function buildWhatsappDeepLink(rawTo: string, message: string): string | null {
+  const digits = normalizeWhatsappDigits(rawTo);
+  if (!digits) return null;
+  const text = message.trim() ? `?text=${encodeURIComponent(message)}` : "";
+  return `https://wa.me/${digits}${text}`;
+}
+
+/**
+ * Handoff URL for Facebook contact: prefers `m.me/<page>` so the recipient lands in Messenger.
+ * Falls back to opening the original facebook.com URL when we can't resolve a page handle.
+ */
+function normalizeFacebookHandoffUrl(raw: string): string | null {
+  const t = raw.trim();
+  if (!t) return null;
+  return messengerHandoffUrlFromFacebook(t);
+}
+
 /** Profile URL for opening in a new tab; accepts full https URL or @handle. */
 function normalizeInstagramProfileUrl(raw: string): string | null {
   const t = raw.trim();
@@ -124,6 +168,10 @@ type ShareTemplates = {
   emailBody: string;
   /** Short DM-style copy; Instagram has no third-party “send DM” API — user pastes in the app. */
   instagramBody: string;
+  /** Click-to-chat copy for WhatsApp deep-link (`https://wa.me/<digits>?text=…`). */
+  whatsappBody: string;
+  /** DM-style copy for Facebook Messenger handoff (`https://m.me/<page>`). */
+  facebookBody: string;
 };
 
 function defaultShareTemplatesForOffer(offer: SelectedOffer): ShareTemplates {
@@ -137,6 +185,10 @@ function defaultShareTemplatesForOffer(offer: SelectedOffer): ShareTemplates {
           "Hi {{businessName}},\n\nWe created a custom website concept for your business. Modern design, built to convert visitors into customers:\n\n{{previewUrl}}\n\nThis is yours to keep either way. If you'd like to take it live or make changes, we're here to help.\n\nHablamos español también.\n\nBest,\n{{yourName}}",
         instagramBody:
           "Hi {{businessName}}! We designed a website concept for your business, check it out:\n\n{{previewUrl}}\n\nLet us know what you think! Hablamos español\n\n{{yourName}}",
+        whatsappBody:
+          "Hi {{businessName}}! We put together a website concept for your business, take a look:\n\n{{previewUrl}}\n\nHappy to walk you through it. Hablamos español!\n\n— {{yourName}}",
+        facebookBody:
+          "Hi {{businessName}}! We designed a website concept for your business, check it out:\n\n{{previewUrl}}\n\nLet us know what you think! Hablamos español\n\n— {{yourName}}",
       };
     case "webapp":
       return {
@@ -147,6 +199,10 @@ function defaultShareTemplatesForOffer(offer: SelectedOffer): ShareTemplates {
           "Hi {{businessName}},\n\nWe designed a web app concept that could help you run your business from a single dashboard. Appointments, clients, reports, all in one place:\n\n{{previewUrl}}\n\nIf this looks like something you'd use, we can hop on a quick call to talk about making it real.\n\nHablamos español también.\n\nBest,\n{{yourName}}",
         instagramBody:
           "Hi {{businessName}}! We designed a web app concept for your business, check it out:\n\n{{previewUrl}}\n\nLet us know what you think! Hablamos español\n\n{{yourName}}",
+        whatsappBody:
+          "Hi {{businessName}}! We designed a web app concept to run your business from one dashboard:\n\n{{previewUrl}}\n\nHappy to walk you through it. Hablamos español!\n\n— {{yourName}}",
+        facebookBody:
+          "Hi {{businessName}}! We designed a web app concept for your business, check it out:\n\n{{previewUrl}}\n\nLet us know what you think! Hablamos español\n\n— {{yourName}}",
       };
     case "mobile":
       return {
@@ -157,6 +213,10 @@ function defaultShareTemplatesForOffer(offer: SelectedOffer): ShareTemplates {
           "Hi {{businessName}},\n\nWe put together a mobile app preview for your business. Your customers would be able to reach you, book services, and stay connected all from their phone:\n\n{{previewUrl}}\n\nThis is yours to keep. If you want to take it further, let's set up a quick call.\n\nWe also speak Spanish if that's easier.\n\nBest,\n{{yourName}}",
         instagramBody:
           "Hi {{businessName}}! We designed a mobile app concept for your business, check it out:\n\n{{previewUrl}}\n\nLet us know what you think! Hablamos español\n\n{{yourName}}",
+        whatsappBody:
+          "Hi {{businessName}}! We designed a mobile app concept so your customers can book and connect from their phone:\n\n{{previewUrl}}\n\nWant a quick walkthrough? Hablamos español!\n\n— {{yourName}}",
+        facebookBody:
+          "Hi {{businessName}}! We designed a mobile app concept for your business, check it out:\n\n{{previewUrl}}\n\nLet us know what you think! Hablamos español\n\n— {{yourName}}",
       };
     case "automations":
       return {
@@ -167,6 +227,10 @@ function defaultShareTemplatesForOffer(offer: SelectedOffer): ShareTemplates {
           "Hi —\n\nFrom our research on {{businessName}}, we put together a structured AI audit — map repeatable processes, spot the highest time/money costs, and recommend tools and workflows. You get a prioritized action plan; building or rolling out systems is scoped separately if you want to move forward.\n\nI can send the PDF or walk through it on a short call.\n\n(Hosted preview links are for Website / Web app / Mobile concepts. For this track, use Generate report (PDF) on the AI audit card.)\n\nBest,\n{{yourName}}",
         instagramBody:
           "Hi! AI audit draft for {{businessName}} — processes, cost hotspots, recommended tools/workflows, and a prioritized plan (implementation is a separate step). Want the PDF or a quick call?\n\n— {{yourName}}",
+        whatsappBody:
+          "Hi! AI audit draft for {{businessName}} — processes, cost hotspots, recommended tools/workflows, and a prioritized plan (implementation is a separate step). Want the PDF or a quick call?\n\n— {{yourName}}",
+        facebookBody:
+          "Hi! AI audit draft for {{businessName}} — processes, cost hotspots, recommended tools/workflows, and a prioritized plan (implementation is a separate step). Want the PDF or a quick call?\n\n— {{yourName}}",
       };
     case "branding":
       return {
@@ -176,6 +240,10 @@ function defaultShareTemplatesForOffer(offer: SelectedOffer): ShareTemplates {
         emailBody:
           "Hi {{businessName}},\n\nWe drafted a complete Brand Guidelines book for your business — cover, brand story, logo direction, color palette (with ratios), typography specimen, imagery & pattern, tone-of-voice examples, merchandising, and do's & don'ts.\n\nIt's yours to keep. If you'd like to evolve the mark or roll it out to your storefront, signage, menus, or web, we can scope that separately.\n\nHablamos español también.\n\nBest,\n{{yourName}}",
         instagramBody:
+          "Hi {{businessName}}! We drafted a Brand Guidelines PDF for your business — palette, type, logo direction, tone and merch. Want me to send it over?\n\n— {{yourName}}",
+        whatsappBody:
+          "Hi {{businessName}}! We drafted a Brand Guidelines PDF for your business — palette, type, logo direction, tone and merch. Want me to send it over?\n\n— {{yourName}}",
+        facebookBody:
           "Hi {{businessName}}! We drafted a Brand Guidelines PDF for your business — palette, type, logo direction, tone and merch. Want me to send it over?\n\n— {{yourName}}",
       };
   }
@@ -623,6 +691,13 @@ type Props = {
   contactEmail?: string;
   /** Instagram profile URL or @handle (e.g. from enrichment). */
   contactInstagram?: string;
+  /**
+   * WhatsApp click-to-chat target. Accepts a phone number, raw digits, or a
+   * `https://wa.me/<digits>` URL. Falls back to `contactPhone` when empty.
+   */
+  contactWhatsapp?: string;
+  /** Facebook page URL or `m.me/<handle>` for Messenger handoff. */
+  contactFacebook?: string;
   yourName?: string;
   marketIntelReport?: MarketIntelReport | null;
 };
@@ -634,6 +709,8 @@ export default function ProspectPreviewOutreachBlock({
   contactPhone = "",
   contactEmail = "",
   contactInstagram = "",
+  contactWhatsapp = "",
+  contactFacebook = "",
   yourName = "",
   marketIntelReport = null,
 }: Props) {
@@ -670,6 +747,8 @@ export default function ProspectPreviewOutreachBlock({
   const [smsTo, setSmsTo] = useState(contactPhone);
   const [emailTo, setEmailTo] = useState(contactEmail);
   const [instagramTo, setInstagramTo] = useState(contactInstagram);
+  const [whatsappTo, setWhatsappTo] = useState(contactWhatsapp || contactPhone);
+  const [facebookTo, setFacebookTo] = useState(contactFacebook);
   const [shareTemplates, setShareTemplates] = useState(createInitialShareTemplates);
   const [attachPreviewImage, setAttachPreviewImage] = useState(true);
   const [outreachAttachments, setOutreachAttachments] = useState<OutreachAttachment[]>([]);
@@ -761,6 +840,14 @@ export default function ProspectPreviewOutreachBlock({
   useEffect(() => {
     setInstagramTo(contactInstagram);
   }, [contactInstagram]);
+
+  useEffect(() => {
+    setWhatsappTo(contactWhatsapp || contactPhone);
+  }, [contactWhatsapp, contactPhone]);
+
+  useEffect(() => {
+    setFacebookTo(contactFacebook);
+  }, [contactFacebook]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1023,32 +1110,49 @@ export default function ProspectPreviewOutreachBlock({
     selectedOffer !== "branding" &&
     Boolean(hostedPreviewIdForSelection && resolvedBusinessName);
 
-  const mergedInstagramMessage = useMemo(() => {
+  const mergedPreviewUrlForSelection = useMemo(() => {
     const id = hostedPreviewIdForSelection;
-    const previewUrl =
-      selectedOffer === "automations" || selectedOffer === "branding"
-        ? ""
-        : id
-          ? buildClientPreviewLink(id, hostedPreviewSlugForSelection)
-          : "";
-    return mergeProspectOutreachTemplate(activeShareTpl.instagramBody, {
-      previewUrl,
-      businessName: resolvedBusinessName,
-      yourName: yourName.trim(),
-    });
-  }, [
-    selectedOffer,
-    hostedPreviewIdForSelection,
-    hostedPreviewSlugForSelection,
-    activeShareTpl.instagramBody,
-    resolvedBusinessName,
-    yourName,
-  ]);
+    if (selectedOffer === "automations" || selectedOffer === "branding") return "";
+    return id ? buildClientPreviewLink(id, hostedPreviewSlugForSelection) : "";
+  }, [selectedOffer, hostedPreviewIdForSelection, hostedPreviewSlugForSelection]);
+
+  const mergedInstagramMessage = useMemo(
+    () =>
+      mergeProspectOutreachTemplate(activeShareTpl.instagramBody, {
+        previewUrl: mergedPreviewUrlForSelection,
+        businessName: resolvedBusinessName,
+        yourName: yourName.trim(),
+      }),
+    [activeShareTpl.instagramBody, mergedPreviewUrlForSelection, resolvedBusinessName, yourName],
+  );
+
+  const mergedWhatsappMessage = useMemo(
+    () =>
+      mergeProspectOutreachTemplate(activeShareTpl.whatsappBody, {
+        previewUrl: mergedPreviewUrlForSelection,
+        businessName: resolvedBusinessName,
+        yourName: yourName.trim(),
+      }),
+    [activeShareTpl.whatsappBody, mergedPreviewUrlForSelection, resolvedBusinessName, yourName],
+  );
+
+  const mergedFacebookMessage = useMemo(
+    () =>
+      mergeProspectOutreachTemplate(activeShareTpl.facebookBody, {
+        previewUrl: mergedPreviewUrlForSelection,
+        businessName: resolvedBusinessName,
+        yourName: yourName.trim(),
+      }),
+    [activeShareTpl.facebookBody, mergedPreviewUrlForSelection, resolvedBusinessName, yourName],
+  );
 
   const canCopyInstagramMessage =
     selectedOffer === "automations" ||
     selectedOffer === "branding" ||
     (Boolean(hostedPreviewIdForSelection) && Boolean(resolvedBusinessName));
+
+  const canSendWhatsappMessage = canCopyInstagramMessage;
+  const canCopyFacebookMessage = canCopyInstagramMessage;
 
   const serializeAttachments = useCallback(async () => {
     const out: { name: string; base64: string; contentType: string }[] = [];
@@ -1170,6 +1274,68 @@ export default function ProspectPreviewOutreachBlock({
     setShareMsg(null);
     window.open(url, "_blank", "noopener,noreferrer");
   }, [instagramTo]);
+
+  const openWhatsappChat = useCallback(() => {
+    if (!canSendWhatsappMessage) {
+      setShareMsg(
+        "Generate a hosted preview and keep Website, Web app, or Mobile selected to include {{previewUrl}}, or choose AI audit / Brand guidelines for a text-only message.",
+      );
+      return;
+    }
+    const url = buildWhatsappDeepLink(whatsappTo, mergedWhatsappMessage);
+    if (!url) {
+      setShareMsg(
+        "Enter a WhatsApp number with country code (e.g. +1 555 123 4567) or a wa.me URL.",
+      );
+      return;
+    }
+    setShareMsg(null);
+    window.open(url, "_blank", "noopener,noreferrer");
+  }, [canSendWhatsappMessage, whatsappTo, mergedWhatsappMessage]);
+
+  const copyWhatsappMessage = useCallback(async () => {
+    if (!canSendWhatsappMessage) {
+      setShareMsg(
+        "Generate a hosted preview and keep Website, Web app, or Mobile selected to include {{previewUrl}}, or choose AI audit / Brand guidelines for a text-only message.",
+      );
+      return;
+    }
+    setShareMsg(null);
+    try {
+      await navigator.clipboard.writeText(mergedWhatsappMessage);
+      setShareMsg("WhatsApp message copied. Paste it in WhatsApp Web or the mobile app.");
+    } catch {
+      setShareMsg("Could not copy (browser blocked).");
+    }
+  }, [canSendWhatsappMessage, mergedWhatsappMessage]);
+
+  const copyFacebookMessage = useCallback(async () => {
+    if (!canCopyFacebookMessage) {
+      setShareMsg(
+        "Generate a hosted preview and keep Website, Web app, or Mobile selected to include {{previewUrl}}, or choose AI audit / Brand guidelines for a text-only message.",
+      );
+      return;
+    }
+    setShareMsg(null);
+    try {
+      await navigator.clipboard.writeText(mergedFacebookMessage);
+      setShareMsg(
+        "Facebook message copied. Open Messenger or the page's Facebook profile and paste — Meta does not offer a one-click third-party DM API for arbitrary recipients.",
+      );
+    } catch {
+      setShareMsg("Could not copy (browser blocked).");
+    }
+  }, [canCopyFacebookMessage, mergedFacebookMessage]);
+
+  const openFacebookHandoff = useCallback(() => {
+    const url = normalizeFacebookHandoffUrl(facebookTo);
+    if (!url) {
+      setShareMsg("Enter their Facebook page URL (https://facebook.com/…) or m.me/<handle>.");
+      return;
+    }
+    setShareMsg(null);
+    window.open(url, "_blank", "noopener,noreferrer");
+  }, [facebookTo]);
 
   const generatePdf = useCallback(async () => {
     if (!marketIntelReport) {
@@ -1658,7 +1824,109 @@ export default function ProspectPreviewOutreachBlock({
             className="hidden"
           />
 
-          <div className="mt-4 grid gap-6 lg:grid-cols-3 lg:items-stretch">
+          <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 lg:items-stretch">
+            <section
+              className="flex min-h-0 flex-col rounded-xl border border-border/70 bg-white/45 p-4 dark:border-zinc-700/70 dark:bg-zinc-900/35"
+              aria-labelledby="prospect-share-email-heading"
+            >
+              <div className="flex items-center gap-2 border-b border-border/50 pb-2 dark:border-zinc-700/50">
+                <Mail className="h-4 w-4 text-sky-700/80 dark:text-sky-400/90" aria-hidden />
+                <h4
+                  id="prospect-share-email-heading"
+                  className="text-xs font-semibold uppercase tracking-widest text-text-secondary/85 dark:text-zinc-400"
+                >
+                  Email
+                </h4>
+              </div>
+              <p className="mt-2 text-[10px] leading-snug text-text-secondary dark:text-zinc-500">
+                Same merge tags as SMS, plus <span className="font-mono">{"{{yourName}}"}</span> in the default
+                sign-off when your profile supplies it. Subject and body can differ per service type. A preview
+                image is embedded when available (hosted screenshot first, else Stitch CDN URL).
+              </p>
+              <label className="mb-1 mt-3 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+                To
+              </label>
+              <input
+                type="email"
+                value={emailTo}
+                onChange={(e) => setEmailTo(e.target.value)}
+                className="w-full rounded-lg border border-border px-2 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-900"
+              />
+              <label className="mb-1 mt-3 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+                Subject
+              </label>
+              <input
+                value={activeShareTpl.emailSubject}
+                onChange={(e) => updateActiveShareTemplates({ emailSubject: e.target.value })}
+                className="w-full rounded-lg border border-border px-2 py-1.5 font-mono text-[11px] dark:border-zinc-700 dark:bg-zinc-900"
+              />
+              <label className="mb-1 mt-3 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+                Body
+              </label>
+              <textarea
+                value={activeShareTpl.emailBody}
+                onChange={(e) => updateActiveShareTemplates({ emailBody: e.target.value })}
+                rows={6}
+                className="min-h-[9rem] w-full flex-1 rounded-lg border border-border px-2 py-1.5 font-mono text-[11px] dark:border-zinc-700 dark:bg-zinc-900"
+              />
+              <div className="mt-4 flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={!canSharePreview || shareBusy !== null || !emailTo.trim()}
+                  onClick={() => void sendEmail()}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-sky-500/40 bg-sky-500/10 px-4 py-2.5 text-xs font-semibold text-sky-900 disabled:opacity-50 dark:border-sky-400/35 dark:bg-sky-500/15 dark:text-sky-100"
+                >
+                  {shareBusy === "email" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                  ) : (
+                    <Mail className="h-3.5 w-3.5" aria-hidden />
+                  )}
+                  Send email
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="relative rounded-lg border border-zinc-300/70 p-2 text-zinc-500 hover:bg-zinc-100 dark:border-zinc-600/60 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                  aria-label="Attach files to email"
+                  title="Attach files"
+                >
+                  <Paperclip className="h-4 w-4" aria-hidden />
+                  {outreachAttachments.length > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-sky-500 text-[9px] font-bold text-white">
+                      {outreachAttachments.length}
+                    </span>
+                  )}
+                </button>
+              </div>
+              {outreachAttachments.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {outreachAttachments.map((att) => (
+                    <span
+                      key={att.id}
+                      className="inline-flex items-center gap-1 rounded-full border border-border bg-white px-1.5 py-0.5 text-[9px] dark:border-zinc-700 dark:bg-zinc-800"
+                    >
+                      {att.blob.type.startsWith("video/") ? (
+                        <Video className="h-2.5 w-2.5 text-purple-500" aria-hidden />
+                      ) : att.blob.type.startsWith("image/") ? (
+                        <ImageDown className="h-2.5 w-2.5 text-emerald-600" aria-hidden />
+                      ) : (
+                        <FileDown className="h-2.5 w-2.5 text-sky-500" aria-hidden />
+                      )}
+                      <span className="max-w-[100px] truncate">{att.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeOutreachAttachment(att.id)}
+                        className="ml-0.5 rounded-full p-0.5 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                        aria-label={`Remove ${att.name}`}
+                      >
+                        <X className="h-2 w-2" aria-hidden />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </section>
+
             <section
               className="flex min-h-0 flex-col rounded-xl border border-border/70 bg-white/45 p-4 dark:border-zinc-700/70 dark:bg-zinc-900/35"
               aria-labelledby="prospect-share-sms-heading"
@@ -1812,104 +2080,62 @@ export default function ProspectPreviewOutreachBlock({
 
             <section
               className="flex min-h-0 flex-col rounded-xl border border-border/70 bg-white/45 p-4 dark:border-zinc-700/70 dark:bg-zinc-900/35"
-              aria-labelledby="prospect-share-email-heading"
+              aria-labelledby="prospect-share-whatsapp-heading"
             >
               <div className="flex items-center gap-2 border-b border-border/50 pb-2 dark:border-zinc-700/50">
-                <Mail className="h-4 w-4 text-sky-700/80 dark:text-sky-400/90" aria-hidden />
+                <MessageCircle className="h-4 w-4 text-emerald-700/80 dark:text-emerald-400/90" aria-hidden />
                 <h4
-                  id="prospect-share-email-heading"
+                  id="prospect-share-whatsapp-heading"
                   className="text-xs font-semibold uppercase tracking-widest text-text-secondary/85 dark:text-zinc-400"
                 >
-                  Email
+                  WhatsApp
                 </h4>
               </div>
               <p className="mt-2 text-[10px] leading-snug text-text-secondary dark:text-zinc-500">
-                Same merge tags as SMS, plus <span className="font-mono">{"{{yourName}}"}</span> in the default
-                sign-off when your profile supplies it. Subject and body can differ per service type. A preview
-                image is embedded when available (hosted screenshot first, else Stitch CDN URL).
+                Same merge tags as SMS. Opens the official{" "}
+                <span className="font-mono">wa.me</span> click-to-chat link with the message pre-filled — the
+                user confirms the send in WhatsApp. Use a phone number with country code (no automated send
+                without WhatsApp Business API).
               </p>
               <label className="mb-1 mt-3 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
-                To
+                Phone (with country code) or wa.me URL
               </label>
               <input
-                type="email"
-                value={emailTo}
-                onChange={(e) => setEmailTo(e.target.value)}
+                type="text"
+                value={whatsappTo}
+                onChange={(e) => setWhatsappTo(e.target.value)}
+                placeholder="+1 555 123 4567 or https://wa.me/15551234567"
                 className="w-full rounded-lg border border-border px-2 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-900"
               />
               <label className="mb-1 mt-3 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
-                Subject
-              </label>
-              <input
-                value={activeShareTpl.emailSubject}
-                onChange={(e) => updateActiveShareTemplates({ emailSubject: e.target.value })}
-                className="w-full rounded-lg border border-border px-2 py-1.5 font-mono text-[11px] dark:border-zinc-700 dark:bg-zinc-900"
-              />
-              <label className="mb-1 mt-3 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
-                Body
+                Message
               </label>
               <textarea
-                value={activeShareTpl.emailBody}
-                onChange={(e) => updateActiveShareTemplates({ emailBody: e.target.value })}
-                rows={6}
-                className="min-h-[9rem] w-full flex-1 rounded-lg border border-border px-2 py-1.5 font-mono text-[11px] dark:border-zinc-700 dark:bg-zinc-900"
+                value={activeShareTpl.whatsappBody}
+                onChange={(e) => updateActiveShareTemplates({ whatsappBody: e.target.value })}
+                rows={5}
+                className="min-h-[7.5rem] w-full flex-1 rounded-lg border border-border px-2 py-1.5 font-mono text-[11px] dark:border-zinc-700 dark:bg-zinc-900"
               />
-              <div className="mt-4 flex items-center gap-2">
+              <div className="mt-4 flex flex-wrap gap-2">
                 <button
                   type="button"
-                  disabled={!canSharePreview || shareBusy !== null || !emailTo.trim()}
-                  onClick={() => void sendEmail()}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-sky-500/40 bg-sky-500/10 px-4 py-2.5 text-xs font-semibold text-sky-900 disabled:opacity-50 dark:border-sky-400/35 dark:bg-sky-500/15 dark:text-sky-100"
+                  disabled={!canSendWhatsappMessage || shareBusy !== null || !normalizeWhatsappDigits(whatsappTo)}
+                  onClick={() => openWhatsappChat()}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2.5 text-xs font-semibold text-emerald-900 disabled:opacity-50 dark:border-emerald-400/35 dark:bg-emerald-500/15 dark:text-emerald-100 sm:w-auto"
                 >
-                  {shareBusy === "email" ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-                  ) : (
-                    <Mail className="h-3.5 w-3.5" aria-hidden />
-                  )}
-                  Send email
+                  <MessageCircle className="h-3.5 w-3.5" aria-hidden />
+                  Open WhatsApp
                 </button>
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="relative rounded-lg border border-zinc-300/70 p-2 text-zinc-500 hover:bg-zinc-100 dark:border-zinc-600/60 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                  aria-label="Attach files to email"
-                  title="Attach files"
+                  disabled={!canSendWhatsappMessage || shareBusy !== null}
+                  onClick={() => void copyWhatsappMessage()}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-xs font-semibold text-text-primary disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-100 sm:w-auto"
                 >
-                  <Paperclip className="h-4 w-4" aria-hidden />
-                  {outreachAttachments.length > 0 && (
-                    <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-sky-500 text-[9px] font-bold text-white">
-                      {outreachAttachments.length}
-                    </span>
-                  )}
+                  <Copy className="h-3.5 w-3.5" aria-hidden />
+                  Copy message
                 </button>
               </div>
-              {outreachAttachments.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {outreachAttachments.map((att) => (
-                    <span
-                      key={att.id}
-                      className="inline-flex items-center gap-1 rounded-full border border-border bg-white px-1.5 py-0.5 text-[9px] dark:border-zinc-700 dark:bg-zinc-800"
-                    >
-                      {att.blob.type.startsWith("video/") ? (
-                        <Video className="h-2.5 w-2.5 text-purple-500" aria-hidden />
-                      ) : att.blob.type.startsWith("image/") ? (
-                        <ImageDown className="h-2.5 w-2.5 text-emerald-600" aria-hidden />
-                      ) : (
-                        <FileDown className="h-2.5 w-2.5 text-sky-500" aria-hidden />
-                      )}
-                      <span className="max-w-[100px] truncate">{att.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeOutreachAttachment(att.id)}
-                        className="ml-0.5 rounded-full p-0.5 hover:bg-zinc-200 dark:hover:bg-zinc-700"
-                        aria-label={`Remove ${att.name}`}
-                      >
-                        <X className="h-2 w-2" aria-hidden />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
             </section>
 
             <section
@@ -1967,6 +2193,66 @@ export default function ProspectPreviewOutreachBlock({
                 >
                   <ExternalLink className="h-3.5 w-3.5" aria-hidden />
                   Open profile
+                </button>
+              </div>
+            </section>
+
+            <section
+              className="flex min-h-0 flex-col rounded-xl border border-border/70 bg-white/45 p-4 dark:border-zinc-700/70 dark:bg-zinc-900/35"
+              aria-labelledby="prospect-share-facebook-heading"
+            >
+              <div className="flex items-center gap-2 border-b border-border/50 pb-2 dark:border-zinc-700/50">
+                <Facebook className="h-4 w-4 text-blue-700/85 dark:text-blue-400/90" aria-hidden />
+                <h4
+                  id="prospect-share-facebook-heading"
+                  className="text-xs font-semibold uppercase tracking-widest text-text-secondary/85 dark:text-zinc-400"
+                >
+                  Facebook
+                </h4>
+              </div>
+              <p className="mt-2 text-[10px] leading-snug text-text-secondary dark:text-zinc-500">
+                Same merge tags as SMS. There is no supported way for this app to send Facebook DMs directly;
+                copy the message, then open Messenger (<span className="font-mono">m.me/&lt;page&gt;</span>) or
+                their Facebook profile and paste in a DM (or wire up Meta&apos;s Business API with your own
+                app for automation).
+              </p>
+              <label className="mb-1 mt-3 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+                Page URL or m.me/&lt;handle&gt;
+              </label>
+              <input
+                type="text"
+                value={facebookTo}
+                onChange={(e) => setFacebookTo(e.target.value)}
+                placeholder="https://www.facebook.com/theirbrand or https://m.me/theirbrand"
+                className="w-full rounded-lg border border-border px-2 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-900"
+              />
+              <label className="mb-1 mt-3 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+                Message
+              </label>
+              <textarea
+                value={activeShareTpl.facebookBody}
+                onChange={(e) => updateActiveShareTemplates({ facebookBody: e.target.value })}
+                rows={5}
+                className="min-h-[7.5rem] w-full flex-1 rounded-lg border border-border px-2 py-1.5 font-mono text-[11px] dark:border-zinc-700 dark:bg-zinc-900"
+              />
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={!canCopyFacebookMessage || shareBusy !== null}
+                  onClick={() => void copyFacebookMessage()}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-blue-500/40 bg-blue-500/10 px-4 py-2.5 text-xs font-semibold text-blue-950 disabled:opacity-50 dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-100 sm:w-auto"
+                >
+                  <Copy className="h-3.5 w-3.5" aria-hidden />
+                  Copy message
+                </button>
+                <button
+                  type="button"
+                  disabled={shareBusy !== null || !normalizeFacebookHandoffUrl(facebookTo)}
+                  onClick={() => openFacebookHandoff()}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-xs font-semibold text-text-primary disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-100 sm:w-auto"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                  Open Messenger
                 </button>
               </div>
             </section>
