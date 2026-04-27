@@ -10,7 +10,6 @@ import {
   Paperclip,
   Mic,
   MoreVertical,
-  Share2,
   Download,
   Reply,
   Heart,
@@ -423,26 +422,6 @@ export default function ConversationsView({
                     ) : null}
                   </button>
                 ))}
-                <div className="ml-auto hidden items-center gap-1 pr-2 sm:flex">
-                  {[1, 2, 3].map((i) => (
-                    <span
-                      key={i}
-                      className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-slate-300 to-slate-500 text-[10px] font-bold text-white ring-2 ring-white dark:ring-zinc-900"
-                    >
-                      {String.fromCharCode(64 + i)}
-                    </span>
-                  ))}
-                  <span className="ml-1 rounded-full bg-surface px-2 py-0.5 text-[11px] font-medium text-text-secondary dark:bg-zinc-800">
-                    +2
-                  </span>
-                  <button
-                    type="button"
-                    className="ml-1 rounded-lg p-1.5 text-text-secondary hover:bg-surface dark:hover:bg-zinc-800"
-                    aria-label="Share"
-                  >
-                    <Share2 className="h-4 w-4" />
-                  </button>
-                </div>
               </div>
 
               {/* Contact row */}

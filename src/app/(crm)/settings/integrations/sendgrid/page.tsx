@@ -24,6 +24,8 @@ export default async function SendGridIntegrationPage() {
       <SendGridIntegrationSettings
         initial={result.initial}
         inboundWebhookUrl={result.inboundWebhookUrl}
+        inboundSecretConfigured={result.inboundSecretConfigured}
+        inboundActivity={result.inboundActivity}
       />
     </div>
   );

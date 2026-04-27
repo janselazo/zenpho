@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   findOrCreateEmailConversation,
@@ -22,12 +23,24 @@ import {
  * - Set SENDGRID_INBOUND_WEBHOOK_SECRET on the server to match the `token` query param.
  * - Point MX for that hostname to SendGrid, and set Reply-To on outbound mail to an address
  *   on that hostname so replies are delivered to Inbound Parse (not only to a personal inbox).
+ *
+ * Every call (success or failure) is recorded in `public.sendgrid_inbound_log` so the
+ * SendGrid integration settings page can surface inbound activity for diagnostics.
  */
 export async function POST(req: NextRequest) {
+  const supabase = createAdminClient();
+
   const secret = process.env["SENDGRID_INBOUND_WEBHOOK_SECRET"]?.trim();
   if (secret) {
     const token = req.nextUrl.searchParams.get("token");
     if (token !== secret) {
+      await logInbound(supabase, {
+        status: "unauthorized",
+        errorMessage:
+          token == null
+            ? "Missing ?token= query parameter on inbound webhook URL."
+            : "?token= query parameter does not match SENDGRID_INBOUND_WEBHOOK_SECRET.",
+      });
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
   }
@@ -35,7 +48,14 @@ export async function POST(req: NextRequest) {
   let formData: FormData;
   try {
     formData = await req.formData();
-  } catch {
+  } catch (err) {
+    await logInbound(supabase, {
+      status: "invalid_payload",
+      errorMessage:
+        err instanceof Error
+          ? `formData() failed: ${err.message}`
+          : "Invalid multipart payload (could not parse).",
+    });
     return NextResponse.json(
       { error: "Invalid multipart payload" },
       { status: 400 }
@@ -46,13 +66,10 @@ export async function POST(req: NextRequest) {
   const subject = String(formData.get("subject") ?? "").trim();
   const textBody = String(formData.get("text") ?? "").trim();
   const rawHeaders = String(formData.get("headers") ?? "");
+  const headersSnippet = rawHeaders.slice(0, 1000) || null;
 
   const fromEmail = extractEmail(fromRaw);
   const fromName = extractName(fromRaw) || fromEmail;
-
-  if (!fromEmail) {
-    return NextResponse.json({ error: "Missing from" }, { status: 400 });
-  }
 
   const parsed = parseRawHeaderBlock(rawHeaders);
   const inReplyTo =
@@ -62,33 +79,115 @@ export async function POST(req: NextRequest) {
   const externalMessageId =
     parsed["message-id"] ?? extractHeaderLegacy(rawHeaders, "Message-ID");
 
-  const supabase = createAdminClient();
-
-  let conversationId: string | null = await findConversationIdByThreading(
-    supabase,
-    inReplyTo,
-    references
-  );
-
-  if (!conversationId) {
-    const result = await findOrCreateEmailConversation(supabase, {
-      contactEmail: fromEmail,
-      contactName: fromName,
+  if (!fromEmail) {
+    await logInbound(supabase, {
+      status: "invalid_payload",
+      subject: subject || null,
+      inReplyTo,
+      referencesHeader: references,
+      externalMessageId,
+      headersSnippet,
+      errorMessage: `Missing or unparseable "from" field. Raw value: ${fromRaw.slice(0, 200)}`,
     });
-    conversationId = result.conversationId;
+    return NextResponse.json({ error: "Missing from" }, { status: 400 });
   }
 
-  await insertEmailMessage(supabase, {
-    conversationId,
-    direction: "inbound",
-    body: textBody || "(no text content)",
-    senderName: fromName,
-    emailSubject: subject || null,
-    emailMessageId: externalMessageId || null,
-    emailInReplyTo: inReplyTo || null,
-  });
+  try {
+    let conversationId: string | null = await findConversationIdByThreading(
+      supabase,
+      inReplyTo,
+      references
+    );
+    const threaded = !!conversationId;
 
-  return NextResponse.json({ ok: true });
+    if (!conversationId) {
+      const result = await findOrCreateEmailConversation(supabase, {
+        contactEmail: fromEmail,
+        contactName: fromName,
+      });
+      conversationId = result.conversationId;
+    }
+
+    await insertEmailMessage(supabase, {
+      conversationId,
+      direction: "inbound",
+      body: textBody || "(no text content)",
+      senderName: fromName,
+      emailSubject: subject || null,
+      emailMessageId: externalMessageId || null,
+      emailInReplyTo: inReplyTo || null,
+    });
+
+    await logInbound(supabase, {
+      status: threaded ? "threaded" : "new_conversation",
+      fromEmail,
+      subject: subject || null,
+      inReplyTo,
+      referencesHeader: references,
+      externalMessageId,
+      conversationId,
+      headersSnippet,
+    });
+
+    return NextResponse.json({
+      ok: true,
+      status: threaded ? "threaded" : "new_conversation",
+      conversationId,
+    });
+  } catch (err) {
+    const errorMessage =
+      err instanceof Error ? err.message : "Unknown inbound webhook error.";
+    await logInbound(supabase, {
+      status: "error",
+      fromEmail,
+      subject: subject || null,
+      inReplyTo,
+      referencesHeader: references,
+      externalMessageId,
+      headersSnippet,
+      errorMessage: errorMessage.slice(0, 1000),
+    });
+    // Return 200 so SendGrid does not retry indefinitely; failure is recorded in the log.
+    return NextResponse.json({ ok: false, status: "error", error: errorMessage });
+  }
+}
+
+/** Insert one row into sendgrid_inbound_log. Never throws — logging must never break the webhook. */
+async function logInbound(
+  supabase: SupabaseClient,
+  row: {
+    status:
+      | "unauthorized"
+      | "invalid_payload"
+      | "threaded"
+      | "new_conversation"
+      | "error"
+      | "diagnostic";
+    fromEmail?: string | null;
+    subject?: string | null;
+    inReplyTo?: string | null;
+    referencesHeader?: string | null;
+    externalMessageId?: string | null;
+    conversationId?: string | null;
+    errorMessage?: string | null;
+    headersSnippet?: string | null;
+  }
+): Promise<void> {
+  try {
+    await supabase.from("sendgrid_inbound_log").insert({
+      status: row.status,
+      from_email: row.fromEmail ?? null,
+      subject: row.subject ?? null,
+      in_reply_to: row.inReplyTo ?? null,
+      references_header: row.referencesHeader ?? null,
+      external_message_id: row.externalMessageId ?? null,
+      conversation_id: row.conversationId ?? null,
+      error_message: row.errorMessage ?? null,
+      headers_snippet: row.headersSnippet ?? null,
+    });
+  } catch {
+    // Swallow: observability must never break the production path.
+  }
 }
 
 /** Fallback if parseRawHeaderBlock missed (single-line regex). */

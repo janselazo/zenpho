@@ -53,10 +53,37 @@ export type SendGridIntegrationFormState = {
   hasApiKey: boolean;
 };
 
+export type SendGridInboundLogStatus =
+  | "unauthorized"
+  | "invalid_payload"
+  | "threaded"
+  | "new_conversation"
+  | "error"
+  | "diagnostic";
+
+export type InboundActivityRow = {
+  id: string;
+  createdAt: string;
+  status: SendGridInboundLogStatus;
+  fromEmail: string | null;
+  subject: string | null;
+  conversationId: string | null;
+  conversationHref: string | null;
+  errorMessage: string | null;
+};
+
 export type LoadSendGridIntegrationPageResult =
-  | { status: "ok"; initial: SendGridIntegrationFormState; inboundWebhookUrl: string }
+  | {
+      status: "ok";
+      initial: SendGridIntegrationFormState;
+      inboundWebhookUrl: string;
+      inboundSecretConfigured: boolean;
+      inboundActivity: InboundActivityRow[];
+    }
   | { status: "no_user" }
   | { status: "forbidden" };
+
+const INBOUND_ACTIVITY_LIMIT = 20;
 
 export async function loadSendGridIntegrationPage(): Promise<LoadSendGridIntegrationPageResult> {
   const gate = await requireAgencyStaff();
@@ -88,8 +115,153 @@ export async function loadSendGridIntegrationPage(): Promise<LoadSendGridIntegra
 
   const origin = (await getPublicOriginFromHeaders()).replace(/\/$/, "");
   const inboundWebhookUrl = `${origin}/api/webhooks/sendgrid/inbound?token=YOUR_SENDGRID_INBOUND_WEBHOOK_SECRET`;
+  const inboundSecretConfigured =
+    !!process.env["SENDGRID_INBOUND_WEBHOOK_SECRET"]?.trim();
 
-  return { status: "ok", initial, inboundWebhookUrl };
+  const { data: logRows } = await gate.supabase
+    .from("sendgrid_inbound_log")
+    .select(
+      "id, created_at, status, from_email, subject, conversation_id, error_message"
+    )
+    .order("created_at", { ascending: false })
+    .limit(INBOUND_ACTIVITY_LIMIT);
+
+  const inboundActivity: InboundActivityRow[] = (logRows ?? []).map((r) => ({
+    id: String(r.id),
+    createdAt: String(r.created_at),
+    status: r.status as SendGridInboundLogStatus,
+    fromEmail: r.from_email ?? null,
+    subject: r.subject ?? null,
+    conversationId: (r.conversation_id as string | null) ?? null,
+    conversationHref: r.conversation_id
+      ? `/conversations/${r.conversation_id}`
+      : null,
+    errorMessage: r.error_message ?? null,
+  }));
+
+  return {
+    status: "ok",
+    initial,
+    inboundWebhookUrl,
+    inboundSecretConfigured,
+    inboundActivity,
+  };
+}
+
+export type RunSendGridInboundDiagnosticResult =
+  | {
+      ok: true;
+      httpStatus: number;
+      body: string;
+      logId: string | null;
+      conversationId: string | null;
+    }
+  | { ok: false; error: string };
+
+/**
+ * Server-to-server POST a synthetic Inbound Parse multipart payload to our own
+ * /api/webhooks/sendgrid/inbound. Confirms in one click that the route is
+ * reachable, the token matches, and a row appears in `sendgrid_inbound_log`.
+ *
+ * Does NOT prove DNS/MX/Inbound Parse on SendGrid's side — only the in-app loop.
+ */
+export async function runSendGridInboundDiagnostic(): Promise<RunSendGridInboundDiagnosticResult> {
+  const gate = await requireAgencyStaff();
+  if (!gate.ok) return { ok: false, error: gateErrorMessage(gate) };
+
+  const secret = process.env["SENDGRID_INBOUND_WEBHOOK_SECRET"]?.trim();
+  if (!secret) {
+    return {
+      ok: false,
+      error:
+        "SENDGRID_INBOUND_WEBHOOK_SECRET is not set on the server. Configure it on Vercel before running the diagnostic.",
+    };
+  }
+
+  const origin = (await getPublicOriginFromHeaders()).replace(/\/$/, "");
+  const url = `${origin}/api/webhooks/sendgrid/inbound?token=${encodeURIComponent(
+    secret
+  )}`;
+
+  const { data: lastOutbound } = await gate.supabase
+    .from("conversation_message")
+    .select("email_message_id, conversation_id, created_at")
+    .eq("direction", "outbound")
+    .not("email_message_id", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const inReplyTo: string | null =
+    (lastOutbound?.email_message_id as string | null) ?? null;
+  const diagMessageId = `<diag-${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2, 10)}@zenpho-diagnostic.local>`;
+  const headerLines = [
+    `Message-ID: ${diagMessageId}`,
+    inReplyTo ? `In-Reply-To: ${inReplyTo}` : null,
+    inReplyTo ? `References: ${inReplyTo}` : null,
+    "From: Zenpho Diagnostic <zenpho-diagnostic@zenpho-diagnostic.local>",
+    "Subject: Zenpho inbound diagnostic",
+  ]
+    .filter(Boolean)
+    .join("\r\n");
+
+  const fd = new FormData();
+  fd.set("from", "Zenpho Diagnostic <zenpho-diagnostic@zenpho-diagnostic.local>");
+  fd.set("to", "inbound@zenpho-diagnostic.local");
+  fd.set("subject", "Zenpho inbound diagnostic");
+  fd.set(
+    "text",
+    "This is a synthetic Inbound Parse payload sent from the SendGrid integration settings page to verify that the inbound webhook is reachable and writes to sendgrid_inbound_log."
+  );
+  fd.set("headers", headerLines);
+
+  let httpStatus = 0;
+  let body = "";
+  let parsedConversationId: string | null = null;
+
+  try {
+    const res = await fetch(url, { method: "POST", body: fd });
+    httpStatus = res.status;
+    body = await res.text();
+    try {
+      const json = JSON.parse(body);
+      if (json && typeof json === "object" && "conversationId" in json) {
+        parsedConversationId =
+          typeof json.conversationId === "string" ? json.conversationId : null;
+      }
+    } catch {
+      // body wasn't JSON; that's ok, surface the raw text in the UI.
+    }
+  } catch (e) {
+    return {
+      ok: false,
+      error:
+        e instanceof Error
+          ? `Could not reach ${url}: ${e.message}`
+          : `Could not reach ${url}.`,
+    };
+  }
+
+  const { data: latestLog } = await gate.supabase
+    .from("sendgrid_inbound_log")
+    .select("id, conversation_id")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  revalidatePath("/settings/integrations/sendgrid");
+
+  return {
+    ok: true,
+    httpStatus,
+    body: body.slice(0, 800),
+    logId: latestLog?.id ? String(latestLog.id) : null,
+    conversationId:
+      parsedConversationId ??
+      ((latestLog?.conversation_id as string | null) ?? null),
+  };
 }
 
 export async function saveSendGridIntegration(formData: FormData) {

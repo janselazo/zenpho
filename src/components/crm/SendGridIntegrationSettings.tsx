@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useRef, useState, useTransition, type FormEvent } from "react";
 import {
+  AlertTriangle,
   ArrowLeft,
+  CheckCircle2,
   ExternalLink,
   Eye,
   EyeOff,
@@ -11,11 +13,16 @@ import {
   RefreshCw,
   Send,
   Shield,
+  XCircle,
+  Zap,
 } from "lucide-react";
 import {
+  runSendGridInboundDiagnostic,
   saveSendGridIntegration,
   testSendGridConnection,
+  type InboundActivityRow,
   type SendGridIntegrationFormState,
+  type SendGridInboundLogStatus,
 } from "@/app/(crm)/actions/sendgrid-integration";
 
 const inputClass =
@@ -38,15 +45,48 @@ type Props = {
   initial: SendGridIntegrationFormState;
   /** Example POST URL for SendGrid Inbound Parse (token must match SENDGRID_INBOUND_WEBHOOK_SECRET). */
   inboundWebhookUrl: string;
+  /** True if SENDGRID_INBOUND_WEBHOOK_SECRET is set on the server. */
+  inboundSecretConfigured: boolean;
+  /** Last 20 entries from sendgrid_inbound_log, newest first. */
+  inboundActivity: InboundActivityRow[];
 };
 
-export default function SendGridIntegrationSettings({ initial, inboundWebhookUrl }: Props) {
+type DiagnosticState =
+  | { kind: "idle" }
+  | { kind: "running" }
+  | {
+      kind: "done";
+      ok: boolean;
+      httpStatus?: number;
+      message: string;
+      conversationHref?: string | null;
+    };
+
+export default function SendGridIntegrationSettings({
+  initial,
+  inboundWebhookUrl,
+  inboundSecretConfigured,
+  inboundActivity,
+}: Props) {
   const formRef = useRef<HTMLFormElement>(null);
   const [showKey, setShowKey] = useState(false);
   const [savePending, startSave] = useTransition();
   const [testPending, startTest] = useTransition();
+  const [diagnosticPending, startDiagnostic] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [diagnostic, setDiagnostic] = useState<DiagnosticState>({ kind: "idle" });
+
+  const replyToTrim = initial.replyTo.trim();
+  const fromEmailDomain =
+    initial.fromEmail.trim().split("@")[1]?.toLowerCase() ?? "";
+  const replyToLooksMissing = !replyToTrim;
+  const showReplyToWarning =
+    replyToLooksMissing &&
+    fromEmailDomain.length > 0 &&
+    !/^(gmail\.com|outlook\.com|yahoo\.com|icloud\.com|hotmail\.com|protonmail\.com|proton\.me)$/i.test(
+      fromEmailDomain
+    );
 
   function handleFormSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -71,6 +111,35 @@ export default function SendGridIntegrationSettings({ initial, inboundWebhookUrl
       if ("error" in res && res.error) setError(res.error);
       else if ("message" in res && res.message) setMessage(res.message);
       else setMessage("Connection OK.");
+    });
+  }
+
+  function onRunDiagnostic() {
+    setDiagnostic({ kind: "running" });
+    startDiagnostic(async () => {
+      const res = await runSendGridInboundDiagnostic();
+      if (!res.ok) {
+        setDiagnostic({ kind: "done", ok: false, message: res.error });
+        return;
+      }
+      const conversationHref = res.conversationId
+        ? `/conversations/${res.conversationId}`
+        : null;
+      const summary =
+        res.httpStatus === 200
+          ? `Webhook responded 200 OK. ${
+              res.logId
+                ? "A new row was inserted into the inbound activity log."
+                : "Could not confirm a log row — check the table below."
+            }`
+          : `Webhook responded ${res.httpStatus}. Body: ${res.body || "(empty)"}`;
+      setDiagnostic({
+        kind: "done",
+        ok: res.httpStatus === 200,
+        httpStatus: res.httpStatus,
+        message: summary,
+        conversationHref,
+      });
     });
   }
 
@@ -306,6 +375,168 @@ export default function SendGridIntegrationSettings({ initial, inboundWebhookUrl
         </section>
 
         <section className={cardClass}>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 className="text-base font-semibold text-text-primary dark:text-zinc-100">
+                Inbound activity
+              </h2>
+              <p className="mt-2 max-w-xl text-sm text-text-secondary dark:text-zinc-400">
+                Every call SendGrid Inbound Parse makes to this app is recorded here, including
+                token mismatches and parse errors. If this list is empty after you reply to a
+                preview email, replies are not reaching SendGrid (DNS/MX or Inbound Parse hostname
+                are wrong).
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onRunDiagnostic}
+              disabled={diagnosticPending}
+              className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-semibold text-text-primary shadow-sm transition-colors hover:bg-surface disabled:opacity-60 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+            >
+              <Zap
+                className={`h-4 w-4 ${diagnosticPending ? "animate-pulse" : ""}`}
+                aria-hidden
+              />
+              {diagnosticPending ? "Running…" : "Run inbound diagnostic"}
+            </button>
+          </div>
+
+          <div className="mt-5 space-y-3">
+            {!inboundSecretConfigured ? (
+              <div
+                className="flex gap-3 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200"
+                role="alert"
+              >
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                <span>
+                  <code className="rounded bg-red-100 px-1 py-0.5 text-xs dark:bg-red-900/60">
+                    SENDGRID_INBOUND_WEBHOOK_SECRET
+                  </code>{" "}
+                  is not set on the server. Add it on Vercel → Environment Variables, then redeploy.
+                  Until you do, every Inbound Parse call will be rejected with 401.
+                </span>
+              </div>
+            ) : null}
+            {showReplyToWarning ? (
+              <div
+                className="flex gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
+                role="status"
+              >
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                <span>
+                  No <strong>Reply-to</strong> is set, so replies will go to{" "}
+                  <code className="rounded bg-amber-100 px-1 py-0.5 text-xs dark:bg-amber-900/60">
+                    {fromEmailDomain}
+                  </code>
+                  . That hostname must have its MX record routed through SendGrid Inbound Parse, or
+                  replies will land in a personal mailbox and never reach Conversations.
+                </span>
+              </div>
+            ) : null}
+          </div>
+
+          {diagnostic.kind === "done" ? (
+            <div
+              className={`mt-4 flex gap-3 rounded-xl border px-4 py-3 text-sm ${
+                diagnostic.ok
+                  ? "border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-200"
+                  : "border-red-300 bg-red-50 text-red-900 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200"
+              }`}
+              role={diagnostic.ok ? "status" : "alert"}
+            >
+              {diagnostic.ok ? (
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+              ) : (
+                <XCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+              )}
+              <span>
+                {diagnostic.message}
+                {diagnostic.conversationHref ? (
+                  <>
+                    {" "}
+                    <Link
+                      href={diagnostic.conversationHref}
+                      className="font-semibold underline-offset-2 hover:underline"
+                    >
+                      Open the conversation
+                    </Link>
+                    .
+                  </>
+                ) : null}
+              </span>
+            </div>
+          ) : null}
+
+          <div className="mt-5 overflow-hidden rounded-xl border border-border dark:border-zinc-800">
+            {inboundActivity.length === 0 ? (
+              <p className="px-4 py-6 text-sm text-text-secondary dark:text-zinc-400">
+                No inbound webhook calls yet. If you sent yourself a reply and this list is still
+                empty, MX routing or the Inbound Parse hostname are wrong — replies are not reaching
+                SendGrid. Click{" "}
+                <span className="font-semibold">Run inbound diagnostic</span> above to verify the
+                webhook is reachable from the app.
+              </p>
+            ) : (
+              <table className="w-full table-fixed text-left text-sm">
+                <thead className="bg-surface/60 text-xs uppercase tracking-wide text-text-secondary dark:bg-zinc-900/60 dark:text-zinc-400">
+                  <tr>
+                    <th className="w-32 px-3 py-2 font-medium">When</th>
+                    <th className="w-32 px-3 py-2 font-medium">Status</th>
+                    <th className="w-48 px-3 py-2 font-medium">From</th>
+                    <th className="px-3 py-2 font-medium">Subject</th>
+                    <th className="w-40 px-3 py-2 font-medium">Conversation</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {inboundActivity.map((row) => (
+                    <tr
+                      key={row.id}
+                      className="border-t border-border/60 align-top dark:border-zinc-800"
+                    >
+                      <td className="px-3 py-2 text-xs text-text-secondary dark:text-zinc-400">
+                        <time
+                          dateTime={row.createdAt}
+                          title={new Date(row.createdAt).toLocaleString()}
+                        >
+                          {formatRelative(row.createdAt)}
+                        </time>
+                      </td>
+                      <td className="px-3 py-2">
+                        <StatusPill status={row.status} />
+                        {row.errorMessage ? (
+                          <p className="mt-1 break-words text-xs text-text-secondary dark:text-zinc-500">
+                            {row.errorMessage}
+                          </p>
+                        ) : null}
+                      </td>
+                      <td className="px-3 py-2 break-words text-text-primary dark:text-zinc-200">
+                        {row.fromEmail ?? <span className="text-text-secondary">—</span>}
+                      </td>
+                      <td className="px-3 py-2 break-words text-text-primary dark:text-zinc-200">
+                        {row.subject ?? <span className="text-text-secondary">—</span>}
+                      </td>
+                      <td className="px-3 py-2">
+                        {row.conversationHref ? (
+                          <Link
+                            href={row.conversationHref}
+                            className="inline-flex items-center gap-1 text-accent hover:underline"
+                          >
+                            Open
+                            <ExternalLink className="h-3 w-3" aria-hidden />
+                          </Link>
+                        ) : (
+                          <span className="text-text-secondary">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </section>
+
+        <section className={cardClass}>
           <h2 className="text-base font-semibold text-text-primary dark:text-zinc-100">
             What SendGrid enables
           </h2>
@@ -349,4 +580,55 @@ export default function SendGridIntegrationSettings({ initial, inboundWebhookUrl
       </section>
     </div>
   );
+}
+
+const STATUS_PILL_STYLES: Record<SendGridInboundLogStatus, string> = {
+  threaded:
+    "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200",
+  new_conversation:
+    "bg-sky-100 text-sky-800 dark:bg-sky-950/40 dark:text-sky-200",
+  diagnostic:
+    "bg-violet-100 text-violet-800 dark:bg-violet-950/40 dark:text-violet-200",
+  unauthorized:
+    "bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200",
+  invalid_payload:
+    "bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200",
+  error: "bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-200",
+};
+
+const STATUS_PILL_LABELS: Record<SendGridInboundLogStatus, string> = {
+  threaded: "Threaded",
+  new_conversation: "New conversation",
+  diagnostic: "Diagnostic",
+  unauthorized: "Unauthorized",
+  invalid_payload: "Invalid payload",
+  error: "Error",
+};
+
+function StatusPill({ status }: { status: SendGridInboundLogStatus }) {
+  const cls = STATUS_PILL_STYLES[status] ?? STATUS_PILL_STYLES.error;
+  const label = STATUS_PILL_LABELS[status] ?? status;
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${cls}`}
+    >
+      {label}
+    </span>
+  );
+}
+
+function formatRelative(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return iso;
+  const diffMs = Date.now() - then;
+  const seconds = Math.round(diffMs / 1000);
+  if (seconds < 5) return "just now";
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.round(hours / 24);
+  if (days < 14) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString();
 }
