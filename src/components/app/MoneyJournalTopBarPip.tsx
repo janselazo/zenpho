@@ -32,20 +32,32 @@ export default function MoneyJournalTopBarPip() {
     return () => clearInterval(id);
   }, []);
   const live = getMoneyJournalTimerSnapshot();
-  if (!live?.show) {
-    return null;
-  }
   void tick;
 
-  const label =
-    live.status === "complete"
-      ? "Money Journal hour complete — add notes and log"
-      : `Money Journal: ${live.mmss} left`;
+  const status: "idle" | "running" | "paused" | "complete" = live?.show
+    ? live.status
+    : "idle";
+  const progress = live?.show ? live.progress : 0;
+
+  let label: string;
+  if (status === "complete") {
+    label = "Money Journal hour complete — add notes and log";
+  } else if (status === "running") {
+    label = `Money Journal: ${live!.mmss} left`;
+  } else if (status === "paused") {
+    label = `Money Journal paused: ${live!.mmss} left`;
+  } else {
+    label = "Money Journal — start your hour";
+  }
 
   return (
     <Link
       href="/prospecting/playbook?tab=journal"
-      className="relative inline-flex h-7 w-7 items-center justify-center text-text-secondary transition-colors hover:text-text-primary dark:text-zinc-400 dark:hover:text-zinc-100"
+      className={`relative inline-flex h-7 w-7 items-center justify-center transition-colors ${
+        status === "idle"
+          ? "text-text-secondary/70 hover:text-text-primary dark:text-zinc-500 dark:hover:text-zinc-100"
+          : "text-text-secondary hover:text-text-primary dark:text-zinc-400 dark:hover:text-zinc-100"
+      }`}
       aria-label={label}
       title={label}
     >
@@ -57,7 +69,7 @@ export default function MoneyJournalTopBarPip() {
       >
         {/* Sand (bottom chamber fills until the hour is done) */}
         <path
-          d={sandPath(live.progress)}
+          d={sandPath(progress)}
           className="fill-current text-text-secondary/55 dark:text-zinc-400/50"
           style={{ transition: "d 0.35s ease" }}
         />
