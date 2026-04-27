@@ -1342,7 +1342,9 @@ export default function ProspectPreviewOutreachBlock({
               <Monitor className="h-4 w-4 shrink-0 text-text-secondary opacity-70 dark:text-zinc-500" aria-hidden />
             </div>
             <p className="mt-2 text-[11px] leading-snug text-text-secondary dark:text-zinc-400">
-              Premium custom website concept with real sections, booking, reviews, services, and contact blocks.{" "}
+              Five-page premium website concept in one design (home, services, about, social proof, book/contact) with
+              real blocks for booking, reviews, services, and contact — uses your Google Business Profile for branding
+              context.{" "}
               {placeVsUrlIntro}
             </p>
             <p className="mt-2 text-[10px] text-text-secondary/90 dark:text-zinc-500">

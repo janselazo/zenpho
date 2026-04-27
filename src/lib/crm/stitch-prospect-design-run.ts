@@ -13,7 +13,11 @@ import type {
   StitchProspectDesignResult,
 } from "@/lib/crm/stitch-prospect-design-types";
 
-/** Stitch “Thinking with 3.1 Pro” (Gemini 3.1 Pro) — website, web app, and mobile API generations. */
+/**
+ * `Project.generate` model id (see `node_modules/@google/stitch-sdk` generated `project.d.ts`).
+ * Use this — not `GEMINI_3_FLASH` — or Stitch may default to the fast model. Aligns with the Stitch
+ * web app’s “Thinking with 3.1 Pro” (Gemini 3.1 Pro) tier.
+ */
 const STITCH_GEMINI_3_1_PRO_MODEL_ID = "GEMINI_3_1_PRO" as const;
 
 function safeTrim(s: unknown): string {

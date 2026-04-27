@@ -315,7 +315,7 @@ function buildSourceWebsiteFactsDirective(facts: WebsiteBrandFacts | null | unde
 const WEBSITE_CREATIVE_DIRECTIVE = `
 ## Creative direction (local business marketing site)
 
-You are an **award-winning creative director** at a **luxury web design agency** specializing in local business websites that convert visitors into customers. Your designs have won Awwwards, CSS Design Awards, and FWA nominations. You do NOT produce template websites — every site you create is a **$50,000+ custom build** that makes the business owner proud and makes competitors jealous.
+You are an **award-winning creative director** at a **luxury web design agency** specializing in local business websites that convert visitors into customers. Your designs have won Awwwards, CSS Design Awards, and FWA nominations. You do NOT produce template websites — every site you create is a **$50,000+ custom build** that feels **premium, modern, and expensive**: editorial spacing, attention-grabbing hero moments, and a polished visual system that makes the business owner proud and competitors jealous.
 
 ### Brand identity first
 Before designing, deeply understand the business from the context above:
@@ -346,8 +346,8 @@ Every design must feel made **specifically for this one business** — as if a c
 6. **Card depth everywhere:** Service cards, testimonial cards, gallery items, and contact forms must all have multi-layered box-shadows and rounded corners (12–20px). Every card visibly floats above its background.
 7. **Micro-interactions on everything:** Every card, button, and link must have a CSS \`:hover\` transition — shadow lift, scale, or color shift. The site should feel alive and responsive without any JavaScript.
 
-### Map to the seven required sections
-The technical brief below fixes section ids (\`#home\`, \`#services\`, \`#about\`, \`#gallery\`, \`#book\`, \`#reviews\`, \`#location\`). **\`#home\`** must contain a **full marketing homepage** (12 blocks — see checklist). Other tabs hold expanded versions. The result must look like a **premium custom site that cost $50,000+**, not a template anyone could buy for $49. The homepage alone should scroll for 8+ viewport heights of rich, substantive content.
+### Map to the five main pages
+The technical brief below requires **exactly five top-level \`<section id="...">\` “pages”** in one long scroll: \`#home\`, \`#services\`, \`#about\`, \`#stories\`, \`#visit\`. The global nav may link only to these five. **\`#home\`** is the full homepage (hero, value proposition, primary CTAs, opening trust). The other four sections must each read as a **full chapter** (generous vertical rhythm, at least one **full-viewport** band or equivalent depth per page — roughly **80–120vh of designed content** per “page” when combined, with clear visual break between pages). Nest supporting blocks **inside** those sections (e.g. trust strip, process, and service cards under **Services**; reviews + gallery under **Stories**; booking, FAQ, map, and contact under **Visit**). The result must look like a **$50,000+ multi-page custom site** delivered as one HTML file, not a short landing page and not a template anyone could buy for $49.
 `.trim();
 
 /** Creative director layer for desktop operator web apps — precedes technical Task/CSS contract. */
@@ -502,7 +502,7 @@ Visual quality — premium marketing site (mandatory budgets):
 - CTA button hover: background color shift, gradient animation, or shadow glow
 - Gallery items: subtle scale on hover with overlay fade-in
 - Links: color transition on hover
-- Navigation uses **:target + :has** — no inline \`<script>\` (Tailwind CDN \`<script src>\` OK)
+- Primary site navigation uses **header anchor links** (\`<a href="#...">\`) only — no inline \`<script>\` (Tailwind CDN \`<script src>\` OK)
 
 **Pitch-winning moments (include at least 4):**
 - **Glassmorphic hero panel:** A frosted glass panel (\`backdrop-filter: blur(20px) saturate(180%)\` + semi-transparent white/colored background + \`1px solid rgba(255,255,255,0.3)\` border) floating over the gradient hero background, containing the headline and CTAs — the signature liquid-glass look
@@ -519,6 +519,13 @@ Visual quality — premium marketing site (mandatory budgets):
 **Anti-template rule:** If any section looks like it came from a free Wix/Squarespace template, redesign it. Every surface must have intentional depth, every heading must use the display font, every interactive element must have a hover state, every section must have a different background treatment from its neighbors.
 `.trim();
 
+/** When users paste the prompt in the Stitch web app, the UI defaults can differ from the server API. */
+const STITCH_WEBSITE_MANUAL_MODEL_HINT = `**Manual use (stitch.withgoogle.com):** In the model dropdown, select **Thinking with 3.1 Pro** — not 3 Flash — to match the quality and reasoning tier used by Zenpho’s server-side generate.
+
+---
+
+`;
+
 export function buildStitchWebsitePrompt(payload: StitchProspectDesignPayload): string {
   const block =
     payload.kind === "place"
@@ -533,7 +540,7 @@ export function buildStitchWebsitePrompt(payload: StitchProspectDesignPayload): 
     ? "This is a redesign upsell. The business already has a website, so the new design must feel dramatically more premium, organized, modern, and conversion-focused while preserving the existing brand identity."
     : "This is a first premium website. The design must make the business look established, trustworthy, and ready to win customers from search and Google Maps traffic.";
 
-  return `${block}
+  return `${STITCH_WEBSITE_MANUAL_MODEL_HINT}${block}
 
 ${brandDirective}${logoDirective}${sourceFactsDirective}
 ## Project brief
@@ -542,65 +549,67 @@ ${projectBrief}
 
 ${differentiation}
 
+${WEBSITE_CREATIVE_DIRECTIVE}
+
+${WEBSITE_REFERENCE_PATTERNS}
+
+${WEBSITE_VISUAL_CHECKLIST}
+
 ## Task
 
-Output **one complete HTML5 document** for a desktop-width, responsive, public marketing website concept for this exact business. This is a sales asset Zenpho can send to the prospect as "your upgraded website." It must look like a premium custom agency build, not a Stitch default, not a wireframe, and not a generic hero-only landing page.
+Output **one complete HTML5 document** for a desktop-width, responsive, public marketing website concept for this exact business. This is a sales asset Zenpho can send to the prospect as "your upgraded website." It must look like a **high-end, functional** agency build: **luxury, modern, and eye-catching** — not a Stitch default, not a wireframe, not a thin hero-only landing.
 
-Build a **single scrollable website** with anchor navigation. Use normal document flow: all sections are visible in sequence and nav links jump to anchors. Do **not** hide pages with \`:target\`, do **not** create tiny embedded mockups, do **not** simulate a phone screen, and do **not** place the site inside a scaled preview frame.
+The deliverable simulates a **5-page website** (Home + four main destinations) in **one scrollable file**: use **exactly five** top-level \`<section id="home|services|about|stories|visit">\` elements. **Global header navigation** may list only: Home, Services, About, Stories (or "Patients" / "Reviews" label), and Visit — each **\`<a href="#...">\` targets one of those five ids**. Nest all other content **inside** those sections (see structure below). Use normal document flow: everything is visible in sequence. Do **not** hide “pages” with \`:target\` tricks, do **not** use tiny embedded mockups, and do **not** place the site inside a scaled preview frame.
+
+**Brand assets (highest priority when present):** If **Brand Identity Colors** and/or **Official Business Logo** appear above, treat the output as a **bespoke luxury rebrand** of that identity — the extracted hexes and the \`<img>\` logo are sacred. The logo belongs in the header on every major scroll region; the primary color must run through CTAs, key gradients, nav active state, and section dividers. Do **not** swap in a random palette when brand colors are provided.
 
 ## Navigation must work in the hosted preview
 
-The hosted preview removes inline JavaScript for security, so navigation must be **real HTML anchors only**:
+The hosted preview removes inline JavaScript. Navigation must be **real HTML anchors only**:
 
-- Use \`<a href="#home">\`, \`<a href="#services">\`, \`<a href="#gallery">\`, \`<a href="#book">\`, \`<a href="#reviews">\`, \`<a href="#faq">\`, \`<a href="#location">\`, and \`<a href="#contact">\` for website navigation.
-- Every nav \`href="#..."\` must have a matching visible \`<section id="...">\` in the document.
-- Do **not** use \`<button>\` elements, tabs, onclick handlers, JavaScript state, or hidden panels for primary website sections.
-- Do **not** add nav labels for sections that do not exist. For example, do not show “Pricing” unless there is a complete visible \`<section id="pricing">\`; prefer “Book” or “Services” for appointment-based local businesses.
-- Clicking any nav item must scroll to the corresponding section in normal document flow. No section should require JavaScript to appear.
+- Use only: \`<a href="#home">\`, \`<a href="#services">\`, \`<a href="#about">\`, \`<a href="#stories">\`, and \`<a href="#visit">\` in the primary nav (labels may be shortened, e.g. "Reviews" for Stories, "Book" for Visit, but \`href\` must target these five ids).
+- Every primary nav \`href="#..."\` must have a matching top-level \`<section id="...">\`.
+- You may add **in-page** sub-anchors (e.g. \`id="stories-reviews"\`) **inside** a main section, but do **not** add additional top-level nav items for them.
+- Do **not** use \`<button>\` for primary page navigation, no onclick, no hidden panels.
+- Do **not** add nav items for content that is not in the document.
 
 ${WEBSITE_LAYOUT_SAFETY}
 
-## Required website structure
+## Required website structure (five main pages)
 
-Use these exact anchor ids and build each section with complete, realistic content:
+Build **all** of the following in order. Each numbered item is a **\`<section>\` with the given \`id\`**. Sub-bullets are **nested** inside that section (not separate top-level pages).
 
-1. \`#home\` — immersive premium hero, at least 85vh, filling the whole desktop viewport. Include overlay/glass nav with **working anchor links**, exact business name, one specific value proposition, dual CTAs (\`#book\` and \`#services\`), Google rating/review count when provided, phone/address when provided, and a visual device/card/map/booking composition that feels custom to the business category.
-2. \`#trust\` — credibility strip with 4-5 proof points derived from the Google profile/category: rating, reviews, local service area, convenient booking, guarantees, licensed/certified, same-day/appointment availability where plausible.
-3. \`#services\` — 5-7 specific service cards with descriptions, price cues, durations, or "from" estimates. Use one featured service tile. Content must match the Google category and business name.
-4. \`#about\` — story/why-us section with 2-3 paragraphs, values, and a visual card. Make the copy sound like this exact local business, not generic filler.
-5. \`#gallery\` — premium bento gallery or portfolio grid with 6-9 CSS image placeholders, captions, hover overlays, and service/category tags. Do not use blank boxes.
-6. \`#process\` — 3-5 step customer journey from booking to completion. Include clear steps, icons, and a connector/timeline treatment.
-7. \`#reviews\` — large aggregate rating and at least 4 realistic testimonial cards with initials/avatars, stars, neighborhood/service references, and quotes that fit the business.
-8. \`#book\` — functional-looking booking section: service selector chips, visual weekly availability grid, form fields, phone CTA, and "Request appointment" button. Static HTML is fine, but it must look usable.
-9. \`#faq\` — 4-6 business-specific FAQ items using styled \`details\`/\`summary\` or cards.
-10. \`#location\` — address, phone, hours table, map-style panel, directions CTA, and nearby/service-area notes. If a real address or phone is in context, use it exactly.
-11. \`#contact\` — polished contact form and direct phone/email CTAs.
-12. Footer — substantial multi-column footer with business name, nav links, hours summary, contact details, service areas/social placeholders, and copyright.
+1. \`#home\` **— Homepage (full “page” 1).** At least **85–100vh** hero: full-width, immersive, impossible to miss. Sticky or overlay **glass** header with the five working anchor links, **official logo** when a logo URL is provided (otherwise a premium text mark), exact business name, a sharp value proposition, dual CTAs to \`#visit\` and \`#services\`, Google rating/review count and phone/address when in context, and a custom visual treatment for the category (e.g. split layout, bento, or feature cards). This section alone should feel like a **$50K** homepage in the first screenshot.
+
+2. \`#services\` **— Services and how you help (page 2).** A **full second “page”** in feel: min ~80–100vh of designed content. Include: a credibility strip (rating, years, area, insurance/certs as fits), **5–7** service cards (one featured), price/duration “from” cues, and a **3–5 step process** journey (icons + timeline) — all in this section. Make it scannable and conversion-oriented.
+
+3. \`#about\` **— About / trust / team (page 3).** Story, differentiators, values, and at least one strong visual block (e.g. team or facility card) with real-sounding copy for **this** business, not lorem. Min ~60–80vh of rich layout.
+
+4. \`#stories\` **— Social proof (page 4).** Large aggregate stars when rating exists; **4+** testimonial cards; a **6–9 image** bento or gallery (CSS placeholders with aspect-ratio, captions, hover) — all inside this one section. This is the "reviews + gallery" chapter.
+
+5. \`#visit\` **— Book + contact + location (page 5 + footer).** A functional-looking **booking** block (service chips, schedule grid, form, primary CTA), then **4–6 FAQs** (\`details\`/\`summary\` or cards), then **address, phone, hours, map panel**, a **contact form**, and finally a **substantial multi-column footer** (nav repeats, hours, areas, small print). If real address/phone are in context, use them **exactly**. The footer is part of this section or immediately follows it in the same document with no new top-level page id.
 
 ## Visual standard
 
-- Fill the desktop canvas at full width. First screenshot must show a complete premium hero, not a tiny centered page preview.
-- Use CSS variables for brand colors. If Brand Identity Colors are provided, they are mandatory and must dominate CTAs, gradients, nav accents, section bands, cards, and hover states.
-- Use at least two distinctive Google Font families via \`<link>\`; never rely on only Arial, Roboto, Inter, or system fonts.
-- Use premium layout techniques: asymmetry, bento grids, split sections, glass panels, gradient mesh backgrounds, tasteful decorative CSS shapes, and varied section backgrounds.
-- Every card/form/panel needs visible depth: multi-layer shadows, 16-28px border radius, generous padding, and hover lift.
-- Include at least 3 gradient uses and 2 glassmorphic surfaces.
-- Text must be readable with strong contrast. Do not layer unmasked images or shapes over headings/body copy.
-- The site must be responsive, but desktop is the primary target for this generated preview.
+- Fill the desktop canvas. First screenshot = full premium **#home** hero.
+- **CSS variables** for color; if Brand Identity Colors are provided, they **dominate** the UI (and harmonize with logo hues when a logo is present).
+- Two+ **distinct Google Font** families; premium typography hierarchy.
+- Asymmetry, bento, glass, gradients, varied section backgrounds — the five pages must each feel like a **new chapter** (background shift at each \`<section id>\` boundary).
+- Every interactive element: hover/focus via CSS only. Heavy shadow depth, 16–28px radii, readable contrast.
+- No unmasked images over body copy. Responsive, desktop-first.
 
 ## Copy and conversion rules
 
-- Use the exact business name everywhere. Do not rename the brand or invent a studio/atelier-style alias.
-- Use the Google Business Profile details as source of truth: category, address, rating, review count, phone, website URL, and business type.
-- Infer services, FAQs, booking options, and testimonials from the category when exact services are not provided.
-- Avoid placeholder text entirely. Never write "coming soon", "lorem ipsum", "placeholder", "sample service", "service one", or empty stub sections.
-- This should feel like an upsell-ready website a business owner would want to replace their current site with today.
+- Exact business name everywhere. No rebrand or fake studio name.
+- Google Business Profile (or URL context) is source of truth for category, NAP, rating, site URL.
+- Infer services, FAQs, and copy from the category when details are missing — always specific, never lorem.
+- This must feel like a website the owner would pay to have built **today**.
 
 ## Technical output
 
-Return only a complete HTML5 document with inline CSS in \`<style>\`. No inline \`<script>\`, no external JS, and no separate files. External font links are allowed. External logo image is allowed only when provided above; otherwise create a premium text/initial brand mark with CSS.
+Return only a complete HTML5 document with inline CSS in \`<style>\`. No inline \`<script>\`, no external JS, no separate files. Google Fonts \`<link>\` and external **logo** \`<img src="..." />\` (when a logo URL is provided) are allowed.
 
-Output: polished, pitch-ready HTML document suitable for a hosted prospect preview.`.trim();
+Output: polished, pitch-ready HTML suitable for a hosted prospect preview.`.trim();
 }
 
 const WEBAPP_ASSIGNED_AESTHETIC_LANES = [

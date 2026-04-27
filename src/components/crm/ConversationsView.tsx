@@ -88,6 +88,32 @@ const CHANNEL_LABELS: Record<string, string> = {
   other: "Other",
 };
 
+/** Pastel channel shells — scannable in the conversation list and thread header. */
+const CHANNEL_BADGE_STYLES: Record<string, string> = {
+  email:
+    "border-sky-200/90 bg-sky-50/95 text-sky-900 [&_svg]:opacity-90 dark:border-sky-500/30 dark:bg-sky-500/[0.12] dark:text-sky-100",
+  sms:
+    "border-violet-200/90 bg-violet-50/95 text-violet-900 [&_svg]:opacity-90 dark:border-violet-500/30 dark:bg-violet-500/[0.12] dark:text-violet-100",
+  whatsapp:
+    "border-emerald-200/90 bg-emerald-50/95 text-emerald-900 [&_svg]:opacity-90 dark:border-emerald-500/30 dark:bg-emerald-500/[0.12] dark:text-emerald-100",
+  facebook_messenger:
+    "border-blue-200/90 bg-blue-50/95 text-blue-900 [&_svg]:opacity-90 dark:border-blue-500/30 dark:bg-blue-500/[0.12] dark:text-blue-100",
+  instagram:
+    "border-pink-200/80 bg-rose-50/95 text-rose-900 [&_svg]:opacity-90 dark:border-pink-500/25 dark:bg-rose-500/[0.12] dark:text-rose-100",
+  linkedin:
+    "border-indigo-200/90 bg-indigo-50/95 text-indigo-900 [&_svg]:opacity-90 dark:border-indigo-500/30 dark:bg-indigo-500/[0.12] dark:text-indigo-100",
+  x:
+    "border-zinc-300/80 bg-zinc-100/95 text-zinc-800 dark:border-zinc-600 dark:bg-zinc-800/85 dark:text-zinc-100",
+  paid_ads:
+    "border-amber-200/90 bg-amber-50/95 text-amber-950 [&_svg]:opacity-90 dark:border-amber-500/30 dark:bg-amber-500/[0.12] dark:text-amber-100",
+  other:
+    "border-slate-200/90 bg-slate-50/95 text-slate-700 [&_svg]:opacity-90 dark:border-slate-600 dark:bg-slate-800/60 dark:text-slate-200",
+};
+
+function channelBadgeStyles(channel: string) {
+  return CHANNEL_BADGE_STYLES[channel] ?? CHANNEL_BADGE_STYLES.other;
+}
+
 function ChannelBadge({ channel }: { channel: string }) {
   const label = CHANNEL_LABELS[channel] ?? channel;
   const iconClass = "h-3.5 w-3.5 shrink-0";
@@ -103,7 +129,9 @@ function ChannelBadge({ channel }: { channel: string }) {
     icon = <span className="text-[10px] font-bold">𝕏</span>;
 
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-border bg-white px-2 py-0.5 text-[11px] font-medium text-text-secondary dark:border-zinc-700 dark:bg-zinc-800/80">
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${channelBadgeStyles(channel)}`}
+    >
       {icon}
       {label}
     </span>

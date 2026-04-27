@@ -12,6 +12,9 @@ import {
   deleteAppointment,
   updateAppointmentAction,
 } from "@/app/(crm)/actions/crm";
+import CrmPopoverDateTimeField, {
+  formatDatetimeLocalInput,
+} from "@/components/crm/CrmPopoverDateTimeField";
 
 type Row = {
   id: string;
@@ -22,11 +25,6 @@ type Row = {
 };
 
 type ViewTab = "upcoming" | "calendar" | "all";
-
-function formatForDatetimeLocal(d: Date) {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 
 function formatDateTime(iso: string) {
   const d = new Date(iso);
@@ -112,8 +110,8 @@ export default function CrmCalendar({ configured }: { configured: boolean }) {
     setEditingId(null);
     setTitle("");
     setDescription("");
-    setStartsLocal(formatForDatetimeLocal(start));
-    setEndsLocal(formatForDatetimeLocal(end));
+    setStartsLocal(formatDatetimeLocalInput(start));
+    setEndsLocal(formatDatetimeLocalInput(end));
     setFormError(null);
     setModalOpen(true);
   }
@@ -131,8 +129,8 @@ export default function CrmCalendar({ configured }: { configured: boolean }) {
     setEditingId(info.event.id);
     setTitle(info.event.title);
     setDescription(String(info.event.extendedProps.description ?? ""));
-    setStartsLocal(formatForDatetimeLocal(start));
-    setEndsLocal(formatForDatetimeLocal(end));
+    setStartsLocal(formatDatetimeLocalInput(start));
+    setEndsLocal(formatDatetimeLocalInput(end));
     setFormError(null);
     setModalOpen(true);
   }
@@ -140,9 +138,19 @@ export default function CrmCalendar({ configured }: { configured: boolean }) {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setFormError(null);
+    if (!startsLocal.trim() || !endsLocal.trim()) {
+      setFormError("Set both start and end date and time.");
+      return;
+    }
+    const startT = new Date(startsLocal).getTime();
+    const endT = new Date(endsLocal).getTime();
+    if (Number.isNaN(startT) || Number.isNaN(endT)) {
+      setFormError("Invalid start or end time.");
+      return;
+    }
     setPending(true);
-    const startIso = new Date(startsLocal).toISOString();
-    const endIso = new Date(endsLocal).toISOString();
+    const startIso = new Date(startT).toISOString();
+    const endIso = new Date(endT).toISOString();
 
     try {
       if (editingId) {
@@ -353,27 +361,31 @@ export default function CrmCalendar({ configured }: { configured: boolean }) {
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-text-secondary">
+                  <label
+                    className="mb-1 block text-xs font-medium text-text-secondary"
+                    htmlFor="appt-starts"
+                  >
                     Start
                   </label>
-                  <input
-                    type="datetime-local"
+                  <CrmPopoverDateTimeField
+                    id="appt-starts"
                     value={startsLocal}
-                    onChange={(e) => setStartsLocal(e.target.value)}
-                    className={inputClass}
-                    required
+                    onChange={setStartsLocal}
+                    aria-label="Start date and time"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-text-secondary">
+                  <label
+                    className="mb-1 block text-xs font-medium text-text-secondary"
+                    htmlFor="appt-ends"
+                  >
                     End
                   </label>
-                  <input
-                    type="datetime-local"
+                  <CrmPopoverDateTimeField
+                    id="appt-ends"
                     value={endsLocal}
-                    onChange={(e) => setEndsLocal(e.target.value)}
-                    className={inputClass}
-                    required
+                    onChange={setEndsLocal}
+                    aria-label="End date and time"
                   />
                 </div>
               </div>
@@ -414,8 +426,8 @@ export default function CrmCalendar({ configured }: { configured: boolean }) {
     setEditingId(row.id);
     setTitle(row.title);
     setDescription(row.description ?? "");
-    setStartsLocal(formatForDatetimeLocal(new Date(row.starts_at)));
-    setEndsLocal(formatForDatetimeLocal(new Date(row.ends_at)));
+    setStartsLocal(formatDatetimeLocalInput(new Date(row.starts_at)));
+    setEndsLocal(formatDatetimeLocalInput(new Date(row.ends_at)));
     setFormError(null);
     setModalOpen(true);
   }
