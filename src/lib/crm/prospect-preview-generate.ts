@@ -1,8 +1,10 @@
 import OpenAI from "openai";
 import {
   buildProspectPreviewDocument,
+  ensureProspectPreviewRequiredSections,
   sanitizeProspectPreviewBodyHtml,
   sanitizeProspectPreviewFullDocumentHtml,
+  type ProspectPreviewSectionMeta,
 } from "@/lib/crm/prospect-preview-sanitize";
 import {
   prospectPreviewLlmTimeoutMs,
@@ -93,7 +95,8 @@ Output format: {"fullHtml": "<!DOCTYPE html>..."} with properly escaped JSON (no
 
 async function finalizeFromModelText(
   raw: string,
-  providerLabel: string
+  providerLabel: string,
+  meta: ProspectPreviewSectionMeta,
 ): Promise<{ ok: true; html: string } | { ok: false; error: string }> {
   if (!raw.trim()) {
     return { ok: false, error: `${providerLabel} returned an empty response.` };
@@ -122,10 +125,13 @@ async function finalizeFromModelText(
   }
 
   try {
-    const html = isFullDocumentHtml(fullHtml)
-      ? sanitizeProspectPreviewFullDocumentHtml(fullHtml)
+    const completed = isFullDocumentHtml(fullHtml)
+      ? ensureProspectPreviewRequiredSections(fullHtml, meta)
+      : fullHtml;
+    const html = isFullDocumentHtml(completed)
+      ? sanitizeProspectPreviewFullDocumentHtml(completed)
       : buildProspectPreviewDocument(
-          sanitizeProspectPreviewBodyHtml(fullHtml),
+          sanitizeProspectPreviewBodyHtml(completed),
         );
     return { ok: true, html };
   } catch (e) {
@@ -138,6 +144,19 @@ async function finalizeFromModelText(
           : "Preview sanitization failed.",
     };
   }
+}
+
+function inputToSectionMeta(
+  input: ProspectPreviewGenerateInput,
+): ProspectPreviewSectionMeta {
+  return {
+    businessName: input.businessName,
+    businessAddress: input.businessAddress,
+    city: input.city,
+    primaryCategory: input.primaryCategory,
+    listingPhone: input.listingPhone,
+    websiteUrl: input.websiteUrl,
+  };
 }
 
 async function generateWithAnthropic(
@@ -191,7 +210,7 @@ async function generateWithAnthropic(
 
     const block = data.content?.find((c) => c.type === "text");
     const raw = block?.text?.trim() ?? "";
-    return finalizeFromModelText(raw, "Anthropic");
+    return finalizeFromModelText(raw, "Anthropic", inputToSectionMeta(input));
   } catch (e) {
     const msg =
       e instanceof Error ? e.message : "Anthropic request failed unexpectedly.";
@@ -234,7 +253,7 @@ async function generateWithOpenAI(
       ],
     });
     const raw = completion.choices[0]?.message?.content?.trim() ?? "";
-    return finalizeFromModelText(raw, "OpenAI");
+    return finalizeFromModelText(raw, "OpenAI", inputToSectionMeta(input));
   } catch (e) {
     const msg =
       e instanceof Error ? e.message : "OpenAI request failed unexpectedly.";

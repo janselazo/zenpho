@@ -352,6 +352,325 @@ function repairBrokenSectionNavigation(html: string): string {
 }
 
 /**
+ * Optional prospect metadata used to fill synthesized stub sections so anchor
+ * links never dead-end when the model skips required sections.
+ */
+export type ProspectPreviewSectionMeta = {
+  businessName?: string | null;
+  businessAddress?: string | null;
+  city?: string | null;
+  primaryCategory?: string | null;
+  listingPhone?: string | null;
+  websiteUrl?: string | null;
+};
+
+const REQUIRED_NAV_TARGETS = [
+  "services",
+  "about",
+  "stories",
+  "testimonials",
+  "reviews",
+  "gallery",
+  "pricing",
+  "faq",
+  "visit",
+  "contact",
+  "location",
+  "book",
+] as const;
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function collectAnchorHashTargets(html: string): Set<string> {
+  const targets = new Set<string>();
+  const re = /<a\b[^>]*\bhref=["']#([^"']+)["'][^>]*>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null) {
+    const id = m[1].trim().toLowerCase();
+    if (id && id !== "home") targets.add(id);
+  }
+  return targets;
+}
+
+function buildStubSection(
+  id: string,
+  meta: ProspectPreviewSectionMeta,
+): string {
+  const business = escapeHtml((meta.businessName ?? "this business").trim() || "this business");
+  const address = meta.businessAddress?.trim() ? escapeHtml(meta.businessAddress.trim()) : null;
+  const city = meta.city?.trim() ? escapeHtml(meta.city.trim()) : null;
+  const phone = meta.listingPhone?.trim() ? escapeHtml(meta.listingPhone.trim()) : null;
+  const cat = meta.primaryCategory?.trim() ? escapeHtml(meta.primaryCategory.trim()) : null;
+
+  const altBg =
+    "bg-gradient-to-br from-white via-slate-50 to-white dark:from-slate-950 dark:via-slate-900 dark:to-slate-950";
+  const ctaClasses =
+    "inline-flex items-center gap-2 rounded-full px-7 py-3 text-sm font-bold text-white shadow-lg transition-transform hover:scale-105 bg-gradient-to-r from-indigo-700 to-blue-600";
+
+  switch (id) {
+    case "services": {
+      const focus = cat || "premium services tailored to your needs";
+      return `
+<section id="services" class="relative w-full ${altBg} py-24 px-6 md:px-12">
+  <div class="max-w-7xl mx-auto">
+    <div class="max-w-3xl">
+      <span class="inline-block text-xs font-bold tracking-[0.3em] uppercase text-blue-700 dark:text-blue-300">What we offer</span>
+      <h2 class="mt-3 text-4xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white">Services built around ${business}</h2>
+      <p class="mt-5 text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
+        Every offering at ${business} is crafted around ${focus}. Explore our full lineup designed to deliver an experience our clients keep coming back for.
+      </p>
+    </div>
+    <div class="mt-14 grid grid-cols-1 md:grid-cols-3 gap-6">
+      <article class="rounded-3xl bg-white dark:bg-slate-900 p-8 shadow-[0_10px_32px_-4px_rgba(15,23,42,0.08)] border border-slate-100 dark:border-slate-800">
+        <div class="h-12 w-12 rounded-2xl bg-blue-50 dark:bg-blue-950 grid place-items-center text-blue-700 dark:text-blue-300 font-black text-lg">01</div>
+        <h3 class="mt-5 text-xl font-bold text-slate-900 dark:text-white">Signature Experience</h3>
+        <p class="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">A flagship service that captures everything ${business} stands for — quality, attention to detail, and unmistakable craft.</p>
+      </article>
+      <article class="rounded-3xl bg-white dark:bg-slate-900 p-8 shadow-[0_10px_32px_-4px_rgba(15,23,42,0.08)] border border-slate-100 dark:border-slate-800">
+        <div class="h-12 w-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950 grid place-items-center text-indigo-700 dark:text-indigo-300 font-black text-lg">02</div>
+        <h3 class="mt-5 text-xl font-bold text-slate-900 dark:text-white">Tailored Packages</h3>
+        <p class="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">Flexible options designed to match your goals, your timeline, and your budget — without compromise.</p>
+      </article>
+      <article class="rounded-3xl bg-white dark:bg-slate-900 p-8 shadow-[0_10px_32px_-4px_rgba(15,23,42,0.08)] border border-slate-100 dark:border-slate-800">
+        <div class="h-12 w-12 rounded-2xl bg-amber-50 dark:bg-amber-950 grid place-items-center text-amber-700 dark:text-amber-300 font-black text-lg">03</div>
+        <h3 class="mt-5 text-xl font-bold text-slate-900 dark:text-white">Concierge Care</h3>
+        <p class="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">Friendly, attentive service from your first conversation to your final follow-up — the way every client should be treated.</p>
+      </article>
+    </div>
+    <div class="mt-12">
+      <a class="${ctaClasses}" href="#visit">Book your visit <span aria-hidden="true">→</span></a>
+    </div>
+  </div>
+</section>`;
+    }
+    case "about": {
+      const where = city ? `in ${city}` : address ? `at ${address}` : "in our community";
+      return `
+<section id="about" class="relative w-full bg-white dark:bg-slate-950 py-24 px-6 md:px-12">
+  <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+    <div class="lg:col-span-5">
+      <span class="inline-block text-xs font-bold tracking-[0.3em] uppercase text-blue-700 dark:text-blue-300">Our story</span>
+      <h2 class="mt-3 text-4xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white">Built on craft, run with heart</h2>
+    </div>
+    <div class="lg:col-span-7 space-y-5 text-lg leading-relaxed text-slate-600 dark:text-slate-300">
+      <p>${business} began with a simple belief: every client deserves to feel like the most important person in the room. That belief drives every detail of how we operate ${where}.</p>
+      <p>Today, our team is known for a calm, premium experience that blends professionalism with genuine warmth. We invest in our people, our space, and the small touches that turn first-time visitors into long-term regulars.</p>
+      <div class="grid grid-cols-3 gap-6 pt-4">
+        <div>
+          <div class="text-3xl font-black text-slate-900 dark:text-white">5★</div>
+          <div class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 mt-1">Client rating</div>
+        </div>
+        <div>
+          <div class="text-3xl font-black text-slate-900 dark:text-white">100%</div>
+          <div class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 mt-1">Locally owned</div>
+        </div>
+        <div>
+          <div class="text-3xl font-black text-slate-900 dark:text-white">7d</div>
+          <div class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 mt-1">Easy booking</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>`;
+    }
+    case "stories":
+    case "testimonials":
+    case "reviews": {
+      return `
+<section id="${id}" class="relative w-full ${altBg} py-24 px-6 md:px-12">
+  <div class="max-w-7xl mx-auto">
+    <div class="max-w-3xl">
+      <span class="inline-block text-xs font-bold tracking-[0.3em] uppercase text-blue-700 dark:text-blue-300">From our community</span>
+      <h2 class="mt-3 text-4xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white">Real stories from real clients</h2>
+    </div>
+    <div class="mt-14 grid grid-cols-1 md:grid-cols-2 gap-6">
+      <figure class="rounded-3xl bg-white dark:bg-slate-900 p-8 shadow-[0_10px_32px_-4px_rgba(15,23,42,0.08)] border border-slate-100 dark:border-slate-800">
+        <div class="text-amber-500 text-lg tracking-wider">★★★★★</div>
+        <blockquote class="mt-4 text-lg leading-relaxed text-slate-700 dark:text-slate-200">“The level of care at ${business} is unmatched. From the moment I walked in I knew I'd be coming back. Worth every second.”</blockquote>
+        <figcaption class="mt-6 text-sm font-semibold text-slate-900 dark:text-white">A long-time client</figcaption>
+      </figure>
+      <figure class="rounded-3xl bg-white dark:bg-slate-900 p-8 shadow-[0_10px_32px_-4px_rgba(15,23,42,0.08)] border border-slate-100 dark:border-slate-800">
+        <div class="text-amber-500 text-lg tracking-wider">★★★★★</div>
+        <blockquote class="mt-4 text-lg leading-relaxed text-slate-700 dark:text-slate-200">“Beautiful space, talented team, and a genuinely premium experience from start to finish. Highly recommended.”</blockquote>
+        <figcaption class="mt-6 text-sm font-semibold text-slate-900 dark:text-white">Verified visitor</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>`;
+    }
+    case "gallery": {
+      return `
+<section id="gallery" class="relative w-full bg-white dark:bg-slate-950 py-24 px-6 md:px-12">
+  <div class="max-w-7xl mx-auto">
+    <span class="inline-block text-xs font-bold tracking-[0.3em] uppercase text-blue-700 dark:text-blue-300">Gallery</span>
+    <h2 class="mt-3 text-4xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white">A look inside</h2>
+    <div class="mt-10 grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="aspect-[3/4] rounded-2xl bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-800 dark:to-slate-900"></div>
+      <div class="aspect-[3/4] rounded-2xl bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-950"></div>
+      <div class="aspect-[3/4] rounded-2xl bg-gradient-to-br from-amber-100 to-amber-200 dark:from-amber-900 dark:to-amber-950"></div>
+      <div class="aspect-[3/4] rounded-2xl bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-800 dark:to-slate-900"></div>
+    </div>
+  </div>
+</section>`;
+    }
+    case "pricing": {
+      return `
+<section id="pricing" class="relative w-full ${altBg} py-24 px-6 md:px-12">
+  <div class="max-w-7xl mx-auto">
+    <span class="inline-block text-xs font-bold tracking-[0.3em] uppercase text-blue-700 dark:text-blue-300">Plans</span>
+    <h2 class="mt-3 text-4xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white">Simple, premium pricing</h2>
+    <p class="mt-5 max-w-2xl text-lg text-slate-600 dark:text-slate-300">Choose the option that fits — every plan includes the same uncompromising quality.</p>
+    <div class="mt-12 text-center">
+      <a class="${ctaClasses}" href="#visit">Talk to our team <span aria-hidden="true">→</span></a>
+    </div>
+  </div>
+</section>`;
+    }
+    case "faq": {
+      return `
+<section id="faq" class="relative w-full bg-white dark:bg-slate-950 py-24 px-6 md:px-12">
+  <div class="max-w-4xl mx-auto">
+    <span class="inline-block text-xs font-bold tracking-[0.3em] uppercase text-blue-700 dark:text-blue-300">Questions</span>
+    <h2 class="mt-3 text-4xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white">Frequently asked</h2>
+    <div class="mt-10 space-y-6">
+      <div class="rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white">How do I book?</h3>
+        <p class="mt-2 text-slate-600 dark:text-slate-300">Use the “Book Appointment” button at the top of the page or call us directly${phone ? ` at ${phone}` : ""}.</p>
+      </div>
+      <div class="rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white">Where are you located?</h3>
+        <p class="mt-2 text-slate-600 dark:text-slate-300">${address ? `You can find us at ${address}.` : `See the Visit section for location details.`}</p>
+      </div>
+      <div class="rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white">Do you accept new clients?</h3>
+        <p class="mt-2 text-slate-600 dark:text-slate-300">Absolutely. ${business} is always welcoming new clients — we'd love to meet you.</p>
+      </div>
+    </div>
+  </div>
+</section>`;
+    }
+    case "visit":
+    case "contact":
+    case "location":
+    case "book": {
+      const cardClass =
+        "rounded-3xl bg-white dark:bg-slate-900 p-8 shadow-[0_10px_32px_-4px_rgba(15,23,42,0.08)] border border-slate-100 dark:border-slate-800";
+      return `
+<section id="${id}" class="relative w-full ${altBg} py-24 px-6 md:px-12">
+  <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+    <div class="lg:col-span-6">
+      <span class="inline-block text-xs font-bold tracking-[0.3em] uppercase text-blue-700 dark:text-blue-300">Visit ${business}</span>
+      <h2 class="mt-3 text-4xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white">Come see us in person</h2>
+      <p class="mt-5 text-lg text-slate-600 dark:text-slate-300 leading-relaxed">We can't wait to welcome you. Stop by, give us a call, or book your appointment online — whichever works best for you.</p>
+      <div class="mt-8 flex flex-wrap gap-3">
+        <a class="${ctaClasses}" href="#visit">Book Appointment <span aria-hidden="true">→</span></a>
+        ${phone ? `<a class="inline-flex items-center gap-2 rounded-full px-7 py-3 text-sm font-bold text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" href="tel:${phone}">Call ${phone}</a>` : ""}
+      </div>
+    </div>
+    <div class="lg:col-span-6 grid grid-cols-1 gap-4">
+      ${address ? `<div class="${cardClass}"><div class="text-xs font-bold tracking-[0.2em] uppercase text-blue-700 dark:text-blue-300">Address</div><div class="mt-2 text-lg font-semibold text-slate-900 dark:text-white leading-snug">${address}</div></div>` : ""}
+      ${phone ? `<div class="${cardClass}"><div class="text-xs font-bold tracking-[0.2em] uppercase text-blue-700 dark:text-blue-300">Phone</div><div class="mt-2 text-lg font-semibold text-slate-900 dark:text-white">${phone}</div></div>` : ""}
+      <div class="${cardClass}">
+        <div class="text-xs font-bold tracking-[0.2em] uppercase text-blue-700 dark:text-blue-300">Hours</div>
+        <div class="mt-2 text-base text-slate-700 dark:text-slate-200">Open by appointment — see you soon.</div>
+      </div>
+    </div>
+  </div>
+</section>`;
+    }
+    default:
+      return "";
+  }
+}
+
+const SECTION_INSERT_ORDER = [
+  "services",
+  "about",
+  "stories",
+  "testimonials",
+  "reviews",
+  "gallery",
+  "pricing",
+  "faq",
+  "visit",
+  "contact",
+  "location",
+  "book",
+] as const;
+
+function injectStubsIntoHtml(html: string, stubs: string): string {
+  if (!stubs) return html;
+
+  const lower = html.toLowerCase();
+
+  // Prefer inserting before </main>, just after the hero/main flow.
+  const mainClose = lower.lastIndexOf("</main>");
+  if (mainClose !== -1) {
+    return html.slice(0, mainClose) + stubs + html.slice(mainClose);
+  }
+
+  // Otherwise insert just before <footer>.
+  const footerOpen = lower.indexOf("<footer");
+  if (footerOpen !== -1) {
+    return html.slice(0, footerOpen) + stubs + html.slice(footerOpen);
+  }
+
+  // Otherwise insert just before </body>.
+  const bodyClose = lower.lastIndexOf("</body>");
+  if (bodyClose !== -1) {
+    return html.slice(0, bodyClose) + stubs + html.slice(bodyClose);
+  }
+
+  return html + stubs;
+}
+
+/**
+ * Safety net for non-deterministic AI HTML output: when the document references
+ * `#services`, `#about`, `#stories`, `#visit`, etc. via nav anchors but the
+ * matching `<section id>` is missing, synthesize branded stub sections inline
+ * using the prospect's real metadata. This guarantees navigation links never
+ * dead-end and the preview reads as a multi-section site even when the model
+ * cuts corners.
+ */
+export function ensureProspectPreviewRequiredSections(
+  html: string,
+  meta: ProspectPreviewSectionMeta,
+): string {
+  const input = typeof html === "string" ? html : "";
+  if (!input.trim()) return input;
+
+  // Only intervene when there is at least one `<section id>` already (i.e. the
+  // model gave us real content). For empty docs, do nothing.
+  const sectionIds = collectSectionIds(input);
+  if (sectionIds.size === 0) return input;
+
+  const anchorTargets = collectAnchorHashTargets(input);
+
+  const missing = new Set<string>();
+  for (const id of REQUIRED_NAV_TARGETS) {
+    if (anchorTargets.has(id) && !sectionIds.has(id)) missing.add(id);
+  }
+
+  if (missing.size === 0) return input;
+
+  const stubs = SECTION_INSERT_ORDER
+    .filter((id) => missing.has(id))
+    .map((id) => buildStubSection(id, meta))
+    .filter(Boolean)
+    .join("\n");
+
+  if (!stubs) return input;
+  return injectStubsIntoHtml(input, stubs);
+}
+
+/**
  * Sanitize a full HTML document from the model (allows &lt;style&gt;, vetted &lt;link&gt;, and
  * vetted external &lt;script src&gt; for Tailwind CDN — no inline script).
  */

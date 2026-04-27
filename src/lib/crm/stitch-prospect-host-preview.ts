@@ -3,7 +3,11 @@ import type { StitchProspectDesignPayload } from "@/lib/crm/stitch-prospect-desi
 import { insertProspectPreviewWithSlug } from "@/lib/crm/prospect-preview-insert";
 import { captureProspectPreviewScreenshot } from "@/lib/crm/prospect-preview-screenshot";
 import { prospectPreviewPageUrl } from "@/lib/crm/prospect-preview-public-url";
-import { sanitizeProspectPreviewFullDocumentHtml } from "@/lib/crm/prospect-preview-sanitize";
+import {
+  ensureProspectPreviewRequiredSections,
+  sanitizeProspectPreviewFullDocumentHtml,
+  type ProspectPreviewSectionMeta,
+} from "@/lib/crm/prospect-preview-sanitize";
 import { primaryPlaceTypeLabel } from "@/lib/crm/places-search-ui";
 
 const MAX_HTML_BYTES = 2_500_000;
@@ -40,6 +44,8 @@ function stitchPayloadToPreviewMeta(payload: StitchProspectDesignPayload): {
   businessAddress: string | null;
   placeGoogleId: string | null;
   primaryCategory: string | null;
+  listingPhone: string | null;
+  websiteUrl: string | null;
 } {
   if (payload.kind === "place") {
     const p = payload.place;
@@ -49,6 +55,11 @@ function stitchPayloadToPreviewMeta(payload: StitchProspectDesignPayload): {
       businessAddress: p.formattedAddress?.trim() || null,
       placeGoogleId: p.id,
       primaryCategory: cat || null,
+      listingPhone:
+        p.nationalPhoneNumber?.trim() ||
+        p.internationalPhoneNumber?.trim() ||
+        null,
+      websiteUrl: p.websiteUri?.trim() || null,
     };
   }
   let host = "";
@@ -65,7 +76,20 @@ function stitchPayloadToPreviewMeta(payload: StitchProspectDesignPayload): {
     businessAddress: null,
     placeGoogleId: null,
     primaryCategory: null,
+    listingPhone: null,
+    websiteUrl: payload.url || null,
   };
+}
+
+function deriveCityFromAddress(address: string | null): string | null {
+  if (!address) return null;
+  const parts = address
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (parts.length === 0) return null;
+  if (parts.length === 1) return parts[0];
+  return parts[parts.length - 2] || parts[0];
 }
 
 export type StitchHostedPreview = {
@@ -90,15 +114,25 @@ export async function persistStitchHtmlAsProspectPreview(params: {
     return null;
   }
 
+  const meta = stitchPayloadToPreviewMeta(params.payload);
+
+  const sectionMeta: ProspectPreviewSectionMeta = {
+    businessName: meta.businessName,
+    businessAddress: meta.businessAddress,
+    city: deriveCityFromAddress(meta.businessAddress),
+    primaryCategory: meta.primaryCategory,
+    listingPhone: meta.listingPhone,
+    websiteUrl: meta.websiteUrl,
+  };
+
   let safe: string;
   try {
-    safe = sanitizeProspectPreviewFullDocumentHtml(raw);
+    const completed = ensureProspectPreviewRequiredSections(raw, sectionMeta);
+    safe = sanitizeProspectPreviewFullDocumentHtml(completed);
   } catch (e) {
     console.warn("[stitch host preview] sanitize failed", e);
     return null;
   }
-
-  const meta = stitchPayloadToPreviewMeta(params.payload);
 
   const inserted = await insertProspectPreviewWithSlug({
     supabase: params.supabase,
