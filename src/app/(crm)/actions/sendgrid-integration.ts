@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { sendSendGridMail } from "@/lib/sendgrid/mail-send";
+import { checkReplyToMx, type ReplyToMxCheck } from "@/lib/sendgrid/inbound-mx-check";
 import { getPublicOriginFromHeaders } from "@/lib/site-public-url";
 import {
   encryptIntegrationSecret,
@@ -79,9 +80,12 @@ export type LoadSendGridIntegrationPageResult =
       inboundWebhookUrl: string;
       inboundSecretConfigured: boolean;
       inboundActivity: InboundActivityRow[];
+      replyToMx: ReplyToMxCheck | null;
     }
   | { status: "no_user" }
   | { status: "forbidden" };
+
+export type { ReplyToMxCheck };
 
 const INBOUND_ACTIVITY_LIMIT = 20;
 
@@ -118,6 +122,8 @@ export async function loadSendGridIntegrationPage(): Promise<LoadSendGridIntegra
   const inboundSecretConfigured =
     !!process.env["SENDGRID_INBOUND_WEBHOOK_SECRET"]?.trim();
 
+  const replyToMx = initial.replyTo ? await checkReplyToMx(initial.replyTo) : null;
+
   const { data: logRows } = await gate.supabase
     .from("sendgrid_inbound_log")
     .select(
@@ -145,6 +151,7 @@ export async function loadSendGridIntegrationPage(): Promise<LoadSendGridIntegra
     inboundWebhookUrl,
     inboundSecretConfigured,
     inboundActivity,
+    replyToMx,
   };
 }
 

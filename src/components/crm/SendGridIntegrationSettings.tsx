@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition, type FormEvent } from "react";
 import {
   AlertTriangle,
@@ -21,6 +22,7 @@ import {
   saveSendGridIntegration,
   testSendGridConnection,
   type InboundActivityRow,
+  type ReplyToMxCheck,
   type SendGridIntegrationFormState,
   type SendGridInboundLogStatus,
 } from "@/app/(crm)/actions/sendgrid-integration";
@@ -49,6 +51,11 @@ type Props = {
   inboundSecretConfigured: boolean;
   /** Last 20 entries from sendgrid_inbound_log, newest first. */
   inboundActivity: InboundActivityRow[];
+  /**
+   * Live MX lookup of the saved Reply-To domain. `null` when Reply-To is empty
+   * (the missing-Reply-To amber banner covers that case).
+   */
+  replyToMx: ReplyToMxCheck | null;
 };
 
 type DiagnosticState =
@@ -67,7 +74,9 @@ export default function SendGridIntegrationSettings({
   inboundWebhookUrl,
   inboundSecretConfigured,
   inboundActivity,
+  replyToMx,
 }: Props) {
+  const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [showKey, setShowKey] = useState(false);
   const [savePending, startSave] = useTransition();
@@ -81,22 +90,32 @@ export default function SendGridIntegrationSettings({
   const fromEmailDomain =
     initial.fromEmail.trim().split("@")[1]?.toLowerCase() ?? "";
   const replyToLooksMissing = !replyToTrim;
-  const showReplyToWarning =
+  const showMissingReplyToWarning =
     replyToLooksMissing &&
     fromEmailDomain.length > 0 &&
     !/^(gmail\.com|outlook\.com|yahoo\.com|icloud\.com|hotmail\.com|protonmail\.com|proton\.me)$/i.test(
       fromEmailDomain
     );
+  const showMxMismatchBanner =
+    replyToMx?.resolved === true && !replyToMx.pointsToSendGrid;
+  const showMxUnresolvedBanner = replyToMx !== null && !replyToMx.resolved;
 
   function handleFormSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setMessage(null);
     setError(null);
-    const formData = new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    const formData = new FormData(form);
     startSave(async () => {
       const res = await saveSendGridIntegration(formData);
-      if ("error" in res && res.error) setError(res.error);
-      else setMessage("Settings saved.");
+      if ("error" in res && res.error) {
+        setError(res.error);
+      } else {
+        setMessage("Settings saved. API key encrypted and stored.");
+        const apiKeyInput = form.elements.namedItem("api_key");
+        if (apiKeyInput instanceof HTMLInputElement) apiKeyInput.value = "";
+        router.refresh();
+      }
     });
   }
 
@@ -225,9 +244,22 @@ export default function SendGridIntegrationSettings({
 
           <div className="mt-8 space-y-5">
             <div>
-              <label htmlFor="api_key" className={labelClass}>
-                API key
-              </label>
+              <div className="mb-1.5 flex items-center justify-between gap-2">
+                <label htmlFor="api_key" className={`${labelClass} mb-0`}>
+                  API key
+                </label>
+                {initial.hasApiKey ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
+                    <CheckCircle2 className="h-3 w-3" aria-hidden />
+                    Saved (encrypted)
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                    <AlertTriangle className="h-3 w-3" aria-hidden />
+                    Not saved yet
+                  </span>
+                )}
+              </div>
               <div className="relative">
                 <input
                   id="api_key"
@@ -235,7 +267,11 @@ export default function SendGridIntegrationSettings({
                   type={showKey ? "text" : "password"}
                   autoComplete="new-password"
                   className={`${inputClass} pr-12`}
-                  placeholder="SG.xxxxxxxxxxxx"
+                  placeholder={
+                    initial.hasApiKey
+                      ? "Leave blank to keep saved key, or paste a new one to replace it"
+                      : "SG.xxxxxxxxxxxx"
+                  }
                 />
                 <button
                   type="button"
@@ -246,9 +282,11 @@ export default function SendGridIntegrationSettings({
                   {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              {initial.hasApiKey ? (
-                <p className={helperClass}>Leave blank to keep your existing API key.</p>
-              ) : null}
+              <p className={helperClass}>
+                {initial.hasApiKey
+                  ? "Your API key is encrypted at rest with INTEGRATION_SECRETS_KEY. The plaintext is never sent back to the browser, so this field always renders empty."
+                  : "Paste your SendGrid API key. It will be encrypted at rest with INTEGRATION_SECRETS_KEY before being stored."}
+              </p>
             </div>
 
             <div>
@@ -417,7 +455,73 @@ export default function SendGridIntegrationSettings({
                 </span>
               </div>
             ) : null}
-            {showReplyToWarning ? (
+            {showMxMismatchBanner && replyToMx ? (
+              <div
+                className="flex gap-3 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200"
+                role="alert"
+              >
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                <span>
+                  Reply-to{" "}
+                  <code className="rounded bg-red-100 px-1 py-0.5 text-xs dark:bg-red-900/60">
+                    {replyToTrim}
+                  </code>{" "}
+                  will bounce.{" "}
+                  {replyToMx.sendgridIsBackupOnly ? (
+                    <>
+                      MX for{" "}
+                      <code className="rounded bg-red-100 px-1 py-0.5 text-xs dark:bg-red-900/60">
+                        {replyToMx.replyToDomain}
+                      </code>{" "}
+                      lists SendGrid, but the most-preferred host is{" "}
+                      <code className="rounded bg-red-100 px-1 py-0.5 text-xs dark:bg-red-900/60">
+                        {replyToMx.topMx ?? "(none)"}
+                      </code>
+                      . SMTP senders try the lowest-priority record first and do not fall back on
+                      a 5xx reject, so SendGrid never sees the message.
+                    </>
+                  ) : (
+                    <>
+                      MX for{" "}
+                      <code className="rounded bg-red-100 px-1 py-0.5 text-xs dark:bg-red-900/60">
+                        {replyToMx.replyToDomain}
+                      </code>{" "}
+                      resolves to{" "}
+                      <code className="rounded bg-red-100 px-1 py-0.5 text-xs dark:bg-red-900/60">
+                        {replyToMx.topMx ?? "(none)"}
+                      </code>
+                      , not an{" "}
+                      <code className="rounded bg-red-100 px-1 py-0.5 text-xs dark:bg-red-900/60">
+                        mx.sendgrid.net
+                      </code>{" "}
+                      host.
+                    </>
+                  )}{" "}
+                  Use a dedicated subdomain whose only MX is SendGrid (e.g.{" "}
+                  <code className="rounded bg-red-100 px-1 py-0.5 text-xs dark:bg-red-900/60">
+                    replies@inbound.{rootDomainOf(replyToMx.replyToDomain)}
+                  </code>
+                  ) and update Reply-to to that address.
+                </span>
+              </div>
+            ) : null}
+            {showMxUnresolvedBanner && replyToMx ? (
+              <div
+                className="flex gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
+                role="status"
+              >
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                <span>
+                  Could not resolve MX for{" "}
+                  <code className="rounded bg-amber-100 px-1 py-0.5 text-xs dark:bg-amber-900/60">
+                    {replyToMx.replyToDomain}
+                  </code>
+                  {replyToMx.error ? <> ({replyToMx.error})</> : null}. Inbound replies will not
+                  reach the CRM until this domain has a SendGrid Inbound Parse MX.
+                </span>
+              </div>
+            ) : null}
+            {showMissingReplyToWarning ? (
               <div
                 className="flex gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
                 role="status"
@@ -615,6 +719,17 @@ function StatusPill({ status }: { status: SendGridInboundLogStatus }) {
       {label}
     </span>
   );
+}
+
+/**
+ * Best-effort registrable domain for the suggested `inbound.<root>` example.
+ * Strips the leftmost label only when there are 3+ labels so `zenphocorp.com`
+ * stays `zenphocorp.com` but `mail.zenphocorp.com` collapses to `zenphocorp.com`.
+ */
+function rootDomainOf(domain: string): string {
+  const parts = domain.split(".");
+  if (parts.length <= 2) return domain;
+  return parts.slice(-2).join(".");
 }
 
 function formatRelative(iso: string): string {
