@@ -440,6 +440,7 @@ function IntelContactHintsPanel({
   onPickEmail,
   onPickPhone,
   embedded = false,
+  placeWebsiteOverride = null,
 }: {
   reportKind: "url" | "place";
   place: PlacesSearchPlace | null;
@@ -451,9 +452,17 @@ function IntelContactHintsPanel({
   onPickPhone: (phone: string) => void;
   /** Nested under Business snapshot (no outer card shell). */
   embedded?: boolean;
+  /**
+   * Overrides `place.websiteUri` for HTML-parse purposes only. Used when Google Places omits
+   * the website but we discovered it via Instagram/Facebook bio scrape — we still want to scan
+   * the public site so the footer email + socials get detected.
+   */
+  placeWebsiteOverride?: string | null;
 }) {
   const listingWebsite =
-    reportKind === "place" ? place?.websiteUri?.trim() || null : null;
+    reportKind === "place"
+      ? placeWebsiteOverride?.trim() || place?.websiteUri?.trim() || null
+      : null;
   const publicSiteTarget =
     reportKind === "url" ? fetchedUrl : listingWebsite;
   const hasPublicFetchTarget = Boolean(publicSiteTarget?.trim());
@@ -1044,6 +1053,22 @@ function ProspectsIntelligenceViewInner({
       instagram: socialEnrichResult.instagramUrl,
     };
   }, [socialEnrichResult]);
+
+  /**
+   * Effective website URL for a Place report. Outscraper / Places sometimes omits `websiteUri`
+   * for SMBs that do have a public site (footer email + social links available). When that
+   * happens, fall back to the website discovered by the social-enrich pipeline (Instagram /
+   * Facebook bio "external link"). This makes the deep website crawl actually run, so the
+   * mailto:/footer email and social channels are detected even when Google didn't expose the URL.
+   */
+  const effectivePlaceWebsiteUri = useMemo<string | null>(() => {
+    if (activeReport?.kind !== "place") return null;
+    const fromPlace = activeReport.place.websiteUri?.trim();
+    if (fromPlace) return fromPlace;
+    const fromSocial = socialEnrichResult?.website?.trim();
+    if (fromSocial) return fromSocial;
+    return null;
+  }, [activeReport, socialEnrichResult?.website]);
 
   const snapshotSocialUrls = useMemo(() => {
     const deep = websiteDeepStatus.contacts?.socialUrls;
@@ -1746,9 +1771,7 @@ function ProspectsIntelligenceViewInner({
                         : null
                     }
                     listingWebsiteUri={
-                      activeReport.kind === "place"
-                        ? activeReport.place.websiteUri?.trim() || null
-                        : null
+                      activeReport.kind === "place" ? effectivePlaceWebsiteUri : null
                     }
                     businessLabel={
                       activeReport.kind === "url"
@@ -1783,6 +1806,7 @@ function ProspectsIntelligenceViewInner({
                     embedded
                     reportKind={activeReport.kind}
                     place={activeReport.kind === "place" ? activeReport.place : null}
+                    placeWebsiteOverride={effectivePlaceWebsiteUri}
                     fetchedUrl={activeReport.kind === "url" ? activeReport.urlMeta.url : null}
                     homepageHints={activeReport.kind === "url" ? urlHomepageHints : null}
                     websiteDeep={websiteDeepStatus}
@@ -2003,7 +2027,7 @@ function ProspectsIntelligenceViewInner({
                   websiteUrl={
                     activeReport.kind === "url"
                       ? activeReport.urlMeta.url
-                      : activeReport.place.websiteUri?.trim() || null
+                      : effectivePlaceWebsiteUri
                   }
                   listingPhone={
                     activeReport.kind === "place"
