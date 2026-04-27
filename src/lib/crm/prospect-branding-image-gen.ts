@@ -1,7 +1,13 @@
 import OpenAI from "openai";
 import type { BrandingSpec } from "@/lib/crm/prospect-branding-spec-llm";
 
-const DEFAULT_MODEL = "gpt-image-2-latest";
+/**
+ * OpenAI does NOT expose a `-latest` alias for image models — `gpt-image-2-latest`
+ * returns 400 `model_not_found`, which silently triggers the gpt-image-1 fallback path
+ * and we never actually use the newer model. The canonical id is `gpt-image-2`.
+ * Verified live via /v1/images/generations on 2026-04-27.
+ */
+const DEFAULT_MODEL = "gpt-image-2";
 const DEFAULT_TIMEOUT_MS = 180_000;
 
 type ImageSize = "1024x1024" | "1536x1024" | "1024x1536";
