@@ -41,7 +41,6 @@ import {
   sendProspectPreviewSmsAction,
 } from "@/app/(crm)/actions/prospect-preview";
 import { generateProspectAutomationPdfAction } from "@/app/(crm)/actions/prospect-automation-report";
-import { generateProspectBrandingPdfAction } from "@/app/(crm)/actions/prospect-branding-pdf";
 import { mergeProspectOutreachTemplate } from "@/lib/crm/prospect-outreach-template";
 import { messengerHandoffUrlFromFacebook } from "@/lib/crm/social-handoff-urls";
 import {
@@ -73,6 +72,16 @@ type OutreachAttachment = {
   blob: Blob;
   source: "suggested" | "custom";
 };
+
+type BrandingPdfResult =
+  | {
+      ok: true;
+      pdfUrl: string;
+      pdfPath: string;
+      filename: string;
+      imageWarnings?: string[];
+    }
+  | { ok: false; error: string };
 
 const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
 const ALLOWED_ATTACHMENT_TYPES = new Set([
@@ -1404,12 +1413,34 @@ export default function ProspectPreviewOutreachBlock({
     setBrandingBusy(true);
     setBrandingMsg(null);
     try {
-      const res = await generateProspectBrandingPdfAction({
-        businessName: resolvedBusinessName,
-        place: stitchContext?.kind === "place" ? stitchContext.place : null,
-        report: marketIntelReport ?? null,
-        leadId: linkedLeadId?.trim() || null,
+      const http = await fetch("/api/prospecting/branding-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          businessName: resolvedBusinessName,
+          place: stitchContext?.kind === "place" ? stitchContext.place : null,
+          report: marketIntelReport ?? null,
+          leadId: linkedLeadId?.trim() || null,
+        }),
       });
+      const text = await http.text();
+      let res: BrandingPdfResult | null = null;
+      if (text) {
+        try {
+          res = JSON.parse(text) as BrandingPdfResult;
+        } catch {
+          res = null;
+        }
+      }
+      if (!res) {
+        setBrandingMsg(
+          http.ok
+            ? "Brand Kit PDF finished but the server returned an invalid response."
+            : `Brand Kit PDF failed (${http.status}): ${text.slice(0, 240) || http.statusText}`,
+        );
+        return;
+      }
       if (!res.ok) {
         setBrandingMsg(res.error);
         return;
