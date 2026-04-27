@@ -9,20 +9,27 @@ export type AgencySendGridCreds = {
 };
 
 /**
- * SendGrid for outbound mail. When `SENDGRID_API_KEY` and `SENDGRID_FROM_EMAIL` are set (e.g. on Vercel),
- * those are used. Otherwise loads encrypted row via service role (Settings → Integrations).
+ * SendGrid for outbound mail.
+ *
+ * Resolution order (per field):
+ * 1. Vercel env (`SENDGRID_API_KEY`, `SENDGRID_FROM_EMAIL`, `SENDGRID_FROM_NAME`, `SENDGRID_REPLY_TO`)
+ * 2. Encrypted row in `agency_sendgrid_integration` (saved via Settings → Integrations)
+ *
+ * Reply-To and From-Name are typically only set in Settings, so we always read the DB row to fill
+ * in any field the env vars didn't provide. Without this merge, saving "Reply-to" in the UI has
+ * no effect when env vars are set on Vercel — outbound mail gets no Reply-To header and replies
+ * default to the From address (which lives on a non-inbound domain and bounces).
  */
 export async function getAgencySendGridCredentials(): Promise<AgencySendGridCreds | null> {
-  const envKey = process.env.SENDGRID_API_KEY?.trim();
-  const envFromEmail = process.env.SENDGRID_FROM_EMAIL?.trim();
-  if (envKey && envFromEmail) {
-    return {
-      apiKey: envKey,
-      fromEmail: envFromEmail,
-      fromName: process.env.SENDGRID_FROM_NAME?.trim() || null,
-      replyTo: process.env.SENDGRID_REPLY_TO?.trim() || null,
-    };
-  }
+  const envKey = process.env.SENDGRID_API_KEY?.trim() || null;
+  const envFromEmail = process.env.SENDGRID_FROM_EMAIL?.trim() || null;
+  const envFromName = process.env.SENDGRID_FROM_NAME?.trim() || null;
+  const envReplyTo = process.env.SENDGRID_REPLY_TO?.trim() || null;
+
+  let dbApiKey: string | null = null;
+  let dbFromEmail: string | null = null;
+  let dbFromName: string | null = null;
+  let dbReplyTo: string | null = null;
 
   try {
     const admin = createAdminClient();
@@ -32,17 +39,32 @@ export async function getAgencySendGridCredentials(): Promise<AgencySendGridCred
       .eq("id", 1)
       .maybeSingle();
 
-    if (error || !data?.api_key_encrypted || !data.from_email?.trim()) {
-      return null;
+    if (!error && data) {
+      if (data.api_key_encrypted) {
+        try {
+          dbApiKey = decryptIntegrationSecret(data.api_key_encrypted);
+        } catch {
+          dbApiKey = null;
+        }
+      }
+      dbFromEmail = data.from_email?.trim() || null;
+      dbFromName = data.from_name?.trim() || null;
+      dbReplyTo = data.reply_to?.trim() || null;
     }
-    const apiKey = decryptIntegrationSecret(data.api_key_encrypted);
-    return {
-      apiKey,
-      fromEmail: data.from_email.trim(),
-      fromName: data.from_name?.trim() || null,
-      replyTo: data.reply_to?.trim() || null,
-    };
   } catch {
+    // Ignore DB errors and rely on whatever env provides.
+  }
+
+  const apiKey = envKey ?? dbApiKey;
+  const fromEmail = envFromEmail ?? dbFromEmail;
+  if (!apiKey || !fromEmail) {
     return null;
   }
+
+  return {
+    apiKey,
+    fromEmail,
+    fromName: envFromName ?? dbFromName,
+    replyTo: envReplyTo ?? dbReplyTo,
+  };
 }

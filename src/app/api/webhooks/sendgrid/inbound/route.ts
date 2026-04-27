@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { simpleParser } from "mailparser";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   findOrCreateEmailConversation,
@@ -62,10 +63,39 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const fromRaw = String(formData.get("from") ?? "").trim();
-  const subject = String(formData.get("subject") ?? "").trim();
-  const textBody = String(formData.get("text") ?? "").trim();
-  const rawHeaders = String(formData.get("headers") ?? "");
+  let fromRaw = String(formData.get("from") ?? "").trim();
+  let subject = String(formData.get("subject") ?? "").trim();
+  let textBody = String(formData.get("text") ?? "").trim();
+  let rawHeaders = String(formData.get("headers") ?? "");
+
+  // SendGrid Inbound Parse "POST the raw, full MIME message" mode delivers everything in a
+  // single `email` field and may omit `text`, `html`, and `headers`. Parse the raw MIME so the
+  // webhook works regardless of which mode is configured in SendGrid.
+  const rawEmail = String(formData.get("email") ?? "");
+  if (rawEmail && (!textBody || !rawHeaders || !fromRaw || !subject)) {
+    try {
+      const parsedMime = await simpleParser(rawEmail);
+      if (!textBody) {
+        const t = (parsedMime.text ?? "").trim();
+        if (t) {
+          textBody = t;
+        } else if (parsedMime.html) {
+          textBody = stripHtmlToText(parsedMime.html).trim();
+        }
+      }
+      if (!rawHeaders && parsedMime.headerLines?.length) {
+        rawHeaders = parsedMime.headerLines.map((h) => h.line).join("\n");
+      }
+      if (!subject && parsedMime.subject) {
+        subject = parsedMime.subject.trim();
+      }
+      if (!fromRaw && parsedMime.from?.text) {
+        fromRaw = parsedMime.from.text.trim();
+      }
+    } catch {
+      // Fall through; we'll log invalid_payload below if there's still nothing usable.
+    }
+  }
   const headersSnippet = rawHeaders.slice(0, 1000) || null;
 
   const fromEmail = extractEmail(fromRaw);
@@ -208,4 +238,22 @@ function extractName(raw: string): string {
   const match = raw.match(/^([^<]+)</);
   if (match) return match[1].trim().replace(/^"|"$/g, "");
   return "";
+}
+
+/** Last-resort HTML → text fallback when an inbound MIME has no text/plain part. */
+function stripHtmlToText(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<br\s*\/?>(\s*)/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\r\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n");
 }
