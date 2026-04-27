@@ -328,8 +328,18 @@ function isStandardMonthlyGoalId(id: string): boolean {
   return standardMonthlyGoals.some((goal) => goal.id === id);
 }
 
-export default function ColdOutreachView() {
-  const [activeTab, setActiveTab] = useState<ActiveTab>("playbook");
+function isActiveTabId(id: string | undefined): id is ActiveTab {
+  return TABS.some((t) => t.id === id);
+}
+
+export default function ColdOutreachView({
+  initialSubTab,
+}: {
+  initialSubTab?: string;
+} = {}) {
+  const [activeTab, setActiveTab] = useState<ActiveTab>(() =>
+    isActiveTabId(initialSubTab) ? initialSubTab : "playbook",
+  );
   const [currentDate, setCurrentDate] = useState(() => new Date());
   /** Month shown in Playbook → Goals; targets and custom goals are keyed by this month. */
   const [goalsMonthDate, setGoalsMonthDate] = useState(() => new Date());

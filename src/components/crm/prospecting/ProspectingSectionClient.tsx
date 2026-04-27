@@ -23,15 +23,18 @@ const NETWORKING_ONLINE_FEATURES = [
 export default function ProspectingSectionClient({
   slug,
   fieldOptions,
+  playbookTab,
 }: {
   slug: ProspectingSectionSlug;
   fieldOptions: MergedCrmFieldOptions;
+  /** From `?tab=` on `/prospecting/playbook` (e.g. `journal`). */
+  playbookTab?: string;
 }) {
   const section = getProspectingSection(slug);
   if (!section) return null;
 
   if (slug === "playbook") {
-    return <ColdOutreachView />;
+    return <ColdOutreachView initialSubTab={playbookTab} />;
   }
 
   if (slug === "prospects") {

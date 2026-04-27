@@ -11,10 +11,14 @@ export const dynamic = "force-dynamic";
 
 export default async function ProspectingSectionPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { slug } = await params;
+  const sp = await searchParams;
+  const playbookTab = sp.tab;
   if (slug === "referrals") {
     redirect("/referrals");
   }
@@ -28,7 +32,11 @@ export default async function ProspectingSectionPage({
 
   return (
     <div className="p-8">
-      <ProspectingSectionClient slug={slug} fieldOptions={fieldOptions} />
+      <ProspectingSectionClient
+        slug={slug}
+        fieldOptions={fieldOptions}
+        playbookTab={playbookTab}
+      />
     </div>
   );
 }

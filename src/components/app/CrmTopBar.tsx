@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import MoneyJournalTopBarPip from "@/components/app/MoneyJournalTopBarPip";
 
 export type CrmTopBarUser = {
   email: string | null;
@@ -129,6 +130,8 @@ export default function CrmTopBar({
           <Moon className="h-4 w-4" />
         </button>
       </div>
+
+      <MoneyJournalTopBarPip />
 
       <Link
         href="/dashboard"

@@ -29,6 +29,8 @@ type PersistedTimer = {
   firstStartMs: number | null;
   targetEndAt: number | null;
   pausedRemainingMs: number | null;
+  /** Set when the user ends the block early (Stop); pauses the countdown and fixes the log window. */
+  userSessionStopAtMs: number | null;
   completeLogRange: { startMs: number; endMs: number } | null;
   completedChime: boolean;
 };
@@ -72,6 +74,7 @@ function loadPersisted(): PersistedTimer | null {
     if (!raw) return null;
     const p = JSON.parse(raw) as PersistedTimer;
     if (p.v !== 1) return null;
+    if (p.userSessionStopAtMs === undefined) p.userSessionStopAtMs = null;
     return p;
   } catch {
     return null;
@@ -88,6 +91,7 @@ function savePartial(p: Partial<PersistedTimer>): void {
       firstStartMs: p.firstStartMs ?? prev?.firstStartMs ?? null,
       targetEndAt: p.targetEndAt ?? prev?.targetEndAt ?? null,
       pausedRemainingMs: p.pausedRemainingMs ?? prev?.pausedRemainingMs ?? null,
+      userSessionStopAtMs: p.userSessionStopAtMs ?? prev?.userSessionStopAtMs ?? null,
       completeLogRange: p.completeLogRange ?? prev?.completeLogRange ?? null,
       completedChime: p.completedChime ?? prev?.completedChime ?? false,
     };
@@ -110,6 +114,12 @@ export type MoneyJournalTimerProps = {
   completedHoursToday: number;
   totalDots?: number;
   onCountdownComplete?: () => void;
+  /** First Start press in a block. */
+  onSessionStart?: (startedAtMs: number) => void;
+  /** Stop button, full hour at 0:00, or when logging—wall-clock end of the session. */
+  onSessionStop?: (stoppedAtMs: number) => void;
+  /** Full reset (rotate) — clear saved session event times in the parent. */
+  onSessionReset?: () => void;
 };
 
 export type MoneyJournalTimerHandle = {
@@ -122,7 +132,14 @@ export type MoneyJournalTimerHandle = {
 
 const MoneyJournalTimer = forwardRef<MoneyJournalTimerHandle, MoneyJournalTimerProps>(
   function MoneyJournalTimer(
-    { completedHoursToday, totalDots = 5, onCountdownComplete },
+    {
+      completedHoursToday,
+      totalDots = 5,
+      onCountdownComplete,
+      onSessionStart,
+      onSessionStop,
+      onSessionReset,
+    },
     ref
   ) {
     const [status, setStatus] = useState<TimerStatus>("idle");
@@ -134,12 +151,25 @@ const MoneyJournalTimer = forwardRef<MoneyJournalTimerHandle, MoneyJournalTimerP
       startMs: number;
       endMs: number;
     } | null>(null);
+    const [userSessionStopAtMs, setUserSessionStopAtMs] = useState<number | null>(null);
+    const userSessionStopAtRef = useRef<number | null>(null);
     const completedChimeRef = useRef(false);
+    const completeStopNotifiedRef = useRef(false);
+
+    useEffect(() => {
+      userSessionStopAtRef.current = userSessionStopAtMs;
+    }, [userSessionStopAtMs]);
     const onCompleteFiredRef = useRef(false);
     const completedOnceRef = useRef(false);
     const permAsked = useRef(false);
     const onCountdownCompleteRef = useRef(onCountdownComplete);
     onCountdownCompleteRef.current = onCountdownComplete;
+    const onSessionStartRef = useRef(onSessionStart);
+    onSessionStartRef.current = onSessionStart;
+    const onSessionStopRef = useRef(onSessionStop);
+    onSessionStopRef.current = onSessionStop;
+    const onSessionResetRef = useRef(onSessionReset);
+    onSessionResetRef.current = onSessionReset;
     const firstStartMsRef = useRef<number | null>(null);
     firstStartMsRef.current = firstStartMs;
 
@@ -154,10 +184,15 @@ const MoneyJournalTimer = forwardRef<MoneyJournalTimerHandle, MoneyJournalTimerP
       setRemainingMs(0);
       targetEndAtRef.current = null;
       pausedRemainingRef.current = null;
+      if (!completeStopNotifiedRef.current) {
+        completeStopNotifiedRef.current = true;
+        onSessionStopRef.current?.(endMs);
+      }
       savePartial({
         status: "complete",
         targetEndAt: null,
         pausedRemainingMs: null,
+        userSessionStopAtMs: null,
         completeLogRange: { startMs, endMs },
         firstStartMs: firstStartMsRef.current,
       });
@@ -191,12 +226,28 @@ const MoneyJournalTimer = forwardRef<MoneyJournalTimerHandle, MoneyJournalTimerP
         setRemainingMs(0);
         targetEndAtRef.current = null;
         pausedRemainingRef.current = null;
+        setUserSessionStopAtMs(null);
+        userSessionStopAtRef.current = null;
         completedChimeRef.current = p.completedChime;
         onCompleteFiredRef.current = p.completedChime;
+        completeStopNotifiedRef.current = p.completedChime;
         completedOnceRef.current = true;
         return;
       }
+      if (p.userSessionStopAtMs != null && p.status === "paused") {
+        setUserSessionStopAtMs(p.userSessionStopAtMs);
+        userSessionStopAtRef.current = p.userSessionStopAtMs;
+        setStatus("paused");
+        setFirstStartMs(p.firstStartMs);
+        firstStartMsRef.current = p.firstStartMs;
+        targetEndAtRef.current = null;
+        pausedRemainingRef.current = p.pausedRemainingMs;
+        setRemainingMs(p.pausedRemainingMs ?? 0);
+        return;
+      }
       if (p.status === "running" && p.targetEndAt) {
+        setUserSessionStopAtMs(null);
+        userSessionStopAtRef.current = null;
         setStatus("running");
         setFirstStartMs(p.firstStartMs);
         firstStartMsRef.current = p.firstStartMs;
@@ -204,6 +255,8 @@ const MoneyJournalTimer = forwardRef<MoneyJournalTimerHandle, MoneyJournalTimerP
         const rem = Math.max(0, p.targetEndAt - Date.now());
         setRemainingMs(rem);
       } else if (p.status === "paused" && p.pausedRemainingMs != null) {
+        setUserSessionStopAtMs(null);
+        userSessionStopAtRef.current = null;
         setStatus("paused");
         setFirstStartMs(p.firstStartMs);
         firstStartMsRef.current = p.firstStartMs;
@@ -245,8 +298,10 @@ const MoneyJournalTimer = forwardRef<MoneyJournalTimerHandle, MoneyJournalTimerP
 
     const onPlay = useCallback(() => {
       void requestNotif();
+      if (userSessionStopAtRef.current != null) return;
       if (status === "idle") {
         const now = Date.now();
+        setUserSessionStopAtMs(null);
         setFirstStartMs(now);
         firstStartMsRef.current = now;
         const end = now + DURATION_MS;
@@ -255,12 +310,15 @@ const MoneyJournalTimer = forwardRef<MoneyJournalTimerHandle, MoneyJournalTimerP
         setRemainingMs(DURATION_MS);
         onCompleteFiredRef.current = false;
         completedChimeRef.current = false;
+        completeStopNotifiedRef.current = false;
         setCompleteLogRange(null);
+        onSessionStartRef.current?.(now);
         savePartial({
           status: "running",
           firstStartMs: now,
           targetEndAt: end,
           pausedRemainingMs: null,
+          userSessionStopAtMs: null,
           completeLogRange: null,
           completedChime: false,
         });
@@ -296,9 +354,39 @@ const MoneyJournalTimer = forwardRef<MoneyJournalTimerHandle, MoneyJournalTimerP
       });
     }, [status]);
 
+    const onUserSessionStop = useCallback(() => {
+      if (userSessionStopAtRef.current != null) return;
+      if (status === "complete") return;
+      if (status !== "running" && status !== "paused") return;
+      const now = Date.now();
+      if (status === "running" && targetEndAtRef.current) {
+        const rem = Math.max(0, targetEndAtRef.current - now);
+        targetEndAtRef.current = null;
+        pausedRemainingRef.current = rem;
+        setRemainingMs(rem);
+      } else if (status === "paused") {
+        const rem = pausedRemainingRef.current ?? remainingMs;
+        pausedRemainingRef.current = rem;
+        setRemainingMs(rem);
+      }
+      setUserSessionStopAtMs(now);
+      userSessionStopAtRef.current = now;
+      setStatus("paused");
+      savePartial({
+        status: "paused",
+        targetEndAt: null,
+        pausedRemainingMs: pausedRemainingRef.current,
+        firstStartMs: firstStartMsRef.current,
+        userSessionStopAtMs: now,
+      });
+      onSessionStopRef.current?.(now);
+    }, [status, remainingMs]);
+
     const onReset = useCallback(() => {
       targetEndAtRef.current = null;
       pausedRemainingRef.current = null;
+      setUserSessionStopAtMs(null);
+      userSessionStopAtRef.current = null;
       setStatus("idle");
       setRemainingMs(DURATION_MS);
       setFirstStartMs(null);
@@ -307,7 +395,9 @@ const MoneyJournalTimer = forwardRef<MoneyJournalTimerHandle, MoneyJournalTimerP
       completedChimeRef.current = false;
       onCompleteFiredRef.current = false;
       completedOnceRef.current = false;
+      completeStopNotifiedRef.current = false;
       clearPersisted();
+      onSessionResetRef.current?.();
     }, []);
 
     useImperativeHandle(
@@ -315,29 +405,36 @@ const MoneyJournalTimer = forwardRef<MoneyJournalTimerHandle, MoneyJournalTimerP
       () => ({
         getLogRange: () => {
           const now = Date.now();
+          const first = firstStartMsRef.current;
+          const userStop = userSessionStopAtRef.current;
           if (status === "complete" && completeLogRange) {
             const { startMs, endMs } = completeLogRange;
+            const sm = first ?? startMs;
             return {
-              startMs,
+              startMs: sm,
               endMs,
-              startLabel: fmtTimeLabel(firstStartMs ?? startMs),
+              startLabel: fmtTimeLabel(sm),
               stopLabel: fmtTimeLabel(endMs),
             };
           }
-          if (status === "running" || status === "paused") {
-            const rem =
-              status === "running" && targetEndAtRef.current
-                ? Math.max(0, targetEndAtRef.current - Date.now())
-                : (pausedRemainingRef.current ?? remainingMs);
-            const elapsed = DURATION_MS - rem;
-            if (elapsed < 30_000) return null;
-            const endMs = now;
-            const startMs = endMs - elapsed;
+          if (userStop != null && first != null) {
+            if (userStop - first < 30_000) return null;
             return {
-              startMs,
-              endMs,
-              startLabel: fmtTimeLabel(firstStartMs ?? startMs),
-              stopLabel: fmtTimeLabel(endMs),
+              startMs: first,
+              endMs: userStop,
+              startLabel: fmtTimeLabel(first),
+              stopLabel: fmtTimeLabel(userStop),
+            };
+          }
+          if (status === "running" || status === "paused") {
+            if (first == null) return null;
+            const elapsed = now - first;
+            if (elapsed < 30_000) return null;
+            return {
+              startMs: first,
+              endMs: now,
+              startLabel: fmtTimeLabel(first),
+              stopLabel: fmtTimeLabel(now),
             };
           }
           return null;
@@ -345,10 +442,11 @@ const MoneyJournalTimer = forwardRef<MoneyJournalTimerHandle, MoneyJournalTimerP
         getLastCompleteLogRange: () => {
           if (!completeLogRange) return null;
           const { startMs, endMs } = completeLogRange;
+          const sm = firstStartMsRef.current ?? startMs;
           return {
-            startMs,
+            startMs: sm,
             endMs,
-            startLabel: fmtTimeLabel(firstStartMs ?? startMs),
+            startLabel: fmtTimeLabel(sm),
             stopLabel: fmtTimeLabel(endMs),
           };
         },
@@ -356,7 +454,7 @@ const MoneyJournalTimer = forwardRef<MoneyJournalTimerHandle, MoneyJournalTimerP
         getRemainingMs: () => remainingMs,
         getStatus: () => status,
       }),
-      [status, completeLogRange, firstStartMs, remainingMs, onReset]
+      [status, completeLogRange, remainingMs, onReset]
     );
 
     const m = Math.floor(remainingMs / 60000);
@@ -398,7 +496,7 @@ const MoneyJournalTimer = forwardRef<MoneyJournalTimerHandle, MoneyJournalTimerP
               type="button"
               onClick={onPause}
               className="inline-flex h-14 w-14 items-center justify-center rounded-full border-2 border-accent/35 bg-accent/10 text-accent transition hover:border-accent/60 hover:bg-accent/15 dark:border-teal-400/45 dark:bg-teal-400/10 dark:text-teal-300"
-              aria-label="Pause"
+              aria-label="Pause timer"
             >
               <div className="h-3.5 w-3.5 rounded-sm bg-current" />
             </button>
@@ -406,9 +504,9 @@ const MoneyJournalTimer = forwardRef<MoneyJournalTimerHandle, MoneyJournalTimerP
             <button
               type="button"
               onClick={onPlay}
-              disabled={status === "complete"}
+              disabled={status === "complete" || userSessionStopAtMs != null}
               className="inline-flex h-14 w-14 items-center justify-center rounded-full border-2 border-accent/35 bg-accent/10 text-accent transition hover:border-accent/60 enabled:hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-40 dark:border-teal-400/45 dark:bg-teal-400/10 dark:text-teal-300"
-              aria-label={status === "idle" ? "Start" : "Resume"}
+              aria-label={status === "idle" ? "Start timer" : "Resume timer"}
             >
               <Play className="h-5 w-5 translate-x-0.5 fill-current" />
             </button>
@@ -421,20 +519,25 @@ const MoneyJournalTimer = forwardRef<MoneyJournalTimerHandle, MoneyJournalTimerP
           >
             <RotateCcw className="h-4 w-4" />
           </button>
-          {(status === "running" || status === "paused") && (
+          {(status === "running" || (status === "paused" && userSessionStopAtMs == null)) && (
             <button
               type="button"
-              onClick={onReset}
+              onClick={onUserSessionStop}
               className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-100 dark:border-rose-400/30 dark:bg-rose-400/5 dark:text-rose-300/80 dark:hover:bg-rose-400/10"
-              aria-label="Stop and clear"
+              aria-label="Stop timer"
             >
               <Square className="h-4 w-4 fill-current" />
             </button>
           )}
         </div>
+        {userSessionStopAtMs != null ? (
+          <p className="mx-auto mt-3 max-w-xs text-xs font-medium text-amber-800/90 dark:text-amber-200/80">
+            Timer stopped. Log this hour below, or reset to start a new block.
+          </p>
+        ) : null}
         <p className="mx-auto mt-4 max-w-xs text-xs leading-relaxed text-text-secondary dark:text-zinc-500">
-          60:00 work block. You’ll get a chime and (if allowed) a notification
-          at 0:00.
+          60:00 work block. Start records when you begin; Stop freezes the block for logging. You’ll get a chime
+          and (if allowed) a notification at 0:00.
         </p>
         </div>
       </div>

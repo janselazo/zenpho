@@ -101,7 +101,27 @@ function parseJournalPayload(v: unknown): MoneyJournalEntryPayload | null {
   const o = v as Record<string, unknown>;
   if (typeof o.hourNumber !== "number" || typeof o.workDetail60m !== "string")
     return null;
-  return v as MoneyJournalEntryPayload;
+  const base = v as MoneyJournalEntryPayload;
+  return {
+    ...base,
+    timerStartedAtIso:
+      typeof o.timerStartedAtIso === "string" ? o.timerStartedAtIso : "",
+    timerStoppedAtIso:
+      typeof o.timerStoppedAtIso === "string" ? o.timerStoppedAtIso : "",
+  };
+}
+
+function formatJournalEventIso(iso: string | undefined): string {
+  const t = (iso ?? "").trim();
+  if (!t) return "—";
+  const d = new Date(t);
+  if (Number.isNaN(d.getTime())) return t;
+  return d.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 function previewLine(text: string, max: number) {
@@ -154,8 +174,14 @@ function JournalPergaminoLeaves({ entries }: { entries: JournalPamphletRow[] }) 
                       · {dateStr}
                     </span>
                   </span>
-                  <span className="font-sans text-[11px] text-amber-800/80 dark:text-amber-300/80">
-                    {j.startTimeLabel} – {j.stopTimeLabel}
+                  <span className="text-right font-sans text-[11px] text-amber-800/80 dark:text-amber-300/80">
+                    <span className="block">{j.startTimeLabel} – {j.stopTimeLabel}</span>
+                    {j.timerStartedAtIso || j.timerStoppedAtIso ? (
+                      <span className="mt-0.5 block text-[10px] font-normal normal-case text-amber-700/75 dark:text-amber-400/60">
+                        {formatJournalEventIso(j.timerStartedAtIso)} →{" "}
+                        {formatJournalEventIso(j.timerStoppedAtIso)}
+                      </span>
+                    ) : null}
                   </span>
                 </div>
                 <p className="mt-1.5 line-clamp-2 font-sans text-xs leading-snug text-amber-900/90 dark:text-amber-100/80">
@@ -173,6 +199,12 @@ function JournalPergaminoLeaves({ entries }: { entries: JournalPamphletRow[] }) 
                 <PergField label="Focus" value={j.focusEffortRating || "—"} multiline />
                 <PergField label="Next hour" value={j.improveNextHour || "—"} multiline />
                 <PergField label="Promise" value={j.promiseKeepGoing || "—"} />
+                {(j.timerStartedAtIso || j.timerStoppedAtIso) && (
+                  <PergField
+                    label="Timer (start → stop)"
+                    value={`${formatJournalEventIso(j.timerStartedAtIso)} → ${formatJournalEventIso(j.timerStoppedAtIso)}`}
+                  />
+                )}
                 <p className="pt-0.5 text-[11px] text-amber-800/70 dark:text-amber-400/60">
                   {j.billable ? "Billable" : "Non-billable"}
                 </p>
@@ -239,6 +271,9 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [needPrompt, setNeedPrompt] = useState(false);
+  /** Wall-clock ms when Start timer was pressed (and optional Stop / log end). */
+  const [sessionStartAtMs, setSessionStartAtMs] = useState<number | null>(null);
+  const [sessionStopAtMs, setSessionStopAtMs] = useState<number | null>(null);
   const timerRef = useRef<MoneyJournalTimerHandle>(null);
   const autoLogDoneRef = useRef(false);
   const formRef = useRef({
@@ -438,9 +473,13 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
       setSaving(true);
       setMsg(null);
       setErr(null);
+      const startMs = sessionStartAtMs ?? range.startMs;
+      const endMs = sessionStopAtMs ?? range.endMs;
       const payload: MoneyJournalEntryPayload = {
         hourNumber: nextHourNRef.current,
         prospectingDone: f.prospectingDone ? "Yes" : "",
+        timerStartedAtIso: new Date(startMs).toISOString(),
+        timerStoppedAtIso: new Date(endMs).toISOString(),
         startTimeLabel: range.startLabel,
         stopTimeLabel: range.stopLabel,
         moneyPurpose: f.moneyPurpose.trim(),
@@ -454,8 +493,8 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
         goalsSnapshot: { ...EMPTY_MONEY_JOURNAL_GOALS },
       };
       const res = await logMoneyJournalEntry({
-        startedAtIso: new Date(range.startMs).toISOString(),
-        endedAtIso: new Date(range.endMs).toISOString(),
+        startedAtIso: new Date(startMs).toISOString(),
+        endedAtIso: new Date(endMs).toISOString(),
         journalData: payload,
       });
       setSaving(false);
@@ -471,7 +510,7 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
         void refreshMeta();
       }
     },
-    [clearHourFields, refreshMeta]
+    [clearHourFields, refreshMeta, sessionStartAtMs, sessionStopAtMs]
   );
 
   const onTimerCountdownComplete = useCallback(() => {
@@ -702,7 +741,40 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
               ref={timerRef}
               completedHoursToday={completedToday}
               onCountdownComplete={onTimerCountdownComplete}
+              onSessionStart={(ms) => {
+                setSessionStartAtMs(ms);
+                setSessionStopAtMs(null);
+              }}
+              onSessionStop={(ms) => {
+                setSessionStopAtMs(ms);
+              }}
+              onSessionReset={() => {
+                setSessionStartAtMs(null);
+                setSessionStopAtMs(null);
+              }}
             />
+            {sessionStartAtMs != null && (
+              <div className="rounded-2xl border border-border bg-white/90 px-4 py-3 text-left text-xs text-text-secondary shadow-sm dark:border-zinc-800 dark:bg-zinc-950/80 dark:text-zinc-400">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-secondary/80 dark:text-zinc-500">
+                  Timer log
+                </p>
+                <p className="mt-1.5 font-mono text-[13px] text-text-primary dark:text-zinc-200">
+                  {sessionStartAtMs != null ? (
+                    <>
+                      Start: {new Date(sessionStartAtMs).toLocaleString()}
+                      <br />
+                    </>
+                  ) : null}
+                  {sessionStopAtMs != null ? (
+                    <>Stop: {new Date(sessionStopAtMs).toLocaleString()}</>
+                  ) : (
+                    <span className="text-text-secondary/70 dark:text-zinc-500">
+                      Stop: (not yet — run the full hour, tap Stop, or log)
+                    </span>
+                  )}
+                </p>
+              </div>
+            )}
 
             <section className={sectionClass}>
               <div className="mb-4 flex items-center gap-2">

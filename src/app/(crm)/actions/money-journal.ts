@@ -57,6 +57,9 @@ function isMoneyJournalEntryPayload(v: unknown): v is MoneyJournalEntryPayload {
   if (!isRecord(v)) return false;
   if (typeof v.hourNumber !== "number" || v.hourNumber < 1 || v.hourNumber > HOUR_MAX)
     return false;
+  if (typeof v.timerStartedAtIso !== "string" || typeof v.timerStoppedAtIso !== "string") {
+    return false;
+  }
   const strs = [
     "prospectingDone",
     "startTimeLabel",

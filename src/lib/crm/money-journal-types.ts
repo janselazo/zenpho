@@ -42,6 +42,10 @@ export const EMPTY_MONEY_JOURNAL_GOALS: MoneyJournalGoals = {
 export type MoneyJournalEntryPayload = {
   hourNumber: number;
   prospectingDone: string;
+  /** When the user pressed Start timer (first time in the block), ISO-8601. */
+  timerStartedAtIso?: string;
+  /** When the user pressed Stop, the hour hit 0:00, or you logged; ISO-8601. */
+  timerStoppedAtIso?: string;
   startTimeLabel: string;
   stopTimeLabel: string;
   moneyPurpose: string;

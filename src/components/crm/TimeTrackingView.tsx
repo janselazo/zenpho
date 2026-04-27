@@ -891,6 +891,17 @@ export default function TimeTrackingView() {
                 <div className="mt-4 space-y-3 text-sm text-text-primary dark:text-zinc-200">
                   <p className="text-text-secondary dark:text-zinc-400">
                     {j.startTimeLabel} – {j.stopTimeLabel}
+                    {j.timerStartedAtIso || j.timerStoppedAtIso ? (
+                      <span className="mt-1 block text-xs text-text-secondary/85 dark:text-zinc-500">
+                        {j.timerStartedAtIso
+                          ? new Date(j.timerStartedAtIso).toLocaleString()
+                          : "—"}{" "}
+                        →{" "}
+                        {j.timerStoppedAtIso
+                          ? new Date(j.timerStoppedAtIso).toLocaleString()
+                          : "—"}
+                      </span>
+                    ) : null}
                   </p>
                   <p>
                     <span className="font-medium">Prospecting: </span>
