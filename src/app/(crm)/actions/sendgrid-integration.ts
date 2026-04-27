@@ -85,8 +85,6 @@ export type LoadSendGridIntegrationPageResult =
   | { status: "no_user" }
   | { status: "forbidden" };
 
-export type { ReplyToMxCheck };
-
 const INBOUND_ACTIVITY_LIMIT = 20;
 
 export async function loadSendGridIntegrationPage(): Promise<LoadSendGridIntegrationPageResult> {

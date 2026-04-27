@@ -22,10 +22,10 @@ import {
   saveSendGridIntegration,
   testSendGridConnection,
   type InboundActivityRow,
-  type ReplyToMxCheck,
   type SendGridIntegrationFormState,
   type SendGridInboundLogStatus,
 } from "@/app/(crm)/actions/sendgrid-integration";
+import type { ReplyToMxCheck } from "@/lib/sendgrid/inbound-mx-check";
 
 const inputClass =
   "w-full rounded-xl border border-border bg-white px-3.5 py-2.5 text-sm text-text-primary shadow-sm outline-none transition-[box-shadow,border-color] placeholder:text-text-secondary/45 focus:border-accent focus:ring-2 focus:ring-accent/15 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500";
