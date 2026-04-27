@@ -338,7 +338,7 @@ Every design must feel made **specifically for this one business** — as if a c
 - **Depth:** Mandatory 3-level surface system: base background → card surface (with box-shadow) → elevated element (stronger shadow). Cards must visibly float. No flat, borderless, shadowless sections.
 
 ### Mandatory luxury signals (must include ALL)
-1. **Hero that stops the scroll:** The hero section must be visually dramatic — at least 70vh tall, with a display headline at 64px+, intentional background treatment (gradient, pattern, or dark immersive), and CTAs that look premium (gradient fill, shadow, or glow effect). The hero alone should sell the redesign.
+1. **Hero that stops the scroll:** The hero section must be visually dramatic — at least 70vh tall, with a display headline at 64px+, intentional background treatment (gradient, pattern, or dark immersive), and a **primary gradient "Book Appointment" button anchored to \`#visit\`** plus a secondary ghost CTA. The "Book Appointment" button must be the boldest interactive element after the headline (largest shadow, accent gradient fill, optional glow). The hero alone should sell the redesign.
 2. **Floating or overlapping elements:** At least one place where a card, badge, or content block crosses a section boundary (e.g. testimonial card overlapping hero-to-content, trust badge floating at section edge) — this creates the sophisticated depth that separates custom from template.
 3. **Premium trust section:** The reviews/testimonials section must look like a premium social-proof area — large aggregate star rating (styled, not plain text), testimonial cards with author avatars (initial circles), quoted text in styled type, and a visual design that builds trust immediately.
 4. **Gradient accent:** At least one meaningful gradient usage — on the hero background, a CTA button, a section divider band, or a decorative element. Flat monochrome sites feel dated.
@@ -572,6 +572,9 @@ The hosted preview removes inline JavaScript. Navigation must be **real HTML anc
 - You may add **in-page** sub-anchors (e.g. \`id="stories-reviews"\`) **inside** a main section, but do **not** add additional top-level nav items for them.
 - Do **not** use \`<button>\` for primary page navigation, no onclick, no hidden panels.
 - Do **not** add nav items for content that is not in the document.
+- Add \`html { scroll-behavior: smooth; }\` to the global \`<style>\` so anchor clicks animate.
+- Add \`section[id] { scroll-margin-top: 96px; }\` (or larger if the sticky header is taller) so each section scrolls into view **below** the floating header — never hidden behind it.
+- Every CTA labeled "Book", "Book Appointment", "Book Now", "Reserve", or "Schedule" MUST be an \`<a href="#visit">\` (never a \`<button>\`, never \`href="#"\`).
 
 ${WEBSITE_LAYOUT_SAFETY}
 
@@ -579,7 +582,14 @@ ${WEBSITE_LAYOUT_SAFETY}
 
 Build **all** of the following in order. Each numbered item is a **\`<section>\` with the given \`id\`**. Sub-bullets are **nested** inside that section (not separate top-level pages).
 
-1. \`#home\` **— Homepage (full “page” 1).** At least **85–100vh** hero: full-width, immersive, impossible to miss. Sticky or overlay **glass** header with the five working anchor links, **official logo** when a logo URL is provided (otherwise a premium text mark), exact business name, a sharp value proposition, dual CTAs to \`#visit\` and \`#services\`, Google rating/review count and phone/address when in context, and a custom visual treatment for the category (e.g. split layout, bento, or feature cards). This section alone should feel like a **$50K** homepage in the first screenshot.
+1. \`#home\` **— Homepage (the showpiece scroll).** Build **all** of the following blocks **inside \`#home\`**, in this order. Each block must visually feel like its own chapter (alternating background tint/gradient/dark band, generous 64–96px vertical spacing, multi-layer shadows, glass and gradient details) — never a thin row.
+   - **1a. Sticky / overlay glass header** with the **official logo** \`<img>\` when a logo URL is provided (otherwise a premium text mark using the exact business name) on the left, and the five anchor links on the right — Home, Services, About, Stories (or "Reviews"), Visit (or "Book"). End the nav with a small "Book Appointment" pill button \`<a href="#visit">\` styled with the brand accent.
+   - **1b. Hero band (85–100vh):** luminous display headline (64–100px+) using the exact business name and a sharp value proposition; Google rating + review count and phone/address rendered as floating glass badges when in context; a **primary "Book Appointment" CTA \`<a href="#visit">\`** rendered as a gradient pill button (this must be the most visually prominent button on the entire page — bigger shadow, accent gradient, glow); and a **secondary ghost CTA \`<a href="#services">\`** labeled "View Services". The hero alone should feel like a $50K homepage in the first screenshot.
+   - **1c. Services preview:** a 3- or 4-card grid summarizing the top services for this business category (icon, service name, 1-line description, "from $X" or duration cue), with a section heading "Our Services" (or category-specific equivalent) and a closing \`<a href="#services">\` "See all services" link styled as an arrow CTA.
+   - **1d. About preview ("About Us"):** a 50/50 split layout pairing a styled image placeholder (CSS gradient + aspect-ratio mask) with **2 short paragraphs** of category-specific copy that introduce the business, plus a closing \`<a href="#about">\` "Read our story" link.
+   - **1e. Testimonials preview:** large styled aggregate stars (use the real Google rating and review count when known), **2 or 3 testimonial cards** with quoted text, author avatars (initial circles), star rows, and a closing \`<a href="#stories">\` "Read more reviews" link. Testimonial cards must use glassmorphism or layered shadows over a tinted/gradient section background.
+   - **1f. Address & Hours panel ("Our Address"):** the **exact** address, phone number, and an opening-hours table for the week, paired with a CSS-only stylized map placeholder block (gradient + grid lines or pin marker). Include a prominent secondary **"Book Appointment" CTA \`<a href="#visit">\`** next to the address. Use exact NAP from context — never invent.
+   The first screenshot of the canvas must already reveal at least the hero AND the start of the Services preview.
 
 2. \`#services\` **— Services and how you help (page 2).** A **full second “page”** in feel: min ~80–100vh of designed content. Include: a credibility strip (rating, years, area, insurance/certs as fits), **5–7** service cards (one featured), price/duration “from” cues, and a **3–5 step process** journey (icons + timeline) — all in this section. Make it scannable and conversion-oriented.
 

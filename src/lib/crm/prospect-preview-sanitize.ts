@@ -255,25 +255,52 @@ function sectionTargetForLabel(label: string, sectionIds: Set<string>): string |
     services: ["services"],
     service: ["services"],
     servicios: ["services"],
-    gallery: ["gallery"],
-    galeria: ["gallery"],
-    galería: ["gallery"],
-    pricing: ["pricing", "services", "book"],
-    prices: ["pricing", "services", "book"],
-    testimonials: ["testimonials", "reviews"],
-    testimonial: ["testimonials", "reviews"],
-    reviews: ["reviews", "testimonials"],
-    reseñas: ["reviews", "testimonials"],
-    book: ["book"],
-    booking: ["book"],
-    appointments: ["book"],
-    cita: ["book"],
-    faq: ["faq"],
-    faqs: ["faq"],
-    "preguntas frecuentes": ["faq"],
-    location: ["location"],
-    contacto: ["contact"],
-    contact: ["contact"],
+    "our services": ["services"],
+    gallery: ["gallery", "stories"],
+    galeria: ["gallery", "stories"],
+    galería: ["gallery", "stories"],
+    pricing: ["pricing", "services", "book", "visit"],
+    prices: ["pricing", "services", "book", "visit"],
+    testimonials: ["testimonials", "reviews", "stories"],
+    testimonial: ["testimonials", "reviews", "stories"],
+    reviews: ["reviews", "testimonials", "stories"],
+    reseñas: ["reviews", "testimonials", "stories"],
+    about: ["about"],
+    "about us": ["about"],
+    "about-us": ["about"],
+    "our story": ["about", "stories"],
+    "our-story": ["about", "stories"],
+    story: ["about", "stories"],
+    team: ["about"],
+    "our team": ["about"],
+    stories: ["stories", "reviews", "testimonials"],
+    visit: ["visit", "contact", "location", "book"],
+    "find us": ["visit", "location", "contact"],
+    "find-us": ["visit", "location", "contact"],
+    hours: ["visit", "location"],
+    address: ["visit", "location", "contact"],
+    "our address": ["visit", "location", "contact"],
+    book: ["visit", "book"],
+    "book now": ["visit", "book"],
+    "book-now": ["visit", "book"],
+    "book appointment": ["visit", "book"],
+    "book-appointment": ["visit", "book"],
+    "book-an-appointment": ["visit", "book"],
+    "book an appointment": ["visit", "book"],
+    booking: ["visit", "book"],
+    appointment: ["visit", "book"],
+    appointments: ["visit", "book"],
+    schedule: ["visit", "book"],
+    reserve: ["visit", "book"],
+    cita: ["visit", "book"],
+    faq: ["faq", "visit"],
+    faqs: ["faq", "visit"],
+    "preguntas frecuentes": ["faq", "visit"],
+    location: ["visit", "location"],
+    contacto: ["visit", "contact"],
+    contact: ["visit", "contact"],
+    "contact us": ["visit", "contact"],
+    "get in touch": ["visit", "contact"],
   };
   const candidates = candidatesByLabel[key];
   if (!candidates) return null;
@@ -285,6 +312,7 @@ function repairBrokenSectionNavigation(html: string): string {
   const sectionIds = collectSectionIds(html);
   if (sectionIds.size === 0) return html;
 
+  // 1. Rewrite empty/javascript anchors when the inner label maps to a known section.
   let out = html.replace(
     /<a\b([^>]*)\bhref=["'](?:#|javascript:void\(0\)|)["']([^>]*)>([\s\S]*?)<\/a>/gi,
     (full: string, before: string, after: string, inner: string) => {
@@ -293,6 +321,21 @@ function repairBrokenSectionNavigation(html: string): string {
     },
   );
 
+  // 2. Rewrite #anchors that point to a hash that does NOT exist as a top-level section
+  //    when the link's label maps to a known section id (e.g. <a href="#our-team">About</a>
+  //    becomes <a href="#about">About</a> when only #about exists).
+  out = out.replace(
+    /<a\b([^>]*?)\bhref=["']#([^"']+)["']([^>]*)>([\s\S]*?)<\/a>/gi,
+    (full: string, before: string, hash: string, after: string, inner: string) => {
+      const normalized = String(hash).trim().toLowerCase();
+      if (!normalized) return full;
+      if (sectionIds.has(normalized)) return full;
+      const target = sectionTargetForLabel(textFromHtmlFragment(inner), sectionIds);
+      return target ? `<a${before} href="${target}"${after}>${inner}</a>` : full;
+    },
+  );
+
+  // 3. Convert <button> primary navigation into anchors when the label maps to a section.
   out = out.replace(
     /<button\b([^>]*)>([\s\S]*?)<\/button>/gi,
     (full: string, attrs: string, inner: string) => {
@@ -384,6 +427,15 @@ const PREVIEW_FOOTER_LINK_STYLE = `<style id="zenpho-preview-footer-link-accent"
 </style>`;
 
 /**
+ * Smooth scroll + sticky-header offset for the Stitch / LLM previews. Without this, anchor
+ * clicks jump abruptly and the destination heading is hidden behind the floating glass nav.
+ */
+const PREVIEW_SECTION_SCROLL_STYLE = `<style id="zenpho-section-scroll-offset">
+  html { scroll-behavior: smooth; }
+  section[id] { scroll-margin-top: 96px; }
+</style>`;
+
+/**
  * Injects footer-focused link colors so Privacy/Terms (and similar) read clearly on generated previews.
  */
 export function injectProspectPreviewFooterLinkStyles(html: string): string {
@@ -392,9 +444,11 @@ export function injectProspectPreviewFooterLinkStyles(html: string): string {
 
   const needsFooter = !/zenpho-preview-footer-link-accent/i.test(h);
   const needsFallback = !/zenpho-page-target-fallback/i.test(h);
-  if (!needsFooter && !needsFallback) return h;
+  const needsScrollOffset = !/zenpho-section-scroll-offset/i.test(h);
+  if (!needsFooter && !needsFallback && !needsScrollOffset) return h;
 
   const inject = (needsFallback ? PREVIEW_PAGE_FALLBACK_STYLE : "") +
+                 (needsScrollOffset ? PREVIEW_SECTION_SCROLL_STYLE : "") +
                  (needsFooter ? PREVIEW_FOOTER_LINK_STYLE : "");
 
   const lower = h.toLowerCase();
