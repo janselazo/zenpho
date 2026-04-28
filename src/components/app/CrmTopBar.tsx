@@ -17,6 +17,14 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import MoneyJournalTopBarPip from "@/components/app/MoneyJournalTopBarPip";
+import {
+  MONEY_JOURNAL_HOUR_COMPLETE_BADGE_KEY,
+  MONEY_JOURNAL_HOUR_COMPLETE_EVENT,
+} from "@/lib/crm/money-journal-types";
+import {
+  clearMoneyJournalHourCompleteBadge,
+  readMoneyJournalHourCompleteBadge,
+} from "@/lib/crm/money-journal-hour-complete-notify";
 
 export type CrmTopBarUser = {
   email: string | null;
@@ -48,6 +56,27 @@ export default function CrmTopBar({
   const [open, setOpen] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const wrapRef = useRef<HTMLDivElement>(null);
+  const [journalHourBellBadge, setJournalHourBellBadge] = useState(false);
+
+  useEffect(() => {
+    const sync = () =>
+      setJournalHourBellBadge(readMoneyJournalHourCompleteBadge());
+    sync();
+    window.addEventListener(MONEY_JOURNAL_HOUR_COMPLETE_EVENT, sync);
+    const onStorage = (e: StorageEvent) => {
+      if (
+        e.key === MONEY_JOURNAL_HOUR_COMPLETE_BADGE_KEY ||
+        e.key === null
+      ) {
+        sync();
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener(MONEY_JOURNAL_HOUR_COMPLETE_EVENT, sync);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
 
   useEffect(() => {
     const stored = localStorage.getItem(THEME_KEY) as "light" | "dark" | null;
@@ -135,10 +164,21 @@ export default function CrmTopBar({
 
       <Link
         href="/dashboard"
-        className="rounded-full p-2 text-text-secondary transition-colors hover:bg-surface hover:text-text-primary dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-        aria-label="Notifications"
+        className="relative rounded-full p-2 text-text-secondary transition-colors hover:bg-surface hover:text-text-primary dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+        aria-label={
+          journalHourBellBadge
+            ? "Notifications — Money Journal hour complete, open journal to log"
+            : "Notifications"
+        }
+        onClick={() => clearMoneyJournalHourCompleteBadge()}
       >
-        <Bell className="h-4 w-4" />
+        <Bell className="h-4 w-4" aria-hidden />
+        {journalHourBellBadge ? (
+          <span
+            className="absolute right-1 top-1 h-2 w-2 rounded-full bg-accent shadow-sm ring-2 ring-white dark:bg-emerald-400 dark:ring-zinc-900"
+            aria-hidden
+          />
+        ) : null}
       </Link>
 
       <div className="relative ml-1" ref={wrapRef}>

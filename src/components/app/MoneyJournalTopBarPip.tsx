@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { MONEY_JOURNAL_TIMER_KEY } from "@/lib/crm/money-journal-types";
 import { getMoneyJournalTimerSnapshot } from "@/lib/crm/money-journal-timer-snapshot";
+import { clearMoneyJournalHourCompleteBadge } from "@/lib/crm/money-journal-hour-complete-notify";
 
 /**
  * Same geometry as the outline: bottom triangle = base at y=14.5, apex at waist (8, 6.2).
@@ -64,6 +65,7 @@ export default function MoneyJournalTopBarPip() {
   return (
     <Link
       href="/prospecting/playbook?tab=journal"
+      onClick={() => clearMoneyJournalHourCompleteBadge()}
       className={`relative inline-flex h-7 w-7 items-center justify-center transition-colors ${
         status === "idle"
           ? "text-text-secondary/70 hover:text-text-primary dark:text-zinc-500 dark:hover:text-zinc-100"

@@ -10,6 +10,11 @@ import {
 } from "react";
 import { Play, RotateCcw, Square } from "lucide-react";
 import { MONEY_JOURNAL_TIMER_KEY } from "@/lib/crm/money-journal-types";
+import { signalMoneyJournalHourComplete } from "@/lib/crm/money-journal-hour-complete-notify";
+import {
+  unlockMoneyJournalTimerAudio,
+  playMoneyJournalTimerChime,
+} from "@/lib/crm/money-journal-timer-chime";
 import {
   clearMoneyJournalTimerStorage,
   readMoneyJournalTimerRaw,
@@ -46,30 +51,6 @@ function fmtTimeLabel(ms: number): string {
     minute: "2-digit",
     hour12: true,
   });
-}
-
-function playChime() {
-  try {
-    const Ctx =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!Ctx) return;
-    const ctx = new Ctx();
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
-    o.type = "sine";
-    o.frequency.setValueAtTime(880, ctx.currentTime);
-    g.gain.setValueAtTime(0, ctx.currentTime);
-    g.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 0.02);
-    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
-    o.connect(g);
-    g.connect(ctx.destination);
-    o.start();
-    o.stop(ctx.currentTime + 0.26);
-    void ctx.resume();
-  } catch {
-    // ignore
-  }
 }
 
 function loadPersisted(): PersistedTimer | null {
@@ -215,7 +196,8 @@ const MoneyJournalTimer = forwardRef<MoneyJournalTimerHandle, MoneyJournalTimerP
       });
       if (!completedChimeRef.current) {
         completedChimeRef.current = true;
-        playChime();
+        playMoneyJournalTimerChime();
+        signalMoneyJournalHourComplete();
         if (typeof Notification !== "undefined" && Notification.permission === "granted") {
           try {
             new Notification("Hour complete", {
@@ -339,6 +321,7 @@ const MoneyJournalTimer = forwardRef<MoneyJournalTimerHandle, MoneyJournalTimerP
     }, []);
 
     const onPlay = useCallback(() => {
+      unlockMoneyJournalTimerAudio();
       void requestNotif();
       if (userSessionStopAtRef.current != null) return;
       if (status === "idle") {

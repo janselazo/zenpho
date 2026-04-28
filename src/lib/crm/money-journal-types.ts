@@ -5,6 +5,12 @@
 export const MONEY_JOURNAL_STORAGE_PREFIX = "zenpho-money-journal:" as const;
 /** Persisted via `localStorage` so the timer is shared across all same-origin tabs. */
 export const MONEY_JOURNAL_TIMER_KEY = "zenpho-money-journal:timer" as const;
+/** Set when the hour hits 0:00 so the CRM bell can show an unread-style badge until dismissed. */
+export const MONEY_JOURNAL_HOUR_COMPLETE_BADGE_KEY =
+  "zenpho-money-journal:hour-complete-badge" as const;
+/** Same-tab sync when the badge is set/cleared (storage events omit the emitting tab). */
+export const MONEY_JOURNAL_HOUR_COMPLETE_EVENT =
+  "zenpho-money-journal-hour-complete" as const;
 
 /**
  * "Money Journal" is tagged in `time_entry.tags` for filtering and UI.
