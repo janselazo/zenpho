@@ -2120,9 +2120,9 @@ export async function generateProspectBrandingPdfAction(input: {
     brandName: specResult.data.brandName || businessName,
   };
 
-  // Brand-book visuals are attempted by default, but the image generator uses
-  // fast parallel mode so one rate-limited slot becomes a placeholder instead
-  // of holding the entire PDF job past Vercel's function timeout.
+  // Brand-book visuals are attempted by default. The image generators share
+  // the same rate limiter so brand and funnel slots do not exceed the OpenAI
+  // gpt-image per-minute quota.
   const imagesPromise = shouldGenerateLegacyBrandImages()
     ? generateBrandingImages(spec)
     : Promise.resolve(
@@ -2130,37 +2130,37 @@ export async function generateProspectBrandingPdfAction(input: {
           "Legacy brand-book image generation skipped to keep the sales-funnel PDF within function timeout.",
         ),
       );
-  const funnelPromise: Promise<{
-    spec: AdsFunnelSpec;
-    images: AdsImages;
-  } | null> = (async () => {
-    const funnelSpecRes = await generateAdsFunnelSpec({
-      spec,
-      vertical,
-      place: input.place ?? null,
-      report: input.report ?? null,
-    });
-    if (!funnelSpecRes.ok) {
-      console.warn(`[branding-pdf] funnel spec failed: ${funnelSpecRes.error}`);
-      return null;
-    }
-    const funnelImages = await generateAdsFunnelImages(
-      spec,
-      funnelSpecRes.data,
-      vertical,
-    );
-    return { spec: funnelSpecRes.data, images: funnelImages };
-  })();
+  const funnelSpecPromise = generateAdsFunnelSpec({
+    spec,
+    vertical,
+    place: input.place ?? null,
+    report: input.report ?? null,
+  });
 
   try {
     const pdf = await PDFDocument.create();
     const fonts = await embedBrandBookFonts(pdf, spec.fontPairingId);
     const ctx = buildContext(pdf, spec, fonts);
 
-    const [images, funnelResult] = await Promise.all([
+    const [images, funnelSpecRes] = await Promise.all([
       imagesPromise,
-      funnelPromise,
+      funnelSpecPromise,
     ]);
+
+    let funnelResult: { spec: AdsFunnelSpec; images: AdsImages } | null = null;
+    if (!funnelSpecRes.ok) {
+      console.warn(`[branding-pdf] funnel spec failed: ${funnelSpecRes.error}`);
+    } else {
+      // Avoid competing with brand-book image generation for the same OpenAI
+      // gpt-image quota. The shared limiter can reuse any remaining capacity
+      // from the current minute before waiting for the next window.
+      const funnelImages = await generateAdsFunnelImages(
+        spec,
+        funnelSpecRes.data,
+        vertical,
+      );
+      funnelResult = { spec: funnelSpecRes.data, images: funnelImages };
+    }
     console.info(
       `[branding-pdf] images done (${Date.now() - t0}ms) failed=${Object.keys(
         images.errors,

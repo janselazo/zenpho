@@ -818,6 +818,7 @@ export default function ProspectPreviewOutreachBlock({
   const [brandingBusy, setBrandingBusy] = useState(false);
   const [brandingMsg, setBrandingMsg] = useState<string | null>(null);
   const [brandingFilename, setBrandingFilename] = useState<string | null>(null);
+  const [brandingPdfUrl, setBrandingPdfUrl] = useState<string | null>(null);
 
   const resolvedBusinessName = useMemo(() => {
     const t = businessNameProp.trim();
@@ -925,6 +926,9 @@ export default function ProspectPreviewOutreachBlock({
     setShareMsg(null);
     setPdfMsg(null);
     setPdfFilename(null);
+    setBrandingMsg(null);
+    setBrandingFilename(null);
+    setBrandingPdfUrl(null);
   }, [reportKey]);
 
   const copyAndFlash = useCallback(async (text: string) => {
@@ -1412,6 +1416,7 @@ export default function ProspectPreviewOutreachBlock({
   const generateBrandingPdf = useCallback(async () => {
     setBrandingBusy(true);
     setBrandingMsg(null);
+    setBrandingPdfUrl(null);
     try {
       const http = await fetch("/api/prospecting/branding-pdf", {
         method: "POST",
@@ -1446,6 +1451,7 @@ export default function ProspectPreviewOutreachBlock({
         return;
       }
       setBrandingFilename(res.filename);
+      setBrandingPdfUrl(res.pdfUrl);
       if (res.imageWarnings && res.imageWarnings.length > 0) {
         const head = res.imageWarnings.slice(0, 2).join("; ");
         const extra =
@@ -1850,6 +1856,19 @@ export default function ProspectPreviewOutreachBlock({
                 {brandingMsg}
                 {brandingFilename ? <span className="ml-1 font-mono text-[10px]">{brandingFilename}</span> : null}
               </p>
+            ) : null}
+            {brandingPdfUrl ? (
+              <a
+                href={brandingPdfUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                download={brandingFilename || undefined}
+                onClick={(e) => e.stopPropagation()}
+                className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-500/[0.14] dark:border-emerald-400/35 dark:bg-emerald-500/15 dark:text-emerald-200 dark:hover:bg-emerald-500/20"
+              >
+                <FileDown className="h-3.5 w-3.5" aria-hidden />
+                Download PDF
+              </a>
             ) : null}
           </div>
         </div>

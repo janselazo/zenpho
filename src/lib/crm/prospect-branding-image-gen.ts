@@ -1,5 +1,9 @@
 import OpenAI from "openai";
 import type { BrandingSpec } from "@/lib/crm/prospect-branding-spec-llm";
+import {
+  parseImageMaxPerMinute,
+  runOpenAiImageJobs,
+} from "@/lib/crm/openai-image-rate-limit";
 
 /**
  * OpenAI does NOT expose a `-latest` alias for image models — `gpt-image-2-latest`
@@ -174,35 +178,8 @@ function useFastMode(): boolean {
   return raw !== "false";
 }
 
-async function generateOneFast(
-  openai: OpenAI,
-  model: string,
-  plan: SlotPlan,
-  spec: BrandingSpec,
-  quality: ImageQuality,
-): Promise<{ slot: BrandingImageSlot; buffer: Buffer | null; error?: string }> {
-  try {
-    const res = await openai.images.generate({
-      model,
-      prompt: plan.prompt(spec),
-      size: plan.size,
-      quality,
-      n: 1,
-      output_format: "png",
-    });
-    const b64 = res.data?.[0]?.b64_json;
-    if (!b64) {
-      return {
-        slot: plan.slot,
-        buffer: null,
-        error: "OpenAI returned no image data.",
-      };
-    }
-    return { slot: plan.slot, buffer: Buffer.from(b64, "base64") };
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "Image generation failed.";
-    return { slot: plan.slot, buffer: null, error: msg };
-  }
+function maxImagesPerMinute(): number {
+  return parseImageMaxPerMinute(process.env.OPENAI_BRANDING_IMAGE_MAX_PER_MINUTE);
 }
 
 async function generateOne(
@@ -259,10 +236,10 @@ async function generateOne(
 const INTER_REQUEST_DELAY_MS = 13_000;
 
 /**
- * Generate all 7 brand-book images **sequentially** using OpenAI image models.
- * Sequential + inter-request delay avoids 429 rate limits (most orgs have a
- * 5 images/min cap). Each call retries up to 3× on 429 with the server-
- * suggested wait time.
+ * Generate all 7 brand-book images using OpenAI image models.
+ * Fast mode shares a process-level limiter with the funnel image generator so
+ * brand and funnel slots stay under the same gpt-image per-minute cap. Each
+ * call retries up to 3× on 429 with the server-suggested wait time.
  *
  * If the primary model fails on the first image with a "model unavailable"
  * error, all remaining images fall back to OPENAI_BRANDING_IMAGE_MODEL_FALLBACK.
@@ -296,20 +273,23 @@ export async function generateBrandingImages(
 
   let model = requested;
   console.info(
-    `[branding-images] starting generation with model=${model} quality=${quality} fast=${useFastMode()}`,
+    `[branding-images] starting generation with model=${model} quality=${quality} fast=${useFastMode()} maxPerMinute=${maxImagesPerMinute()}`,
   );
 
   let results: { slot: BrandingImageSlot; buffer: Buffer | null; error?: string }[];
 
   if (useFastMode()) {
-    results = await Promise.all(
-      SLOTS.map((plan, i) => {
+    results = await runOpenAiImageJobs({
+      label: "branding-images",
+      jobs: SLOTS,
+      maxPerMinute: maxImagesPerMinute(),
+      run: (plan, i) => {
         console.info(
           `[branding-images] fast generating slot=${plan.slot} (${i + 1}/${SLOTS.length}) model=${model}`,
         );
-        return generateOneFast(openai, model, plan, spec, quality);
-      }),
-    );
+        return generateOne(openai, model, plan, spec, quality);
+      },
+    });
   } else {
     results = [];
     for (let i = 0; i < SLOTS.length; i++) {

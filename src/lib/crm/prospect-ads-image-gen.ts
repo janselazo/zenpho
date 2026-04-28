@@ -25,6 +25,10 @@ import {
   type ProspectVertical,
   verticalImageryDirection,
 } from "@/lib/crm/prospect-vertical-classify";
+import {
+  parseImageMaxPerMinute,
+  runOpenAiImageJobs,
+} from "@/lib/crm/openai-image-rate-limit";
 
 const DEFAULT_MODEL = "gpt-image-2";
 const DEFAULT_TIMEOUT_MS = 180_000;
@@ -250,45 +254,19 @@ async function generateOne(
   return { slot: plan.slot, buffer: null, error: "Max retries exceeded." };
 }
 
-async function generateOneFast(
-  openai: OpenAI,
-  model: string,
-  plan: SlotPlan,
-  ctx: PromptCtx,
-  quality: ImageQuality,
-): Promise<{ slot: AdsImageSlot; buffer: Buffer | null; error?: string }> {
-  try {
-    const res = await openai.images.generate({
-      model,
-      prompt: plan.prompt(ctx),
-      size: plan.size,
-      quality,
-      n: 1,
-      output_format: "png",
-    });
-    const b64 = res.data?.[0]?.b64_json;
-    if (!b64) {
-      return {
-        slot: plan.slot,
-        buffer: null,
-        error: "OpenAI returned no image data.",
-      };
-    }
-    return { slot: plan.slot, buffer: Buffer.from(b64, "base64") };
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "Image generation failed.";
-    return { slot: plan.slot, buffer: null, error: msg };
-  }
-}
-
 function useFastMode(): boolean {
   const raw = (process.env.OPENAI_ADS_IMAGE_FAST_MODE || "").trim().toLowerCase();
   return raw !== "false";
 }
 
+function maxImagesPerMinute(): number {
+  return parseImageMaxPerMinute(process.env.OPENAI_ADS_IMAGE_MAX_PER_MINUTE);
+}
+
 /**
- * Generate all 6 ad-funnel images sequentially. Per-slot failures fall back
- * to `null` and the PDF renders a placeholder.
+ * Generate all 6 ad-funnel images. Fast mode shares the same process-level
+ * limiter as brand-book image generation so the full PDF respects OpenAI's
+ * gpt-image per-minute cap.
  */
 export async function generateAdsFunnelImages(
   spec: BrandingSpec,
@@ -323,20 +301,23 @@ export async function generateAdsFunnelImages(
 
   let model = requested;
   console.info(
-    `[ads-images] starting generation with model=${model} quality=${quality} vertical=${vertical} fast=${useFastMode()}`,
+    `[ads-images] starting generation with model=${model} quality=${quality} vertical=${vertical} fast=${useFastMode()} maxPerMinute=${maxImagesPerMinute()}`,
   );
 
   let results: { slot: AdsImageSlot; buffer: Buffer | null; error?: string }[];
 
   if (useFastMode()) {
-    results = await Promise.all(
-      SLOTS.map((plan, i) => {
+    results = await runOpenAiImageJobs({
+      label: "ads-images",
+      jobs: SLOTS,
+      maxPerMinute: maxImagesPerMinute(),
+      run: (plan, i) => {
         console.info(
           `[ads-images] fast generating slot=${plan.slot} (${i + 1}/${SLOTS.length}) model=${model}`,
         );
-        return generateOneFast(openai, model, plan, ctx, quality);
-      }),
-    );
+        return generateOne(openai, model, plan, ctx, quality);
+      },
+    });
   } else {
     results = [];
     for (let i = 0; i < SLOTS.length; i++) {
