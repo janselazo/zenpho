@@ -456,6 +456,8 @@ const WEBSITE_LAYOUT_SAFETY = `
 - **Full-bleed background images** require a **gradient or scrim overlay** and foreground copy in a clear stacking layer with padding; body text must meet **WCAG contrast** against its background.
 - **Card or image rows** below the hero must follow **normal document flow** (\`gap\`, \`margin-top\`) — **no negative margins** that pull tiles upward over hero typography.
 - Avoid **z-index** stacks that put decorative imagery above text unless the text sits on an intentional overlay panel or scrim. Never obscure the business name or primary value proposition.
+- **Mobile contrast and spacing:** At 375px width, no card may have white or near-white text on a white/glass background. Service cards must show complete readable copy; do not rely on \`line-clamp\` for essential descriptions. Avoid large negative margins, transform offsets, or fixed-height empty panels on mobile.
+- **CSS token completeness:** If you use custom utility names like \`text-on-surface\`, \`text-on-surface-variant\`, \`bg-primary-container\`, or \`bg-secondary-container\`, you MUST define them in the inline \`<style>\`. Prefer plain CSS variables and explicit classes over undefined Tailwind theme tokens.
 `.trim();
 
 const WEBSITE_REFERENCE_PATTERNS = `
@@ -618,6 +620,8 @@ Build **all** of the following in order. Each numbered item is a **\`<section>\`
 - Asymmetry, bento, glass, gradients, varied section backgrounds — the five pages must each feel like a **new chapter** (background shift at each \`<section id>\` boundary).
 - Every interactive element: hover/focus via CSS only. Heavy shadow depth, 16–28px radii, readable contrast.
 - No unmasked images over body copy. Responsive, desktop-first.
+- **Mobile QA rule:** Include an explicit \`@media (max-width: 640px)\` block that improves readability: stronger glass/card backgrounds, dark text on light cards, no clipped essential text, no horizontal overflow, and hero/card spacing that works on iPhone-width screens.
+- **No placeholder workspaces:** Do not generate dashboard/workspace panels, "Status Live" cards, "Home workspace", "Book Appointment workspace", or web-app placeholder sections in a public website preview.
 
 ## Copy and conversion rules
 

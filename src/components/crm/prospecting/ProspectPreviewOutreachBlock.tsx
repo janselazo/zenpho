@@ -85,6 +85,16 @@ type BrandingPdfResult =
     }
   | { ok: false; error: string };
 
+type BrandingShareImageResult =
+  | {
+      ok: true;
+      svg: string;
+      width: number;
+      height: number;
+      filename: string;
+    }
+  | { ok: false; error: string };
+
 const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
 const ALLOWED_ATTACHMENT_TYPES = new Set([
   "image/png", "image/jpeg", "image/gif", "image/webp",
@@ -261,16 +271,16 @@ function defaultShareTemplatesForOffer(offer: SelectedOffer): ShareTemplates {
     case "branding":
       return {
         smsBody:
-          "Hi {{businessName}} — we built a complete Brand Kit + paid-ads Sales Funnel for you: real palette + logo, full brand book, landing page mockup, Facebook/Instagram/Google ad creatives + copy. Want the PDF?",
+          "Hi {{businessName}} — I put together a quick brand + ads preview image for you: palette, typography, website direction, and campaign assets. I can send the detailed PDF next if you want.",
         emailSubject: "Brand kit + paid-ads funnel for {{businessName}}",
         emailBody:
-          "Hi {{businessName}},\n\nWe drafted a complete Brand Kit + Sales Funnel for your business — the full brand book (story, logo, palette pulled from your real site, typography, tone of voice, imagery, merch, do's & don'ts) AND a paid-ads funnel section: audience strategy, an AI landing-page mockup, plus Facebook feed, Instagram feed, Instagram Story, Google Display and a hero banner — with platform-specific copy, suggested daily budget and KPIs.\n\nIt's yours to keep. If you want to launch the funnel or evolve the brand to storefront/web, we can scope that separately.\n\nHablamos español también.\n\nBest,\n{{yourName}}",
+          "Hi {{businessName}},\n\nI put together a quick brand + ads preview image for you first: palette, typography, website direction, and campaign assets for Meta, Instagram, and Google.\n\nIf it feels useful, I can send the detailed Brand Kit + Sales Funnel PDF next with the full brand book, landing page strategy, ad copy, suggested budget, and KPIs.\n\nHablamos español también.\n\nBest,\n{{yourName}}",
         instagramBody:
-          "Hi {{businessName}}! We drafted a Brand Kit + Sales Funnel PDF — palette/logo from your real site, plus FB/IG/Google ad creatives + landing page mockup. Want me to send it over?\n\n— {{yourName}}",
+          "Hi {{businessName}}! I made a quick brand + ads preview image for you — palette, website direction, and FB/IG/Google campaign assets. I can send the detailed PDF next if you want.\n\n— {{yourName}}",
         whatsappBody:
-          "Hi {{businessName}}! We drafted a Brand Kit + Sales Funnel PDF — palette/logo from your real site, plus FB/IG/Google ad creatives + landing page mockup. Want me to send it over?\n\n— {{yourName}}",
+          "Hi {{businessName}}! I made a quick brand + ads preview image for you — palette, website direction, and FB/IG/Google campaign assets. I can send the detailed PDF next if you want.\n\n— {{yourName}}",
         facebookBody:
-          "Hi {{businessName}}! We drafted a Brand Kit + Sales Funnel PDF — palette/logo from your real site, plus FB/IG/Google ad creatives + landing page mockup. Want me to send it over?\n\n— {{yourName}}",
+          "Hi {{businessName}}! I made a quick brand + ads preview image for you — palette, website direction, and FB/IG/Google campaign assets. I can send the detailed PDF next if you want.\n\n— {{yourName}}",
       };
   }
 }
@@ -321,6 +331,37 @@ async function downloadStitchPreviewImage(
   } catch {
     window.open(imageUrl, "_blank", "noopener,noreferrer");
     onFallback();
+  }
+}
+
+async function convertSvgToPngBlob(
+  svg: string,
+  width: number,
+  height: number,
+): Promise<Blob> {
+  const svgBlob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+  const svgUrl = URL.createObjectURL(svgBlob);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const node = new Image();
+      node.onload = () => resolve(node);
+      node.onerror = () => reject(new Error("Could not render share image SVG."));
+      node.src = svgUrl;
+    });
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas is not available in this browser.");
+    ctx.drawImage(img, 0, 0, width, height);
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error("Could not create PNG share image."));
+      }, "image/png");
+    });
+  } finally {
+    URL.revokeObjectURL(svgUrl);
   }
 }
 
@@ -803,8 +844,7 @@ export default function ProspectPreviewOutreachBlock({
 
   const addOutreachAttachment = useCallback((att: OutreachAttachment) => {
     setOutreachAttachments((prev) => {
-      if (prev.some((a) => a.id === att.id)) return prev;
-      return [...prev, att];
+      return [...prev.filter((a) => a.id !== att.id), att];
     });
   }, []);
 
@@ -836,6 +876,10 @@ export default function ProspectPreviewOutreachBlock({
   const [brandingMsg, setBrandingMsg] = useState<string | null>(null);
   const [brandingFilename, setBrandingFilename] = useState<string | null>(null);
   const [brandingPdfUrl, setBrandingPdfUrl] = useState<string | null>(null);
+  const [brandingShareBusy, setBrandingShareBusy] = useState(false);
+  const [brandingShareMsg, setBrandingShareMsg] = useState<string | null>(null);
+  const [brandingShareFilename, setBrandingShareFilename] = useState<string | null>(null);
+  const [brandingShareBlob, setBrandingShareBlob] = useState<Blob | null>(null);
 
   const resolvedBusinessName = useMemo(() => {
     const t = businessNameProp.trim();
@@ -860,6 +904,16 @@ export default function ProspectPreviewOutreachBlock({
     if (stitchContext?.kind === "url") return stitchContext.url?.trim() || null;
     return null;
   }, [stitchContext]);
+
+  const hasWalkthroughAttachment = outreachAttachments.some(
+    (att) => att.id === "walkthrough-video",
+  );
+  const hasBeforeAfterAttachment = outreachAttachments.some(
+    (att) => att.id === "before-after-image",
+  );
+  const hasBrandShareAttachment = outreachAttachments.some(
+    (att) => att.id === "brand-share-image",
+  );
 
   const activeShareTpl = shareTemplates[selectedOffer];
 
@@ -1160,9 +1214,10 @@ export default function ProspectPreviewOutreachBlock({
   }, [selectedOffer, stitchWebResult, stitchWebAppResult, stitchMobileResult]);
 
   const canSharePreview =
-    selectedOffer !== "automations" &&
-    selectedOffer !== "branding" &&
-    Boolean(hostedPreviewIdForSelection && resolvedBusinessName);
+    selectedOffer === "branding"
+      ? Boolean(resolvedBusinessName && hasBrandShareAttachment)
+      : selectedOffer !== "automations" &&
+        Boolean(hostedPreviewIdForSelection && resolvedBusinessName);
 
   const mergedPreviewUrlForSelection = useMemo(() => {
     const id = hostedPreviewIdForSelection;
@@ -1253,15 +1308,19 @@ export default function ProspectPreviewOutreachBlock({
 
   const sendSms = useCallback(async () => {
     const id = hostedPreviewIdForSelection;
-    if (!id || !smsTo.trim()) {
-      setShareMsg("Add a phone number and select a card with a hosted preview.");
+    if (!canSharePreview || !smsTo.trim()) {
+      setShareMsg(
+        selectedOffer === "branding"
+          ? "Add a phone number and generate the brand share image first."
+          : "Add a phone number and select a card with a hosted preview.",
+      );
       return;
     }
     setShareBusy("sms");
     setShareMsg(null);
     const extraAttachments = await serializeAttachments();
     const res = await sendProspectPreviewSmsAction({
-      previewId: id,
+      previewId: id ?? undefined,
       to: smsTo.trim(),
       bodyTemplate: shareTemplates[selectedOffer].smsBody,
       businessName: resolvedBusinessName,
@@ -1272,17 +1331,12 @@ export default function ProspectPreviewOutreachBlock({
     });
     setShareBusy(null);
     if (res.ok) {
-      const details =
-        "sid" in res && res.sid
-          ? `Twilio ${res.status ? res.status : "accepted"} (${res.sid}) from ${
-              "from" in res && res.from ? res.from : "configured sender"
-            } to ${res.to}.`
-          : "SMS request accepted.";
-      setShareMsg("warning" in res && res.warning ? `${details} ${res.warning}` : details);
+      setShareMsg("SMS sent.");
     } else {
       setShareMsg(res.error);
     }
   }, [
+    canSharePreview,
     hostedPreviewIdForSelection,
     stitchPreviewImageUrlForSelection,
     selectedOffer,
@@ -1296,8 +1350,12 @@ export default function ProspectPreviewOutreachBlock({
 
   const sendEmail = useCallback(async () => {
     const id = hostedPreviewIdForSelection;
-    if (!id || !emailTo.trim()) {
-      setShareMsg("Add an email address and select a card with a hosted preview.");
+    if (!canSharePreview || !emailTo.trim()) {
+      setShareMsg(
+        selectedOffer === "branding"
+          ? "Add an email address and generate the brand share image first."
+          : "Add an email address and select a card with a hosted preview.",
+      );
       return;
     }
     setShareBusy("email");
@@ -1309,7 +1367,7 @@ export default function ProspectPreviewOutreachBlock({
         : undefined,
     );
     const res = await sendProspectPreviewEmailAction({
-      previewId: id,
+      previewId: id ?? undefined,
       to: emailTo.trim(),
       subjectTemplate: shareTemplates[selectedOffer].emailSubject,
       bodyTemplate: shareTemplates[selectedOffer].emailBody,
@@ -1330,6 +1388,7 @@ export default function ProspectPreviewOutreachBlock({
       setShareMsg(res.error);
     }
   }, [
+    canSharePreview,
     hostedPreviewIdForSelection,
     stitchPreviewImageUrlForSelection,
     selectedOffer,
@@ -1469,6 +1528,70 @@ export default function ProspectPreviewOutreachBlock({
       setPdfBusy(false);
     }
   }, [marketIntelReport, resolvedBusinessName]);
+
+  const generateBrandingShareImage = useCallback(async () => {
+    setBrandingShareBusy(true);
+    setBrandingShareMsg(null);
+    setBrandingShareBlob(null);
+    setBrandingShareFilename(null);
+    try {
+      const http = await fetch("/api/prospecting/branding-share-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          businessName: resolvedBusinessName,
+          place: stitchContext?.kind === "place" ? stitchContext.place : null,
+          report: marketIntelReport ?? null,
+          leadId: linkedLeadId?.trim() || null,
+        }),
+      });
+      const text = await http.text();
+      let res: BrandingShareImageResult | null = null;
+      if (text) {
+        try {
+          res = JSON.parse(text) as BrandingShareImageResult;
+        } catch {
+          res = null;
+        }
+      }
+      if (!res) {
+        setBrandingShareMsg(
+          http.ok
+            ? "Share image finished but the server returned an invalid response."
+            : `Share image failed (${http.status}): ${text.slice(0, 240) || http.statusText}`,
+        );
+        return;
+      }
+      if (!res.ok) {
+        setBrandingShareMsg(res.error);
+        return;
+      }
+
+      const blob = await convertSvgToPngBlob(res.svg, res.width, res.height);
+      const filename = res.filename || "brand-kit-sales-funnel-preview.png";
+      setBrandingShareBlob(blob);
+      setBrandingShareFilename(filename);
+      addOutreachAttachment({
+        id: "brand-share-image",
+        name: filename,
+        blob,
+        source: "suggested",
+      });
+      setSelectedOffer("branding");
+      setBrandingShareMsg("Share image ready and attached.");
+    } catch (e) {
+      setBrandingShareMsg(e instanceof Error ? e.message : "Share image request failed.");
+    } finally {
+      setBrandingShareBusy(false);
+    }
+  }, [
+    addOutreachAttachment,
+    linkedLeadId,
+    marketIntelReport,
+    resolvedBusinessName,
+    stitchContext,
+  ]);
 
   const generateBrandingPdf = useCallback(async () => {
     setBrandingBusy(true);
@@ -1885,20 +2008,49 @@ export default function ProspectPreviewOutreachBlock({
               <Palette className="h-4 w-4 shrink-0 text-text-secondary opacity-70 dark:text-zinc-500" aria-hidden />
             </div>
             <p className="mt-2 text-[11px] leading-snug text-text-secondary dark:text-zinc-400">
-              Landscape A4 brand book using the prospect&apos;s real palette and logo extracted from their site, plus a
-              full Sales Funnel section: audience strategy, an AI landing page mockup, and Facebook, Instagram (feed +
-              story), Google Display and hero banner ad creatives with platform-specific copy, suggested daily budget
-              and KPIs. Visuals via OpenAI gpt-image-2; copy is biased to local-business / tech-startup / ecommerce.
-              Not a Stitch screen.
+              Start with a 1200×900 share image for SMS, email, or manual outreach. It summarizes the prospect&apos;s
+              palette, typography, website direction, and campaign assets. Then generate the detailed PDF as the
+              follow-up brand book and sales-funnel strategy.
             </p>
             <button
               type="button"
-              disabled={brandingBusy}
+              disabled={brandingShareBusy}
+              onClick={(e) => {
+                e.stopPropagation();
+                void generateBrandingShareImage();
+              }}
+              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-500/[0.14] disabled:opacity-50 dark:border-emerald-400/35 dark:bg-emerald-500/15 dark:text-emerald-200 dark:hover:bg-emerald-500/20"
+            >
+              {brandingShareBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <ImageDown className="h-3.5 w-3.5" aria-hidden />}
+              {brandingShareBusy ? "Composing image…" : "Generate Image"}
+            </button>
+            {brandingShareMsg ? (
+              <p className="mt-2 text-[11px] text-text-secondary dark:text-zinc-400" role="status">
+                {brandingShareMsg}
+                {brandingShareFilename ? <span className="ml-1 font-mono text-[10px]">{brandingShareFilename}</span> : null}
+              </p>
+            ) : null}
+            {brandingShareBlob && brandingShareFilename ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  downloadBlob(brandingShareBlob, brandingShareFilename);
+                }}
+                className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-500/[0.14] dark:border-emerald-400/35 dark:bg-emerald-500/15 dark:text-emerald-200 dark:hover:bg-emerald-500/20"
+              >
+                <ImageDown className="h-3.5 w-3.5" aria-hidden />
+                Download image
+              </button>
+            ) : null}
+            <button
+              type="button"
+              disabled={brandingBusy || brandingShareBusy}
               onClick={(e) => {
                 e.stopPropagation();
                 void generateBrandingPdf();
               }}
-              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 hover:bg-blue-500/[0.14] disabled:opacity-50 dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200 dark:hover:bg-blue-500/20"
+              className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 hover:bg-blue-500/[0.14] disabled:opacity-50 dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200 dark:hover:bg-blue-500/20"
             >
               {brandingBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Palette className="h-3.5 w-3.5" aria-hidden />}
               {brandingBusy ? "Composing brand kit + funnel…" : "Generate brand kit & funnel (PDF)"}
@@ -1956,8 +2108,8 @@ export default function ProspectPreviewOutreachBlock({
             ) : (
               <>
                 {" "}
-                · templates for <span className="text-text-primary dark:text-zinc-200">Brand guidelines</span> (hosted
-                link send requires Website, Web app, or Mobile)
+                · templates for <span className="text-text-primary dark:text-zinc-200">Brand guidelines</span> (generate
+                the share image first to attach it)
               </>
             )}
           </p>
@@ -2045,33 +2197,6 @@ export default function ProspectPreviewOutreachBlock({
                   )}
                 </button>
               </div>
-              {outreachAttachments.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {outreachAttachments.map((att) => (
-                    <span
-                      key={att.id}
-                      className="inline-flex items-center gap-1 rounded-full border border-border bg-white px-1.5 py-0.5 text-[9px] dark:border-zinc-700 dark:bg-zinc-800"
-                    >
-                      {att.blob.type.startsWith("video/") ? (
-                        <Video className="h-2.5 w-2.5 text-purple-500" aria-hidden />
-                      ) : att.blob.type.startsWith("image/") ? (
-                        <ImageDown className="h-2.5 w-2.5 text-emerald-600" aria-hidden />
-                      ) : (
-                        <FileDown className="h-2.5 w-2.5 text-sky-500" aria-hidden />
-                      )}
-                      <span className="max-w-[100px] truncate">{att.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeOutreachAttachment(att.id)}
-                        className="ml-0.5 rounded-full p-0.5 hover:bg-zinc-200 dark:hover:bg-zinc-700"
-                        aria-label={`Remove ${att.name}`}
-                      >
-                        <X className="h-2 w-2" aria-hidden />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
             </section>
 
             <section
@@ -2091,7 +2216,7 @@ export default function ProspectPreviewOutreachBlock({
                 Merge tags: <span className="font-mono">{"{{previewUrl}}"}</span>,{" "}
                 <span className="font-mono">{"{{businessName}}"}</span>
                 {selectedOffer === "automations" || selectedOffer === "branding" ? (
-                  <> — <span className="font-mono">{"{{previewUrl}}"}</span> usually omitted (PDF follow-up).</>
+                  <> — <span className="font-mono">{"{{previewUrl}}"}</span> usually omitted for image-first outreach.</>
                 ) : (
                   <> — optional <span className="font-mono">{"{{yourName}}"}</span> (typical in email sign-off).</>
                 )}
@@ -2156,73 +2281,6 @@ export default function ProspectPreviewOutreachBlock({
                   )}
                 </button>
               </div>
-              {outreachAttachments.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {outreachAttachments.map((att) => (
-                    <span
-                      key={att.id}
-                      className="inline-flex items-center gap-1 rounded-full border border-border bg-white px-1.5 py-0.5 text-[9px] dark:border-zinc-700 dark:bg-zinc-800"
-                    >
-                      {att.blob.type.startsWith("video/") ? (
-                        <Video className="h-2.5 w-2.5 text-purple-500" aria-hidden />
-                      ) : att.blob.type.startsWith("image/") ? (
-                        <ImageDown className="h-2.5 w-2.5 text-emerald-600" aria-hidden />
-                      ) : (
-                        <FileDown className="h-2.5 w-2.5 text-sky-500" aria-hidden />
-                      )}
-                      <span className="max-w-[100px] truncate">{att.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeOutreachAttachment(att.id)}
-                        className="ml-0.5 rounded-full p-0.5 hover:bg-zinc-200 dark:hover:bg-zinc-700"
-                        aria-label={`Remove ${att.name}`}
-                      >
-                        <X className="h-2 w-2" aria-hidden />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-              {(hasVideoBlob && parentVideoBlobRef.current && !outreachAttachments.some((a) => a.id === "walkthrough-video")) ||
-               (existingWebsiteUrl && stitchWebResult && !outreachAttachments.some((a) => a.id === "before-after-image")) ? (
-                <div className="mt-1.5 flex flex-wrap gap-1">
-                  {hasVideoBlob && parentVideoBlobRef.current && !outreachAttachments.some((a) => a.id === "walkthrough-video") && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const blob = parentVideoBlobRef.current;
-                        if (!blob) return;
-                        addOutreachAttachment({ id: "walkthrough-video", name: "homepage-walkthrough.mp4", blob, source: "suggested" });
-                      }}
-                      className="inline-flex items-center gap-0.5 rounded-full border border-dashed border-purple-400/50 px-1.5 py-0.5 text-[9px] text-purple-700 hover:bg-purple-50 dark:border-purple-500/40 dark:text-purple-300 dark:hover:bg-purple-500/10"
-                    >
-                      <Plus className="h-2 w-2" aria-hidden />
-                      <Video className="h-2.5 w-2.5" aria-hidden />
-                      Video
-                    </button>
-                  )}
-                  {existingWebsiteUrl && stitchWebResult && !outreachAttachments.some((a) => a.id === "before-after-image") && (
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        try {
-                          const blob = await composeBeforeAfterImage({
-                            beforeImageUrl: `/api/prospecting/website-snapshot?url=${encodeURIComponent(existingWebsiteUrl)}`,
-                            afterImageUrl: stitchWebResult.imageUrl,
-                            businessName: resolvedBusinessName,
-                          });
-                          addOutreachAttachment({ id: "before-after-image", name: "before-after-comparison.png", blob, source: "suggested" });
-                        } catch { /* silent */ }
-                      }}
-                      className="inline-flex items-center gap-0.5 rounded-full border border-dashed border-amber-400/50 px-1.5 py-0.5 text-[9px] text-amber-700 hover:bg-amber-50 dark:border-amber-500/40 dark:text-amber-300 dark:hover:bg-amber-500/10"
-                    >
-                      <Plus className="h-2 w-2" aria-hidden />
-                      <ImageDown className="h-2.5 w-2.5" aria-hidden />
-                      Before/After
-                    </button>
-                  )}
-                </div>
-              ) : null}
             </section>
 
             <section
@@ -2409,6 +2467,147 @@ export default function ProspectPreviewOutreachBlock({
             <p className="mt-4 text-[11px] text-text-secondary dark:text-zinc-400" role="status">
               {shareMsg}
             </p>
+          ) : null}
+
+          {outreachAttachments.length > 0 ||
+          (hasVideoBlob && parentVideoBlobRef.current && !hasWalkthroughAttachment) ||
+          (existingWebsiteUrl && stitchWebResult && !hasBeforeAfterAttachment) ||
+          (brandingShareBlob && brandingShareFilename && !hasBrandShareAttachment) ? (
+            <div className="mt-4 rounded-xl border border-border/70 bg-white/50 p-3 dark:border-zinc-700/70 dark:bg-zinc-900/35">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-text-secondary/85 dark:text-zinc-400">
+                    Media to send
+                  </p>
+                  <p className="mt-1 text-[10px] leading-snug text-text-secondary dark:text-zinc-500">
+                    Select the assets to attach for SMS/email. For WhatsApp, Instagram, and Facebook, download or copy the
+                    selected media manually.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="shrink-0 rounded-lg border border-zinc-300/70 p-2 text-zinc-500 hover:bg-zinc-100 dark:border-zinc-600/60 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                  aria-label="Attach custom files"
+                  title="Attach custom files"
+                >
+                  <Paperclip className="h-4 w-4" aria-hidden />
+                </button>
+              </div>
+
+              {(hasVideoBlob && parentVideoBlobRef.current && !hasWalkthroughAttachment) ||
+              (existingWebsiteUrl && stitchWebResult && !hasBeforeAfterAttachment) ||
+              (brandingShareBlob && brandingShareFilename && !hasBrandShareAttachment) ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {brandingShareBlob && brandingShareFilename && !hasBrandShareAttachment ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        addOutreachAttachment({
+                          id: "brand-share-image",
+                          name: brandingShareFilename,
+                          blob: brandingShareBlob,
+                          source: "suggested",
+                        });
+                      }}
+                      className="inline-flex items-center gap-1 rounded-full border border-dashed border-emerald-400/60 px-2.5 py-1 text-[11px] font-medium text-emerald-700 hover:bg-emerald-50 dark:border-emerald-500/40 dark:text-emerald-300 dark:hover:bg-emerald-500/10"
+                    >
+                      <Plus className="h-3 w-3" aria-hidden />
+                      <ImageDown className="h-3.5 w-3.5" aria-hidden />
+                      Brand Image
+                    </button>
+                  ) : null}
+                  {hasVideoBlob && parentVideoBlobRef.current && !hasWalkthroughAttachment ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const blob = parentVideoBlobRef.current;
+                        if (!blob) return;
+                        addOutreachAttachment({
+                          id: "walkthrough-video",
+                          name: "homepage-walkthrough.mp4",
+                          blob,
+                          source: "suggested",
+                        });
+                      }}
+                      className="inline-flex items-center gap-1 rounded-full border border-dashed border-purple-400/60 px-2.5 py-1 text-[11px] font-medium text-purple-700 hover:bg-purple-50 dark:border-purple-500/40 dark:text-purple-300 dark:hover:bg-purple-500/10"
+                    >
+                      <Plus className="h-3 w-3" aria-hidden />
+                      <Video className="h-3.5 w-3.5" aria-hidden />
+                      Video
+                    </button>
+                  ) : null}
+                  {existingWebsiteUrl && stitchWebResult && !hasBeforeAfterAttachment ? (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          const blob = await composeBeforeAfterImage({
+                            beforeImageUrl: `/api/prospecting/website-snapshot?url=${encodeURIComponent(existingWebsiteUrl)}`,
+                            afterImageUrl: stitchWebResult.imageUrl,
+                            businessName: resolvedBusinessName,
+                          });
+                          addOutreachAttachment({
+                            id: "before-after-image",
+                            name: "before-after-comparison.png",
+                            blob,
+                            source: "suggested",
+                          });
+                        } catch {
+                          setShareMsg("Could not create the before/after image.");
+                        }
+                      }}
+                      className="inline-flex items-center gap-1 rounded-full border border-dashed border-amber-400/60 px-2.5 py-1 text-[11px] font-medium text-amber-700 hover:bg-amber-50 dark:border-amber-500/40 dark:text-amber-300 dark:hover:bg-amber-500/10"
+                    >
+                      <Plus className="h-3 w-3" aria-hidden />
+                      <ImageDown className="h-3.5 w-3.5" aria-hidden />
+                      Before/After
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {outreachAttachments.length > 0 ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {outreachAttachments.map((att) => (
+                    <span
+                      key={att.id}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-2.5 py-1 text-[11px] dark:border-zinc-700 dark:bg-zinc-800"
+                    >
+                      {att.blob.type.startsWith("video/") ? (
+                        <Video className="h-3.5 w-3.5 text-purple-500" aria-hidden />
+                      ) : att.blob.type.startsWith("image/") ? (
+                        <ImageDown className="h-3.5 w-3.5 text-emerald-600" aria-hidden />
+                      ) : (
+                        <FileDown className="h-3.5 w-3.5 text-sky-500" aria-hidden />
+                      )}
+                      <span className="max-w-[180px] truncate">{att.name}</span>
+                      <span className="text-[10px] text-text-secondary/70 dark:text-zinc-500">
+                        {formatFileSize(att.blob.size)}
+                      </span>
+                      {att.blob.type.startsWith("image/") || att.blob.type.startsWith("video/") ? (
+                        <button
+                          type="button"
+                          onClick={() => downloadBlob(att.blob, att.name)}
+                          className="ml-0.5 rounded-full p-0.5 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                          aria-label={`Download ${att.name}`}
+                        >
+                          <FileDown className="h-2.5 w-2.5" aria-hidden />
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => removeOutreachAttachment(att.id)}
+                        className="rounded-full p-0.5 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                        aria-label={`Remove ${att.name}`}
+                      >
+                        <X className="h-2.5 w-2.5" aria-hidden />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
           ) : null}
 
         </div>

@@ -257,6 +257,18 @@ export default function ConversationsView({
   }, [activeConversationId, router]);
 
   useEffect(() => {
+    const refreshIfVisible = () => {
+      if (document.visibilityState === "visible") router.refresh();
+    };
+    const interval = window.setInterval(refreshIfVisible, 10000);
+    document.addEventListener("visibilitychange", refreshIfVisible);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", refreshIfVisible);
+    };
+  }, [router]);
+
+  useEffect(() => {
     setTab("messages");
     setBody("");
     setEmailSubject("");

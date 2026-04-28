@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { normalizeSmsPhone } from "@/lib/crm/conversation-sms";
 
 /**
  * GET /api/conversations/by-phone?phone=+15551234567
@@ -7,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
  * Used by ProspectConversationPanel for inline mini-conversations.
  */
 export async function GET(req: NextRequest) {
-  const phone = req.nextUrl.searchParams.get("phone")?.trim();
+  const phone = normalizeSmsPhone(req.nextUrl.searchParams.get("phone")?.trim() ?? "");
   if (!phone) {
     return NextResponse.json({ error: "Missing phone param" }, { status: 400 });
   }

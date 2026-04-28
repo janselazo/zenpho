@@ -146,8 +146,8 @@ function drawPersonalityPage(ctx: BrandBookContext, pageNumber: number): void {
   const cardCount = Math.max(traits.length, 1);
   const gap = 24;
   const cardW = (CONTENT_W - gap * (cardCount - 1)) / cardCount;
-  const cardH = 210;
-  const cardY = SAFE_MARGIN + 60;
+  const cardH = 185;
+  const cardY = SAFE_MARGIN + 28;
 
   for (let i = 0; i < cardCount; i++) {
     const trait = traits[i] || "—";
@@ -171,17 +171,17 @@ function drawPersonalityPage(ctx: BrandBookContext, pageNumber: number): void {
   if (ctx.spec.targetAudience) {
     drawSectionEyebrow(page, ctx, {
       x: SAFE_MARGIN,
-      y: SAFE_MARGIN + 320,
+      y: PAGE_H - SAFE_MARGIN - 205,
       label: "For",
     });
     drawWrappedText(page, ctx.spec.targetAudience, {
       x: SAFE_MARGIN,
-      y: SAFE_MARGIN + 300,
-      size: 16,
-      font: ctx.fonts.display,
+      y: PAGE_H - SAFE_MARGIN - 228,
+      size: 12.5,
+      font: ctx.fonts.body,
       color: ctx.ink,
-      maxWidth: CONTENT_W,
-      lineGap: 6,
+      maxWidth: CONTENT_W * 0.82,
+      lineGap: 5,
     });
   }
 
@@ -861,6 +861,229 @@ async function drawFunnelSection(
       ? f.landingPage.sections
       : sectionFallbacks
     ).slice(0, 5);
+    const drawSectionSnapshot = (
+      section: string,
+      index: number,
+      rect: { x: number; y: number; width: number; height: number },
+    ) => {
+      const lower = section.toLowerCase();
+      const isHero = index === 0 || /hero|headline|intro/.test(lower);
+      const isServices = /service|treatment|offer|package|program|menu/.test(lower);
+      const isProof = /review|testimonial|story|proof|patient/.test(lower);
+      const isLocation = /location|hour|visit|contact|book|appointment|map/.test(lower);
+      const isGallery = /gallery|image|photo|work|case|portfolio/.test(lower);
+
+      page.drawRectangle({
+        x: rect.x,
+        y: rect.y,
+        width: rect.width,
+        height: rect.height,
+        color: rgbColor([0.99, 0.985, 0.97]),
+        borderColor: rgbColor(mixRgb(ctx.primary, [1, 1, 1], 0.65)),
+        borderWidth: index === 0 ? 0.8 : 0.45,
+      });
+
+      const pad = 8;
+      const innerX = rect.x + pad;
+      const innerY = rect.y + pad;
+      const innerW = rect.width - pad * 2;
+      const innerH = rect.height - pad * 2;
+      const tint = mixRgb(ctx.primary, [1, 1, 1], 0.88);
+      const tint2 = mixRgb(ctx.accent, [1, 1, 1], 0.82);
+
+      page.drawRectangle({
+        x: innerX,
+        y: innerY,
+        width: innerW,
+        height: innerH,
+        color: rgbColor([1, 1, 1]),
+      });
+
+      page.drawCircle({
+        x: rect.x + 13,
+        y: rect.y + rect.height - 12,
+        size: 7,
+        color: rgbColor(ctx.primary),
+        opacity: 0.12,
+      });
+      page.drawText(String(index + 1).padStart(2, "0"), {
+        x: rect.x + 9,
+        y: rect.y + rect.height - 15,
+        size: 6,
+        font: ctx.fonts.body,
+        color: rgbColor(ctx.primary),
+      });
+
+      if (isHero) {
+        page.drawRectangle({
+          x: innerX,
+          y: innerY + innerH * 0.32,
+          width: innerW,
+          height: innerH * 0.68,
+          color: rgbColor(tint),
+        });
+        page.drawRectangle({
+          x: innerX + 8,
+          y: innerY + innerH * 0.46,
+          width: innerW * 0.58,
+          height: innerH * 0.34,
+          color: rgbColor([1, 1, 1]),
+          opacity: 0.9,
+        });
+        page.drawRectangle({
+          x: innerX + 16,
+          y: innerY + innerH * 0.67,
+          width: innerW * 0.34,
+          height: 5,
+          color: rgbColor(ctx.ink),
+        });
+        page.drawRectangle({
+          x: innerX + 16,
+          y: innerY + innerH * 0.57,
+          width: innerW * 0.44,
+          height: 4,
+          color: rgbColor(mixRgb(ctx.ink, [1, 1, 1], 0.55)),
+        });
+        page.drawRectangle({
+          x: innerX + 16,
+          y: innerY + innerH * 0.43,
+          width: innerW * 0.24,
+          height: 10,
+          color: rgbColor(ctx.primary),
+        });
+        return;
+      }
+
+      if (isServices) {
+        const cardGap = 5;
+        const cardW = (innerW - cardGap * 2) / 3;
+        for (let i = 0; i < 3; i++) {
+          page.drawRectangle({
+            x: innerX + i * (cardW + cardGap),
+            y: innerY + 6,
+            width: cardW,
+            height: innerH - 12,
+            color: rgbColor(i === 1 ? tint : [1, 1, 1]),
+            borderColor: rgbColor([0.88, 0.87, 0.84]),
+            borderWidth: 0.35,
+          });
+          page.drawCircle({
+            x: innerX + i * (cardW + cardGap) + cardW / 2,
+            y: innerY + innerH - 18,
+            size: 5,
+            color: rgbColor(i === 1 ? ctx.primary : tint2),
+          });
+          page.drawRectangle({
+            x: innerX + i * (cardW + cardGap) + 7,
+            y: innerY + 16,
+            width: cardW - 14,
+            height: 4,
+            color: rgbColor(mixRgb(ctx.ink, [1, 1, 1], 0.55)),
+          });
+        }
+        return;
+      }
+
+      if (isProof) {
+        for (let i = 0; i < 2; i++) {
+          page.drawRectangle({
+            x: innerX + i * (innerW / 2 + 4),
+            y: innerY + 8,
+            width: innerW / 2 - 4,
+            height: innerH - 16,
+            color: rgbColor([1, 1, 1]),
+            borderColor: rgbColor([0.88, 0.87, 0.84]),
+            borderWidth: 0.35,
+          });
+          page.drawRectangle({
+            x: innerX + i * (innerW / 2 + 4) + 8,
+            y: innerY + innerH - 20,
+            width: 38,
+            height: 4,
+            color: rgbColor(ctx.accent),
+          });
+          page.drawRectangle({
+            x: innerX + i * (innerW / 2 + 4) + 8,
+            y: innerY + 20,
+            width: innerW / 2 - 26,
+            height: 4,
+            color: rgbColor(mixRgb(ctx.ink, [1, 1, 1], 0.65)),
+          });
+        }
+        return;
+      }
+
+      if (isLocation) {
+        page.drawRectangle({
+          x: innerX,
+          y: innerY,
+          width: innerW * 0.52,
+          height: innerH,
+          color: rgbColor(tint),
+        });
+        page.drawCircle({
+          x: innerX + innerW * 0.26,
+          y: innerY + innerH * 0.58,
+          size: 8,
+          color: rgbColor(ctx.primary),
+        });
+        for (let i = 0; i < 3; i++) {
+          page.drawRectangle({
+            x: innerX + innerW * 0.6,
+            y: innerY + innerH - 18 - i * 13,
+            width: innerW * (i === 0 ? 0.32 : 0.26),
+            height: 5,
+            color: rgbColor(i === 0 ? ctx.ink : mixRgb(ctx.ink, [1, 1, 1], 0.65)),
+          });
+        }
+        return;
+      }
+
+      if (isGallery) {
+        const tileGap = 4;
+        const tileW = (innerW - tileGap * 2) / 3;
+        const tileH = (innerH - tileGap) / 2;
+        for (let i = 0; i < 6; i++) {
+          page.drawRectangle({
+            x: innerX + (i % 3) * (tileW + tileGap),
+            y: innerY + (i < 3 ? tileH + tileGap : 0),
+            width: tileW,
+            height: tileH,
+            color: rgbColor(i % 2 === 0 ? tint : tint2),
+          });
+        }
+        return;
+      }
+
+      page.drawRectangle({
+        x: innerX,
+        y: innerY + innerH * 0.58,
+        width: innerW,
+        height: innerH * 0.42,
+        color: rgbColor(tint),
+      });
+      page.drawRectangle({
+        x: innerX + 10,
+        y: innerY + innerH * 0.68,
+        width: innerW * 0.52,
+        height: 6,
+        color: rgbColor(ctx.ink),
+      });
+      page.drawRectangle({
+        x: innerX + 10,
+        y: innerY + innerH * 0.43,
+        width: innerW * 0.78,
+        height: 5,
+        color: rgbColor(mixRgb(ctx.ink, [1, 1, 1], 0.65)),
+      });
+      page.drawRectangle({
+        x: innerX + 10,
+        y: innerY + innerH * 0.28,
+        width: innerW * 0.58,
+        height: 5,
+        color: rgbColor(mixRgb(ctx.ink, [1, 1, 1], 0.75)),
+      });
+    };
     let mobileY = heroY - 18;
     for (const vp of valueProps) {
       page.drawRectangle({
@@ -938,37 +1161,23 @@ async function drawFunnelSection(
     drawSectionEyebrow(page, ctx, {
       x: rightX,
       y: blueprintY,
-      label: "Section order",
+      label: "Section snapshots",
     });
-    blueprintY -= 26;
+    blueprintY -= 22;
+    const snapshotGap = 12;
+    const snapshotW = (rightW - snapshotGap) / 2;
+    const snapshotH = 72;
     sections.forEach((section, i) => {
-      page.drawRectangle({
-        x: rightX,
-        y: blueprintY - 24,
-        width: rightW,
-        height: 34,
-        color: rgbColor(i === 0 ? mixRgb(ctx.primary, [1, 1, 1], 0.86) : [0.98, 0.98, 0.97]),
-        borderColor: rgbColor(i === 0 ? ctx.primary : [0.86, 0.86, 0.84]),
-        borderWidth: 0.45,
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      drawSectionSnapshot(section, i, {
+        x: rightX + col * (snapshotW + snapshotGap),
+        y: blueprintY - snapshotH - row * (snapshotH + snapshotGap),
+        width: snapshotW,
+        height: snapshotH,
       });
-      page.drawText(String(i + 1).padStart(2, "0"), {
-        x: rightX + 12,
-        y: blueprintY - 9,
-        size: 8,
-        font: ctx.fonts.body,
-        color: rgbColor(ctx.primary),
-      });
-      drawLimitedWrappedText(section, {
-        x: rightX + 42,
-        y: blueprintY - 8,
-        size: 9,
-        font: ctx.fonts.body,
-        color: ctx.ink,
-        maxWidth: rightW - 54,
-        maxLines: 1,
-      });
-      blueprintY -= 42;
     });
+    blueprintY -= Math.ceil(sections.length / 2) * (snapshotH + snapshotGap) + 2;
 
     drawSectionEyebrow(page, ctx, {
       x: rightX,
@@ -1251,11 +1460,12 @@ async function drawFunnelSection(
 
     const googleBlue: Rgb = hexToRgb("#4285F4");
 
-    // Top: centered responsive search ad mock card, lowered so it clears the title.
-    const rsaW = CONTENT_W * 0.82;
-    const rsaH = 124;
+    // Top: compact responsive search ad mock. It stays in its own band so the
+    // display creatives below never overlap the search copy.
+    const rsaW = CONTENT_W * 0.78;
+    const rsaH = 104;
     const rsaX = SAFE_MARGIN + (CONTENT_W - rsaW) / 2;
-    const rsaY = PAGE_H - SAFE_MARGIN - 126 - rsaH;
+    const rsaY = PAGE_H - SAFE_MARGIN - 132 - rsaH;
     page.drawRectangle({
       x: rsaX,
       y: rsaY,
@@ -1273,55 +1483,51 @@ async function drawFunnelSection(
       color: rgbColor([0.4, 0.4, 0.42]),
     });
 
-    let rsaCy = rsaY + rsaH - 44;
+    let rsaCy = rsaY + rsaH - 36;
     const headlines = f.google.searchHeadlines.slice(0, 3);
-    headlines.forEach((h, i) => {
-      page.drawText(sanitizeForBrandBook(h), {
-        x: rsaX + 16,
-        y: rsaCy,
-        size: 14,
-        font: ctx.fonts.display,
-        color: rgbColor(googleBlue),
-      });
-      if (i < headlines.length - 1) {
-        page.drawText("|", {
-          x:
-            rsaX +
-            16 +
-            ctx.fonts.display.widthOfTextAtSize(sanitizeForBrandBook(h), 14) +
-            8,
-          y: rsaCy,
-          size: 14,
-          font: ctx.fonts.display,
-          color: rgbColor([0.7, 0.7, 0.74]),
-        });
-      }
-      rsaCy -= 24;
+    const headlineText = headlines.length
+      ? headlines.map((h) => sanitizeForBrandBook(h)).join("  |  ")
+      : sanitizeForBrandBook(f.google.displayHeadline || "Search headline");
+    rsaCy = drawLimitedWrappedTextBlock(page, headlineText, {
+      x: rsaX + 16,
+      y: rsaCy,
+      size: 11.5,
+      font: ctx.fonts.display,
+      color: googleBlue,
+      maxWidth: rsaW - 32,
+      maxLines: 2,
+      lineGap: 3,
     });
     rsaCy -= 4;
-    f.google.searchDescriptions.slice(0, 2).forEach((d) => {
-      rsaCy = drawWrappedText(page, d, {
+    f.google.searchDescriptions.slice(0, 1).forEach((d) => {
+      rsaCy = drawLimitedWrappedTextBlock(page, d, {
         x: rsaX + 16,
         y: rsaCy,
-        size: 10.5,
+        size: 8.8,
         font: ctx.fonts.body,
         color: [0.25, 0.25, 0.27],
         maxWidth: rsaW - 32,
-        lineGap: 3,
+        maxLines: 2,
+        lineGap: 2,
       });
-      rsaCy -= 4;
     });
 
-    // Bottom: centered display creative + banner thumbnail. Copy sits inside the banner
-    // so it cannot collide with the footer.
-    const dispW = 190;
-    const dispH = 190;
-    const displayGap = 36;
-    const banW = 346;
-    const banH = 170;
+    drawCtaChip(page, ctx, {
+      x: rsaX + 16,
+      y: rsaY + 12,
+      label: "Google Search",
+      color: googleBlue,
+    });
+
+    // Bottom: centered display creative + banner thumbnail in a separate band.
+    const dispW = 172;
+    const dispH = 172;
+    const displayGap = 40;
+    const banW = 336;
+    const banH = 156;
     const displayGroupW = dispW + displayGap + banW;
     const dispX = SAFE_MARGIN + (CONTENT_W - displayGroupW) / 2;
-    const dispY = SAFE_MARGIN + 54;
+    const dispY = SAFE_MARGIN + 40;
     await drawAdMock(
       ctx,
       page,

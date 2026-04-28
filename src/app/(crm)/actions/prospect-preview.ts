@@ -94,7 +94,7 @@ async function fetchInlinePreviewAttachment(
 }
 
 export async function sendProspectPreviewSmsAction(input: {
-  previewId: string;
+  previewId?: string;
   to: string;
   bodyTemplate: string;
   businessName: string;
@@ -142,19 +142,27 @@ export async function sendProspectPreviewSmsAction(input: {
     };
   }
 
-  const { data: row, error: rowErr } = await auth.supabase
-    .from("prospect_preview")
-    .select("screenshot_url, screenshot_status, slug")
-    .eq("id", input.previewId.trim())
-    .maybeSingle();
-  if (rowErr) {
-    return { ok: false as const, error: "Could not load preview for SMS." };
+  const previewId = input.previewId?.trim() || null;
+  let row: {
+    screenshot_url?: string | null;
+    screenshot_status?: string | null;
+    slug?: string | null;
+  } | null = null;
+  if (previewId) {
+    const { data, error: rowErr } = await auth.supabase
+      .from("prospect_preview")
+      .select("screenshot_url, screenshot_status, slug")
+      .eq("id", previewId)
+      .maybeSingle();
+    if (rowErr) {
+      return { ok: false as const, error: "Could not load preview for SMS." };
+    }
+    row = data;
   }
 
-  const previewUrl = prospectOutboundTemplatePreviewUrl(
-    input.previewId.trim(),
-    row?.slug?.trim() || null,
-  );
+  const previewUrl = previewId
+    ? prospectOutboundTemplatePreviewUrl(previewId, row?.slug?.trim() || null)
+    : "";
   const body = mergeProspectOutreachTemplate(input.bodyTemplate, {
     previewUrl,
     businessName: input.businessName,
@@ -221,10 +229,6 @@ export async function sendProspectPreviewSmsAction(input: {
       status: smsResult.status,
       to: toPhone,
       from: creds.fromPhone,
-      warning:
-        smsResult.status === "queued" || smsResult.status === "accepted"
-          ? "Twilio accepted the SMS. Final carrier delivery can still fail later; check Twilio logs if the prospect does not receive it."
-          : undefined,
     };
   } catch (e) {
     const hasMedia = allMediaUrls.length > 0;
@@ -266,7 +270,7 @@ export async function sendProspectPreviewSmsAction(input: {
 }
 
 export async function sendProspectPreviewEmailAction(input: {
-  previewId: string;
+  previewId?: string;
   to: string;
   subjectTemplate: string;
   bodyTemplate: string;
@@ -284,19 +288,27 @@ export async function sendProspectPreviewEmailAction(input: {
     return { ok: false as const, error: auth.error ?? "Unauthorized" };
   }
 
-  const { data: prevRow, error: prevRowErr } = await auth.supabase
-    .from("prospect_preview")
-    .select("slug, screenshot_url, screenshot_status")
-    .eq("id", input.previewId.trim())
-    .maybeSingle();
-  if (prevRowErr) {
-    return { ok: false as const, error: "Could not load preview for email." };
+  const previewId = input.previewId?.trim() || null;
+  let prevRow: {
+    slug?: string | null;
+    screenshot_url?: string | null;
+    screenshot_status?: string | null;
+  } | null = null;
+  if (previewId) {
+    const { data, error: prevRowErr } = await auth.supabase
+      .from("prospect_preview")
+      .select("slug, screenshot_url, screenshot_status")
+      .eq("id", previewId)
+      .maybeSingle();
+    if (prevRowErr) {
+      return { ok: false as const, error: "Could not load preview for email." };
+    }
+    prevRow = data;
   }
 
-  const previewUrl = prospectOutboundTemplatePreviewUrl(
-    input.previewId.trim(),
-    prevRow?.slug?.trim() || null,
-  );
+  const previewUrl = previewId
+    ? prospectOutboundTemplatePreviewUrl(previewId, prevRow?.slug?.trim() || null)
+    : "";
   const subj = mergeProspectOutreachTemplate(input.subjectTemplate, {
     previewUrl,
     businessName: input.businessName,
@@ -361,11 +373,11 @@ export async function sendProspectPreviewEmailAction(input: {
 
   const htmlBody = `
 <p>${textBody.replace(/\n/g, "<br/>")}</p>
-<p><a href="${previewUrl}">Open preview</a></p>
+${previewUrl ? `<p><a href="${previewUrl}">Open preview</a></p>` : ""}
 ${previewImageHtml}
 `.trim();
 
-  const plainText = `${textBody}\n\n${previewUrl}`;
+  const plainText = previewUrl ? `${textBody}\n\n${previewUrl}` : textBody;
 
   const sendGridCreds = await getAgencySendGridCredentials();
   if (sendGridCreds) {

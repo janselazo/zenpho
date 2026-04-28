@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import {
   saveTwilioIntegration,
+  syncTwilioSmsWebhook,
   testTwilioConnection,
   type TwilioIntegrationFormState,
 } from "@/app/(crm)/actions/twilio-integration";
@@ -52,6 +53,7 @@ export default function TwilioIntegrationSettings({ initial, webhookOrigin }: Pr
   const [whatsappSandbox, setWhatsappSandbox] = useState(initial.whatsappSandbox);
   const [savePending, startSave] = useTransition();
   const [testPending, startTest] = useTransition();
+  const [syncPending, startSync] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -94,6 +96,17 @@ export default function TwilioIntegrationSettings({ initial, webhookOrigin }: Pr
       if ("error" in res && res.error) setError(res.error);
       else if ("message" in res && res.message) setMessage(res.message);
       else setMessage("Connection OK.");
+    });
+  }
+
+  function onSyncSmsWebhook() {
+    setMessage(null);
+    setError(null);
+    startSync(async () => {
+      const res = await syncTwilioSmsWebhook();
+      if ("error" in res && res.error) setError(res.error);
+      else if ("message" in res && res.message) setMessage(res.message);
+      else setMessage("SMS replies are now routed to Conversations.");
     });
   }
 
@@ -435,6 +448,21 @@ export default function TwilioIntegrationSettings({ initial, webhookOrigin }: Pr
                   <Copy className="h-4 w-4" />
                 )}
               </button>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                disabled={syncPending}
+                onClick={() => onSyncSmsWebhook()}
+                className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-accent-hover disabled:opacity-60"
+              >
+                <Inbox className={`h-4 w-4 ${syncPending ? "animate-pulse" : ""}`} aria-hidden />
+                {syncPending ? "Syncing SMS replies..." : "Sync SMS replies"}
+              </button>
+              <p className="max-w-xl text-xs leading-relaxed text-text-secondary dark:text-zinc-400">
+                If replies show Twilio&apos;s default &quot;Configure your number&apos;s SMS URL&quot; message, sync this
+                webhook so inbound SMS replies appear in Conversations.
+              </p>
             </div>
           </div>
           <div>

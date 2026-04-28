@@ -9,10 +9,16 @@ export type FindOrCreateSmsConversationResult = {
 
 /**
  * Normalize a phone number to a consistent format for matching.
- * Strips whitespace; keeps the E.164 "+" prefix if present.
+ * Prefer E.164-style values so outbound and inbound Twilio events land in the same thread.
  */
-function normalizePhone(raw: string): string {
-  return raw.replace(/[\s()-]/g, "").trim();
+export function normalizeSmsPhone(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+  const digits = trimmed.replace(/[^\d]/g, "");
+  if (trimmed.startsWith("+") && digits) return `+${digits}`;
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  return digits || trimmed.replace(/[\s()-]/g, "").trim();
 }
 
 /**
@@ -27,7 +33,7 @@ export async function findOrCreateSmsConversation(
     clientId?: string | null;
   }
 ): Promise<FindOrCreateSmsConversationResult> {
-  const phone = normalizePhone(opts.contactPhone);
+  const phone = normalizeSmsPhone(opts.contactPhone);
 
   const { data: existing } = await supabase
     .from("conversation")
@@ -78,6 +84,16 @@ export async function insertSmsMessage(
     smsSid?: string | null;
   }
 ): Promise<string> {
+  if (opts.smsSid) {
+    const { data: existing } = await supabase
+      .from("conversation_message")
+      .select("id")
+      .eq("sms_sid", opts.smsSid)
+      .limit(1)
+      .maybeSingle();
+    if (existing?.id) return existing.id;
+  }
+
   const { data: msg, error: msgErr } = await supabase
     .from("conversation_message")
     .insert({

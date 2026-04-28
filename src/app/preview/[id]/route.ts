@@ -43,7 +43,7 @@ export async function GET(
   const base = admin
     .from("prospect_preview")
     .select(
-      "id, html, preview_device_type, business_name, business_address, primary_category",
+      "id, html, preview_device_type, preview_target, business_name, business_address, primary_category",
     );
   const { data, error } = isUuid
     ? await base.eq("id", segment).maybeSingle()
@@ -58,7 +58,10 @@ export async function GET(
   // heuristics inside `repairWebAppDashboardNavigation`, so it is a no-op for
   // marketing-style previews.
   let storedHtml = data.html as string;
+  const previewTarget =
+    typeof data.preview_target === "string" ? data.preview_target.trim() : "";
   const looksLikeWebAppShell =
+    previewTarget === "webapp" &&
     /<(nav|aside)\b[^>]*>/i.test(storedHtml) &&
     /<a\b[^>]*\bhref=["']#/i.test(storedHtml);
   const alreadyRepaired = /\bclass=["'][^"']*\bpage\b[^"']*["']/i.test(storedHtml);

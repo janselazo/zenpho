@@ -796,16 +796,19 @@ export function drawTypeSpecimen(
   { x, y, width }: { x: number; y: number; width: number },
 ): void {
   const { display, body, pairing } = ctx.fonts;
+  const specimenW = Math.min(230, width * 0.34);
+  const specimenSize = 190;
 
   page.drawText("Aa", {
     x,
-    y: y - 180,
-    size: 240,
+    y: y - 156,
+    size: specimenSize,
     font: display,
     color: rgbColor(ctx.primary),
   });
 
-  const nameX = x + 260;
+  const nameX = x + specimenW + 56;
+  const nameW = Math.max(220, width - specimenW - 56);
   let ny = y;
   drawSectionEyebrow(page, ctx, {
     x: nameX,
@@ -814,14 +817,16 @@ export function drawTypeSpecimen(
     color: ctx.primary,
   });
   ny -= 22;
-  page.drawText(sanitizeForBrandBook(pairing.displayFamily), {
+  ny = drawWrappedText(page, sanitizeForBrandBook(pairing.displayFamily), {
     x: nameX,
     y: ny,
     size: 28,
     font: display,
-    color: rgbColor(ctx.ink),
+    color: ctx.ink,
+    maxWidth: nameW,
+    lineGap: 4,
   });
-  ny -= 48;
+  ny -= 24;
   drawSectionEyebrow(page, ctx, {
     x: nameX,
     y: ny,
@@ -829,14 +834,16 @@ export function drawTypeSpecimen(
     color: ctx.primary,
   });
   ny -= 22;
-  page.drawText(sanitizeForBrandBook(pairing.bodyFamily), {
+  ny = drawWrappedText(page, sanitizeForBrandBook(pairing.bodyFamily), {
     x: nameX,
     y: ny,
     size: 22,
     font: body,
-    color: rgbColor(ctx.ink),
+    color: ctx.ink,
+    maxWidth: nameW,
+    lineGap: 4,
   });
-  ny -= 40;
+  ny -= 24;
   drawWrappedText(
     page,
     "Pack my box with five dozen liquor jugs — 0123456789. Whereas disregard and contempt for human rights have resulted in barbarous acts which have outraged the conscience of mankind.",
@@ -846,7 +853,7 @@ export function drawTypeSpecimen(
       size: 11,
       font: body,
       color: ctx.ink,
-      maxWidth: width - 260,
+      maxWidth: nameW,
       lineGap: 5,
     },
   );

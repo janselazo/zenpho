@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   findOrCreateSmsConversation,
   insertSmsMessage,
+  normalizeSmsPhone,
 } from "@/lib/crm/conversation-sms";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +19,7 @@ export async function POST(req: NextRequest) {
   if (!result.valid) return result.response;
 
   const { params } = result;
-  const from = params.From?.trim() ?? "";
+  const from = normalizeSmsPhone(params.From?.trim() ?? "");
   const body = params.Body?.trim() ?? "";
   const messageSid = params.MessageSid?.trim() ?? "";
   const deliveryStatus = params.MessageStatus?.trim() || params.SmsStatus?.trim() || "";
@@ -54,7 +55,11 @@ export async function POST(req: NextRequest) {
       senderName: from,
       smsSid: messageSid || null,
     });
-  } catch {
+  } catch (e) {
+    console.warn(
+      "[twilio-webhook] inbound SMS conversation logging failed:",
+      e instanceof Error ? e.message : "Unknown error",
+    );
     // Still return 200 so Twilio does not retry endlessly
   }
 

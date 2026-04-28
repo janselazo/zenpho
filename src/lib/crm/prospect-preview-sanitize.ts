@@ -1162,20 +1162,158 @@ const PREVIEW_SECTION_SCROLL_STYLE = `<style id="zenpho-section-scroll-offset">
 </style>`;
 
 /**
+ * Stitch often emits Tailwind class names from a custom design token system
+ * (`text-on-surface`, `bg-primary-container`, etc.) without exporting the token
+ * definitions. When hosted outside Stitch, those classes are no-ops and can
+ * create white text on white cards, especially on mobile.
+ */
+const PREVIEW_STITCH_READABILITY_STYLE = `<style id="zenpho-stitch-readability-repair">
+  :root {
+    --zp-preview-primary: #014372;
+    --zp-preview-primary-dark: #002c4e;
+    --zp-preview-primary-soft: #e6f3fa;
+    --zp-preview-secondary: #f2c98b;
+    --zp-preview-surface: #ffffff;
+    --zp-preview-surface-muted: #f1f7fb;
+    --zp-preview-text: #0f172a;
+    --zp-preview-muted: #334155;
+  }
+
+  .text-on-surface,
+  .text-on-surface * {
+    color: var(--zp-preview-text) !important;
+  }
+
+  .text-on-surface-variant,
+  .text-on-surface-variant * {
+    color: var(--zp-preview-muted) !important;
+  }
+
+  .text-primary-container,
+  .text-primary-container * {
+    color: var(--zp-preview-primary) !important;
+  }
+
+  .text-secondary-container,
+  .text-secondary-container * {
+    color: #92400e !important;
+  }
+
+  .bg-primary,
+  .bg-primary-container {
+    background: linear-gradient(135deg, var(--zp-preview-primary), var(--zp-preview-primary-dark)) !important;
+    color: #ffffff !important;
+  }
+
+  .bg-primary *,
+  .bg-primary-container * {
+    color: inherit;
+  }
+
+  .bg-primary .text-secondary-container,
+  .bg-primary-container .text-secondary-container {
+    color: var(--zp-preview-secondary) !important;
+  }
+
+  .bg-secondary-container,
+  .bg-surface-variant {
+    background: var(--zp-preview-primary-soft) !important;
+  }
+
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.92) !important;
+    color: var(--zp-preview-text);
+  }
+
+  .line-clamp-2 {
+    display: block !important;
+    -webkit-line-clamp: unset !important;
+    line-clamp: unset !important;
+    overflow: visible !important;
+  }
+
+  section.page:has(.workspace),
+  section.page:has([class*="workspace"]) {
+    display: none !important;
+  }
+
+  @media (max-width: 640px) {
+    html,
+    body {
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
+    body {
+      background: #ffffff;
+    }
+
+    section {
+      max-width: 100%;
+    }
+
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.96) !important;
+      backdrop-filter: blur(8px) !important;
+      -webkit-backdrop-filter: blur(8px) !important;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12) !important;
+    }
+
+    .custom-radius {
+      border-radius: 18px !important;
+    }
+
+    .text-h1,
+    h1 {
+      font-size: clamp(2rem, 10vw, 3.35rem) !important;
+      line-height: 1.05 !important;
+      letter-spacing: -0.035em;
+    }
+
+    .text-h2,
+    h2 {
+      font-size: clamp(1.75rem, 8vw, 2.6rem) !important;
+      line-height: 1.12 !important;
+    }
+
+    .text-h3,
+    h3 {
+      font-size: clamp(1.2rem, 5vw, 1.55rem) !important;
+      line-height: 1.2 !important;
+    }
+
+    p,
+    a,
+    li,
+    blockquote {
+      overflow-wrap: anywhere;
+    }
+
+    .min-h-screen {
+      min-height: auto !important;
+    }
+  }
+</style>`;
+
+/**
  * Injects footer-focused link colors so Privacy/Terms (and similar) read clearly on generated previews.
  */
 export function injectProspectPreviewFooterLinkStyles(html: string): string {
   let h = typeof html === "string" ? html : "";
   if (!h.trim()) return h;
 
+  h = stripErrantWebAppPanelsFromMarketingPreview(h);
+
   const needsFooter = !/zenpho-preview-footer-link-accent/i.test(h);
   const needsFallback = !/zenpho-page-target-fallback/i.test(h);
   const needsScrollOffset = !/zenpho-section-scroll-offset/i.test(h);
-  if (!needsFooter && !needsFallback && !needsScrollOffset) return h;
+  const needsReadability = !/zenpho-stitch-readability-repair/i.test(h);
+  if (!needsFooter && !needsFallback && !needsScrollOffset && !needsReadability) return h;
 
   const inject = (needsFallback ? PREVIEW_PAGE_FALLBACK_STYLE : "") +
                  (needsScrollOffset ? PREVIEW_SECTION_SCROLL_STYLE : "") +
-                 (needsFooter ? PREVIEW_FOOTER_LINK_STYLE : "");
+                 (needsFooter ? PREVIEW_FOOTER_LINK_STYLE : "") +
+                 (needsReadability ? PREVIEW_STITCH_READABILITY_STYLE : "");
 
   const lower = h.toLowerCase();
   const headClose = lower.lastIndexOf("</head>");
@@ -1192,4 +1330,22 @@ export function injectProspectPreviewFooterLinkStyles(html: string): string {
   }
 
   return inject + h;
+}
+
+function stripErrantWebAppPanelsFromMarketingPreview(html: string): string {
+  const h = typeof html === "string" ? html : "";
+  if (!h.trim()) return h;
+
+  const hasMarketingSections =
+    /<section\b[^>]*\bid=["'](?:home|services|about|stories|visit)["'][^>]*>/i.test(h);
+  const hasWorkspaceStub =
+    /\bclass=["'][^"']*\bpage\b[^"']*["'][\s\S]{0,3000}\bworkspace\b/i.test(h) ||
+    /This panel is a placeholder\. The production build of this view will surface/i.test(h);
+
+  if (!hasMarketingSections || !hasWorkspaceStub) return h;
+
+  return h.replace(
+    /<section\b(?=[^>]*\bclass=["'][^"']*\bpage\b[^"']*["'])[^>]*>[\s\S]*?(?:This panel is a placeholder\. The production build of this view will surface[\s\S]*?|<h3[^>]*>[^<]*workspace<\/h3>[\s\S]*?)<\/section>/gi,
+    ""
+  );
 }
