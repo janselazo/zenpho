@@ -560,7 +560,7 @@ async function drawFunnelSection(
     });
     drawPageTitle(page, ctx, {
       x: SAFE_MARGIN,
-      y: PAGE_H - SAFE_MARGIN - 18,
+      y: PAGE_H - SAFE_MARGIN - 66,
       text: "Three plays, one customer.",
       size: 36,
     });
@@ -620,7 +620,7 @@ async function drawFunnelSection(
     });
     drawPageTitle(page, ctx, {
       x: SAFE_MARGIN,
-      y: PAGE_H - SAFE_MARGIN - 18,
+      y: PAGE_H - SAFE_MARGIN - 66,
       text: "Who buys, and why.",
       size: 36,
     });
@@ -796,7 +796,7 @@ async function drawFunnelSection(
     });
     drawPageTitle(page, ctx, {
       x: SAFE_MARGIN,
-      y: PAGE_H - SAFE_MARGIN - 18,
+      y: PAGE_H - SAFE_MARGIN - 66,
       text: "Facebook feed.",
       size: 32,
     });
@@ -911,7 +911,7 @@ async function drawFunnelSection(
     });
     drawPageTitle(page, ctx, {
       x: SAFE_MARGIN,
-      y: PAGE_H - SAFE_MARGIN - 18,
+      y: PAGE_H - SAFE_MARGIN - 66,
       text: "Feed + Story.",
       size: 32,
     });
@@ -1030,7 +1030,7 @@ async function drawFunnelSection(
     });
     drawPageTitle(page, ctx, {
       x: SAFE_MARGIN,
-      y: PAGE_H - SAFE_MARGIN - 18,
+      y: PAGE_H - SAFE_MARGIN - 66,
       text: "Search + Display.",
       size: 32,
     });
@@ -1173,7 +1173,7 @@ async function drawFunnelSection(
     });
     drawPageTitle(page, ctx, {
       x: SAFE_MARGIN,
-      y: PAGE_H - SAFE_MARGIN - 18,
+      y: PAGE_H - SAFE_MARGIN - 66,
       text: "Spend smart, track tight.",
       size: 36,
     });
@@ -1309,7 +1309,7 @@ async function composeBook(
     });
     drawPageTitle(pg, ctx, {
       x: SAFE_MARGIN,
-      y: PAGE_H - SAFE_MARGIN - 18,
+      y: PAGE_H - SAFE_MARGIN - 66,
       text: "The primary mark.",
       size: 40,
     });
@@ -1380,7 +1380,7 @@ async function composeBook(
     });
     drawPageTitle(pg, ctx, {
       x: SAFE_MARGIN,
-      y: PAGE_H - SAFE_MARGIN - 18,
+      y: PAGE_H - SAFE_MARGIN - 66,
       text: "Variants.",
       size: 40,
     });
@@ -1452,98 +1452,6 @@ async function composeBook(
     drawRunningFooter(pg, ctx, { pageNumber: pageNum, sectionLabel: "Logo" });
   }
 
-  // 7. Logo — don'ts
-  {
-    const pageNum = nextPage("Logo misuse");
-    const pg = addBlankPage(pdf, [1, 1, 1]);
-    drawSectionEyebrow(pg, ctx, {
-      x: SAFE_MARGIN,
-      y: PAGE_H - SAFE_MARGIN,
-      label: "03 · Logo",
-    });
-    drawPageTitle(pg, ctx, {
-      x: SAFE_MARGIN,
-      y: PAGE_H - SAFE_MARGIN - 64,
-      text: "Don't do this.",
-      size: 40,
-    });
-    const realMark = await embedPngIfAny(pdf, realLogoPng);
-    const aiWordmark = await embedPngIfAny(pdf, images.logos[0]);
-    const wm = realMark ?? aiWordmark;
-    const dontRules = [
-      "Don't stretch or squash",
-      "Don't rotate",
-      "Don't add drop shadows",
-      "Don't recolor to random hues",
-    ];
-    const cellW = (CONTENT_W - 36) / 4;
-    const cellH = 170;
-    const cellY = PAGE_H / 2 - cellH / 2 + 20;
-    for (let i = 0; i < 4; i++) {
-      const cellX = SAFE_MARGIN + i * (cellW + 12);
-      pg.drawRectangle({
-        x: cellX,
-        y: cellY,
-        width: cellW,
-        height: cellH,
-        color: rgbColor([0.99, 0.98, 0.97]),
-        borderColor: rgbColor([0.88, 0.87, 0.85]),
-        borderWidth: 0.5,
-      });
-      const misuseRect = {
-        x: cellX + 22,
-        y: cellY + 50,
-        width: cellW - 44,
-        height: 74,
-      };
-      if (wm) {
-        drawMisuseRasterLogo(
-          pg,
-          wm,
-          misuseRect,
-          i === 0 ? "stretch" : i === 1 ? "rotate" : i === 2 ? "shadow" : "recolor",
-        );
-      } else {
-        let drewSvg = false;
-        if (i === 2) {
-          drawSvgLogoFit(pg, ctx, realLogoSvg, {
-            ...misuseRect,
-            x: misuseRect.x + 3,
-            y: misuseRect.y - 3,
-          }, { forceColor: [0, 0, 0], opacity: 0.16 });
-        }
-        drewSvg = drawSvgLogoFit(pg, ctx, realLogoSvg, misuseRect, {
-          forceColor: i === 3 ? [0.74, 0.18, 0.72] : ctx.ink,
-          opacity: i === 2 ? 0.75 : 1,
-          rotateDegrees: i === 1 ? 15 : undefined,
-        });
-        if (!drewSvg) {
-          drawReadableWordmark(pg, ctx, misuseRect, {
-            color: i === 3 ? [0.74, 0.18, 0.72] : ctx.ink,
-            rotateDegrees: i === 1 ? 15 : undefined,
-            opacity: i === 2 ? 0.72 : 1,
-            shadow: i === 2,
-          });
-        }
-      }
-      // strike
-      pg.drawLine({
-        start: { x: cellX + 10, y: cellY + 10 },
-        end: { x: cellX + cellW - 10, y: cellY + cellH - 10 },
-        thickness: 2,
-        color: rgbColor([0.85, 0.14, 0.14]),
-      });
-      pg.drawText(sanitizeForBrandBook(dontRules[i]), {
-        x: cellX,
-        y: cellY - 18,
-        size: 9.5,
-        font: ctx.fonts.body,
-        color: rgbColor(ctx.ink),
-      });
-    }
-    drawRunningFooter(pg, ctx, { pageNumber: pageNum, sectionLabel: "Logo" });
-  }
-
   // 8. Primary color — full-bleed per primary
   ctx.spec.primaryColors.slice(0, 3).forEach((c, i) => {
     const pageNum = nextPage(
@@ -1567,7 +1475,7 @@ async function composeBook(
     });
     drawPageTitle(pg, ctx, {
       x: SAFE_MARGIN,
-      y: PAGE_H - SAFE_MARGIN - 18,
+      y: PAGE_H - SAFE_MARGIN - 66,
       text: "Supporting hues.",
       size: 40,
     });
@@ -1618,7 +1526,7 @@ async function composeBook(
     });
     drawPageTitle(pg, ctx, {
       x: SAFE_MARGIN,
-      y: PAGE_H - SAFE_MARGIN - 18,
+      y: PAGE_H - SAFE_MARGIN - 66,
       text: "How the palette is used.",
       size: 40,
     });
@@ -1655,13 +1563,13 @@ async function composeBook(
     });
     drawPageTitle(pg, ctx, {
       x: SAFE_MARGIN,
-      y: PAGE_H - SAFE_MARGIN - 18,
+      y: PAGE_H - SAFE_MARGIN - 66,
       text: "The brand's voice, set in type.",
       size: 40,
     });
     drawTypeSpecimen(pg, ctx, {
       x: SAFE_MARGIN,
-      y: PAGE_H - SAFE_MARGIN - 120,
+      y: PAGE_H - SAFE_MARGIN - 150,
       width: CONTENT_W,
     });
     drawRunningFooter(pg, ctx, { pageNumber: pageNum, sectionLabel: "Typography" });
@@ -1678,13 +1586,13 @@ async function composeBook(
     });
     drawPageTitle(pg, ctx, {
       x: SAFE_MARGIN,
-      y: PAGE_H - SAFE_MARGIN - 18,
+      y: PAGE_H - SAFE_MARGIN - 66,
       text: "A consistent rhythm.",
       size: 40,
     });
     drawTypeScale(pg, ctx, {
       x: SAFE_MARGIN,
-      y: PAGE_H - SAFE_MARGIN - 120,
+      y: PAGE_H - SAFE_MARGIN - 150,
       width: CONTENT_W,
     });
     drawRunningFooter(pg, ctx, { pageNumber: pageNum, sectionLabel: "Typography" });
@@ -1735,7 +1643,7 @@ async function composeBook(
     });
     drawPageTitle(pg, ctx, {
       x: SAFE_MARGIN,
-      y: PAGE_H - heroH - 44,
+      y: PAGE_H - heroH - 76,
       text: "A consistent way of seeing.",
       size: 32,
     });
@@ -1745,7 +1653,7 @@ async function composeBook(
         "Warm, natural light. Real people, real moments. Editorial crop, plenty of room to breathe.",
       {
         x: SAFE_MARGIN,
-        y: PAGE_H - heroH - 90,
+        y: PAGE_H - heroH - 126,
         size: 11,
         font: ctx.fonts.body,
         color: ctx.ink,
@@ -1767,7 +1675,7 @@ async function composeBook(
     });
     drawPageTitle(pg, ctx, {
       x: SAFE_MARGIN,
-      y: PAGE_H - SAFE_MARGIN - 18,
+      y: PAGE_H - SAFE_MARGIN - 66,
       text: "Repeat with restraint.",
       size: 40,
     });
@@ -1833,14 +1741,14 @@ async function composeBook(
     });
     drawPageTitle(pg, ctx, {
       x: SAFE_MARGIN,
-      y: PAGE_H - SAFE_MARGIN - 18,
+      y: PAGE_H - SAFE_MARGIN - 66,
       text: "How we sound.",
       size: 40,
     });
 
     drawWrappedText(pg, ctx.spec.toneOfVoice || "", {
       x: SAFE_MARGIN,
-      y: PAGE_H - SAFE_MARGIN - 80,
+      y: PAGE_H - SAFE_MARGIN - 122,
       size: 12,
       font: ctx.fonts.body,
       color: ctx.ink,
@@ -1851,7 +1759,7 @@ async function composeBook(
     const gap = 18;
     const cardW = (CONTENT_W - gap * 2) / 3;
     const cardH = 220;
-    const cardY = SAFE_MARGIN + 40;
+    const cardY = SAFE_MARGIN + 18;
     const ex = ctx.spec.toneExamples;
     const slots: Array<{ eyebrow: string; title: string; body: string }> = [
       { eyebrow: "Headline", title: ex.headline || "—", body: "Used in ads, homepage heroes, launch moments." },
@@ -1884,12 +1792,12 @@ async function composeBook(
     });
     drawPageTitle(pg, ctx, {
       x: SAFE_MARGIN,
-      y: PAGE_H - SAFE_MARGIN - 18,
+      y: PAGE_H - SAFE_MARGIN - 66,
       text: "Words we choose.",
       size: 40,
     });
     const colW = (CONTENT_W - 36) / 2;
-    const colY = PAGE_H - SAFE_MARGIN - 120;
+    const colY = PAGE_H - SAFE_MARGIN - 145;
     const drawWordList = (
       x: number,
       title: string,
@@ -1931,13 +1839,13 @@ async function composeBook(
     });
     drawPageTitle(pg, ctx, {
       x: SAFE_MARGIN,
-      y: PAGE_H - SAFE_MARGIN - 18,
+      y: PAGE_H - SAFE_MARGIN - 66,
       text: "How the brand shows up in the world.",
       size: 32,
     });
     const merchImg = await embedPngIfAny(pdf, images.merch);
     const imgW = CONTENT_W * 0.6;
-    const imgH = PAGE_H - SAFE_MARGIN - 170;
+    const imgH = PAGE_H - SAFE_MARGIN - 210;
     const imgY = SAFE_MARGIN + 40;
     if (merchImg) {
       drawImageFit(pg, merchImg, {
@@ -1992,12 +1900,12 @@ async function composeBook(
     });
     drawPageTitle(pg, ctx, {
       x: SAFE_MARGIN,
-      y: PAGE_H - SAFE_MARGIN - 18,
+      y: PAGE_H - SAFE_MARGIN - 66,
       text: "Keep us consistent.",
       size: 40,
     });
     const colW = (CONTENT_W - 36) / 2;
-    const colY = PAGE_H - SAFE_MARGIN - 120;
+    const colY = PAGE_H - SAFE_MARGIN - 145;
     const renderCol = (
       x: number,
       title: string,
