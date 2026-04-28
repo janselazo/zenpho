@@ -29,10 +29,10 @@ export default function Hero() {
           initial={{ opacity: 1, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, delay: 0.06 }}
-          className="heading-display mx-auto max-w-xl text-xl font-bold leading-[1.12] tracking-tight text-text-primary min-[390px]:text-2xl min-[390px]:leading-[1.13] sm:max-w-3xl sm:text-5xl sm:leading-[1.08] md:text-5xl md:leading-[1.06] lg:max-w-4xl lg:text-6xl lg:leading-[1.05]"
+          className="heading-display mx-auto max-w-2xl text-2xl font-bold leading-[1.1] tracking-tight text-text-primary min-[390px]:text-3xl min-[390px]:leading-[1.08] sm:max-w-4xl sm:text-6xl sm:leading-[1.05] md:text-6xl md:leading-[1.04] lg:max-w-5xl lg:text-7xl lg:leading-[1.03]"
         >
           <span className="block text-text-primary">We build and scale</span>
-          <span className="mt-1 block text-pretty leading-[1.12] text-accent sm:mt-0.5 lg:mt-1">
+          <span className="mt-1.5 block text-pretty leading-[1.1] text-accent sm:mt-2 lg:mt-2.5">
             software startups
           </span>
         </motion.h1>
@@ -41,9 +41,12 @@ export default function Hero() {
           initial={{ opacity: 1, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.12 }}
-          className="mx-auto mt-4 max-w-2xl text-base font-medium leading-relaxed text-text-secondary sm:mt-5 sm:text-lg md:text-xl"
+          className="mx-auto mt-5 max-w-2xl text-center text-base font-medium leading-snug text-text-secondary text-pretty sm:mt-6 sm:text-lg sm:leading-relaxed md:mt-7 md:text-xl md:leading-relaxed"
         >
-          We help founders design, build, and launch AI-powered MVPs in 2 weeks.
+          <span className="block">
+            We help founders design, build, and launch AI-powered MVPs
+          </span>
+          <span className="mt-1 block">in 2 weeks</span>
         </motion.p>
 
         <motion.div
