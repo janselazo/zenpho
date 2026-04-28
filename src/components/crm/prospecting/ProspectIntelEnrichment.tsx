@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   enrichWebsiteContactsDeepAction,
+  fetchHomepageWebsiteContactsAction,
   outscraperProspectSearchAction,
   apolloProspectPeopleAction,
   apolloEnrichProspectPeopleAction,
@@ -145,7 +146,27 @@ export default function ProspectIntelEnrichment({
     setDeep(null);
     setDeepLoading(true);
     setDeepError(null);
-    void enrichWebsiteContactsDeepAction(websiteUrl).then((r) => {
+    void (async () => {
+      let homepageContacts: MergedWebsiteContacts | null = null;
+      const homepage = await fetchHomepageWebsiteContactsAction(websiteUrl);
+      if (cancelled) return;
+      if (homepage.ok) {
+        homepageContacts = homepage.contacts;
+        setDeep(homepage.contacts);
+        const emails = homepage.contacts.emailsRanked;
+        websiteEmailsCbRef.current?.(emails);
+        websiteDeepStatusCbRef.current?.({
+          loading: true,
+          contacts: homepage.contacts,
+          error: null,
+        });
+        const first = emails[0];
+        if (first) pickEmailRef.current?.(first);
+        const ph = homepage.contacts.phones[0];
+        if (ph) pickPhoneRef.current?.(ph);
+      }
+
+      const r = await enrichWebsiteContactsDeepAction(websiteUrl);
       if (cancelled) return;
       setDeepLoading(false);
       const cb = websiteEmailsCbRef.current;
@@ -162,16 +183,16 @@ export default function ProspectIntelEnrichment({
         const ph = r.contacts.phones[0];
         if (ph) pickPhoneRef.current?.(ph);
       } else {
-        setDeep(null);
+        setDeep(homepageContacts);
         setDeepError(r.error);
-        cb?.([]);
+        cb?.(homepageContacts?.emailsRanked ?? []);
         websiteDeepStatusCbRef.current?.({
           loading: false,
-          contacts: null,
+          contacts: homepageContacts,
           error: r.error,
         });
       }
-    });
+    })();
     return () => {
       cancelled = true;
     };

@@ -196,6 +196,39 @@ export async function fingerprintProspectSiteAction(
 
 const MAX_CONTACT_PAGES = 8;
 
+export async function fetchHomepageWebsiteContactsAction(
+  rawUrl: string
+): Promise<{ ok: true; contacts: MergedWebsiteContacts } | { ok: false; error: string }> {
+  const auth = await requireAgencyStaff();
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const root = normalizeUrlForFetch(rawUrl);
+  if (!root) return { ok: false, error: "Invalid or blocked URL." };
+
+  const first = await fetchHtmlSafe(root);
+  if (!first.ok) return { ok: false, error: first.error };
+
+  const hints = extractPublicContactHints(first.html);
+  return {
+    ok: true,
+    contacts: {
+      byPage: [
+        {
+          pageLabel: pageLabelFromUrl(root, root),
+          url: root,
+          emails: hints.emails,
+          phones: hints.phones,
+          founderName: hints.founderName,
+        },
+      ],
+      emailsRanked: rankEmailsUnique(hints.emails),
+      phones: hints.phones,
+      founderName: hints.founderName,
+      socialUrls: extractProspectSocialUrls(first.html, root),
+    },
+  };
+}
+
 export async function enrichWebsiteContactsDeepAction(
   rawUrl: string
 ): Promise<{ ok: true; contacts: MergedWebsiteContacts } | { ok: false; error: string }> {
@@ -455,6 +488,13 @@ import {
   type SocialPageContacts,
 } from "@/lib/crm/social-profile-scrape";
 
+function normalizeComparablePhone(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  let digits = raw.replace(/\D/g, "");
+  if (digits.length === 11 && digits.startsWith("1")) digits = digits.slice(1);
+  return digits.length === 10 ? digits : null;
+}
+
 export async function enrichProspectFromSocialAction(
   place: PlacesSearchPlace,
 ): Promise<SocialEnrichmentResult> {
@@ -481,7 +521,16 @@ export async function enrichProspectFromSocialAction(
 
     const results = (await Promise.all(fetches)).filter(
       (r): r is SocialPageContacts => r !== null,
-    );
+    ).map((src) => {
+      const listingPhone = normalizeComparablePhone(
+        place.nationalPhoneNumber || place.internationalPhoneNumber,
+      );
+      const socialPhone = normalizeComparablePhone(src.phone);
+      if (listingPhone && socialPhone && listingPhone !== socialPhone) {
+        return { ...src, phone: null };
+      }
+      return src;
+    });
 
     let email: string | null = null;
     let phone: string | null = null;

@@ -183,7 +183,9 @@ export async function fetchFacebookPageContacts(
   if (!result.phone && tels[0]) result.phone = tels[0];
 
   if (!result.email) result.email = firstEmail(html);
-  if (!result.phone) result.phone = firstPhone(html);
+  // Do not scan the full Facebook HTML for phone-looking numbers. Public
+  // Facebook pages include many IDs and tracking values that can match NANP
+  // phone patterns; only trust profile meta text or explicit tel: links.
 
   result.website = extractExternalWebsite(html, [
     "facebook.com",

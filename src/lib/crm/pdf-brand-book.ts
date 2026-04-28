@@ -943,15 +943,25 @@ export function drawCard(
     yy -= 20;
   }
   if (title) {
-    page.drawText(sanitizeForBrandBook(title), {
-      x: x + padX,
-      y: yy - 4,
-      size: 16,
-      font: ctx.fonts.display,
-      color: rgbColor(ctx.ink),
-      maxWidth: width - padX * 2,
+    const titleWidth = width - padX * 2;
+    let titleSize = 16;
+    let titleLines = wrapText(title, ctx.fonts.display, titleSize, titleWidth);
+    if (titleLines.length > 2) {
+      titleSize = 14;
+      titleLines = wrapText(title, ctx.fonts.display, titleSize, titleWidth);
+    }
+    const visibleTitleLines = titleLines.slice(0, 3);
+    const titleLineHeight = titleSize + 5;
+    visibleTitleLines.forEach((line, idx) => {
+      page.drawText(line, {
+        x: x + padX,
+        y: yy - 4 - idx * titleLineHeight,
+        size: titleSize,
+        font: ctx.fonts.display,
+        color: rgbColor(ctx.ink),
+      });
     });
-    yy -= 26;
+    yy -= visibleTitleLines.length * titleLineHeight + 10;
   }
   if (body) {
     drawWrappedText(page, body, {

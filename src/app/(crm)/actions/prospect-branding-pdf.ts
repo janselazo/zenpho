@@ -77,7 +77,7 @@ function drawBrandStoryPage(ctx: BrandBookContext, pageNumber: number): void {
   });
   drawPageTitle(page, ctx, {
     x: SAFE_MARGIN,
-    y: PAGE_H - SAFE_MARGIN - 18,
+    y: PAGE_H - SAFE_MARGIN - 70,
     text: "Why we exist.",
     size: 56,
   });
@@ -137,7 +137,7 @@ function drawPersonalityPage(ctx: BrandBookContext, pageNumber: number): void {
   });
   drawPageTitle(page, ctx, {
     x: SAFE_MARGIN,
-    y: PAGE_H - SAFE_MARGIN - 18,
+    y: PAGE_H - SAFE_MARGIN - 70,
     text: "How we show up.",
     size: 56,
   });
@@ -269,6 +269,7 @@ function drawSvgLogoFit(
   ctx: BrandBookContext,
   svg: string | null,
   rect: { x: number; y: number; width: number; height: number },
+  opts: { forceColor?: Rgb; opacity?: number; rotateDegrees?: number } = {},
 ): boolean {
   if (!svg) return false;
   const viewBox = parseSvgViewBox(svg);
@@ -280,6 +281,7 @@ function drawSvgLogoFit(
   const drawnH = viewBox.height * scale;
   const x = rect.x + (rect.width - drawnW) / 2;
   const y = rect.y + (rect.height - drawnH) / 2;
+  const rotate = opts.rotateDegrees ? degrees(opts.rotateDegrees) : undefined;
 
   for (const shape of paths) {
     try {
@@ -287,7 +289,9 @@ function drawSvgLogoFit(
         x,
         y,
         scale,
-        color: rgbColor(shape.fill ?? ctx.primary),
+        color: rgbColor(opts.forceColor ?? shape.fill ?? ctx.primary),
+        ...(opts.opacity != null ? { opacity: opts.opacity } : {}),
+        ...(rotate ? { rotate } : {}),
       });
     } catch {
       // Keep SVG logo rendering best-effort; unsupported path syntax falls
@@ -297,6 +301,113 @@ function drawSvgLogoFit(
   }
 
   return true;
+}
+
+function drawReadableWordmark(
+  page: import("pdf-lib").PDFPage,
+  ctx: BrandBookContext,
+  rect: { x: number; y: number; width: number; height: number },
+  opts: {
+    color?: Rgb;
+    rotateDegrees?: number;
+    opacity?: number;
+    shadow?: boolean;
+  } = {},
+): void {
+  const label = sanitizeForBrandBook(ctx.spec.brandName || "Brand");
+  const color = opts.color ?? ctx.ink;
+  const bg = mixRgb(ctx.primary, [1, 1, 1], 0.86);
+  page.drawRectangle({
+    x: rect.x,
+    y: rect.y,
+    width: rect.width,
+    height: rect.height,
+    color: rgbColor(bg),
+    borderColor: rgbColor(mixRgb(ctx.primary, ctx.ink, 0.12)),
+    borderWidth: 0.5,
+    ...(opts.opacity != null ? { opacity: Math.min(1, opts.opacity + 0.2) } : {}),
+  });
+
+  let size = Math.min(20, rect.height * 0.32);
+  while (size > 8 && ctx.fonts.display.widthOfTextAtSize(label, size) > rect.width - 24) {
+    size -= 1;
+  }
+  const tw = ctx.fonts.display.widthOfTextAtSize(label, size);
+  const x = rect.x + (rect.width - tw) / 2;
+  const y = rect.y + rect.height / 2 - size * 0.35;
+  const rotate = opts.rotateDegrees ? degrees(opts.rotateDegrees) : undefined;
+
+  if (opts.shadow) {
+    page.drawText(label, {
+      x: x + 3,
+      y: y - 3,
+      size,
+      font: ctx.fonts.display,
+      color: rgbColor([0, 0, 0]),
+      opacity: 0.18,
+      ...(rotate ? { rotate } : {}),
+    });
+  }
+  page.drawText(label, {
+    x,
+    y,
+    size,
+    font: ctx.fonts.display,
+    color: rgbColor(color),
+    ...(opts.opacity != null ? { opacity: opts.opacity } : {}),
+    ...(rotate ? { rotate } : {}),
+  });
+}
+
+function drawMisuseRasterLogo(
+  page: import("pdf-lib").PDFPage,
+  img: import("pdf-lib").PDFImage,
+  rect: { x: number; y: number; width: number; height: number },
+  mode: "stretch" | "rotate" | "shadow" | "recolor",
+): void {
+  if (mode === "stretch") {
+    page.drawImage(img, {
+      x: rect.x,
+      y: rect.y + rect.height * 0.2,
+      width: rect.width,
+      height: rect.height * 0.56,
+    });
+    return;
+  }
+  if (mode === "rotate") {
+    page.drawImage(img, {
+      x: rect.x,
+      y: rect.y,
+      width: rect.width,
+      height: rect.height,
+      rotate: degrees(12),
+    });
+    return;
+  }
+  if (mode === "shadow") {
+    page.drawImage(img, {
+      x: rect.x + 4,
+      y: rect.y - 4,
+      width: rect.width,
+      height: rect.height,
+      opacity: 0.16,
+    });
+    page.drawImage(img, {
+      x: rect.x,
+      y: rect.y,
+      width: rect.width,
+      height: rect.height,
+      opacity: 0.86,
+    });
+    return;
+  }
+  page.drawImage(img, {
+    x: rect.x,
+    y: rect.y,
+    width: rect.width,
+    height: rect.height,
+    opacity: 0.92,
+  });
 }
 
 /** Draws a small platform pill (e.g. "Facebook" / "Instagram" / "Google"). */
@@ -1352,11 +1463,13 @@ async function composeBook(
     });
     drawPageTitle(pg, ctx, {
       x: SAFE_MARGIN,
-      y: PAGE_H - SAFE_MARGIN - 18,
+      y: PAGE_H - SAFE_MARGIN - 64,
       text: "Don't do this.",
       size: 40,
     });
-    const wm = await embedPngIfAny(pdf, images.logos[0]);
+    const realMark = await embedPngIfAny(pdf, realLogoPng);
+    const aiWordmark = await embedPngIfAny(pdf, images.logos[0]);
+    const wm = realMark ?? aiWordmark;
     const dontRules = [
       "Don't stretch or squash",
       "Don't rotate",
@@ -1377,40 +1490,41 @@ async function composeBook(
         borderColor: rgbColor([0.88, 0.87, 0.85]),
         borderWidth: 0.5,
       });
+      const misuseRect = {
+        x: cellX + 22,
+        y: cellY + 50,
+        width: cellW - 44,
+        height: 74,
+      };
       if (wm) {
-        const inset = 18;
-        const w = cellW - inset * 2;
-        const h = cellH - inset * 2;
-        if (i === 0) {
-          pg.drawImage(wm, { x: cellX + inset, y: cellY + inset + 20, width: w, height: h - 40 });
-        } else if (i === 1) {
-          pg.drawImage(wm, {
-            x: cellX + inset,
-            y: cellY + inset,
-            width: w,
-            height: h,
-            rotate: degrees(15),
-          });
-        } else {
-          pg.drawImage(wm, { x: cellX + inset, y: cellY + inset, width: w, height: h, opacity: i === 2 ? 0.45 : 0.7 });
-        }
-      } else if (
-        drawSvgLogoFit(pg, ctx, realLogoSvg, {
-          x: cellX + 14,
-          y: cellY + 42,
-          width: cellW - 28,
-          height: 90,
-        })
-      ) {
-        // Actual SVG logo used when AI wordmark image is unavailable.
+        drawMisuseRasterLogo(
+          pg,
+          wm,
+          misuseRect,
+          i === 0 ? "stretch" : i === 1 ? "rotate" : i === 2 ? "shadow" : "recolor",
+        );
       } else {
-        drawImagePlaceholder(pg, ctx, {
-          x: cellX + 14,
-          y: cellY + 14,
-          width: cellW - 28,
-          height: cellH - 28,
-          label: dontRules[i],
+        let drewSvg = false;
+        if (i === 2) {
+          drawSvgLogoFit(pg, ctx, realLogoSvg, {
+            ...misuseRect,
+            x: misuseRect.x + 3,
+            y: misuseRect.y - 3,
+          }, { forceColor: [0, 0, 0], opacity: 0.16 });
+        }
+        drewSvg = drawSvgLogoFit(pg, ctx, realLogoSvg, misuseRect, {
+          forceColor: i === 3 ? [0.74, 0.18, 0.72] : ctx.ink,
+          opacity: i === 2 ? 0.75 : 1,
+          rotateDegrees: i === 1 ? 15 : undefined,
         });
+        if (!drewSvg) {
+          drawReadableWordmark(pg, ctx, misuseRect, {
+            color: i === 3 ? [0.74, 0.18, 0.72] : ctx.ink,
+            rotateDegrees: i === 1 ? 15 : undefined,
+            opacity: i === 2 ? 0.72 : 1,
+            shadow: i === 2,
+          });
+        }
       }
       // strike
       pg.drawLine({
@@ -1598,6 +1712,22 @@ async function composeBook(
         label: "Moodboard unavailable",
       });
     }
+    const textPanelH = PAGE_H - heroH + 36;
+    pg.drawRectangle({
+      x: 0,
+      y: 0,
+      width: PAGE_W,
+      height: textPanelH,
+      color: rgbColor([0.995, 0.99, 0.975]),
+      opacity: 0.96,
+    });
+    pg.drawLine({
+      start: { x: SAFE_MARGIN, y: textPanelH },
+      end: { x: PAGE_W - SAFE_MARGIN, y: textPanelH },
+      thickness: 0.7,
+      color: rgbColor(mixRgb(ctx.primary, ctx.ink, 0.2)),
+      opacity: 0.22,
+    });
     drawSectionEyebrow(pg, ctx, {
       x: SAFE_MARGIN,
       y: PAGE_H - heroH - 24,
@@ -1972,7 +2102,7 @@ async function composeBook(
     });
     drawPageTitle(tocPlaceholder, ctx, {
       x: SAFE_MARGIN,
-      y: PAGE_H - SAFE_MARGIN - 20,
+      y: PAGE_H - SAFE_MARGIN - 72,
       text: "Contents",
       size: 56,
     });
