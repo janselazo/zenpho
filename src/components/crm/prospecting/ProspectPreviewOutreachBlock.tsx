@@ -39,6 +39,7 @@ import {
 import {
   sendProspectPreviewEmailAction,
   sendProspectPreviewSmsAction,
+  type OutreachFileAttachment,
 } from "@/app/(crm)/actions/prospect-preview";
 import { generateProspectAutomationPdfAction } from "@/app/(crm)/actions/prospect-automation-report";
 import { mergeProspectOutreachTemplate } from "@/lib/crm/prospect-outreach-template";
@@ -50,7 +51,6 @@ import {
   recordProspectPreviewScrollVideo,
   type PreviewDeviceTypeForVideo,
 } from "@/lib/crm/stitch-preview-scroll-video";
-import ProspectConversationPanel from "@/components/crm/prospecting/ProspectConversationPanel";
 
 /** Context for Google Stitch prompts (Local Business listing or URL research). */
 export type ProspectStitchContext =
@@ -73,6 +73,8 @@ type OutreachAttachment = {
   source: "suggested" | "custom";
 };
 
+type SerializedOutreachAttachment = OutreachFileAttachment;
+
 type BrandingPdfResult =
   | {
       ok: true;
@@ -94,6 +96,21 @@ function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+async function serializeBlobAttachment(
+  name: string,
+  blob: Blob,
+): Promise<SerializedOutreachAttachment> {
+  const buf = await blob.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  let binary = "";
+  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+  return {
+    name,
+    base64: btoa(binary),
+    contentType: blob.type || "application/octet-stream",
+  };
 }
 
 const STITCH_HELP_URL = stitchWithGoogleAppHomeUrl();
@@ -1191,17 +1208,48 @@ export default function ProspectPreviewOutreachBlock({
   const canSendWhatsappMessage = canCopyInstagramMessage;
   const canCopyFacebookMessage = canCopyInstagramMessage;
 
-  const serializeAttachments = useCallback(async () => {
-    const out: { name: string; base64: string; contentType: string }[] = [];
+  const serializeAttachments = useCallback(async (excludeIds = new Set<string>()) => {
+    const out: SerializedOutreachAttachment[] = [];
     for (const att of outreachAttachments) {
-      const buf = await att.blob.arrayBuffer();
-      const bytes = new Uint8Array(buf);
-      let binary = "";
-      for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-      out.push({ name: att.name, base64: btoa(binary), contentType: att.blob.type || "application/octet-stream" });
+      if (excludeIds.has(att.id)) continue;
+      out.push(await serializeBlobAttachment(att.name, att.blob));
     }
     return out;
   }, [outreachAttachments]);
+
+  const buildBeforeAfterEmailFallback = useCallback(async (): Promise<
+    | { attachment: SerializedOutreachAttachment; sourceAttachmentId?: string }
+    | undefined
+  > => {
+    const existing = outreachAttachments.find(
+      (att) => att.id === "before-after-image" && att.blob.type.startsWith("image/"),
+    );
+    if (existing) {
+      return {
+        attachment: await serializeBlobAttachment(existing.name, existing.blob),
+        sourceAttachmentId: existing.id,
+      };
+    }
+
+    if (!existingWebsiteUrl || !stitchPreviewImageUrlForSelection) return undefined;
+    try {
+      const blob = await composeBeforeAfterImage({
+        beforeImageUrl: `/api/prospecting/website-snapshot?url=${encodeURIComponent(existingWebsiteUrl)}`,
+        afterImageUrl: stitchPreviewImageUrlForSelection,
+        businessName: resolvedBusinessName,
+      });
+      return {
+        attachment: await serializeBlobAttachment("before-after-comparison.png", blob),
+      };
+    } catch {
+      return undefined;
+    }
+  }, [
+    existingWebsiteUrl,
+    outreachAttachments,
+    resolvedBusinessName,
+    stitchPreviewImageUrlForSelection,
+  ]);
 
   const sendSms = useCallback(async () => {
     const id = hostedPreviewIdForSelection;
@@ -1226,7 +1274,9 @@ export default function ProspectPreviewOutreachBlock({
     if (res.ok) {
       const details =
         "sid" in res && res.sid
-          ? `Twilio ${res.status ? res.status : "accepted"} (${res.sid}) to ${res.to}.`
+          ? `Twilio ${res.status ? res.status : "accepted"} (${res.sid}) from ${
+              "from" in res && res.from ? res.from : "configured sender"
+            } to ${res.to}.`
           : "SMS request accepted.";
       setShareMsg("warning" in res && res.warning ? `${details} ${res.warning}` : details);
     } else {
@@ -1252,7 +1302,12 @@ export default function ProspectPreviewOutreachBlock({
     }
     setShareBusy("email");
     setShareMsg(null);
-    const extraAttachments = await serializeAttachments();
+    const beforeAfterFallback = await buildBeforeAfterEmailFallback();
+    const extraAttachments = await serializeAttachments(
+      beforeAfterFallback?.sourceAttachmentId
+        ? new Set([beforeAfterFallback.sourceAttachmentId])
+        : undefined,
+    );
     const res = await sendProspectPreviewEmailAction({
       previewId: id,
       to: emailTo.trim(),
@@ -1261,6 +1316,7 @@ export default function ProspectPreviewOutreachBlock({
       businessName: resolvedBusinessName,
       yourName: yourName.trim() || undefined,
       stitchPreviewImageUrl: stitchPreviewImageUrlForSelection,
+      beforeAfterImage: beforeAfterFallback?.attachment,
       extraAttachments: extraAttachments.length ? extraAttachments : undefined,
     });
     setShareBusy(null);
@@ -1281,6 +1337,7 @@ export default function ProspectPreviewOutreachBlock({
     emailTo,
     resolvedBusinessName,
     yourName,
+    buildBeforeAfterEmailFallback,
     serializeAttachments,
   ]);
 
@@ -1930,8 +1987,8 @@ export default function ProspectPreviewOutreachBlock({
               </div>
               <p className="mt-2 text-[10px] leading-snug text-text-secondary dark:text-zinc-500">
                 Same merge tags as SMS, plus <span className="font-mono">{"{{yourName}}"}</span> in the default
-                sign-off when your profile supplies it. Subject and body can differ per service type. A preview
-                image is embedded when available (hosted screenshot first, else Stitch CDN URL).
+                sign-off when your profile supplies it. Subject and body can differ per service type. A Stitch
+                preview image is embedded when available; before/after is the backup, never a Vercel login preview.
               </p>
               <label className="mb-1 mt-3 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
                 To
@@ -2066,8 +2123,8 @@ export default function ProspectPreviewOutreachBlock({
                   className="mt-0.5 rounded border-border"
                 />
                 <span>
-                  Attach preview image for MMS: uses the hosted page screenshot when ready, otherwise the Stitch
-                  preview image. Email inlines the same priority when the server can fetch the image.
+                  Attach preview image for MMS: uses the Stitch preview image first. Email uses Stitch first,
+                  before/after as backup, and skips hosted screenshots that can show Vercel auth.
                 </span>
               </label>
               <div className="mt-4 flex items-center gap-2">
@@ -2354,15 +2411,6 @@ export default function ProspectPreviewOutreachBlock({
             </p>
           ) : null}
 
-          {emailTo?.trim() || smsTo?.trim() ? (
-            <div className="mt-6">
-              <ProspectConversationPanel
-                contactEmail={emailTo?.trim() || undefined}
-                contactPhone={smsTo?.trim() || undefined}
-                contactName={resolvedBusinessName}
-              />
-            </div>
-          ) : null}
         </div>
       </div>
     </div>

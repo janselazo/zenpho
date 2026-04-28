@@ -2,7 +2,9 @@
 
 import twilio from "twilio";
 import { Resend } from "resend";
-import { prospectPreviewPageUrl } from "@/lib/crm/prospect-preview-public-url";
+import {
+  prospectOutboundTemplatePreviewUrl,
+} from "@/lib/crm/prospect-preview-public-url";
 import { isIntegrationSecretsKeyConfigured } from "@/lib/crypto/integration-secrets";
 import {
   getAgencyTwilioCredentials,
@@ -21,11 +23,16 @@ import {
   findOrCreateSmsConversation,
   insertSmsMessage,
 } from "@/lib/crm/conversation-sms";
-import { getPublicAppOrigin } from "@/lib/crm/prospect-preview-public-url";
 
 function normalizeHttpsImageUrl(raw: string | undefined): string | null {
   const t = raw?.trim() ?? "";
   return t.startsWith("https://") ? t : null;
+}
+
+function twilioStatusCallbackUrl(): string | undefined {
+  const explicit = process.env.PUBLIC_APP_URL?.trim();
+  if (!explicit) return undefined;
+  return `${explicit.replace(/\/$/, "")}/api/webhooks/twilio/status`;
 }
 
 function normalizeOutboundSmsPhone(raw: string): string | null {
@@ -59,6 +66,33 @@ export type OutreachFileAttachment = {
   contentType: string;
 };
 
+async function fetchInlinePreviewAttachment(
+  url: string,
+  opts: { filenameBase: string; alt: string }
+): Promise<{
+  attachment: { filename: string; content: Buffer; contentType?: string; contentId?: string };
+  html: string;
+} | null> {
+  try {
+    const imgRes = await fetch(url, { signal: AbortSignal.timeout(25_000) });
+    const ct = (imgRes.headers.get("content-type") ?? "").toLowerCase();
+    if (!imgRes.ok || !ct.startsWith("image/")) return null;
+
+    const buf = Buffer.from(await imgRes.arrayBuffer());
+    const isJpeg = ct.includes("jpeg") || ct.includes("jpg");
+    const filename = `${opts.filenameBase}.${isJpeg ? "jpg" : "png"}`;
+    const contentType = isJpeg ? "image/jpeg" : "image/png";
+    const contentId = "prospect_preview_img";
+
+    return {
+      attachment: { filename, content: buf, contentType, contentId },
+      html: `<p><img src="cid:${contentId}" alt="${opts.alt}" style="max-width:100%;height:auto;border-radius:8px;" /></p>`,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function sendProspectPreviewSmsAction(input: {
   previewId: string;
   to: string;
@@ -66,7 +100,7 @@ export async function sendProspectPreviewSmsAction(input: {
   businessName: string;
   yourName?: string;
   includeMmsImage?: boolean;
-  /** Stitch CDN preview; used for MMS when hosted screenshot is not ready yet. */
+  /** Stitch CDN preview; preferred for MMS because hosted crawlers can capture deployment-protection pages. */
   stitchPreviewImageUrl?: string;
   /** Extra file attachments (base64). Uploaded to Supabase storage for Twilio MMS. */
   extraAttachments?: OutreachFileAttachment[];
@@ -117,7 +151,7 @@ export async function sendProspectPreviewSmsAction(input: {
     return { ok: false as const, error: "Could not load preview for SMS." };
   }
 
-  const previewUrl = prospectPreviewPageUrl(
+  const previewUrl = prospectOutboundTemplatePreviewUrl(
     input.previewId.trim(),
     row?.slug?.trim() || null,
   );
@@ -128,7 +162,7 @@ export async function sendProspectPreviewSmsAction(input: {
   });
 
   const client = twilio(creds.accountSid, creds.authToken);
-  const statusCallback = `${getPublicAppOrigin()}/api/webhooks/twilio/status`;
+  const statusCallback = twilioStatusCallbackUrl();
 
   let mediaUrl: string | undefined;
   if (input.includeMmsImage) {
@@ -138,10 +172,10 @@ export async function sendProspectPreviewSmsAction(input: {
       Boolean(row.screenshot_url?.trim().startsWith("https://"));
     const screenshotUrl = row?.screenshot_url?.trim();
     const stitchUrl = normalizeHttpsImageUrl(input.stitchPreviewImageUrl);
-    if (screenshotReady && screenshotUrl) {
-      mediaUrl = screenshotUrl;
-    } else if (stitchUrl) {
+    if (stitchUrl) {
       mediaUrl = stitchUrl;
+    } else if (screenshotReady && screenshotUrl) {
+      mediaUrl = screenshotUrl;
     }
   }
 
@@ -171,7 +205,7 @@ export async function sendProspectPreviewSmsAction(input: {
       from: creds.fromPhone,
       to: toPhone,
       body,
-      statusCallback,
+      ...(statusCallback ? { statusCallback } : {}),
       ...(allMediaUrls.length ? { mediaUrl: allMediaUrls.slice(0, 10) } : {}),
     });
     await logProspectSmsToConversation(auth.supabase, {
@@ -186,6 +220,7 @@ export async function sendProspectPreviewSmsAction(input: {
       sid: smsResult.sid,
       status: smsResult.status,
       to: toPhone,
+      from: creds.fromPhone,
       warning:
         smsResult.status === "queued" || smsResult.status === "accepted"
           ? "Twilio accepted the SMS. Final carrier delivery can still fail later; check Twilio logs if the prospect does not receive it."
@@ -205,7 +240,7 @@ export async function sendProspectPreviewSmsAction(input: {
           from: creds.fromPhone,
           to: toPhone,
           body,
-          statusCallback,
+          ...(statusCallback ? { statusCallback } : {}),
         });
         await logProspectSmsToConversation(auth.supabase, {
           to: toPhone,
@@ -219,6 +254,7 @@ export async function sendProspectPreviewSmsAction(input: {
           sid: smsRetry.sid,
           status: smsRetry.status,
           to: toPhone,
+          from: creds.fromPhone,
           warning: `MMS failed; sent SMS with link only. Twilio SID ${smsRetry.sid}, status ${smsRetry.status}.`,
         };
       } catch (e2) {
@@ -236,8 +272,10 @@ export async function sendProspectPreviewEmailAction(input: {
   bodyTemplate: string;
   businessName: string;
   yourName?: string;
-  /** Stitch CDN preview; inlined when hosted screenshot is not ready yet. */
+  /** Stitch CDN preview; preferred for email because hosted crawlers can capture deployment-protection pages. */
   stitchPreviewImageUrl?: string;
+  /** Client-composed before/after PNG; used as backup when the Stitch preview image cannot be embedded. */
+  beforeAfterImage?: OutreachFileAttachment;
   /** Extra file attachments (base64) sent as email attachments. */
   extraAttachments?: OutreachFileAttachment[];
 }) {
@@ -255,7 +293,7 @@ export async function sendProspectPreviewEmailAction(input: {
     return { ok: false as const, error: "Could not load preview for email." };
   }
 
-  const previewUrl = prospectPreviewPageUrl(
+  const previewUrl = prospectOutboundTemplatePreviewUrl(
     input.previewId.trim(),
     prevRow?.slug?.trim() || null,
   );
@@ -270,56 +308,43 @@ export async function sendProspectPreviewEmailAction(input: {
     yourName: input.yourName,
   });
 
-  const img = prevRow?.screenshot_url?.trim();
-  const hasImg =
-    prevRow?.screenshot_status === "ready" && img?.startsWith("https://");
+  const stitchImg = normalizeHttpsImageUrl(input.stitchPreviewImageUrl);
 
   let previewImageHtml = "";
   let attachments:
     | { filename: string; content: Buffer; contentType?: string; contentId?: string }[]
     | undefined;
 
-  if (hasImg && img) {
-    try {
-      const imgRes = await fetch(img, { signal: AbortSignal.timeout(25_000) });
-      if (imgRes.ok) {
-        const buf = Buffer.from(await imgRes.arrayBuffer());
-        const ct = (imgRes.headers.get("content-type") ?? "").toLowerCase();
-        const isJpeg = ct.includes("jpeg") || ct.includes("jpg");
-        const filename = isJpeg ? "preview.jpg" : "preview.png";
-        const contentType = isJpeg ? "image/jpeg" : "image/png";
-        const contentId = "prospect_preview_img";
-        attachments = [{ filename, content: buf, contentType, contentId }];
-        previewImageHtml = `<p><img src="cid:${contentId}" alt="Site preview" style="max-width:100%;height:auto;border-radius:8px;" /></p>`;
-      }
-    } catch {
-      previewImageHtml = "";
-    }
-  }
-  if (!previewImageHtml && hasImg && img) {
-    previewImageHtml = `<p><img src="${img}" alt="Preview" style="max-width:100%;height:auto;border-radius:8px;" /></p>`;
-  }
-
-  const stitchImg = normalizeHttpsImageUrl(input.stitchPreviewImageUrl);
-  if (!previewImageHtml && stitchImg) {
-    try {
-      const imgRes = await fetch(stitchImg, { signal: AbortSignal.timeout(25_000) });
-      if (imgRes.ok) {
-        const buf = Buffer.from(await imgRes.arrayBuffer());
-        const ct = (imgRes.headers.get("content-type") ?? "").toLowerCase();
-        const isJpeg = ct.includes("jpeg") || ct.includes("jpg");
-        const filename = isJpeg ? "stitch-preview.jpg" : "stitch-preview.png";
-        const contentType = isJpeg ? "image/jpeg" : "image/png";
-        const contentId = "prospect_preview_img";
-        attachments = [{ filename, content: buf, contentType, contentId }];
-        previewImageHtml = `<p><img src="cid:${contentId}" alt="Concept preview" style="max-width:100%;height:auto;border-radius:8px;" /></p>`;
-      }
-    } catch {
-      previewImageHtml = "";
+  // Prefer the source preview image the UI already knows about. Hosted screenshots are generated
+  // by crawlers and can accidentally capture deployment-protection/login pages.
+  if (stitchImg) {
+    const inline = await fetchInlinePreviewAttachment(stitchImg, {
+      filenameBase: "concept-preview",
+      alt: "Concept preview",
+    });
+    if (inline) {
+      attachments = [inline.attachment];
+      previewImageHtml = inline.html;
     }
   }
   if (!previewImageHtml && stitchImg) {
     previewImageHtml = `<p><img src="${stitchImg}" alt="Concept preview" style="max-width:100%;height:auto;border-radius:8px;" /></p>`;
+  }
+
+  if (!previewImageHtml && input.beforeAfterImage?.base64) {
+    try {
+      const buf = Buffer.from(input.beforeAfterImage.base64, "base64");
+      const contentId = "prospect_preview_img";
+      attachments = [{
+        filename: input.beforeAfterImage.name || "before-after-comparison.png",
+        content: buf,
+        contentType: input.beforeAfterImage.contentType || "image/png",
+        contentId,
+      }];
+      previewImageHtml = `<p><img src="cid:${contentId}" alt="Before and after website comparison" style="max-width:100%;height:auto;border-radius:8px;" /></p>`;
+    } catch {
+      // No image is safer than embedding a hosted crawler screenshot that may show Vercel auth.
+    }
   }
 
   if (input.extraAttachments?.length) {
