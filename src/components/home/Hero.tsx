@@ -32,7 +32,7 @@ export default function Hero() {
           className="heading-display max-w-[22rem] text-balance text-[1.5rem] font-bold leading-[1.18] tracking-tight text-text-primary min-[400px]:max-w-none min-[400px]:text-3xl min-[400px]:leading-[1.12] sm:text-5xl sm:leading-[1.08] md:text-5xl md:leading-[1.06] lg:text-6xl lg:leading-[1.05]"
         >
           Launch your MVP and get early users{" "}
-          <span className="text-accent">in 2 weeks.</span>
+          <span className="text-accent">in 2 weeks</span>
         </motion.h1>
 
         <motion.p
@@ -109,7 +109,7 @@ export default function Hero() {
           className="mt-10 sm:mt-14"
         >
           <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-text-secondary/80 sm:mb-4">
-            Teams we&apos;ve shipped with
+            Clients we&apos;ve shipped for
           </p>
           <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-3">
             {clients.map((client) => (

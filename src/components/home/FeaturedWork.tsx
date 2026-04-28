@@ -37,8 +37,8 @@ export default function FeaturedWork() {
             transition={{ duration: 0.5, delay: 0.06 }}
             className="heading-display text-balance text-4xl font-bold leading-[1.12] tracking-tight text-text-primary sm:text-5xl sm:leading-[1.1] lg:text-6xl lg:leading-[1.08]"
           >
-            We eat our own{" "}
-            <span className="text-accent">cooking.</span>
+            <span className="block text-text-primary">We ship our own products</span>
+            <span className="mt-1 block text-accent">Same standards as founder work.</span>
           </motion.h2>
 
           <motion.p

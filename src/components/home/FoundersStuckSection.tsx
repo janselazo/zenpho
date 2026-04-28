@@ -52,17 +52,6 @@ export default function FoundersStuckSection() {
             </ul>
           </Card>
         </motion.div>
-
-        <motion.p
-          initial={{ opacity: 1, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.12 }}
-          transition={{ duration: 0.45, delay: 0.06 }}
-          className="mx-auto mt-10 max-w-2xl text-center text-base leading-relaxed text-text-secondary sm:text-lg"
-        >
-          At Zenpho, we help you move from idea to working product without
-          spending months in development.
-        </motion.p>
       </div>
     </section>
   );

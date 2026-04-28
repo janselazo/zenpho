@@ -19,7 +19,7 @@ export type ServiceDetailBody = {
 const bySlug: Record<string, ServiceDetailBody> = {
   "mvp-development": {
     metaDescription:
-      "MVP Development by Zenpho — AI-powered MVPs for founders: web apps, SaaS, PWAs, internal tools, landing pages for launch. Starting at $5,000.",
+      "MVP Development by Zenpho — AI-powered MVPs for founders: web apps, SaaS, PWAs, internal tools, landing pages for launch. Starting at $3,000.",
     intro: [
       "Zenpho is an AI MVP development studio — not a generic web shop. We partner with startup founders to compress time-to-demo: most engagements target a working first version in about two weeks when scope stays ruthless.",
       "You get product engineering, pragmatic AI where it supports the core loop, modern web stacks (and mobile-first PWAs or selective native slices when the roadmap calls for it). Marketing websites only show up here as launch landing pages, onboarding shells, or signup flows that support the MVP — not unrelated brochure builds.",

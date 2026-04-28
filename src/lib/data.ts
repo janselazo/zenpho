@@ -83,9 +83,9 @@ export interface DevelopmentPricingOffering {
   cardHeadline?: string;
   /** One-line positioning under headline */
   subtitle: string;
-  /** Formatted dollar amount, e.g. "$5,000" */
+  /** Formatted dollar amount, e.g. "$3,000" */
   priceAmount: string;
-  /** e.g. "$5,000 – $50,000+" */
+  /** e.g. "$3,000 – $30,000+" */
   typicalRange?: string;
   /** @deprecated Unused in UI — kept for older references */
   priceSuffix?: string;
@@ -106,8 +106,8 @@ export const developmentPricingOfferings: DevelopmentPricingOffering[] = [
     cardHeadline: "Ship a focused software MVP in ~2 weeks.",
     subtitle:
       "Strategy, UX, build, integrations, launch surfaces, QA, deployment, and docs—scoped so stakeholders get a credible v1.",
-    priceAmount: "$5,000",
-    typicalRange: "$5,000 – $50,000+",
+    priceAmount: "$3,000",
+    typicalRange: "$3,000 – $30,000+",
     featured: true,
     includedGroups: [
       {
@@ -732,7 +732,7 @@ export const resourceItems: ResourceItem[] = [
   {
     title: "Pricing & FAQs",
     description:
-      "MVP Development from $5k and MVP Growth from $2.5k — clear starting points, scoped on a call.",
+      "MVP Development from $3k and MVP Growth from $2.5k — clear starting points, scoped on a call.",
     href: "/pricing",
     tag: "Engagement",
   },

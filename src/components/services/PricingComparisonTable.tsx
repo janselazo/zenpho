@@ -26,8 +26,12 @@ export default function PricingComparisonTable() {
             <td className="hidden px-4 py-4 sm:table-cell">
               Building your AI-powered MVP, web app, SaaS, mobile-first app, internal tool, or marketplace
             </td>
-            <td className="px-4 py-4 tabular-nums font-medium text-text-primary">$5,000</td>
-            <td className="whitespace-nowrap px-5 py-4 tabular-nums sm:px-6">$5k–$50k+</td>
+            <td className="px-4 py-4 font-semibold tabular-nums text-text-primary">
+              From $3,000
+            </td>
+            <td className="whitespace-nowrap px-5 py-4 font-semibold tabular-nums text-text-primary sm:px-6">
+              $3,000–$30,000+
+            </td>
           </tr>
           <tr>
             <td className="px-5 py-4 font-medium text-text-primary sm:px-6">

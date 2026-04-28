@@ -7,8 +7,8 @@ import { SECTION_EYEBROW_CLASSNAME } from "@/components/ui/SectionHeading";
 
 export default function ServicesHero() {
   return (
-    <section className="hero-sky relative flex min-h-0 items-center justify-center overflow-hidden pb-10 pt-20 sm:pb-12 sm:pt-24">
-      <div className="relative z-10 mx-auto max-w-4xl px-6 text-center">
+    <section className="hero-sky relative overflow-hidden pb-24 pt-28 sm:pb-32 sm:pt-32">
+      <div className="relative z-10 mx-auto flex max-w-3xl flex-col items-center px-6 text-center">
         <motion.span
           initial={{ opacity: 1, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -22,31 +22,38 @@ export default function ServicesHero() {
           initial={{ opacity: 1, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.06 }}
-          className="heading-display text-balance text-3xl font-bold leading-[1.2] tracking-tight text-text-primary sm:text-4xl sm:leading-[1.15] lg:text-5xl lg:leading-[1.1]"
+          className="heading-display text-balance text-4xl font-bold leading-[1.12] tracking-tight text-text-primary sm:text-5xl sm:leading-[1.1] lg:text-6xl lg:leading-[1.08]"
         >
-          MVP development and growth services for startup founders.
+          MVP development and growth services{" "}
+          <span className="text-accent">for startup founders.</span>
         </motion.h1>
 
         <motion.p
           initial={{ opacity: 1, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, delay: 0.14 }}
-          className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-text-primary/88 sm:mt-8 sm:text-lg"
+          className="mx-auto mt-8 max-w-xl text-base font-medium leading-relaxed text-pretty text-text-primary/80 sm:mt-9 sm:text-lg"
         >
           Zenpho helps founders scope, build, launch, and grow AI-powered MVPs
           with a simple two-service model: MVP Development and MVP Growth.
         </motion.p>
 
         <motion.div
-          initial={{ opacity: 1, y: 12 }}
+          initial={{ opacity: 1, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, delay: 0.22 }}
-          className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4"
+          className="mt-11 flex w-full max-w-md flex-col items-stretch justify-center gap-3 sm:mt-12 sm:flex-row sm:items-center sm:justify-center sm:gap-4"
         >
-          <Button href="/booking" variant="primary" size="lg">
+          <Button href="/booking" variant="primary" size="lg" className="whitespace-nowrap">
             Book an MVP Strategy Call
           </Button>
-          <Button href="/pricing" variant="dark" size="lg" showLiveDot>
+          <Button
+            href="/pricing"
+            variant="dark"
+            size="lg"
+            showLiveDot
+            className="whitespace-nowrap"
+          >
             View pricing
           </Button>
         </motion.div>
@@ -55,7 +62,7 @@ export default function ServicesHero() {
           initial={{ opacity: 1, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.28 }}
-          className="mt-6 text-sm font-medium text-text-secondary"
+          className="mt-8 text-sm font-medium text-text-secondary"
         >
           <Link
             href="/case-studies"

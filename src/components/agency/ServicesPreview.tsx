@@ -246,14 +246,14 @@ function ServiceHero({
       <h3 className="mb-3 text-3xl font-bold leading-none tracking-wide text-text-primary sm:text-4xl lg:text-[40px]">
         {title}
       </h3>
-      <h4 className="mb-5 text-lg font-semibold tracking-tighter text-accent sm:text-xl">
+      <h4 className="mb-5 text-lg font-semibold tracking-tight text-accent sm:text-xl">
         {subtitle}
       </h4>
 
       <div className="rounded-2xl bg-card px-8 py-7 shadow-soft sm:px-9">
         {description.map((paragraph) => (
           <div key={paragraph} className="mb-5 last:mb-0">
-            <p className="text-base leading-snug tracking-tighter text-muted sm:text-lg">
+            <p className="text-base font-medium leading-relaxed tracking-normal text-text-secondary sm:text-[17px] sm:leading-relaxed">
               {paragraph}
             </p>
           </div>
