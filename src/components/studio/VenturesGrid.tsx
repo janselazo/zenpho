@@ -12,10 +12,15 @@ export default function VenturesGrid() {
     <section id="studio-projects" className="mx-auto max-w-7xl px-6 py-24 lg:px-8 lg:py-32">
       <SectionHeading
         label="Studio products"
-        title="On our"
+        title="Live on our"
         titleAccent="roadmap"
         titleAccentInline
-        description="Systems we operate under our own P&amp;L — proof we ship, measure, support, and iterate beyond demo day."
+        description={
+          <>
+            Systems we operate under our own P&amp;L—proof we ship, measure,
+            support, and iterate beyond demo day.
+          </>
+        }
       />
 
       <div className="grid gap-6 sm:grid-cols-2">

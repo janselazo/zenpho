@@ -5,7 +5,7 @@ import { SECTION_EYEBROW_CLASSNAME } from "@/components/ui/SectionHeading";
 
 export default function ContactHero() {
   return (
-    <section className="relative overflow-hidden px-6 pb-12 pt-36">
+    <section className="relative overflow-hidden px-6 pb-16 pt-[7.75rem] sm:pb-20 sm:pt-40">
       <div className="relative z-10 mx-auto max-w-3xl text-center">
         <motion.span
           initial={{ opacity: 1, y: 16 }}
@@ -20,10 +20,10 @@ export default function ContactHero() {
           initial={{ opacity: 1, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.06 }}
-          className="heading-display text-4xl font-bold leading-tight tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
+          className="heading-display text-balance text-4xl font-bold leading-tight tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
         >
-          <span className="block">Let&apos;s build</span>
-          <span className="mt-1 block text-accent">your MVP.</span>
+          Let&apos;s build{" "}
+          <span className="text-accent">your MVP.</span>
         </motion.h1>
 
         <motion.p

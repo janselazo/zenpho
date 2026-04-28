@@ -58,7 +58,7 @@ export default function SplitIntro() {
             viewport={{ once: true, amount: 0.05, margin: "0px 0px 160px 0px" }}
             custom={i}
             variants={fadeUp}
-            className="relative overflow-hidden rounded-3xl border border-border bg-white p-8 shadow-soft lg:p-10"
+            className="relative overflow-hidden rounded-3xl border border-border bg-white p-8 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:border-accent/25 hover:shadow-soft-lg lg:p-10"
           >
             <div className="relative z-10">
               <div

@@ -12,7 +12,7 @@ export default function HomeFinalCTA() {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.05, margin: "0px 0px 160px 0px" }}
         transition={{ duration: 0.5 }}
-        className="relative overflow-hidden rounded-2xl border border-border bg-white p-8 text-center shadow-soft-lg sm:rounded-3xl sm:p-12 lg:p-16"
+        className="relative overflow-hidden rounded-[1.35rem] border border-border bg-white p-8 text-center shadow-soft-lg ring-1 ring-black/[0.04] sm:rounded-3xl sm:p-12 lg:p-16"
       >
         <div className="pointer-events-none absolute inset-0 opacity-50">
           <div className="absolute inset-0 scifi-grid" />

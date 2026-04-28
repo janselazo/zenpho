@@ -14,13 +14,14 @@ import Badge from "@/components/ui/Badge";
 
 export default function FeaturedWork() {
   return (
-    <section className="relative mx-auto max-w-7xl px-6 py-24 lg:px-8">
+    <section className="relative border-t border-border/40 bg-white/80 py-24 backdrop-blur-[2px] lg:py-28">
+      <div className="mx-auto max-w-7xl px-6 lg:px-8">
       <SectionHeading
-        label="Featured case studies"
-        title="Recent"
-        titleAccent="outcomes"
+        label="Track record"
+        title="Shipped client MVPs"
+        titleAccent="& Studio"
         titleAccentInline
-        description="Founder-facing MVPs in production — product-led builds, not page-only launches."
+        description="Past founder engagements our team has delivered to production, plus SoldTools on the Studio side—evidence of how we scope, ship, and iterate."
       />
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -78,10 +79,14 @@ export default function FeaturedWork() {
         ))}
       </div>
 
-      <div className="mt-12 flex justify-center">
-        <Button href="/case-studies" variant="dark" size="lg" showLiveDot>
-          All case studies
+      <div className="mt-12 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
+        <Button href="/booking" variant="primary" size="lg">
+          Book an MVP Strategy Call
         </Button>
+        <Button href="/case-studies" variant="dark" size="lg" showLiveDot>
+          Explore lab concepts
+        </Button>
+      </div>
       </div>
     </section>
   );

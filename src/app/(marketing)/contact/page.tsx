@@ -4,6 +4,7 @@ import ContactIntro from "./ContactIntro";
 import ContactForm from "@/components/contact/ContactForm";
 import ContactFitSection from "./ContactFitSection";
 import ContactPageCTA from "./ContactPageCTA";
+import ContactAside from "@/components/contact/ContactAside";
 
 export const metadata: Metadata = {
   title: {
@@ -17,68 +18,15 @@ export default function ContactPage() {
   return (
     <>
       <ContactHero />
-      <section className="mx-auto max-w-7xl px-6 pb-16 lg:px-8">
-        <div className="grid gap-16 lg:grid-cols-5">
-          <div className="lg:col-span-3">
+      <section className="mx-auto max-w-7xl px-6 pb-20 lg:px-8">
+        <div className="grid gap-12 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)] lg:gap-14 xl:gap-16 lg:items-start">
+          <div className="min-w-0">
             <ContactIntro />
             <ContactForm />
           </div>
 
-          <div className="lg:col-span-2 lg:pt-8">
-            <div className="space-y-8 lg:sticky lg:top-28">
-              <div>
-                <h3 className="mb-2 font-mono text-xs uppercase tracking-widest text-text-secondary">
-                  Email
-                </h3>
-                <a
-                  href="mailto:hello@zenpho.com"
-                  className="text-text-primary transition-colors hover:text-accent"
-                >
-                  hello@zenpho.com
-                </a>
-              </div>
-
-              <div>
-                <h3 className="mb-2 font-mono text-xs uppercase tracking-widest text-text-secondary">
-                  Social
-                </h3>
-                <div className="flex flex-col gap-2">
-                  <a
-                    href="https://x.com/zenpho"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-text-primary transition-colors hover:text-accent"
-                  >
-                    X / Twitter
-                  </a>
-                  <a
-                    href="https://github.com/zenpho"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-text-primary transition-colors hover:text-accent"
-                  >
-                    GitHub
-                  </a>
-                  <a
-                    href="https://www.linkedin.com/company/zenpho"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-text-primary transition-colors hover:text-accent"
-                  >
-                    LinkedIn
-                  </a>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="mb-2 font-mono text-xs uppercase tracking-widest text-text-secondary">
-                  Response time
-                </h3>
-                <p className="text-sm text-text-secondary">
-                  We typically respond within 24 hours on business days.
-                </p>
-              </div>
-            </div>
+          <div className="min-w-0 lg:sticky lg:top-[6.75rem]">
+            <ContactAside />
           </div>
         </div>
       </section>

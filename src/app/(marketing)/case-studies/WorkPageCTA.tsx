@@ -24,7 +24,7 @@ export default function WorkPageCTA() {
 
         <div className="relative z-10">
           <div className="mb-4 flex justify-center sm:mb-5">
-            <span className={SECTION_EYEBROW_CLASSNAME}>Case studies</span>
+            <span className={SECTION_EYEBROW_CLASSNAME}>Early access</span>
           </div>
           <h2 className="heading-display text-balance text-3xl font-bold tracking-tight text-text-primary sm:text-4xl lg:text-5xl lg:leading-tight">
             Want your MVP featured here next?

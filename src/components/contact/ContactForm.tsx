@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { Check } from "lucide-react";
 import Button from "@/components/ui/Button";
@@ -41,6 +41,23 @@ const BUDGETS = [
   "$50k+",
 ] as const;
 
+function FormSurface({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="rounded-2xl border border-border/70 bg-white/95 p-5 shadow-sm sm:p-6">
+      <p className="mb-5 border-b border-border/50 pb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-text-secondary">
+        {label}
+      </p>
+      <div className="space-y-5">{children}</div>
+    </div>
+  );
+}
+
 function RadioList({
   name,
   options,
@@ -51,11 +68,11 @@ function RadioList({
   required?: boolean;
 }) {
   return (
-    <div className="space-y-2">
+    <div className="grid gap-2 sm:grid-cols-2">
       {options.map((opt) => (
         <label
           key={opt}
-          className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-white px-4 py-3 text-sm text-text-primary shadow-sm transition-all hover:border-accent/35 has-[:checked]:border-accent has-[:checked]:bg-accent/[0.06] has-[:checked]:ring-1 has-[:checked]:ring-accent/20"
+          className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-white px-4 py-3 text-sm leading-snug text-text-primary shadow-sm transition-all hover:border-accent/35 has-[:checked]:border-accent has-[:checked]:bg-accent/[0.06] has-[:checked]:ring-1 has-[:checked]:ring-accent/20"
         >
           <input
             type="radio"
@@ -147,7 +164,7 @@ export default function ContactForm() {
       initial={{ opacity: 1, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, delay: 0.12 }}
-      className="mx-auto max-w-xl space-y-6"
+      className="mx-auto max-w-xl space-y-8"
       onSubmit={handleSubmit}
     >
       {error && (
@@ -156,195 +173,195 @@ export default function ContactForm() {
         </p>
       )}
 
-      <div className="grid gap-5 sm:grid-cols-2">
+      <FormSurface label="About you">
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div>
+            <label
+              htmlFor="contact-name"
+              className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
+            >
+              Name
+            </label>
+            <input
+              id="contact-name"
+              name="name"
+              type="text"
+              required
+              autoComplete="name"
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="contact-email"
+              className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
+            >
+              Email
+            </label>
+            <input
+              id="contact-email"
+              name="email"
+              type="email"
+              required
+              autoComplete="email"
+              className={inputClass}
+            />
+          </div>
+        </div>
         <div>
           <label
-            htmlFor="contact-name"
+            htmlFor="contact-company"
             className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
           >
-            Name
+            Company name
           </label>
           <input
-            id="contact-name"
-            name="name"
+            id="contact-company"
+            name="company"
             type="text"
-            required
-            autoComplete="name"
+            autoComplete="organization"
             className={inputClass}
           />
         </div>
         <div>
           <label
-            htmlFor="contact-email"
+            htmlFor="contact-web"
             className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
           >
-            Email
+            Website or LinkedIn
           </label>
           <input
-            id="contact-email"
-            name="email"
-            type="email"
-            required
-            autoComplete="email"
+            id="contact-web"
+            name="website_linkedin"
+            type="text"
             className={inputClass}
+            placeholder="https:// or linkedin.com/in/…"
           />
         </div>
-      </div>
+      </FormSurface>
 
-      <div>
-        <label
-          htmlFor="contact-company"
-          className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
-        >
-          Company name
-        </label>
-        <input
-          id="contact-company"
-          name="company"
-          type="text"
-          autoComplete="organization"
-          className={inputClass}
-        />
-      </div>
-
-      <div>
-        <label
-          htmlFor="contact-web"
-          className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
-        >
-          Website or LinkedIn
-        </label>
-        <input
-          id="contact-web"
-          name="website_linkedin"
-          type="text"
-          className={inputClass}
-          placeholder="https:// or linkedin.com/in/…"
-        />
-      </div>
-
-      <div>
-        <label
-          htmlFor="contact-what"
-          className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
-        >
-          What are you building?
-        </label>
-        <textarea
-          id="contact-what"
-          name="what_building"
-          rows={4}
-          required
-          className={`${inputClass} resize-none`}
-        />
-      </div>
-
-      <div>
-        <label
-          htmlFor="contact-for"
-          className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
-        >
-          Who is the product for?
-        </label>
-        <textarea
-          id="contact-for"
-          name="product_for"
-          rows={3}
-          required
-          className={`${inputClass} resize-none`}
-        />
-      </div>
-
-      <div>
-        <label
-          htmlFor="contact-validation"
-          className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
-        >
-          Do you already have users, a waitlist, or validation?
-        </label>
-        <textarea
-          id="contact-validation"
-          name="validation_notes"
-          rows={3}
-          className={`${inputClass} resize-none`}
-        />
-      </div>
-
-      <div>
-        <p className="mb-3 text-xs font-medium uppercase tracking-wide text-text-secondary">
-          What do you need help with?
-        </p>
-        <RadioList name="help_needed" options={HELP_OPTIONS} required />
-      </div>
-
-      <div>
-        <p className="mb-3 text-xs font-medium uppercase tracking-wide text-text-secondary">
-          What type of product are you building?
-        </p>
-        <RadioList name="product_type" options={PRODUCT_TYPES} required />
-      </div>
-
-      <div>
-        <label
-          htmlFor="contact-timeline"
-          className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
-        >
-          Desired timeline
-        </label>
-        <select
-          id="contact-timeline"
-          name="timeline"
-          className={inputClass}
-          defaultValue=""
-        >
-          <option value="">Select…</option>
-          {TIMELINES.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label
-          htmlFor="contact-budget"
-          className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
-        >
-          Estimated budget
-        </label>
-        <select
-          id="contact-budget"
-          name="budget_range"
-          className={inputClass}
-          defaultValue=""
-        >
-          <option value="">Select…</option>
-          {BUDGETS.map((b) => (
-            <option key={b} value={b}>
-              {b}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label
-          htmlFor="contact-extra"
-          className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
-        >
-          Anything else we should know?
-        </label>
-        <textarea
-          id="contact-extra"
-          name="notes_extra"
-          rows={4}
-          className={`${inputClass} resize-none`}
-        />
-      </div>
-
-      <div className="grid gap-5 sm:grid-cols-2">
+      <FormSurface label="The product">
         <div>
+          <label
+            htmlFor="contact-what"
+            className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
+          >
+            What are you building?
+          </label>
+          <textarea
+            id="contact-what"
+            name="what_building"
+            rows={4}
+            required
+            className={`${inputClass} resize-none`}
+          />
+        </div>
+        <div>
+          <label
+            htmlFor="contact-for"
+            className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
+          >
+            Who is the product for?
+          </label>
+          <textarea
+            id="contact-for"
+            name="product_for"
+            rows={3}
+            required
+            className={`${inputClass} resize-none`}
+          />
+        </div>
+        <div>
+          <label
+            htmlFor="contact-validation"
+            className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
+          >
+            Do you already have users, a waitlist, or validation?
+          </label>
+          <textarea
+            id="contact-validation"
+            name="validation_notes"
+            rows={3}
+            className={`${inputClass} resize-none`}
+          />
+        </div>
+      </FormSurface>
+
+      <FormSurface label="Fit & scope">
+        <div>
+          <p className="mb-3 text-xs font-medium uppercase tracking-wide text-text-secondary">
+            What do you need help with?
+          </p>
+          <RadioList name="help_needed" options={HELP_OPTIONS} required />
+        </div>
+        <div>
+          <p className="mb-3 text-xs font-medium uppercase tracking-wide text-text-secondary">
+            What type of product are you building?
+          </p>
+          <RadioList name="product_type" options={PRODUCT_TYPES} required />
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div>
+            <label
+              htmlFor="contact-timeline"
+              className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
+            >
+              Desired timeline
+            </label>
+            <select
+              id="contact-timeline"
+              name="timeline"
+              className={inputClass}
+              defaultValue=""
+            >
+              <option value="">Select…</option>
+              {TIMELINES.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label
+              htmlFor="contact-budget"
+              className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
+            >
+              Estimated budget
+            </label>
+            <select
+              id="contact-budget"
+              name="budget_range"
+              className={inputClass}
+              defaultValue=""
+            >
+              <option value="">Select…</option>
+              {BUDGETS.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div>
+          <label
+            htmlFor="contact-extra"
+            className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
+          >
+            Anything else we should know?
+          </label>
+          <textarea
+            id="contact-extra"
+            name="notes_extra"
+            rows={4}
+            className={`${inputClass} resize-none`}
+          />
+        </div>
+      </FormSurface>
+
+      <FormSurface label="Optional contact">
+        <div className="max-w-md">
           <label
             htmlFor="contact-phone"
             className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
@@ -363,47 +380,47 @@ export default function ContactForm() {
             placeholder="+1 (555) 000-0000"
           />
         </div>
-      </div>
 
-      <div className="flex items-start gap-2.5 rounded-xl border border-border bg-white/70 px-3 py-2.5">
-        <input
-          id="contact-sms-consent"
-          name="sms_consent"
-          type="checkbox"
-          className="mt-0.5 h-4 w-4 rounded border-border text-accent accent-accent focus:ring-accent/30"
-        />
-        <label
-          htmlFor="contact-sms-consent"
-          className="text-xs leading-relaxed text-text-secondary"
-        >
-          By checking this box, I agree to receive SMS text messages from{" "}
-          <span className="font-medium text-text-primary">Zenpho</span> at the phone
-          number I provided above, including links to design previews and project
-          updates. Message frequency is low — typically 1–5 messages per engagement.
-          Message and data rates may apply. Reply{" "}
-          <span className="font-medium text-text-primary">STOP</span> to unsubscribe.
-          Reply <span className="font-medium text-text-primary">HELP</span> for help.
-          See our{" "}
-          <a
-            href="/privacy"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline hover:text-accent"
+        <div className="flex items-start gap-2.5 rounded-xl border border-border bg-white px-3 py-2.5">
+          <input
+            id="contact-sms-consent"
+            name="sms_consent"
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 rounded border-border text-accent accent-accent focus:ring-accent/30"
+          />
+          <label
+            htmlFor="contact-sms-consent"
+            className="text-xs leading-relaxed text-text-secondary"
           >
-            Privacy Policy
-          </a>{" "}
-          and{" "}
-          <a
-            href="/terms"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline hover:text-accent"
-          >
-            SMS Terms
-          </a>
-          .
-        </label>
-      </div>
+            By checking this box, I agree to receive SMS text messages from{" "}
+            <span className="font-medium text-text-primary">Zenpho</span> at the phone
+            number I provided above, including links to design previews and project
+            updates. Message frequency is low — typically 1–5 messages per engagement.
+            Message and data rates may apply. Reply{" "}
+            <span className="font-medium text-text-primary">STOP</span> to unsubscribe.
+            Reply{" "}
+            <span className="font-medium text-text-primary">HELP</span> for help. See our{" "}
+            <a
+              href="/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-accent"
+            >
+              Privacy Policy
+            </a>{" "}
+            and{" "}
+            <a
+              href="/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-accent"
+            >
+              SMS Terms
+            </a>
+            .
+          </label>
+        </div>
+      </FormSurface>
 
       <Button
         type="submit"

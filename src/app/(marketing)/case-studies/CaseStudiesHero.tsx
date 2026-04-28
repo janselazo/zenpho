@@ -21,10 +21,10 @@ export default function CaseStudiesHero() {
           initial={{ opacity: 1, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.06 }}
-          className="heading-display flex flex-col gap-2 text-4xl font-bold leading-[1.12] tracking-tight text-text-primary sm:gap-3 sm:text-5xl sm:leading-[1.1] lg:text-6xl lg:leading-[1.08]"
+          className="heading-display text-balance text-4xl font-bold leading-[1.12] tracking-tight text-text-primary sm:text-5xl sm:leading-[1.1] lg:text-6xl lg:leading-[1.08]"
         >
-          <span className="block">Selected MVP concepts</span>
-          <span className="block text-accent">and studio builds.</span>
+          Selected MVP concepts{" "}
+          <span className="text-accent">and studio builds.</span>
         </motion.h1>
 
         <motion.p

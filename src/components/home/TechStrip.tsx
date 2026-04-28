@@ -13,7 +13,8 @@ const chipClass = (i: number) =>
 
 export default function TechStrip() {
   return (
-    <section className="relative mx-auto max-w-7xl px-6 py-24 lg:px-8">
+    <section className="relative mx-auto border-y border-border/40 bg-surface/35 py-24 lg:px-8 lg:py-28">
+      <div className="mx-auto max-w-7xl px-6">
       <SectionHeading
         label="Stack"
         title="Tools"
@@ -43,6 +44,7 @@ export default function TechStrip() {
             </motion.div>
           ))}
         </motion.div>
+      </div>
       </div>
     </section>
   );

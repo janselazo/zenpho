@@ -15,7 +15,8 @@ const stuckPoints = [
 
 export default function ProblemSection() {
   return (
-    <section className="relative mx-auto max-w-3xl px-6 py-24 lg:px-8 lg:py-28">
+    <section className="relative w-full py-24 marketing-section-band lg:py-28">
+      <div className="mx-auto max-w-3xl px-6 lg:px-8">
       <SectionHeading
         title="Most founders lose months"
         titleAccent="building too much too early."
@@ -68,6 +69,7 @@ export default function ProblemSection() {
         At Zenpho, we help you move from idea to working product without
         spending months in development.
       </motion.p>
+      </div>
     </section>
   );
 }

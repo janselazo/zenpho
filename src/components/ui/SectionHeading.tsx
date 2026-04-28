@@ -17,6 +17,8 @@ interface SectionHeadingProps {
   titleAccentInline?: boolean;
   description?: ReactNode;
   align?: "left" | "center";
+  /** Extra classes on section heading wrapper (e.g. tighter margin). */
+  className?: string;
 }
 
 export default function SectionHeading({
@@ -26,6 +28,7 @@ export default function SectionHeading({
   titleAccentInline = false,
   description,
   align = "center",
+  className = "",
 }: SectionHeadingProps) {
   const alignment = align === "center" ? "text-center mx-auto" : "text-left";
   const labelRowClass =
@@ -34,7 +37,7 @@ export default function SectionHeading({
     align === "center" ? "items-center" : "items-start";
 
   return (
-    <div className={`max-w-3xl ${alignment} mb-12 sm:mb-14`}>
+    <div className={`max-w-3xl ${alignment} mb-12 sm:mb-14 ${className}`}>
       {label ? (
         <div className={labelRowClass}>
           <span className={SECTION_EYEBROW_CLASSNAME}>{label}</span>
@@ -44,12 +47,14 @@ export default function SectionHeading({
         {titleAccent ? (
           titleAccentInline ? (
             <span
-              className={`flex flex-row flex-nowrap items-baseline gap-x-2 leading-[1.08] sm:leading-[1.1] ${
+              className={`flex flex-row flex-wrap items-baseline gap-x-2 gap-y-1 leading-[1.08] sm:leading-[1.1] ${
                 align === "center" ? "justify-center" : "justify-start"
               }`}
             >
-              <span className="shrink-0 text-text-primary">{title}</span>
-              <span className="shrink-0 text-accent">{titleAccent}</span>
+              <span className="max-w-[95%] text-pretty text-text-primary sm:max-w-none">
+                {title}
+              </span>
+              <span className="text-pretty text-accent">{titleAccent}</span>
             </span>
           ) : (
             <span

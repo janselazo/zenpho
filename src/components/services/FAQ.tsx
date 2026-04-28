@@ -1,35 +1,5 @@
 import SectionHeading from "@/components/ui/SectionHeading";
-
-const faqs = [
-  {
-    q: "How much does MVP Development cost?",
-    a: "MVP Development starts at $5,000. Most projects range from $5,000 to $50,000+, depending on the scope, complexity, integrations, and product requirements.",
-  },
-  {
-    q: "How much does MVP Growth cost?",
-    a: "MVP Growth starts at $2,500. Most projects range from $2,500 to $25,000+, depending on the launch scope, acquisition campaigns, landing page work, and growth support needed.",
-  },
-  {
-    q: "Can you really build an MVP in 2 weeks?",
-    a: "Yes, if the MVP is focused. Our 2-week sprint is designed for products with one core workflow, essential features, and a clear launch goal.",
-  },
-  {
-    q: "Can you build any product in 2 weeks?",
-    a: "No. We can move fast, but not every product fits a 2-week timeline. Complex platforms, advanced mobile apps, enterprise systems, and compliance-heavy products may require a larger scope.",
-  },
-  {
-    q: "Do you build websites?",
-    a: "Yes. MVP Development can include a launch landing page. MVP Growth can include landing page creation or optimization.",
-  },
-  {
-    q: "Do you build mobile apps?",
-    a: "Yes, when the scope fits. For most early-stage founders, we recommend starting with a mobile-first web app or PWA before investing in full native iOS/Android development.",
-  },
-  {
-    q: "Do I need both MVP Development and MVP Growth?",
-    a: "Not always. If you need the product built, start with MVP Development. If you already have a product and need users, start with MVP Growth. Many founders use both: first build the MVP, then launch and grow it.",
-  },
-];
+import { SITE_PRIMARY_FAQS } from "@/lib/marketing/site-faq-items";
 
 export default function FAQ() {
   return (
@@ -43,13 +13,13 @@ export default function FAQ() {
       />
 
       <div className="mx-auto max-w-3xl space-y-3">
-        {faqs.map((faq, i) => (
+        {SITE_PRIMARY_FAQS.map((faq, i) => (
           <details
             key={i}
             name="services-faq"
-            className="faq-native overflow-hidden rounded-2xl border border-border bg-white shadow-sm"
+            className="faq-native overflow-hidden rounded-2xl border border-border bg-white/95 shadow-sm transition-shadow hover:shadow-md"
           >
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-left [&::-webkit-details-marker]:hidden">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-4 text-left sm:px-5 [&::-webkit-details-marker]:hidden">
               <span className="text-sm font-medium text-text-primary">
                 {faq.q}
               </span>

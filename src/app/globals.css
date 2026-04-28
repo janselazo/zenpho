@@ -40,6 +40,32 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
+/* Marketing: subtle page noise + section rhythm (no extra HTTP) */
+.marketing-page-bg {
+  background-color: var(--color-background);
+  background-image:
+    radial-gradient(
+      ellipse 80% 50% at 50% -20%,
+      rgba(37, 99, 235, 0.06),
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 40% 25% at 100% 0%,
+      rgba(14, 165, 233, 0.05),
+      transparent 50%
+    );
+}
+
+.marketing-section-band {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(244, 247, 250, 0.72) 35%,
+    rgba(244, 247, 250, 0.72) 65%,
+    rgba(255, 255, 255, 0) 100%
+  );
+}
+
 ::selection {
   background-color: rgba(37, 99, 235, 0.2);
   color: #000000;
@@ -253,4 +279,21 @@ html.dark .crm-dark-bg {
 /* Native <details> FAQ chevrons — rotate when open (works without Tailwind group-open) */
 details.faq-native[open] summary .faq-chevron {
   transform: rotate(180deg);
+}
+
+details.faq-native summary {
+  outline: none;
+}
+
+details.faq-native summary:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.45);
+  outline-offset: 2px;
+  border-radius: 0.75rem;
+}
+
+details.faq-native[open] {
+  border-color: rgba(37, 99, 235, 0.18);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 12px 36px rgba(37, 99, 235, 0.06);
 }

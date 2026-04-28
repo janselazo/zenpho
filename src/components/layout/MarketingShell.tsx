@@ -7,9 +7,9 @@ export default function MarketingShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative">
+    <div className="relative marketing-page-bg min-h-screen">
       <Navbar />
-      <main className="relative">{children}</main>
+      <main className="relative isolate overflow-x-hidden">{children}</main>
       <Footer />
     </div>
   );
