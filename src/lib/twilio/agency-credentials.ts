@@ -7,6 +7,19 @@ export type AgencyTwilioCreds = {
   fromPhone: string | null;
 };
 
+function normalizeTwilioSender(raw: string | null | undefined): string | null {
+  const t = raw?.trim();
+  if (!t) return null;
+  if (t.startsWith("+")) {
+    const digits = t.replace(/[^\d]/g, "");
+    return digits ? `+${digits}` : null;
+  }
+  const digits = t.replace(/[^\d]/g, "");
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  return t;
+}
+
 /** Booleans only — for staff diagnostics; never log secret values. */
 export function getTwilioEnvVarPresence(): {
   accountSid: boolean;
@@ -24,22 +37,14 @@ export function getTwilioEnvVarPresence(): {
 
 /**
  * Twilio for outbound SMS and inbound webhook validation.
- * When `TWILIO_ACCOUNT_SID`, auth token (`TWILIO_AUTH_TOKEN` or alias `TWILIO_SECRET_KEY`), and
- * `TWILIO_FROM_PHONE` are all set (e.g. on Vercel), those are used. Otherwise loads encrypted row
- * via service role (Settings → Integrations).
+ * Settings → Integrations takes priority so admins can change sender numbers without
+ * redeploying Vercel. Env vars are the fallback when no saved integration exists.
  */
 export async function getAgencyTwilioCredentials(): Promise<AgencyTwilioCreds | null> {
   const envSid = process.env["TWILIO_ACCOUNT_SID"]?.trim();
   const envToken =
     process.env["TWILIO_AUTH_TOKEN"]?.trim() || process.env["TWILIO_SECRET_KEY"]?.trim();
-  const envFrom = process.env["TWILIO_FROM_PHONE"]?.trim();
-  if (envSid && envToken && envFrom) {
-    return {
-      accountSid: envSid,
-      authToken: envToken,
-      fromPhone: envFrom,
-    };
-  }
+  const envFrom = normalizeTwilioSender(process.env["TWILIO_FROM_PHONE"]);
 
   try {
     const admin = createAdminClient();
@@ -49,16 +54,25 @@ export async function getAgencyTwilioCredentials(): Promise<AgencyTwilioCreds | 
       .eq("id", 1)
       .maybeSingle();
 
-    if (error || !data?.account_sid || !data.auth_token_encrypted) {
-      return null;
+    if (!error && data?.account_sid && data.auth_token_encrypted) {
+      const authToken = decryptIntegrationSecret(data.auth_token_encrypted);
+      return {
+        accountSid: data.account_sid.trim(),
+        authToken,
+        fromPhone: normalizeTwilioSender(data.from_phone),
+      };
     }
-    const authToken = decryptIntegrationSecret(data.auth_token_encrypted);
-    return {
-      accountSid: data.account_sid.trim(),
-      authToken,
-      fromPhone: data.from_phone?.trim() || null,
-    };
   } catch {
-    return null;
+    // Fall back to env credentials below.
   }
+
+  if (envSid && envToken && envFrom) {
+    return {
+      accountSid: envSid,
+      authToken: envToken,
+      fromPhone: envFrom,
+    };
+  }
+
+  return null;
 }

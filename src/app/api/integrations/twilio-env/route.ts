@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { requireAgencyStaff } from "@/app/(crm)/actions/prospect-preview-agency";
 import { isIntegrationSecretsKeyConfigured } from "@/lib/crypto/integration-secrets";
-import { getTwilioEnvVarPresence } from "@/lib/twilio/agency-credentials";
+import {
+  getAgencyTwilioCredentials,
+  getTwilioEnvVarPresence,
+} from "@/lib/twilio/agency-credentials";
 
 export const runtime = "nodejs";
 
@@ -17,11 +20,14 @@ export async function GET() {
 
   const env = getTwilioEnvVarPresence();
   const fullyConfigured = env.accountSid && env.authToken && env.fromPhone;
+  const resolved = await getAgencyTwilioCredentials();
 
   return NextResponse.json({
     ok: true as const,
     env,
     envFullyConfigured: fullyConfigured,
+    resolvedCredentialsPresent: Boolean(resolved),
+    resolvedFromPhonePresent: Boolean(resolved?.fromPhone),
     /** Required to save Twilio/SendGrid tokens under Settings → Integrations. */
     integrationSecretsKeyConfigured: isIntegrationSecretsKeyConfigured(),
     /** Needed if env trio is incomplete and the app falls back to Settings → Integrations (DB). */

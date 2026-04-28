@@ -195,6 +195,7 @@ export async function fingerprintProspectSiteAction(
 }
 
 const MAX_CONTACT_PAGES = 8;
+const MIN_FALLBACK_CONTACT_PAGES = 4;
 
 export async function fetchHomepageWebsiteContactsAction(
   rawUrl: string
@@ -252,15 +253,23 @@ export async function enrichWebsiteContactsDeepAction(
     founderName: h0.founderName,
   });
 
-  // Discover linked contact-style pages first; if discovery yields nothing (SPA navs / hidden
-  // mobile menus where the contact link only exists in JS), fall back to common guessed paths.
+  // Discover linked contact-style pages first, then always try a short list of common contact
+  // paths. Some SMB sites expose only location/service links on the homepage while the real
+  // email is on `/contact-us/`, so limiting guesses to "no links found" misses those pages.
   const linked = discoverContactPageUrls(first.html, root, MAX_CONTACT_PAGES);
-  const fallbackTargets = linked.length === 0 ? fallbackContactPageGuesses(root) : [];
-  const seen = new Set<string>([root, ...linked]);
+  const fallbackTargets = fallbackContactPageGuesses(root);
+  const fallbackSlotCount = Math.min(
+    MIN_FALLBACK_CONTACT_PAGES,
+    MAX_CONTACT_PAGES,
+    fallbackTargets.length
+  );
+  const linkedSlotCount = MAX_CONTACT_PAGES - fallbackSlotCount;
+  const linkedTargets = linked.slice(0, linkedSlotCount);
+  const seen = new Set<string>([root, ...linkedTargets]);
   const extra = [
-    ...linked,
-    ...fallbackTargets.filter((u) => !seen.has(u)),
-  ].slice(0, MAX_CONTACT_PAGES);
+    ...linkedTargets,
+    ...fallbackTargets.filter((u) => !seen.has(u)).slice(0, fallbackSlotCount),
+  ];
 
   const extraResults = await Promise.allSettled(extra.map((u) => fetchHtmlSafe(u)));
   for (let i = 0; i < extra.length; i++) {

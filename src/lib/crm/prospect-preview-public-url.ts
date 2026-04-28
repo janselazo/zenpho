@@ -20,8 +20,8 @@ export function getPublicAppOrigin(): string {
  */
 /**
  * Stable screenshot/crawler URL: primary app origin + `/preview/{uuid}`.
- * Used by Microlink screenshot capture and optionally outbound SMS/email
- * when env `PROSPECT_OUTBOUND_USE_MICROLINK_URL` is enabled.
+ * Used by Microlink screenshot capture and any bot/crawler flow that must avoid
+ * pretty-domain rewrites.
  */
 export function prospectPreviewMicrolinkUrl(previewId: string): string {
   return `${getPublicAppOrigin()}/preview/${previewId}`;
@@ -30,26 +30,22 @@ export function prospectPreviewMicrolinkUrl(previewId: string): string {
 /**
  * URL merged into SMS/email outreach templates (`{{previewUrl}}`).
  *
- * Defaults to the primary app origin + `/preview/{uuid}` because email clients
- * crawl links and can render a Vercel Deployment Protection login card for a
- * protected `PREVIEW_PUBLIC_HOST` subdomain.
+ * Defaults to the branded preview page URL (e.g. `https://preview.zenpho.com/{slug}`)
+ * when `PREVIEW_PUBLIC_HOST` and a slug are available. Email screenshot embeds are
+ * handled separately, so outbound copy can keep the clean public preview domain.
  *
- * Set env **`PROSPECT_OUTBOUND_USE_PRETTY_URL=true`** to use the pretty
- * `PREVIEW_PUBLIC_HOST` link in outbound copy when that host is public.
- *
- * Legacy support: **`PROSPECT_OUTBOUND_USE_MICROLINK_URL=false`** also opts into
- * the pretty URL.
+ * Set env **`PROSPECT_OUTBOUND_USE_MICROLINK_URL=true`** to force the raw app
+ * origin + `/preview/{uuid}` link for debugging or protected preview-host setups.
  */
 export function prospectOutboundTemplatePreviewUrl(
   previewId: string,
   slug?: string | null
 ): string {
-  const pretty = process.env.PROSPECT_OUTBOUND_USE_PRETTY_URL?.trim().toLowerCase();
   const legacy = process.env.PROSPECT_OUTBOUND_USE_MICROLINK_URL?.trim().toLowerCase();
-  if (pretty === "true" || pretty === "1" || legacy === "false" || legacy === "0") {
-    return prospectPreviewPageUrl(previewId, slug);
+  if (legacy === "true" || legacy === "1") {
+    return prospectPreviewMicrolinkUrl(previewId);
   }
-  return prospectPreviewMicrolinkUrl(previewId);
+  return prospectPreviewPageUrl(previewId, slug);
 }
 
 export function prospectPreviewPageUrl(previewId: string, slug?: string | null): string {
