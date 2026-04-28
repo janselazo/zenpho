@@ -28,8 +28,9 @@ export default function StudioPageCTA() {
             Want to build with Zenpho?
           </h2>
           <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-text-secondary sm:text-base">
-            If you are a founder with a technology product idea, we can help you
-            build the first version and launch it to the market.
+            If you are building a tech startup or ecommerce brand and need a
+            product shipped, we can help you build the first version and launch
+            it to the market.
           </p>
           <div className="mx-auto mt-8 flex justify-center">
             <Button href="/booking" variant="primary" size="lg">

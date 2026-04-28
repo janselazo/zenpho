@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     absolute: "Zenpho Studio | AI Product Studio",
   },
   description:
-    "Zenpho Studio is building toward an AI Product Studio model, helping founders launch products while creating our own AI-powered software.",
+    "Zenpho Studio is building toward an AI Product Studio model—developing and growing tech startups and ecommerce brands while creating our own AI-powered software.",
 };
 
 export default function StudioPage() {

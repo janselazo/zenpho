@@ -39,8 +39,8 @@ export default function StudioHero() {
           className="mx-auto mt-8 max-w-xl text-base font-medium leading-relaxed text-pretty text-text-primary/80 sm:mt-9 sm:text-lg"
         >
           We are building more than an agency. Zenpho is evolving into an AI
-          Product Studio that helps founders launch products while creating our
-          own software.
+          Product Studio focused on developing and growing tech startups and
+          ecommerce brands—while building our own AI-powered software.
         </motion.p>
 
         <motion.div

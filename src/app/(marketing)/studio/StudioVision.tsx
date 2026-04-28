@@ -16,7 +16,8 @@ export default function StudioVision() {
           Zenpho Studio is our long-term vision.
         </p>
         <p className="mt-5 text-base leading-relaxed text-text-secondary">
-          Today, we help founders build and launch MVPs.
+          Today, we help tech startups and ecommerce brands build and launch
+          MVPs.
         </p>
         <p className="mt-4 text-base leading-relaxed text-text-secondary">
           Tomorrow, we will also build and launch our own AI-powered software

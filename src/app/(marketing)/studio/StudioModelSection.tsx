@@ -4,11 +4,11 @@ import Card from "@/components/ui/Card";
 const steps = [
   {
     title: "Build with founders",
-    body: "We work with founders to build MVPs, launch products, and solve real product challenges.",
+    body: "We work with tech startups and ecommerce brands to build MVPs, launch products, and solve real product challenges.",
   },
   {
     title: "Identify repeated problems",
-    body: "Through client work and founder conversations, we identify patterns, bottlenecks, and product opportunities.",
+    body: "Through client work with startups and brands, we identify patterns, bottlenecks, and product opportunities.",
   },
   {
     title: "Build internal tools",
