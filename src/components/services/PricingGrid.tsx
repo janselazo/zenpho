@@ -1,7 +1,6 @@
 import SectionHeading from "@/components/ui/SectionHeading";
 import DevelopmentPricingTables from "@/components/services/DevelopmentPricingTables";
 import PricingComparisonTable from "@/components/services/PricingComparisonTable";
-import PricingNote from "@/components/services/PricingNote";
 
 export default function PricingGrid() {
   return (
@@ -16,7 +15,6 @@ export default function PricingGrid() {
           <DevelopmentPricingTables />
         </div>
         <PricingComparisonTable />
-        <PricingNote />
       </div>
     </section>
   );

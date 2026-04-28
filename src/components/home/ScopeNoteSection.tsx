@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import SectionHeading from "@/components/ui/SectionHeading";
 import Card from "@/components/ui/Card";
+import { SplitIntroCards } from "@/components/home/SplitIntro";
 
 const bullets = [
   "1 core user type",
@@ -61,6 +62,8 @@ export default function ScopeNoteSection() {
           </Card>
         </motion.div>
       </div>
+
+      <SplitIntroCards className="mt-16 lg:mt-20" />
     </section>
   );
 }

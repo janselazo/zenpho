@@ -24,8 +24,8 @@ export default function HomeFinalCTA() {
 
         <div className="relative z-10">
           <h2 className="heading-display text-balance text-3xl font-bold tracking-tight text-text-primary sm:text-4xl lg:text-5xl lg:leading-tight">
-            Have an idea for an{" "}
-            <span className="text-accent">AI-powered MVP?</span>
+            Have an idea for a{" "}
+            <span className="text-accent">Software Product?</span>
           </h2>
           <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-text-secondary sm:mt-5 sm:text-base">
             Let&apos;s map out what a focused version one could look like and what

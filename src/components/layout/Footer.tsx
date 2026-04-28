@@ -21,15 +21,11 @@ export default function Footer() {
               />
             </Link>
             <p className="mt-5 text-sm font-semibold leading-snug text-text-primary">
-              Zenpho — AI MVP Development Studio for Founders.
+              Zenpho — AI MVP Development Studio
             </p>
             <p className="mt-3 max-w-sm text-sm leading-relaxed text-text-secondary">
               We help founders build and launch AI-powered MVPs through product
               strategy, UX/UI, development, analytics, and growth support.
-            </p>
-            <p className="mt-5 text-sm leading-relaxed text-text-secondary/95">
-              Focused MVPs typically reach a demo-ready milestone in about two
-              weeks when scope stays disciplined.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Button href="/booking" variant="primary" size="md">

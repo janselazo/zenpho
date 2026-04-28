@@ -1,24 +1,81 @@
 "use client";
 
-import Link from "next/link";
 import { motion } from "framer-motion";
-import type { DevelopmentPricingOffering } from "@/lib/data";
+import { Check } from "lucide-react";
+import type { DevelopmentPricingOffering, PricingIncludedGroup } from "@/lib/data";
 import { developmentPricingOfferings } from "@/lib/data";
+import Button from "@/components/ui/Button";
 
-function CheckIcon({ className }: { className?: string }) {
+function resolvedIncludedGroups(
+  offering: DevelopmentPricingOffering,
+): PricingIncludedGroup[] {
+  if (offering.includedGroups && offering.includedGroups.length > 0) {
+    return offering.includedGroups;
+  }
+  if (offering.features && offering.features.length > 0) {
+    return [{ title: "What’s included", items: offering.features }];
+  }
+  return [];
+}
+
+function IncludedGrid({ groups }: { groups: PricingIncludedGroup[] }) {
   return (
-    <svg
-      className={className}
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="m4.5 12.75 6 6 9-13.5" />
-    </svg>
+    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      {groups.map((group) => (
+        <div
+          key={group.title}
+          className="rounded-2xl border border-border/80 bg-surface/70 p-4 shadow-sm"
+        >
+          <h4 className="text-[11px] font-bold uppercase tracking-wider text-text-secondary">
+            {group.title}
+          </h4>
+          <ul className="mt-3 space-y-2">
+            {group.items.map((line) => (
+              <li
+                key={line}
+                className="flex gap-2 text-sm leading-snug text-text-secondary"
+              >
+                <Check
+                  className="mt-0.5 h-4 w-4 shrink-0 text-accent"
+                  strokeWidth={2.25}
+                  aria-hidden
+                />
+                {line}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AudienceColumn({
+  title,
+  dotClass,
+  items,
+}: {
+  title: string;
+  dotClass: string;
+  items: string[];
+}) {
+  return (
+    <div>
+      <p className="text-xs font-bold uppercase tracking-wider text-text-primary">
+        {title}
+      </p>
+      <ul className="mt-3 space-y-2.5">
+        {items.map((line) => (
+          <li key={line} className="flex gap-2 text-sm leading-snug text-text-secondary">
+            <span
+              className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${dotClass}`}
+              aria-hidden
+            />
+            {line}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -30,8 +87,8 @@ function RichOfferingCard({
   index: number;
 }) {
   const featured = Boolean(offering.featured);
-  const suffix = offering.priceSuffix ?? "starting";
-  const cta = offering.ctaLabel ?? "Book an MVP Strategy Call";
+  const cta = offering.ctaLabel ?? "Book a Call";
+  const includedGroups = resolvedIncludedGroups(offering);
 
   return (
     <motion.article
@@ -73,85 +130,56 @@ function RichOfferingCard({
         {offering.subtitle}
       </p>
 
-      <div className="mt-6 space-y-1 border-t border-border/70 pt-6 text-sm">
-        <div className="flex flex-wrap items-baseline gap-2">
-          <span className="font-medium text-text-secondary">Starting price:</span>
+      <div className="mt-6 border-t border-border/70 pt-6">
+        <p className="text-sm leading-relaxed">
+          <span className="font-medium text-text-secondary">From </span>
           <span className="text-2xl font-bold tabular-nums text-text-primary sm:text-[1.65rem]">
             {offering.priceAmount}
           </span>
-          <span className="text-text-secondary">/ {suffix}</span>
-        </div>
+        </p>
         {offering.typicalRange ? (
-          <p className="text-sm text-text-secondary">
-            <span className="font-medium text-text-primary/90">Typical range:</span>{" "}
+          <p className="mt-2 text-sm text-text-secondary">
+            <span className="font-medium text-text-primary/90">
+              Typical range:
+            </span>{" "}
             {offering.typicalRange}
           </p>
         ) : null}
       </div>
 
-      {offering.bestFor && offering.bestFor.length > 0 ? (
+      {includedGroups.length > 0 ? (
         <div className="mt-8">
           <p className="text-xs font-bold uppercase tracking-wider text-text-primary">
-            Best for
+            What&apos;s included
           </p>
-          <ul className="mt-3 space-y-2">
-            {offering.bestFor.map((line) => (
-              <li
-                key={line}
-                className="flex gap-2.5 text-sm leading-snug text-text-secondary"
-              >
-                <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-accent-violet" />
-                {line}
-              </li>
-            ))}
-          </ul>
+          <IncludedGrid groups={includedGroups} />
         </div>
       ) : null}
 
-      <div className="mt-8">
-        <p className="text-xs font-bold uppercase tracking-wider text-text-primary">
-          What&apos;s included
-        </p>
-        <ul className="mt-3 space-y-2">
-          {offering.features.map((line) => (
-            <li key={line} className="flex gap-2.5 text-sm leading-snug text-text-secondary">
-              <CheckIcon className="mt-0.5 h-[1.125rem] w-[1.125rem] shrink-0 text-accent" />
-              {line}
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {offering.idealIf && offering.idealIf.length > 0 ? (
-        <div className="mt-8">
-          <p className="text-xs font-bold uppercase tracking-wider text-text-primary">
-            Ideal if you need to
-          </p>
-          <ul className="mt-3 space-y-2">
-            {offering.idealIf.map((line) => (
-              <li
-                key={line}
-                className="flex gap-2.5 text-sm leading-snug text-text-secondary"
-              >
-                <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-accent-warm" />
-                {line}
-              </li>
-            ))}
-          </ul>
+      {((offering.bestFor?.length ?? 0) > 0 ||
+        (offering.idealIf?.length ?? 0) > 0) && (
+        <div className="mt-8 grid gap-8 border-t border-border/60 pt-8 lg:grid-cols-2 lg:gap-6">
+          {(offering.bestFor?.length ?? 0) > 0 ? (
+            <AudienceColumn
+              title="Best for"
+              dotClass="bg-accent-violet"
+              items={offering.bestFor ?? []}
+            />
+          ) : null}
+          {(offering.idealIf?.length ?? 0) > 0 ? (
+            <AudienceColumn
+              title="Ideal if you need to"
+              dotClass="bg-accent-warm"
+              items={offering.idealIf ?? []}
+            />
+          ) : null}
         </div>
-      ) : null}
+      )}
 
       <div className="mt-10">
-        <Link
-          href="/booking"
-          className={`flex w-full items-center justify-center rounded-full px-6 py-3.5 text-sm font-semibold transition-colors ${
-            featured
-              ? "bg-accent text-white shadow-md shadow-accent/25 hover:bg-accent-hover"
-              : "border border-border bg-white text-text-primary hover:border-accent/35 hover:bg-surface-light/80"
-          }`}
-        >
+        <Button href="/booking" variant={featured ? "primary" : "dark"} size="lg" className="w-full">
           {cta}
-        </Link>
+        </Button>
       </div>
     </motion.article>
   );

@@ -44,19 +44,7 @@ export default function SolutionSection() {
           }
         />
 
-        <motion.p
-          initial={{ opacity: 1, y: 12 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.15 }}
-          transition={{ duration: 0.45 }}
-          className="mx-auto -mt-4 mb-14 max-w-2xl text-center text-base leading-relaxed text-text-secondary sm:-mt-2 sm:mb-16 sm:text-lg"
-        >
-          We help you define what to build, design the product experience,
-          develop the MVP, launch it to the market, and collect feedback from
-          real users.
-        </motion.p>
-
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="mt-4 grid gap-6 sm:mt-6 md:grid-cols-3">
           {pillars.map((pillar, i) => (
             <motion.div
               key={pillar.eyebrow}

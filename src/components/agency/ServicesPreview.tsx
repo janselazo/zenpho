@@ -2,277 +2,395 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import Card from "@/components/ui/Card";
-import { serviceIconMap } from "@/components/services/service-icons";
-import { serviceIconAccentClass } from "@/lib/marketing/service-accent";
+import { BarChart3, Check, Rocket } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import SectionHeading from "@/components/ui/SectionHeading";
+import Button from "@/components/ui/Button";
 
-const development = {
-  subtitle: "Build your AI-powered MVP in 2 weeks.",
-  paragraphs: [
-    "Our MVP Development service helps founders turn ideas, prototypes, and product concepts into functional technology products.",
-    "We combine product strategy, UX/UI design, AI-assisted development, web app development, mobile-first experiences, launch pages, analytics, and deployment into one focused sprint.",
-    "This service is ideal if you need a working MVP for users, investors, partners, or market validation.",
+const BOOKING_HREF = "/booking";
+
+type ServiceGroup = { title: string; items: string[] };
+
+type ServiceConfig = {
+  id: string;
+  tag: string;
+  title: string;
+  subtitle: string;
+  description: string[];
+  icon: LucideIcon;
+  /** Omitted for single-grid services (e.g. growth). */
+  whatWeOffer?: ServiceGroup[];
+  included: ServiceGroup[];
+  bestFor: string[];
+  primaryHref: string;
+  primaryLabel: string;
+  learnHref: string;
+  learnLabel: string;
+};
+
+const MVP_DEVELOPMENT_SERVICE: ServiceConfig = {
+  id: "mvp-development",
+  tag: "Service 1",
+  title: "MVP Development",
+  subtitle:
+    "Ship a focused software MVP in ~2 weeks—strategy through handoff.",
+  description: [
+    "We bundle discovery, UX, engineering, integrations, landing, analytics, QA, deployment, and documentation into disciplined sprint cycles—you leave with a working product stakeholders can demo, not a slide deck.",
+    "Scope stays tight around one prioritized user workflow first: faster validation, clearer next steps after launch.",
   ],
-  whatWeCanBuild: [
-    "AI SaaS products",
-    "Web app MVPs",
-    "Mobile-first apps",
-    "Progressive web apps",
-    "Internal tools",
-    "Client portals",
-    "Marketplaces",
-    "Workflow automation tools",
-    "AI assistants",
-    "Launch landing pages",
-    "Admin dashboards",
+  icon: Rocket,
+  whatWeOffer: [
+    {
+      title: "Products & surfaces",
+      items: [
+        "AI & SaaS products",
+        "Web MVPs & PWAs",
+        "Mobile-first experiences",
+        "Internal tools",
+        "Client portals & marketplaces",
+      ],
+    },
+    {
+      title: "Intelligence & ops",
+      items: [
+        "AI assistants",
+        "Workflow automation",
+        "Admin dashboards",
+        "API integrations",
+      ],
+    },
+    {
+      title: "Go-to-market",
+      items: ["Launch & onboarding flows", "Analytics-ready builds"],
+    },
   ],
-  whatsIncluded: [
-    "Product discovery",
-    "MVP scope definition",
-    "Core user journey",
-    "Feature prioritization",
-    "UX/UI design",
-    "Web app or mobile-first development",
-    "AI/API integrations",
-    "Authentication",
-    "Database setup",
-    "Admin dashboard",
-    "Launch landing page",
-    "Product analytics",
-    "QA testing",
-    "Deployment",
-    "Handover documentation",
+  included: [
+    {
+      title: "Discover & scope",
+      items: [
+        "Discovery workshop",
+        "MVP scope & prioritization",
+        "Core journey mapping",
+      ],
+    },
+    {
+      title: "Design & build",
+      items: [
+        "UX/UI for core workflows",
+        "Web or mobile-first development",
+        "AI/API integrations",
+        "Authentication",
+        "Database setup",
+        "Admin dashboard",
+      ],
+    },
+    {
+      title: "Launch & handoff",
+      items: [
+        "Launch landing page",
+        "Product analytics",
+        "QA & deployment",
+        "Documentation",
+      ],
+    },
   ],
   bestFor: [
-    "Founders with a validated idea",
-    "Non-technical founders",
-    "AI startup founders",
-    "SaaS founders",
-    "Founders preparing for demo day",
-    "Founders who need a working prototype",
-    "Operators turning workflows into software",
-    "Consultants productizing expertise",
+    "Validated ideas that need disciplined execution—not endless research",
+    "Non-technical founders who want transparency and predictable demos",
+    "SaaS, AI-first, or internal tooling teams prepping for pilots",
+    "Operators productizing workflows or consultants packaging expertise",
   ],
-} as const;
+  primaryHref: BOOKING_HREF,
+  primaryLabel: "Book a Call",
+  learnHref: "/services/mvp-development",
+  learnLabel: "More about MVP Development",
+};
 
-const growth = {
-  subtitle: "Launch your MVP and get early users.",
-  paragraphs: [
-    "Building the MVP is only the first step. The next step is getting it in front of the right people.",
-    "Our MVP Growth service helps founders position, launch, track, and improve their product after it goes live.",
-    "We help you build the growth foundation needed to attract beta users, collect feedback, measure behavior, and improve the product based on real market signals.",
+const MVP_GROWTH_SERVICE: ServiceConfig = {
+  id: "mvp-growth",
+  tag: "Service 2",
+  title: "MVP Growth",
+  subtitle:
+    "Position, ship, measure, and iterate after your product goes live.",
+  description: [
+    "Shipping the MVP clears the runway; growth work gets it into the hands of the right buyers and testers.",
+    "We wire together positioning, acquisition plays, experimentation, and lightweight analytics so founders learn quickly from signals—not guesses.",
   ],
-  whatsIncluded: [
-    "ICP definition",
-    "Positioning and messaging",
-    "Landing page copy",
-    "Landing page design/development",
-    "Waitlist or demo booking flow",
-    "Product analytics",
-    "Feedback system",
-    "Cold email/DM outreach strategy",
-    "Founder LinkedIn launch content",
-    "Product Hunt/community launch support",
-    "Beta user acquisition plan",
-    "Growth experiment roadmap",
-    "Conversion optimization recommendations",
+  icon: BarChart3,
+  included: [
+    {
+      title: "Positioning & funnel",
+      items: [
+        "ICP & messaging alignment",
+        "Landing narrative, copy & build",
+        "Waitlists & demo booking flows",
+        "Analytics instrumentation & lightweight feedback loops",
+      ],
+    },
+    {
+      title: "Acquisition & launches",
+      items: [
+        "Cold outbound & DM playbook",
+        "Founder LinkedIn cadence kits",
+        "Product Hunt / community launch support",
+        "Beta acquisition roadmap",
+      ],
+    },
+    {
+      title: "Learn & iterate",
+      items: [
+        "Growth experiment backlog",
+        "Conversion & funnel recommendations",
+      ],
+    },
   ],
   bestFor: [
-    "Founders launching an MVP",
-    "MVPs with no users yet",
-    "Startups preparing for Product Hunt",
-    "Founders who need beta users",
-    "Products with unclear messaging",
-    "Startups that need waitlist signups or demo bookings",
-    "Founders who need user feedback and growth experiments",
+    "Teams with a shipped MVP staring at blank acquisition metrics",
+    "Founders prepping Product Hunt, waitlists, or first paid funnel",
+    "Products where positioning and landing don’t reflect the roadmap",
+    "Operators who need repeatable beta feedback loops—not one-off bursts",
   ],
-} as const;
+  primaryHref: BOOKING_HREF,
+  primaryLabel: "Book a Call",
+  learnHref: "/services/mvp-growth",
+  learnLabel: "More about MVP Growth",
+};
+
+function ServiceGroupCards({
+  groups,
+  sectionLabel,
+  columns = 3,
+}: {
+  groups: ServiceGroup[];
+  sectionLabel: string;
+  columns?: 2 | 3;
+}) {
+  const grid =
+    columns === 2
+      ? "md:grid-cols-2"
+      : "md:grid-cols-2 lg:grid-cols-3";
+
+  return (
+    <div>
+      <p className="text-xs font-bold uppercase tracking-wider text-muted">
+        {sectionLabel}
+      </p>
+      <div className={`mt-4 grid gap-4 ${grid}`}>
+        {groups.map((group) => (
+          <article
+            key={group.title}
+            className="rounded-2xl border border-border/80 bg-card p-5 shadow-sm"
+          >
+            <h4 className="text-sm font-semibold text-text-primary">
+              {group.title}
+            </h4>
+            <ul className="mt-3 space-y-2 text-sm text-text-secondary">
+              {group.items.map((item) => (
+                <li key={item} className="flex gap-2">
+                  <span
+                    aria-hidden="true"
+                    className="mt-1 inline-block size-2 shrink-0 rounded-full bg-accent/90"
+                  />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BestForBlock({ items }: { items: string[] }) {
+  const mid = Math.ceil(items.length / 2);
+  return (
+    <div className="rounded-2xl border border-dashed border-border/70 bg-accent/10 p-6">
+      <p className="text-xs font-bold uppercase tracking-wider text-text-primary">
+        Best for
+      </p>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <ul className="space-y-3 text-sm text-text-secondary">
+          {items.slice(0, mid).map((bullet) => (
+            <li key={bullet} className="flex gap-3">
+              <Check
+                aria-hidden
+                className="mt-0.5 size-4 shrink-0 text-accent"
+                strokeWidth={2.25}
+              />
+              <span>{bullet}</span>
+            </li>
+          ))}
+        </ul>
+        <ul className="space-y-3 text-sm text-text-secondary">
+          {items.slice(mid).map((bullet) => (
+            <li key={bullet} className="flex gap-3">
+              <Check
+                aria-hidden
+                className="mt-0.5 size-4 shrink-0 text-accent"
+                strokeWidth={2.25}
+              />
+              <span>{bullet}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+function ServiceHero({
+  Icon,
+  tag,
+  title,
+  subtitle,
+  description,
+}: {
+  Icon: LucideIcon;
+  tag: string;
+  title: string;
+  subtitle: string;
+  description: string[];
+}) {
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        whileInView={{ opacity: 1, scale: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5 }}
+        className="mb-12 flex justify-center lg:justify-start lg:translate-x-[-2px]"
+      >
+        <div className="flex h-24 w-24 items-center justify-center rounded-[2rem] bg-accent-light shadow-soft">
+          <Icon className="h-14 w-14 text-accent" strokeWidth={1.5} />
+        </div>
+      </motion.div>
+      <p className="mb-6 text-[10px] font-bold uppercase tracking-widest text-muted">
+        {tag}
+      </p>
+      <h3 className="mb-8 text-[44px] font-bold leading-none tracking-wide text-text-primary">
+        {title}
+      </h3>
+      <h4 className="mb-8 text-xl font-semibold tracking-tighter text-accent sm:text-[22px]">
+        {subtitle}
+      </h4>
+
+      <div className="mb-12 rounded-2xl bg-card px-10 py-8 shadow-soft">
+        {description.map((paragraph) => (
+          <div key={paragraph} className="mb-10 last:mb-0">
+            <p className="text-lg leading-snug tracking-tighter text-muted">
+              {paragraph}
+            </p>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
 
 export default function ServicesPreview() {
   return (
     <>
-      {/* Service 1 — MVP Development */}
-      <section
-        id="mvp-development"
-        className="mx-auto max-w-3xl px-6 pb-20 pt-12 lg:px-8 lg:pb-24 lg:pt-8"
+      <motion.div
+        initial={{ opacity: 1, scale: 0.98 }}
+        whileInView={{ opacity: 1, scale: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6 }}
+        className="mx-auto max-w-6xl px-6 py-12 sm:px-8 md:py-16"
       >
-        <motion.div
-          initial={{ opacity: 1, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.08 }}
-          transition={{ duration: 0.45 }}
+        <SectionHeading
+          title="Our"
+          titleAccent="Services"
+          align="center"
+          className="mb-16"
+        />
+
+        <section
+          id={MVP_DEVELOPMENT_SERVICE.id}
+          className="mb-24 scroll-mt-24 md:mb-32"
         >
-          <div className={`mb-6 flex h-14 w-14 items-center justify-center rounded-full [&_svg]:h-8 [&_svg]:w-8 ${serviceIconAccentClass(0)}`}>
-            {serviceIconMap.rocket}
-          </div>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-text-secondary">
-              Service 1
-            </p>
-            <h2 className="heading-display mt-2 text-3xl font-bold tracking-tight text-text-primary sm:text-4xl">
-              MVP Development
-            </h2>
-            <p className="mt-3 text-lg font-semibold text-accent sm:text-xl">
-              {development.subtitle}
-            </p>
-          </div>
-          <Card className="mt-10 border-border/80 bg-white p-8 shadow-soft sm:p-10">
-            {development.paragraphs.map((p, idx) => (
-              <p
-                key={`dev-${idx}`}
-                className="mb-0 text-base leading-relaxed text-text-secondary [&+&]:mt-5"
-              >
-                {p}
-              </p>
-            ))}
-          </Card>
-
-          <div className="mt-12">
-            <p className="text-xs font-bold uppercase tracking-widest text-text-primary">
-              What We Can Build
-            </p>
-            <ul className="mt-4 grid gap-2 sm:grid-cols-2">
-              {development.whatWeCanBuild.map((line) => (
-                <li key={line} className="flex gap-3 text-sm text-text-secondary">
-                  <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-accent" aria-hidden />
-                  {line}
-                </li>
-              ))}
-            </ul>
+          <div className="mx-auto max-w-3xl text-center lg:max-w-none lg:text-left">
+            <ServiceHero
+              Icon={MVP_DEVELOPMENT_SERVICE.icon}
+              tag={MVP_DEVELOPMENT_SERVICE.tag}
+              title={MVP_DEVELOPMENT_SERVICE.title}
+              subtitle={MVP_DEVELOPMENT_SERVICE.subtitle}
+              description={MVP_DEVELOPMENT_SERVICE.description}
+            />
           </div>
 
-          <div className="mt-12">
-            <p className="text-xs font-bold uppercase tracking-widest text-text-primary">
-              What&apos;s Included
-            </p>
-            <ul className="mt-4 space-y-2">
-              {development.whatsIncluded.map((line) => (
-                <li key={line} className="flex gap-3 text-sm text-text-secondary">
-                  <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-accent-violet" aria-hidden />
-                  {line}
-                </li>
-              ))}
-            </ul>
+          <div className="mx-auto mt-12 max-w-6xl space-y-12">
+            {MVP_DEVELOPMENT_SERVICE.whatWeOffer && (
+              <ServiceGroupCards
+                groups={MVP_DEVELOPMENT_SERVICE.whatWeOffer}
+                sectionLabel="What we can build"
+              />
+            )}
+            <ServiceGroupCards
+              groups={MVP_DEVELOPMENT_SERVICE.included}
+              sectionLabel="What’s included"
+            />
+            <BestForBlock items={MVP_DEVELOPMENT_SERVICE.bestFor} />
           </div>
 
-          <div className="mt-12">
-            <p className="text-xs font-bold uppercase tracking-widest text-text-primary">
-              Best For
-            </p>
-            <ul className="mt-4 space-y-2">
-              {development.bestFor.map((line) => (
-                <li key={line} className="flex gap-3 text-sm text-text-secondary">
-                  <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-accent-warm" aria-hidden />
-                  {line}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="mt-12">
-            <Link
-              href="/booking"
-              className="inline-flex w-full items-center justify-center rounded-full bg-accent px-8 py-3.5 text-sm font-semibold text-white shadow-md shadow-accent/20 transition-colors hover:bg-accent-hover sm:w-auto"
+          <div className="mx-auto mt-12 flex max-w-3xl flex-col items-center gap-4 text-center lg:max-w-none lg:items-start lg:text-left">
+            <Button
+              href={MVP_DEVELOPMENT_SERVICE.primaryHref}
+              variant="primary"
+              size="lg"
             >
-              Book an MVP Strategy Call
+              {MVP_DEVELOPMENT_SERVICE.primaryLabel}
+            </Button>
+            <Link
+              href={MVP_DEVELOPMENT_SERVICE.learnHref}
+              className="inline-flex items-center gap-1 text-sm font-semibold text-accent transition hover:text-accent-hover"
+            >
+              {MVP_DEVELOPMENT_SERVICE.learnLabel}
+              <span aria-hidden>→</span>
             </Link>
           </div>
-          <p className="mt-4 text-center sm:text-left">
-            <Link
-              href="/services/mvp-development"
-              className="text-sm font-medium text-accent underline-offset-4 hover:underline"
+        </section>
+
+        <section
+          id={MVP_GROWTH_SERVICE.id}
+          className="scroll-mt-24 border-t border-border/60 pt-16 md:pt-24"
+        >
+          <div className="mx-auto max-w-3xl text-center lg:max-w-none lg:text-left">
+            <ServiceHero
+              Icon={MVP_GROWTH_SERVICE.icon}
+              tag={MVP_GROWTH_SERVICE.tag}
+              title={MVP_GROWTH_SERVICE.title}
+              subtitle={MVP_GROWTH_SERVICE.subtitle}
+              description={MVP_GROWTH_SERVICE.description}
+            />
+          </div>
+
+          <div className="mx-auto mt-12 max-w-6xl space-y-12">
+            <ServiceGroupCards
+              groups={MVP_GROWTH_SERVICE.included}
+              sectionLabel="What’s included"
+            />
+            <BestForBlock items={MVP_GROWTH_SERVICE.bestFor} />
+          </div>
+
+          <div className="mx-auto mt-12 flex max-w-3xl flex-col items-center gap-4 text-center lg:max-w-none lg:items-start lg:text-left">
+            <Button
+              href={MVP_GROWTH_SERVICE.primaryHref}
+              variant="primary"
+              size="lg"
             >
-              More about MVP Development →
+              {MVP_GROWTH_SERVICE.primaryLabel}
+            </Button>
+            <Link
+              href={MVP_GROWTH_SERVICE.learnHref}
+              className="inline-flex items-center gap-1 text-sm font-semibold text-accent transition hover:text-accent-hover"
+            >
+              {MVP_GROWTH_SERVICE.learnLabel}
+              <span aria-hidden>→</span>
             </Link>
-          </p>
-        </motion.div>
-      </section>
-
-      {/* Service 2 — MVP Growth */}
-      <section
-        id="mvp-growth"
-        className="border-t border-border/60 bg-surface/45 py-20 lg:py-24"
-      >
-        <div className="mx-auto max-w-3xl px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 1, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.08 }}
-            transition={{ duration: 0.45 }}
-          >
-            <div className={`mb-6 flex h-14 w-14 items-center justify-center rounded-full [&_svg]:h-8 [&_svg]:w-8 ${serviceIconAccentClass(1)}`}>
-              {serviceIconMap.chart}
-            </div>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-text-secondary">
-                Service 2
-              </p>
-              <h2 className="heading-display mt-2 text-3xl font-bold tracking-tight text-text-primary sm:text-4xl">
-                MVP Growth
-              </h2>
-              <p className="mt-3 text-lg font-semibold text-accent sm:text-xl">
-                {growth.subtitle}
-              </p>
-            </div>
-
-            <Card className="mt-10 border-border/80 bg-white p-8 shadow-soft sm:p-10">
-              {growth.paragraphs.map((p, idx) => (
-                <p
-                  key={`growth-${idx}`}
-                  className="text-base leading-relaxed text-text-secondary [&+&]:mt-5"
-                >
-                  {p}
-                </p>
-              ))}
-            </Card>
-
-            <div className="mt-12">
-              <p className="text-xs font-bold uppercase tracking-widest text-text-primary">
-                What&apos;s Included
-              </p>
-              <ul className="mt-4 space-y-2">
-                {growth.whatsIncluded.map((line) => (
-                  <li key={line} className="flex gap-3 text-sm text-text-secondary">
-                    <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-accent" aria-hidden />
-                    {line}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="mt-12">
-              <p className="text-xs font-bold uppercase tracking-widest text-text-primary">
-                Best For
-              </p>
-              <ul className="mt-4 space-y-2">
-                {growth.bestFor.map((line) => (
-                  <li key={line} className="flex gap-3 text-sm text-text-secondary">
-                    <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-accent-violet" aria-hidden />
-                    {line}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="mt-12">
-              <Link
-                href="/booking"
-                className="inline-flex w-full items-center justify-center rounded-full border border-accent bg-white px-8 py-3.5 text-sm font-semibold text-accent shadow-sm transition-colors hover:bg-accent/5 sm:w-auto"
-              >
-                Plan My MVP Launch
-              </Link>
-            </div>
-            <p className="mt-4 text-center sm:text-left">
-              <Link
-                href="/services/mvp-growth"
-                className="text-sm font-medium text-accent underline-offset-4 hover:underline"
-              >
-                More about MVP Growth →
-              </Link>
-            </p>
-          </motion.div>
-        </div>
-      </section>
+          </div>
+        </section>
+      </motion.div>
     </>
   );
 }

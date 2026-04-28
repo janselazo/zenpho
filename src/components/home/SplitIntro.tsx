@@ -46,9 +46,10 @@ const cards = [
   },
 ] as const;
 
-export default function SplitIntro() {
+/** Service offering cards (MVP Development, Growth, Studio) — reusable inside a parent section. */
+export function SplitIntroCards({ className = "" }: { className?: string }) {
   return (
-    <section className="relative mx-auto max-w-7xl px-6 py-24 lg:px-8">
+    <div className={`mx-auto max-w-7xl px-6 lg:px-8 ${className}`}>
       <div className="grid gap-6 md:grid-cols-3">
         {cards.map((card, i) => (
           <motion.div
@@ -89,6 +90,6 @@ export default function SplitIntro() {
           </motion.div>
         ))}
       </div>
-    </section>
+    </div>
   );
 }

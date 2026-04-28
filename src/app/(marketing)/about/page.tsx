@@ -4,7 +4,6 @@ import AboutOurStory from "./AboutOurStory";
 import AboutWhatWeBelieve from "./AboutWhatWeBelieve";
 import AboutWhoWeHelp from "./AboutWhoWeHelp";
 import AboutWhatWeDo from "./AboutWhatWeDo";
-import AboutFuture from "./AboutFuture";
 import AboutCTASection from "./AboutCTASection";
 import SectionHeading from "@/components/ui/SectionHeading";
 import Card from "@/components/ui/Card";
@@ -17,20 +16,6 @@ export const metadata: Metadata = {
   description:
     "Learn about Zenpho, an AI MVP development studio helping startup founders build, launch, and grow technology products faster.",
 };
-
-const highlights = [
-  "10x10K Cuba — Mikma",
-  "Startup Weekend Havana — Sírvete",
-  "Taptok — scaled from 0 to 15,000 customers, with teams at Authentic Brands Group, Coral Gables City, AT&T, Harvard University, RP Realty, and more",
-  "Taptok — press: Miami Herald, Refresh Miami, El Nuevo Herald, New York Wire",
-] as const;
-
-const credentials = [
-  "MBA",
-  "HubSpot certifications",
-  "Google Ads certifications",
-  "Semrush certifications",
-] as const;
 
 export default function AboutPage() {
   return (
@@ -113,7 +98,7 @@ export default function AboutPage() {
         </Card>
       </section>
 
-      <section className="mx-auto max-w-3xl px-6 pb-20 lg:px-8">
+      <section className="mx-auto max-w-3xl px-6 pb-28 lg:px-8">
         <SectionHeading
           align="left"
           label="Zenpho"
@@ -144,49 +129,6 @@ export default function AboutPage() {
             </Button>
           </div>
         </Card>
-      </section>
-
-      <AboutFuture />
-
-      <section className="mx-auto max-w-3xl px-6 pb-20 lg:px-8">
-        <SectionHeading
-          align="left"
-          label="Highlights"
-          title="Selected"
-          titleAccent="milestones"
-          titleAccentInline
-          description="A few public touchpoints from entrepreneurship, community, and media."
-        />
-        <ul className="space-y-4">
-          {highlights.map((item) => (
-            <li key={item}>
-              <Card className="border-border/80 bg-surface px-6 py-4 text-sm font-medium text-text-primary">
-                {item}
-              </Card>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="mx-auto max-w-3xl px-6 pb-28 lg:px-8">
-        <SectionHeading
-          align="left"
-          label="Credentials"
-          title="Trust"
-          titleAccent="& craft"
-          titleAccentInline
-          description="Engineering plus growth execution — certifications across modern marketing stacks so MVP Development and MVP Growth tie back to behavior, not vendor hype."
-        />
-        <div className="flex flex-wrap gap-3">
-          {credentials.map((c) => (
-            <span
-              key={c}
-              className="rounded-full border border-border bg-white px-4 py-2 text-xs font-semibold uppercase tracking-wider text-text-secondary"
-            >
-              {c}
-            </span>
-          ))}
-        </div>
       </section>
 
       <AboutCTASection />

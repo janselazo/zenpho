@@ -26,13 +26,11 @@ export default function FoundingClientSection() {
             Founding client opportunities
           </h2>
           <p className="mt-5 text-sm leading-relaxed text-text-secondary sm:text-base">
-            Zenpho is currently selecting a limited number of early founder
-            projects for portfolio case studies.
-          </p>
-          <p className="mt-4 text-sm leading-relaxed text-text-secondary sm:text-base">
-            If your project is a strong fit, you may qualify for a reduced
-            founding client rate in exchange for detailed feedback, a
-            testimonial, and permission to share the project as a case study.
+            We are currently selecting a limited number of early founder projects
+            for portfolio case studies. If your project is a strong fit, you may
+            qualify for a reduced founding client rate in exchange for detailed
+            feedback, a testimonial, and permission to share the project as a
+            case study.
           </p>
           <div className="mt-8 flex justify-center">
             <Button href="/booking" variant="primary" size="lg">

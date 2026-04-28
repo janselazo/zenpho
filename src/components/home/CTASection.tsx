@@ -31,9 +31,9 @@ export default function CTASection() {
             <span className="text-accent">building</span>
           </h2>
           <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-text-secondary sm:mt-4 sm:text-base">
-            Share the problem space, earliest users, and whether you&apos;re
-            leaning MVP Development now or MVP Growth soon after launch —
-            we&apos;ll reply with scoped next steps.
+            Include the problem you&apos;re tackling, who your earliest users
+            are, and whether MVP Development is the immediate focus—or MVP Growth
+            right after ship. We&apos;ll respond with scoped next steps.
           </p>
           <div className="mx-auto mt-6 flex w-full max-w-md flex-row items-stretch justify-center gap-2 sm:mt-8 sm:max-w-none sm:gap-4 md:items-center">
             <Button

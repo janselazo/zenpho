@@ -44,11 +44,17 @@ export default function CaseStudiesHero() {
           transition={{ duration: 0.45, delay: 0.22 }}
           className="mt-11 flex w-full max-w-md flex-col items-stretch justify-center gap-3 sm:mt-12 sm:flex-row sm:items-center sm:justify-center sm:gap-4"
         >
-          <Button href="#concepts" variant="primary" size="lg">
+          <Button href="#concepts" variant="primary" size="lg" className="whitespace-nowrap">
             Explore concepts
           </Button>
-          <Button href="/booking" variant="dark" size="lg" showLiveDot>
-            Book an MVP Strategy Call
+          <Button
+            href="/booking"
+            variant="dark"
+            size="lg"
+            showLiveDot
+            className="whitespace-nowrap"
+          >
+            Book a Call
           </Button>
         </motion.div>
       </div>

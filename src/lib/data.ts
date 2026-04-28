@@ -72,24 +72,29 @@ export interface MethodologyPillar {
   principles: string[];
 }
 
+/** Grouped “what’s included” blocks — easier to scan than one long bullet list. */
+export type PricingIncludedGroup = { title: string; items: string[] };
+
 /** Single offering on the pricing page (one starting price + highlights). */
 export interface DevelopmentPricingOffering {
   id: string;
   title: string;
-  /** Bold line inside the card — e.g. “Build your AI-powered MVP in 2 weeks.” */
+  /** Bold line inside the card — e.g. “Ship a focused software MVP in ~2 weeks.” */
   cardHeadline?: string;
   /** One-line positioning under headline */
   subtitle: string;
   /** Formatted dollar amount, e.g. "$5,000" */
   priceAmount: string;
-  /** e.g. "$5k–$50k+" */
+  /** e.g. "$5,000 – $50,000+" */
   typicalRange?: string;
-  /** Shown after price, e.g. "starting" */
+  /** @deprecated Unused in UI — kept for older references */
   priceSuffix?: string;
   /** Middle / highlighted tier in the grid */
   featured?: boolean;
-  /** “What’s included” lines */
-  features: string[];
+  /** Grouped deliverables — preferred when set */
+  includedGroups?: PricingIncludedGroup[];
+  /** Flat “included” fallback when no groups — prefer includedGroups */
+  features?: string[];
   bestFor?: string[];
   idealIf?: string[];
   ctaLabel?: string;
@@ -100,89 +105,103 @@ export const developmentPricingOfferings: DevelopmentPricingOffering[] = [
   {
     id: "mvp-development",
     title: "MVP Development",
-    cardHeadline: "Build your AI-powered MVP in 2 weeks.",
+    cardHeadline: "Ship a focused software MVP in ~2 weeks.",
     subtitle:
-      "For founders who need a working product built fast.",
+      "Strategy, UX, build, integrations, launch surfaces, QA, deployment, and docs—scoped so stakeholders get a credible v1.",
     priceAmount: "$5,000",
     typicalRange: "$5,000 – $50,000+",
-    priceSuffix: "starting",
     featured: true,
-    features: [
-      "Product strategy and MVP scope",
-      "Core user journey",
-      "UX/UI design",
-      "Web app or mobile-first development",
-      "AI/API integrations",
-      "Authentication and database",
-      "Admin dashboard",
-      "Launch landing page",
-      "Product analytics",
-      "QA testing",
-      "Deployment",
-      "Handover documentation",
+    includedGroups: [
+      {
+        title: "Discover & scope",
+        items: [
+          "Product strategy & MVP scope",
+          "Core user journey mapping",
+          "Feature prioritization",
+        ],
+      },
+      {
+        title: "Design & build",
+        items: [
+          "UX/UI for core workflows",
+          "Web or mobile-first development",
+          "AI/API integrations",
+          "Authentication & database",
+          "Admin dashboard",
+        ],
+      },
+      {
+        title: "Launch & handoff",
+        items: [
+          "Launch landing page",
+          "Product analytics setup",
+          "QA testing & deployment",
+          "Documentation & handoff",
+        ],
+      },
     ],
     bestFor: [
-      "AI SaaS products",
-      "Web apps",
-      "Mobile-first apps",
-      "Progressive web apps",
-      "Internal tools",
-      "Marketplaces",
-      "Client portals",
-      "Workflow automation tools",
-      "Founder prototypes",
+      "AI SaaS, web apps, PWAs & mobile-first products",
+      "Internal tools, marketplaces, client portals",
+      "Workflow automation & founder-facing prototypes",
     ],
     idealIf: [
-      "Turn your idea into a working MVP",
-      "Build a demo for users, investors, or partners",
-      "Replace a no-code prototype with a real product",
-      "Launch a simple version of your SaaS or AI product",
-      "Validate demand without spending months in development",
+      "Ship something users can try—not another slide deck",
+      "Give investors or partners a credible demo loop",
+      "Graduate brittle no-code into maintainable software",
+      "Validate traction before committing to a big build phase",
     ],
-    ctaLabel: "Book an MVP Strategy Call",
+    ctaLabel: "Book a Call",
   },
   {
     id: "mvp-growth",
     title: "MVP Growth",
-    cardHeadline: "Launch your MVP and get early users.",
+    cardHeadline: "Grow after launch with positioning, funnel, and experiments.",
     subtitle:
-      "For founders who already have an MVP and need help with positioning, launch, acquisition, analytics, and growth experiments.",
+      "For teams with a live product who need sharper messaging, distribution, and instrumentation—not random hacks.",
     priceAmount: "$2,500",
     typicalRange: "$2,500 – $25,000+",
-    priceSuffix: "starting",
-    features: [
-      "ICP definition",
-      "Positioning and messaging",
-      "Landing page copy/design",
-      "Launch strategy",
-      "Waitlist or demo booking flow",
-      "Beta user outreach",
-      "Cold email/DM campaigns",
-      "Founder LinkedIn content",
-      "Community launch support",
-      "Product analytics",
-      "Feedback system",
-      "Growth experiment roadmap",
+    includedGroups: [
+      {
+        title: "Positioning & funnel",
+        items: [
+          "ICP & positioning synthesis",
+          "Landing messaging & visuals",
+          "Waitlist or demo booking flows",
+          "Baseline product analytics",
+        ],
+      },
+      {
+        title: "Acquisition & community",
+        items: [
+          "Launch playbook & timelines",
+          "Beta user outreach loops",
+          "Cold outbound & DM strategy",
+          "Founder LinkedIn/content kits",
+          "Community & Product Hunt support",
+        ],
+      },
+      {
+        title: "Learn & iterate",
+        items: [
+          "Structured feedback rhythm",
+          "Growth experiment backlog",
+          "Conversion funnel recommendations",
+        ],
+      },
     ],
     bestFor: [
-      "MVP launches",
-      "Beta user acquisition",
-      "Waitlist growth",
-      "Demo booking campaigns",
-      "Landing page optimization",
-      "Product Hunt launches",
-      "Founder-led growth",
-      "Early growth experiments",
+      "Shipped MVP with little or no acquisition yet",
+      "Waitlists, beta programs, or Product Hunt prep",
+      "Founder-led growth that needs a concrete plan",
     ],
     idealIf: [
-      "Launch your MVP to the market",
-      "Get your first users or beta testers",
-      "Improve your landing page and messaging",
-      "Validate demand before building more features",
-      "Collect user feedback and product insights",
-      "Start testing growth channels",
+      "Turn first testers into repeatable acquisition systems",
+      "Align homepage copy with what the product actually does",
+      "Pair experiments with measurable signals—not guesswork",
+      "Establish feedback loops before the next roadmap phase",
     ],
-    ctaLabel: "Plan My MVP Launch",
+    ctaLabel: "Book a Call",
   },
 ];
 
