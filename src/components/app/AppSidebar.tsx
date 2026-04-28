@@ -48,10 +48,10 @@ const workNav = [
 const agencyNav = [
   { href: "/my-life", label: "My Life", icon: Compass },
   { href: "/finances", label: "Finances", icon: DollarSign },
+  { href: "/docs", label: "Documents", icon: BookOpen },
   { href: "/team", label: "Team", icon: Users },
   { href: "/automations", label: "Automations", icon: Workflow },
   { href: "/reports", label: "Reports", icon: FileBarChart },
-  { href: "/docs", label: "Docs", icon: BookOpen },
   { href: "/industries", label: "Industries", icon: Building2 },
 ];
 
