@@ -37,9 +37,8 @@ export default function SolutionSection() {
           align="center"
           description={
             <p className="!text-base sm:!text-lg">
-              Zenpho combines product strategy, AI-assisted development, UX/UI
-              design, and growth marketing to help founders build and launch
-              technology products faster.
+              At Zenpho, we help you move from idea to working product without
+              spending months in development.
             </p>
           }
         />

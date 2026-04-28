@@ -18,7 +18,7 @@ export default function FoundersStuckSection() {
     <section
       id="founders-get-stuck"
       aria-labelledby="founders-stuck-heading"
-      className="relative w-full border-t border-border/50 bg-background py-24 lg:py-28"
+      className="relative w-full border-t border-border/50 bg-background pb-24 pt-12 lg:pb-28 lg:pt-14"
     >
       <div className="mx-auto max-w-3xl px-6 lg:px-8">
         <p

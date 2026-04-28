@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Check } from "lucide-react";
 import type { DevelopmentPricingOffering, PricingIncludedGroup } from "@/lib/data";
 import { developmentPricingOfferings } from "@/lib/data";
 import Button from "@/components/ui/Button";
@@ -20,7 +19,7 @@ function resolvedIncludedGroups(
 
 function IncludedGrid({ groups }: { groups: PricingIncludedGroup[] }) {
   return (
-    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+    <div className="mt-4 grid grid-cols-1 gap-3">
       {groups.map((group) => (
         <div
           key={group.title}
@@ -33,48 +32,18 @@ function IncludedGrid({ groups }: { groups: PricingIncludedGroup[] }) {
             {group.items.map((line) => (
               <li
                 key={line}
-                className="flex gap-2 text-sm leading-snug text-text-secondary"
+                className="flex gap-2.5 text-sm leading-snug text-text-secondary"
               >
-                <Check
-                  className="mt-0.5 h-4 w-4 shrink-0 text-accent"
-                  strokeWidth={2.25}
+                <span
                   aria-hidden
+                  className="mt-2 inline-block size-1.5 shrink-0 rounded-full bg-accent/90"
                 />
-                {line}
+                <span>{line}</span>
               </li>
             ))}
           </ul>
         </div>
       ))}
-    </div>
-  );
-}
-
-function AudienceColumn({
-  title,
-  dotClass,
-  items,
-}: {
-  title: string;
-  dotClass: string;
-  items: string[];
-}) {
-  return (
-    <div>
-      <p className="text-xs font-bold uppercase tracking-wider text-text-primary">
-        {title}
-      </p>
-      <ul className="mt-3 space-y-2.5">
-        {items.map((line) => (
-          <li key={line} className="flex gap-2 text-sm leading-snug text-text-secondary">
-            <span
-              className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${dotClass}`}
-              aria-hidden
-            />
-            {line}
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }
@@ -155,26 +124,6 @@ function RichOfferingCard({
           <IncludedGrid groups={includedGroups} />
         </div>
       ) : null}
-
-      {((offering.bestFor?.length ?? 0) > 0 ||
-        (offering.idealIf?.length ?? 0) > 0) && (
-        <div className="mt-8 grid gap-8 border-t border-border/60 pt-8 lg:grid-cols-2 lg:gap-6">
-          {(offering.bestFor?.length ?? 0) > 0 ? (
-            <AudienceColumn
-              title="Best for"
-              dotClass="bg-accent-violet"
-              items={offering.bestFor ?? []}
-            />
-          ) : null}
-          {(offering.idealIf?.length ?? 0) > 0 ? (
-            <AudienceColumn
-              title="Ideal if you need to"
-              dotClass="bg-accent-warm"
-              items={offering.idealIf ?? []}
-            />
-          ) : null}
-        </div>
-      )}
 
       <div className="mt-10">
         <Button href="/booking" variant={featured ? "primary" : "dark"} size="lg" className="w-full">

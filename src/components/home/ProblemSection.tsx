@@ -2,9 +2,10 @@ import SectionHeading from "@/components/ui/SectionHeading";
 
 export default function ProblemSection() {
   return (
-    <section className="relative w-full py-24 marketing-section-band lg:py-28">
+    <section className="marketing-section-band relative w-full pb-10 pt-24 lg:pb-12 lg:pt-28">
       <div className="mx-auto max-w-3xl px-6 lg:px-8">
         <SectionHeading
+          className="!mb-0"
           title="Most founders lose months"
           titleAccent="building too much too early."
           align="center"

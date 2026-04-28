@@ -2,9 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { BarChart3, Check, Rocket } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
-import SectionHeading from "@/components/ui/SectionHeading";
+import { Check } from "lucide-react";
 import Button from "@/components/ui/Button";
 
 const BOOKING_HREF = "/booking";
@@ -17,7 +15,6 @@ type ServiceConfig = {
   title: string;
   subtitle: string;
   description: string[];
-  icon: LucideIcon;
   /** Omitted for single-grid services (e.g. growth). */
   whatWeOffer?: ServiceGroup[];
   included: ServiceGroup[];
@@ -38,7 +35,6 @@ const MVP_DEVELOPMENT_SERVICE: ServiceConfig = {
     "We bundle discovery, UX, engineering, integrations, landing, analytics, QA, deployment, and documentation into disciplined sprint cycles—you leave with a working product stakeholders can demo, not a slide deck.",
     "Scope stays tight around one prioritized user workflow first: faster validation, clearer next steps after launch.",
   ],
-  icon: Rocket,
   whatWeOffer: [
     {
       title: "Products & surfaces",
@@ -116,7 +112,6 @@ const MVP_GROWTH_SERVICE: ServiceConfig = {
     "Shipping the MVP clears the runway; growth work gets it into the hands of the right buyers and testers.",
     "We wire together positioning, acquisition plays, experimentation, and lightweight analytics so founders learn quickly from signals—not guesses.",
   ],
-  icon: BarChart3,
   included: [
     {
       title: "Positioning & funnel",
@@ -159,23 +154,16 @@ const MVP_GROWTH_SERVICE: ServiceConfig = {
 function ServiceGroupCards({
   groups,
   sectionLabel,
-  columns = 3,
 }: {
   groups: ServiceGroup[];
   sectionLabel: string;
-  columns?: 2 | 3;
 }) {
-  const grid =
-    columns === 2
-      ? "md:grid-cols-2"
-      : "md:grid-cols-2 lg:grid-cols-3";
-
   return (
     <div>
       <p className="text-xs font-bold uppercase tracking-wider text-muted">
         {sectionLabel}
       </p>
-      <div className={`mt-4 grid gap-4 ${grid}`}>
+      <div className="mt-3 grid grid-cols-1 gap-3">
         {groups.map((group) => (
           <article
             key={group.title}
@@ -205,11 +193,11 @@ function ServiceGroupCards({
 function BestForBlock({ items }: { items: string[] }) {
   const mid = Math.ceil(items.length / 2);
   return (
-    <div className="rounded-2xl border border-dashed border-border/70 bg-accent/10 p-6">
+    <div className="rounded-2xl border border-dashed border-border/70 bg-accent/10 p-5">
       <p className="text-xs font-bold uppercase tracking-wider text-text-primary">
         Best for
       </p>
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <ul className="space-y-3 text-sm text-text-secondary">
           {items.slice(0, mid).map((bullet) => (
             <li key={bullet} className="flex gap-3">
@@ -240,13 +228,11 @@ function BestForBlock({ items }: { items: string[] }) {
 }
 
 function ServiceHero({
-  Icon,
   tag,
   title,
   subtitle,
   description,
 }: {
-  Icon: LucideIcon;
   tag: string;
   title: string;
   subtitle: string;
@@ -254,31 +240,20 @@ function ServiceHero({
 }) {
   return (
     <>
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        whileInView={{ opacity: 1, scale: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5 }}
-        className="mb-12 flex justify-center lg:justify-start lg:translate-x-[-2px]"
-      >
-        <div className="flex h-24 w-24 items-center justify-center rounded-[2rem] bg-accent-light shadow-soft">
-          <Icon className="h-14 w-14 text-accent" strokeWidth={1.5} />
-        </div>
-      </motion.div>
-      <p className="mb-6 text-[10px] font-bold uppercase tracking-widest text-muted">
+      <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-muted">
         {tag}
       </p>
-      <h3 className="mb-8 text-[44px] font-bold leading-none tracking-wide text-text-primary">
+      <h3 className="mb-3 text-3xl font-bold leading-none tracking-wide text-text-primary sm:text-4xl lg:text-[40px]">
         {title}
       </h3>
-      <h4 className="mb-8 text-xl font-semibold tracking-tighter text-accent sm:text-[22px]">
+      <h4 className="mb-5 text-lg font-semibold tracking-tighter text-accent sm:text-xl">
         {subtitle}
       </h4>
 
-      <div className="mb-12 rounded-2xl bg-card px-10 py-8 shadow-soft">
+      <div className="rounded-2xl bg-card px-8 py-7 shadow-soft sm:px-9">
         {description.map((paragraph) => (
-          <div key={paragraph} className="mb-10 last:mb-0">
-            <p className="text-lg leading-snug tracking-tighter text-muted">
+          <div key={paragraph} className="mb-5 last:mb-0">
+            <p className="text-base leading-snug tracking-tighter text-muted sm:text-lg">
               {paragraph}
             </p>
           </div>
@@ -296,22 +271,14 @@ export default function ServicesPreview() {
         whileInView={{ opacity: 1, scale: 1 }}
         viewport={{ once: true }}
         transition={{ duration: 0.6 }}
-        className="mx-auto max-w-6xl px-6 py-12 sm:px-8 md:py-16"
+        className="mx-auto max-w-6xl px-6 py-8 sm:px-8 md:py-12"
       >
-        <SectionHeading
-          title="Our"
-          titleAccent="Services"
-          align="center"
-          className="mb-16"
-        />
-
         <section
           id={MVP_DEVELOPMENT_SERVICE.id}
-          className="mb-24 scroll-mt-24 md:mb-32"
+          className="mb-14 scroll-mt-24 md:mb-16"
         >
           <div className="mx-auto max-w-3xl text-center lg:max-w-none lg:text-left">
             <ServiceHero
-              Icon={MVP_DEVELOPMENT_SERVICE.icon}
               tag={MVP_DEVELOPMENT_SERVICE.tag}
               title={MVP_DEVELOPMENT_SERVICE.title}
               subtitle={MVP_DEVELOPMENT_SERVICE.subtitle}
@@ -319,7 +286,7 @@ export default function ServicesPreview() {
             />
           </div>
 
-          <div className="mx-auto mt-12 max-w-6xl space-y-12">
+          <div className="mx-auto mt-8 max-w-6xl space-y-8">
             {MVP_DEVELOPMENT_SERVICE.whatWeOffer && (
               <ServiceGroupCards
                 groups={MVP_DEVELOPMENT_SERVICE.whatWeOffer}
@@ -333,7 +300,7 @@ export default function ServicesPreview() {
             <BestForBlock items={MVP_DEVELOPMENT_SERVICE.bestFor} />
           </div>
 
-          <div className="mx-auto mt-12 flex max-w-3xl flex-col items-center gap-4 text-center lg:max-w-none lg:items-start lg:text-left">
+          <div className="mx-auto mt-8 flex max-w-3xl flex-col items-center gap-3 text-center lg:max-w-none lg:items-start lg:text-left">
             <Button
               href={MVP_DEVELOPMENT_SERVICE.primaryHref}
               variant="primary"
@@ -353,11 +320,10 @@ export default function ServicesPreview() {
 
         <section
           id={MVP_GROWTH_SERVICE.id}
-          className="scroll-mt-24 border-t border-border/60 pt-16 md:pt-24"
+          className="scroll-mt-24 border-t border-border/60 pb-10 pt-10 md:pt-14"
         >
           <div className="mx-auto max-w-3xl text-center lg:max-w-none lg:text-left">
             <ServiceHero
-              Icon={MVP_GROWTH_SERVICE.icon}
               tag={MVP_GROWTH_SERVICE.tag}
               title={MVP_GROWTH_SERVICE.title}
               subtitle={MVP_GROWTH_SERVICE.subtitle}
@@ -365,7 +331,7 @@ export default function ServicesPreview() {
             />
           </div>
 
-          <div className="mx-auto mt-12 max-w-6xl space-y-12">
+          <div className="mx-auto mt-8 max-w-6xl space-y-8">
             <ServiceGroupCards
               groups={MVP_GROWTH_SERVICE.included}
               sectionLabel="What’s included"
@@ -373,7 +339,7 @@ export default function ServicesPreview() {
             <BestForBlock items={MVP_GROWTH_SERVICE.bestFor} />
           </div>
 
-          <div className="mx-auto mt-12 flex max-w-3xl flex-col items-center gap-4 text-center lg:max-w-none lg:items-start lg:text-left">
+          <div className="mx-auto mt-8 flex max-w-3xl flex-col items-center gap-3 text-center lg:max-w-none lg:items-start lg:text-left">
             <Button
               href={MVP_GROWTH_SERVICE.primaryHref}
               variant="primary"

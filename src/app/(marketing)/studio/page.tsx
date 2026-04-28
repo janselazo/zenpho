@@ -3,7 +3,6 @@ import StudioHero from "./StudioHero";
 import StudioVision from "./StudioVision";
 import StudioModelSection from "./StudioModelSection";
 import FutureProductAreas from "./FutureProductAreas";
-import CurrentFocus from "./CurrentFocus";
 import VenturesGrid from "@/components/studio/VenturesGrid";
 import StudioPageCTA from "./StudioPageCTA";
 
@@ -22,7 +21,6 @@ export default function StudioPage() {
       <StudioVision />
       <StudioModelSection />
       <FutureProductAreas />
-      <CurrentFocus />
       <VenturesGrid />
       <StudioPageCTA />
     </>

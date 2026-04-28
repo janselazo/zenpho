@@ -6,7 +6,7 @@ import { SECTION_EYEBROW_CLASSNAME } from "@/components/ui/SectionHeading";
 
 export default function StudioHero() {
   return (
-    <section className="relative flex min-h-[72vh] items-center justify-center overflow-hidden pt-24">
+    <section className="relative overflow-hidden pb-12 pt-24 sm:pb-14 sm:pt-28">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute right-1/4 top-1/4 h-80 w-80 rounded-full bg-accent-warm/10 blur-[90px]" />
         <div className="absolute bottom-1/3 left-1/4 h-72 w-72 rounded-full bg-accent/10 blur-[90px]" />

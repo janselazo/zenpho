@@ -7,7 +7,7 @@ import { SECTION_EYEBROW_CLASSNAME } from "@/components/ui/SectionHeading";
 
 export default function ServicesHero() {
   return (
-    <section className="hero-sky relative flex min-h-[50vh] items-center justify-center overflow-hidden pb-14 pt-28 sm:min-h-[55vh] sm:pb-16">
+    <section className="hero-sky relative flex min-h-0 items-center justify-center overflow-hidden pb-10 pt-20 sm:pb-12 sm:pt-24">
       <div className="relative z-10 mx-auto max-w-4xl px-6 text-center">
         <motion.span
           initial={{ opacity: 1, y: 16 }}

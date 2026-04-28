@@ -6,14 +6,15 @@ import SectionHeading from "@/components/ui/SectionHeading";
 
 export default function ServicesProcess() {
   return (
-    <section className="mx-auto max-w-7xl px-6 py-24 lg:px-8 lg:py-28">
+    <section className="mx-auto max-w-7xl px-6 py-16 lg:px-8 lg:py-20">
       <SectionHeading
+        className="!mb-8 sm:!mb-10"
         title="Simple, fast, and"
         titleAccent="founder-focused."
         align="center"
       />
 
-      <div className="mx-auto mt-12 grid max-w-6xl gap-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="mx-auto mt-8 grid max-w-6xl gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {servicesPageProcessSteps.map((step, i) => (
           <motion.div
             key={step.number}

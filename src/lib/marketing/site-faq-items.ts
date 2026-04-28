@@ -12,7 +12,7 @@ export interface SiteFaqItem {
 export const SITE_PRIMARY_FAQS: SiteFaqItem[] = [
   {
     q: "How much does MVP Development cost?",
-    a: "MVP Development starts at $5,000. Most projects are scoped from that baseline, depending on the scope, complexity, integrations, and product requirements.",
+    a: "MVP Development starts at $5,000. Exact pricing depends on scope, complexity, integrations, and product requirements.",
   },
   {
     q: "How much does MVP Growth cost?",

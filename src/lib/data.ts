@@ -95,8 +95,6 @@ export interface DevelopmentPricingOffering {
   includedGroups?: PricingIncludedGroup[];
   /** Flat “included” fallback when no groups — prefer includedGroups */
   features?: string[];
-  bestFor?: string[];
-  idealIf?: string[];
   ctaLabel?: string;
 }
 
@@ -140,17 +138,6 @@ export const developmentPricingOfferings: DevelopmentPricingOffering[] = [
         ],
       },
     ],
-    bestFor: [
-      "AI SaaS, web apps, PWAs & mobile-first products",
-      "Internal tools, marketplaces, client portals",
-      "Workflow automation & founder-facing prototypes",
-    ],
-    idealIf: [
-      "Ship something users can try—not another slide deck",
-      "Give investors or partners a credible demo loop",
-      "Graduate brittle no-code into maintainable software",
-      "Validate traction before committing to a big build phase",
-    ],
     ctaLabel: "Book a Call",
   },
   {
@@ -168,7 +155,7 @@ export const developmentPricingOfferings: DevelopmentPricingOffering[] = [
           "ICP & positioning synthesis",
           "Landing messaging & visuals",
           "Waitlist or demo booking flows",
-          "Baseline product analytics",
+          "Product analytics instrumentation",
         ],
       },
       {
@@ -189,17 +176,6 @@ export const developmentPricingOfferings: DevelopmentPricingOffering[] = [
           "Conversion funnel recommendations",
         ],
       },
-    ],
-    bestFor: [
-      "Shipped MVP with little or no acquisition yet",
-      "Waitlists, beta programs, or Product Hunt prep",
-      "Founder-led growth that needs a concrete plan",
-    ],
-    idealIf: [
-      "Turn first testers into repeatable acquisition systems",
-      "Align homepage copy with what the product actually does",
-      "Pair experiments with measurable signals—not guesswork",
-      "Establish feedback loops before the next roadmap phase",
     ],
     ctaLabel: "Book a Call",
   },

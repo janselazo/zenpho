@@ -3,8 +3,9 @@ import Card from "@/components/ui/Card";
 
 export default function StudioVision() {
   return (
-    <section className="mx-auto max-w-3xl px-6 pb-16 pt-8 lg:px-8 lg:pb-20">
+    <section className="mx-auto max-w-3xl px-6 pb-14 pt-2 lg:px-8 lg:pb-16">
       <SectionHeading
+        className="mb-8 sm:mb-9"
         align="left"
         label="Vision"
         title="A studio for AI-powered"

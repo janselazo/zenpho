@@ -31,7 +31,7 @@ export default function Hero() {
           transition={{ duration: 0.55, delay: 0.06 }}
           className="heading-display max-w-[22rem] text-balance text-[1.5rem] font-bold leading-[1.18] tracking-tight text-text-primary min-[400px]:max-w-none min-[400px]:text-3xl min-[400px]:leading-[1.12] sm:text-5xl sm:leading-[1.08] md:text-5xl md:leading-[1.06] lg:text-6xl lg:leading-[1.05]"
         >
-          Build your AI-powered MVP{" "}
+          Launch your MVP and get early users{" "}
           <span className="text-accent">in 2 weeks.</span>
         </motion.h1>
 
