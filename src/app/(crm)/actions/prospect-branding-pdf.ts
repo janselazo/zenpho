@@ -469,6 +469,42 @@ function drawCtaChip(
   return width;
 }
 
+function drawLimitedWrappedTextBlock(
+  page: import("pdf-lib").PDFPage,
+  text: string,
+  opts: {
+    x: number;
+    y: number;
+    size: number;
+    font: Parameters<typeof wrapText>[1];
+    color: Rgb;
+    maxWidth: number;
+    maxLines: number;
+    lineGap?: number;
+    opacity?: number;
+  },
+): number {
+  const lines = wrapText(text, opts.font, opts.size, opts.maxWidth).slice(
+    0,
+    opts.maxLines,
+  );
+  const lineGap = opts.lineGap ?? opts.size * 0.35;
+  const lineH = opts.size + lineGap;
+  let y = opts.y;
+  for (const line of lines) {
+    page.drawText(line, {
+      x: opts.x,
+      y,
+      size: opts.size,
+      font: opts.font,
+      color: rgbColor(opts.color),
+      ...(opts.opacity != null ? { opacity: opts.opacity } : {}),
+    });
+    y -= lineH;
+  }
+  return y + lineGap;
+}
+
 /** Renders an ad image inside a phone-style mock frame. Falls back to a
  *  placeholder when the image is missing. */
 async function drawAdMock(
@@ -666,18 +702,111 @@ async function drawFunnelSection(
       label: "06.3 · Landing page",
     });
 
-    // Hero image takes the top 55% of the content area.
-    const heroH = 280;
-    const heroY = PAGE_H - SAFE_MARGIN - 30 - heroH;
+    const drawLimitedWrappedText = (
+      text: string,
+      opts: {
+        x: number;
+        y: number;
+        size: number;
+        font: Parameters<typeof wrapText>[1];
+        color: Rgb;
+        maxWidth: number;
+        maxLines: number;
+        lineGap?: number;
+        opacity?: number;
+      },
+    ): number => {
+      const lines = wrapText(text, opts.font, opts.size, opts.maxWidth).slice(
+        0,
+        opts.maxLines,
+      );
+      const lineGap = opts.lineGap ?? opts.size * 0.35;
+      const lineH = opts.size + lineGap;
+      let y = opts.y;
+      for (const line of lines) {
+        page.drawText(line, {
+          x: opts.x,
+          y,
+          size: opts.size,
+          font: opts.font,
+          color: rgbColor(opts.color),
+          ...(opts.opacity != null ? { opacity: opts.opacity } : {}),
+        });
+        y -= lineH;
+      }
+      return y + lineGap;
+    };
+
+    // Mobile-first mockup: the generated image is contained so it cannot bleed into text.
+    const phoneX = SAFE_MARGIN + 18;
+    const phoneY = SAFE_MARGIN + 22;
+    const phoneW = 302;
+    const phoneH = 430;
+    const screenPad = 10;
+    const screenX = phoneX + screenPad;
+    const screenY = phoneY + screenPad;
+    const screenW = phoneW - screenPad * 2;
+    const screenH = phoneH - screenPad * 2;
+    const browserH = 28;
+    const heroH = 150;
+    const browserY = screenY + screenH - browserH;
+    const heroY = browserY - heroH;
     const heroRect = {
-      x: SAFE_MARGIN,
+      x: screenX,
       y: heroY,
-      width: CONTENT_W,
+      width: screenW,
       height: heroH,
     };
+
+    page.drawRectangle({
+      x: phoneX,
+      y: phoneY,
+      width: phoneW,
+      height: phoneH,
+      color: rgbColor([0.08, 0.08, 0.1]),
+    });
+    page.drawRectangle({
+      x: screenX,
+      y: screenY,
+      width: screenW,
+      height: screenH,
+      color: rgbColor([1, 1, 1]),
+    });
+    page.drawRectangle({
+      x: screenX,
+      y: browserY,
+      width: screenW,
+      height: browserH,
+      color: rgbColor([0.97, 0.97, 0.96]),
+    });
+    page.drawCircle({
+      x: screenX + 14,
+      y: browserY + 16,
+      size: 3,
+      color: rgbColor(ctx.primary),
+    });
+    page.drawCircle({
+      x: screenX + 25,
+      y: browserY + 16,
+      size: 3,
+      color: rgbColor(ctx.accent),
+    });
+    page.drawText("MOBILE PREVIEW", {
+      x: screenX + 44,
+      y: browserY + 11,
+      size: 7,
+      font: ctx.fonts.body,
+      color: rgbColor(ctx.ink),
+      opacity: 0.55,
+    });
+
+    page.drawRectangle({
+      ...heroRect,
+      color: rgbColor(ctx.surface),
+    });
     const heroImg = await embedPngIfAny(ctx.pdf, images.landingHero);
     if (heroImg) {
-      drawImageFit(page, heroImg, heroRect, "cover");
+      drawImageFit(page, heroImg, heroRect, "contain");
     } else {
       drawImagePlaceholder(page, ctx, {
         ...heroRect,
@@ -685,12 +814,12 @@ async function drawFunnelSection(
       });
     }
 
-    // Hero copy overlay block on the lower-left of the image.
-    const overlayPad = 20;
-    const overlayW = CONTENT_W * 0.55;
-    const overlayH = 120;
-    const overlayX = SAFE_MARGIN + overlayPad;
-    const overlayY = heroY + overlayPad;
+    // Hero copy lives inside a constrained card, above the CTA, so long copy cannot collide.
+    const overlayPad = 12;
+    const overlayW = screenW - overlayPad * 2;
+    const overlayH = 112;
+    const overlayX = screenX + overlayPad;
+    const overlayY = heroY + 16;
     page.drawRectangle({
       x: overlayX,
       y: overlayY,
@@ -699,84 +828,165 @@ async function drawFunnelSection(
       color: rgbColor([1, 1, 1]),
       opacity: 0.92,
     });
-    drawWrappedText(page, f.landingPage.hero || "Landing headline.", {
+    drawLimitedWrappedText(f.landingPage.hero || "Landing headline.", {
       x: overlayX + 16,
       y: overlayY + overlayH - 22,
-      size: 22,
+      size: 13.5,
       font: ctx.fonts.display,
       color: ctx.ink,
       maxWidth: overlayW - 32,
-      lineGap: 4,
+      maxLines: 2,
+      lineGap: 3,
     });
-    drawWrappedText(page, f.landingPage.subhero || "", {
+    drawLimitedWrappedText(f.landingPage.subhero || "", {
       x: overlayX + 16,
-      y: overlayY + overlayH - 70,
-      size: 10.5,
+      y: overlayY + 48,
+      size: 7.6,
       font: ctx.fonts.body,
       color: ctx.ink,
       maxWidth: overlayW - 32,
-      lineGap: 3,
+      maxLines: 2,
+      lineGap: 2,
     });
     drawCtaChip(page, ctx, {
       x: overlayX + 16,
-      y: overlayY + 12,
-      label: f.landingPage.ctaPrimary || "Get started",
+      y: overlayY + 10,
+      label: (f.landingPage.ctaPrimary || "Get started").slice(0, 28),
     });
 
-    // Below-the-hero zone: value props in two columns + sections list right.
-    const belowY = heroY - 22;
-    const colGutter = 24;
-    const colW = (CONTENT_W * 0.6 - colGutter) / 2;
-    const valueProps = f.landingPage.valueProps.slice(0, 4);
-    let yp = belowY;
-    drawSectionEyebrow(page, ctx, {
-      x: SAFE_MARGIN,
-      y: yp,
-      label: "Value props",
-    });
-    yp -= 18;
-    valueProps.forEach((vp, i) => {
-      const col = i % 2;
-      const row = Math.floor(i / 2);
-      const xx = SAFE_MARGIN + col * (colW + colGutter);
-      const yy = yp - row * 50;
+    // Below-the-fold mobile sections, stacked like the prospect would scroll them.
+    const valueProps = f.landingPage.valueProps.slice(0, 3);
+    const sectionFallbacks = ["Services", "Reviews", "Gallery", "Location & contact"];
+    const sections = (f.landingPage.sections.length > 0
+      ? f.landingPage.sections
+      : sectionFallbacks
+    ).slice(0, 5);
+    let mobileY = heroY - 18;
+    for (const vp of valueProps) {
       page.drawRectangle({
-        x: xx,
-        y: yy - 8,
-        width: 4,
+        x: screenX + 14,
+        y: mobileY - 24,
+        width: screenW - 28,
         height: 32,
-        color: rgbColor(ctx.primary),
+        color: rgbColor(mixRgb(ctx.primary, [1, 1, 1], 0.9)),
+        borderColor: rgbColor(mixRgb(ctx.primary, [1, 1, 1], 0.45)),
+        borderWidth: 0.4,
       });
-      drawWrappedText(page, vp, {
-        x: xx + 12,
-        y: yy + 14,
-        size: 10.5,
+      drawLimitedWrappedText(vp, {
+        x: screenX + 26,
+        y: mobileY - 8,
+        size: 7.4,
         font: ctx.fonts.body,
         color: ctx.ink,
-        maxWidth: colW - 16,
-        lineGap: 3,
+        maxWidth: screenW - 52,
+        maxLines: 2,
+        lineGap: 2,
       });
+      mobileY -= 38;
+    }
+
+    for (const [i, section] of sections.entries()) {
+      page.drawRectangle({
+        x: screenX + 14,
+        y: mobileY - 20,
+        width: screenW - 28,
+        height: 28,
+        color: rgbColor([0.985, 0.985, 0.98]),
+        borderColor: rgbColor([0.86, 0.86, 0.84]),
+        borderWidth: 0.35,
+      });
+      page.drawText(String(i + 1).padStart(2, "0"), {
+        x: screenX + 26,
+        y: mobileY - 7,
+        size: 7,
+        font: ctx.fonts.body,
+        color: rgbColor(ctx.primary),
+      });
+      drawLimitedWrappedText(section, {
+        x: screenX + 50,
+        y: mobileY - 6,
+        size: 7.4,
+        font: ctx.fonts.body,
+        color: ctx.ink,
+        maxWidth: screenW - 76,
+        maxLines: 1,
+      });
+      mobileY -= 34;
+      if (mobileY < screenY + 22) break;
+    }
+
+    const rightX = phoneX + phoneW + 44;
+    const rightW = PAGE_W - SAFE_MARGIN - rightX;
+    drawPageTitle(page, ctx, {
+      x: rightX,
+      y: PAGE_H - SAFE_MARGIN - 54,
+      text: "Mobile landing page flow.",
+      size: 30,
+      maxWidth: rightW,
+    });
+    drawWrappedText(page, "A cleaner stacked layout keeps the hero, CTA, proof points, and page sections readable on one brand-book spread.", {
+      x: rightX,
+      y: PAGE_H - SAFE_MARGIN - 122,
+      size: 10.5,
+      font: ctx.fonts.body,
+      color: ctx.ink,
+      maxWidth: rightW,
+      lineGap: 4,
     });
 
-    // Sections list on the right.
-    const rightX = SAFE_MARGIN + CONTENT_W * 0.62;
-    const rightW = CONTENT_W - (rightX - SAFE_MARGIN);
+    let blueprintY = PAGE_H - SAFE_MARGIN - 190;
     drawSectionEyebrow(page, ctx, {
       x: rightX,
-      y: belowY,
-      label: "Page sections",
+      y: blueprintY,
+      label: "Section order",
     });
-    let rightY = belowY - 18;
-    f.landingPage.sections.slice(0, 5).forEach((s, i) => {
-      page.drawText(`${i + 1}.  ${sanitizeForBrandBook(s)}`, {
+    blueprintY -= 26;
+    sections.forEach((section, i) => {
+      page.drawRectangle({
         x: rightX,
-        y: rightY,
-        size: 10.5,
-        font: ctx.fonts.body,
-        color: rgbColor(ctx.ink),
-        maxWidth: rightW,
+        y: blueprintY - 24,
+        width: rightW,
+        height: 34,
+        color: rgbColor(i === 0 ? mixRgb(ctx.primary, [1, 1, 1], 0.86) : [0.98, 0.98, 0.97]),
+        borderColor: rgbColor(i === 0 ? ctx.primary : [0.86, 0.86, 0.84]),
+        borderWidth: 0.45,
       });
-      rightY -= 18;
+      page.drawText(String(i + 1).padStart(2, "0"), {
+        x: rightX + 12,
+        y: blueprintY - 9,
+        size: 8,
+        font: ctx.fonts.body,
+        color: rgbColor(ctx.primary),
+      });
+      drawLimitedWrappedText(section, {
+        x: rightX + 42,
+        y: blueprintY - 8,
+        size: 9,
+        font: ctx.fonts.body,
+        color: ctx.ink,
+        maxWidth: rightW - 54,
+        maxLines: 1,
+      });
+      blueprintY -= 42;
+    });
+
+    drawSectionEyebrow(page, ctx, {
+      x: rightX,
+      y: blueprintY - 10,
+      label: "Primary proof",
+    });
+    let proofY = blueprintY - 36;
+    valueProps.slice(0, 3).forEach((vp) => {
+      proofY = drawLimitedWrappedText(`- ${vp}`, {
+        x: rightX,
+        y: proofY,
+        size: 9,
+        font: ctx.fonts.body,
+        color: ctx.ink,
+        maxWidth: rightW,
+        maxLines: 2,
+        lineGap: 3,
+      }) - 8;
     });
 
     drawRunningFooter(page, ctx, {
@@ -918,11 +1128,18 @@ async function drawFunnelSection(
 
     const igPink: Rgb = hexToRgb("#E1306C");
 
-    // Left: IG feed (square)
+    // Center the feed + story pair as one composition, with enough lower margin for copy.
     const feedW = 240;
     const feedH = 240;
-    const feedX = SAFE_MARGIN;
-    const feedY = SAFE_MARGIN + 70;
+    const storyW = 200;
+    const storyH = 320;
+    const igGap = 96;
+    const igGroupW = feedW + igGap + storyW;
+    const feedX = SAFE_MARGIN + (CONTENT_W - igGroupW) / 2;
+    const feedY = SAFE_MARGIN + 104;
+    const storyX = feedX + feedW + igGap;
+    const storyY = SAFE_MARGIN + 86;
+
     await drawAdMock(
       ctx,
       page,
@@ -939,22 +1156,24 @@ async function drawFunnelSection(
     });
 
     let lcy = feedY - 12;
-    lcy = drawWrappedText(page, f.instagram.feedHeadline || "", {
+    lcy = drawLimitedWrappedTextBlock(page, f.instagram.feedHeadline || "", {
       x: feedX,
       y: lcy,
       size: 13,
       font: ctx.fonts.display,
       color: ctx.ink,
       maxWidth: feedW,
+      maxLines: 2,
       lineGap: 3,
     });
-    lcy = drawWrappedText(page, f.instagram.feedPrimaryText || "", {
+    lcy = drawLimitedWrappedTextBlock(page, f.instagram.feedPrimaryText || "", {
       x: feedX,
       y: lcy - 4,
       size: 9.5,
       font: ctx.fonts.body,
       color: ctx.ink,
       maxWidth: feedW,
+      maxLines: 3,
       lineGap: 3,
     });
     drawCtaChip(page, ctx, {
@@ -964,11 +1183,6 @@ async function drawFunnelSection(
       color: igPink,
     });
 
-    // Right: IG Story (9:16 portrait)
-    const storyW = 200;
-    const storyH = 320;
-    const storyX = SAFE_MARGIN + CONTENT_W - storyW;
-    const storyY = SAFE_MARGIN + 30;
     await drawAdMock(
       ctx,
       page,
@@ -1037,11 +1251,11 @@ async function drawFunnelSection(
 
     const googleBlue: Rgb = hexToRgb("#4285F4");
 
-    // Top half: Responsive Search Ad mock card.
-    const rsaY = PAGE_H / 2 + 14;
-    const rsaH = PAGE_H - SAFE_MARGIN - 60 - rsaY;
-    const rsaX = SAFE_MARGIN;
-    const rsaW = CONTENT_W;
+    // Top: centered responsive search ad mock card, lowered so it clears the title.
+    const rsaW = CONTENT_W * 0.82;
+    const rsaH = 124;
+    const rsaX = SAFE_MARGIN + (CONTENT_W - rsaW) / 2;
+    const rsaY = PAGE_H - SAFE_MARGIN - 126 - rsaH;
     page.drawRectangle({
       x: rsaX,
       y: rsaY,
@@ -1098,11 +1312,16 @@ async function drawFunnelSection(
       rsaCy -= 4;
     });
 
-    // Bottom half: Display creative + hero banner thumbnail
-    const dispW = 220;
-    const dispH = 220;
-    const dispX = SAFE_MARGIN;
-    const dispY = SAFE_MARGIN + 30;
+    // Bottom: centered display creative + banner thumbnail. Copy sits inside the banner
+    // so it cannot collide with the footer.
+    const dispW = 190;
+    const dispH = 190;
+    const displayGap = 36;
+    const banW = 346;
+    const banH = 170;
+    const displayGroupW = dispW + displayGap + banW;
+    const dispX = SAFE_MARGIN + (CONTENT_W - displayGroupW) / 2;
+    const dispY = SAFE_MARGIN + 54;
     await drawAdMock(
       ctx,
       page,
@@ -1117,10 +1336,8 @@ async function drawFunnelSection(
       color: googleBlue,
     });
 
-    const banW = CONTENT_W - dispW - 32;
-    const banH = 160;
-    const banX = dispX + dispW + 32;
-    const banY = dispY + dispH - banH;
+    const banX = dispX + dispW + displayGap;
+    const banY = dispY + 18;
     await drawAdMock(
       ctx,
       page,
@@ -1129,29 +1346,39 @@ async function drawFunnelSection(
       "Hero / display banner",
     );
 
-    // Display copy below the hero banner.
-    let dy = banY - 18;
-    dy = drawWrappedText(page, f.google.displayHeadline || "", {
-      x: banX,
-      y: dy,
-      size: 14,
+    const bannerOverlayH = 78;
+    const bannerOverlayY = banY + 14;
+    page.drawRectangle({
+      x: banX + 14,
+      y: bannerOverlayY,
+      width: banW - 28,
+      height: bannerOverlayH,
+      color: rgbColor([1, 1, 1]),
+      opacity: 0.9,
+    });
+    drawLimitedWrappedTextBlock(page, f.google.displayHeadline || "", {
+      x: banX + 26,
+      y: bannerOverlayY + bannerOverlayH - 22,
+      size: 11.5,
       font: ctx.fonts.display,
       color: ctx.ink,
-      maxWidth: banW,
+      maxWidth: banW - 52,
+      maxLines: 1,
       lineGap: 3,
     });
-    dy = drawWrappedText(page, f.google.displayDescription || "", {
-      x: banX,
-      y: dy - 2,
-      size: 10,
+    drawLimitedWrappedTextBlock(page, f.google.displayDescription || "", {
+      x: banX + 26,
+      y: bannerOverlayY + 36,
+      size: 7.8,
       font: ctx.fonts.body,
       color: ctx.ink,
-      maxWidth: banW,
-      lineGap: 3,
+      maxWidth: banW - 52,
+      maxLines: 2,
+      lineGap: 2,
     });
     drawCtaChip(page, ctx, {
-      x: banX,
-      y: dy - 28,
+      x: banX + 26,
+      y: bannerOverlayY + 8,
       label: f.google.displayCta || "Learn more",
       color: googleBlue,
     });
