@@ -38,7 +38,7 @@ export default function FeaturedWork() {
             className="heading-display text-balance text-4xl font-bold leading-[1.12] tracking-tight text-text-primary sm:text-5xl sm:leading-[1.1] lg:text-6xl lg:leading-[1.08]"
           >
             <span className="block text-text-primary">We ship our own products</span>
-            <span className="mt-1 block text-accent">Same standards as founder work</span>
+            <span className="mt-1 block text-accent">Same standards</span>
           </motion.h2>
 
           <motion.p
@@ -48,8 +48,8 @@ export default function FeaturedWork() {
             transition={{ duration: 0.45, delay: 0.14 }}
             className="mx-auto mt-8 max-w-xl text-base font-medium leading-relaxed text-pretty text-text-primary/80 sm:mt-9 sm:text-lg"
           >
-            Products we operate on our own roadmap — SoldTools lives here — the
-            same accountability we promise on founder engagements.
+            Products we operate on our own roadmap — the same accountability we
+            promise on founder engagements.
           </motion.p>
 
           <motion.div
