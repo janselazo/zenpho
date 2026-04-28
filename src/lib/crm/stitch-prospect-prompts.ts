@@ -2,6 +2,10 @@ import type { PlacesSearchPlace } from "@/lib/crm/places-types";
 import { primaryPlaceTypeLabel } from "@/lib/crm/places-search-ui";
 import type { StitchProspectDesignPayload } from "@/lib/crm/stitch-prospect-design-types";
 import type { BrandColorResult, WebsiteBrandFacts } from "@/lib/crm/brand-color-extract";
+import {
+  buildStitchWebsiteProfileDirective,
+  selectStitchWebsiteProfile,
+} from "@/lib/crm/stitch-website-profiles";
 
 /** Stable hash for picking variation axes (same business → same axes on regenerate). */
 function stablePickIndex(seed: string, salt: string, modulo: number): number {
@@ -532,10 +536,15 @@ export function buildStitchWebsitePrompt(payload: StitchProspectDesignPayload): 
       ? placeContext(payload.place, payload.colorVibe)
       : urlContext(payload.url, payload.pageTitle, payload.metaDescription, payload.colorVibe);
 
+  const websiteProfile = selectStitchWebsiteProfile(payload);
   const differentiation = buildWebsiteAssignedDifferentiationBlock(payload);
   const brandDirective = buildBrandColorDirective(payload.brandColors);
   const logoDirective = buildLogoDirective(payload.logoUrl);
   const sourceFactsDirective = buildSourceWebsiteFactsDirective(payload.sourceWebsiteFacts);
+  const profileDirective = buildStitchWebsiteProfileDirective(
+    websiteProfile,
+    Boolean(payload.brandColors?.primary)
+  );
   const projectBrief = hasExistingWebsite(payload)
     ? "This is a redesign upsell. The business already has a website, so the new design must feel dramatically more premium, organized, modern, and conversion-focused while preserving the existing brand identity."
     : "This is a first premium website. The design must make the business look established, trustworthy, and ready to win customers from search and Google Maps traffic.";
@@ -549,6 +558,8 @@ ${projectBrief}
 
 ${differentiation}
 
+${profileDirective}
+
 ${WEBSITE_CREATIVE_DIRECTIVE}
 
 ${WEBSITE_REFERENCE_PATTERNS}
@@ -559,7 +570,7 @@ ${WEBSITE_VISUAL_CHECKLIST}
 
 Output **one complete HTML5 document** for a desktop-width, responsive, public marketing website concept for this exact business. This is a sales asset Zenpho can send to the prospect as "your upgraded website." It must look like a **high-end, functional** agency build: **luxury, modern, and eye-catching** — not a Stitch default, not a wireframe, not a thin hero-only landing.
 
-The deliverable simulates a **5-page website** (Home + four main destinations) in **one scrollable file**: use **exactly five** top-level \`<section id="home|services|about|stories|visit">\` elements. **Global header navigation** may list only: Home, Services, About, Stories (or "Patients" / "Reviews" label), and Visit — each **\`<a href="#...">\` targets one of those five ids**. Nest all other content **inside** those sections (see structure below). Use normal document flow: everything is visible in sequence. Do **not** hide “pages” with \`:target\` tricks, do **not** use tiny embedded mockups, and do **not** place the site inside a scaled preview frame.
+The deliverable simulates a **5-page website** (Home + four business-specific destinations) in **one scrollable file**: use **exactly five** top-level \`<section id="home|services|about|stories|visit">\` elements. **Global header navigation** may list only: Home, ${websiteProfile.nav.services}, ${websiteProfile.nav.about}, ${websiteProfile.nav.stories}, and ${websiteProfile.nav.visit} — each **\`<a href="#...">\` targets one of those five ids**. Nest all other content **inside** those sections (see structure below). Use normal document flow: everything is visible in sequence. Do **not** hide “pages” with \`:target\` tricks, do **not** use tiny embedded mockups, and do **not** place the site inside a scaled preview frame.
 
 **Brand assets (highest priority when present):** If **Brand Identity Colors** and/or **Official Business Logo** appear above, treat the output as a **bespoke luxury rebrand** of that identity — the extracted hexes and the \`<img>\` logo are sacred. The logo belongs in the header on every major scroll region; the primary color must run through CTAs, key gradients, nav active state, and section dividers. Do **not** swap in a random palette when brand colors are provided.
 
@@ -567,37 +578,37 @@ The deliverable simulates a **5-page website** (Home + four main destinations) i
 
 The hosted preview removes inline JavaScript. Navigation must be **real HTML anchors only**:
 
-- Use only: \`<a href="#home">\`, \`<a href="#services">\`, \`<a href="#about">\`, \`<a href="#stories">\`, and \`<a href="#visit">\` in the primary nav (labels may be shortened, e.g. "Reviews" for Stories, "Book" for Visit, but \`href\` must target these five ids).
+- Use only: \`<a href="#home">\`, \`<a href="#services">\`, \`<a href="#about">\`, \`<a href="#stories">\`, and \`<a href="#visit">\` in the primary nav (labels should match this profile: "${websiteProfile.nav.services}", "${websiteProfile.nav.about}", "${websiteProfile.nav.stories}", "${websiteProfile.nav.visit}", but \`href\` must target these five ids).
 - Every primary nav \`href="#..."\` must have a matching top-level \`<section id="...">\`.
 - You may add **in-page** sub-anchors (e.g. \`id="stories-reviews"\`) **inside** a main section, but do **not** add additional top-level nav items for them.
 - Do **not** use \`<button>\` for primary page navigation, no onclick, no hidden panels.
 - Do **not** add nav items for content that is not in the document.
 - Add \`html { scroll-behavior: smooth; }\` to the global \`<style>\` so anchor clicks animate.
 - Add \`section[id] { scroll-margin-top: 96px; }\` (or larger if the sticky header is taller) so each section scrolls into view **below** the floating header — never hidden behind it.
-- Every CTA labeled "Book", "Book Appointment", "Book Now", "Reserve", or "Schedule" MUST be an \`<a href="#visit">\` (never a \`<button>\`, never \`href="#"\`).
+- Every primary conversion CTA, especially "${websiteProfile.primaryCta}", MUST be an \`<a href="#visit">\` (never a \`<button>\`, never \`href="#"\`). The secondary CTA "${websiteProfile.secondaryCta}" should link to \`#services\`.
 
 ${WEBSITE_LAYOUT_SAFETY}
 
-## Required website structure (five main pages)
+## Required website structure (five business-specific pages)
 
-Build **all** of the following in order. Each numbered item is a **\`<section>\` with the given \`id\`**. Sub-bullets are **nested** inside that section (not separate top-level pages).
+Build **all** of the following in order. Each numbered item is a **\`<section>\` with the given \`id\`**. Sub-bullets are **nested** inside that section (not separate top-level pages). Follow the **Business-specific website blueprint** above for exact content choices; this structure only defines safe ids and minimum richness.
 
 1. \`#home\` **— Homepage (the showpiece scroll).** Build **all** of the following blocks **inside \`#home\`**, in this order. Each block must visually feel like its own chapter (alternating background tint/gradient/dark band, generous 64–96px vertical spacing, multi-layer shadows, glass and gradient details) — never a thin row.
-   - **1a. Sticky / overlay glass header** with the **official logo** \`<img>\` when a logo URL is provided (otherwise a premium text mark using the exact business name) on the left, and the five anchor links on the right — Home, Services, About, Stories (or "Reviews"), Visit (or "Book"). End the nav with a small "Book Appointment" pill button \`<a href="#visit">\` styled with the brand accent.
-   - **1b. Hero band (85–100vh):** luminous display headline (64–100px+) using the exact business name and a sharp value proposition; Google rating + review count and phone/address rendered as floating glass badges when in context; a **primary "Book Appointment" CTA \`<a href="#visit">\`** rendered as a gradient pill button (this must be the most visually prominent button on the entire page — bigger shadow, accent gradient, glow); and a **secondary ghost CTA \`<a href="#services">\`** labeled "View Services". The hero alone should feel like a $50K homepage in the first screenshot.
-   - **1c. Services preview:** a 3- or 4-card grid summarizing the top services for this business category (icon, service name, 1-line description, "from $X" or duration cue), with a section heading "Our Services" (or category-specific equivalent) and a closing \`<a href="#services">\` "See all services" link styled as an arrow CTA.
-   - **1d. About preview ("About Us"):** a 50/50 split layout pairing a styled image placeholder (CSS gradient + aspect-ratio mask) with **2 short paragraphs** of category-specific copy that introduce the business, plus a closing \`<a href="#about">\` "Read our story" link.
-   - **1e. Testimonials preview:** large styled aggregate stars (use the real Google rating and review count when known), **2 or 3 testimonial cards** with quoted text, author avatars (initial circles), star rows, and a closing \`<a href="#stories">\` "Read more reviews" link. Testimonial cards must use glassmorphism or layered shadows over a tinted/gradient section background.
-   - **1f. Address & Hours panel ("Our Address"):** the **exact** address, phone number, and an opening-hours table for the week, paired with a CSS-only stylized map placeholder block (gradient + grid lines or pin marker). Include a prominent secondary **"Book Appointment" CTA \`<a href="#visit">\`** next to the address. Use exact NAP from context — never invent.
-   The first screenshot of the canvas must already reveal at least the hero AND the start of the Services preview.
+   - **1a. Sticky / overlay glass header** with the **official logo** \`<img>\` when a logo URL is provided (otherwise a premium text mark using the exact business name) on the left, and the five anchor links on the right — Home, ${websiteProfile.nav.services}, ${websiteProfile.nav.about}, ${websiteProfile.nav.stories}, ${websiteProfile.nav.visit}. End the nav with a small "${websiteProfile.primaryCta}" pill button \`<a href="#visit">\` styled with the brand accent.
+   - **1b. Hero band (85–100vh):** luminous display headline (64–100px+) using the exact business name and a sharp category-specific value proposition; Google rating + review count and phone/address rendered as floating glass badges when in context; a **primary "${websiteProfile.primaryCta}" CTA \`<a href="#visit">\`** rendered as a gradient pill button (this must be the most visually prominent button on the entire page — bigger shadow, accent gradient, glow); and a **secondary ghost CTA \`<a href="#services">\`** labeled "${websiteProfile.secondaryCta}". The hero alone should feel like a $50K homepage in the first screenshot.
+   - **1c. ${websiteProfile.nav.services} preview:** a 3- or 4-card grid summarizing top offers from the selected profile, with icon, specific offer name, 1-line benefit, and useful cue (duration, capacity, starting price, urgency, insurance, package type, or availability as fits the business). End with an \`<a href="#services">\` arrow CTA.
+   - **1d. ${websiteProfile.nav.about} preview:** a 50/50 split layout pairing a styled image placeholder (CSS gradient + aspect-ratio mask) with **2 short paragraphs** of profile-specific copy, plus a closing \`<a href="#about">\` link using the profile language.
+   - **1e. ${websiteProfile.nav.stories} preview:** large styled aggregate stars (use the real Google rating and review count when known), **2 or 3 testimonial/story cards** with quoted text, author avatars (initial circles), star rows, and a closing \`<a href="#stories">\` link. Cards must use glassmorphism or layered shadows over a tinted/gradient section background.
+   - **1f. ${websiteProfile.nav.visit} / location panel:** the **exact** address, phone number, and an opening-hours table for the week, paired with a CSS-only stylized map placeholder block (gradient + grid lines or pin marker). Include a prominent secondary **"${websiteProfile.primaryCta}" CTA \`<a href="#visit">\`** next to the address. Use exact NAP from context — never invent.
+   The first screenshot of the canvas must already reveal at least the hero AND the start of the ${websiteProfile.nav.services} preview.
 
-2. \`#services\` **— Services and how you help (page 2).** A **full second “page”** in feel: min ~80–100vh of designed content. Include: a credibility strip (rating, years, area, insurance/certs as fits), **5–7** service cards (one featured), price/duration “from” cues, and a **3–5 step process** journey (icons + timeline) — all in this section. Make it scannable and conversion-oriented.
+2. \`#services\` **— ${websiteProfile.nav.services} (page 2).** A **full second “page”** in feel: min ~80–100vh of designed content. Include: a credibility strip using profile-appropriate proof signals, **5–7** offer cards (one featured), useful price/duration/capacity/availability cues as appropriate, and a **3–5 step process** journey (icons + timeline) using the profile journey language — all in this section. Make it scannable and conversion-oriented.
 
-3. \`#about\` **— About / trust / team (page 3).** Story, differentiators, values, and at least one strong visual block (e.g. team or facility card) with real-sounding copy for **this** business, not lorem. Min ~60–80vh of rich layout.
+3. \`#about\` **— ${websiteProfile.nav.about} (page 3).** Story, differentiators, values, and at least one strong visual block (team, space, facility, craft, venue, shop, project, or provider card as fits the profile) with real-sounding copy for **this** business, not lorem. Min ~60–80vh of rich layout.
 
-4. \`#stories\` **— Social proof (page 4).** Large aggregate stars when rating exists; **4+** testimonial cards; a **6–9 image** bento or gallery (CSS placeholders with aspect-ratio, captions, hover) — all inside this one section. This is the "reviews + gallery" chapter.
+4. \`#stories\` **— ${websiteProfile.nav.stories} (page 4).** Large aggregate stars when rating exists; **4+** testimonial/story cards; a **6–9 image** bento or gallery (CSS placeholders with aspect-ratio, captions, hover) whose captions match this business profile — all inside this one section. This is the profile-specific proof + gallery chapter.
 
-5. \`#visit\` **— Book + contact + location (page 5 + footer).** A functional-looking **booking** block (service chips, schedule grid, form, primary CTA), then **4–6 FAQs** (\`details\`/\`summary\` or cards), then **address, phone, hours, map panel**, a **contact form**, and finally a **substantial multi-column footer** (nav repeats, hours, areas, small print). If real address/phone are in context, use them **exactly**. The footer is part of this section or immediately follows it in the same document with no new top-level page id.
+5. \`#visit\` **— ${websiteProfile.nav.visit} (page 5 + footer).** A functional-looking **conversion** block (booking, quote, reservation, tour, consultation, order, or visit flow as dictated by the profile), then **4–6 profile-specific FAQs** (\`details\`/\`summary\` or cards), then **address, phone, hours, map panel**, a **contact form**, and finally a **substantial multi-column footer** (nav repeats, hours, areas, small print). If real address/phone are in context, use them **exactly**. The footer is part of this section or immediately follows it in the same document with no new top-level page id.
 
 ## Visual standard
 
@@ -612,7 +623,7 @@ Build **all** of the following in order. Each numbered item is a **\`<section>\`
 
 - Exact business name everywhere. No rebrand or fake studio name.
 - Google Business Profile (or URL context) is source of truth for category, NAP, rating, site URL.
-- Infer services, FAQs, and copy from the category when details are missing — always specific, never lorem.
+- Infer services, FAQs, and copy from the selected business profile and source-site facts when details are missing — always specific, never lorem.
 - This must feel like a website the owner would pay to have built **today**.
 
 ## Technical output

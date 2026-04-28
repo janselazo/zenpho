@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAgencyStaff } from "@/app/(crm)/actions/prospect-preview-agency";
 import { buildStitchProspectGenerationBundle } from "@/lib/crm/stitch-prospect-bundle";
+import { enrichStitchProspectPayloadWithBrandAssets } from "@/lib/crm/stitch-prospect-enrich";
 import { parseStitchDesignPayload } from "@/lib/crm/stitch-prospect-payload";
 
 export const runtime = "nodejs";
@@ -33,7 +34,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const bundle = buildStitchProspectGenerationBundle(payload);
+  const enrichedPayload = await enrichStitchProspectPayloadWithBrandAssets(
+    payload,
+    { logPrefix: "[stitch-design-prompt]", timeoutMs: 6000 }
+  );
+  const bundle = buildStitchProspectGenerationBundle(enrichedPayload);
   return NextResponse.json({
     ok: true as const,
     prompt: bundle.prompt,

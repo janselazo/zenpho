@@ -7,7 +7,7 @@ import {
 } from "@/lib/crm/stitch-server-key";
 import { persistStitchHtmlAsProspectPreview } from "@/lib/crm/stitch-prospect-host-preview";
 import { getStitchLinkedProjectId } from "@/lib/crm/stitch-linked-project";
-import { fetchBrandAssetsFromUrl } from "@/lib/crm/brand-color-extract";
+import { enrichStitchProspectPayloadWithBrandAssets } from "@/lib/crm/stitch-prospect-enrich";
 import type {
   StitchProspectDesignPayload,
   StitchProspectDesignResult,
@@ -54,25 +54,10 @@ export async function runStitchProspectDesign(
     }
   }
 
-  const brandUrl =
-    payload.kind === "place"
-      ? payload.place.websiteUri?.trim() || null
-      : payload.url?.trim() || null;
-
-  let enrichedPayload = payload;
-  if (brandUrl && (!payload.brandColors || !payload.logoUrl || !payload.sourceWebsiteFacts)) {
-    const assets = await fetchBrandAssetsFromUrl(brandUrl, 6000).catch((e) => {
-      console.warn("[stitch-design] brand asset fetch failed:", e instanceof Error ? e.message : e);
-      return { colors: null, logoUrl: null, sourceFacts: null };
-    });
-    console.info("[stitch-design] brand extraction for", brandUrl, "→ colors:", assets.colors, "logo:", assets.logoUrl);
-    enrichedPayload = {
-      ...payload,
-      brandColors: payload.brandColors ?? assets.colors ?? undefined,
-      logoUrl: payload.logoUrl ?? assets.logoUrl ?? undefined,
-      sourceWebsiteFacts: payload.sourceWebsiteFacts ?? assets.sourceFacts ?? undefined,
-    };
-  }
+  const enrichedPayload = await enrichStitchProspectPayloadWithBrandAssets(
+    payload,
+    { logPrefix: "[stitch-design]", timeoutMs: 6000 }
+  );
 
   const { prompt, projectTitle, deviceType } = buildStitchProspectGenerationBundle(enrichedPayload);
 
@@ -140,7 +125,7 @@ export async function runStitchProspectDesign(
     const hosted = await persistStitchHtmlAsProspectPreview({
       supabase: auth.supabase,
       userId: auth.user.id,
-      payload,
+      payload: enrichedPayload,
       htmlExportUrl: html,
     });
 
