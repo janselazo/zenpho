@@ -29,13 +29,12 @@ export default function Hero() {
           initial={{ opacity: 1, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, delay: 0.06 }}
-          className="heading-display max-w-[22rem] text-balance text-[1.5rem] font-bold leading-[1.18] tracking-tight text-text-primary min-[400px]:max-w-none min-[400px]:text-3xl min-[400px]:leading-[1.12] sm:text-5xl sm:leading-[1.08] md:text-5xl md:leading-[1.06] lg:text-6xl lg:leading-[1.05]"
+          className="heading-display mx-auto max-w-xl text-xl font-bold leading-[1.12] tracking-tight text-text-primary min-[390px]:text-2xl min-[390px]:leading-[1.13] sm:max-w-3xl sm:text-5xl sm:leading-[1.08] md:text-5xl md:leading-[1.06] lg:max-w-4xl lg:text-6xl lg:leading-[1.05]"
         >
-          <span className="block text-text-primary">
-            Launch your MVP and get early users
-          </span>
-          <span className="mt-1 block text-accent sm:mt-0.5 lg:mt-1">
-            in 2 weeks
+          <span className="block text-text-primary">Launch your MVP</span>
+          <span className="mt-1 block leading-[1.12] text-pretty sm:mt-0.5 lg:mt-1">
+            <span className="text-text-primary">and get early users </span>
+            <span className="text-accent tabular-nums">in 2 weeks</span>
           </span>
         </motion.h1>
 
