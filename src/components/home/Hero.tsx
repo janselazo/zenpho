@@ -44,9 +44,14 @@ export default function Hero() {
           className="mx-auto mt-5 max-w-2xl text-center text-base font-medium leading-snug text-text-secondary text-pretty sm:mt-6 sm:text-lg sm:leading-relaxed md:mt-7 md:text-xl md:leading-relaxed"
         >
           <span className="block">
-            We help founders design, build, and launch AI-powered MVPs
+            We help founders design, build, and launch AI-powered
           </span>
-          <span className="mt-1 block">in 2 weeks</span>
+          <span className="mt-1 block">
+            <span className="text-text-secondary">MVPs in </span>
+            <span className="rounded-md bg-accent/12 px-1.5 py-0.5 font-semibold text-accent tabular-nums sm:px-2">
+              2 weeks
+            </span>
+          </span>
         </motion.p>
 
         <motion.div
