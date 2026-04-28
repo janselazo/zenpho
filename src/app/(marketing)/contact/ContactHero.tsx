@@ -23,7 +23,7 @@ export default function ContactHero() {
           className="heading-display text-balance text-4xl font-bold leading-tight tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
         >
           Let&apos;s build{" "}
-          <span className="text-accent">your MVP.</span>
+          <span className="text-accent">your MVP</span>
         </motion.h1>
 
         <motion.p

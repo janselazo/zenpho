@@ -30,7 +30,7 @@ export default function StudioModelSection() {
       <SectionHeading
         label="Model"
         title="How the studio model"
-        titleAccent="works."
+        titleAccent="works"
         description="A loop that keeps client work, internal tools, and owned products in sync."
       />
       <ol className="mx-auto grid max-w-3xl gap-5">

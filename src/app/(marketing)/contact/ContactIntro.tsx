@@ -6,7 +6,7 @@ export default function ContactIntro() {
       <SectionHeading
         align="left"
         label="Start here"
-        title="Start with an MVP Strategy Call."
+        title="Start with an MVP Strategy Call"
         description={
           <p>
             Use the form below to share your idea, product stage, timeline, and goals.

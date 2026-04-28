@@ -8,8 +8,8 @@ export default function PricingGrid() {
       <div className="mx-auto max-w-7xl px-6 pt-12 lg:px-8 lg:pt-16">
         <SectionHeading
           align="center"
-          title="Two services."
-          titleAccent="Clear starting points."
+          title="Two services"
+          titleAccent="Clear starting points"
         />
         <div className="mt-12 lg:mt-14">
           <DevelopmentPricingTables />

@@ -23,7 +23,7 @@ export default function AboutWhatWeDo() {
         <SectionHeading
           align="left"
           title="We help you go from"
-          titleAccent="idea to launch."
+          titleAccent="idea to launch"
           description={
             <p className="!text-[15px] !leading-relaxed text-text-secondary sm:!text-base">
               Our work covers the full early product journey:

@@ -26,7 +26,7 @@ export default function AboutHero() {
           transition={{ duration: 0.5, delay: 0.06 }}
           className="heading-display max-w-[22rem] text-2xl font-bold leading-snug tracking-tight text-text-primary min-[460px]:max-w-none sm:text-4xl sm:leading-tight lg:text-[2.5rem] lg:leading-[1.15]"
         >
-          We help founders build and launch technology products faster.
+          We help founders build and launch technology products faster
         </motion.h1>
         <motion.p
           initial={{ opacity: 1, y: 16 }}

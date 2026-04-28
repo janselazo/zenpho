@@ -36,7 +36,7 @@ export default function ServicesWhatWeBuild() {
     <section className="border-t border-border/60 bg-surface/60 py-24 lg:py-28">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <SectionHeading
-          title="MVPs for modern founders."
+          title="MVPs for modern founders"
           align="center"
           description="We build focused MVPs for founders creating technology products across SaaS, AI, automation, marketplaces, and mobile-first experiences."
         />

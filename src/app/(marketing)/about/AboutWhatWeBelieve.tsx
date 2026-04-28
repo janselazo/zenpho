@@ -3,23 +3,23 @@ import Card from "@/components/ui/Card";
 
 const beliefs = [
   {
-    title: "Build less, learn faster.",
+    title: "Build less, learn faster",
     body: "The best MVPs are not smaller versions of big products. They are focused tools designed to validate one important assumption.",
   },
   {
-    title: "Strategy comes before code.",
+    title: "Strategy comes before code",
     body: "Before building, we clarify the user, problem, workflow, features, and success metrics.",
   },
   {
-    title: "Launch matters.",
+    title: "Launch matters",
     body: "A product sitting in a private demo environment does not create traction. Founders need users, feedback, analytics, and growth experiments.",
   },
   {
-    title: "AI should solve real problems.",
+    title: "AI should solve real problems",
     body: "AI is powerful, but it should not be added just for hype. We use AI where it improves workflows, automates tasks, generates insights, or creates a better product experience.",
   },
   {
-    title: "Every MVP should create momentum.",
+    title: "Every MVP should create momentum",
     body: "A good MVP should help you get users, learn from the market, show progress, and make smarter decisions for the next version.",
   },
 ] as const;
@@ -31,7 +31,7 @@ export default function AboutWhatWeBelieve() {
         <SectionHeading
           align="left"
           label="Philosophy"
-          title="Our product philosophy."
+          title="Our product philosophy"
         />
 
         <ul className="mt-12 space-y-5">

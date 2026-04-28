@@ -21,7 +21,7 @@ export default function FutureProductAreas() {
         align="left"
         label="Roadmap"
         title="What we want to"
-        titleAccent="build."
+        titleAccent="build"
       />
       <Card className="border-border/80 bg-white p-8 shadow-soft sm:p-10">
         <p className="text-base font-medium leading-relaxed text-text-secondary">

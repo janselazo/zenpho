@@ -186,7 +186,7 @@ export const services: Service[] = [
   {
     slug: "mvp-development",
     title: "MVP Development",
-    subtitle: "Build your AI-powered MVP in 2 weeks.",
+    subtitle: "Build your AI-powered MVP in 2 weeks",
     description:
       "For founders who need a functional product built fast. We help you turn your idea, prototype, or product concept into a working MVP with strategy, UX/UI, development, AI integrations, analytics, and deployment.",
     details: [
@@ -201,7 +201,7 @@ export const services: Service[] = [
   {
     slug: "mvp-growth",
     title: "MVP Growth",
-    subtitle: "Launch your MVP and get early users.",
+    subtitle: "Launch your MVP and get early users",
     description:
       "For founders who already have an MVP and need help turning it into traction. We help with positioning, landing pages, beta user acquisition, launch campaigns, analytics, and growth experiments.",
     details: [

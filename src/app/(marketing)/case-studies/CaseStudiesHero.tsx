@@ -24,7 +24,7 @@ export default function CaseStudiesHero() {
           className="heading-display text-balance text-4xl font-bold leading-[1.12] tracking-tight text-text-primary sm:text-5xl sm:leading-[1.1] lg:text-6xl lg:leading-[1.08]"
         >
           Selected MVP concepts{" "}
-          <span className="text-accent">and studio builds.</span>
+          <span className="text-accent">and studio builds</span>
         </motion.h1>
 
         <motion.p

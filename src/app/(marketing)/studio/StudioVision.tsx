@@ -9,7 +9,7 @@ export default function StudioVision() {
         align="left"
         label="Vision"
         title="A studio for AI-powered"
-        titleAccent="products."
+        titleAccent="products"
       />
       <Card className="border-border/80 bg-white p-8 shadow-soft sm:p-10">
         <p className="text-base font-semibold text-text-primary">

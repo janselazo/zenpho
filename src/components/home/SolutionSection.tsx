@@ -33,7 +33,7 @@ export default function SolutionSection() {
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <SectionHeading
           title="From idea to MVP"
-          titleAccent="to launch."
+          titleAccent="to launch"
           align="center"
           description={
             <p className="!text-base sm:!text-lg">

@@ -25,7 +25,7 @@ export default function ScopeNoteSection() {
         <SectionHeading
           align="center"
           title="Fast does not mean"
-          titleAccent="unfocused."
+          titleAccent="unfocused"
           description={
             <p>
               Our 2-week MVP sprint is designed for focused products with one

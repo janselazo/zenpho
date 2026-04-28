@@ -29,7 +29,7 @@ export default function StudioHero() {
           className="heading-display text-balance text-4xl font-bold leading-[1.12] tracking-tight text-text-primary sm:text-5xl sm:leading-[1.1] lg:text-6xl lg:leading-[1.08]"
         >
           Zenpho{" "}
-          <span className="text-accent">Studio.</span>
+          <span className="text-accent">Studio</span>
         </motion.h1>
 
         <motion.p

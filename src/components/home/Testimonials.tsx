@@ -46,8 +46,8 @@ export default function Testimonials() {
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <SectionHeading
           label="Testimonials"
-          title="Trusted by founders."
-          titleAccent="Hear what clients are saying."
+          title="Trusted by founders"
+          titleAccent="Hear what clients are saying"
           description="Real feedback from the teams we've built with."
         />
       </div>

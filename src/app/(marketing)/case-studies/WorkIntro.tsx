@@ -11,7 +11,7 @@ export default function WorkIntro() {
         align="left"
         label="Approach"
         title="Proof through"
-        titleAccent="building."
+        titleAccent="building"
       />
       <Card className="border-border/80 bg-white p-8 shadow-soft sm:p-10">
         <p className="text-base leading-relaxed text-text-secondary">

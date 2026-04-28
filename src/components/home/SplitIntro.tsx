@@ -17,7 +17,7 @@ const cards = [
   {
     label: "MVP Development",
     badgeClass: "bg-accent text-white",
-    title: "Ship fast. Learn from real usage.",
+    title: "Ship fast. Learn from real usage",
     titleAccent: "",
     body: "Scoped AI-assisted MVPs for web, SaaS, PWAs, internal tools, marketplace slices, prototypes — landing pages included when they support onboarding or launch.",
     href: "/services/mvp-development",
@@ -38,7 +38,7 @@ const cards = [
     label: "Studio",
     badgeClass: "bg-accent-warm text-white",
     title: "We ship our own products",
-    titleAccent: "Same standards as founder work.",
+    titleAccent: "Same standards as founder work",
     body: "Products we operate on our own roadmap — SoldTools lives here — the same accountability we promise on founder engagements.",
     href: "/studio",
     cta: "Open Studio",

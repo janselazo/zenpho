@@ -38,7 +38,7 @@ export default function FeaturedWork() {
             className="heading-display text-balance text-4xl font-bold leading-[1.12] tracking-tight text-text-primary sm:text-5xl sm:leading-[1.1] lg:text-6xl lg:leading-[1.08]"
           >
             <span className="block text-text-primary">We ship our own products</span>
-            <span className="mt-1 block text-accent">Same standards as founder work.</span>
+            <span className="mt-1 block text-accent">Same standards as founder work</span>
           </motion.h2>
 
           <motion.p

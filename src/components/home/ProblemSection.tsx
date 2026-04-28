@@ -7,7 +7,7 @@ export default function ProblemSection() {
         <SectionHeading
           className="!mb-0"
           title="Most founders lose months"
-          titleAccent="building too much too early."
+          titleAccent="building too much too early"
           align="center"
           description={
             <p>

@@ -8,7 +8,7 @@ export default function AboutOurStory() {
         align="left"
         label="Our story"
         title="Zenpho was built for founders"
-        titleAccent="who move fast."
+        titleAccent="who move fast"
       />
       <Card className="border-border/80 bg-white p-8 shadow-soft sm:p-10">
         <p className="text-base leading-relaxed text-text-secondary">

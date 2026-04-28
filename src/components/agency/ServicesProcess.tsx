@@ -10,7 +10,7 @@ export default function ServicesProcess() {
       <SectionHeading
         className="!mb-8 sm:!mb-10"
         title="Simple, fast, and"
-        titleAccent="founder-focused."
+        titleAccent="founder-focused"
         align="center"
       />
 

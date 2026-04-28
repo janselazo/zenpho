@@ -163,7 +163,7 @@ function ServiceGroupCards({
       <p className="text-xs font-bold uppercase tracking-wider text-muted">
         {sectionLabel}
       </p>
-      <div className="mt-3 grid grid-cols-1 gap-3">
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {groups.map((group) => (
           <article
             key={group.title}

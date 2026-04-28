@@ -24,8 +24,7 @@ export default function ServicesHero() {
           transition={{ duration: 0.5, delay: 0.06 }}
           className="heading-display text-balance text-4xl font-bold leading-[1.12] tracking-tight text-text-primary sm:text-5xl sm:leading-[1.1] lg:text-6xl lg:leading-[1.08]"
         >
-          MVP development and growth services{" "}
-          <span className="text-accent">for startup founders.</span>
+          MVP development and growth services
         </motion.h1>
 
         <motion.p
@@ -34,8 +33,7 @@ export default function ServicesHero() {
           transition={{ duration: 0.45, delay: 0.14 }}
           className="mx-auto mt-8 max-w-xl text-base font-medium leading-relaxed text-pretty text-text-primary/80 sm:mt-9 sm:text-lg"
         >
-          Zenpho helps founders scope, build, launch, and grow AI-powered MVPs
-          with a simple two-service model: MVP Development and MVP Growth.
+          We help founders scope, build, launch, and grow AI-powered MVPs
         </motion.p>
 
         <motion.div

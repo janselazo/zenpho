@@ -18,7 +18,7 @@ export default function AboutWhoWeHelp() {
       <SectionHeading
         align="left"
         title="Built for startup founders"
-        titleAccent="and product builders."
+        titleAccent="and product builders"
         description={
           <p className="!text-[15px] !leading-relaxed text-text-secondary sm:!text-base">
             Zenpho works with founders who want to turn ideas into technology
