@@ -9,10 +9,9 @@
  *      `fetchBrandAssetsFromUrl` (existing helper).
  *   2. Take its `colors.palette` (already de-duped, chromatic-only) as the
  *      extracted palette.
- *   3. If a `logoUrl` was discovered, fetch its bytes with a bounded reader
- *      and SSRF guard. Only return PNG / JPEG since `pdf-lib` embeds those
- *      natively — SVG / WebP / ICO fall back to `null` so the PDF uses the
- *      AI wordmark instead.
+ *   3. If a `logoUrl` was discovered, fetch it with a bounded reader and SSRF
+ *      guard. PNG/JPEG return as bytes. SVG returns as text so `pdf-lib` can
+ *      draw the vector paths directly.
  *
  * Failure isolation: every step is best-effort. A missing palette or logo
  * never throws; callers fall back to the LLM-driven defaults.
@@ -32,6 +31,8 @@ export type ResolvedBrandAssets = {
   accent: string | null;
   /** PNG/JPEG bytes of the prospect's logo, or `null` if none were usable. */
   logoPng: Buffer | null;
+  /** SVG text of the prospect's logo, or `null` if none was usable. */
+  logoSvg: string | null;
   /** The URL the logo was fetched from, for debugging / logs. */
   logoSourceUrl: string | null;
 };
@@ -41,6 +42,7 @@ const EMPTY: ResolvedBrandAssets = {
   primary: null,
   accent: null,
   logoPng: null,
+  logoSvg: null,
   logoSourceUrl: null,
 };
 
@@ -68,10 +70,11 @@ const LOGO_FETCH_TIMEOUT_MS = 8_000;
 
 /**
  * Bounded image fetch with SSRF guard. Returns `null` for any non-2xx
- * response, oversized payloads, blocked hosts, or non-PNG/JPEG content.
+ * response, oversized payloads, blocked hosts, or unsupported content.
  */
-async function safeFetchLogoBuffer(rawUrl: string): Promise<{
-  buffer: Buffer;
+async function safeFetchLogoAsset(rawUrl: string): Promise<{
+  buffer: Buffer | null;
+  svg: string | null;
   sourceUrl: string;
 } | null> {
   const normalized = normalizeUrlForFetch(rawUrl);
@@ -112,9 +115,66 @@ async function safeFetchLogoBuffer(rawUrl: string): Promise<{
   }
 
   const fmt = sniffRasterFormat(buf);
-  if (!fmt) return null;
+  if (fmt) return { buffer: buf, svg: null, sourceUrl: normalized };
 
-  return { buffer: buf, sourceUrl: normalized };
+  const contentType = res.headers.get("content-type")?.toLowerCase() ?? "";
+  const looksSvg =
+    contentType.includes("svg") ||
+    /\.svg(?:[?#].*)?$/i.test(normalized) ||
+    buf.subarray(0, 256).toString("utf8").includes("<svg");
+  if (!looksSvg) return null;
+
+  const svg = buf.toString("utf8");
+  if (!/<svg[\s>]/i.test(svg)) return null;
+
+  return { buffer: null, svg, sourceUrl: normalized };
+}
+
+function rgbFromHex(hex: string): [number, number, number] | null {
+  const m = hex.trim().match(/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/);
+  if (!m) return null;
+  let h = m[1];
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  const n = Number.parseInt(h, 16);
+  if (!Number.isFinite(n)) return null;
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function isUsableLogoHex(hex: string): boolean {
+  const rgb = rgbFromHex(hex);
+  if (!rgb) return false;
+  const [r, g, b] = rgb;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const avg = (r + g + b) / 3;
+  if (avg > 242 || avg < 18) return false;
+  return max - min >= 18;
+}
+
+function normalizeHex(hex: string): string | null {
+  const rgb = rgbFromHex(hex);
+  if (!rgb) return null;
+  const [r, g, b] = rgb;
+  return `#${((1 << 24) | (r << 16) | (g << 8) | b)
+    .toString(16)
+    .slice(1)
+    .toUpperCase()}`;
+}
+
+function svgPalette(svg: string | null): string[] {
+  if (!svg) return [];
+  const counts = new Map<string, number>();
+  const re = /#[0-9a-fA-F]{3,6}\b/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(svg)) !== null) {
+    const hex = normalizeHex(m[0]);
+    if (!hex || !isUsableLogoHex(hex)) continue;
+    counts.set(hex, (counts.get(hex) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([hex]) => hex)
+    .slice(0, 5);
 }
 
 function pickPrimaryAndAccent(colors: BrandColorResult | null): {
@@ -153,20 +213,28 @@ export async function resolveProspectBrandAssets(input: {
   const { palette, primary, accent } = pickPrimaryAndAccent(assets.colors);
 
   let logoPng: Buffer | null = null;
+  let logoSvg: string | null = null;
   let logoSourceUrl: string | null = null;
   if (assets.logoUrl) {
-    const fetched = await safeFetchLogoBuffer(assets.logoUrl);
+    const fetched = await safeFetchLogoAsset(assets.logoUrl);
     if (fetched) {
       logoPng = fetched.buffer;
+      logoSvg = fetched.svg;
       logoSourceUrl = fetched.sourceUrl;
     }
   }
 
+  const logoPalette = svgPalette(logoSvg);
+  const finalPalette = logoPalette.length ? logoPalette : palette;
+  const finalPrimary = logoPalette[0] ?? primary;
+  const finalAccent = logoPalette.find((h) => h !== finalPrimary) ?? accent;
+
   return {
-    palette,
-    primary,
-    accent,
+    palette: finalPalette,
+    primary: finalPrimary,
+    accent: finalAccent,
     logoPng,
+    logoSvg,
     logoSourceUrl,
   };
 }

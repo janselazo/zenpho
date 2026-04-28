@@ -221,11 +221,82 @@ function emptyBrandingImages(reason?: string): BrandingImages {
 }
 
 function shouldGenerateLegacyBrandImages(): boolean {
-  return (
-    (process.env.BRANDING_GENERATE_LEGACY_IMAGES || "")
-      .trim()
-      .toLowerCase() === "true"
-  );
+  const raw = (process.env.BRANDING_GENERATE_LEGACY_IMAGES || "")
+    .trim()
+    .toLowerCase();
+  return raw !== "false";
+}
+
+type SvgPathShape = { d: string; fill: Rgb | null };
+
+function parseSvgViewBox(svg: string): { width: number; height: number } | null {
+  const vb = svg.match(/viewBox=["']\s*[-\d.]+\s+[-\d.]+\s+([\d.]+)\s+([\d.]+)\s*["']/i);
+  if (vb) {
+    const width = Number(vb[1]);
+    const height = Number(vb[2]);
+    if (Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
+      return { width, height };
+    }
+  }
+  const width = Number(svg.match(/\bwidth=["']([\d.]+)/i)?.[1]);
+  const height = Number(svg.match(/\bheight=["']([\d.]+)/i)?.[1]);
+  if (Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
+    return { width, height };
+  }
+  return null;
+}
+
+function parseSvgPaths(svg: string): SvgPathShape[] {
+  const out: SvgPathShape[] = [];
+  const re = /<path\b([^>]*)>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(svg)) !== null) {
+    const attrs = m[1];
+    const d = attrs.match(/\bd=["']([^"']+)["']/i)?.[1]?.trim();
+    if (!d) continue;
+    const fillRaw =
+      attrs.match(/\bfill=["'](#[0-9a-fA-F]{3,6})["']/i)?.[1] ??
+      attrs.match(/\bstyle=["'][^"']*fill:\s*(#[0-9a-fA-F]{3,6})/i)?.[1] ??
+      null;
+    out.push({ d, fill: fillRaw ? hexToRgb(fillRaw, [0, 0, 0]) : null });
+    if (out.length >= 120) break;
+  }
+  return out;
+}
+
+function drawSvgLogoFit(
+  page: import("pdf-lib").PDFPage,
+  ctx: BrandBookContext,
+  svg: string | null,
+  rect: { x: number; y: number; width: number; height: number },
+): boolean {
+  if (!svg) return false;
+  const viewBox = parseSvgViewBox(svg);
+  const paths = parseSvgPaths(svg);
+  if (!viewBox || paths.length === 0) return false;
+
+  const scale = Math.min(rect.width / viewBox.width, rect.height / viewBox.height);
+  const drawnW = viewBox.width * scale;
+  const drawnH = viewBox.height * scale;
+  const x = rect.x + (rect.width - drawnW) / 2;
+  const y = rect.y + (rect.height - drawnH) / 2;
+
+  for (const shape of paths) {
+    try {
+      page.drawSvgPath(shape.d, {
+        x,
+        y,
+        scale,
+        color: rgbColor(shape.fill ?? ctx.primary),
+      });
+    } catch {
+      // Keep SVG logo rendering best-effort; unsupported path syntax falls
+      // through to image placeholders / AI marks.
+      return false;
+    }
+  }
+
+  return true;
 }
 
 /** Draws a small platform pill (e.g. "Facebook" / "Instagram" / "Google"). */
@@ -1088,6 +1159,7 @@ async function composeBook(
   ctx: BrandBookContext,
   images: BrandingImages,
   realLogoPng: Buffer | null,
+  realLogoSvg: string | null,
   funnel: FunnelComposeInput | null,
 ): Promise<void> {
   const pdf = ctx.pdf;
@@ -1146,13 +1218,21 @@ async function composeBook(
       color: rgbColor([1, 1, 1]),
     });
     const realMark = await embedPngIfAny(pdf, realLogoPng);
-    const aiWordmark = realMark
+    const drewSvgMark = realMark
+      ? false
+      : drawSvgLogoFit(pg, ctx, realLogoSvg, {
+          x: boxX,
+          y: boxY,
+          width: boxW,
+          height: boxH,
+        });
+    const aiWordmark = realMark || drewSvgMark
       ? null
       : await embedPngIfAny(pdf, images.logos[0]);
     const mark = realMark ?? aiWordmark;
     if (mark) {
       drawImageFit(pg, mark, { x: boxX, y: boxY, width: boxW, height: boxH });
-    } else {
+    } else if (!drewSvgMark) {
       drawImagePlaceholder(pg, ctx, {
         x: boxX,
         y: boxY,
@@ -1162,7 +1242,7 @@ async function composeBook(
       });
     }
     const notes = sanitizeForBrandBook(
-      realMark
+      realMark || drewSvgMark
         ? "This is the prospect's actual mark, captured from their live website. Always leave clearspace equal to the height of a capital letter around it. Prefer the primary color on white; inverse version on dark imagery."
         : "Minimum size: 40 px digital / 20 mm print. Always leave clearspace equal to the height of a capital letter around the mark. Prefer the primary color on white; inverse version on dark imagery.",
     );
@@ -1222,6 +1302,16 @@ async function composeBook(
           width: cellW - 36,
           height: cellH - 36,
         });
+      } else if (
+        i === 0 &&
+        drawSvgLogoFit(pg, ctx, realLogoSvg, {
+          x: cellX + 18,
+          y: cellY + 18,
+          width: cellW - 36,
+          height: cellH - 36,
+        })
+      ) {
+        // Real SVG wordmark used as the first variant when AI wordmark is unavailable.
       } else {
         drawImagePlaceholder(pg, ctx, {
           x: cellX + 18,
@@ -1304,6 +1394,15 @@ async function composeBook(
         } else {
           pg.drawImage(wm, { x: cellX + inset, y: cellY + inset, width: w, height: h, opacity: i === 2 ? 0.45 : 0.7 });
         }
+      } else if (
+        drawSvgLogoFit(pg, ctx, realLogoSvg, {
+          x: cellX + 14,
+          y: cellY + 42,
+          width: cellW - 28,
+          height: 90,
+        })
+      ) {
+        // Actual SVG logo used when AI wordmark image is unavailable.
       } else {
         drawImagePlaceholder(pg, ctx, {
           x: cellX + 14,
@@ -2021,11 +2120,9 @@ export async function generateProspectBrandingPdfAction(input: {
     brandName: specResult.data.brandName || businessName,
   };
 
-  // The original brand-book visuals add 7 image generations on top of the new
-  // 6 sales-funnel visuals. On Vercel this can exceed maxDuration, so the
-  // default production path keeps the full brand book layout and real logo but
-  // uses placeholders for decorative legacy image slots. Set
-  // BRANDING_GENERATE_LEGACY_IMAGES=true for slower, all-image exports.
+  // Brand-book visuals are attempted by default, but the image generator uses
+  // fast parallel mode so one rate-limited slot becomes a placeholder instead
+  // of holding the entire PDF job past Vercel's function timeout.
   const imagesPromise = shouldGenerateLegacyBrandImages()
     ? generateBrandingImages(spec)
     : Promise.resolve(
@@ -2078,7 +2175,7 @@ export async function generateProspectBrandingPdfAction(input: {
         }
       : null;
 
-    await composeBook(ctx, images, realAssets.logoPng, funnelInput);
+    await composeBook(ctx, images, realAssets.logoPng, realAssets.logoSvg, funnelInput);
 
     const bytes = await pdf.save();
     const safeName =
