@@ -20,7 +20,7 @@ export default function FeaturedWork() {
         title="Recent"
         titleAccent="outcomes"
         titleAccentInline
-        description="Each build ships cleanly and hands off without friction."
+        description="Founder-facing MVPs in production — product-led builds, not page-only launches."
       />
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

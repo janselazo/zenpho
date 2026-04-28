@@ -83,7 +83,7 @@ export default function ReferralsReviewsView() {
                 Contact (introduce someone)
               </Button>
               <Button href="/booking" variant="dark" size="md" showLiveDot>
-                Book a call
+                Book a Call
               </Button>
             </div>
             <p className="mt-4 text-xs text-text-secondary dark:text-zinc-500">

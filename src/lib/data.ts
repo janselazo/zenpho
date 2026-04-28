@@ -76,153 +76,180 @@ export interface MethodologyPillar {
 export interface DevelopmentPricingOffering {
   id: string;
   title: string;
+  /** Bold line inside the card — e.g. “Build your AI-powered MVP in 2 weeks.” */
+  cardHeadline?: string;
+  /** One-line positioning under headline */
   subtitle: string;
-  /** Formatted dollar amount, e.g. "$1,000" */
+  /** Formatted dollar amount, e.g. "$5,000" */
   priceAmount: string;
+  /** e.g. "$5k–$50k+" */
+  typicalRange?: string;
   /** Shown after price, e.g. "starting" */
   priceSuffix?: string;
   /** Middle / highlighted tier in the grid */
   featured?: boolean;
+  /** “What’s included” lines */
   features: string[];
+  bestFor?: string[];
+  idealIf?: string[];
+  ctaLabel?: string;
 }
 
-/** Development offerings in ascending price order for the pricing grid. */
+/** Two core offerings — pricing grid on /pricing. */
 export const developmentPricingOfferings: DevelopmentPricingOffering[] = [
   {
-    id: "websites-development",
-    title: "Custom Websites",
+    id: "mvp-development",
+    title: "MVP Development",
+    cardHeadline: "Build your AI-powered MVP in 2 weeks.",
     subtitle:
-      "Marketing sites, landing pages, and company presence — fast to ship, on-brand, and built to convert.",
-    priceAmount: "$1,000",
-    priceSuffix: "starting",
-    features: [
-      "Discovery and IA scoped to your audience, goals, and primary calls to action",
-      "Responsive layouts, performance-minded frontend, and accessible UI patterns",
-      "Contact and lead capture, analytics hooks, and SEO-friendly structure as scoped",
-      "Staging preview, launch checklist, and handoff so you can update copy or use a light CMS",
-      "Slack channel + post-launch support window",
-    ],
-  },
-  {
-    id: "web-apps",
-    title: "Web Apps",
-    subtitle: "SaaS, dashboards, and internal tools — built to scale with usage.",
+      "For founders who need a working product built fast.",
     priceAmount: "$5,000",
+    typicalRange: "$5,000 – $50,000+",
     priceSuffix: "starting",
     featured: true,
     features: [
-      "Auth, roles, and production-ready patterns",
-      "APIs, integrations, and data models as scoped",
-      "Phased delivery with weekly milestones — ship a usable slice, then extend",
-      "CI-friendly codebase your team can extend",
-      "Slack channel + post-launch support window",
+      "Product strategy and MVP scope",
+      "Core user journey",
+      "UX/UI design",
+      "Web app or mobile-first development",
+      "AI/API integrations",
+      "Authentication and database",
+      "Admin dashboard",
+      "Launch landing page",
+      "Product analytics",
+      "QA testing",
+      "Deployment",
+      "Handover documentation",
     ],
+    bestFor: [
+      "AI SaaS products",
+      "Web apps",
+      "Mobile-first apps",
+      "Progressive web apps",
+      "Internal tools",
+      "Marketplaces",
+      "Client portals",
+      "Workflow automation tools",
+      "Founder prototypes",
+    ],
+    idealIf: [
+      "Turn your idea into a working MVP",
+      "Build a demo for users, investors, or partners",
+      "Replace a no-code prototype with a real product",
+      "Launch a simple version of your SaaS or AI product",
+      "Validate demand without spending months in development",
+    ],
+    ctaLabel: "Book an MVP Strategy Call",
   },
   {
-    id: "mobile-apps",
-    title: "Mobile Apps",
-    subtitle: "iOS, Android, or both",
-    priceAmount: "$7,000",
+    id: "mvp-growth",
+    title: "MVP Growth",
+    cardHeadline: "Launch your MVP and get early users.",
+    subtitle:
+      "For founders who already have an MVP and need help with positioning, launch, acquisition, analytics, and growth experiments.",
+    priceAmount: "$2,500",
+    typicalRange: "$2,500 – $25,000+",
     priceSuffix: "starting",
     features: [
-      "Cross-platform or native by scope",
-      "App Store / Play submission support",
-      "Push, offline patterns, and core native hooks",
-      "Mobile-first UI/UX and accessibility",
-      "Slack channel + post-launch support window",
+      "ICP definition",
+      "Positioning and messaging",
+      "Landing page copy/design",
+      "Launch strategy",
+      "Waitlist or demo booking flow",
+      "Beta user outreach",
+      "Cold email/DM campaigns",
+      "Founder LinkedIn content",
+      "Community launch support",
+      "Product analytics",
+      "Feedback system",
+      "Growth experiment roadmap",
     ],
+    bestFor: [
+      "MVP launches",
+      "Beta user acquisition",
+      "Waitlist growth",
+      "Demo booking campaigns",
+      "Landing page optimization",
+      "Product Hunt launches",
+      "Founder-led growth",
+      "Early growth experiments",
+    ],
+    idealIf: [
+      "Launch your MVP to the market",
+      "Get your first users or beta testers",
+      "Improve your landing page and messaging",
+      "Validate demand before building more features",
+      "Collect user feedback and product insights",
+      "Start testing growth channels",
+    ],
+    ctaLabel: "Plan My MVP Launch",
   },
 ];
 
-/** Full-width row above the main 3-column pricing grid. */
-export const mvpDevelopmentPricingOffering: DevelopmentPricingOffering = {
-  id: "mvp-development",
-  title: "MVP Development",
-  subtitle:
-    "Go from idea to live product fast — we scope, design, and ship a focused first version so you can validate with real users before scaling.",
-  priceAmount: "$2,500",
-  priceSuffix: "starting",
-  features: [
-    "Scope-down workshop to define the core loop, key screens, and launch criteria",
-    "Lean tech stack chosen for speed-to-market and future extensibility",
-    "End-to-end build: auth, data, core features, and a polished enough UI to onboard real users",
-    "Deployment to production with CI pipeline and environment setup",
-    "Feedback-ready handoff: analytics hooks, error tracking, and a short iteration runway",
-    "Slack channel + post-launch support window",
-  ],
-};
-
-/** Full-width row below the main 3-column pricing grid. */
-export const aiAutomationsPricingOffering: DevelopmentPricingOffering = {
-  id: "ai-automations",
-  title: "AI Automations",
-  subtitle:
-    "Workflows, agents, and integrations that reduce manual work — scoped with guardrails, logging, and handoff your team can run.",
-  priceAmount: "$3,000",
-  priceSuffix: "starting",
-  features: [
-    "Discovery focused on one high-ROI automation or assistive workflow",
-    "LLM or deterministic steps with human approval where revenue or customers are involved",
-    "Hooks into your stack: CRM, email, spreadsheets, webhooks, or custom APIs as scoped",
-    "Retries, error surfacing, and basic observability so failures aren’t silent",
-    "Runbook-style handoff so you can extend, pause, or retrain safely",
-    "Slack channel + post-launch support window",
-  ],
-};
-
-/** Services grid on /services — Custom Websites → Web Apps → Mobile Apps → AI Automations. */
+/** Services grid on /services — MVP Development ↔ MVP Growth. */
 export const services: Service[] = [
   {
-    slug: "websites-development",
-    title: "Custom Websites",
-    subtitle: "A site that reflects your brand and drives the next step",
+    slug: "mvp-development",
+    title: "MVP Development",
+    subtitle: "Build your AI-powered MVP in 2 weeks.",
     description:
-      "We design and build marketing sites, landing pages, and company presence on the web — clear story, strong calls to action, and fast, accessible pages your team can evolve without a rebuild every quarter.",
+      "For founders who need a functional product built fast. We help you turn your idea, prototype, or product concept into a working MVP with strategy, UX/UI, development, AI integrations, analytics, and deployment.",
     details: [
-      "Structure and messaging aligned to who you’re for, what you want them to do, and what proof they need to see",
-      "Modern frontend stack with performance, accessibility, and SEO hygiene baked in — not bolted on after launch",
-      "Forms, tracking, and handoff patterns that fit how you sell: book a call, request a quote, or join a list",
-    ],
-    icon: "globe",
-  },
-  {
-    slug: "web-applications",
-    title: "Web Apps",
-    subtitle: "SaaS, dashboards, and internal tools",
-    description:
-      "SaaS, dashboards, and internal tools — secure, maintainable, and ready to grow with real traffic and real users.",
-    details: [
-      "Next.js / React, APIs, auth, roles, and production patterns",
-      "Performance, observability, and CI-friendly delivery",
-      "Handoff your team can extend — no mystery box codebase",
-    ],
-    icon: "code",
-  },
-  {
-    slug: "mobile-apps",
-    title: "Mobile Apps",
-    subtitle: "iOS, Android, or both",
-    description:
-      "iOS and Android when the product belongs in someone’s pocket — including offline-first when the job doesn’t stop at the signal bar.",
-    details: [
-      "React Native or native where constraints demand it",
-      "Push, store submission, and post-launch iteration",
-      "Aligned with the same metrics mindset as your web product",
+      "MVP strategy and scope",
+      "UX/UI design",
+      "Web app or mobile-first development",
+      "AI/API integrations, auth, database, admin",
+      "Launch landing page, analytics, deployment and handover",
     ],
     icon: "rocket",
   },
   {
-    slug: "ai-automations",
-    title: "AI Automations",
-    subtitle: "Workflows and integrations that reduce manual work — safely",
+    slug: "mvp-growth",
+    title: "MVP Growth",
+    subtitle: "Launch your MVP and get early users.",
     description:
-      "We scope and build automations that combine AI where it helps with deterministic steps where it must: CRM and email hooks, webhooks, internal tools, and guarded multi-step flows your team can run and extend.",
+      "For founders who already have an MVP and need help turning it into traction. We help with positioning, landing pages, beta user acquisition, launch campaigns, analytics, and growth experiments.",
     details: [
-      "One high-ROI workflow per engagement — discovery, approvals where money or customers are involved, and observability so failures aren’t silent",
-      "Connects to your stack: spreadsheets, SaaS APIs, custom backends, and LLM-assisted steps with clear boundaries",
-      "Handoff and runbooks so you can pause, extend, or retrain without vendor lock-in on every tweak",
+      "Positioning and messaging",
+      "Landing page optimization and launch strategy",
+      "Beta user acquisition and outreach",
+      "Product analytics and growth experiment roadmap",
     ],
-    icon: "brain",
+    icon: "chart",
+  },
+];
+
+/** 5-step process shown on /services. */
+export const servicesPageProcessSteps: ProcessStep[] = [
+  {
+    number: "01",
+    title: "Strategy",
+    description:
+      "We clarify the product idea, audience, use case, success metrics, and MVP scope.",
+  },
+  {
+    number: "02",
+    title: "Design",
+    description:
+      "We map the user journey and design the core product experience.",
+  },
+  {
+    number: "03",
+    title: "Build",
+    description:
+      "We develop the MVP using modern web, AI, and automation tools.",
+  },
+  {
+    number: "04",
+    title: "Launch",
+    description:
+      "We deploy the product and create the launch foundation.",
+  },
+  {
+    number: "05",
+    title: "Grow",
+    description:
+      "We help you attract users, collect feedback, and plan the next iteration.",
   },
 ];
 
@@ -231,25 +258,25 @@ export const processSteps: ProcessStep[] = [
     number: "01",
     title: "Discovery",
     description:
-      "We listen to your idea, understand your goals, and define the scope of your product in a single strategy call.",
+      "We compress scope to the smallest MVP that proves value — founders, constraint, timeline, and what “done” looks like in two weeks when that’s the target.",
   },
   {
     number: "02",
     title: "Design",
     description:
-      "We create the structure and visual flow of your product so you can see exactly what we're building before we write a single line of code.",
+      "Flows, UX, and system shape for an AI-assisted product prototype or investor-ready demo — before we commit the full implementation path.",
   },
   {
     number: "03",
     title: "Build",
     description:
-      "Our team develops your fully functional website, web app, or mobile app fast, clean, and built to scale.",
+      "We ship the web or mobile-first experience, integrations, AI surfaces, and staging-to-production pipelines with weekly visibility.",
   },
   {
     number: "04",
     title: "Launch",
     description:
-      "We deliver your working software product, support you through go-live, and make sure everything works perfectly from day one.",
+      "Go-live support, instrumentation, launch landing pages aligned to onboarding, then optional MVP Growth once you’re in market.",
   },
 ];
 
@@ -290,7 +317,6 @@ export const techStack: TechItem[] = [
 ];
 
 export const portfolioProjects: PortfolioProject[] = [
-  // Client case studies (current engagements)
   {
     client: "Taptok",
     title: "Digital Business Card & Networking App",
@@ -315,11 +341,11 @@ export const portfolioProjects: PortfolioProject[] = [
     client: "TQMuch",
     title: "Nationwide Food Delivery Store",
     description:
-      "Built a mobile-first ordering experience with a full product catalog, temperature-controlled shipping, and automated fulfillment — so the team focuses on the food, not the orders.",
+      "Built a mobile-first ordering experience with catalog, fulfillment, and ops automation — a product-heavy MVP focused on repeatable delivery, not a generic storefront playbook.",
     tags: [],
     type: "agency",
-    category: "ecommerce",
-    result: "Ecommerce Website",
+    category: "web-app",
+    result: "Mobile-first web app",
   },
   {
     client: "SoldTools",
@@ -359,11 +385,11 @@ export const featuredProjects: FeaturedProject[] = [
     client: "TQMuch",
     title: "Nationwide Food Delivery Store",
     description:
-      "Built a mobile-first ordering experience with a full product catalog, temperature-controlled shipping, and automated fulfillment — so the team focuses on the food, not the orders.",
+      "Built a mobile-first ordering experience with catalog, fulfillment, and ops automation — a product-heavy MVP focused on repeatable delivery, not a generic storefront playbook.",
     tags: [],
     type: "agency",
-    category: "ecommerce",
-    result: "Ecommerce Website",
+    category: "web-app",
+    result: "Mobile-first web app",
   },
   {
     client: "SoldTools",
@@ -444,7 +470,7 @@ export const servicePackages: ServicePackage[] = [
     icon: "brain",
     timeline: "1–2 weeks",
     description:
-      "Align on users, outcomes, and constraints. Map the smallest shippable slice, risks, and how success will be measured before writing production code.",
+      "Founder workshop: users, constraints, riskiest assumptions, and the smallest demo-ready slice before code ships.",
     deliverables: [
       "Problem and user framing workshop",
       "Scope document and milestone outline",
@@ -704,14 +730,14 @@ export const resourceItems: ResourceItem[] = [
   {
     title: "Case studies",
     description:
-      "Selected client builds in production — SaaS platforms, MVPs, and dashboards.",
+      "Founder MVPs in production — SaaS, mobile-first web apps, and AI-assisted products.",
     href: "/case-studies",
     tag: "Work",
   },
   {
     title: "Pricing & FAQs",
     description:
-      "Packages, typical timelines, and answers to how engagements are structured.",
+      "MVP Development from $5k and MVP Growth from $2.5k — clear starting points, scoped on a call.",
     href: "/pricing",
     tag: "Engagement",
   },

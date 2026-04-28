@@ -8,7 +8,7 @@ export default function BookingSection() {
     <section
       id="booking"
       className="mx-auto max-w-7xl px-6 pb-16 lg:px-8"
-      aria-label="Book a call"
+      aria-label="Book a Call"
     >
       <motion.div
         initial={{ opacity: 1, y: 20 }}

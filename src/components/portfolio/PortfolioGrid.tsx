@@ -19,7 +19,6 @@ const categoryFilters: { id: ProjectCategory | "all"; label: string }[] = [
   { id: "mobile-app", label: "Mobile App" },
   { id: "web-app", label: "Web App" },
   { id: "website", label: "Website" },
-  { id: "ecommerce", label: "Ecommerce Store" },
 ];
 
 function filterChipClass(
@@ -58,7 +57,7 @@ export default function PortfolioGrid() {
         title="Selected"
         titleAccent="work"
         titleAccentInline
-        description="Some of the products we've designed, built, and launched for founders around the world."
+        description="Sampling of AI-assisted products we have shipped alongside founders — no cookie-cutter portfolios or generic local retainers."
       />
 
       <div className="mb-12 flex flex-wrap justify-center gap-2">

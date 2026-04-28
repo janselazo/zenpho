@@ -15,7 +15,7 @@ export default function VenturesGrid() {
         title="On our"
         titleAccent="roadmap"
         titleAccentInline
-        description="Owned, shipped, and iterated like the products we build for you through the Agency. Same stack discipline and growth mindset."
+        description="Systems we operate under our own P&amp;L — proof we ship, measure, support, and iterate beyond demo day."
       />
 
       <div className="grid gap-6 sm:grid-cols-2">

@@ -19,7 +19,7 @@ export default function StudioHero() {
           transition={{ duration: 0.45 }}
           className={`mb-5 ${SECTION_EYEBROW_CLASSNAME}`}
         >
-          Studio
+          Zenpho Studio
         </motion.span>
 
         <motion.h1
@@ -28,8 +28,7 @@ export default function StudioHero() {
           transition={{ duration: 0.5, delay: 0.06 }}
           className="heading-display text-4xl font-bold leading-tight tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
         >
-          <span className="block">Products that</span>
-          <span className="mt-1 block text-accent-warm">matter</span>
+          <span className="block">Zenpho Studio</span>
         </motion.h1>
 
         <motion.p
@@ -38,9 +37,9 @@ export default function StudioHero() {
           transition={{ duration: 0.45, delay: 0.14 }}
           className="mx-auto mt-6 max-w-2xl text-base font-medium leading-relaxed text-text-secondary sm:text-lg"
         >
-          Studio is where we build and scale{" "}
-          <span className="text-text-primary">our own</span> software — web apps,
-          mobile, and SaaS. Same team and standards as our Agency.
+          We are building more than an agency. Zenpho is evolving into an AI
+          Product Studio that helps founders launch products while creating our
+          own software.
         </motion.p>
 
         <motion.div
@@ -49,11 +48,11 @@ export default function StudioHero() {
           transition={{ duration: 0.45, delay: 0.22 }}
           className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4"
         >
-          <Button href="#studio-projects" variant="primary" size="lg">
-            Browse Studio projects
+          <Button href="#studio-model" variant="primary" size="lg">
+            How the model works
           </Button>
           <Button href="/booking" variant="dark" size="lg" showLiveDot>
-            Book a call
+            Book an MVP Strategy Call
           </Button>
         </motion.div>
       </div>

@@ -16,19 +16,19 @@ export default function ServicesGrid() {
     <section className="mx-auto max-w-7xl px-6 py-32 lg:px-8">
       <SectionHeading
         label="Capabilities"
-        title="Development"
-        titleAccent="Services"
+        title="MVP"
+        titleAccent="Development & Growth"
         titleAccentInline
         description={
           <p>
-            Whether you&apos;re starting from scratch or scaling an existing
-            product, we handle the full development process from strategy to
-            launch.
+            Two straightforward lines of business: ship an AI-assisted MVP fast,
+            then compound traction once you&apos;re in market. Most builds target
+            a demo-ready milestone in ~two weeks when scope stays focused.
           </p>
         }
       />
 
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mx-auto grid max-w-5xl gap-6 sm:grid-cols-2">
         {services.map((service, i) => (
           <motion.div
             key={service.slug}

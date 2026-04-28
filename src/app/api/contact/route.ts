@@ -5,6 +5,34 @@ function json(data: unknown, status = 200) {
   return NextResponse.json(data, { status });
 }
 
+function str(v: unknown): string {
+  return String(v ?? "").trim();
+}
+
+function buildLeadNotes(payload: Record<string, unknown>): string {
+  const what = str(payload.what_building);
+  const whom = str(payload.product_for);
+  const validation = str(payload.validation_notes);
+  const help = str(payload.help_needed);
+  const timeline = str(payload.timeline);
+  const budget = str(payload.budget_range);
+  const extra = str(payload.notes_extra);
+  const web = str(payload.website_linkedin);
+
+  const parts: string[] = [];
+  if (what) parts.push(`What you're building:\n${what}`);
+  if (whom) parts.push(`Who the product is for:\n${whom}`);
+  if (validation)
+    parts.push(`Users / waitlist / validation:\n${validation}`);
+  if (help)
+    parts.push(`Help needed:\n${help}`);
+  if (timeline) parts.push(`Desired timeline:\n${timeline}`);
+  if (budget) parts.push(`Estimated budget:\n${budget}`);
+  if (web) parts.push(`Website or LinkedIn:\n${web}`);
+  if (extra) parts.push(`Additional notes:\n${extra}`);
+  return parts.join("\n\n—\n\n");
+}
+
 export async function POST(req: NextRequest) {
   let body: Record<string, unknown>;
   try {
@@ -13,12 +41,12 @@ export async function POST(req: NextRequest) {
     return json({ error: "Invalid JSON body" }, 400);
   }
 
-  const name = String(body.name ?? "").trim();
-  const email = String(body.email ?? "").trim();
-  const phone = String(body.phone ?? "").trim();
-  const company = String(body.company ?? "").trim();
-  const message = String(body.message ?? "").trim();
-  const projectType = String(body.project_type ?? "").trim();
+  const name = str(body.name);
+  const email = str(body.email);
+  const phone = str(body.phone);
+  const company = str(body.company);
+  const message = buildLeadNotes(body);
+  const projectType = str(body.product_type);
   const smsConsent = body.sms_consent === true;
 
   if (!name || !email) {

@@ -2,36 +2,36 @@ import SectionHeading from "@/components/ui/SectionHeading";
 
 const faqs = [
   {
-    q: "What exactly do you build?",
-    a: "We build custom web apps, mobile apps, and marketing sites — from simple MVPs to fully functional software products ready to scale.",
+    q: "What exactly does Zenpho build?",
+    a: "We focus on founders shipping AI-assisted MVPs: SaaS surfaces, dashboards, PWAs and mobile-first apps, prototypes, marketplace slices, lightweight internal tooling, and MVP Growth after launch.",
   },
   {
-    q: "How long does it take to build my product?",
-    a: "We deliver your first ready-to-launch version in as little as 2 weeks, depending on the scope and complexity of your idea.",
+    q: "What’s your main timeline promise?",
+    a: "We aim for a demo-ready MVP in about two weeks when scope stays disciplined. Larger bets split into milestones so you still get working software every week.",
   },
   {
-    q: "Do I need to be technical to work with you?",
-    a: "Not at all. We work with both tech and non-tech founders. You bring the idea — we handle everything else.",
+    q: "Do I need to be technical?",
+    a: "No. We partner with both technical and non-technical founders — you own the problem and users; we own stack choices, delivery, and instrumentation.",
   },
   {
     q: "How much does it cost?",
-    a: "Every project is different. We offer affordable, transparent pricing based on your scope. Book a call and we'll give you a clear quote with no surprises.",
+    a: "Two clear starting points: MVP Development from $5,000 and MVP Growth from $2,500. Exact quotes come after a short scoping call — no surprise line items.",
   },
   {
-    q: "What if I only have an idea and nothing else?",
-    a: "That's exactly where we start. Our discovery process is designed to take you from raw idea to a defined, buildable product in one strategy call.",
+    q: "What if I only have an idea?",
+    a: "That’s the default starting point. Discovery turns the idea into a crisp MVP definition, success metrics, and what we’re explicitly not building in v1.",
   },
   {
-    q: "Do you work with startups outside the U.S.?",
-    a: "Yes. We work with founders across the U.S., Latin America, and Europe — in both English and Spanish.",
+    q: "Do you work with founders outside the U.S.?",
+    a: "Yes — U.S., Latin America, and Europe, in English and Spanish.",
   },
   {
-    q: "Will I own the code and the product?",
-    a: "Absolutely. Once delivered, you have full ownership of your product, codebase, and all associated assets.",
+    q: "Will I own the code?",
+    a: "Yes. You own the product, repository, and assets once delivered per agreement.",
   },
   {
     q: "What happens after launch?",
-    a: "We support you through go-live and can continue as your development partner for future updates, new features, and scaling needs.",
+    a: "We include a post-launch support window with MVP Development. When you’re ready to optimize traction, MVP Growth layers on experiments, analytics, and lifecycle work.",
   },
 ];
 
@@ -44,7 +44,7 @@ export default function HomeFAQ() {
         title="Common"
         titleAccent="questions"
         titleAccentInline
-        description="No surprises, just clear answers about how we work."
+        description="Clear answers for founders evaluating an AI MVP studio."
       />
 
       <div className="mx-auto max-w-3xl space-y-3">

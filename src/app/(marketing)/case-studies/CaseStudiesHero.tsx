@@ -23,8 +23,8 @@ export default function CaseStudiesHero() {
           transition={{ duration: 0.5, delay: 0.06 }}
           className="heading-display flex flex-col gap-2 text-4xl font-bold leading-[1.12] tracking-tight text-text-primary sm:gap-3 sm:text-5xl sm:leading-[1.1] lg:text-6xl lg:leading-[1.08]"
         >
-          <span className="block">Products that</span>
-          <span className="block text-accent">scale</span>
+          <span className="block">Selected MVP concepts</span>
+          <span className="block text-accent">and studio builds.</span>
         </motion.h1>
 
         <motion.p
@@ -33,9 +33,9 @@ export default function CaseStudiesHero() {
           transition={{ duration: 0.45, delay: 0.14 }}
           className="mx-auto mt-8 max-w-xl text-base font-medium leading-relaxed text-pretty text-text-primary/80 sm:mt-9 sm:text-lg"
         >
-          We build products that move fast and last long. Every project we take
-          on is a reflection of our commitment to speed, quality, and real
-          results — from early-stage MVPs to fully scaled software products.
+          We are building demo MVPs, internal tools, and product concepts to show
+          how quickly focused technology products can move from idea to working
+          prototype.
         </motion.p>
 
         <motion.div
@@ -44,11 +44,11 @@ export default function CaseStudiesHero() {
           transition={{ duration: 0.45, delay: 0.22 }}
           className="mt-11 flex w-full max-w-md flex-col items-stretch justify-center gap-3 sm:mt-12 sm:flex-row sm:items-center sm:justify-center sm:gap-4"
         >
-          <Button href="#projects" variant="primary" size="lg">
-            Explore projects
+          <Button href="#concepts" variant="primary" size="lg">
+            Explore concepts
           </Button>
           <Button href="/booking" variant="dark" size="lg" showLiveDot>
-            Book a call
+            Book an MVP Strategy Call
           </Button>
         </motion.div>
       </div>

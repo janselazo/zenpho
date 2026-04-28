@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { footerNavLinks } from "@/lib/data";
+import Button from "@/components/ui/Button";
 
 export default function Footer() {
   return (
@@ -19,9 +20,21 @@ export default function Footer() {
                 className="h-9 w-auto"
               />
             </Link>
-            <p className="mt-3 max-w-xs text-sm leading-relaxed text-text-secondary">
-              We build and scale software products through our Agency, and launch our own through Studio — same team, same standards.
+            <p className="mt-4 text-sm font-semibold leading-snug text-text-primary">
+              Zenpho — AI MVP Development Studio for Founders.
             </p>
+            <p className="mt-3 max-w-md text-sm leading-relaxed text-text-secondary">
+              We help founders build and launch AI-powered MVPs through product
+              strategy, UX/UI, development, analytics, and growth support.
+            </p>
+            <p className="mt-6 text-base font-semibold leading-snug text-text-primary">
+              Build your MVP in 2 weeks.
+            </p>
+            <div className="mt-4">
+              <Button href="/booking" variant="primary" size="md">
+                Book an MVP Strategy Call
+              </Button>
+            </div>
           </div>
 
           <div>

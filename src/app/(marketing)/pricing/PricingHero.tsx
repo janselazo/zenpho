@@ -41,12 +41,9 @@ export default function PricingHero() {
           initial={{ opacity: 1, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, delay: 0.05 }}
-          className="text-balance text-3xl font-bold leading-[1.15] tracking-tight text-text-primary sm:text-4xl sm:leading-[1.12] lg:text-[2.75rem] lg:leading-[1.1]"
+          className="text-balance text-3xl font-bold leading-[1.15] tracking-tight text-text-primary sm:text-4xl sm:leading-[1.12] lg:text-[2.65rem] lg:leading-[1.1]"
         >
-          <span className="block">Simple, transparent pricing</span>
-          <span className="mt-1 block italic text-accent [font-family:var(--font-pricing-serif),Georgia,serif]">
-            for every build
-          </span>
+          Simple pricing for building and launching your MVP.
         </motion.h1>
 
         <motion.p
@@ -55,23 +52,9 @@ export default function PricingHero() {
           transition={{ duration: 0.4, delay: 0.1 }}
           className="mx-auto mt-5 max-w-xl text-pretty text-base leading-relaxed text-text-secondary sm:text-lg"
         >
-          Choose what you&apos;re shipping. No hidden fees — we scope milestones
-          and deliverables on a call, then lock a clear quote.
+          Zenpho offers two focused services for founders: build the product,
+          then launch and grow it.
         </motion.p>
-
-        <motion.div
-          initial={{ opacity: 1, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.14 }}
-          className="mt-8 flex flex-wrap items-center justify-center gap-3"
-        >
-          <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-sm">
-            No hidden fees
-          </span>
-          <span className="inline-flex items-center rounded-full border border-border bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wider text-text-secondary shadow-sm">
-            Fixed scope options
-          </span>
-        </motion.div>
       </div>
     </section>
   );

@@ -31,9 +31,9 @@ export default function CTASection() {
             <span className="text-accent">building</span>
           </h2>
           <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-text-secondary sm:mt-4 sm:text-base">
-            Share a short brief: what the product does, who uses it, and
-            your timeline. We&apos;ll respond with how we would approach it and
-            what a good first milestone looks like.
+            Share the problem space, earliest users, and whether you&apos;re
+            leaning MVP Development now or MVP Growth soon after launch —
+            we&apos;ll reply with scoped next steps.
           </p>
           <div className="mx-auto mt-6 flex w-full max-w-md flex-row items-stretch justify-center gap-2 sm:mt-8 sm:max-w-none sm:gap-4 md:items-center">
             <Button
@@ -42,16 +42,16 @@ export default function CTASection() {
               size="lg"
               className="min-h-9 flex-1 text-center !gap-1.5 !px-2.5 !py-2 !text-[11px] leading-tight sm:min-h-11 sm:flex-initial sm:!gap-2.5 sm:!px-8 sm:!py-3.5 sm:!text-sm sm:leading-normal"
             >
-              Book a call
+              Book an MVP Strategy Call
             </Button>
             <Button
-              href="/pricing"
+              href="/services"
               variant="dark"
               size="lg"
               showLiveDot
               className="min-h-9 flex-1 text-center !gap-1.5 !px-2.5 !py-2 !text-[11px] leading-tight sm:min-h-11 sm:flex-initial sm:!gap-2.5 sm:!px-8 sm:!py-3.5 sm:!text-sm sm:leading-normal"
             >
-              View Pricing
+              View Services
             </Button>
           </div>
         </div>

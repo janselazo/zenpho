@@ -30,16 +30,13 @@ const pricingSerif = Lora({
 });
 
 export const metadata: Metadata = {
-  title: {
-    default: "Zenpho — AI Product Studio",
-    template: "%s | Zenpho",
-  },
+  title: "Zenpho | AI MVP Development Studio for Founders",
   description:
-    "AI software development agency: websites, web apps, mobile apps, automation, and integrations — starting points from $2,500. Studio for in-house products.",
+    "Zenpho helps founders build and launch AI-powered MVPs in 2 weeks with product strategy, UX/UI, web app development, AI integrations, analytics, and growth support.",
   openGraph: {
-    title: "Zenpho — AI Software Development Agency & Studio",
+    title: "Zenpho | AI MVP Development Studio for Founders",
     description:
-      "Design, build, and launch products that scale. Transparent pricing, weekly output, Studio for in-house builds.",
+      "Zenpho helps founders build and launch AI-powered MVPs in 2 weeks with product strategy, UX/UI, web app development, AI integrations, analytics, and growth support.",
     type: "website",
     locale: "en_US",
   },

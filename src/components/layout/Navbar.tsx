@@ -70,10 +70,10 @@ export default function Navbar() {
               variant="primary"
               size="sm"
               className="!px-3.5 sm:!px-5"
-              aria-label="Book a call"
+              aria-label="Book a Call"
             >
               <span className="sm:hidden">Book</span>
-              <span className="hidden sm:inline">Book a call</span>
+              <span className="hidden sm:inline">Book a Call</span>
             </Button>
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
@@ -110,7 +110,7 @@ export default function Navbar() {
             href="/booking"
             className="rounded-xl bg-accent px-4 py-3 text-center text-sm font-semibold text-white shadow-sm"
           >
-            Book a call
+            Book a Call
           </Link>
           {headerNavLinks.map((link) => (
             <Link

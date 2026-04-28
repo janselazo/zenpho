@@ -22,8 +22,8 @@ export default function ContactHero() {
           transition={{ duration: 0.5, delay: 0.06 }}
           className="heading-display text-4xl font-bold leading-tight tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
         >
-          <span className="block">Let&apos;s talk about</span>
-          <span className="mt-1 block text-accent">your next project</span>
+          <span className="block">Let&apos;s build</span>
+          <span className="mt-1 block text-accent">your MVP.</span>
         </motion.h1>
 
         <motion.p
@@ -32,8 +32,8 @@ export default function ContactHero() {
           transition={{ duration: 0.45, delay: 0.14 }}
           className="mx-auto mt-4 max-w-xl text-base text-text-secondary"
         >
-          A few sentences about what you&apos;re building, who uses it, and
-          your timeline — that&apos;s enough to start.
+          Tell us what you are building, and we&apos;ll help you map out what a focused
+          version one could look like.
         </motion.p>
       </div>
     </section>

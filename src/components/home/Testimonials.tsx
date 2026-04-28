@@ -22,7 +22,7 @@ const testimonials: Testimonial[] = [
   },
   {
     quote:
-      "They built our online ordering flow end to end, including catalog, checkout, and fulfillment, and now we run daily operations without needing a developer. The speed of delivery and attention to detail were exceptional.",
+      "They built our mobile-first ordering product end to end — catalog, checkout, fulfillment — and today we operate without a bench of engineers. Velocity and craftsmanship were standout.",
     name: "Andrea Guzmán",
     title: "Founder",
     company: "TQMuch",

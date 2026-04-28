@@ -2,36 +2,32 @@ import SectionHeading from "@/components/ui/SectionHeading";
 
 const faqs = [
   {
-    q: "What exactly do you build?",
-    a: "We build custom web apps, mobile apps, and marketing sites — from simple MVPs to fully functional software products ready to scale.",
+    q: "How much does MVP Development cost?",
+    a: "MVP Development starts at $5,000. Most projects range from $5,000 to $50,000+, depending on the scope, complexity, integrations, and product requirements.",
   },
   {
-    q: "How long does it take to build my product?",
-    a: "We deliver your first ready-to-launch version in as little as 2 weeks, depending on the scope and complexity of your idea.",
+    q: "How much does MVP Growth cost?",
+    a: "MVP Growth starts at $2,500. Most projects range from $2,500 to $25,000+, depending on the launch scope, acquisition campaigns, landing page work, and growth support needed.",
   },
   {
-    q: "Do I need to be technical to work with you?",
-    a: "Not at all. We work with both tech and non-tech founders. You bring the idea — we handle everything else.",
+    q: "Can you really build an MVP in 2 weeks?",
+    a: "Yes, if the MVP is focused. Our 2-week sprint is designed for products with one core workflow, essential features, and a clear launch goal.",
   },
   {
-    q: "How much does it cost?",
-    a: "Every project is different. We offer affordable, transparent pricing based on your scope. Book a call and we'll give you a clear quote with no surprises.",
+    q: "Can you build any product in 2 weeks?",
+    a: "No. We can move fast, but not every product fits a 2-week timeline. Complex platforms, advanced mobile apps, enterprise systems, and compliance-heavy products may require a larger scope.",
   },
   {
-    q: "What if I only have an idea and nothing else?",
-    a: "That's exactly where we start. Our discovery process is designed to take you from raw idea to a defined, buildable product in one strategy call.",
+    q: "Do you build websites?",
+    a: "Yes. MVP Development can include a launch landing page. MVP Growth can include landing page creation or optimization.",
   },
   {
-    q: "Do you work with startups outside the U.S.?",
-    a: "Yes. We work with founders across the U.S., Latin America, and Europe — in both English and Spanish.",
+    q: "Do you build mobile apps?",
+    a: "Yes, when the scope fits. For most early-stage founders, we recommend starting with a mobile-first web app or PWA before investing in full native iOS/Android development.",
   },
   {
-    q: "Will I own the code and the product?",
-    a: "Absolutely. Once delivered, you have full ownership of your product, codebase, and all associated assets.",
-  },
-  {
-    q: "What happens after launch?",
-    a: "We support you through go-live and can continue as your development partner for future updates, new features, and scaling needs.",
+    q: "Do I need both MVP Development and MVP Growth?",
+    a: "Not always. If you need the product built, start with MVP Development. If you already have a product and need users, start with MVP Growth. Many founders use both: first build the MVP, then launch and grow it.",
   },
 ];
 
@@ -43,7 +39,7 @@ export default function FAQ() {
         title="Common"
         titleAccent="questions"
         titleAccentInline
-        description="No surprises, just clear answers about how we work."
+        description="Pricing, scope, and what to expect from an AI-powered MVP engagement."
       />
 
       <div className="mx-auto max-w-3xl space-y-3">

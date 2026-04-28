@@ -1,25 +1,31 @@
 import type { Metadata } from "next";
 import ContactHero from "./ContactHero";
+import ContactIntro from "./ContactIntro";
 import ContactForm from "@/components/contact/ContactForm";
+import ContactFitSection from "./ContactFitSection";
+import ContactPageCTA from "./ContactPageCTA";
 
 export const metadata: Metadata = {
-  title: "Contact",
+  title: {
+    absolute: "Contact Zenpho | Build Your MVP",
+  },
   description:
-    "Get in touch with Zenpho — AI software development agency for MVPs, web, mobile, plus in-house Studio products.",
+    "Contact Zenpho to discuss your MVP, AI product, web app, mobile-first app, or launch strategy. Book an MVP Strategy Call today.",
 };
 
 export default function ContactPage() {
   return (
     <>
       <ContactHero />
-      <section className="mx-auto max-w-7xl px-6 pb-32 lg:px-8">
+      <section className="mx-auto max-w-7xl px-6 pb-16 lg:px-8">
         <div className="grid gap-16 lg:grid-cols-5">
           <div className="lg:col-span-3">
+            <ContactIntro />
             <ContactForm />
           </div>
 
-          <div className="lg:col-span-2">
-            <div className="space-y-8">
+          <div className="lg:col-span-2 lg:pt-8">
+            <div className="space-y-8 lg:sticky lg:top-28">
               <div>
                 <h3 className="mb-2 font-mono text-xs uppercase tracking-widest text-text-secondary">
                   Email
@@ -76,6 +82,8 @@ export default function ContactPage() {
           </div>
         </div>
       </section>
+      <ContactFitSection />
+      <ContactPageCTA />
     </>
   );
 }

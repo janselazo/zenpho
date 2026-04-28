@@ -11,6 +11,13 @@ const clients = [
   "TQMuch",
 ];
 
+const supportingPoints = [
+  "AI MVP development for startup founders",
+  "Web apps, SaaS products, mobile-first apps, and internal tools",
+  "Product strategy, design, development, and launch support",
+  "Built for founders who need to validate fast",
+] as const;
+
 export default function Hero() {
   return (
     <section className="hero-sky relative overflow-hidden pb-10 pt-32 sm:pb-12 md:pt-36">
@@ -21,7 +28,7 @@ export default function Hero() {
           transition={{ duration: 0.55 }}
         >
           <span className={`mb-3 sm:mb-4 ${SECTION_EYEBROW_CLASSNAME}`}>
-            AI Product Studio
+            AI MVP Development Studio for Founders
           </span>
         </motion.div>
 
@@ -29,47 +36,62 @@ export default function Hero() {
           initial={{ opacity: 1, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, delay: 0.06 }}
-          className="heading-display text-6xl font-bold leading-[1.08] tracking-tight text-text-primary sm:text-7xl sm:leading-[1.06] md:text-7xl md:leading-[1.06] lg:text-8xl lg:leading-[1.04]"
+          className="heading-display max-w-[20rem] text-[1.5rem] font-bold leading-[1.15] tracking-tight text-text-primary min-[400px]:max-w-none min-[400px]:text-3xl min-[400px]:leading-[1.12] sm:text-5xl sm:leading-[1.08] md:text-5xl md:leading-[1.06] lg:text-6xl lg:leading-[1.05]"
         >
-          <span className="block">We build and scale</span>
-          <span className="mt-0.5 block text-accent sm:mt-1">software products</span>
+          <span className="block">Build your AI-powered MVP</span>
+          <span className="mt-1 block text-accent">in 2 weeks.</span>
         </motion.h1>
 
         <motion.p
           initial={{ opacity: 1, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.12 }}
-          className="mx-auto mt-3 max-w-2xl text-base font-medium leading-snug text-text-secondary sm:mt-4 sm:text-lg md:text-xl"
+          className="mx-auto mt-4 max-w-2xl text-base font-medium leading-relaxed text-text-secondary sm:mt-5 sm:text-lg md:text-xl"
         >
-          We turn your{" "}
-          <span className="font-semibold text-emerald-500">idea</span> into a
-          software product in{" "}
-          <span className="font-semibold text-accent">2 weeks</span>, built
-          fast, priced affordably, and designed to scale.
+          Zenpho helps founders turn ideas into working technology products
+          through rapid MVP development, AI integrations, UX/UI, launch pages,
+          analytics, and growth support.
         </motion.p>
+
+        <motion.ul
+          initial={{ opacity: 1, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.18 }}
+          className="mx-auto mt-8 max-w-lg space-y-2.5 text-left text-sm leading-relaxed text-text-secondary sm:mt-9 sm:max-w-2xl sm:text-[15px]"
+        >
+          {supportingPoints.map((line) => (
+            <li key={line} className="flex gap-3">
+              <span
+                className="mt-2 h-1 w-1 shrink-0 rounded-full bg-accent"
+                aria-hidden
+              />
+              <span>{line}</span>
+            </li>
+          ))}
+        </motion.ul>
 
         <motion.div
           initial={{ opacity: 1, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.24 }}
-          className="mx-auto mt-6 flex w-full max-w-md flex-row items-stretch justify-center gap-2 sm:mt-10 sm:max-w-none sm:gap-4 md:items-center"
+          className="mx-auto mt-8 flex w-full max-w-lg flex-row items-stretch justify-center gap-2 sm:mt-10 sm:max-w-none sm:gap-4 md:items-center"
         >
           <Button
-            href="/pricing"
+            href="/booking"
             variant="primary"
             size="lg"
-            className="min-h-9 flex-1 !gap-1.5 !px-3 !py-2 !text-xs sm:min-h-11 sm:flex-initial sm:!gap-2.5 sm:!px-8 sm:!py-3.5 sm:!text-sm"
+            className="min-h-9 flex-1 !gap-1.5 !px-2 !py-2 !text-[11px] leading-tight sm:min-h-11 sm:flex-initial sm:!gap-2.5 sm:!px-6 sm:!py-3.5 sm:!text-sm sm:leading-normal"
           >
-            Agency
+            Book an MVP Strategy Call
           </Button>
           <Button
-            href="/studio"
+            href="/services"
             variant="dark"
             size="lg"
             showLiveDot
             className="min-h-9 flex-1 !gap-1.5 !px-3 !py-2 !text-xs sm:min-h-11 sm:flex-initial sm:!gap-2.5 sm:!px-8 sm:!py-3.5 sm:!text-sm"
           >
-            Studio
+            View Services
           </Button>
         </motion.div>
 

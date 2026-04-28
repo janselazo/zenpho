@@ -22,7 +22,7 @@ export default function BookingHero() {
           transition={{ duration: 0.5, delay: 0.06 }}
           className="heading-display text-4xl font-bold leading-tight tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
         >
-          <span className="block">Book a call</span>
+          <span className="block">Book a Call</span>
           <span className="mt-1 block text-accent">with our team</span>
         </motion.h1>
 
@@ -32,8 +32,8 @@ export default function BookingHero() {
           transition={{ duration: 0.45, delay: 0.14 }}
           className="mx-auto mt-4 max-w-xl text-base text-text-secondary"
         >
-          Pick a time that works for you — we&apos;ll send a calendar invite
-          and come prepared to talk about your project.
+          Pick a slot — we come ready to pressure-test scope, AI fit, and
+          whether MVP Development or Growth is the right next move.
         </motion.p>
       </div>
     </section>

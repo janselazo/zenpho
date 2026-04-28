@@ -19,7 +19,7 @@ export default function TechStrip() {
         title="Tools"
         titleAccent="& platforms"
         titleAccentInline
-        description="Every stack decision is driven by your product goals."
+        description="Boring, observable defaults so your MVP ships with room to grow."
       />
 
       <div className="w-full overflow-x-auto overflow-y-hidden scroll-smooth pb-1 [-webkit-overflow-scrolling:touch]">

@@ -1,22 +1,24 @@
 import type { Metadata } from "next";
 import ServicesHero from "./ServicesHero";
-import ServicesGrid from "@/components/agency/ServicesGrid";
-import Process from "@/components/agency/Process";
-import CTASection from "@/components/home/CTASection";
+import ServicesPreview from "@/components/agency/ServicesPreview";
+import ServicesProcess from "@/components/agency/ServicesProcess";
+import ServicesClosingCTA from "./ServicesClosingCTA";
 
 export const metadata: Metadata = {
-  title: "Services",
+  title: {
+    absolute: "MVP Development and Growth Services | Zenpho",
+  },
   description:
-    "Custom websites, web apps, mobile apps, AI, and integrations — designed, built, and launched fast for founders and businesses. AI Product Studio.",
+    "Explore Zenpho's MVP Development and MVP Growth services for founders building AI SaaS products, web apps, mobile-first apps, internal tools, and marketplaces.",
 };
 
 export default function ServicesPage() {
   return (
     <>
       <ServicesHero />
-      <ServicesGrid />
-      <Process />
-      <CTASection />
+      <ServicesPreview />
+      <ServicesProcess />
+      <ServicesClosingCTA />
     </>
   );
 }

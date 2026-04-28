@@ -1,18 +1,24 @@
 import type { Metadata } from "next";
 import CaseStudiesHero from "./CaseStudiesHero";
-import PortfolioGrid from "@/components/portfolio/PortfolioGrid";
+import WorkIntro from "./WorkIntro";
+import WorkConceptGrid from "./WorkConceptGrid";
+import WorkPageCTA from "./WorkPageCTA";
 
 export const metadata: Metadata = {
-  title: "Work",
+  title: {
+    absolute: "MVP Builds and Product Concepts | Zenpho",
+  },
   description:
-    "Products that move fast and last long — MVPs to scaled software. Case studies and work from AI Product Studio.",
+    "View Zenpho's demo MVPs, AI product concepts, and studio builds showing how focused technology products can be scoped, built, and launched fast.",
 };
 
 export default function CaseStudiesPage() {
   return (
     <>
       <CaseStudiesHero />
-      <PortfolioGrid />
+      <WorkIntro />
+      <WorkConceptGrid />
+      <WorkPageCTA />
     </>
   );
 }

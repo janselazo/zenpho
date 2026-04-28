@@ -7,7 +7,7 @@ import { SECTION_EYEBROW_CLASSNAME } from "@/components/ui/SectionHeading";
 
 export default function ServicesHero() {
   return (
-    <section className="hero-sky relative flex min-h-[65vh] items-center justify-center overflow-hidden pt-28">
+    <section className="hero-sky relative flex min-h-[50vh] items-center justify-center overflow-hidden pb-14 pt-28 sm:min-h-[55vh] sm:pb-16">
       <div className="relative z-10 mx-auto max-w-4xl px-6 text-center">
         <motion.span
           initial={{ opacity: 1, y: 16 }}
@@ -15,29 +15,26 @@ export default function ServicesHero() {
           transition={{ duration: 0.45 }}
           className={`mb-5 ${SECTION_EYEBROW_CLASSNAME}`}
         >
-          AI Product Studio
+          Services
         </motion.span>
 
         <motion.h1
           initial={{ opacity: 1, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.06 }}
-          className="heading-display text-4xl font-bold leading-[1.15] tracking-tight text-balance text-text-primary sm:text-5xl sm:leading-[1.12] lg:text-6xl lg:leading-[1.1]"
+          className="heading-display text-balance text-3xl font-bold leading-[1.2] tracking-tight text-text-primary sm:text-4xl sm:leading-[1.15] lg:text-5xl lg:leading-[1.1]"
         >
-          <span className="text-text-primary">
-            We Build Software That Works{" "}
-          </span>
-          <span className="text-accent">Fast</span>
+          MVP development and growth services for startup founders.
         </motion.h1>
 
         <motion.p
           initial={{ opacity: 1, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, delay: 0.14 }}
-          className="mx-auto mt-8 max-w-2xl text-base font-medium leading-relaxed text-text-primary/80 sm:mt-9 sm:text-lg"
+          className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-text-primary/88 sm:mt-8 sm:text-lg"
         >
-          Custom websites, web apps, and mobile apps designed, built, and
-          launched for founders and businesses ready to move.
+          Zenpho helps founders scope, build, launch, and grow AI-powered MVPs
+          with a simple two-service model: MVP Development and MVP Growth.
         </motion.p>
 
         <motion.div
@@ -47,10 +44,10 @@ export default function ServicesHero() {
           className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4"
         >
           <Button href="/booking" variant="primary" size="lg">
-            Book a call
+            Book an MVP Strategy Call
           </Button>
           <Button href="/pricing" variant="dark" size="lg" showLiveDot>
-            View Pricing
+            View pricing
           </Button>
         </motion.div>
 
@@ -64,7 +61,7 @@ export default function ServicesHero() {
             href="/case-studies"
             className="text-accent underline-offset-4 hover:underline"
           >
-            See Work
+            See work
           </Link>
         </motion.p>
       </div>

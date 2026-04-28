@@ -1,20 +1,32 @@
 import type { Metadata } from "next";
 import StudioHero from "./StudioHero";
+import StudioVision from "./StudioVision";
+import StudioModelSection from "./StudioModelSection";
+import FutureProductAreas from "./FutureProductAreas";
+import WhyMatters from "./WhyMatters";
+import CurrentFocus from "./CurrentFocus";
 import VenturesGrid from "@/components/studio/VenturesGrid";
-import CTASection from "@/components/home/CTASection";
+import StudioPageCTA from "./StudioPageCTA";
 
 export const metadata: Metadata = {
-  title: "Studio",
+  title: {
+    absolute: "Zenpho Studio | AI Product Studio",
+  },
   description:
-    "AI Product Studio: products we own and scale — same team as our Agency, separate roadmap. SoldTools for car sales teams is live. Client work: Work, Services, or book a call.",
+    "Zenpho Studio is building toward an AI Product Studio model, helping founders launch products while creating our own AI-powered software.",
 };
 
 export default function StudioPage() {
   return (
     <>
       <StudioHero />
+      <StudioVision />
+      <StudioModelSection />
+      <FutureProductAreas />
+      <WhyMatters />
+      <CurrentFocus />
       <VenturesGrid />
-      <CTASection />
+      <StudioPageCTA />
     </>
   );
 }

@@ -13,16 +13,18 @@ export default function AboutIntro() {
         className="text-center"
       >
         <h2 className="heading-display text-2xl font-bold tracking-tight text-text-primary sm:text-3xl">
-          Who is this for?
+          Who we work with
         </h2>
         <div className="mx-auto mt-5 max-w-2xl text-text-secondary">
           <p className="text-center text-lg font-medium leading-relaxed sm:text-xl">
-            For{" "}
-            <span className="font-semibold text-accent-warm">tech</span>
-            {" "}and{" "}
-            <span className="font-semibold text-accent-warm">non-tech</span>{" "}
-            founders who have an idea and need a software product built fast and
-            at an affordable price.
+            <span className="font-semibold text-accent-warm">
+              Startup founders
+            </span>{" "}
+            — technical and non-technical — shipping{" "}
+            <span className="font-semibold text-accent">
+              AI-powered software products
+            </span>
+            , not brochure sites or local marketing retainers.
           </p>
         </div>
       </motion.div>

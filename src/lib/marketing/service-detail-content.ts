@@ -17,194 +17,90 @@ export type ServiceDetailBody = {
 };
 
 const bySlug: Record<string, ServiceDetailBody> = {
-  "websites-development": {
+  "mvp-development": {
     metaDescription:
-      "Custom websites from Zenpho: marketing sites and landing pages with clear IA, fast performance, accessible UI, forms and analytics — starting at $2,500.",
+      "MVP Development by Zenpho — AI-powered MVPs for founders: web apps, SaaS, PWAs, internal tools, landing pages for launch. Starting at $5,000.",
     intro: [
-      "Your website is the one place you control the full story: who you help, why you’re credible, and what you want visitors to do next. We scope around that — not a kitchen-sink sitemap — so what ships is easy to understand, fast to load, and straightforward for your team to update.",
-      "Whether it’s a focused launch page, a multi-section marketing site, or a refresh of something that’s outgrown its template, we build with the same production habits as our apps: staging previews, a short go-live checklist, and handoff notes so you’re not locked to us for every copy tweak.",
+      "Zenpho is an AI MVP development studio — not a generic web shop. We partner with startup founders to compress time-to-demo: most engagements target a working first version in about two weeks when scope stays ruthless.",
+      "You get product engineering, pragmatic AI where it supports the core loop, modern web stacks (and mobile-first PWAs or selective native slices when the roadmap calls for it). Marketing websites only show up here as launch landing pages, onboarding shells, or signup flows that support the MVP — not unrelated brochure builds.",
     ],
     sections: [
       {
-        title: "Discovery & structure",
+        title: "What we build",
+        bullets: [
+          "AI-assisted SaaS, internal tools, dashboards, and product prototypes",
+          "Marketplaces and transactional flows when the MVP needs them — still product-led, still scoped",
+          "Launch surfaces: pricing, onboarding, docs-light — whatever activates your first cohort",
+          "PWAs and mobile-first web by default; native iOS/Android MVPs when distribution or UX demands it",
+        ],
+      },
+      {
+        title: "How discovery works",
         paragraphs: [
-          "We align on audience, primary conversion goal, and the proof that goal needs (social proof, product shots, team, pricing, FAQs). That drives information architecture and page flow before we touch visual polish.",
+          "One focused strategy call locks the minimum lovable core, success metrics, and explicit out-of-scope items. We’d rather ship a narrow wedge that founders can sell than a wide mock that slips the timeline.",
         ],
         bullets: [
-          "Goals, success metrics, and explicit out-of-scope for v1",
-          "Sitemap and key sections — no mystery pages that exist “because competitors have them”",
-          "Content gaps called out early so launch isn’t blocked by missing assets",
-        ],
-      },
-      {
-        title: "Design & build",
-        bullets: [
-          "Responsive layouts and typography tuned for readability on real devices",
-          "Performance and accessibility: semantic HTML, contrast, focus states, and image discipline",
-          "Brand-consistent UI without a generic template look — scoped to your assets and tone",
-        ],
-      },
-      {
-        title: "Launch & measurement",
-        bullets: [
-          "Contact and lead capture wired to your stack (form endpoints, CRM hooks, or email) as scoped",
-          "Analytics and conversion events named so you can see what works after go-live",
-          "SEO-friendly structure: titles, descriptions, Open Graph basics, and clean URLs where it matters",
-        ],
-      },
-      {
-        title: "How we deliver",
-        paragraphs: [
-          "Same rhythm as our other engagements: visible progress, async updates in Slack, and a small number of scoped revisions so we land something you’re proud to send traffic to.",
-        ],
-        bullets: [
-          "Fixed-scope website pricing starts at $2,500; exact quote after a short discovery call",
-          "Post-launch support window included; follow-on work when you add pages, locales, or deeper integrations",
-        ],
-      },
-    ],
-    idealFor: [
-      "Companies launching or repositioning and needing a credible site before campaigns or outbound",
-      "Founders who outgrew a DIY builder but don’t need a full product app yet",
-      "Teams that want speed without sacrificing performance, accessibility, or handoff clarity",
-    ],
-  },
-  "web-applications": {
-    metaDescription:
-      "Custom web applications from Zenpho: Next.js and React, auth and roles, APIs, observability, and CI-friendly delivery — built so your team can extend the codebase after launch.",
-    intro: [
-      "Web apps are where complexity shows up: permissions, data models, edge cases, and the gap between “demo” and production. We ship SaaS surfaces, internal tools, and dashboards with the same patterns we’d use on our own products — typed boundaries, predictable deploys, and logging you can read when something breaks at 9 p.m.",
-      "You should not need a forensic archaeologist to change a screen six months later. We document assumptions, keep boundaries clean, and leave hooks for tests and CI so your next hire or agency can move fast.",
-    ],
-    sections: [
-      {
-        title: "Product engineering",
-        bullets: [
-          "Next.js / React App Router, server components where they help, client islands where they must",
-          "Authentication, organizations, and role-based access as scoped",
-          "REST or typed APIs, background jobs, and webhooks when the product needs them",
-        ],
-      },
-      {
-        title: "Quality in production",
-        bullets: [
-          "Error handling, empty states, and loading UX that match real latency",
-          "Observability: structured logs, error reporting, and basic tracing hooks",
-          "Performance: database access patterns, caching boundaries, and bundle discipline",
+          "Core user loop, riskiest assumptions, and demo or investor narrative",
+          "Data + integration boundaries so AI features stay maintainable",
+          "Launch checklist: environments, analytics hooks, error tracking",
         ],
       },
       {
         title: "Delivery & handoff",
         bullets: [
-          "Preview deployments and environments that mirror production enough to trust",
-          "CI checks (lint, typecheck, tests as agreed) so main stays shippable",
-          "Runbooks for deploy, rollback, and common operational tasks",
-        ],
-      },
-      {
-        title: "Integrations",
-        paragraphs: [
-          "Most serious apps don’t live alone. We wire billing, email, analytics, and third-party APIs with explicit failure modes and retries where appropriate.",
+          "Weekly demos, Slack async, staging before production",
+          "CI-friendly repos, ADRs when tradeoffs matter, runbooks for deploy",
+          "Post-launch support window; MVP Growth when you’re ready to optimize traction",
         ],
       },
     ],
     idealFor: [
-      "Teams shipping a new SaaS or replacing a spreadsheet workflow",
-      "Companies modernizing an internal admin or ops console",
-      "Founders who want velocity without trading away maintainability",
+      "Founders validating a new software idea with a credible v1",
+      "Teams replacing spreadsheets or duct-tape tools with a real product surface",
+      "Operators who need speed without forfeiting architectural clarity",
     ],
   },
-  "mobile-apps": {
+  "mvp-growth": {
     metaDescription:
-      "iOS and Android apps from Zenpho: React Native or native when required, push notifications, store submission support, offline-first patterns, and metrics aligned with your web product.",
+      "MVP Growth by Zenpho — acquisition, onboarding, experimentation, and measurement after your MVP is live. Starting at $2,500.",
     intro: [
-      "Mobile is a commitment: store policies, permissions, push, background behavior, and the expectation that everything works on a shaky connection. We build when the product truly belongs in a pocket — field tools, consumer apps, and companion experiences that extend what you already do on the web.",
-      "When the job doesn’t stop at the signal bar, we design for offline-first or degraded modes so users can still complete critical tasks and sync when they’re back online.",
+      "Growth isn’t a separate playbook from product. After MVP Development ships, MVP Growth tightens acquisition, onboarding, lifecycle, experiments, and instrumentation so decisions trace to observed behavior.",
+      "We’re not repositioning Zenpho as a full-service ads agency — we orchestrate traction systems that reinforce what you learned in build: channels, funnel copy tied to onboarding, cohort reviews, and test cadence.",
     ],
     sections: [
       {
-        title: "Platforms & stack",
+        title: "What lands here",
         bullets: [
-          "React Native for most cross-platform delivery; native Swift/Kotlin slices when constraints demand it",
-          "Shared design language with your web product where both exist",
-          "Deep links, universal links, and app config for staging vs production",
+          "Experiment design: hypotheses, guards, kill criteria — sized to runway",
+          "Funnel instrumentation and dashboards founders can interpret",
+          "Lifecycle messaging experiments across email, product, and paid pilots when relevant",
+          "Landing and activation assets aligned to the existing MVP narrative",
         ],
       },
       {
-        title: "Store readiness",
-        bullets: [
-          "App Store and Play Console setup, signing, and release tracks as scoped",
-          "Privacy manifests, permission copy, and review notes prepared pragmatically",
-          "Crash reporting and release health so post-launch isn’t a blind spot",
-        ],
-      },
-      {
-        title: "Lifecycle after v1",
-        bullets: [
-          "Push notifications and in-app messaging patterns when your roadmap needs them",
-          "OTA-friendly workflows for JS bundles where applicable; store updates when not",
-          "Iteration cadence aligned with analytics and support feedback",
-        ],
-      },
-      {
-        title: "Reliability & UX",
+        title: "How we collaborate",
         paragraphs: [
-          "We treat mobile-specific states as first-class: permissions denied, background refresh limits, keyboard overlap, and one-handed use on common screens.",
+          "We integrate with what's already deployed — analytics, attribution, CRM, support — rather than rewriting your stack.",
+        ],
+        bullets: [
+          "North-star behaviors and weekly readouts instead of vanity metrics alone",
+          "Growth backlog synced with engineering capacity",
+          "Clear handoffs when experiments need product changes vs. channel tweaks",
+        ],
+      },
+      {
+        title: "When to start",
+        bullets: [
+          "You already have usable software in production with real sessions",
+          "You need repeatable learning loops, not one-off campaigns",
+          "You're ready to commit to iteration velocity alongside roadmap work",
         ],
       },
     ],
     idealFor: [
-      "Products where frequency or context favors a native shell over mobile web",
-      "Teams that need Apple and Google presence for trust or distribution",
-      "Workflows used on the go (field service, sales, logistics, events)",
-    ],
-  },
-  "ai-automations": {
-    metaDescription:
-      "AI automations from Zenpho: one high-ROI workflow per engagement — CRM and email hooks, webhooks, LLM-assisted steps with guardrails, and observability. Starting at $3,000.",
-    intro: [
-      "We combine deterministic integrations with AI only where it earns its place: the boring plumbing stays boring (OAuth, webhooks, queues, retries), and models handle judgment-heavy slices with explicit boundaries, approvals, and logging.",
-      "Each engagement scopes one workflow end to end — discovery, build, and handoff — so you get something shippable and maintainable, not a shelf of half-wired experiments.",
-    ],
-    sections: [
-      {
-        title: "Workflows & integrations",
-        bullets: [
-          "CRM, email, spreadsheets, and SaaS APIs wired with idempotency and failure handling you can see",
-          "Webhook receivers, scheduled jobs, and event pipelines sized to your volume",
-          "Human approval gates where money, customers, or compliance are on the line",
-        ],
-      },
-      {
-        title: "AI where it helps",
-        bullets: [
-          "Classification, summarization, routing, or draft generation scoped to your data and policies",
-          "Retrieval and tool use when the task needs context — not a generic chat shell",
-          "Cost, latency, and evaluation hooks so you can tune or roll back without drama",
-        ],
-      },
-      {
-        title: "Safety & operations",
-        paragraphs: [
-          "Customer-facing or revenue-touching automation gets the same bar as product AI: PII handling, rate limits, escalation when confidence is low, and audit-friendly logs as agreed.",
-        ],
-        bullets: [
-          "Dead-letter and replay paths so flaky partners don’t become silent failures",
-          "Runbooks and handoff so your team can pause, extend, or change providers",
-        ],
-      },
-      {
-        title: "How we deliver",
-        bullets: [
-          "Fixed-scope AI Automations pricing starts at $3,000; exact quote after a short discovery call",
-          "One primary workflow per engagement — expand with follow-on slices when the first loop is stable",
-        ],
-      },
-    ],
-    idealFor: [
-      "Ops and revenue teams bridging SaaS tools with too much copy-paste",
-      "Products that need in-app assistive flows or semantic search over proprietary content",
-      "Companies ready to own integrations instead of brittle no-code chains alone",
+      "Post-launch founders who need disciplined traction mechanics",
+      "Teams with product-market-fit signals still buried in spreadsheets",
+      "Operators balancing burn with experimentation throughput",
     ],
   },
 };

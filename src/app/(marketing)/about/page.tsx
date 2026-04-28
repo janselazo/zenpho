@@ -1,13 +1,21 @@
 import type { Metadata } from "next";
 import AboutHero from "./AboutHero";
+import AboutOurStory from "./AboutOurStory";
+import AboutWhatWeBelieve from "./AboutWhatWeBelieve";
+import AboutWhoWeHelp from "./AboutWhoWeHelp";
+import AboutWhatWeDo from "./AboutWhatWeDo";
+import AboutFuture from "./AboutFuture";
+import AboutCTASection from "./AboutCTASection";
 import SectionHeading from "@/components/ui/SectionHeading";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 
 export const metadata: Metadata = {
-  title: "About",
+  title: {
+    absolute: "About Zenpho | AI MVP Development Studio",
+  },
   description:
-    "Meet the Zenpho founder, then how the studio splits Agency client work and in-house Studio products. Web, mobile, and marketing sites — first version in two weeks. Miami, FL.",
+    "Learn about Zenpho, an AI MVP development studio helping startup founders build, launch, and grow technology products faster.",
 };
 
 const highlights = [
@@ -29,28 +37,39 @@ export default function AboutPage() {
     <>
       <AboutHero />
 
+      <AboutOurStory />
+
+      <AboutWhatWeBelieve />
+
+      <AboutWhoWeHelp />
+
+      <AboutWhatWeDo />
+
       <section className="mx-auto max-w-3xl px-6 pb-20 lg:px-8">
         <SectionHeading
           align="left"
           label="Founder"
           title="Janse Lazo"
-          description="Founder and principal of Zenpho. Software engineer with an MBA — I've shipped products from zero to thousands of customers and still write alongside the team."
+          description="Founder and principal of Zenpho. Software engineer with an MBA — shipped products from zero to thousands of customers and still builds alongside the team."
         />
         <Card className="border-border/80 bg-white p-8 shadow-soft sm:p-10">
           <p className="text-base leading-relaxed text-text-secondary">
-            I started Zenpho because too many teams get pretty mockups and slow
-            cycles instead of momentum. You should see a{" "}
+            I started Zenpho because founders shouldn&apos;t lose months to vague
+            roadmaps instead of traction. Expect a{" "}
             <span className="font-medium text-text-primary">
-              first working version in two weeks
-            </span>
-            , then steady weekly progress — not a big reveal months later.
+              demo-ready AI MVP in roughly two weeks
+            </span>{" "}
+            when scope stays ruthless — followed by weekly increments, not a
+            single massive reveal months later.
           </p>
           <p className="mt-6 text-base leading-relaxed text-text-secondary">
-            My background is{" "}
-            <span className="font-medium text-text-primary">engineering plus go-to-market</span>
-            : shipping, onboarding, support, and growth as one system. I lead
-            strategy and delivery for client work through the Agency and our own
-            roadmap through the Studio — same bar for both.
+            My background ties{" "}
+            <span className="font-medium text-text-primary">
+              engineering to go-to-market
+            </span>
+            : onboarding, instrumentation, launch, iteration. Founder-facing
+            work runs through the Agency; our own roadmap runs through Studio —
+            one standard for shipped software.
           </p>
         </Card>
       </section>
@@ -58,7 +77,7 @@ export default function AboutPage() {
       <section className="mx-auto max-w-3xl px-6 pb-20 lg:px-8">
         <SectionHeading
           align="left"
-          label="Story"
+          label="Journey"
           title="From engineering roots to"
           titleAccent="products that scale"
           description="Years building in the U.S. showed me that great software is never only code. It's how people discover it, trust it, and come back. That thread runs from my own ventures to how we work with clients today."
@@ -67,11 +86,11 @@ export default function AboutPage() {
           <p className="text-base leading-relaxed text-text-secondary">
             We take the same stance as on the homepage:{" "}
             <span className="font-medium text-text-primary">
-              most agencies build what you ask for; we build what you need to
-              win
+              founders need AI-assisted MVPs, not generic brochures
             </span>
-            — web apps, mobile apps, and marketing sites, with growth and
-            retention in the room from day one.
+            — SaaS, PWAs, internal tools, product prototypes — with launch landers
+            only when they onboard users, and MVP Growth staged once signals
+            show up after release.
           </p>
           <p className="mt-6 text-base leading-relaxed text-text-secondary">
             A chapter that proved that for me was{" "}
@@ -106,19 +125,18 @@ export default function AboutPage() {
         <Card className="border-border/80 bg-white p-8 shadow-soft sm:p-10">
           <p className="text-base leading-relaxed text-text-secondary">
             <span className="font-medium text-text-primary">Zenpho Agency</span>{" "}
-            is where most of our calendar lives: SaaS, marketing sites,
-            dashboards, and internal tools for teams that need focused execution.
-            We own the full path — scope, design, build, and handoff — so you
-            can run what we ship without friction.
+            is where most of our calendar lives: MVP Development and MVP Growth
+            for founders — scope, design, ship, measure. No positioning as a
+            generalist web design or local business shop; we stay product-led.
           </p>
           <p className="mt-6 text-base leading-relaxed text-text-secondary">
             <span className="font-medium text-text-primary">Zenpho Studio</span>{" "}
             is where we build and run{" "}
             <span className="font-medium text-text-primary">SoldTools</span> — a
-            live product for car sales teams (leads, scheduling, deal context,
-            referrals). Keeping something in production under our own name keeps
-            us honest about maintenance, support, and the long tail after launch —
-            the same bar we hold for your product.
+            live SaaS for car sales teams (leads, scheduling, deal context,
+            referrals). Owning production software keeps us accountable for
+            maintenance, support, and the long tail after launch — the same bar
+            we hold for what we ship for founders.
           </p>
           <div className="mt-8">
             <Button href="/contact" variant="primary" size="md">
@@ -127,6 +145,8 @@ export default function AboutPage() {
           </div>
         </Card>
       </section>
+
+      <AboutFuture />
 
       <section className="mx-auto max-w-3xl px-6 pb-20 lg:px-8">
         <SectionHeading
@@ -155,7 +175,7 @@ export default function AboutPage() {
           title="Trust"
           titleAccent="& craft"
           titleAccentInline
-          description="Software engineer with an MBA and real product growth experience, backed by marketing-platform certifications — so engineering and go-to-market choices serve your product goals, not the tool-of-the-week."
+          description="Engineering plus growth execution — certifications across modern marketing stacks so MVP Development and MVP Growth tie back to behavior, not vendor hype."
         />
         <div className="flex flex-wrap gap-3">
           {credentials.map((c) => (
@@ -168,6 +188,8 @@ export default function AboutPage() {
           ))}
         </div>
       </section>
+
+      <AboutCTASection />
     </>
   );
 }

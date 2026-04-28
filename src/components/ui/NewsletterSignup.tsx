@@ -78,8 +78,8 @@ export default function NewsletterSignup({ compact }: NewsletterSignupProps) {
           Build smarter, <span className="text-accent">ship faster</span>
         </h3>
         <p className="mt-2 text-sm text-text-secondary">
-          Practical lessons on building products, scaling growth, and using AI
-          to move faster, straight from our studio to your inbox.
+          Field notes on AI MVPs, traction systems, and founder shipping — from
+          the same team building Studio products.
         </p>
         {status === "success" ? (
           <p className="mt-6 text-sm text-accent-violet">

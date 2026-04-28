@@ -28,28 +28,43 @@ const nextConfig = {
       { source: "/agency", destination: "/services", permanent: true },
       { source: "/methodology", destination: "/about", permanent: true },
       {
-        source: "/services/mvp-development",
-        destination: "/services/websites-development",
+        source: "/services/websites-development",
+        destination: "/services/mvp-development",
         permanent: true,
       },
       {
         source: "/services/websites-ecommerce",
-        destination: "/services/websites-development",
+        destination: "/services/mvp-development",
         permanent: true,
       },
       {
         source: "/services/websites",
-        destination: "/services/websites-development",
+        destination: "/services/mvp-development",
+        permanent: true,
+      },
+      {
+        source: "/services/web-applications",
+        destination: "/services/mvp-development",
+        permanent: true,
+      },
+      {
+        source: "/services/mobile-apps",
+        destination: "/services/mvp-development",
+        permanent: true,
+      },
+      {
+        source: "/services/ai-automations",
+        destination: "/services/mvp-growth",
         permanent: true,
       },
       {
         source: "/services/ai-in-your-product",
-        destination: "/services/ai-automations",
+        destination: "/services/mvp-development",
         permanent: true,
       },
       {
         source: "/services/automation-integrations",
-        destination: "/services/ai-automations",
+        destination: "/services/mvp-growth",
         permanent: true,
       },
     ];
