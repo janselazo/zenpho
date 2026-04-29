@@ -29,7 +29,7 @@ export default function Hero() {
           initial={{ opacity: 1, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, delay: 0.06 }}
-          className="heading-display mx-auto max-w-2xl text-3xl font-bold leading-[1.02] tracking-tight text-text-primary min-[390px]:text-4xl min-[390px]:leading-[1] sm:max-w-4xl sm:text-7xl sm:leading-[0.98] md:text-7xl md:leading-[0.98] lg:max-w-5xl lg:text-8xl lg:leading-[0.97]"
+          className="heading-display mx-auto max-w-2xl text-2xl font-bold leading-[1.04] tracking-tight text-text-primary min-[390px]:text-3xl min-[390px]:leading-[1.02] sm:max-w-4xl sm:text-6xl sm:leading-[1] md:text-6xl md:leading-[1] lg:max-w-5xl lg:text-7xl lg:leading-[0.99]"
         >
           <span className="block leading-[1.02] text-text-primary">
             We build and scale
