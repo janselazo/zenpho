@@ -244,6 +244,14 @@ const INTEGRATIONS: IntegrationItem[] = [
     description: "Sync Outlook calendar events and meeting invites",
     available: true,
   },
+  {
+    id: "ahrefs",
+    name: "Ahrefs",
+    category: "SEO",
+    description:
+      "Site audits, keyword rankings, and backlink insights alongside your CRM",
+    available: false,
+  },
 ];
 
 function categoryPillClass(category: string) {
@@ -260,6 +268,8 @@ function categoryPillClass(category: string) {
     return "bg-amber-100 text-amber-950 dark:bg-amber-950/40 dark:text-amber-200";
   if (c === "calendar")
     return "bg-indigo-100 text-indigo-900 dark:bg-indigo-950/50 dark:text-indigo-200";
+  if (c === "seo")
+    return "bg-teal-100 text-teal-900 dark:bg-teal-950/50 dark:text-teal-200";
   return "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300";
 }
 
