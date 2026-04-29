@@ -348,7 +348,6 @@ export default function LeadEditForm({
   const [activeTab, setActiveTab] = useState<string>("contact");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
   const [projectModalOpen, setProjectModalOpen] = useState(false);
   const [quickAppointmentOpen, setQuickAppointmentOpen] = useState(false);
   const [quickApptInitialYmd, setQuickApptInitialYmd] = useState<string | null>(
@@ -425,7 +424,6 @@ export default function LeadEditForm({
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    setSaved(false);
     setPending(true);
     const fd = new FormData(e.currentTarget);
     const res = await updateLeadRow(fd);
@@ -434,7 +432,6 @@ export default function LeadEditForm({
       setError(res.error);
       return;
     }
-    setSaved(true);
     router.refresh();
   }
 
@@ -525,11 +522,6 @@ export default function LeadEditForm({
         {error ? (
           <p className="mt-4 text-sm text-red-600 dark:text-red-400" role="alert">
             {error}
-          </p>
-        ) : null}
-        {saved ? (
-          <p className="mt-4 text-sm font-medium text-emerald-700 dark:text-emerald-400">
-            Saved.
           </p>
         ) : null}
 

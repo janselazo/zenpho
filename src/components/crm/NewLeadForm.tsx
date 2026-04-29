@@ -82,6 +82,19 @@ export default function NewLeadForm({
         </div>
         <div className="sm:col-span-2">
           <label className="mb-1 block text-xs font-medium text-text-secondary">
+            Website
+          </label>
+          <input
+            name="website"
+            type="url"
+            inputMode="url"
+            autoComplete="url"
+            placeholder="https://company.com"
+            className={inputClass}
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="mb-1 block text-xs font-medium text-text-secondary">
             Project type
           </label>
           <select

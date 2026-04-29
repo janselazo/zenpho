@@ -3,15 +3,15 @@ import { CalendarSync, Check, Clock, X } from "lucide-react";
 
 export type AppointmentStatus =
   | "scheduled"
+  | "rescheduled"
   | "completed"
-  | "cancelled"
-  | "rescheduled";
+  | "cancelled";
 
 export const APPOINTMENT_STATUS_LIST: readonly AppointmentStatus[] = [
   "scheduled",
+  "rescheduled",
   "completed",
   "cancelled",
-  "rescheduled",
 ] as const;
 
 export const APPOINTMENT_STATUS_SET = new Set<string>(APPOINTMENT_STATUS_LIST);

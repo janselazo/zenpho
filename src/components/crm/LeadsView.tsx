@@ -3116,6 +3116,19 @@ function NewLeadModal({
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-text-primary">
+              Website
+            </label>
+            <input
+              name="website"
+              type="url"
+              inputMode="url"
+              autoComplete="url"
+              placeholder="https://company.com"
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-text-primary">
               Project type
             </label>
             <select
