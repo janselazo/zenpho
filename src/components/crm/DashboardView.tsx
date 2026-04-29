@@ -1193,14 +1193,14 @@ export default function DashboardView({
                       <p className="text-sm font-medium text-text-primary dark:text-zinc-100">
                         {row.title}
                       </p>
-                      <div className="mt-1.5">
-                        <AppointmentStatusBadge status={row.status} />
-                      </div>
                       {row.meta ? (
                         <p className="mt-1.5 text-xs text-text-secondary dark:text-zinc-500">
                           {row.meta}
                         </p>
                       ) : null}
+                      <div className="mt-1.5">
+                        <AppointmentStatusBadge status={row.status} />
+                      </div>
                     </div>
                     <span className="shrink-0 text-xs font-medium tabular-nums text-text-secondary dark:text-zinc-400">
                       {formatDashboardApptStart(row.starts_at)}

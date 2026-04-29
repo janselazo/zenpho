@@ -560,14 +560,14 @@ function AppointmentList({
             >
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-text-primary">{row.title}</p>
-                <div className="mt-1.5">
-                  <AppointmentStatusBadge status={row.status} />
-                </div>
                 {meta ? (
-                  <p className="mt-2 text-xs text-text-secondary dark:text-zinc-400">
+                  <p className="mt-1.5 text-xs text-text-secondary dark:text-zinc-400">
                     {meta}
                   </p>
                 ) : null}
+                <div className="mt-1.5">
+                  <AppointmentStatusBadge status={row.status} />
+                </div>
                 {row.description?.trim() ? (
                   <p className="mt-1.5 text-sm text-text-secondary line-clamp-2 dark:text-zinc-400">
                     {row.description.trim()}

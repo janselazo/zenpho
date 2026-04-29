@@ -1501,7 +1501,7 @@ function LeadsPipelineBoard({
                 ) : null}
               </div>
             </div>
-            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+            <p className="mt-1 truncate text-xs tabular-nums text-zinc-500 dark:text-zinc-400">
               {formatLeadPhone(lead.phone)}
             </p>
             {lead.company?.trim() ? (
@@ -1814,7 +1814,7 @@ function LeadsTable({
             <th className="px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               Name
             </th>
-            <th className="px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            <th className="min-w-[11rem] whitespace-nowrap px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               Phone
             </th>
             <th className="px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
@@ -1923,7 +1923,7 @@ function LeadsTable({
                     )}
                   </div>
                 </td>
-                <td className="px-4 py-2.5 align-top">
+                <td className="min-w-[11rem] whitespace-nowrap px-4 py-2.5 align-top">
                   {isEditing ? (
                     <input
                       type="tel"
@@ -1932,10 +1932,10 @@ function LeadsTable({
                         setDraft((d) => (d ? { ...d, phone: e.target.value } : d))
                       }
                       placeholder="(555) 000-0000"
-                      className={inlineInputClass}
+                      className={`${inlineInputClass} min-w-[11rem]`}
                     />
                   ) : (
-                    <span className="text-zinc-600 dark:text-zinc-400">
+                    <span className="tabular-nums text-zinc-600 dark:text-zinc-400">
                       {formatLeadPhone(lead.phone)}
                     </span>
                   )}
