@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { readProjectSourceLeadId } from "@/lib/crm/prospect-client-shell";
 
 /**
  * Calendar month bounds as ISO strings for timestamptz filters.
@@ -44,8 +45,8 @@ export async function fetchMonthlyClientsWonCount(
 }
 
 /**
- * Sum of `project.budget` for projects created in the calendar month.
- * Matches dashboard funnel revenue semantics (projects, not deals).
+ * Sum of `project.budget` for root products whose lead is Won (projects from a lead with
+ * `metadata.sourceLeadId`) or any product without a source lead link (studio clients).
  */
 export async function fetchMonthlyRevenueFromWonClientProjects(
   supabase: SupabaseClient,
@@ -55,12 +56,42 @@ export async function fetchMonthlyRevenueFromWonClientProjects(
 
   const { data: projects, error } = await supabase
     .from("project")
-    .select("budget")
+    .select("budget, metadata")
     .is("parent_project_id", null)
     .gte("created_at", startIso)
     .lte("created_at", endIso);
 
   if (error) return 0;
 
-  return (projects ?? []).reduce((s, p) => s + Number(p.budget ?? 0), 0);
+  const leadIds = [
+    ...new Set(
+      (projects ?? [])
+        .map((p) => readProjectSourceLeadId(p.metadata))
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+
+  const stageByLead = new Map<string, string>();
+  if (leadIds.length > 0) {
+    const { data: lr } = await supabase
+      .from("lead")
+      .select("id, stage")
+      .in("id", leadIds);
+    for (const r of lr ?? []) {
+      stageByLead.set(
+        r.id as string,
+        String((r.stage as string | null) ?? "").trim()
+      );
+    }
+  }
+
+  let sum = 0;
+  for (const p of projects ?? []) {
+    const sid = readProjectSourceLeadId(p.metadata);
+    if (sid) {
+      if (stageByLead.get(sid) !== "closed_won") continue;
+    }
+    sum += Number((p.budget as number | null) ?? 0);
+  }
+  return sum;
 }

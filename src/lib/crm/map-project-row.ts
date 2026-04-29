@@ -18,6 +18,8 @@ export type CrmProjectPersistInput = {
   website: string | null;
   teamId: string;
   teamName: string | null;
+  /** When creating from a lead: stored on metadata for Won/booked semantics. */
+  sourceLeadId?: string | null;
 };
 
 /** Kanban / table product code: `PRJ-001` when `referenceNumber` is set; else legacy id tail. */

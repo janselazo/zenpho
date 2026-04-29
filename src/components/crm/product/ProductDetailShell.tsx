@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import TabBar from "@/components/crm/TabBar";
@@ -16,15 +17,48 @@ import type { ChildDeliveryStatusUiConfig } from "@/lib/crm/child-delivery-statu
 import { parseCustomProjectStatuses } from "@/lib/crm/custom-project-status";
 import NewProductProjectModal from "@/components/crm/product/NewProductProjectModal";
 import ProductOverviewTab from "@/components/crm/product/ProductOverviewTab";
-import ProductDiscoveryTab from "@/components/crm/product/ProductDiscoveryTab";
-import ProductRoadmapPhasesTab from "@/components/crm/product/ProductRoadmapPhasesTab";
-import ProductBacklogTab from "@/components/crm/product/ProductBacklogTab";
-import ProductSprintBoardTab from "@/components/crm/product/ProductSprintBoardTab";
-import ProductIssuesLinearTab from "@/components/crm/product/ProductIssuesLinearTab";
-import ProductReleasesTab from "@/components/crm/product/ProductReleasesTab";
-import ProductResourcesTab from "@/components/crm/product/ProductResourcesTab";
-import ProductSettingsTab from "@/components/crm/product/ProductSettingsTab";
 import ProductOwnerSummaryField from "@/components/crm/product/ProductOwnerSummaryField";
+
+function TabPanelLoading({ label }: { label: string }) {
+  return (
+    <p className="text-sm text-text-secondary dark:text-zinc-500" role="status">
+      Loading {label}…
+    </p>
+  );
+}
+
+const ProductDiscoveryTab = dynamic(
+  () => import("@/components/crm/product/ProductDiscoveryTab"),
+  { loading: () => <TabPanelLoading label="Discovery" /> }
+);
+const ProductRoadmapPhasesTab = dynamic(
+  () => import("@/components/crm/product/ProductRoadmapPhasesTab"),
+  { loading: () => <TabPanelLoading label="Roadmap" /> }
+);
+const ProductBacklogTab = dynamic(
+  () => import("@/components/crm/product/ProductBacklogTab"),
+  { loading: () => <TabPanelLoading label="Backlog" /> }
+);
+const ProductSprintBoardTab = dynamic(
+  () => import("@/components/crm/product/ProductSprintBoardTab"),
+  { loading: () => <TabPanelLoading label="Sprint board" /> }
+);
+const ProductIssuesLinearTab = dynamic(
+  () => import("@/components/crm/product/ProductIssuesLinearTab"),
+  { loading: () => <TabPanelLoading label="QA" /> }
+);
+const ProductReleasesTab = dynamic(
+  () => import("@/components/crm/product/ProductReleasesTab"),
+  { loading: () => <TabPanelLoading label="Releases" /> }
+);
+const ProductResourcesTab = dynamic(
+  () => import("@/components/crm/product/ProductResourcesTab"),
+  { loading: () => <TabPanelLoading label="Resources" /> }
+);
+const ProductSettingsTab = dynamic(
+  () => import("@/components/crm/product/ProductSettingsTab"),
+  { loading: () => <TabPanelLoading label="Settings" /> }
+);
 
 const LEGACY_TAB_MAP: Record<string, string> = {
   projects: "overview",
@@ -62,6 +96,10 @@ type Props = {
   childDeliveryStatusUi: ChildDeliveryStatusUiConfig;
   productMetadata: unknown;
   planLabels?: Record<string, string>;
+  /** SSR: roadmap / discovery row counts for Overview (avoids client round-trips when set). */
+  overviewRoadmapPhaseCount?: number | null;
+  overviewDiscoverySectionCount?: number | null;
+  overviewCountsError?: string | null;
 };
 
 function MetaField({
@@ -87,6 +125,9 @@ export default function ProductDetailShell({
   childDeliveryStatusUi,
   productMetadata,
   planLabels = PLAN_LABELS,
+  overviewRoadmapPhaseCount = null,
+  overviewDiscoverySectionCount = null,
+  overviewCountsError = null,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -336,6 +377,9 @@ export default function ProductDetailShell({
             childrenProjects={childrenProjects}
             productMetadata={productMetadata}
             childDeliveryStatusUi={childDeliveryStatusUi}
+            roadmapPhaseCount={overviewRoadmapPhaseCount ?? undefined}
+            discoverySectionCount={overviewDiscoverySectionCount ?? undefined}
+            countsLoadingError={overviewCountsError}
             onOpenProject={(id) => setQuery({ tab: "backlog", project: id })}
             onNewProject={(preset) => {
               setNewProjectGroupPreset(preset);

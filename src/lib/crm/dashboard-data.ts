@@ -1,5 +1,8 @@
 import { enumerateDays } from "@/lib/crm/dashboard-range";
 import {
+  notesIncludeProspectShellMarker,
+} from "@/lib/crm/prospect-client-shell";
+import {
   type ClientsCreatedPoint,
   type DashboardFunnelStage,
   type DashboardRangeTotals,
@@ -38,24 +41,29 @@ export async function fetchDashboardKpis(from: string, to: string) {
   const rs = rangeStart(from);
   const re = rangeEnd(to);
 
-  const [clients, projects] = await Promise.all([
-    supabase
-      .from("client")
-      .select("*", { count: "exact", head: true })
-      .gte("created_at", rs)
-      .lte("created_at", re),
-    supabase
-      .from("project")
-      .select("*", { count: "exact", head: true })
-      .is("parent_project_id", null)
-      .gte("created_at", rs)
-      .lte("created_at", re),
-  ]);
+  const [{ data: clientsInRange, error: clientsErr }, projects] =
+    await Promise.all([
+      supabase
+        .from("client")
+        .select("notes")
+        .gte("created_at", rs)
+        .lte("created_at", re),
+      supabase
+        .from("project")
+        .select("*", { count: "exact", head: true })
+        .is("parent_project_id", null)
+        .gte("created_at", rs)
+        .lte("created_at", re),
+    ]);
+
+  const activeClients = (clientsInRange ?? []).filter(
+    (r) => !notesIncludeProspectShellMarker(r.notes as string | null)
+  ).length;
 
   return {
-    activeClients: clients.count ?? 0,
+    activeClients,
     activeProjects: projects.count ?? 0,
-    errors: [clients.error, projects.error].filter(Boolean),
+    errors: [clientsErr, projects.error].filter(Boolean),
   };
 }
 
@@ -249,7 +257,7 @@ export async function fetchDashboardRangeTotals(
   const rs = rangeStart(from);
   const re = rangeEnd(to);
 
-  const [leadsRes, apptsRes, clientsRes, revenueRes] = await Promise.all([
+  const [leadsRes, apptsRes, clientsRange, revenueRes] = await Promise.all([
     supabase
       .from("lead")
       .select("*", { count: "exact", head: true })
@@ -262,7 +270,7 @@ export async function fetchDashboardRangeTotals(
       .lte("starts_at", re),
     supabase
       .from("client")
-      .select("*", { count: "exact", head: true })
+      .select("notes")
       .gte("created_at", rs)
       .lte("created_at", re),
     supabase
@@ -276,10 +284,14 @@ export async function fetchDashboardRangeTotals(
   const revenue =
     revenueRes.data?.reduce((s, r) => s + Number(r.amount), 0) ?? 0;
 
+  const clientsCount = (clientsRange.data ?? []).filter(
+    (r) => !notesIncludeProspectShellMarker(r.notes as string | null)
+  ).length;
+
   return {
     leads: leadsRes.count ?? 0,
     appointments: apptsRes.count ?? 0,
-    clients: clientsRes.count ?? 0,
+    clients: clientsCount,
     revenue,
   };
 }
@@ -298,7 +310,7 @@ export async function fetchClientsCreatedSeries(
 
   const { data } = await supabase
     .from("client")
-    .select("created_at")
+    .select("created_at, notes")
     .gte("created_at", rs)
     .lte("created_at", re);
 
@@ -307,6 +319,7 @@ export async function fetchClientsCreatedSeries(
     byDay[d] = 0;
   }
   for (const row of data ?? []) {
+    if (notesIncludeProspectShellMarker(row.notes as string | null)) continue;
     const k = dayKeyFromTimestamptz(row.created_at as string);
     if (byDay[k] !== undefined) byDay[k] += 1;
   }

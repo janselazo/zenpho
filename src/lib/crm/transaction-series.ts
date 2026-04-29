@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { enumerateDays } from "@/lib/crm/dashboard-range";
+import { readProjectSourceLeadId } from "@/lib/crm/prospect-client-shell";
 
 export type DailyMoneyPoint = {
   label: string;
@@ -211,7 +212,7 @@ export async function getProjectBudgetSeriesForRange(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("project")
-    .select("created_at, budget")
+    .select("created_at, budget, metadata")
     .is("parent_project_id", null)
     .gte("created_at", `${from}T00:00:00.000Z`)
     .lte("created_at", `${to}T23:59:59.999Z`);
@@ -220,12 +221,43 @@ export async function getProjectBudgetSeriesForRange(
     return emptySeries();
   }
 
+  const leadIds = [
+    ...new Set(
+      (data ?? [])
+        .map((row) => readProjectSourceLeadId(row.metadata))
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+
+  const stageByLead = new Map<string, string>();
+  if (leadIds.length > 0) {
+    const chunk = 200;
+    for (let i = 0; i < leadIds.length; i += chunk) {
+      const slice = leadIds.slice(i, i + chunk);
+      const { data: lr } = await supabase
+        .from("lead")
+        .select("id, stage")
+        .in("id", slice);
+      for (const r of lr ?? []) {
+        stageByLead.set(
+          r.id as string,
+          String((r.stage as string | null) ?? "").trim()
+        );
+      }
+    }
+  }
+
   const sums: Record<string, number> = {};
   for (const k of plan.bucketKeys) {
     sums[k] = 0;
   }
 
   for (const row of data ?? []) {
+    const sid = readProjectSourceLeadId(row.metadata);
+    if (sid) {
+      const st = stageByLead.get(sid) ?? "";
+      if (st !== "closed_won") continue;
+    }
     const keyDay = dayKeyFromTimestamptz(row.created_at as string);
     if (keyDay < from || keyDay > to) continue;
     const bucket = bucketForDayKey(keyDay, plan);

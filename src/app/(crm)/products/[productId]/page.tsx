@@ -8,6 +8,10 @@ import {
 } from "@/lib/crm/map-project-row";
 import { parseChildDeliveryStatusUi } from "@/lib/crm/child-delivery-status-ui";
 import { parseProductResources } from "@/lib/crm/product-project-metadata";
+import {
+  listDiscoverySections,
+  listRoadmapPhases,
+} from "@/app/(crm)/actions/product-manager";
 import ProductDetailShell from "@/components/crm/product/ProductDetailShell";
 import { fetchMergedCrmFieldOptions } from "@/lib/crm/fetch-crm-field-options";
 
@@ -38,25 +42,46 @@ export default async function ProductOverviewPage({
     );
   }
 
-  const { data: client } = await supabase
-    .from("client")
-    .select("name, email, company")
-    .eq("id", row.client_id)
-    .maybeSingle();
+  const [
+    fieldOptions,
+    clientRes,
+    childrenRes,
+    roadmapListing,
+    discoveryListing,
+  ] = await Promise.all([
+    fetchMergedCrmFieldOptions(),
+    supabase
+      .from("client")
+      .select("name, email, company")
+      .eq("id", row.client_id as string)
+      .maybeSingle(),
+    supabase
+      .from("project")
+      .select("id, title, plan_stage, metadata, target_date, created_at")
+      .eq("parent_project_id", productId)
+      .order("created_at", { ascending: true }),
+    listRoadmapPhases(productId),
+    listDiscoverySections(productId),
+  ]);
 
-  const fieldOptions = await fetchMergedCrmFieldOptions();
+  const client = clientRes.data;
+  const overviewRoadmapPhaseCount =
+    roadmapListing.error == null ? roadmapListing.rows?.length ?? 0 : null;
+  const overviewDiscoverySectionCount =
+    discoveryListing.error == null ? discoveryListing.rows?.length ?? 0 : null;
+  const overviewCountsError =
+    roadmapListing.error && roadmapListing.error !== "Unauthorized"
+      ? roadmapListing.error
+      : discoveryListing.error &&
+          discoveryListing.error !== "Unauthorized"
+        ? discoveryListing.error
+        : null;
 
   const project = projectRowToMock(
     row as ProjectRow,
     clientRowToProjectSlice(client ?? undefined),
     { fieldOptions }
   );
-
-  const { data: children } = await supabase
-    .from("project")
-    .select("id, title, plan_stage, metadata, target_date, created_at")
-    .eq("parent_project_id", productId)
-    .order("created_at", { ascending: true });
 
   const initialProductResources = parseProductResources(row.metadata);
   const childDeliveryStatusUi = parseChildDeliveryStatusUi(row.metadata);
@@ -67,11 +92,14 @@ export default async function ProductOverviewPage({
       <ProductDetailShell
         productId={productId}
         product={project}
-        childrenProjects={children ?? []}
+        childrenProjects={childrenRes.data ?? []}
         initialProductResources={initialProductResources}
         childDeliveryStatusUi={childDeliveryStatusUi}
         productMetadata={row.metadata}
         planLabels={fieldOptions.productPlanLabels}
+        overviewRoadmapPhaseCount={overviewRoadmapPhaseCount}
+        overviewDiscoverySectionCount={overviewDiscoverySectionCount}
+        overviewCountsError={overviewCountsError}
       />
     </Suspense>
   );

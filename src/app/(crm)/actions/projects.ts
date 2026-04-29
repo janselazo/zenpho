@@ -9,6 +9,7 @@ import {
   type ProjectRow,
   type CrmProjectPersistInput,
 } from "@/lib/crm/map-project-row";
+import { PROJECT_SOURCE_LEAD_ID_KEY } from "@/lib/crm/prospect-client-shell";
 import type { MockProject } from "@/lib/crm/mock-data";
 import {
   CHILD_DELIVERY_STATUSES,
@@ -184,10 +185,12 @@ export async function createCrmProject(
   if ("error" in ptRes) return { error: ptRes.error };
 
   const target_date = parseTargetDate(input.expectedEndDate);
-  const metadata = {
+  const sid = input.sourceLeadId?.trim() || null;
+  const metadata: Record<string, unknown> = {
     teamId: input.teamId.trim() || "team-general",
     teamName: input.teamName?.trim() || null,
   };
+  if (sid) metadata[PROJECT_SOURCE_LEAD_ID_KEY] = sid;
 
   const { data: productRow, error: prodErr } = await supabase
     .from("project")
@@ -221,7 +224,7 @@ export async function createCrmProject(
   return { ok: true, id: productId };
 }
 
-/** Create project and ensure a client exists for the lead (creates client from lead if needed). */
+/** Create project tied to metadata.sourceLeadId; lead converts only after Won on the pipeline. */
 export async function createCrmProjectFromLead(
   leadId: string,
   input: CrmProjectPersistInput,
@@ -241,6 +244,7 @@ export async function createCrmProjectFromLead(
   const result = await createCrmProject({
     ...input,
     clientId: resolved.clientId,
+    sourceLeadId: lid,
   });
 
   if ("ok" in result) {

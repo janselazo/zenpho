@@ -21,6 +21,11 @@ import {
 import type { LeadFollowUpAppointment } from "@/lib/crm/lead-follow-up-appointment";
 import { parseAppointmentStatus } from "@/lib/crm/appointment-status";
 import { uploadBrandingFunnelPdf } from "@/lib/crm/branding-funnel-pdf-storage";
+import {
+  PROJECT_SOURCE_LEAD_ID_KEY,
+  prospectShellLine,
+  stripProspectShellMarkerAndAppend,
+} from "@/lib/crm/prospect-client-shell";
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>;
 
@@ -277,7 +282,7 @@ export async function updateLeadRow(formData: FormData) {
 
   const { data: existingLead } = await supabase
     .from("lead")
-    .select("source, project_type, contact_category")
+    .select("source, project_type, contact_category, stage, converted_client_id")
     .eq("id", id)
     .maybeSingle();
   const existingSource = (existingLead?.source as string | null)?.trim() || null;
@@ -342,6 +347,8 @@ export async function updateLeadRow(formData: FormData) {
     return { error: "Invalid stage" };
   }
 
+  const prevStage = (existingLead?.stage as string | null)?.trim() || "";
+
   const leadUpdate: Record<string, unknown> = {
     name: name || null,
     email: email || null,
@@ -368,6 +375,10 @@ export async function updateLeadRow(formData: FormData) {
   if (formData.has("google_place_types_json")) {
     leadUpdate.google_place_types =
       google_place_types && google_place_types.length > 0 ? google_place_types : null;
+  }
+
+  if (prevStage === "closed_won" && stage !== "closed_won") {
+    leadUpdate.converted_client_id = null;
   }
 
   const { error } = await supabase.from("lead").update(leadUpdate).eq("id", id);
@@ -532,6 +543,15 @@ export async function updateLeadStage(
   if (!id) return { error: "Missing lead id" };
 
   const s = String(stage ?? "").trim();
+
+  const { data: prior, error: priorErr } = await supabase
+    .from("lead")
+    .select("stage")
+    .eq("id", id)
+    .maybeSingle();
+  if (priorErr) return { error: priorErr.message };
+  const prevStage = (prior?.stage as string | null)?.trim() || "";
+
   const leadStages = await leadStageSlugSet(supabase);
   if (!leadStages.has(s)) {
     return { error: "Invalid stage" };
@@ -552,8 +572,16 @@ export async function updateLeadStage(
     );
   }
 
-  const updateBody: { stage: string; notes?: string | null } = { stage: s };
+  const updateBody: {
+    stage: string;
+    notes?: string | null;
+    converted_client_id?: string | null;
+  } = { stage: s };
   if (notesPayload !== undefined) updateBody.notes = notesPayload;
+
+  if (prevStage === "closed_won" && s !== "closed_won") {
+    updateBody.converted_client_id = null;
+  }
 
   const { error } = await supabase.from("lead").update(updateBody).eq("id", id);
 
@@ -859,9 +887,70 @@ async function insertClientFromLeadAndLink(
   return !updErr;
 }
 
+/** Root product created from lead flow: find existing `client_id` when metadata links the lead. */
+async function findProvisionalClientIdFromLeadProjects(
+  supabase: SupabaseServer,
+  leadId: string
+): Promise<string | null> {
+  const { data: rows } = await supabase
+    .from("project")
+    .select("client_id")
+    .is("parent_project_id", null)
+    .contains("metadata", { [PROJECT_SOURCE_LEAD_ID_KEY]: leadId })
+    .limit(5);
+  const first = rows?.find((r) => (r.client_id as string | null)?.trim());
+  const cid = (first?.client_id as string | null)?.trim();
+  return cid ?? null;
+}
+
+/** Create a standalone `client` for product FK without converting the lead (`converted_client_id` unset). */
+async function insertProspectShellClientForLead(
+  supabase: SupabaseServer,
+  lead: {
+    id: string;
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+    company: string | null;
+    notes: string | null;
+  },
+  hints?: { company?: string | null; email?: string | null }
+): Promise<string | null> {
+  const stamp = new Date().toISOString().slice(0, 10);
+  const prospectLine = prospectShellLine();
+  const name =
+    lead.name?.trim() ||
+    lead.email?.trim() ||
+    lead.company?.trim() ||
+    "Unnamed prospect";
+  const email = hints?.email?.trim() || lead.email?.trim() || null;
+  const company =
+    (hints?.company?.trim() ?? lead.company)?.trim() || null;
+
+  const notesBase = (lead.notes ?? "").trim();
+  const prepend = `[${stamp}] Project record — prospect not converted until Won.\n${prospectLine}`;
+  const notes = notesBase ? `${notesBase}\n${prepend}` : prepend;
+
+  const { data: client, error: insErr } = await supabase
+    .from("client")
+    .insert({
+      name,
+      email,
+      phone: lead.phone?.trim() || null,
+      company,
+      notes,
+    })
+    .select("id")
+    .single();
+
+  if (insErr || !client?.id) return null;
+  return client.id as string;
+}
+
 /**
- * Resolve `client` for a lead: return existing `converted_client_id`, or create
- * client from lead (same as Won conversion) for “project from lead” flows.
+ * Resolve `client` for a lead: return existing converted client or prospect shell /
+ * provisional client tied to root products (`metadata.sourceLeadId`).
+ * Does **not** set `converted_client_id`; Won move links the convert.
  */
 export async function resolveOrCreateClientForLead(
   leadId: string,
@@ -901,36 +990,29 @@ export async function resolveOrCreateClientForLead(
     return { clientId: cid };
   }
 
-  const stamp = new Date().toISOString().slice(0, 10);
-  const conversionLine = `[${stamp}] Client created when starting project from lead.`;
-
-  const leadForInsert = {
-    ...lead,
-    email: hints?.email?.trim() || lead.email,
-    company: hints?.company?.trim() || lead.company,
-  };
-
-  const created = await insertClientFromLeadAndLink(
+  const existingFromProject = await findProvisionalClientIdFromLeadProjects(
     supabase,
-    leadForInsert,
-    conversionLine,
-    hints?.company?.trim() || lead.company
+    id
   );
-
-  if (!created) {
-    return { error: "Could not create client from this lead." };
+  if (existingFromProject) {
+    const email = hints?.email?.trim();
+    const company = hints?.company?.trim();
+    if (email || company) {
+      const patch: Record<string, string | null> = {};
+      if (email) patch.email = email;
+      if (company) patch.company = company;
+      if (Object.keys(patch).length > 0) {
+        await supabase.from("client").update(patch).eq("id", existingFromProject);
+      }
+    }
+    return { clientId: existingFromProject };
   }
 
-  const { data: again } = await supabase
-    .from("lead")
-    .select("converted_client_id")
-    .eq("id", id)
-    .maybeSingle();
-
-  const cid = again?.converted_client_id?.trim();
-  if (!cid) return { error: "Client was not linked to the lead." };
-
-  return { clientId: cid };
+  const createdId = await insertProspectShellClientForLead(supabase, lead, hints);
+  if (!createdId) {
+    return { error: "Could not create prospect account for project." };
+  }
+  return { clientId: createdId };
 }
 
 /**
@@ -966,7 +1048,7 @@ async function ensureClientFromClosedDeal(
 }
 
 /**
- * When `lead.stage` is `closed_won`, create client if not already converted
+ * When `lead.stage` is `closed_won`, create or link client if not yet converted
  * (covers Kanban / table moves with no deal update in the same request).
  */
 async function ensureClientFromWonLeadStage(
@@ -975,14 +1057,45 @@ async function ensureClientFromWonLeadStage(
 ): Promise<boolean> {
   const { data: lead, error: leadErr } = await supabase
     .from("lead")
-    .select("id, name, email, phone, company, notes, converted_client_id, stage")
+    .select(
+      "id, name, email, phone, company, notes, converted_client_id, stage"
+    )
     .eq("id", leadId)
     .maybeSingle();
 
   if (leadErr || !lead || lead.stage !== "closed_won") return false;
+  if (lead.converted_client_id?.trim()) return true;
 
+  const provisional = await findProvisionalClientIdFromLeadProjects(
+    supabase,
+    lead.id
+  );
   const stamp = new Date().toISOString().slice(0, 10);
   const conversionLine = `[${stamp}] Lead marked Won — converted from lead.`;
+
+  if (provisional?.trim()) {
+    const cid = provisional.trim();
+    const { data: cRow } = await supabase
+      .from("client")
+      .select("notes")
+      .eq("id", cid)
+      .maybeSingle();
+    const newNotes = stripProspectShellMarkerAndAppend(
+      (cRow?.notes as string | null) ?? null,
+      conversionLine
+    );
+    const { error: upCl } = await supabase
+      .from("client")
+      .update({ notes: newNotes })
+      .eq("id", cid);
+    if (upCl) return false;
+
+    const { error: upLead } = await supabase
+      .from("lead")
+      .update({ converted_client_id: cid })
+      .eq("id", lead.id);
+    return !upLead;
+  }
 
   return insertClientFromLeadAndLink(supabase, lead, conversionLine, null);
 }
@@ -1536,6 +1649,19 @@ export async function reassignLeadsFromStage(fromSlug: string, toSlug: string) {
   const { error } = await supabase.from("lead").update({ stage: to }).eq("stage", from);
 
   if (error) return { error: error.message };
+
+  if (from === "closed_won" && to !== "closed_won") {
+    const ids = (toMove ?? [])
+      .map((r) => r.id as string | undefined)
+      .filter((x): x is string => Boolean(x?.trim()));
+    if (ids.length > 0) {
+      const { error: clearErr } = await supabase
+        .from("lead")
+        .update({ converted_client_id: null })
+        .in("id", ids);
+      if (clearErr) return { error: clearErr.message };
+    }
+  }
 
   if (to === "closed_won") {
     for (const row of toMove ?? []) {
