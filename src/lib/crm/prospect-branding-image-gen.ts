@@ -247,6 +247,25 @@ const INTER_REQUEST_DELAY_MS = 13_000;
 export async function generateBrandingImages(
   spec: BrandingSpec,
 ): Promise<BrandingImages> {
+  return generateBrandingImagesForSlots(
+    spec,
+    SLOTS.map((plan) => plan.slot),
+    "branding-images",
+  );
+}
+
+export async function generateBrandingImageSubset(
+  spec: BrandingSpec,
+  slots: BrandingImageSlot[],
+): Promise<BrandingImages> {
+  return generateBrandingImagesForSlots(spec, slots, "branding-images-subset");
+}
+
+async function generateBrandingImagesForSlots(
+  spec: BrandingSpec,
+  slots: BrandingImageSlot[],
+  label: string,
+): Promise<BrandingImages> {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   const empty: BrandingImages = {
     cover: null,
@@ -260,9 +279,13 @@ export async function generateBrandingImages(
   if (!apiKey) {
     const err = "OPENAI_API_KEY is not configured.";
     for (const plan of SLOTS) empty.errors[plan.slot] = err;
-    console.warn("[branding-images] " + err);
+    console.warn(`[${label}] ${err}`);
     return empty;
   }
+
+  const slotSet = new Set(slots);
+  const plans = SLOTS.filter((plan) => slotSet.has(plan.slot));
+  if (plans.length === 0) return empty;
 
   const requested =
     process.env.OPENAI_BRANDING_IMAGE_MODEL?.trim() || DEFAULT_MODEL;
@@ -273,46 +296,46 @@ export async function generateBrandingImages(
 
   let model = requested;
   console.info(
-    `[branding-images] starting generation with model=${model} quality=${quality} fast=${useFastMode()} maxPerMinute=${maxImagesPerMinute()}`,
+    `[${label}] starting generation with model=${model} quality=${quality} fast=${useFastMode()} maxPerMinute=${maxImagesPerMinute()} slots=${plans.length}`,
   );
 
   let results: { slot: BrandingImageSlot; buffer: Buffer | null; error?: string }[];
 
   if (useFastMode()) {
     results = await runOpenAiImageJobs({
-      label: "branding-images",
-      jobs: SLOTS,
+      label,
+      jobs: plans,
       maxPerMinute: maxImagesPerMinute(),
       run: (plan, i) => {
         console.info(
-          `[branding-images] fast generating slot=${plan.slot} (${i + 1}/${SLOTS.length}) model=${model}`,
+          `[${label}] fast generating slot=${plan.slot} (${i + 1}/${plans.length}) model=${model}`,
         );
         return generateOne(openai, model, plan, spec, quality);
       },
     });
   } else {
     results = [];
-    for (let i = 0; i < SLOTS.length; i++) {
-      const plan = SLOTS[i];
+    for (let i = 0; i < plans.length; i++) {
+      const plan = plans[i];
 
       if (i > 0) {
-        console.info(`[branding-images] waiting ${INTER_REQUEST_DELAY_MS}ms before slot=${plan.slot}`);
+        console.info(`[${label}] waiting ${INTER_REQUEST_DELAY_MS}ms before slot=${plan.slot}`);
         await new Promise((r) => setTimeout(r, INTER_REQUEST_DELAY_MS));
       }
 
-      console.info(`[branding-images] generating slot=${plan.slot} (${i + 1}/${SLOTS.length}) model=${model}`);
+      console.info(`[${label}] generating slot=${plan.slot} (${i + 1}/${plans.length}) model=${model}`);
       const r = await generateOne(openai, model, plan, spec, quality);
       results.push(r);
 
       if (r.error) {
-        console.warn(`[branding-images] slot=${r.slot} model=${model} error=${r.error}`);
+        console.warn(`[${label}] slot=${r.slot} model=${model} error=${r.error}`);
 
         if (i === 0 && r.error && isModelUnavailableError(r.error) && fallback && fallback !== model) {
-          console.warn(`[branding-images] switching from ${model} to ${fallback} for remaining images`);
+          console.warn(`[${label}] switching from ${model} to ${fallback} for remaining images`);
           model = fallback;
         }
       } else {
-        console.info(`[branding-images] slot=${r.slot} ok`);
+        console.info(`[${label}] slot=${r.slot} ok`);
       }
     }
   }

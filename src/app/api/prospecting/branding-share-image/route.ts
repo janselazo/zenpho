@@ -5,6 +5,7 @@ import type { PlacesSearchPlace } from "@/lib/crm/places-types";
 import {
   generateBrandingSpec,
   type BrandingSpec,
+  type BrandingColor,
   type ExtractedBrandPalette,
 } from "@/lib/crm/prospect-branding-spec-llm";
 import { generateAdsFunnelSpec } from "@/lib/crm/prospect-ads-funnel-spec-llm";
@@ -16,6 +17,7 @@ import {
 } from "@/lib/crm/prospect-vertical-classify";
 import { renderBrandingShareImage } from "@/lib/crm/branding-share-image";
 import { generateAdsFunnelImageSubset } from "@/lib/crm/prospect-ads-image-gen";
+import { generateBrandingImageSubset } from "@/lib/crm/prospect-branding-image-gen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,6 +51,76 @@ function brandLogoDataUrl(input: {
 
 function pngDataUrl(buf: Buffer | null): string | null {
   return buf ? `data:image/png;base64,${buf.toString("base64")}` : null;
+}
+
+function hexToRgb(hex: string): [number, number, number] | null {
+  const m = hex.trim().match(/^#?([0-9a-fA-F]{6})$/);
+  if (!m) return null;
+  const n = Number.parseInt(m[1], 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function normalizeHex(hex: string): string | null {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return null;
+  return `#${((1 << 24) | (rgb[0] << 16) | (rgb[1] << 8) | rgb[2])
+    .toString(16)
+    .slice(1)
+    .toUpperCase()}`;
+}
+
+function colorDistance(a: string, b: string): number {
+  const ar = hexToRgb(a);
+  const br = hexToRgb(b);
+  if (!ar || !br) return 999;
+  return Math.sqrt(
+    (ar[0] - br[0]) ** 2 + (ar[1] - br[1]) ** 2 + (ar[2] - br[2]) ** 2,
+  );
+}
+
+const GENERIC_WORDPRESS_COLORS = [
+  "#CF2E2E",
+  "#CC1818",
+  "#FCB900",
+  "#F0BB49",
+  "#00D084",
+  "#4AB866",
+  "#0693E3",
+  "#3858E9",
+  "#9B51E0",
+];
+
+function cleanPalette(input: readonly string[]): string[] {
+  const out: string[] = [];
+  for (const raw of input) {
+    const hex = normalizeHex(raw);
+    if (!hex) continue;
+    if (GENERIC_WORDPRESS_COLORS.some((generic) => colorDistance(hex, generic) < 18)) {
+      continue;
+    }
+    if (out.every((existing) => colorDistance(existing, hex) > 28)) out.push(hex);
+  }
+  return out.slice(0, 5);
+}
+
+function applySharePalette(spec: BrandingSpec, rawPalette: readonly string[]): BrandingSpec {
+  const palette = cleanPalette(rawPalette);
+  const primary = palette[0] || "#0DA7AD";
+  const accent = palette[1] || "#2F64A7";
+  const soft = palette[2] || "#EAF7F8";
+  const deep = palette[3] || "#123D68";
+  const color = (name: string, hex: string): BrandingColor => ({ name, hex });
+  return {
+    ...spec,
+    primaryColors: [
+      color("Brand primary", primary),
+      color("Brand accent", accent),
+    ],
+    secondaryColors: [
+      color("Soft tint", soft),
+      color("Deep brand", deep),
+    ],
+  };
 }
 
 export async function POST(req: Request) {
@@ -133,15 +205,24 @@ export async function POST(req: Request) {
       );
     }
 
+    const shareSpec = applySharePalette(spec, realAssets.palette);
+
+    const merchImagesPromise = generateBrandingImageSubset(shareSpec, ["merch"]);
     const campaignImages = funnel
-      ? await generateAdsFunnelImageSubset(spec, funnel, vertical, [
+      ? await generateAdsFunnelImageSubset(shareSpec, funnel, vertical, [
           "landingHero",
           "adFbFeed",
           "adIgStory",
           "adGoogleDisplay",
-          "adHeroBanner",
         ])
       : null;
+    const merchImages = await merchImagesPromise;
+    if (Object.keys(merchImages.errors).length > 0) {
+      console.warn(
+        "[branding-share-image] merchandising image warnings:",
+        merchImages.errors,
+      );
+    }
     if (campaignImages && Object.keys(campaignImages.errors).length > 0) {
       console.warn(
         "[branding-share-image] campaign image warnings:",
@@ -150,17 +231,17 @@ export async function POST(req: Request) {
     }
 
     const rendered = renderBrandingShareImage({
-      spec,
+      spec: shareSpec,
       funnel,
       realPalette: realAssets.palette,
       logoDataUrl: brandLogoDataUrl(realAssets),
+      merchImage: pngDataUrl(merchImages.merch),
       campaignImages: campaignImages
         ? {
             landingHero: pngDataUrl(campaignImages.landingHero),
             metaFeed: pngDataUrl(campaignImages.adFbFeed),
             instagramStory: pngDataUrl(campaignImages.adIgStory),
             googleDisplay: pngDataUrl(campaignImages.adGoogleDisplay),
-            heroBanner: pngDataUrl(campaignImages.adHeroBanner),
           }
         : undefined,
     });
