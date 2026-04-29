@@ -30,7 +30,12 @@ import {
   crmLabelPickerChipClass,
 } from "@/lib/crm/crm-label-presets";
 import type { ProductMilestoneMeta } from "@/lib/crm/product-project-metadata";
+import {
+  CHILD_PROJECT_PRIORITY_LABELS,
+  type ChildProjectPriority,
+} from "@/lib/crm/product-project-metadata";
 import { PriorityFlagIcon } from "@/components/crm/product/PriorityFlagIcon";
+import { ProductRowAssigneePicker } from "@/components/crm/product/ProductRowAssigneePicker";
 import CrmPopoverDateField from "@/components/crm/CrmPopoverDateField";
 import ProductTaskStatusModal from "@/components/crm/product/ProductTaskStatusModal";
 import {
@@ -38,144 +43,28 @@ import {
   Ban,
   Box,
   Calendar,
-  CalendarPlus,
   Check,
   CheckCircle2,
   ChevronDown,
   Circle,
   CircleDashed,
-  Flag,
   Hash,
   Loader2,
   Plus,
   Tag,
   Trash2,
   Type,
-  User,
-  UserCircle,
   UserPlus,
   X,
 } from "lucide-react";
 
-type AssigneeMemberRow = { id: string; name: string };
-
-function assigneeInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) {
-    return (
-      parts[0].charAt(0) + parts[parts.length - 1].charAt(0)
-    ).toUpperCase();
-  }
-  const one = parts[0];
-  if (one && one.length >= 2) return one.slice(0, 2).toUpperCase();
-  return one?.charAt(0)?.toUpperCase() ?? "?";
-}
-
-function TaskAssigneeCell({
-  assigneeId,
-  members,
-  onAssign,
-}: {
-  assigneeId: string;
-  members: AssigneeMemberRow[];
-  onAssign: (id: string | null) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const assigned = assigneeId
-    ? members.find((m) => m.id === assigneeId)
-    : undefined;
-
-  useEffect(() => {
-    if (!open) return;
-    function onDoc(e: MouseEvent) {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [open]);
-
-  return (
-    <div className="relative flex justify-center px-1" ref={wrapRef}>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border transition-colors hover:bg-surface/80 dark:border-zinc-600 dark:hover:bg-zinc-800 ${
-          assigned ? "bg-accent/10 dark:bg-blue-500/15" : ""
-        }`}
-        title={
-          assigned
-            ? `${assigned.name} — click to change`
-            : "Unassigned — click to assign"
-        }
-        aria-label={
-          assigned
-            ? `Assignee ${assigned.name}, click to change`
-            : "Assign teammate"
-        }
-        aria-expanded={open}
-        aria-haspopup="listbox"
-      >
-        {assigned ? (
-          <span className="text-[11px] font-semibold text-text-primary dark:text-zinc-100">
-            {assigneeInitials(assigned.name)}
-          </span>
-        ) : (
-          <UserCircle
-            className="h-5 w-5 text-text-secondary dark:text-zinc-500"
-            aria-hidden
-          />
-        )}
-      </button>
-      {open ? (
-        <div
-          className="absolute right-0 top-full z-[60] mt-1 max-h-64 w-52 overflow-y-auto rounded-xl border border-border bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-950"
-          role="listbox"
-        >
-          <button
-            type="button"
-            role="option"
-            className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-text-primary hover:bg-surface/80 dark:text-zinc-100 dark:hover:bg-zinc-800"
-            onClick={() => {
-              onAssign(null);
-              setOpen(false);
-            }}
-          >
-            Unassigned
-            {!assigneeId ? (
-              <Check className="h-4 w-4 shrink-0 text-accent" aria-hidden />
-            ) : null}
-          </button>
-          {members.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              role="option"
-              className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-text-primary hover:bg-surface/80 dark:text-zinc-100 dark:hover:bg-zinc-800"
-              onClick={() => {
-                onAssign(m.id);
-                setOpen(false);
-              }}
-            >
-              <span className="min-w-0 truncate">{m.name}</span>
-              {assigneeId === m.id ? (
-                <Check className="h-4 w-4 shrink-0 text-accent" aria-hidden />
-              ) : null}
-            </button>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 type TaskPriorityValue = NonNullable<WorkspaceTask["priority"]> | "";
 
 const TASK_PRIORITY_OPTIONS: { id: TaskPriorityValue; label: string }[] = [
-  { id: "urgent", label: "Urgent" },
-  { id: "high", label: "High" },
-  { id: "medium", label: "Normal" },
-  { id: "low", label: "Low" },
+  { id: "urgent", label: CHILD_PROJECT_PRIORITY_LABELS.urgent },
+  { id: "high", label: CHILD_PROJECT_PRIORITY_LABELS.high },
+  { id: "medium", label: CHILD_PROJECT_PRIORITY_LABELS.medium },
+  { id: "low", label: CHILD_PROJECT_PRIORITY_LABELS.low },
   { id: "", label: "Clear" },
 ];
 
@@ -190,6 +79,11 @@ function TaskPriorityCell({
   const wrapRef = useRef<HTMLDivElement>(null);
   const current: TaskPriorityValue = priority ?? "";
 
+  const chipLabel =
+    current && CHILD_PROJECT_PRIORITY_LABELS[current as ChildProjectPriority]
+      ? CHILD_PROJECT_PRIORITY_LABELS[current as ChildProjectPriority]
+      : null;
+
   useEffect(() => {
     if (!open) return;
     function onDoc(e: MouseEvent) {
@@ -203,30 +97,32 @@ function TaskPriorityCell({
     TASK_PRIORITY_OPTIONS.find((p) => p.id === current)?.label ?? "Clear";
 
   return (
-    <div className="relative flex justify-center px-0.5" ref={wrapRef}>
+    <div className="relative min-w-0 px-0.5" ref={wrapRef}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex h-8 max-w-[4.5rem] items-center justify-center gap-0.5 rounded-lg border border-border bg-white px-1 dark:border-zinc-600 dark:bg-zinc-800/90"
+        className={`flex h-8 w-full min-w-0 items-center justify-center gap-1.5 overflow-hidden rounded-lg border px-2 text-xs font-medium transition-colors ${
+          current
+            ? "border-border bg-white text-text-primary shadow-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+            : "border-transparent text-text-secondary hover:border-border hover:bg-white hover:text-text-primary dark:text-zinc-500 dark:hover:border-zinc-700 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
+        }`}
         aria-label={`Priority: ${label}`}
         aria-expanded={open}
         aria-haspopup="listbox"
       >
-        {current ? (
-          <PriorityFlagIcon level={current} className="h-4 w-4" />
-        ) : (
-          <span className="text-xs font-medium text-text-secondary dark:text-zinc-500">
-            —
-          </span>
-        )}
+        <PriorityFlagIcon
+          level={current}
+          className="h-4 w-4 shrink-0 opacity-80"
+        />
+        <span className="min-w-0 truncate">{chipLabel ?? "Priority"}</span>
         <ChevronDown
-          className="h-3 w-3 shrink-0 text-text-secondary opacity-70 dark:text-zinc-400"
+          className="h-3.5 w-3.5 shrink-0 opacity-60 dark:text-zinc-400"
           aria-hidden
         />
       </button>
       {open ? (
         <div
-          className="absolute right-0 top-full z-[60] mt-1 w-48 overflow-hidden rounded-xl border border-border bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-950"
+          className="absolute right-0 top-full z-[70] mt-1 w-52 overflow-hidden rounded-xl border border-border bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-950"
           role="listbox"
         >
           <p className="px-3 py-1.5 text-[11px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
@@ -915,7 +811,7 @@ export default function ProductTasksLinearTab({
               onClick={() => toggleNewMenu("assignee")}
               aria-expanded={newTaskMenu === "assignee"}
             >
-              <User className="h-3.5 w-3.5 text-text-secondary" />
+              <UserPlus className="h-3.5 w-3.5 text-text-secondary" aria-hidden />
               {selectedAssigneeName}
             </button>
             {newTaskMenu === "assignee" ? (
@@ -1127,6 +1023,8 @@ export default function ProductTasksLinearTab({
                     onChange={setNewDueDate}
                     displayFormat="numeric"
                     compact
+                    showTriggerChevron
+                    emptyLabel="Due"
                     triggerClassName="!max-w-none"
                   />
                 </div>
@@ -1186,7 +1084,7 @@ export default function ProductTasksLinearTab({
       ) : null}
 
       <div className="overflow-x-auto rounded-xl border border-border bg-white dark:border-zinc-800 dark:bg-zinc-950">
-        <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+        <table className="w-full min-w-[820px] border-collapse text-left text-sm">
           <thead>
             <tr className="border-b border-border bg-surface/60 dark:border-zinc-800 dark:bg-zinc-900/80">
               <th className="w-10 px-2 py-3 text-xs font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
@@ -1195,27 +1093,14 @@ export default function ProductTasksLinearTab({
               <th className="min-w-[200px] px-3 py-3 text-xs font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
                 Title
               </th>
-              <th className="w-12 px-0.5 py-3 text-center text-xs font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
-                <UserPlus
-                  className="mx-auto h-4 w-4 opacity-80 dark:opacity-70"
-                  aria-hidden
-                />
-                <span className="sr-only">Assignee</span>
+              <th className="min-w-[8rem] px-2 py-2 text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+                Assignee
               </th>
-              <th className="w-[5.75rem] px-0.5 py-3 text-center text-xs font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
-                <CalendarPlus
-                  className="mx-auto h-4 w-4 opacity-80 dark:opacity-70"
-                  aria-hidden
-                />
-                <span className="sr-only">Due date</span>
+              <th className="min-w-[8rem] px-2 py-2 text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+                Due date
               </th>
-              <th className="w-16 px-0.5 py-3 text-center text-xs font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
-                <Flag
-                  className="mx-auto h-4 w-4 opacity-80 dark:opacity-70"
-                  strokeWidth={2}
-                  aria-hidden
-                />
-                <span className="sr-only">Priority</span>
+              <th className="min-w-[7rem] px-2 py-2 text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+                Priority
               </th>
               {workspace.taskCustomFields.map((def) => (
                 <th
@@ -1355,10 +1240,11 @@ export default function ProductTasksLinearTab({
                       </div>
                     ) : null}
                   </td>
-                  <td className="px-1 py-2 align-middle">
-                    <TaskAssigneeCell
-                      assigneeId={assigneeVal}
+                  <td className="min-w-[8rem] px-2 py-2 align-middle">
+                    <ProductRowAssigneePicker
+                      memberId={assigneeVal || null}
                       members={assigneeOptions}
+                      ariaSubject={task.title}
                       onAssign={(id) =>
                         updateTask(task.id, {
                           assigneeId: id,
@@ -1367,17 +1253,21 @@ export default function ProductTasksLinearTab({
                       }
                     />
                   </td>
-                  <td className="px-0.5 py-2 align-middle">
+                  <td className="min-w-[8rem] px-2 py-2 align-middle">
                     <CrmPopoverDateField
                       id={`linear-task-due-${task.id}`}
                       value={task.endDate}
                       onChange={(v) => updateTask(task.id, { endDate: v })}
                       displayFormat="numeric"
                       compact
-                      triggerClassName="!max-w-[6.75rem]"
+                      showFooter
+                      showTriggerChevron
+                      emptyLabel="Due"
+                      triggerClassName="!max-w-none w-full min-h-8"
+                      aria-label={`Due date for ${task.title}`}
                     />
                   </td>
-                  <td className="px-0.5 py-2 align-middle">
+                  <td className="min-w-[7rem] px-1 py-2 align-middle">
                     <TaskPriorityCell
                       priority={task.priority}
                       onChange={(v) =>
@@ -1406,10 +1296,10 @@ export default function ProductTasksLinearTab({
                       onClick={() => {
                         if (confirm(`Delete “${task.title}”?`)) deleteTask(task.id);
                       }}
-                      className="rounded p-1.5 text-text-secondary hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-text-secondary/70 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-zinc-500 dark:hover:bg-red-950/30 dark:hover:text-red-400"
                       aria-label="Delete task"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4" aria-hidden />
                     </button>
                   </td>
                   <td className="px-1 py-2 align-middle" aria-hidden />
