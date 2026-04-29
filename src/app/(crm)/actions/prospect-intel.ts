@@ -4,9 +4,9 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { buildMarketIntelReport, type IntelSignals } from "@/lib/crm/prospect-intel-report";
 import {
+  decodeFetchedHtmlBuffer,
   extractPageSignals,
   FETCH_TIMEOUT_MS,
-  MAX_FETCH_BYTES,
   normalizeUrlForFetch,
 } from "@/lib/crm/safe-url-fetch";
 import {
@@ -77,8 +77,7 @@ async function fetchHtmlSafe(url: string): Promise<{ ok: true; html: string } | 
   }
   if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
   const buf = await res.arrayBuffer();
-  const slice = buf.byteLength > MAX_FETCH_BYTES ? buf.slice(0, MAX_FETCH_BYTES) : buf;
-  const html = new TextDecoder("utf-8", { fatal: false }).decode(slice);
+  const html = decodeFetchedHtmlBuffer(buf);
   return { ok: true, html };
 }
 
@@ -131,8 +130,7 @@ export async function researchProspectFromUrl(
   }
 
   const buf = await res.arrayBuffer();
-  const slice = buf.byteLength > MAX_FETCH_BYTES ? buf.slice(0, MAX_FETCH_BYTES) : buf;
-  const html = new TextDecoder("utf-8", { fatal: false }).decode(slice);
+  const html = decodeFetchedHtmlBuffer(buf);
   const { pageTitle, metaDescription } = extractPageSignals(html);
   const hints = extractPublicContactHints(html);
   const socialUrls = extractProspectSocialUrls(html, normalized);

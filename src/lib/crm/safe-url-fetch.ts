@@ -63,6 +63,21 @@ export function normalizeUrlForFetch(raw: string): string | null {
 export const MAX_FETCH_BYTES = 1_500_000;
 export const FETCH_TIMEOUT_MS = 15_000;
 
+export function decodeFetchedHtmlBuffer(buf: ArrayBuffer): string {
+  if (buf.byteLength <= MAX_FETCH_BYTES) {
+    return new TextDecoder("utf-8", { fatal: false }).decode(buf);
+  }
+
+  // Keep both the document head and footer. SMB sites often put contact
+  // details near the bottom, so a simple leading slice can miss emails.
+  const headBytes = Math.floor(MAX_FETCH_BYTES * 0.6);
+  const tailBytes = MAX_FETCH_BYTES - headBytes;
+  const head = buf.slice(0, headBytes);
+  const tail = buf.slice(buf.byteLength - tailBytes);
+  const decoder = new TextDecoder("utf-8", { fatal: false });
+  return `${decoder.decode(head)}\n<!-- zenpho-truncated-html-middle -->\n${decoder.decode(tail)}`;
+}
+
 export function extractPageSignals(html: string): {
   pageTitle: string | null;
   metaDescription: string | null;

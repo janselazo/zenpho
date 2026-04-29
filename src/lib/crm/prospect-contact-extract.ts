@@ -143,7 +143,23 @@ function extractCfEmails(html: string): string[] {
     const decoded = decodeCfEmail(m[1]);
     if (decoded && !isJunkEmail(decoded)) out.push(decoded);
   }
+  for (const m of html.matchAll(/\/cdn-cgi\/l\/email-protection#([0-9a-fA-F]+)/gi)) {
+    const decoded = decodeCfEmail(m[1]);
+    if (decoded && !isJunkEmail(decoded)) out.push(decoded);
+  }
   return out;
+}
+
+function decodeBasicHtmlEntities(raw: string): string {
+  return raw
+    .replace(/&commat;/gi, "@")
+    .replace(/&#0*64;/g, "@")
+    .replace(/&#x0*40;/gi, "@")
+    .replace(/&period;/gi, ".")
+    .replace(/&#0*46;/g, ".")
+    .replace(/&#x0*2e;/gi, ".")
+    .replace(/&amp;/gi, "&")
+    .replace(/&nbsp;|&#0*160;|&#x0*a0;/gi, " ");
 }
 
 export function extractPublicContactHints(html: string): {
@@ -155,11 +171,13 @@ export function extractPublicContactHints(html: string): {
   const phones = new Set<string>();
   let founderName: string | null = null;
 
-  for (const m of html.matchAll(/mailto:([^\s'"<>]+)/gi)) {
+  const decodedHtml = decodeBasicHtmlEntities(html);
+
+  for (const m of decodedHtml.matchAll(/mailto:([^\s'"<>]+)/gi)) {
     const addr = decodeURIComponent(m[1].split("?")[0]).trim();
     if (addr && !isJunkEmail(addr)) emails.add(addr.toLowerCase());
   }
-  for (const m of html.matchAll(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi)) {
+  for (const m of decodedHtml.matchAll(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi)) {
     const e = m[0];
     if (!isJunkEmail(e)) emails.add(e.toLowerCase());
   }
