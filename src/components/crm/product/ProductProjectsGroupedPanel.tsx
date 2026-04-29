@@ -8,7 +8,11 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { setCrmChildProjectTabGroup } from "@/app/(crm)/actions/projects";
+import {
+  deleteCrmProject,
+  setCrmChildProjectTabGroup,
+  updateCrmChildProjectQuickFields,
+} from "@/app/(crm)/actions/projects";
 import type { ProductChildRow } from "@/components/crm/product/ProductDetailShell";
 import { PriorityFlagIcon } from "@/components/crm/product/PriorityFlagIcon";
 import ProductChildDeliveryStatusModal from "@/components/crm/product/ProductChildDeliveryStatusModal";
@@ -30,6 +34,7 @@ import {
   CHILD_PROJECT_GROUP_ORDER,
   CHILD_PROJECT_PRIORITY_LABELS,
   type ChildDeliveryStatus,
+  type ChildProjectPriority,
   parseChildProjectPriority,
   resolveChildDeliveryGroup,
 } from "@/lib/crm/product-project-metadata";
@@ -47,6 +52,7 @@ import {
   Plus,
   Rocket,
   TestTube2,
+  Trash2,
   UserPlus,
 } from "lucide-react";
 
@@ -68,6 +74,16 @@ const GROUP_ICON: Record<ChildDeliveryStatus, ReactNode> = {
   testing: <TestTube2 className="h-3.5 w-3.5" aria-hidden />,
   production: <Rocket className="h-3.5 w-3.5" aria-hidden />,
 };
+
+const CHILD_PROJECT_PRIORITY_OPTIONS: {
+  value: ChildProjectPriority;
+  label: string;
+}[] = [
+  { value: "urgent", label: CHILD_PROJECT_PRIORITY_LABELS.urgent },
+  { value: "high", label: CHILD_PROJECT_PRIORITY_LABELS.high },
+  { value: "medium", label: CHILD_PROJECT_PRIORITY_LABELS.medium },
+  { value: "low", label: CHILD_PROJECT_PRIORITY_LABELS.low },
+];
 
 function RowStatusDot({
   status,
@@ -204,6 +220,7 @@ export default function ProductProjectsGroupedPanel({
   const [columnMenuOpen, setColumnMenuOpen] = useState(false);
   const columnMenuRef = useRef<HTMLDivElement>(null);
   const [bulkStatusModalOpen, setBulkStatusModalOpen] = useState(false);
+  const [rowBusyId, setRowBusyId] = useState<string | null>(null);
 
   const members = useMemo(() => {
     const t = getMembersForTeam(teamId);
@@ -328,6 +345,47 @@ export default function ProductProjectsGroupedPanel({
       onChildDeliveryChanged?.();
     },
     [productId, onChildDeliveryChanged]
+  );
+
+  const updateChildQuickField = useCallback(
+    async (
+      childId: string,
+      input: {
+        leadMemberId?: string | null;
+        target_date?: string | null;
+        priority?: ChildProjectPriority | null;
+      }
+    ) => {
+      setRowBusyId(childId);
+      const res = await updateCrmChildProjectQuickFields(
+        productId,
+        childId,
+        input
+      );
+      setRowBusyId(null);
+      if ("error" in res && res.error) {
+        window.alert(res.error);
+        return;
+      }
+      onChildDeliveryChanged?.();
+    },
+    [productId, onChildDeliveryChanged]
+  );
+
+  const deleteChildProject = useCallback(
+    async (child: ProductChildRow) => {
+      const label = child.title.trim() || "this project";
+      if (!window.confirm(`Delete "${label}"? This cannot be undone.`)) return;
+      setRowBusyId(child.id);
+      const res = await deleteCrmProject(child.id);
+      setRowBusyId(null);
+      if ("error" in res && res.error) {
+        window.alert(res.error);
+        return;
+      }
+      onChildDeliveryChanged?.();
+    },
+    [onChildDeliveryChanged]
   );
 
   function formatDue(iso: string | null | undefined) {
@@ -492,7 +550,7 @@ export default function ProductProjectsGroupedPanel({
 
               {!isCollapsed ? (
                 <div>
-                  <div className="grid grid-cols-[2rem_minmax(0,1fr)_7rem_7rem_5.5rem_2rem] gap-2 border-b border-border px-3 py-2 text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:border-zinc-800 dark:text-zinc-500">
+                  <div className="grid grid-cols-[2rem_minmax(0,1fr)_8rem_8rem_7rem_2rem] gap-2 border-b border-border px-3 py-2 text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:border-zinc-800 dark:text-zinc-500">
                     <span />
                     <span>Name</span>
                     <span>Assignee</span>
@@ -519,7 +577,7 @@ export default function ProductProjectsGroupedPanel({
                         const rv = rowVisuals(p);
                         return (
                           <li key={p.id}>
-                            <div className="grid grid-cols-[2rem_minmax(0,1fr)_7rem_7rem_5.5rem_2rem] items-center gap-2 px-3 py-2.5 text-sm transition-colors hover:bg-surface/60 dark:hover:bg-zinc-900/80">
+                            <div className="grid grid-cols-[2rem_minmax(0,1fr)_8rem_8rem_7rem_2rem] items-center gap-2 px-3 py-2.5 text-sm transition-colors hover:bg-surface/60 dark:hover:bg-zinc-900/80">
                               <button
                                 type="button"
                                 onClick={(e) => {
@@ -550,48 +608,123 @@ export default function ProductProjectsGroupedPanel({
                               <button
                                 type="button"
                                 onClick={() => onOpenProject(p.id)}
-                                className="col-span-5 grid grid-cols-[minmax(0,1fr)_7rem_7rem_5.5rem_2rem] items-center gap-2 text-left"
+                                className="min-w-0 truncate rounded-md text-left font-medium text-text-primary hover:text-accent hover:underline dark:text-zinc-100"
                               >
-                                <span className="min-w-0 truncate font-medium text-text-primary dark:text-zinc-100">
-                                  {p.title}
+                                {p.title}
+                              </button>
+                              <label
+                                className="relative flex h-8 min-w-0 cursor-pointer items-center justify-center gap-1.5 overflow-hidden rounded-lg border border-transparent px-2 text-xs font-medium text-text-secondary transition-colors hover:border-border hover:bg-white hover:text-text-primary dark:text-zinc-500 dark:hover:border-zinc-700 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
+                                title={
+                                  leadName ? `Assignee: ${leadName}` : "Assign project"
+                                }
+                              >
+                                <span className="pointer-events-none flex min-w-0 items-center gap-1.5">
+                                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[10px] font-bold text-zinc-500 ring-1 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:ring-zinc-700">
+                                    {leadName ? (
+                                      leadName.slice(0, 2).toUpperCase()
+                                    ) : (
+                                      <UserPlus className="h-3.5 w-3.5" aria-hidden />
+                                    )}
+                                  </span>
+                                  <span className="truncate">
+                                    {leadName ?? "Assign"}
+                                  </span>
+                                  <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" aria-hidden />
                                 </span>
-                                <span className="flex items-center justify-center text-text-secondary dark:text-zinc-500">
-                                  {leadName ? (
-                                    <span className="truncate text-xs">
-                                      {leadName}
-                                    </span>
-                                  ) : (
-                                    <UserPlus className="h-4 w-4 opacity-50" aria-hidden />
-                                  )}
+                                <select
+                                  value={lead ?? ""}
+                                  disabled={rowBusyId === p.id}
+                                  onChange={(e) =>
+                                    void updateChildQuickField(p.id, {
+                                      leadMemberId: e.target.value || null,
+                                    })
+                                  }
+                                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-wait"
+                                  aria-label={`Assignee for ${p.title}`}
+                                >
+                                  <option value="">Assign</option>
+                                  {members.map((m) => (
+                                    <option key={m.id} value={m.id}>
+                                      {m.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label
+                                className={`relative flex h-8 min-w-0 cursor-pointer items-center justify-center gap-1.5 overflow-hidden rounded-lg border px-2 text-xs font-medium transition-colors ${
+                                  due
+                                    ? "border-border bg-white text-text-primary shadow-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                                    : "border-transparent text-text-secondary hover:border-border hover:bg-white hover:text-text-primary dark:text-zinc-500 dark:hover:border-zinc-700 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
+                                }`}
+                                title={due ? `Due ${due}` : "Set due date"}
+                              >
+                                <span className="pointer-events-none flex min-w-0 items-center gap-1.5">
+                                  <Calendar className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+                                  <span className="truncate">{due ?? "Due"}</span>
                                 </span>
-                                <span className="flex items-center justify-center text-text-secondary dark:text-zinc-500">
-                                  {due ? (
-                                    <span className="truncate text-xs">{due}</span>
-                                  ) : (
-                                    <span className="inline-flex items-center gap-0.5 text-xs opacity-50">
-                                      <Calendar className="h-3.5 w-3.5" />
-                                      <Plus className="h-3 w-3" />
-                                    </span>
-                                  )}
+                                <input
+                                  type="date"
+                                  value={p.target_date ?? ""}
+                                  disabled={rowBusyId === p.id}
+                                  onChange={(e) =>
+                                    void updateChildQuickField(p.id, {
+                                      target_date: e.target.value || null,
+                                    })
+                                  }
+                                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-wait"
+                                  aria-label={`Due date for ${p.title}`}
+                                />
+                              </label>
+                              <label
+                                className={`relative flex h-8 min-w-0 cursor-pointer items-center justify-center gap-1.5 overflow-hidden rounded-lg border px-2 text-xs font-medium transition-colors ${
+                                  priLevel
+                                    ? "border-border bg-white text-text-primary shadow-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                                    : "border-transparent text-text-secondary hover:border-border hover:bg-white hover:text-text-primary dark:text-zinc-500 dark:hover:border-zinc-700 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
+                                }`}
+                                title={
+                                  priLabel ? `Priority: ${priLabel}` : "Set priority"
+                                }
+                              >
+                                <span className="pointer-events-none flex min-w-0 items-center gap-1.5">
+                                  <PriorityFlagIcon
+                                    level={priLevel ?? ""}
+                                    className="h-4 w-4 shrink-0 opacity-80"
+                                  />
+                                  <span className="truncate">
+                                    {priLabel ?? "Priority"}
+                                  </span>
+                                  <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" aria-hidden />
                                 </span>
-                                <span className="flex items-center justify-center text-text-secondary dark:text-zinc-500">
-                                  {priLevel ? (
-                                    <span className="inline-flex items-center gap-1 text-xs">
-                                      <PriorityFlagIcon level={priLevel} />
-                                      <span className="text-text-primary dark:text-zinc-200">
-                                        {priLabel}
-                                      </span>
-                                    </span>
-                                  ) : (
-                                    <PriorityFlagIcon
-                                      level=""
-                                      className="h-4 w-4 opacity-50"
-                                    />
-                                  )}
-                                </span>
-                                <span className="flex justify-center text-text-secondary opacity-40 dark:text-zinc-500">
-                                  <Plus className="h-4 w-4" aria-hidden />
-                                </span>
+                                <select
+                                  value={priLevel ?? ""}
+                                  disabled={rowBusyId === p.id}
+                                  onChange={(e) =>
+                                    void updateChildQuickField(p.id, {
+                                      priority:
+                                        (e.target.value as ChildProjectPriority) ||
+                                        null,
+                                    })
+                                  }
+                                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-wait"
+                                  aria-label={`Priority for ${p.title}`}
+                                >
+                                  <option value="">Priority</option>
+                                  {CHILD_PROJECT_PRIORITY_OPTIONS.map((o) => (
+                                    <option key={o.value} value={o.value}>
+                                      {o.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <button
+                                type="button"
+                                disabled={rowBusyId === p.id}
+                                onClick={() => void deleteChildProject(p)}
+                                className="flex h-8 w-8 items-center justify-center rounded-lg text-text-secondary/70 transition-colors hover:bg-red-50 hover:text-red-600 disabled:cursor-wait disabled:opacity-50 dark:text-zinc-500 dark:hover:bg-red-950/30 dark:hover:text-red-400"
+                                title="Delete project"
+                                aria-label={`Delete ${p.title}`}
+                              >
+                                <Trash2 className="h-4 w-4" aria-hidden />
                               </button>
                             </div>
                           </li>

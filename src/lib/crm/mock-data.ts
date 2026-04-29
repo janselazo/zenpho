@@ -462,6 +462,8 @@ export interface MonthlyGoal {
   target: number;
   unit: "count" | "currency";
   icon: string;
+  /** Optional YYYY-MM-DD deadline for the selected monthly goal period. */
+  dueDate?: string | null;
 }
 
 /** Fixed playbook monthly goals: Clients (won this month) + Revenue (project budgets). */

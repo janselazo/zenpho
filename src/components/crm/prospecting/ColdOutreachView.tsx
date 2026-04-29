@@ -95,10 +95,12 @@ import {
   GOALS_SECTION_IDS,
   loadCustomMonthlyGoals,
   loadGoalsSectionCollapsed,
+  loadMonthlyGoalDeadlines,
   loadNorthStarGoalIds,
   pruneNorthStarGoalIds,
   saveCustomMonthlyGoals,
   saveGoalsSectionCollapsed,
+  saveMonthlyGoalDeadlines,
   saveNorthStarGoalIds,
 } from "@/lib/crm/monthly-goals-store";
 import {
@@ -253,6 +255,22 @@ function formatShortDate(date: Date) {
   });
 }
 
+function parseLocalYmd(ymd: string): Date | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return null;
+  const [y, m, d] = ymd.split("-").map(Number);
+  return new Date(y, m - 1, d, 12, 0, 0, 0);
+}
+
+function formatGoalDeadline(ymd: string | null | undefined): string | null {
+  if (!ymd) return null;
+  const d = parseLocalYmd(ymd);
+  if (!d || Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
 function formatCurrency(n: number) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -359,11 +377,23 @@ export default function ColdOutreachView({
   useEffect(() => {
     const ym = monthKeyFromDate(goalsMonthDate);
     const t = loadMonthlyGoalTargets(ym, DEFAULT_MONTHLY_TARGETS);
+    const deadlines = loadMonthlyGoalDeadlines(ym);
     const customGoals = loadCustomMonthlyGoals(ym);
     setGoals([
-      { ...standardMonthlyGoals[0], target: t.clients },
-      { ...standardMonthlyGoals[1], target: t.revenue },
-      ...customGoals,
+      {
+        ...standardMonthlyGoals[0],
+        target: t.clients,
+        dueDate: deadlines[standardMonthlyGoals[0].id] ?? null,
+      },
+      {
+        ...standardMonthlyGoals[1],
+        target: t.revenue,
+        dueDate: deadlines[standardMonthlyGoals[1].id] ?? null,
+      },
+      ...customGoals.map((goal) => ({
+        ...goal,
+        dueDate: deadlines[goal.id] ?? goal.dueDate ?? null,
+      })),
     ]);
     setGoalsHydrated(true);
   }, [goalsMonthDate]);
@@ -424,6 +454,7 @@ export default function ColdOutreachView({
       next.find((x) => x.id === "mg-revenue")?.target ??
       DEFAULT_MONTHLY_TARGETS.revenue;
     saveMonthlyGoalTargets(ym, { clients: clientsT, revenue: revenueT });
+    saveMonthlyGoalDeadlines(ym, next);
     saveCustomMonthlyGoals(
       ym,
       next.filter((goal) => !isStandardMonthlyGoalId(goal.id))
@@ -508,6 +539,7 @@ function GoalRow({
   onStartEditTarget,
   onConfirmTargetEdit,
   onCancelTargetEdit,
+  onSetDeadline,
   onDeleteGoal,
 }: {
   goal: MonthlyGoal;
@@ -519,11 +551,13 @@ function GoalRow({
   onStartEditTarget: (goal: MonthlyGoal) => void;
   onConfirmTargetEdit: (goal: MonthlyGoal) => void;
   onCancelTargetEdit: () => void;
+  onSetDeadline: (goalId: string, dueDate: string | null) => void;
   onDeleteGoal?: (goalId: string) => void;
 }) {
   const pct = Math.min((goal.current / Math.max(goal.target, 1)) * 100, 100);
   const GoalIcon = goal.icon === "users" ? UsersRound : DollarSign;
   const isEditingTarget = editingTargetId === goal.id;
+  const deadlineLabel = formatGoalDeadline(goal.dueDate);
   const displayDots = Math.min(goal.target, 40);
   const filledDots =
     goal.target > 0
@@ -537,8 +571,16 @@ function GoalRow({
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800/90">
             <GoalIcon className="h-4 w-4 text-zinc-600 dark:text-zinc-400" aria-hidden />
           </span>
-          <span className="truncate text-sm font-medium text-text-primary dark:text-zinc-100">
-            {goal.title}
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-medium text-text-primary dark:text-zinc-100">
+              {goal.title}
+            </span>
+            {deadlineLabel ? (
+              <span className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-medium text-text-secondary dark:text-zinc-500">
+                <CalendarDays className="h-3 w-3" aria-hidden />
+                {deadlineLabel}
+              </span>
+            ) : null}
           </span>
         </div>
 
@@ -595,6 +637,25 @@ function GoalRow({
             >
               <Star className={`h-3.5 w-3.5 ${isNorthStar ? "fill-current" : ""}`} />
             </button>
+            <label
+              className={`rounded p-0.5 transition-colors ${
+                goal.dueDate
+                  ? "cursor-pointer text-violet-500 hover:text-violet-600"
+                  : "cursor-pointer text-text-secondary/40 hover:text-violet-500"
+              }`}
+              title={goal.dueDate ? "Change deadline" : "Add deadline"}
+            >
+              <CalendarDays className="h-3.5 w-3.5" aria-hidden />
+              <input
+                type="date"
+                value={goal.dueDate ?? ""}
+                onChange={(e) =>
+                  onSetDeadline(goal.id, e.target.value || null)
+                }
+                className="sr-only"
+                aria-label={`Set deadline for ${goal.title}`}
+              />
+            </label>
             <button
               type="button"
               onClick={() => onStartEditTarget(goal)}
@@ -725,6 +786,7 @@ function MonthlyGoalsCard({
   const [newGoalTitle, setNewGoalTitle] = useState("");
   const [newGoalTarget, setNewGoalTarget] = useState(1);
   const [newGoalUnit, setNewGoalUnit] = useState<MonthlyGoal["unit"]>("count");
+  const [newGoalDueDate, setNewGoalDueDate] = useState("");
   const goalsMonthKey = monthKeyFromDate(goalsMonthDate);
   const [goalsSectionCollapsed, setGoalsSectionCollapsed] = useState<
     Record<string, boolean>
@@ -769,16 +831,26 @@ function MonthlyGoalsCard({
         target: cleanTarget,
         unit: newGoalUnit,
         icon: newGoalUnit === "currency" ? "dollar" : "target",
+        dueDate: newGoalDueDate || null,
       },
     ]);
     setNewGoalTitle("");
     setNewGoalTarget(1);
     setNewGoalUnit("count");
+    setNewGoalDueDate("");
     setIsAddingGoal(false);
   }
 
   function deleteGoal(goalId: string) {
     onChange(goals.filter((goal) => goal.id !== goalId));
+  }
+
+  function setGoalDeadline(goalId: string, dueDate: string | null) {
+    onChange(
+      goals.map((goal) =>
+        goal.id === goalId ? { ...goal, dueDate: dueDate || null } : goal
+      )
+    );
   }
 
   function toggleGoalsSection(sectionId: string) {
@@ -801,6 +873,7 @@ function MonthlyGoalsCard({
   useEffect(() => {
     setIsAddingGoal(false);
     setEditingTargetId(null);
+    setNewGoalDueDate("");
   }, [goalsMonthKey]);
 
   const monthLabel = goalsMonthDate.toLocaleDateString("en-US", {
@@ -837,6 +910,7 @@ function MonthlyGoalsCard({
               onStartEditTarget={startEditTarget}
               onConfirmTargetEdit={confirmTargetEdit}
               onCancelTargetEdit={() => setEditingTargetId(null)}
+              onSetDeadline={setGoalDeadline}
             />
           ))}
         </GoalsSectionCard>
@@ -882,7 +956,7 @@ function MonthlyGoalsCard({
       >
         {isAddingGoal ? (
           <div className="border-b border-border bg-surface/40 px-5 py-4 dark:border-zinc-800 dark:bg-zinc-900/40">
-            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_8rem_8rem_auto]">
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_8rem_8rem_10rem_auto]">
               <input
                 value={newGoalTitle}
                 onChange={(e) => setNewGoalTitle(e.target.value)}
@@ -910,6 +984,19 @@ function MonthlyGoalsCard({
                 <option value="count">Count</option>
                 <option value="currency">Currency</option>
               </select>
+              <label
+                className="flex items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-sm text-text-primary focus-within:border-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                title="Goal deadline"
+              >
+                <CalendarDays className="h-4 w-4 shrink-0 text-text-secondary/70" />
+                <input
+                  type="date"
+                  value={newGoalDueDate}
+                  onChange={(e) => setNewGoalDueDate(e.target.value)}
+                  className="min-w-0 flex-1 bg-transparent outline-none"
+                  aria-label="Goal deadline"
+                />
+              </label>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -941,6 +1028,7 @@ function MonthlyGoalsCard({
             onStartEditTarget={startEditTarget}
             onConfirmTargetEdit={confirmTargetEdit}
             onCancelTargetEdit={() => setEditingTargetId(null)}
+            onSetDeadline={setGoalDeadline}
             onDeleteGoal={isStandardMonthlyGoalId(goal.id) ? undefined : deleteGoal}
           />
         ))}

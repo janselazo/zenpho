@@ -23,6 +23,24 @@ import {
 
 type ViewTab = "upcoming" | "calendar" | "all";
 
+type AppointmentLeadContext = {
+  name: string | null;
+  company: string | null;
+  project_type: string | null;
+};
+
+function singleLeadContext(raw: unknown): AppointmentLeadContext | null {
+  const one = Array.isArray(raw) ? raw[0] : raw;
+  if (!one || typeof one !== "object") return null;
+  const row = one as Record<string, unknown>;
+  return {
+    name: typeof row.name === "string" ? row.name : null,
+    company: typeof row.company === "string" ? row.company : null,
+    project_type:
+      typeof row.project_type === "string" ? row.project_type : null,
+  };
+}
+
 function formatDateTime(iso: string) {
   const d = new Date(iso);
   return d.toLocaleString("en-US", {
@@ -71,7 +89,9 @@ export default function CrmCalendar({ configured }: { configured: boolean }) {
       const supabase = createClient();
       const { data, error: qErr } = await supabase
         .from("appointment")
-        .select("id, title, description, starts_at, ends_at, status")
+        .select(
+          "id, title, description, starts_at, ends_at, status, lead:lead_id ( name, company, project_type )"
+        )
         .order("starts_at", { ascending: true });
       if (qErr) {
         setLoadError(qErr.message);
@@ -79,14 +99,22 @@ export default function CrmCalendar({ configured }: { configured: boolean }) {
       }
       setLoadError(null);
       setRows(
-        (data ?? []).map((r) => ({
-          id: r.id as string,
-          title: r.title as string,
-          description: (r.description as string | null) ?? null,
-          starts_at: r.starts_at as string,
-          ends_at: r.ends_at as string,
-          status: parseAppointmentStatus(r.status as string | null),
-        }))
+        (data ?? []).map((r) => {
+          const lead = singleLeadContext(
+            (r as Record<string, unknown>).lead
+          );
+          return {
+            id: r.id as string,
+            title: r.title as string,
+            description: (r.description as string | null) ?? null,
+            starts_at: r.starts_at as string,
+            ends_at: r.ends_at as string,
+            status: parseAppointmentStatus(r.status as string | null),
+            clientName: lead?.name ?? null,
+            company: lead?.company ?? null,
+            projectType: lead?.project_type ?? null,
+          };
+        })
       );
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : "Failed to load");

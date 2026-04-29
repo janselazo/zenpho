@@ -17,6 +17,9 @@ export type AppointmentCalendarRow = {
   starts_at: string;
   ends_at: string;
   status: AppointmentStatus;
+  clientName?: string | null;
+  company?: string | null;
+  projectType?: string | null;
 };
 
 function startOfDay(d: Date): Date {
@@ -42,6 +45,13 @@ function formatEventTime(iso: string): string {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+function compactMeta(parts: Array<string | null | undefined>): string {
+  return parts
+    .map((p) => p?.trim())
+    .filter((p): p is string => Boolean(p))
+    .join(" · ");
 }
 
 type CalendarCell = {
@@ -188,29 +198,41 @@ export default function AppointmentMonthGrid({
               </button>
 
               <div className="relative z-[1] flex flex-col gap-1 pr-0.5 pt-8">
-                {visible.map((ev) => (
-                  <button
-                    key={ev.id}
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEditEvent(ev);
-                    }}
-                    className={`w-full rounded-md border border-zinc-200/80 px-1.5 py-1 text-left shadow-[0_1px_0_rgba(0,0,0,0.02)] transition-colors hover:brightness-[0.98] dark:border-zinc-700/80 ${appointmentEventBarClasses(ev.status)}`}
-                  >
-                    <div className="flex items-start justify-between gap-1">
-                      <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-zinc-900 dark:text-zinc-50">
-                        {ev.title}
-                      </span>
-                      <span className="shrink-0 tabular-nums text-[10px] font-medium text-zinc-600 dark:text-zinc-300">
-                        {formatEventTime(ev.starts_at)}
-                      </span>
-                    </div>
-                    <div className="mt-1">
-                      <AppointmentStatusBadge status={ev.status} />
-                    </div>
-                  </button>
-                ))}
+                {visible.map((ev) => {
+                  const metaLine = compactMeta([
+                    ev.clientName,
+                    ev.company,
+                    ev.projectType,
+                  ]);
+                  return (
+                    <button
+                      key={ev.id}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditEvent(ev);
+                      }}
+                      className={`w-full rounded-md border border-zinc-200/80 px-1.5 py-1 text-left shadow-[0_1px_0_rgba(0,0,0,0.02)] transition-colors hover:brightness-[0.98] dark:border-zinc-700/80 ${appointmentEventBarClasses(ev.status)}`}
+                    >
+                      <div className="flex items-start justify-between gap-1">
+                        <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-zinc-900 dark:text-zinc-50">
+                          {ev.title}
+                        </span>
+                        <span className="shrink-0 tabular-nums text-[10px] font-medium text-zinc-600 dark:text-zinc-300">
+                          {formatEventTime(ev.starts_at)}
+                        </span>
+                      </div>
+                      {metaLine ? (
+                        <p className="mt-0.5 truncate text-[10px] font-medium text-zinc-600/90 dark:text-zinc-300/90">
+                          {metaLine}
+                        </p>
+                      ) : null}
+                      <div className="mt-1">
+                        <AppointmentStatusBadge status={ev.status} />
+                      </div>
+                    </button>
+                  );
+                })}
                 {!expanded && hidden > 0 ? (
                   <button
                     type="button"

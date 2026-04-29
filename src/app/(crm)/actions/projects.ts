@@ -901,6 +901,74 @@ export async function setCrmChildProjectTabGroup(
   return { ok: true };
 }
 
+export async function updateCrmChildProjectQuickFields(
+  productId: string,
+  childId: string,
+  input: {
+    leadMemberId?: string | null;
+    target_date?: string | null;
+    priority?: ChildProjectPriority | null;
+  }
+): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const pid = productId.trim();
+  const cid = childId.trim();
+  if (!pid || !cid) return { error: "Missing id" };
+
+  const { data: child, error: cErr } = await supabase
+    .from("project")
+    .select("id, metadata, parent_project_id")
+    .eq("id", cid)
+    .maybeSingle();
+
+  if (cErr) return { error: humanizeProjectDbError(cErr.message) };
+  if (!child || (child.parent_project_id as string | null) !== pid) {
+    return { error: "Project not found under this product" };
+  }
+
+  const meta =
+    child.metadata &&
+    typeof child.metadata === "object" &&
+    !Array.isArray(child.metadata)
+      ? ({ ...(child.metadata as Record<string, unknown>) } as Record<
+          string,
+          unknown
+        >)
+      : {};
+
+  if ("leadMemberId" in input) {
+    const leadMemberId = input.leadMemberId?.trim() || null;
+    if (leadMemberId) meta.leadMemberId = leadMemberId;
+    else delete meta.leadMemberId;
+  }
+
+  if ("priority" in input) {
+    const priority = input.priority;
+    if (priority && CHILD_PRIORITY_SET.has(priority)) meta.priority = priority;
+    else delete meta.priority;
+  }
+
+  const update: Record<string, unknown> = { metadata: meta };
+  if ("target_date" in input) {
+    update.target_date = parseTargetDate(input.target_date ?? undefined);
+  }
+
+  const { error } = await supabase
+    .from("project")
+    .update(update)
+    .eq("id", cid);
+
+  if (error) return { error: humanizeProjectDbError(error.message) };
+  revalidatePath(`/products/${pid}`);
+  revalidatePath("/products");
+  return { ok: true };
+}
+
 export async function updateProductResources(
   productId: string,
   resources: WorkspaceResource[]
