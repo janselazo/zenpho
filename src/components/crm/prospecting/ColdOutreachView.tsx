@@ -312,11 +312,11 @@ function DateNavigator({
 type ActiveTab = "playbook" | "journal" | "goals" | "agenda" | "tasks";
 
 const TABS = [
-  { id: "playbook", label: "Playbook", icon: BookOpen },
   { id: "journal", label: "Journal", icon: NotebookText },
-  { id: "goals", label: "Goals", icon: Target },
+  { id: "playbook", label: "Playbook", icon: BookOpen },
   { id: "agenda", label: "Agenda", icon: CalendarDays },
   { id: "tasks", label: "Tasks", icon: ListTodo },
+  { id: "goals", label: "Goals", icon: Target },
 ];
 
 const DEFAULT_MONTHLY_TARGETS = {
