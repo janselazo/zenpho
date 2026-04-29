@@ -15,10 +15,11 @@ import {
   type ProspectVertical,
 } from "@/lib/crm/prospect-vertical-classify";
 import { renderBrandingShareImage } from "@/lib/crm/branding-share-image";
+import { generateAdsFunnelImageSubset } from "@/lib/crm/prospect-ads-image-gen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 type Body = {
   businessName?: unknown;
@@ -26,6 +27,29 @@ type Body = {
   report?: MarketIntelReport | null;
   leadId?: unknown;
 };
+
+function brandLogoDataUrl(input: {
+  logoPng: Buffer | null;
+  logoSvg: string | null;
+}): string | null {
+  if (input.logoPng) {
+    const isJpeg =
+      input.logoPng.length >= 3 &&
+      input.logoPng[0] === 0xff &&
+      input.logoPng[1] === 0xd8 &&
+      input.logoPng[2] === 0xff;
+    const mime = isJpeg ? "image/jpeg" : "image/png";
+    return `data:${mime};base64,${input.logoPng.toString("base64")}`;
+  }
+  if (input.logoSvg?.trim()) {
+    return `data:image/svg+xml;base64,${Buffer.from(input.logoSvg).toString("base64")}`;
+  }
+  return null;
+}
+
+function pngDataUrl(buf: Buffer | null): string | null {
+  return buf ? `data:image/png;base64,${buf.toString("base64")}` : null;
+}
 
 export async function POST(req: Request) {
   let body: Body;
@@ -109,7 +133,37 @@ export async function POST(req: Request) {
       );
     }
 
-    const rendered = renderBrandingShareImage({ spec, funnel });
+    const campaignImages = funnel
+      ? await generateAdsFunnelImageSubset(spec, funnel, vertical, [
+          "landingHero",
+          "adFbFeed",
+          "adIgStory",
+          "adGoogleDisplay",
+          "adHeroBanner",
+        ])
+      : null;
+    if (campaignImages && Object.keys(campaignImages.errors).length > 0) {
+      console.warn(
+        "[branding-share-image] campaign image warnings:",
+        campaignImages.errors,
+      );
+    }
+
+    const rendered = renderBrandingShareImage({
+      spec,
+      funnel,
+      realPalette: realAssets.palette,
+      logoDataUrl: brandLogoDataUrl(realAssets),
+      campaignImages: campaignImages
+        ? {
+            landingHero: pngDataUrl(campaignImages.landingHero),
+            metaFeed: pngDataUrl(campaignImages.adFbFeed),
+            instagramStory: pngDataUrl(campaignImages.adIgStory),
+            googleDisplay: pngDataUrl(campaignImages.adGoogleDisplay),
+            heroBanner: pngDataUrl(campaignImages.adHeroBanner),
+          }
+        : undefined,
+    });
     console.info(
       `[branding-share-image] done business="${businessName}" vertical="${verticalLabel(
         vertical,

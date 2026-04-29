@@ -5,6 +5,15 @@ import type { BrandingSpec } from "@/lib/crm/prospect-branding-spec-llm";
 export type BrandingShareImageInput = {
   spec: BrandingSpec;
   funnel: AdsFunnelSpec | null;
+  realPalette?: string[];
+  logoDataUrl?: string | null;
+  campaignImages?: {
+    landingHero?: string | null;
+    metaFeed?: string | null;
+    instagramStory?: string | null;
+    googleDisplay?: string | null;
+    heroBanner?: string | null;
+  };
 };
 
 export type BrandingShareImageResult = {
@@ -97,11 +106,55 @@ function textLines(
     .join("");
 }
 
+function textColorFor(bg: string): string {
+  const m = bg.match(/^#([0-9a-fA-F]{6})$/);
+  if (!m) return "#ffffff";
+  const n = Number.parseInt(m[1], 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? INK : "#ffffff";
+}
+
 function chip(x: number, y: number, label: string, color: string): string {
+  const fg = textColorFor(color);
   return `<g>
     <rect x="${x}" y="${y}" width="154" height="96" fill="${color}" stroke="${LINE}" stroke-width="1"/>
-    <text x="${x + 14}" y="${y + 32}" font-size="11" font-weight="700" fill="${color.toLowerCase() === "#ffffff" ? INK : "#ffffff"}" font-family="Inter, Arial, sans-serif">${esc(clamp(label, 18).toUpperCase())}</text>
-    <text x="${x + 14}" y="${y + 56}" font-size="13" font-weight="700" fill="${color.toLowerCase() === "#ffffff" ? INK : "#ffffff"}" font-family="Inter, Arial, sans-serif">${esc(color)}</text>
+    <text x="${x + 14}" y="${y + 32}" font-size="10" font-weight="700" fill="${fg}" font-family="Inter, Arial, sans-serif">${esc(clamp(label, 18).toUpperCase())}</text>
+    <text x="${x + 14}" y="${y + 56}" font-size="12" font-weight="700" fill="${fg}" font-family="Inter, Arial, sans-serif">${esc(color)}</text>
+  </g>`;
+}
+
+function landingMiniature(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  colors: { primary: string; accent: string; surface: string },
+  imageUrl?: string | null,
+): string {
+  if (imageUrl) {
+    return `<g>
+      <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="#ffffff" stroke="${LINE}"/>
+      <image href="${esc(imageUrl)}" x="${x + 10}" y="${y + 10}" width="${w - 20}" height="${h * 0.58}" preserveAspectRatio="xMidYMid slice"/>
+      <rect x="${x + 10}" y="${y + 10 + h * 0.58}" width="${w - 20}" height="${h * 0.28}" fill="#ffffff" stroke="${LINE}"/>
+      <rect x="${x + 24}" y="${y + 26 + h * 0.58}" width="${w * 0.42}" height="7" fill="${INK}" opacity="0.8"/>
+      <rect x="${x + 24}" y="${y + 44 + h * 0.58}" width="${w * 0.22}" height="14" fill="${colors.primary}"/>
+      <rect x="${x + 98}" y="${y + 44 + h * 0.58}" width="${w * 0.22}" height="14" fill="${colors.accent}" opacity="0.8"/>
+    </g>`;
+  }
+  return `<g>
+    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="#ffffff" stroke="${LINE}"/>
+    <rect x="${x + 14}" y="${y + 14}" width="${w - 28}" height="${h * 0.34}" fill="${colors.surface}" stroke="${LINE}"/>
+    <rect x="${x + 28}" y="${y + 30}" width="${w * 0.34}" height="8" fill="${INK}" opacity="0.9"/>
+    <rect x="${x + 28}" y="${y + 48}" width="${w * 0.48}" height="6" fill="${MUTED}" opacity="0.45"/>
+    <rect x="${x + 28}" y="${y + 66}" width="${w * 0.2}" height="16" fill="${colors.primary}"/>
+    <circle cx="${x + w - 52}" cy="${y + 56}" r="26" fill="${colors.accent}" opacity="0.9"/>
+    <rect x="${x + 14}" y="${y + h * 0.46}" width="${(w - 40) / 3}" height="${h * 0.18}" fill="${colors.primary}" opacity="0.9"/>
+    <rect x="${x + 26 + (w - 40) / 3}" y="${y + h * 0.46}" width="${(w - 40) / 3}" height="${h * 0.18}" fill="${colors.accent}" opacity="0.9"/>
+    <rect x="${x + 38 + ((w - 40) / 3) * 2}" y="${y + h * 0.46}" width="${(w - 40) / 3}" height="${h * 0.18}" fill="${colors.primary}" opacity="0.18"/>
+    <rect x="${x + 14}" y="${y + h * 0.72}" width="${w - 28}" height="${h * 0.17}" fill="#ffffff" stroke="${LINE}"/>
+    <rect x="${x + 28}" y="${y + h * 0.77}" width="${w * 0.45}" height="7" fill="${INK}" opacity="0.75"/>
   </g>`;
 }
 
@@ -110,28 +163,47 @@ function campaignTile(
   y: number,
   w: number,
   h: number,
-  opts: { label: string; title: string; accent: string; imageKind: "meta" | "story" | "google" | "hero" }
+  opts: {
+    label: string;
+    title: string;
+    accent: string;
+    imageKind: "meta" | "story" | "google" | "hero";
+    imageUrl?: string | null;
+  }
 ): string {
   const label = clamp(opts.label, 24).toUpperCase();
-  const title = clamp(opts.title, 54);
+  const title = clamp(opts.title, 42);
+  if (opts.imageUrl) {
+    return `<g>
+      <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#ffffff" stroke="${LINE}" stroke-width="1"/>
+      <image href="${esc(opts.imageUrl)}" x="${x + 12}" y="${y + 12}" width="${w - 24}" height="${h - 62}" preserveAspectRatio="xMidYMid slice"/>
+      <rect x="${x + 12}" y="${y + h - 48}" width="${w - 24}" height="36" fill="#ffffff" opacity="0.94"/>
+      <text x="${x + 20}" y="${y + h - 28}" font-size="8" font-weight="800" fill="${MUTED}" font-family="Inter, Arial, sans-serif">${esc(label)}</text>
+      <text x="${x + 20}" y="${y + h - 13}" font-size="12" font-weight="900" fill="${INK}" font-family="Inter, Arial, sans-serif">${esc(clamp(title, 30))}</text>
+    </g>`;
+  }
+  const visualX = x + w - 92;
+  const visualY = y + 46;
   const visual =
     opts.imageKind === "story"
-      ? `<rect x="${x + w - 78}" y="${y + 34}" width="48" height="${h - 64}" rx="22" fill="${opts.accent}" opacity="0.9"/>
-         <circle cx="${x + w - 54}" cy="${y + 64}" r="14" fill="#fff" opacity="0.85"/>`
+      ? `<rect x="${visualX + 22}" y="${visualY - 10}" width="44" height="82" rx="18" fill="${opts.accent}" opacity="0.9"/>
+         <circle cx="${visualX + 44}" cy="${visualY + 18}" r="11" fill="#fff" opacity="0.85"/>
+         <rect x="${visualX + 33}" y="${visualY + 48}" width="22" height="5" fill="#fff" opacity="0.75"/>`
       : opts.imageKind === "google"
-        ? `<rect x="${x + w - 96}" y="${y + 38}" width="62" height="62" fill="${opts.accent}" opacity="0.9"/>
-           <rect x="${x + w - 83}" y="${y + 54}" width="36" height="8" fill="#fff" opacity="0.9"/>
-           <rect x="${x + w - 83}" y="${y + 72}" width="28" height="8" fill="#fff" opacity="0.7"/>`
+        ? `<rect x="${visualX}" y="${visualY}" width="74" height="56" fill="${opts.accent}" opacity="0.9"/>
+           <rect x="${visualX + 14}" y="${visualY + 15}" width="44" height="7" fill="#fff" opacity="0.9"/>
+           <rect x="${visualX + 14}" y="${visualY + 32}" width="34" height="7" fill="#fff" opacity="0.7"/>`
         : opts.imageKind === "hero"
-          ? `<rect x="${x + w - 118}" y="${y + 42}" width="84" height="54" fill="${opts.accent}" opacity="0.9"/>
-             <rect x="${x + w - 106}" y="${y + 58}" width="54" height="8" fill="#fff" opacity="0.9"/>
-             <rect x="${x + w - 106}" y="${y + 76}" width="36" height="8" fill="#fff" opacity="0.7"/>`
-          : `<circle cx="${x + w - 58}" cy="${y + 70}" r="34" fill="${opts.accent}" opacity="0.9"/>
-             <circle cx="${x + w - 58}" cy="${y + 70}" r="18" fill="#fff" opacity="0.55"/>`;
+          ? `<rect x="${visualX - 4}" y="${visualY}" width="82" height="56" fill="${opts.accent}" opacity="0.9"/>
+             <rect x="${visualX + 12}" y="${visualY + 17}" width="48" height="7" fill="#fff" opacity="0.9"/>
+             <rect x="${visualX + 12}" y="${visualY + 34}" width="34" height="7" fill="#fff" opacity="0.7"/>`
+          : `<rect x="${visualX - 2}" y="${visualY}" width="76" height="56" fill="${opts.accent}" opacity="0.16"/>
+             <circle cx="${visualX + 36}" cy="${visualY + 28}" r="30" fill="${opts.accent}" opacity="0.9"/>
+             <circle cx="${visualX + 36}" cy="${visualY + 28}" r="14" fill="#fff" opacity="0.55"/>`;
   return `<g>
     <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#ffffff" stroke="${LINE}" stroke-width="1"/>
-    <text x="${x + 18}" y="${y + 30}" font-size="10" font-weight="700" fill="${MUTED}" font-family="Inter, Arial, sans-serif">${esc(label)}</text>
-    ${textLines(title, x + 18, y + 62, { maxChars: 18, maxLines: 3, size: 25, lineHeight: 27, weight: 900, fill: INK })}
+    <text x="${x + 16}" y="${y + 28}" font-size="9" font-weight="700" fill="${MUTED}" font-family="Inter, Arial, sans-serif">${esc(label)}</text>
+    ${textLines(title, x + 16, y + 58, { maxChars: 16, maxLines: 3, size: 19, lineHeight: 21, weight: 900, fill: INK })}
     ${visual}
   </g>`;
 }
@@ -143,17 +215,25 @@ function sectionTitle(x: number, y: number, n: string, label: string): string {
 export function renderBrandingShareImage(
   input: BrandingShareImageInput
 ): BrandingShareImageResult {
-  const { spec, funnel } = input;
+  const { spec, funnel, logoDataUrl, campaignImages } = input;
   const pairing = getBrandingFontPairing(spec.fontPairingId);
   const brand = spec.brandName || "Brand";
-  const primary = safeHex(spec.primaryColors[0]?.hex, "#111111");
-  const accent = safeHex(spec.primaryColors[1]?.hex || spec.secondaryColors[0]?.hex, "#D8D3C8");
-  const surface = safeHex(spec.secondaryColors[0]?.hex, "#F7F5F0");
+  const realPalette = (input.realPalette ?? [])
+    .map((hex) => safeHex(hex, ""))
+    .filter(Boolean)
+    .slice(0, 5);
+  const primary = safeHex(realPalette[0] || spec.primaryColors[0]?.hex, "#0DA7AD");
+  const accent = safeHex(
+    realPalette[1] || spec.primaryColors[1]?.hex || spec.secondaryColors[0]?.hex,
+    "#2F64A7",
+  );
+  const surface = safeHex(realPalette[2] || spec.secondaryColors[0]?.hex, "#EAF7F8");
+  const deep = safeHex(realPalette[3] || spec.secondaryColors[1]?.hex, "#123D68");
   const colors = [
-    spec.primaryColors[0] ? { name: spec.primaryColors[0].name, hex: primary } : { name: "Primary", hex: primary },
-    spec.primaryColors[1] ? { name: spec.primaryColors[1].name, hex: accent } : { name: "Accent", hex: accent },
-    spec.secondaryColors[0] ? { name: spec.secondaryColors[0].name, hex: surface } : { name: "Surface", hex: surface },
-    ...(spec.secondaryColors[1] ? [{ name: spec.secondaryColors[1].name, hex: safeHex(spec.secondaryColors[1].hex, "#FFFFFF") }] : []),
+    { name: spec.primaryColors[0]?.name || "Primary", hex: primary },
+    { name: spec.primaryColors[1]?.name || "Accent", hex: accent },
+    { name: spec.secondaryColors[0]?.name || "Surface", hex: surface },
+    { name: spec.secondaryColors[1]?.name || "Deep", hex: deep },
   ].slice(0, 4);
 
   const headline =
@@ -168,6 +248,9 @@ export function renderBrandingShareImage(
 
   const personality = spec.brandPersonality.slice(0, 4);
   const motifs = spec.keyVisualElements.slice(0, 4);
+  const brandMark = logoDataUrl
+    ? `<image href="${esc(logoDataUrl)}" x="72" y="116" width="260" height="82" preserveAspectRatio="xMidYMid meet"/>`
+    : `<text x="72" y="172" font-size="${brand.length > 22 ? 34 : 42}" font-weight="900" fill="${INK}" font-family="Inter, Arial, sans-serif">${esc(clamp(brand, 34).toUpperCase())}</text>`;
 
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" role="img" aria-label="${esc(brand)} brand kit and sales funnel preview">
@@ -179,8 +262,8 @@ export function renderBrandingShareImage(
 
   <g>
     <rect x="48" y="88" width="340" height="190" fill="#fff" stroke="${LINE}" stroke-width="1"/>
-    <text x="72" y="172" font-size="${brand.length > 22 ? 46 : 58}" font-weight="900" fill="${INK}" font-family="Inter, Arial, sans-serif">${esc(clamp(brand, 34).toUpperCase())}</text>
-    ${textLines(spec.tagline || spec.industry || "Brand system and campaign direction.", 74, 214, { maxChars: 36, maxLines: 2, size: 15, lineHeight: 20, fill: MUTED })}
+    ${brandMark}
+    ${textLines(spec.tagline || spec.industry || "Brand system and campaign direction.", 74, 230, { maxChars: 38, maxLines: 2, size: 13, lineHeight: 17, fill: MUTED })}
   </g>
 
   <g>
@@ -191,17 +274,17 @@ export function renderBrandingShareImage(
   <g>
     ${sectionTitle(780, 94, "02", "Typography")}
     <rect x="780" y="116" width="348" height="208" fill="#fff" stroke="${LINE}" stroke-width="1"/>
-    <text x="804" y="178" font-size="34" font-weight="900" fill="${INK}" font-family="Inter, Arial, sans-serif">${esc(pairing.displayFamily)}</text>
-    <line x1="804" y1="202" x2="1104" y2="202" stroke="${LINE}"/>
-    <text x="804" y="240" font-size="21" font-weight="500" fill="${INK}" font-family="Georgia, serif">${esc(pairing.bodyFamily)}</text>
-    <text x="1022" y="224" font-size="88" font-weight="900" fill="${primary}" font-family="Inter, Arial, sans-serif">Aa</text>
-    <text x="804" y="282" font-size="12" fill="${MUTED}" font-family="Inter, Arial, sans-serif">${esc(pairing.vibe)}</text>
+    ${textLines(pairing.displayFamily, 804, 174, { maxChars: 19, maxLines: 2, size: 27, lineHeight: 30, weight: 900 })}
+    <line x1="804" y1="214" x2="1092" y2="214" stroke="${LINE}"/>
+    <text x="804" y="250" font-size="18" font-weight="500" fill="${INK}" font-family="Georgia, serif">${esc(pairing.bodyFamily)}</text>
+    <text x="1018" y="225" font-size="76" font-weight="900" fill="${primary}" font-family="Inter, Arial, sans-serif">Aa</text>
+    ${textLines(pairing.vibe, 804, 292, { maxChars: 45, maxLines: 1, size: 11, lineHeight: 14, fill: MUTED })}
   </g>
 
   <g>
     ${sectionTitle(48, 342, "03", "Personality")}
     <rect x="48" y="364" width="340" height="206" fill="#fff" stroke="${LINE}" stroke-width="1"/>
-    ${personality.map((p, i) => `<text x="74" y="${402 + i * 34}" font-size="27" font-weight="900" fill="${INK}" font-family="Inter, Arial, sans-serif">${esc(p)}</text>`).join("")}
+    ${personality.map((p, i) => `<text x="74" y="${402 + i * 30}" font-size="23" font-weight="900" fill="${INK}" font-family="Inter, Arial, sans-serif">${esc(clamp(p, 20))}</text>`).join("")}
     ${textLines(spec.targetAudience || "Primary customer segment and buyer motivation.", 74, 538, { maxChars: 44, maxLines: 2, size: 12, lineHeight: 16, fill: MUTED })}
   </g>
 
@@ -215,31 +298,26 @@ export function renderBrandingShareImage(
     <rect x="444" y="482" width="86" height="62" fill="${accent}" opacity="0.9"/>
     <rect x="546" y="482" width="86" height="62" fill="${primary}" opacity="0.18"/>
     <rect x="648" y="482" width="86" height="62" fill="${INK}" opacity="0.92"/>
-    ${motifs.map((m, i) => `<text x="${i < 2 ? 444 : 594}" y="${610 + (i % 2) * 22}" font-size="12" fill="${MUTED}" font-family="Inter, Arial, sans-serif">- ${esc(clamp(m, 32))}</text>`).join("")}
+    ${motifs.map((m, i) => `<text x="${i < 2 ? 444 : 594}" y="${610 + (i % 2) * 20}" font-size="10" fill="${MUTED}" font-family="Inter, Arial, sans-serif">- ${esc(clamp(m, 30))}</text>`).join("")}
   </g>
 
   <g>
     ${sectionTitle(790, 342, "05", "Website direction")}
     <rect x="790" y="364" width="338" height="206" fill="#fff" stroke="${LINE}" stroke-width="1"/>
-    <rect x="816" y="392" width="286" height="88" fill="${surface}" stroke="${LINE}"/>
-    <rect x="838" y="416" width="130" height="10" fill="${INK}"/>
-    <rect x="838" y="438" width="190" height="8" fill="${MUTED}" opacity="0.55"/>
-    <rect x="838" y="460" width="76" height="16" fill="${primary}"/>
-    <circle cx="1058" cy="436" r="34" fill="${accent}" opacity="0.85"/>
-    ${textLines(headline, 816, 526, { maxChars: 42, maxLines: 2, size: 18, lineHeight: 23, weight: 900, fill: INK })}
+    ${landingMiniature(812, 388, 294, 118, { primary, accent, surface }, campaignImages?.landingHero)}
+    ${textLines(headline, 816, 542, { maxChars: 42, maxLines: 2, size: 15, lineHeight: 19, weight: 900, fill: INK })}
   </g>
 
   <g>
     ${sectionTitle(48, 640, "06", "Campaign assets")}
-    ${campaignTile(48, 666, 254, 154, { label: "Meta feed", title: metaTitle, accent: primary, imageKind: "meta" })}
-    ${campaignTile(320, 666, 254, 154, { label: "Instagram story", title: storyTitle, accent, imageKind: "story" })}
-    ${campaignTile(592, 666, 254, 154, { label: "Google display", title: googleTitle, accent: primary, imageKind: "google" })}
-    ${campaignTile(864, 666, 264, 154, { label: "Hero banner", title: heroTitle, accent, imageKind: "hero" })}
+    ${campaignTile(48, 666, 254, 154, { label: "Meta feed", title: metaTitle, accent: primary, imageKind: "meta", imageUrl: campaignImages?.metaFeed })}
+    ${campaignTile(320, 666, 254, 154, { label: "Instagram story", title: storyTitle, accent, imageKind: "story", imageUrl: campaignImages?.instagramStory })}
+    ${campaignTile(592, 666, 254, 154, { label: "Google display", title: googleTitle, accent: primary, imageKind: "google", imageUrl: campaignImages?.googleDisplay })}
+    ${campaignTile(864, 666, 264, 154, { label: "Hero banner", title: heroTitle, accent, imageKind: "hero", imageUrl: campaignImages?.heroBanner })}
   </g>
 
   <line x1="48" y1="846" x2="1152" y2="846" stroke="${LINE}"/>
   <text x="48" y="872" font-size="12" font-weight="800" fill="${INK}" font-family="Inter, Arial, sans-serif">${esc(brand.toUpperCase())}</text>
-  <text x="600" y="872" text-anchor="middle" font-size="12" fill="${MUTED}" font-family="Inter, Arial, sans-serif">OUTREACH PREVIEW</text>
   <text x="1152" y="872" text-anchor="end" font-size="12" font-weight="800" fill="${INK}" font-family="Inter, Arial, sans-serif">BRAND + FUNNEL SNAPSHOT</text>
 </svg>`;
 

@@ -273,6 +273,37 @@ export async function generateAdsFunnelImages(
   funnel: AdsFunnelSpec,
   vertical: ProspectVertical,
 ): Promise<AdsImages> {
+  return generateAdsFunnelImagesForSlots(
+    spec,
+    funnel,
+    vertical,
+    SLOTS.map((plan) => plan.slot),
+    "ads-images",
+  );
+}
+
+export async function generateAdsFunnelImageSubset(
+  spec: BrandingSpec,
+  funnel: AdsFunnelSpec,
+  vertical: ProspectVertical,
+  slots: AdsImageSlot[],
+): Promise<AdsImages> {
+  return generateAdsFunnelImagesForSlots(
+    spec,
+    funnel,
+    vertical,
+    slots,
+    "ads-images-subset",
+  );
+}
+
+async function generateAdsFunnelImagesForSlots(
+  spec: BrandingSpec,
+  funnel: AdsFunnelSpec,
+  vertical: ProspectVertical,
+  slots: AdsImageSlot[],
+  label: string,
+): Promise<AdsImages> {
   const empty: AdsImages = {
     landingHero: null,
     adFbFeed: null,
@@ -287,9 +318,13 @@ export async function generateAdsFunnelImages(
   if (!apiKey) {
     const err = "OPENAI_API_KEY is not configured.";
     for (const plan of SLOTS) empty.errors[plan.slot] = err;
-    console.warn("[ads-images] " + err);
+    console.warn(`[${label}] ${err}`);
     return empty;
   }
+
+  const slotSet = new Set(slots);
+  const plans = SLOTS.filter((plan) => slotSet.has(plan.slot));
+  if (plans.length === 0) return empty;
 
   const requested =
     process.env.OPENAI_BRANDING_IMAGE_MODEL?.trim() || DEFAULT_MODEL;
@@ -301,41 +336,41 @@ export async function generateAdsFunnelImages(
 
   let model = requested;
   console.info(
-    `[ads-images] starting generation with model=${model} quality=${quality} vertical=${vertical} fast=${useFastMode()} maxPerMinute=${maxImagesPerMinute()}`,
+    `[${label}] starting generation with model=${model} quality=${quality} vertical=${vertical} fast=${useFastMode()} maxPerMinute=${maxImagesPerMinute()} slots=${plans.length}`,
   );
 
   let results: { slot: AdsImageSlot; buffer: Buffer | null; error?: string }[];
 
   if (useFastMode()) {
     results = await runOpenAiImageJobs({
-      label: "ads-images",
-      jobs: SLOTS,
+      label,
+      jobs: plans,
       maxPerMinute: maxImagesPerMinute(),
       run: (plan, i) => {
         console.info(
-          `[ads-images] fast generating slot=${plan.slot} (${i + 1}/${SLOTS.length}) model=${model}`,
+          `[${label}] fast generating slot=${plan.slot} (${i + 1}/${plans.length}) model=${model}`,
         );
         return generateOne(openai, model, plan, ctx, quality);
       },
     });
   } else {
     results = [];
-    for (let i = 0; i < SLOTS.length; i++) {
-      const plan = SLOTS[i];
+    for (let i = 0; i < plans.length; i++) {
+      const plan = plans[i];
 
       if (i > 0) {
-        console.info(`[ads-images] waiting ${INTER_REQUEST_DELAY_MS}ms before slot=${plan.slot}`);
+        console.info(`[${label}] waiting ${INTER_REQUEST_DELAY_MS}ms before slot=${plan.slot}`);
         await new Promise((r) => setTimeout(r, INTER_REQUEST_DELAY_MS));
       }
 
       console.info(
-        `[ads-images] generating slot=${plan.slot} (${i + 1}/${SLOTS.length}) model=${model}`,
+        `[${label}] generating slot=${plan.slot} (${i + 1}/${plans.length}) model=${model}`,
       );
       const r = await generateOne(openai, model, plan, ctx, quality);
       results.push(r);
 
       if (r.error) {
-        console.warn(`[ads-images] slot=${r.slot} model=${model} error=${r.error}`);
+        console.warn(`[${label}] slot=${r.slot} model=${model} error=${r.error}`);
         if (
           i === 0 &&
           r.error &&
@@ -343,11 +378,11 @@ export async function generateAdsFunnelImages(
           fallback &&
           fallback !== model
         ) {
-          console.warn(`[ads-images] switching from ${model} to ${fallback} for remaining images`);
+          console.warn(`[${label}] switching from ${model} to ${fallback} for remaining images`);
           model = fallback;
         }
       } else {
-        console.info(`[ads-images] slot=${r.slot} ok`);
+        console.info(`[${label}] slot=${r.slot} ok`);
       }
     }
   }
