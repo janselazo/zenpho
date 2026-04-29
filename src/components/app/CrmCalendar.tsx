@@ -41,14 +41,56 @@ function singleLeadContext(raw: unknown): AppointmentLeadContext | null {
   };
 }
 
-function formatDateTime(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleString("en-US", {
+function formatAppointmentListSchedule(startIso: string, endIso: string): {
+  dateLine: string;
+  timeLine: string | null;
+} {
+  const s = new Date(startIso);
+  const e = new Date(endIso);
+  if (Number.isNaN(s.getTime())) {
+    return { dateLine: "", timeLine: null };
+  }
+  const dateLine = s.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
+    year: "numeric",
+  });
+  const tStart = s.toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
   });
+  if (Number.isNaN(e.getTime())) {
+    return { dateLine, timeLine: tStart };
+  }
+  const tEnd = e.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  const sameDay =
+    s.getFullYear() === e.getFullYear() &&
+    s.getMonth() === e.getMonth() &&
+    s.getDate() === e.getDate();
+  if (sameDay && tEnd !== tStart) {
+    return { dateLine, timeLine: `${tStart} – ${tEnd}` };
+  }
+  if (!sameDay) {
+    const endDate = e.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+    return {
+      dateLine: `${dateLine} → ${endDate}`,
+      timeLine: `${tStart} – ${tEnd}`,
+    };
+  }
+  return { dateLine, timeLine: tStart };
+}
+
+function leadContextLine(row: AppointmentCalendarRow): string | null {
+  const parts = [row.clientName, row.company, row.projectType]
+    .map((p) => (typeof p === "string" ? p.trim() : ""))
+    .filter(Boolean);
+  return parts.length ? parts.join(" · ") : null;
 }
 
 function defaultNextHourWindow() {
@@ -503,30 +545,49 @@ function AppointmentList({
 
   return (
     <ul className="divide-y divide-border rounded-2xl border border-border bg-white shadow-sm">
-      {items.map((row) => (
-        <li key={row.id}>
-          <button
-            type="button"
-            onClick={() => onEdit(row)}
-            className="flex w-full items-start justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-surface/50"
-          >
-            <div className="min-w-0">
-              <p className="font-medium text-text-primary">{row.title}</p>
-              <div className="mt-1.5">
-                <AppointmentStatusBadge status={row.status} />
+      {items.map((row) => {
+        const meta = leadContextLine(row);
+        const { dateLine, timeLine } = formatAppointmentListSchedule(
+          row.starts_at,
+          row.ends_at
+        );
+        return (
+          <li key={row.id}>
+            <button
+              type="button"
+              onClick={() => onEdit(row)}
+              className="flex w-full items-start justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-surface/50"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-text-primary">{row.title}</p>
+                <div className="mt-1.5">
+                  <AppointmentStatusBadge status={row.status} />
+                </div>
+                {meta ? (
+                  <p className="mt-2 text-xs text-text-secondary dark:text-zinc-400">
+                    {meta}
+                  </p>
+                ) : null}
+                {row.description?.trim() ? (
+                  <p className="mt-1.5 text-sm text-text-secondary line-clamp-2 dark:text-zinc-400">
+                    {row.description.trim()}
+                  </p>
+                ) : null}
               </div>
-              {row.description && (
-                <p className="mt-1 text-sm text-text-secondary line-clamp-1">
-                  {row.description}
+              <div className="shrink-0 text-right">
+                <p className="text-sm font-medium tabular-nums text-text-primary">
+                  {dateLine}
                 </p>
-              )}
-            </div>
-            <span className="shrink-0 text-sm text-text-secondary">
-              {formatDateTime(row.starts_at)}
-            </span>
-          </button>
-        </li>
-      ))}
+                {timeLine ? (
+                  <p className="mt-0.5 text-xs tabular-nums text-text-secondary dark:text-zinc-500">
+                    {timeLine}
+                  </p>
+                ) : null}
+              </div>
+            </button>
+          </li>
+        );
+      })}
     </ul>
   );
 }

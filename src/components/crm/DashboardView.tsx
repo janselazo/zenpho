@@ -20,28 +20,21 @@ import {
 } from "recharts";
 import {
   Flame,
-  Clock,
   Zap,
   ArrowRight,
   Calendar,
   Building2,
   DollarSign,
-  Phone,
-  Mail,
+  ListTodo,
   Users,
-  MessageSquare,
-  CalendarCheck,
   MoreHorizontal,
 } from "lucide-react";
 import {
   playbookCategories,
-  prospectingTasks,
   DEAL_STAGE_LABELS,
   DEAL_STAGE_COLORS,
   type DealStage,
   type PlaybookCategory,
-  type ProspectingTask,
-  type ProspectingTaskType,
 } from "@/lib/crm/mock-data";
 import {
   type ClientsCreatedPoint,
@@ -53,12 +46,19 @@ import DashboardRangePicker from "@/components/crm/DashboardRangePicker";
 import {
   getCompletions,
   loadPlaybookCategories,
+  loadPlaybookPriorityActivityIds,
   PLAYBOOK_STRUCTURE_CHANGED_EVENT,
+  prunePriorityActivityIds,
 } from "@/lib/crm/playbook-store";
 import { fetchUserProspectingPlaybook } from "@/lib/crm/playbook-remote";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import type { DailyMoneyPoint } from "@/components/crm/DashboardCharts";
+import AppointmentStatusBadge from "@/components/app/AppointmentStatusBadge";
+import {
+  parseAppointmentStatus,
+  type AppointmentStatus,
+} from "@/lib/crm/appointment-status";
 
 const dashCard =
   "rounded-2xl border border-border bg-white shadow-sm dark:border-zinc-800/70 dark:bg-zinc-900/60 dark:shadow-none dark:ring-1 dark:ring-white/[0.05]";
@@ -167,22 +167,51 @@ function formatFinanceXAxisTick(v: number): string {
   return `$${x.toFixed(1)}`;
 }
 
-function daysBetween(a: string, b: Date) {
-  const d = new Date(a);
-  d.setHours(0, 0, 0, 0);
-  const bNorm = new Date(b);
-  bNorm.setHours(0, 0, 0, 0);
-  return Math.floor((bNorm.getTime() - d.getTime()) / 86_400_000);
+type DashboardUpcomingAppointment = {
+  id: string;
+  title: string;
+  starts_at: string;
+  status: AppointmentStatus;
+  meta: string | null;
+};
+
+function singleAppointmentLead(raw: unknown): {
+  name: string | null;
+  company: string | null;
+  project_type: string | null;
+} | null {
+  const one = Array.isArray(raw) ? raw[0] : raw;
+  if (!one || typeof one !== "object") return null;
+  const row = one as Record<string, unknown>;
+  return {
+    name: typeof row.name === "string" ? row.name : null,
+    company: typeof row.company === "string" ? row.company : null,
+    project_type:
+      typeof row.project_type === "string" ? row.project_type : null,
+  };
 }
 
-const TASK_TYPE_ICONS: Record<ProspectingTaskType, React.ReactNode> = {
-  follow_up: <Clock className="h-4 w-4" />,
-  call: <Phone className="h-4 w-4" />,
-  email: <Mail className="h-4 w-4" />,
-  text: <MessageSquare className="h-4 w-4" />,
-  appointment: <CalendarCheck className="h-4 w-4" />,
-  other: <MoreHorizontal className="h-4 w-4" />,
-};
+function formatDashboardApptStart(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function appointmentMetaLine(
+  name: string | null,
+  company: string | null,
+  projectType: string | null
+): string | null {
+  const parts = [name, company, projectType]
+    .map((p) => (typeof p === "string" ? p.trim() : ""))
+    .filter(Boolean);
+  return parts.length ? parts.join(" · ") : null;
+}
 
 /** Per-column fills under funnel line: left = stronger periwinkle, right = lighter. */
 const FUNNEL_AREA_FILLS_LIGHT = [
@@ -281,27 +310,6 @@ function SalesFunnelAreaSvg({
       />
     </svg>
   );
-}
-
-// ── Active tasks for dashboard ──────────────────────────────────────────────
-
-function getActiveTasks(
-  today: Date,
-  range: { from: string; to: string }
-): ProspectingTask[] {
-  return prospectingTasks
-    .filter((t) => {
-      if (t.status === "completed" || t.status === "skipped") return false;
-      const d = t.dueDate.slice(0, 10);
-      return d >= range.from && d <= range.to;
-    })
-    .sort((a, b) => {
-      const aOver = daysBetween(a.dueDate, today) > 0 ? 0 : 1;
-      const bOver = daysBetween(b.dueDate, today) > 0 ? 0 : 1;
-      if (aOver !== bOver) return aOver - bOver;
-      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-    })
-    .slice(0, 4);
 }
 
 // ── Deals activity heatmap data ─────────────────────────────────────────────
@@ -513,9 +521,6 @@ export default function DashboardView({
   businessTotalsCur,
   businessTotalsPrev,
 }: DashboardViewProps) {
-  const today = new Date();
-  const range = { from: dateFrom, to: dateTo };
-  const activeTasks = getActiveTasks(today, range);
   const heatmap = buildDealsHeatmap();
 
   const leadsBars = useMemo(
@@ -605,17 +610,54 @@ export default function DashboardView({
   const [playbookCompletions, setPlaybookCompletions] = useState<
     Record<string, number>
   >({});
+  const [priorityActivityIds, setPriorityActivityIds] = useState<string[]>([]);
+  const [upcomingAppts, setUpcomingAppts] = useState<
+    DashboardUpcomingAppointment[]
+  >([]);
+  const [apptsLoadError, setApptsLoadError] = useState<string | null>(null);
   const funnelMaxCount = useMemo(
     () => Math.max(...funnel.map((s) => s.count), 1),
     [funnel]
   );
 
+  const dashboardPlaybookTasks = useMemo(() => {
+    const prio = new Set(priorityActivityIds);
+    const rows: {
+      id: string;
+      title: string;
+      category: string;
+      done: number;
+      target: number;
+      isPriority: boolean;
+    }[] = [];
+    for (const cat of playbookCats) {
+      for (const a of cat.activities) {
+        const done = playbookCompletions[a.id] ?? 0;
+        if (done >= a.target) continue;
+        rows.push({
+          id: a.id,
+          title: a.title,
+          category: cat.name,
+          done,
+          target: a.target,
+          isPriority: prio.has(a.id),
+        });
+      }
+    }
+    rows.sort((a, b) => Number(b.isPriority) - Number(a.isPriority));
+    return rows.slice(0, 6);
+  }, [playbookCats, playbookCompletions, priorityActivityIds]);
+
   useEffect(() => {
     async function syncPlaybookKpis() {
       if (!isSupabaseConfigured()) {
         const loaded = loadPlaybookCategories();
+        const cats = loaded ?? playbookCategories;
         if (loaded !== null) setPlaybookCats(loaded);
         setPlaybookCompletions(getCompletions());
+        setPriorityActivityIds(
+          prunePriorityActivityIds(cats, loadPlaybookPriorityActivityIds())
+        );
         return;
       }
       const supabase = createClient();
@@ -624,18 +666,29 @@ export default function DashboardView({
       } = await supabase.auth.getUser();
       if (!user) {
         const loaded = loadPlaybookCategories();
+        const cats = loaded ?? playbookCategories;
         if (loaded !== null) setPlaybookCats(loaded);
         setPlaybookCompletions(getCompletions());
+        setPriorityActivityIds(
+          prunePriorityActivityIds(cats, loadPlaybookPriorityActivityIds())
+        );
         return;
       }
       const result = await fetchUserProspectingPlaybook(supabase, user.id);
       if (!result.found) {
         setPlaybookCats([]);
         setPlaybookCompletions({});
+        setPriorityActivityIds([]);
         return;
       }
       setPlaybookCats(result.categories);
       setPlaybookCompletions(result.completions);
+      setPriorityActivityIds(
+        prunePriorityActivityIds(
+          result.categories,
+          result.priorityActivityIds
+        )
+      );
     }
 
     void syncPlaybookKpis();
@@ -650,6 +703,71 @@ export default function DashboardView({
         syncPlaybookKpis
       );
       sub?.data.subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured()) {
+      setUpcomingAppts([]);
+      setApptsLoadError(null);
+      return;
+    }
+    let cancelled = false;
+    async function loadUpcoming() {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from("appointment")
+          .select(
+            "id, title, starts_at, status, lead:lead_id ( name, company, project_type )"
+          )
+          .gte("starts_at", new Date().toISOString())
+          .order("starts_at", { ascending: true })
+          .limit(6);
+        if (cancelled) return;
+        if (error) {
+          setUpcomingAppts([]);
+          setApptsLoadError(error.message);
+          return;
+        }
+        setApptsLoadError(null);
+        setUpcomingAppts(
+          (data ?? []).map(
+            (r: {
+              id: string;
+              title: string;
+              starts_at: string;
+              status: string | null;
+              lead?: unknown;
+            }) => {
+            const lead = singleAppointmentLead(r.lead);
+            return {
+              id: r.id,
+              title: r.title,
+              starts_at: r.starts_at,
+              status: parseAppointmentStatus(r.status),
+              meta: lead
+                ? appointmentMetaLine(
+                    lead.name,
+                    lead.company,
+                    lead.project_type
+                  )
+                : null,
+            };
+          })
+        );
+      } catch (e) {
+        if (!cancelled) {
+          setUpcomingAppts([]);
+          setApptsLoadError(
+            e instanceof Error ? e.message : "Failed to load appointments"
+          );
+        }
+      }
+    }
+    void loadUpcoming();
+    return () => {
+      cancelled = true;
     };
   }, []);
 
@@ -1036,13 +1154,12 @@ export default function DashboardView({
         </div>
       </div>
 
-      {/* Next Appointments + Tasks */}
+      {/* Upcoming Appointments + Tasks */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Next Appointments */}
         <div className={`${dashCard} p-5`}>
           <div className="flex items-center justify-between">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/60 dark:text-zinc-500">
-              Next Appointments
+              Upcoming appointments
             </p>
             <Link
               href="/calendar"
@@ -1051,68 +1168,120 @@ export default function DashboardView({
               View all →
             </Link>
           </div>
-          <div className="mt-6 flex flex-col items-center gap-2 py-6 text-center">
-            <Calendar className="h-8 w-8 text-text-secondary/30 dark:text-zinc-600" />
-            <p className="text-sm text-text-secondary dark:text-zinc-400">
-              No upcoming appointments
+          {apptsLoadError ? (
+            <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+              {apptsLoadError}
             </p>
-          </div>
+          ) : null}
+          {upcomingAppts.length === 0 && !apptsLoadError ? (
+            <div className="mt-6 flex flex-col items-center gap-2 py-6 text-center">
+              <Calendar className="h-8 w-8 text-text-secondary/30 dark:text-zinc-600" aria-hidden />
+              <p className="text-sm text-text-secondary dark:text-zinc-400">
+                No upcoming appointments
+              </p>
+            </div>
+          ) : null}
+          {upcomingAppts.length > 0 ? (
+            <ul className="mt-4 divide-y divide-border dark:divide-zinc-800">
+              {upcomingAppts.map((row) => (
+                <li key={row.id}>
+                  <Link
+                    href="/calendar"
+                    className="flex w-full items-start justify-between gap-3 py-3 text-left transition-colors first:pt-0 last:pb-0 hover:opacity-90"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-text-primary dark:text-zinc-100">
+                        {row.title}
+                      </p>
+                      <div className="mt-1.5">
+                        <AppointmentStatusBadge status={row.status} />
+                      </div>
+                      {row.meta ? (
+                        <p className="mt-1.5 text-xs text-text-secondary dark:text-zinc-500">
+                          {row.meta}
+                        </p>
+                      ) : null}
+                    </div>
+                    <span className="shrink-0 text-xs font-medium tabular-nums text-text-secondary dark:text-zinc-400">
+                      {formatDashboardApptStart(row.starts_at)}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
 
-        {/* Tasks */}
         <div className={`${dashCard} p-5`}>
           <div className="flex items-center justify-between">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/60 dark:text-zinc-500">
               Tasks
             </p>
             <Link
-              href="/prospecting/playbook"
+              href="/prospecting/playbook?tab=tasks"
               className="text-xs font-medium text-accent hover:underline dark:text-blue-400 dark:hover:text-blue-300"
             >
               View all →
             </Link>
           </div>
-          <div className="mt-4 space-y-3">
-            {activeTasks.length === 0 ? (
-              <p className="py-6 text-center text-sm text-text-secondary dark:text-zinc-400">
-                No active tasks
+          {dashboardPlaybookTasks.length === 0 ? (
+            <div className="mt-6 flex flex-col items-center gap-2 py-6 text-center">
+              <ListTodo className="h-8 w-8 text-text-secondary/30 dark:text-zinc-600" aria-hidden />
+              <p className="text-sm text-text-secondary dark:text-zinc-400">
+                {playbookCats.length === 0 || totalActivities === 0
+                  ? "Add playbook activities under Prospecting to see tasks here."
+                  : "All playbook activities are complete for today."}
               </p>
-            ) : (
-              activeTasks.map((t) => {
-                const diff = daysBetween(t.dueDate, today);
-                const isOverdue = diff > 0;
+            </div>
+          ) : (
+            <ul className="mt-4 space-y-2">
+              {dashboardPlaybookTasks.map((t) => {
+                const left = t.target - t.done;
                 return (
-                  <div
-                    key={t.id}
-                    className={`flex items-start gap-3 rounded-xl px-3 py-2.5 ${
-                      isOverdue ? "bg-red-50/60 dark:bg-red-950/35" : ""
-                    }`}
-                  >
-                    <span className={isOverdue ? "text-red-400 dark:text-red-400" : "text-text-secondary/40 dark:text-zinc-600"}>
-                      {TASK_TYPE_ICONS[t.type]}
-                    </span>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-text-primary dark:text-zinc-100">
-                        {t.title}
-                      </p>
-                      <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                        {t.linkedLead && (
-                          <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent">
-                            {t.linkedLead}
-                          </span>
+                  <li key={t.id}>
+                    <Link
+                      href="/prospecting/playbook?tab=tasks"
+                      className="flex items-start gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-surface/60 dark:hover:bg-zinc-800/50"
+                    >
+                      <span
+                        className={
+                          t.isPriority
+                            ? "text-amber-500 dark:text-amber-400"
+                            : "text-text-secondary/45 dark:text-zinc-600"
+                        }
+                        aria-hidden
+                      >
+                        {t.isPriority ? (
+                          <Flame className="h-4 w-4" />
+                        ) : (
+                          <ListTodo className="h-4 w-4" />
                         )}
-                        {isOverdue && (
-                          <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-700 dark:bg-red-950/80 dark:text-red-300">
-                            Overdue by {diff} day{diff > 1 ? "s" : ""}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-text-primary dark:text-zinc-100">
+                          {t.title}
+                        </p>
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                          <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-medium text-text-secondary dark:bg-zinc-800 dark:text-zinc-400">
+                            {t.category}
                           </span>
-                        )}
+                          <span className="text-[10px] font-medium tabular-nums text-text-secondary dark:text-zinc-500">
+                            {t.done}/{t.target} today
+                            {left > 0 ? ` · ${left} left` : ""}
+                          </span>
+                          {t.isPriority ? (
+                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800 dark:bg-amber-950/60 dark:text-amber-200">
+                              Priority
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
-                    </div>
-                  </div>
+                    </Link>
+                  </li>
                 );
-              })
-            )}
-          </div>
+              })}
+            </ul>
+          )}
         </div>
       </div>
 
