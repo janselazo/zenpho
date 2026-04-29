@@ -124,6 +124,14 @@ export function sanitizeDocHtml(html: string): string {
       "td",
       "img",
     ],
-    ALLOWED_ATTR: ["class", "colspan", "rowspan", "src", "alt", "title"],
+    ALLOWED_ATTR: [
+      "class",
+      "colspan",
+      "rowspan",
+      "src",
+      "alt",
+      "title",
+      "style",
+    ],
   });
 }

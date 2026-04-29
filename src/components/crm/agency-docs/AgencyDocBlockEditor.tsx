@@ -15,11 +15,16 @@ import type { Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Image from "@tiptap/extension-image";
+import TextAlign from "@tiptap/extension-text-align";
 import { TableKit } from "@tiptap/extension-table";
 import { plainTextToTableHtml } from "@/lib/crm/agency-doc-paste-table";
 import { AGENCY_DOC_TABLE_PROSE_CLASS } from "@/lib/crm/agency-doc-body";
 import { uploadDocImage } from "@/app/(crm)/actions/agency-docs";
 import {
+  AlignCenter,
+  AlignJustify,
+  AlignLeft,
+  AlignRight,
   Bold,
   ImagePlus,
   Italic,
@@ -57,6 +62,9 @@ const AgencyDocBlockEditor = forwardRef<AgencyDocBlockEditorHandle, Props>(
           heading: false,
         }),
         Underline,
+        TextAlign.configure({
+          types: ["paragraph", "heading"],
+        }),
         Image.configure({ inline: false, allowBase64: false }),
         TableKit.configure({
           table: { resizable: false },
@@ -170,7 +178,7 @@ const AgencyDocBlockEditor = forwardRef<AgencyDocBlockEditorHandle, Props>(
         <div
           className="flex items-center gap-0.5 border-b border-border px-2 py-1.5 dark:border-zinc-700"
           role="toolbar"
-          aria-label="Text formatting and structure"
+          aria-label="Text formatting, alignment, and structure"
         >
           <ToolbarBtn
             editor={editor}
@@ -195,6 +203,45 @@ const AgencyDocBlockEditor = forwardRef<AgencyDocBlockEditorHandle, Props>(
             onPress={() => editor.chain().focus().toggleUnderline().run()}
           >
             <UnderlineIcon className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
+          </ToolbarBtn>
+          <span
+            className="mx-1 h-6 w-px shrink-0 self-center bg-border dark:bg-zinc-600"
+            aria-hidden
+          />
+          <ToolbarBtn
+            editor={editor}
+            label="Align left"
+            isActive={() =>
+              (editor.getAttributes("paragraph").textAlign ?? "left") ===
+              "left"
+            }
+            onPress={() => editor.chain().focus().setTextAlign("left").run()}
+          >
+            <AlignLeft className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
+          </ToolbarBtn>
+          <ToolbarBtn
+            editor={editor}
+            label="Align center"
+            isActive={() => editor.isActive({ textAlign: "center" })}
+            onPress={() => editor.chain().focus().setTextAlign("center").run()}
+          >
+            <AlignCenter className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
+          </ToolbarBtn>
+          <ToolbarBtn
+            editor={editor}
+            label="Align right"
+            isActive={() => editor.isActive({ textAlign: "right" })}
+            onPress={() => editor.chain().focus().setTextAlign("right").run()}
+          >
+            <AlignRight className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
+          </ToolbarBtn>
+          <ToolbarBtn
+            editor={editor}
+            label="Justify"
+            isActive={() => editor.isActive({ textAlign: "justify" })}
+            onPress={() => editor.chain().focus().setTextAlign("justify").run()}
+          >
+            <AlignJustify className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
           </ToolbarBtn>
           <span
             className="mx-1 h-6 w-px shrink-0 self-center bg-border dark:bg-zinc-600"
