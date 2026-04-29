@@ -284,17 +284,14 @@ function campaignTile(
   const title = clamp(opts.title, 42);
   const cta = clamp(opts.cta, 18).toUpperCase();
   if (opts.imageUrl) {
+    const ctaW = Math.min(82, w - 128);
     return `<g>
       <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#ffffff" stroke="${LINE}" stroke-width="1"/>
-      <image href="${esc(opts.imageUrl)}" x="${x + 12}" y="${y + 12}" width="${w - 24}" height="${h - 52}" preserveAspectRatio="xMidYMid slice"/>
-      <rect x="${x + 12}" y="${y + 12}" width="${w - 24}" height="${h - 52}" fill="#000000" opacity="0.18"/>
-      <rect x="${x + 22}" y="${y + 22}" width="${w - 96}" height="38" fill="#ffffff" opacity="0.88"/>
-      <text x="${x + 32}" y="${y + 39}" font-size="8" font-weight="800" fill="${MUTED}" font-family="Inter, Arial, sans-serif">${esc(label)}</text>
-      <text x="${x + 32}" y="${y + 54}" font-size="12" font-weight="900" fill="${INK}" font-family="Inter, Arial, sans-serif">${esc(clamp(title, 24))}</text>
-      <rect x="${x + 22}" y="${y + h - 64}" width="${Math.min(92, w - 44)}" height="22" rx="11" fill="${opts.accent}"/>
-      <text x="${x + 68}" y="${y + h - 49}" text-anchor="middle" font-size="8" font-weight="900" fill="${textColorFor(opts.accent)}" font-family="Inter, Arial, sans-serif">${esc(cta)}</text>
-      <rect x="${x + 12}" y="${y + h - 34}" width="${w - 24}" height="22" fill="#ffffff" opacity="0.96"/>
-      <text x="${x + 20}" y="${y + h - 18}" font-size="10" font-weight="900" fill="${INK}" font-family="Inter, Arial, sans-serif">${esc(clamp(title, 30))}</text>
+      <text x="${x + 14}" y="${y + 20}" font-size="8" font-weight="800" fill="${MUTED}" font-family="Inter, Arial, sans-serif">${esc(label)}</text>
+      <text x="${x + 14}" y="${y + 38}" font-size="12" font-weight="900" fill="${INK}" font-family="Inter, Arial, sans-serif">${esc(clamp(title, 22))}</text>
+      <rect x="${x + w - ctaW - 14}" y="${y + 18}" width="${ctaW}" height="22" rx="11" fill="${opts.accent}"/>
+      <text x="${x + w - ctaW / 2 - 14}" y="${y + 33}" text-anchor="middle" font-size="8" font-weight="900" fill="${textColorFor(opts.accent)}" font-family="Inter, Arial, sans-serif">${esc(cta)}</text>
+      <image href="${esc(opts.imageUrl)}" x="${x + 12}" y="${y + 50}" width="${w - 24}" height="${h - 62}" preserveAspectRatio="xMidYMid slice"/>
     </g>`;
   }
   const visualX = x + w - 92;
