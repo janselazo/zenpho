@@ -116,7 +116,7 @@ export default async function LeadDetailPage({ params }: Props) {
 
   const followUpsRes = await supabase
     .from("appointment")
-    .select("id, title, starts_at, ends_at")
+    .select("id, title, starts_at, ends_at, description, status")
     .eq("lead_id", id)
     .order("starts_at", { ascending: true });
   const followUpAppointments: LeadFollowUpAppointment[] =

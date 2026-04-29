@@ -44,8 +44,9 @@ const STATUS_ORDER: TaskStatus[] = [
 const PRIORITY_OPTIONS = [
   { value: "", label: "Not set" },
   { value: "low", label: "Low" },
-  { value: "medium", label: "Medium" },
+  { value: "medium", label: "Normal" },
   { value: "high", label: "High" },
+  { value: "urgent", label: "Urgent" },
 ] as const;
 
 type InnerTab = "description" | "files" | "comments" | "subtasks";
@@ -55,9 +56,19 @@ export type TaskCreateIntent = {
   sprintId: string | null;
 } | null;
 
+function taskStatusRowLabel(
+  s: TaskStatus,
+  overrides?: Partial<Record<TaskStatus, string>>
+) {
+  const o = overrides?.[s]?.trim();
+  return o || TASK_STATUS_LABELS[s];
+}
+
 type Props = {
   tasks: WorkspaceTask[];
   sprints: WorkspaceSprint[];
+  taskStatusLabels?: Partial<Record<TaskStatus, string>>;
+  onOpenStatusSettings?: () => void;
   onAddTask: (input: {
     title: string;
     status: TaskStatus;
@@ -120,6 +131,8 @@ function milestoneRank(key: MilestoneKey | undefined): number {
 export default function ProjectTasksView({
   tasks,
   sprints,
+  taskStatusLabels,
+  onOpenStatusSettings,
   onAddTask,
   onUpdateTask,
   onDeleteTask,
@@ -153,7 +166,7 @@ export default function ProjectTasksView({
   const [draftStartTime, setDraftStartTime] = useState("");
   const [draftEndTime, setDraftEndTime] = useState("");
   const [draftPriority, setDraftPriority] = useState<
-    "" | "low" | "medium" | "high"
+    "" | "low" | "medium" | "high" | "urgent"
   >("");
   const [draftAssigneeIds, setDraftAssigneeIds] = useState<string[]>([]);
   const [draftMilestoneTags, setDraftMilestoneTags] = useState<string[]>([]);
@@ -403,15 +416,26 @@ export default function ProjectTasksView({
         </button>
       </div>
 
-      <div className="relative mt-4 max-w-md">
-        <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary/50" />
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search tasks…"
-          className="w-full rounded-xl border border-border bg-white py-2 pl-9 pr-3 text-sm text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/15 dark:border-zinc-700 dark:bg-zinc-800/50"
-        />
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative max-w-md flex-1">
+          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary/50" />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search tasks…"
+            className="w-full rounded-xl border border-border bg-white py-2 pl-9 pr-3 text-sm text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/15 dark:border-zinc-700 dark:bg-zinc-800/50"
+          />
+        </div>
+        {onOpenStatusSettings ? (
+          <button
+            type="button"
+            onClick={onOpenStatusSettings}
+            className="shrink-0 rounded-xl border border-border bg-white px-3 py-2 text-sm font-medium text-text-primary hover:bg-surface/80 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+          >
+            Edit statuses
+          </button>
+        ) : null}
       </div>
 
       <div className="mt-6 overflow-x-auto rounded-2xl border border-border bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900/40">
@@ -469,14 +493,22 @@ export default function ProjectTasksView({
                       {MILESTONE_LABELS[t.milestoneKey ?? "unassigned"]}
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium text-white"
-                        style={{
-                          backgroundColor: TASK_STATUS_COLORS[t.status],
-                        }}
+                      <select
+                        value={t.status}
+                        onChange={(e) =>
+                          onUpdateTask(t.id, {
+                            status: e.target.value as TaskStatus,
+                          })
+                        }
+                        className="max-w-[13rem] rounded-lg border border-border bg-white px-2 py-1.5 text-xs font-medium text-text-primary dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                        aria-label={`Status for ${t.title}`}
                       >
-                        {TASK_STATUS_LABELS[t.status]}
-                      </span>
+                        {[...new Set([...STATUS_ORDER, t.status])].map((s) => (
+                          <option key={s} value={s}>
+                            {taskStatusRowLabel(s, taskStatusLabels)}
+                          </option>
+                        ))}
+                      </select>
                     </td>
                     <td className="px-4 py-3 text-text-secondary">
                       {sprintLabel(sprints, t.sprintId)}
@@ -718,7 +750,7 @@ export default function ProjectTasksView({
                       >
                         {STATUS_ORDER.map((s) => (
                           <option key={s} value={s}>
-                            {TASK_STATUS_LABELS[s]}
+                            {taskStatusRowLabel(s, taskStatusLabels)}
                           </option>
                         ))}
                       </select>

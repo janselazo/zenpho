@@ -49,6 +49,8 @@ type Props = {
   displayFormat?: "presentation" | "medium" | "numeric";
   showFooter?: boolean;
   showTriggerChevron?: boolean;
+  /** Tighter trigger for dense tables (smaller height, less horizontal padding). */
+  compact?: boolean;
   disabled?: boolean;
   "aria-label"?: string;
 };
@@ -61,6 +63,7 @@ export default function CrmPopoverDateField({
   displayFormat = "presentation",
   showFooter = false,
   showTriggerChevron = false,
+  compact = false,
   disabled = false,
   "aria-label": ariaLabel,
 }: Props) {
@@ -78,9 +81,14 @@ export default function CrmPopoverDateField({
     ? formatCrmDateTrigger(value, displayFormat)
     : null;
   const placeholder = crmDatePlaceholder(displayFormat);
-  const triggerClasses = [crmDateTriggerClassName, triggerClassName]
-    .filter(Boolean)
-    .join(" ");
+  const triggerClasses = compact
+    ? [
+        "relative flex w-full min-h-8 max-w-[6.75rem] items-center rounded-lg border border-zinc-200 bg-white py-0.5 pl-6 pr-1 text-left text-xs font-medium text-text-primary shadow-sm outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-600 dark:bg-zinc-800/60 dark:text-zinc-100 dark:focus:border-blue-500",
+        triggerClassName,
+      ]
+        .filter(Boolean)
+        .join(" ")
+    : [crmDateTriggerClassName, triggerClassName].filter(Boolean).join(" ");
 
   const updatePopoverPosition = () => {
     const el = triggerWrapRef.current;
@@ -241,7 +249,7 @@ export default function CrmPopoverDateField({
   );
 
   return (
-    <div className="relative" ref={triggerWrapRef}>
+    <div className="relative min-w-0" ref={triggerWrapRef}>
       <button
         type="button"
         id={id}
@@ -253,21 +261,25 @@ export default function CrmPopoverDateField({
         className={triggerClasses}
       >
         <CalendarIcon
-          className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary/55"
+          className={`pointer-events-none absolute top-1/2 -translate-y-1/2 text-text-secondary/55 ${
+            compact ? "left-1.5 h-3.5 w-3.5" : "left-3.5 h-4 w-4"
+          }`}
           aria-hidden
         />
         <span
-          className={`block w-full text-left text-sm tabular-nums ${
-            showTriggerChevron ? "pl-10 pr-10" : "pl-10 pr-3"
+          className={`block min-w-0 flex-1 truncate text-left tabular-nums ${
+            compact
+              ? `text-xs ${showTriggerChevron ? "pr-5" : ""}`
+              : `text-sm ${showTriggerChevron ? "pl-10 pr-10" : "pl-10 pr-3"}`
           } ${display ? "text-text-primary" : "text-text-secondary/50"}`}
         >
           {display ?? placeholder}
         </span>
         {showTriggerChevron ? (
           <ChevronDown
-            className={`pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary/55 transition-transform ${
+            className={`pointer-events-none absolute top-1/2 -translate-y-1/2 text-text-secondary/55 transition-transform ${
               open ? "rotate-180" : ""
-            }`}
+            } ${compact ? "right-1 h-3.5 w-3.5" : "right-3 h-4 w-4"}`}
             aria-hidden
           />
         ) : null}

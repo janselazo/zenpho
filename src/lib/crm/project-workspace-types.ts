@@ -55,7 +55,7 @@ export interface WorkspaceTask {
   endDate: string;
   progress?: number;
   estimateHours?: number;
-  priority?: "low" | "medium" | "high";
+  priority?: "low" | "medium" | "high" | "urgent";
   description?: string;
   comments?: WorkspaceTaskComment[];
   subtasks?: WorkspaceTaskSubtask[];

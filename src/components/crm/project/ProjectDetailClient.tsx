@@ -41,6 +41,7 @@ import ProjectMilestonesView from "@/components/crm/project/ProjectMilestonesVie
 import ProjectTasksView, {
   type TaskCreateIntent,
 } from "@/components/crm/project/ProjectTasksView";
+import ProductTaskStatusModal from "@/components/crm/product/ProductTaskStatusModal";
 import ProjectIssuesPanel from "@/components/crm/project/ProjectIssuesPanel";
 import CrmPopoverDateField from "@/components/crm/CrmPopoverDateField";
 import { Loader2, Pencil, Trash2 } from "lucide-react";
@@ -96,6 +97,7 @@ export function ProjectDetailClient({
   const [sprintDeleteId, setSprintDeleteId] = useState<string | null>(null);
   const [taskCreateIntent, setTaskCreateIntent] =
     useState<TaskCreateIntent>(null);
+  const [taskStatusModalOpen, setTaskStatusModalOpen] = useState(false);
 
   const onConsumedTaskCreateIntent = useCallback(
     () => setTaskCreateIntent(null),
@@ -125,6 +127,7 @@ export function ProjectDetailClient({
     addMeeting,
     addResource,
     deleteResource,
+    setTaskStatusConfiguration,
   } = useProjectWorkspace(phaseId);
 
   useEffect(() => {
@@ -453,6 +456,8 @@ export function ProjectDetailClient({
       <ProjectTasksView
         tasks={workspace.tasks}
         sprints={sprints}
+        taskStatusLabels={workspace.taskStatusLabels}
+        onOpenStatusSettings={() => setTaskStatusModalOpen(true)}
         onAddTask={addTask}
         onUpdateTask={updateTask}
         onDeleteTask={deleteTask}
@@ -718,6 +723,13 @@ export function ProjectDetailClient({
           </form>
         </div>
       ) : null}
+
+      <ProductTaskStatusModal
+        open={taskStatusModalOpen}
+        onClose={() => setTaskStatusModalOpen(false)}
+        workspace={workspace}
+        onApply={(payload) => setTaskStatusConfiguration(payload)}
+      />
     </div>
   );
 }

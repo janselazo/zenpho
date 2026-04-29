@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  CalendarPlus,
   ChevronDown,
   Clock,
   ListTodo,
@@ -65,15 +66,22 @@ export default function CrmQuickTaskModal({
   leadId,
   contextLabel,
   resetKey,
+  variant = "task",
+  /** When set (YYYY-MM-DD), opens with that day at 9:00 instead of tomorrow. */
+  initialDateYmd = null,
   onClose,
 }: {
   leadId: string;
   contextLabel: string;
   resetKey: string;
+  /** "appointment" uses calendar-oriented copy and default title prefix. */
+  variant?: "task" | "appointment";
+  initialDateYmd?: string | null;
   onClose: () => void;
 }) {
   const router = useRouter();
   const label = contextLabel.trim() || "this contact";
+  const isAppointment = variant === "appointment";
 
   const [title, setTitle] = useState("");
   const [dateStr, setDateStr] = useState(() =>
@@ -104,11 +112,17 @@ export default function CrmQuickTaskModal({
 
   useEffect(() => {
     setTitle("");
-    setDateStr(addCalendarDaysFromYMD(toLocalYMD(new Date()), 1));
+    const ymd = initialDateYmd?.trim() ?? "";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
+      setDateStr(ymd);
+      setQuickPreset(null);
+    } else {
+      setDateStr(addCalendarDaysFromYMD(toLocalYMD(new Date()), 1));
+      setQuickPreset("tomorrow");
+    }
     setTimeStr("09:00");
-    setQuickPreset("tomorrow");
     setError(null);
-  }, [resetKey, leadId]);
+  }, [resetKey, leadId, initialDateYmd]);
 
   useEffect(() => {
     void refreshTasks();
@@ -129,7 +143,11 @@ export default function CrmQuickTaskModal({
     e.preventDefault();
     setError(null);
     const trimmed = title.trim();
-    const taskTitle = trimmed || `Follow up — ${label}`;
+    const taskTitle = trimmed
+      ? trimmed
+      : isAppointment
+        ? `Appointment — ${label}`
+        : `Follow up — ${label}`;
     const start = combineLocalDateTime(dateStr, timeStr);
     const end = new Date(start.getTime() + 60 * 60 * 1000);
     setPending(true);
@@ -178,7 +196,7 @@ export default function CrmQuickTaskModal({
             id="quick-task-title"
             className="text-lg font-bold text-text-primary dark:text-zinc-50"
           >
-            Quick Task
+            {isAppointment ? "Schedule appointment" : "Quick Task"}
           </h2>
           <button
             type="button"
@@ -190,16 +208,34 @@ export default function CrmQuickTaskModal({
           </button>
         </div>
         <p className="mt-1 text-sm text-text-secondary dark:text-zinc-400">
-          Create a follow-up task for{" "}
-          <span className="font-semibold text-text-primary dark:text-zinc-200">
-            {label}
-          </span>
+          {isAppointment ? (
+            <>
+              Add a calendar block for{" "}
+              <span className="font-semibold text-text-primary dark:text-zinc-200">
+                {label}
+              </span>
+              . It appears on the calendar and under this lead.
+            </>
+          ) : (
+            <>
+              Create a follow-up task for{" "}
+              <span className="font-semibold text-text-primary dark:text-zinc-200">
+                {label}
+              </span>
+            </>
+          )}
         </p>
 
         <div className="mt-5 rounded-xl border border-zinc-200 bg-zinc-50/90 p-4 dark:border-zinc-700 dark:bg-zinc-900/50">
           <div className="flex items-center gap-2 text-sm font-semibold text-text-primary dark:text-zinc-100">
-            <ListTodo className="h-4 w-4 text-zinc-500" aria-hidden />
-            Follow-ups for this lead
+            {isAppointment ? (
+              <CalendarPlus className="h-4 w-4 text-zinc-500" aria-hidden />
+            ) : (
+              <ListTodo className="h-4 w-4 text-zinc-500" aria-hidden />
+            )}
+            {isAppointment
+              ? "Appointments for this lead"
+              : "Follow-ups for this lead"}
           </div>
           {tasksLoading ? (
             <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
@@ -214,8 +250,9 @@ export default function CrmQuickTaskModal({
             </p>
           ) : tasks.length === 0 ? (
             <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
-              No follow-ups yet. Creating a task adds it to your calendar and
-              here.
+              {isAppointment
+                ? "No appointments linked yet. Saving adds one to your calendar and here."
+                : "No follow-ups yet. Creating a task adds it to your calendar and here."}
             </p>
           ) : (
             <ul className="mt-3 max-h-40 space-y-2 overflow-y-auto pr-1 text-sm">
@@ -259,7 +296,11 @@ export default function CrmQuickTaskModal({
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. Follow up on proposal or scope call"
+            placeholder={
+              isAppointment
+                ? "e.g. Discovery call or site visit"
+                : "e.g. Follow up on proposal or scope call"
+            }
             className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-text-primary outline-none transition-[box-shadow,border-color] placeholder:text-zinc-400 focus:border-accent focus:ring-2 focus:ring-accent/20 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
           />
 
@@ -285,18 +326,24 @@ export default function CrmQuickTaskModal({
             ))}
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <CrmPopoverDateField
-              id="quick-task-date"
-              value={dateStr}
-              onChange={(v) => {
-                setDateStr(v);
-                setQuickPreset(null);
-              }}
-              triggerClassName="w-full"
-              showFooter
-            />
-            <div className={fieldShell}>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
+            <div className="min-w-0 flex-1">
+              <CrmPopoverDateField
+                id={
+                  isAppointment ? "quick-appointment-date" : "quick-task-date"
+                }
+                value={dateStr}
+                onChange={(v) => {
+                  setDateStr(v);
+                  setQuickPreset(null);
+                }}
+                triggerClassName="w-full"
+                showFooter
+              />
+            </div>
+            <div
+              className={`${fieldShell} sm:w-[10.75rem] sm:flex-none sm:shrink-0`}
+            >
               <Clock className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
               <div className="relative min-w-0 flex-1">
                 <ChevronDown
@@ -333,10 +380,12 @@ export default function CrmQuickTaskModal({
             >
               {pending ? (
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : isAppointment ? (
+                <CalendarPlus className="h-4 w-4" aria-hidden />
               ) : (
                 <Plus className="h-4 w-4" aria-hidden />
               )}
-              Create Task
+              {isAppointment ? "Add appointment" : "Create Task"}
             </button>
           </div>
         </form>

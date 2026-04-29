@@ -12,6 +12,7 @@ import { setCrmChildProjectTabGroup } from "@/app/(crm)/actions/projects";
 import type { ProductChildRow } from "@/components/crm/product/ProductDetailShell";
 import { PriorityFlagIcon } from "@/components/crm/product/PriorityFlagIcon";
 import ProductChildDeliveryStatusModal from "@/components/crm/product/ProductChildDeliveryStatusModal";
+import ProductChildDeliveryStatusesBulkModal from "@/components/crm/product/ProductChildDeliveryStatusesBulkModal";
 import ProductChildProjectStatusMenu from "@/components/crm/product/ProductChildProjectStatusMenu";
 import ProductCustomProjectStatusModal from "@/components/crm/product/ProductCustomProjectStatusModal";
 import {
@@ -202,6 +203,7 @@ export default function ProductProjectsGroupedPanel({
   >(null);
   const [columnMenuOpen, setColumnMenuOpen] = useState(false);
   const columnMenuRef = useRef<HTMLDivElement>(null);
+  const [bulkStatusModalOpen, setBulkStatusModalOpen] = useState(false);
 
   const members = useMemo(() => {
     const t = getMembersForTeam(teamId);
@@ -399,6 +401,17 @@ export default function ProductProjectsGroupedPanel({
                 <p className="border-b border-border px-3 py-2 text-xs text-text-secondary dark:border-zinc-800">
                   Edit column…
                 </p>
+                <button
+                  role="menuitem"
+                  type="button"
+                  className="w-full border-b border-border px-3 py-2 text-left text-sm font-medium text-accent hover:bg-surface/80 dark:border-zinc-800 dark:text-blue-400 dark:hover:bg-zinc-800"
+                  onClick={() => {
+                    setColumnMenuOpen(false);
+                    setBulkStatusModalOpen(true);
+                  }}
+                >
+                  Customize names & colors…
+                </button>
                 {groups.map((g) => (
                   <button
                     key={g.id}
@@ -630,6 +643,14 @@ export default function ProductProjectsGroupedPanel({
         statusId={editingStatus}
         statusUi={childDeliveryStatusUi}
         onClose={() => setEditingStatus(null)}
+        onSaved={onDeliveryStatusUiSaved}
+      />
+
+      <ProductChildDeliveryStatusesBulkModal
+        productId={productId}
+        open={bulkStatusModalOpen}
+        statusUi={childDeliveryStatusUi}
+        onClose={() => setBulkStatusModalOpen(false)}
         onSaved={onDeliveryStatusUiSaved}
       />
 

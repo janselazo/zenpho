@@ -27,9 +27,9 @@ import ProductRoadmapTab from "@/components/crm/product/ProductRoadmapTab";
 
 const TABS = [
   { id: "projects", label: "Project" },
-  { id: "milestones", label: "Milestones" },
   { id: "tasks", label: "Tasks" },
   { id: "sprints", label: "Sprints" },
+  { id: "milestones", label: "Milestones" },
   { id: "roadmap", label: "Roadmap" },
   { id: "issues", label: "Issues" },
   { id: "resources", label: "Resources" },

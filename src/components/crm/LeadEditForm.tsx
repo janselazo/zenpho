@@ -7,6 +7,7 @@ import {
   Briefcase,
   Building2,
   CalendarDays,
+  CalendarPlus,
   ChevronDown,
   ExternalLink,
   Facebook,
@@ -16,7 +17,6 @@ import {
   Globe,
   LayoutDashboard,
   Layers,
-  ListTodo,
   Loader2,
   Mail,
   Monitor,
@@ -31,47 +31,43 @@ import { setLeadTagAssigned, updateLeadRow } from "@/app/(crm)/actions/crm";
 import type { MergedCrmFieldOptions } from "@/lib/crm/field-options";
 import CrmNewProjectFromLeadModal from "@/components/crm/CrmNewProjectFromLeadModal";
 import CrmQuickTaskModal from "@/components/crm/CrmQuickTaskModal";
+import LeadAppointmentEditModal from "@/components/crm/LeadAppointmentEditModal";
+import LeadAppointmentsMonthCalendar from "@/components/crm/LeadAppointmentsMonthCalendar";
+import AppointmentStatusBadge from "@/components/app/AppointmentStatusBadge";
 import type { LeadFollowUpAppointment } from "@/lib/crm/lead-follow-up-appointment";
+import { parseAppointmentStatus } from "@/lib/crm/appointment-status";
 import { prospectPreviewPageUrl } from "@/lib/crm/prospect-preview-public-url";
 import {
   DEFAULT_LEAD_PIPELINE_COLUMNS,
   leadStageLabelColor,
-  normalizePipelineHexColor,
   type PipelineColumnDef,
 } from "@/lib/crm/pipeline-columns";
+import { formatLeadSourceOptionLabel } from "@/lib/crm/field-options";
 
-function formatSourceOptionLabel(value: string) {
-  return value
-    .split(/[\s_-]+/)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(" ");
-}
-
-function hexToRgba(hex: string, alpha: number): string {
-  const norm = normalizePipelineHexColor(hex);
-  const h = (norm ?? "#64748b").slice(1);
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
-  return `rgba(${r},${g},${b},${alpha})`;
-}
-
-const sourceFieldTint: Record<string, string> = {
-  website: "bg-sky-100/90 dark:bg-sky-950/40",
-  referral: "bg-orange-100/90 dark:bg-orange-950/35",
-  linkedin: "bg-blue-100/90 dark:bg-blue-950/40",
-  "cold outreach": "bg-amber-100/90 dark:bg-amber-950/35",
-  conference: "bg-violet-100/90 dark:bg-violet-950/40",
-  facebook: "bg-purple-100/90 dark:bg-purple-950/40",
-  direct: "bg-emerald-100/90 dark:bg-emerald-950/35",
-  instagram: "bg-fuchsia-100/90 dark:bg-fuchsia-950/35",
+const sourceFieldText: Record<string, string> = {
+  website: "text-sky-700 dark:text-sky-400",
+  referral: "text-teal-700 dark:text-teal-400",
+  linkedin: "text-blue-700 dark:text-blue-400",
+  upwork: "text-emerald-700 dark:text-emerald-400",
+  "cold email": "text-amber-700 dark:text-amber-400",
+  "cold dm": "text-rose-700 dark:text-rose-400",
+  networking: "text-violet-700 dark:text-violet-400",
+  prospects: "text-slate-700 dark:text-slate-400",
+  "facebook ads": "text-indigo-700 dark:text-indigo-400",
+  "google ads": "text-red-700 dark:text-red-400",
+  "social media": "text-fuchsia-700 dark:text-fuchsia-400",
+  partnerships: "text-teal-700 dark:text-teal-400",
+  "cold outreach": "text-orange-700 dark:text-orange-400",
+  conference: "text-purple-700 dark:text-purple-400",
+  facebook: "text-indigo-700 dark:text-indigo-400",
+  direct: "text-emerald-700 dark:text-emerald-400",
+  instagram: "text-pink-700 dark:text-pink-400",
 };
 
-function sourceTintClass(source: string) {
-  return (
-    sourceFieldTint[source.trim().toLowerCase()] ??
-    "bg-zinc-100 dark:bg-zinc-800/80"
-  );
+function sourceSelectTextClass(source: string) {
+  const t = source.trim().toLowerCase();
+  if (!t) return "text-zinc-900 dark:text-zinc-100";
+  return sourceFieldText[t] ?? "text-zinc-900 dark:text-zinc-100";
 }
 
 const inputClass =
@@ -80,7 +76,8 @@ const inputClass =
 const LEAD_TABS = [
   { id: "contact", label: "Contact", icon: UserCircle },
   { id: "projects", label: "Projects", icon: FolderKanban },
-  { id: "tasks", label: "Tasks", icon: ListTodo },
+  { id: "appointments", label: "Appointments", icon: CalendarPlus },
+  { id: "calendar", label: "Calendar", icon: CalendarDays },
 ] as const;
 
 function formatFollowUpWhen(iso: string): string {
@@ -93,6 +90,32 @@ function formatFollowUpWhen(iso: string): string {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+function formatAppointmentRange(startIso: string, endIso: string): string {
+  const start = new Date(startIso);
+  const end = new Date(endIso);
+  if (Number.isNaN(start.getTime())) return formatFollowUpWhen(startIso);
+  if (Number.isNaN(end.getTime())) return formatFollowUpWhen(startIso);
+  const sameDay =
+    start.getFullYear() === end.getFullYear() &&
+    start.getMonth() === end.getMonth() &&
+    start.getDate() === end.getDate();
+  const startLbl = start.toLocaleString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  if (!sameDay) {
+    return `${startLbl} – ${formatFollowUpWhen(endIso)}`;
+  }
+  const endTime = end.toLocaleString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  return `${startLbl} – ${endTime}`;
 }
 
 type Lead = {
@@ -165,24 +188,16 @@ function PastelSelect({
   defaultValue,
   onPreviewChange,
   dotColor,
-  tintClass,
   children,
 }: {
   name: string;
   defaultValue: string;
   onPreviewChange: (v: string) => void;
   dotColor: string;
-  tintClass?: string;
   children: React.ReactNode;
 }) {
-  const bgStyle = tintClass
-    ? undefined
-    : { backgroundColor: hexToRgba(dotColor, 0.14) };
   return (
-    <div
-      className={`relative rounded-full ring-1 ring-zinc-200/90 dark:ring-zinc-600 ${tintClass ?? ""}`}
-      style={bgStyle}
-    >
+    <div className="relative rounded-full bg-transparent ring-1 ring-zinc-200/90 dark:ring-zinc-600">
       <span
         className="pointer-events-none absolute left-3 top-1/2 z-10 h-2 w-2 -translate-y-1/2 rounded-full ring-2 ring-white dark:ring-zinc-900"
         style={{ backgroundColor: dotColor }}
@@ -332,7 +347,12 @@ export default function LeadEditForm({
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [projectModalOpen, setProjectModalOpen] = useState(false);
-  const [quickTaskOpen, setQuickTaskOpen] = useState(false);
+  const [quickAppointmentOpen, setQuickAppointmentOpen] = useState(false);
+  const [quickApptInitialYmd, setQuickApptInitialYmd] = useState<string | null>(
+    null
+  );
+  const [editingFollowUp, setEditingFollowUp] =
+    useState<LeadFollowUpAppointment | null>(null);
 
   const defaultStage =
     (lead.stage ?? "").trim() || leadPipelineColumns[0]?.slug || "contacted";
@@ -362,7 +382,7 @@ export default function LeadEditForm({
     !fieldOptions.leadContactCategories.includes(currentContactCategory);
 
   const stageMeta = leadStageLabelColor(stagePreview, leadPipelineColumns);
-  const sourceTint = sourceTintClass(sourcePreview || " ");
+  const sourceTextCls = sourceSelectTextClass(sourcePreview);
 
   const effectiveHostedPreviewId =
     (hostedProspectPreviewId?.trim() || lead.prospect_preview_id?.trim()) ?? "";
@@ -380,7 +400,8 @@ export default function LeadEditForm({
   useEffect(() => {
     const tab = searchParams.get("tab");
     if (tab === "deal" || tab === "projects") setActiveTab("projects");
-    else if (tab === "tasks") setActiveTab("tasks");
+    else if (tab === "appointments" || tab === "tasks") setActiveTab("appointments");
+    else if (tab === "calendar") setActiveTab("calendar");
   }, [searchParams]);
 
   useEffect(() => {
@@ -732,18 +753,18 @@ export default function LeadEditForm({
             </div>
 
             <div
-              className={activeTab === "tasks" ? "space-y-6" : "hidden"}
-              id="tasks-panel"
+              className={activeTab === "appointments" ? "space-y-6" : "hidden"}
+              id="appointments-panel"
               role="tabpanel"
-              aria-hidden={activeTab !== "tasks"}
+              aria-hidden={activeTab !== "appointments"}
             >
               <div>
                 <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
-                  <ListTodo className="h-3.5 w-3.5" aria-hidden />
-                  Follow-ups
+                  <CalendarPlus className="h-3.5 w-3.5" aria-hidden />
+                  Appointments
                 </h2>
                 <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-                  Scheduled calls and reminders tied to this lead appear on your{" "}
+                  Meetings and scheduled blocks for this lead sync to your{" "}
                   <Link
                     href="/calendar"
                     className="inline-flex items-center gap-1 font-medium text-blue-600 hover:underline dark:text-blue-400"
@@ -756,15 +777,19 @@ export default function LeadEditForm({
               </div>
               <button
                 type="button"
-                onClick={() => setQuickTaskOpen(true)}
-                className="rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500"
+                onClick={() => {
+                  setQuickApptInitialYmd(null);
+                  setQuickAppointmentOpen(true);
+                }}
+                className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500"
               >
-                + Schedule follow-up
+                <CalendarPlus className="h-4 w-4" aria-hidden />
+                Add appointment
               </button>
               {followUpAppointments.length === 0 ? (
                 <p className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/80 px-4 py-6 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800/40 dark:text-zinc-400">
-                  No follow-ups yet. Add one to block time and keep the pipeline
-                  moving.
+                  No appointments yet. Add one to reserve time and keep this
+                  lead on track.
                 </p>
               ) : (
                 <ul className="divide-y divide-zinc-100 rounded-xl border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-700">
@@ -773,13 +798,67 @@ export default function LeadEditForm({
                       <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                         {t.title}
                       </p>
+                      <div className="mt-1.5">
+                        <AppointmentStatusBadge
+                          status={parseAppointmentStatus(t.status)}
+                        />
+                      </div>
                       <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-                        {formatFollowUpWhen(t.starts_at)}
+                        {formatAppointmentRange(t.starts_at, t.ends_at)}
                       </p>
                     </li>
                   ))}
                 </ul>
               )}
+            </div>
+
+            <div
+              className={activeTab === "calendar" ? "space-y-6" : "hidden"}
+              id="calendar-panel"
+              role="tabpanel"
+              aria-hidden={activeTab !== "calendar"}
+            >
+              <div>
+                <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                  <CalendarDays className="h-3.5 w-3.5" aria-hidden />
+                  Calendar
+                </h2>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                  Month view for this lead. Click a day to schedule, or an
+                  event to edit. All appointments also appear on the{" "}
+                  <Link
+                    href="/calendar"
+                    className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+                  >
+                    agency calendar
+                  </Link>
+                  .
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuickApptInitialYmd(null);
+                    setQuickAppointmentOpen(true);
+                  }}
+                  className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500"
+                >
+                  <CalendarPlus className="h-4 w-4" aria-hidden />
+                  Add appointment
+                </button>
+              </div>
+              <LeadAppointmentsMonthCalendar
+                appointments={followUpAppointments}
+                onAddOnDay={(day) => {
+                  const y = day.getFullYear();
+                  const mo = String(day.getMonth() + 1).padStart(2, "0");
+                  const d = String(day.getDate()).padStart(2, "0");
+                  setQuickApptInitialYmd(`${y}-${mo}-${d}`);
+                  setQuickAppointmentOpen(true);
+                }}
+                onEditEvent={(a) => setEditingFollowUp(a)}
+              />
             </div>
           </div>
 
@@ -804,7 +883,7 @@ export default function LeadEditForm({
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                       Source
                     </p>
-                    <div className={`mt-1.5 rounded-full ${sourceTint}`}>
+                    <div className="relative mt-1.5 rounded-full bg-transparent ring-1 ring-zinc-200/90 dark:ring-zinc-600">
                       <div className="relative">
                         <ChevronDown
                           className="pointer-events-none absolute right-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-zinc-400"
@@ -814,15 +893,15 @@ export default function LeadEditForm({
                           name="source"
                           defaultValue={currentSource}
                           onChange={(e) => setSourcePreview(e.target.value)}
-                          className="w-full cursor-pointer appearance-none rounded-full border-0 bg-transparent py-2.5 pl-3 pr-10 text-sm font-semibold text-zinc-900 outline-none focus:ring-2 focus:ring-blue-500/20 dark:text-zinc-100"
+                          className={`w-full cursor-pointer appearance-none rounded-full border-0 bg-transparent py-2.5 pl-3 pr-10 text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-400/25 ${sourceTextCls}`}
                         >
-                          <option value="">Not set</option>
+                          <option value="">Not Set</option>
                           {sourceOrphan ? (
                             <option value={currentSource}>{currentSource}</option>
                           ) : null}
                           {fieldOptions.leadSources.map((o) => (
                             <option key={o} value={o}>
-                              {formatSourceOptionLabel(o)}
+                              {formatLeadSourceOptionLabel(o)}
                             </option>
                           ))}
                         </select>
@@ -965,15 +1044,15 @@ export default function LeadEditForm({
                     />
                     <p className="text-sm text-zinc-500 dark:text-zinc-400">
                       Open the{" "}
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab("tasks")}
-                        className="font-medium text-blue-600 hover:underline dark:text-blue-400"
-                      >
-                        Tasks
-                      </button>{" "}
-                      tab for follow-ups; more activity types will appear here
-                      later.
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("appointments")}
+                      className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+                    >
+                      Appointments
+                    </button>{" "}
+                    tab for scheduled time; more activity types will appear here
+                    later.
                     </p>
                   </li>
                 </ul>
@@ -992,13 +1071,25 @@ export default function LeadEditForm({
           }}
         />
       ) : null}
-      {quickTaskOpen ? (
+      {quickAppointmentOpen ? (
         <CrmQuickTaskModal
           leadId={lead.id}
           contextLabel={displayName}
-          resetKey={lead.id}
+          resetKey={`${lead.id}-${quickApptInitialYmd ?? "default"}`}
+          initialDateYmd={quickApptInitialYmd}
+          variant="appointment"
           onClose={() => {
-            setQuickTaskOpen(false);
+            setQuickAppointmentOpen(false);
+            setQuickApptInitialYmd(null);
+            router.refresh();
+          }}
+        />
+      ) : null}
+      {editingFollowUp ? (
+        <LeadAppointmentEditModal
+          appointment={editingFollowUp}
+          onClose={() => {
+            setEditingFollowUp(null);
             router.refresh();
           }}
         />

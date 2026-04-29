@@ -5,15 +5,9 @@ import { useState } from "react";
 import { createLead } from "@/app/(crm)/actions/crm";
 import {
   DEFAULT_MERGED_CRM_FIELD_OPTIONS,
+  formatLeadSourceOptionLabel,
   type MergedCrmFieldOptions,
 } from "@/lib/crm/field-options";
-
-function formatSourceOptionLabel(value: string) {
-  return value
-    .split(/[\s_-]+/)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(" ");
-}
 
 const inputClass =
   "w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/15";
@@ -124,10 +118,10 @@ export default function NewLeadForm({
             Source
           </label>
           <select name="source" defaultValue="" className={inputClass}>
-            <option value="">Not set</option>
+            <option value="">Not Set</option>
             {fieldOptions.leadSources.map((o) => (
               <option key={o} value={o}>
-                {formatSourceOptionLabel(o)}
+                {formatLeadSourceOptionLabel(o)}
               </option>
             ))}
           </select>

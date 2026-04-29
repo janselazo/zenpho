@@ -469,7 +469,7 @@ function ProjectsPageContent({
           >
             <span className="inline-flex items-center gap-2">
               <LayoutGrid className="h-3.5 w-3.5 opacity-80" aria-hidden />
-              Board
+              Pipeline
             </span>
           </ViewTab>
         </div>

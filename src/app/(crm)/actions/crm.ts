@@ -19,6 +19,7 @@ import {
   type PipelineColumnDef,
 } from "@/lib/crm/pipeline-columns";
 import type { LeadFollowUpAppointment } from "@/lib/crm/lead-follow-up-appointment";
+import { parseAppointmentStatus } from "@/lib/crm/appointment-status";
 import { uploadBrandingFunnelPdf } from "@/lib/crm/branding-funnel-pdf-storage";
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>;
@@ -453,6 +454,39 @@ export async function updateLeadNotes(leadId: string, notes: string) {
   revalidatePath(`/leads/${id}`);
   revalidatePath("/dashboard");
   return { ok: true };
+}
+
+/** Updates `lead.temperature` (cold / warm / hot) for pipeline triage. */
+export async function updateLeadTemperature(
+  leadId: string,
+  temperature: string | null
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const id = String(leadId ?? "").trim();
+  if (!id) return { error: "Missing lead id" };
+
+  const raw =
+    temperature == null ? null : String(temperature).trim().toLowerCase();
+  if (raw !== null && raw !== "cold" && raw !== "warm" && raw !== "hot") {
+    return { error: "Invalid temperature" };
+  }
+
+  const { error } = await supabase
+    .from("lead")
+    .update({ temperature: raw })
+    .eq("id", id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/leads");
+  revalidatePath(`/leads/${id}`);
+  revalidatePath("/dashboard");
+  return { ok: true as const };
 }
 
 function appendLostReasonToLeadNotes(
@@ -1139,6 +1173,7 @@ export async function createAppointmentAction(input: {
   /** ISO strings from the browser */
   starts_at: string;
   ends_at: string;
+  status?: string | null;
 }) {
   const supabase = await createClient();
   const {
@@ -1157,11 +1192,14 @@ export async function createAppointmentAction(input: {
   }
   if (ends <= starts) return { error: "End must be after start" };
 
+  const status = parseAppointmentStatus(input.status);
+
   const { error } = await supabase.from("appointment").insert({
     title,
     description: description || null,
     starts_at: starts.toISOString(),
     ends_at: ends.toISOString(),
+    status,
     created_by: user.id,
   });
 
@@ -1186,7 +1224,7 @@ export async function listLeadFollowUpAppointments(leadId: string): Promise<
 
   const { data, error } = await supabase
     .from("appointment")
-    .select("id, title, starts_at, ends_at")
+    .select("id, title, starts_at, ends_at, description, status")
     .eq("lead_id", id)
     .order("starts_at", { ascending: true });
 
@@ -1264,6 +1302,7 @@ export async function updateAppointmentAction(input: {
   description?: string;
   starts_at: string;
   ends_at: string;
+  status?: string | null;
 }) {
   const supabase = await createClient();
   const {
@@ -1285,6 +1324,8 @@ export async function updateAppointmentAction(input: {
   }
   if (ends <= starts) return { error: "End must be after start" };
 
+  const status = parseAppointmentStatus(input.status);
+
   const { error } = await supabase
     .from("appointment")
     .update({
@@ -1292,6 +1333,7 @@ export async function updateAppointmentAction(input: {
       description: description || null,
       starts_at: starts.toISOString(),
       ends_at: ends.toISOString(),
+      status,
     })
     .eq("id", id);
 

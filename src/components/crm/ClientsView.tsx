@@ -25,9 +25,19 @@ const sourceTextClasses: Record<string, string> = {
   website: "text-sky-700 dark:text-sky-400",
   referral: "text-teal-700 dark:text-teal-400",
   linkedin: "text-blue-700 dark:text-blue-400",
+  upwork: "text-emerald-700 dark:text-emerald-400",
+  "cold email": "text-amber-700 dark:text-amber-400",
+  "cold dm": "text-rose-700 dark:text-rose-400",
+  networking: "text-violet-700 dark:text-violet-400",
+  prospects: "text-slate-700 dark:text-slate-400",
+  "facebook ads": "text-indigo-700 dark:text-indigo-400",
+  "google ads": "text-red-700 dark:text-red-400",
+  "social media": "text-fuchsia-700 dark:text-fuchsia-400",
+  partnerships: "text-teal-700 dark:text-teal-400",
   "cold outreach": "text-orange-700 dark:text-orange-400",
   conference: "text-purple-700 dark:text-purple-400",
   facebook: "text-indigo-700 dark:text-indigo-400",
+  instagram: "text-pink-700 dark:text-pink-400",
 };
 
 function getSourceTextClass(source: string) {

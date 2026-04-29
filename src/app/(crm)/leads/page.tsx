@@ -32,6 +32,17 @@ function parseHighlightClientId(
   return t.length > 0 ? t : undefined;
 }
 
+/** Next upcoming `starts_at`, or most recent past if none — for pipeline card preview. */
+function pickPipelineCardAppointmentStart(isoTimes: string[]): string | null {
+  if (isoTimes.length === 0) return null;
+  const sorted = [...isoTimes].sort(
+    (a, b) => new Date(a).getTime() - new Date(b).getTime()
+  );
+  const now = Date.now();
+  const upcoming = sorted.find((t) => new Date(t).getTime() >= now);
+  return upcoming ?? sorted[sorted.length - 1] ?? null;
+}
+
 export default async function LeadsPage({
   searchParams,
 }: {
@@ -59,7 +70,7 @@ export default async function LeadsPage({
     supabase
       .from("lead")
       .select(
-        "id, name, email, phone, company, stage, source, notes, project_type, contact_category, created_at, converted_client_id"
+        "id, name, email, phone, company, stage, source, notes, project_type, contact_category, temperature, created_at, converted_client_id"
       )
       .order("created_at", { ascending: false })
       .limit(200),
@@ -160,9 +171,31 @@ export default async function LeadsPage({
     }
   }
 
+  const appointmentStartsByLeadId = new Map<string, string[]>();
+  const leadIdList = leadRows.map((l) => l.id as string);
+  if (leadIdList.length > 0) {
+    const { data: apptRows, error: apptErr } = await supabase
+      .from("appointment")
+      .select("lead_id, starts_at")
+      .in("lead_id", leadIdList);
+    if (!apptErr && apptRows) {
+      for (const r of apptRows) {
+        const lid = r.lead_id as string | null;
+        if (!lid) continue;
+        const st = r.starts_at as string;
+        if (!appointmentStartsByLeadId.has(lid))
+          appointmentStartsByLeadId.set(lid, []);
+        appointmentStartsByLeadId.get(lid)!.push(st);
+      }
+    }
+  }
+
   const leadsForView = leadRows.map((l) => {
     const cid = (l.converted_client_id as string | null)?.trim() ?? null;
     const lid = l.id as string;
+    const nextAppointmentStartsAt = pickPipelineCardAppointmentStart(
+      appointmentStartsByLeadId.get(lid) ?? []
+    );
     return {
       ...l,
       primaryProject:
@@ -170,6 +203,7 @@ export default async function LeadsPage({
           ? primaryProjectByClientId.get(cid)!
           : null,
       leadTags: tagsByLeadId.get(lid) ?? [],
+      nextAppointmentStartsAt,
     };
   });
 

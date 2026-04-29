@@ -8,15 +8,33 @@ import {
 
 /** Default seed for lead sources (merged with DB; users can edit in Settings). */
 export const LEAD_SOURCE_DEFAULT_OPTIONS = [
-  "website",
-  "referral",
-  "linkedin",
-  "cold outreach",
-  "conference",
-  "facebook",
-  "instagram",
+  "Website",
+  "Referral",
+  "LinkedIn",
+  "Upwork",
+  "Cold Email",
+  "Cold DM",
+  "Networking",
   "Prospects",
+  "Facebook Ads",
+  "Google Ads",
+  "Social Media",
+  "Partnerships",
 ] as const;
+
+/** Display label for lead source picklist (legacy all-lowercase values get title case). */
+export function formatLeadSourceOptionLabel(value: string): string {
+  const t = value.trim();
+  if (!t) return "";
+  if (/[A-Z]/.test(t) && t !== t.toUpperCase()) return t;
+  const lower = t.toLowerCase();
+  if (lower === "linkedin") return "LinkedIn";
+  if (lower === "cold dm") return "Cold DM";
+  return t
+    .split(/[\s_-]+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+}
 
 export const MAX_FIELD_OPTION_LIST_ITEMS = 50;
 export const MAX_FIELD_OPTION_STRING_LEN = 80;
@@ -103,6 +121,21 @@ function normalizeStringList(
   return [...fallback];
 }
 
+function parsePicklistFromDbRaw(raw: unknown): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  const arr = Array.isArray(raw) ? raw : [];
+  for (const item of arr) {
+    if (typeof item !== "string") continue;
+    const t = item.trim().slice(0, MAX_FIELD_OPTION_STRING_LEN);
+    if (!t || seen.has(t)) continue;
+    seen.add(t);
+    out.push(t);
+    if (out.length >= MAX_FIELD_OPTION_LIST_ITEMS) break;
+  }
+  return out;
+}
+
 /** Order-independent signature for comparing saved picklists to legacy defaults. */
 function picklistSignature(arr: readonly string[]): string {
   return [...arr]
@@ -124,8 +157,33 @@ const LEGACY_LEAD_CONTACT_CATEGORY_PICKLIST_SIGS = new Set([
   ]),
 ]);
 
+const LEGACY_LEAD_SOURCE_PICKLIST_SIGS = new Set([
+  picklistSignature([
+    "website",
+    "referral",
+    "linkedin",
+    "cold outreach",
+    "conference",
+    "facebook",
+    "instagram",
+    "Prospects",
+  ]),
+]);
+
 function shouldUseCanonicalLeadContactCategories(arr: string[]): boolean {
   return LEGACY_LEAD_CONTACT_CATEGORY_PICKLIST_SIGS.has(picklistSignature(arr));
+}
+
+function mergeLeadSourcesFromDb(rawSources: unknown): string[] {
+  const fromDb = parsePicklistFromDbRaw(rawSources);
+  if (
+    fromDb.length > 0 &&
+    LEGACY_LEAD_SOURCE_PICKLIST_SIGS.has(picklistSignature(fromDb))
+  ) {
+    return [...LEAD_SOURCE_DEFAULT_OPTIONS];
+  }
+  if (fromDb.length > 0) return fromDb;
+  return [...LEAD_SOURCE_DEFAULT_OPTIONS];
 }
 
 function parseProductPlanLabelsRaw(raw: unknown): Record<string, string> {
@@ -210,10 +268,7 @@ export function mergeFieldOptionsFromDb(
         r.leadProjectTypes,
         LEAD_PROJECT_TYPE_OPTIONS
       ),
-      leadSources: normalizeStringList(
-        r.leadSources,
-        LEAD_SOURCE_DEFAULT_OPTIONS
-      ),
+      leadSources: mergeLeadSourcesFromDb(r.leadSources),
       leadContactCategories: (() => {
         const fromDb = normalizeStringList(r.leadContactCategories, []);
         if (shouldUseCanonicalLeadContactCategories(fromDb)) {

@@ -37,6 +37,7 @@ import {
   readStoredTeamMembers,
   writeStoredTeamMembers,
 } from "@/lib/crm/team-members-storage";
+import { fileToTeamMemberPhotoDataUrl } from "@/lib/crm/team-member-photo";
 import { readStoredProjects } from "@/lib/crm/projects-storage";
 import { createClient } from "@/lib/supabase/client";
 
@@ -102,21 +103,135 @@ function colorForTagLabel(tag: string) {
 }
 
 function normalizeMember(m: MockTeamMember): MockTeamMember {
+  const url =
+    typeof m.avatarUrl === "string" && m.avatarUrl.trim().length > 0
+      ? m.avatarUrl.trim()
+      : null;
   return {
     ...m,
     tags: m.tags ?? [],
     location: m.location ?? null,
     permission: parseTeamMemberPermission(m.permission),
+    avatarUrl: url,
   };
 }
 
 function initials(name: string) {
-  return name
-    .split(" ")
+  const t = name.trim();
+  if (!t) return "?";
+  return t
+    .split(/\s+/)
     .map((w) => w[0])
     .join("")
     .toUpperCase()
     .slice(0, 2);
+}
+
+function MemberPhotoField({
+  label = "Profile photo",
+  photoUrl,
+  fallbackLabel,
+  fallbackBgColor,
+  onPhotoChange,
+  helperText,
+}: {
+  label?: string;
+  photoUrl: string | null;
+  fallbackLabel: string;
+  fallbackBgColor: string;
+  onPhotoChange: (url: string | null) => void;
+  helperText?: string;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    setErr(null);
+    setBusy(true);
+    try {
+      const dataUrl = await fileToTeamMemberPhotoDataUrl(f);
+      onPhotoChange(dataUrl);
+    } catch (x) {
+      setErr(x instanceof Error ? x.message : "Could not use that image.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div>
+      <label className="mb-1 block text-sm font-medium text-text-primary">
+        {label}
+      </label>
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full ring-2 ring-border dark:ring-zinc-700">
+          {photoUrl ? (
+            <img
+              src={photoUrl}
+              alt=""
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <span
+              className="flex h-full w-full items-center justify-center text-sm font-bold text-white"
+              style={{ backgroundColor: fallbackBgColor }}
+              aria-hidden
+            >
+              {fallbackLabel}
+            </span>
+          )}
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              ref={inputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="sr-only"
+              onChange={onFile}
+            />
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => inputRef.current?.click()}
+              className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:opacity-60 dark:bg-blue-600 dark:hover:bg-blue-500"
+            >
+              {busy
+                ? "Processing…"
+                : photoUrl
+                  ? "Change photo"
+                  : "Upload photo"}
+            </button>
+            {photoUrl ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  setErr(null);
+                  onPhotoChange(null);
+                }}
+                className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-text-primary hover:bg-surface disabled:opacity-60"
+              >
+                Remove
+              </button>
+            ) : null}
+          </div>
+          {helperText ? (
+            <p className="text-xs text-text-secondary">{helperText}</p>
+          ) : null}
+          {err ? (
+            <p className="text-xs font-medium text-red-600 dark:text-red-400">
+              {err}
+            </p>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function getAssignedProjects(
@@ -541,12 +656,20 @@ export default function TeamsView({
                   <td className="px-3 py-3 align-middle">
                     <div className="flex items-center gap-3">
                       <div className="relative shrink-0">
-                        <span
-                          className="flex h-10 w-10 items-center justify-center rounded-full text-xs font-bold text-white"
-                          style={{ backgroundColor: avatarColor }}
-                        >
-                          {m.avatarFallback}
-                        </span>
+                        {m.avatarUrl ? (
+                          <img
+                            src={m.avatarUrl}
+                            alt={m.name}
+                            className="h-10 w-10 rounded-full border-2 border-white object-cover dark:border-zinc-900"
+                          />
+                        ) : (
+                          <span
+                            className="flex h-10 w-10 items-center justify-center rounded-full text-xs font-bold text-white"
+                            style={{ backgroundColor: avatarColor }}
+                          >
+                            {m.avatarFallback}
+                          </span>
+                        )}
                         <span
                           className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-zinc-900 ${
                             online ? "bg-emerald-500" : "bg-red-500"
@@ -687,11 +810,19 @@ function EditMemberModal({
   const [permission, setPermission] = useState<TeamMemberPermission>(
     member.permission
   );
+  const [photoUrl, setPhotoUrl] = useState<string | null>(
+    member.avatarUrl ?? null
+  );
 
   useEffect(() => {
     setTeamTags(member.tags);
     setPermission(member.permission);
+    setPhotoUrl(member.avatarUrl ?? null);
   }, [member]);
+
+  const avatarColor =
+    allTeams.find((t) => t.id === member.teamId)?.color ??
+    (member.tags[0] ? colorForTagLabel(member.tags[0]) : "#6b7280");
 
   const inputClass =
     "w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/15";
@@ -709,6 +840,7 @@ function EditMemberModal({
       teamId: tagsToTeamId(teamTags),
       tags: teamTags,
       avatarFallback: initials(name),
+      avatarUrl: photoUrl,
     });
   }
 
@@ -738,6 +870,13 @@ function EditMemberModal({
         </p>
 
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+          <MemberPhotoField
+            photoUrl={photoUrl}
+            fallbackLabel={initials(member.name)}
+            fallbackBgColor={avatarColor}
+            onPhotoChange={setPhotoUrl}
+            helperText="JPG, PNG, GIF, or WebP. Compressed for this browser; not uploaded to a server."
+          />
           <div>
             <label className="mb-1 block text-sm font-medium text-text-primary">
               Name
@@ -1220,10 +1359,16 @@ function NewMemberModal({
   onAdd: (m: MockTeamMember) => void;
 }) {
   const [teamTags, setTeamTags] = useState<string[]>([]);
+  const [nameDraft, setNameDraft] = useState("");
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [permission, setPermission] =
     useState<TeamMemberPermission>("member");
   const inputClass =
     "w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/15";
+
+  const fallbackColor = teamTags[0]
+    ? colorForTagLabel(teamTags[0])
+    : "#6b7280";
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -1239,6 +1384,7 @@ function NewMemberModal({
       utilization: 0,
       activeProjects: 0,
       avatarFallback: initials(name),
+      avatarUrl: photoUrl,
       permission,
     });
   }
@@ -1265,11 +1411,25 @@ function NewMemberModal({
         </h2>
 
         <form onSubmit={onSubmit} className="mt-5 space-y-4">
+          <MemberPhotoField
+            photoUrl={photoUrl}
+            fallbackLabel={initials(nameDraft)}
+            fallbackBgColor={fallbackColor}
+            onPhotoChange={setPhotoUrl}
+            helperText="JPG, PNG, GIF, or WebP. Stored locally in this browser with other team data."
+          />
           <div>
             <label className="mb-1 block text-sm font-medium text-text-primary">
               Name
             </label>
-            <input name="name" type="text" required className={inputClass} />
+            <input
+              name="name"
+              type="text"
+              required
+              value={nameDraft}
+              onChange={(e) => setNameDraft(e.target.value)}
+              className={inputClass}
+            />
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-text-primary">

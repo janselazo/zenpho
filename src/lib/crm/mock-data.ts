@@ -156,6 +156,8 @@ export interface MockTeamMember {
   utilization: number;
   activeProjects: number;
   avatarFallback: string;
+  /** Optional profile image (e.g. JPEG data URL in local CRM storage) */
+  avatarUrl?: string | null;
   /** City / region; optional — UI can fall back to a demo label when absent */
   location?: string | null;
   /** Owner / Admin / Member */

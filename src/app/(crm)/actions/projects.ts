@@ -19,10 +19,12 @@ import {
 } from "@/lib/crm/product-project-metadata";
 import {
   applyChildDeliveryStatusUiToMetadata,
+  buildChildDeliveryStatusUiFromDrafts,
   defaultChildDeliveryLabel,
   DEFAULT_CHILD_DELIVERY_STATUS_COLORS,
   normalizeHexColor,
   parseChildDeliveryStatusUi,
+  type ChildDeliveryStatusDraftRow,
   type ChildDeliveryStatusUiConfig,
   type ChildDeliveryStatusUiEntry,
 } from "@/lib/crm/child-delivery-status-ui";
@@ -1008,6 +1010,76 @@ export async function updateProductChildDeliveryStatusUi(
       next[statusId] = entry;
     }
   }
+
+  const newMeta = applyChildDeliveryStatusUiToMetadata(meta, next);
+
+  const { error } = await supabase
+    .from("project")
+    .update({ metadata: newMeta })
+    .eq("id", pid);
+
+  if (error) return { error: humanizeProjectDbError(error.message) };
+  revalidatePath(`/products/${pid}`);
+  revalidatePath("/products");
+  return { ok: true };
+}
+
+export async function updateProductChildDeliveryStatusesBulk(
+  productId: string,
+  rows: ChildDeliveryStatusDraftRow[]
+): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const pid = productId.trim();
+  if (!pid) return { error: "Missing product" };
+
+  if (!Array.isArray(rows) || rows.length !== CHILD_DELIVERY_STATUSES.length) {
+    return { error: "Invalid payload." };
+  }
+
+  const seen = new Set<string>();
+  for (const row of rows) {
+    const id = row.id;
+    if (!CHILD_DELIVERY_SET.has(id)) return { error: "Invalid status." };
+    if (seen.has(id)) return { error: "Duplicate status." };
+    seen.add(id);
+    const label = row.label.trim();
+    if (!label || label.length > 64) {
+      return { error: "Each name is required (max 64 characters)." };
+    }
+    const color = normalizeHexColor(row.color);
+    if (!color) return { error: "Each row needs a valid color." };
+  }
+
+  for (const id of CHILD_DELIVERY_STATUSES) {
+    if (!seen.has(id)) return { error: "Missing status row." };
+  }
+
+  const next = buildChildDeliveryStatusUiFromDrafts(rows);
+
+  const { data: root, error: rErr } = await supabase
+    .from("project")
+    .select("id, metadata")
+    .eq("id", pid)
+    .is("parent_project_id", null)
+    .maybeSingle();
+
+  if (rErr) return { error: humanizeProjectDbError(rErr.message) };
+  if (!root) return { error: "Product not found" };
+
+  const meta =
+    root.metadata &&
+    typeof root.metadata === "object" &&
+    !Array.isArray(root.metadata)
+      ? ({ ...(root.metadata as Record<string, unknown>) } as Record<
+          string,
+          unknown
+        >)
+      : {};
 
   const newMeta = applyChildDeliveryStatusUiToMetadata(meta, next);
 

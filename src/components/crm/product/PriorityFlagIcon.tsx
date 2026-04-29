@@ -9,8 +9,8 @@ type Props = {
 };
 
 /**
- * Priority flags: urgent red, high orange, medium yellow, low white with stroke
- * for contrast on light backgrounds.
+ * Priority flags: urgent rose, high amber, normal/medium blue, low muted grey.
+ * Empty shows outline flag for “no priority”.
  */
 export function PriorityFlagIcon({ level, className }: Props) {
   const base = className?.trim()
@@ -31,8 +31,8 @@ export function PriorityFlagIcon({ level, className }: Props) {
     return (
       <Flag
         className={base}
-        fill="#ef4444"
-        stroke="#ef4444"
+        fill="#e11d48"
+        stroke="#e11d48"
         strokeWidth={1.5}
         aria-hidden
       />
@@ -42,8 +42,8 @@ export function PriorityFlagIcon({ level, className }: Props) {
     return (
       <Flag
         className={base}
-        fill="#f97316"
-        stroke="#f97316"
+        fill="#d97706"
+        stroke="#d97706"
         strokeWidth={1.5}
         aria-hidden
       />
@@ -53,8 +53,8 @@ export function PriorityFlagIcon({ level, className }: Props) {
     return (
       <Flag
         className={base}
-        fill="#eab308"
-        stroke="#eab308"
+        fill="#2563eb"
+        stroke="#2563eb"
         strokeWidth={1.5}
         aria-hidden
       />
@@ -63,8 +63,8 @@ export function PriorityFlagIcon({ level, className }: Props) {
   return (
     <Flag
       className={base}
-      fill="#ffffff"
-      stroke="#a1a1aa"
+      fill="#71717a"
+      stroke="#71717a"
       strokeWidth={1.5}
       aria-hidden
     />

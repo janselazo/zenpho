@@ -35,13 +35,16 @@ import CrmPopoverDateField from "@/components/crm/CrmPopoverDateField";
 import ProductTaskStatusModal from "@/components/crm/product/ProductTaskStatusModal";
 import {
   AlignLeft,
+  Ban,
   Box,
   Calendar,
+  CalendarPlus,
   Check,
   CheckCircle2,
   ChevronDown,
   Circle,
   CircleDashed,
+  Flag,
   Hash,
   Loader2,
   Plus,
@@ -50,6 +53,7 @@ import {
   Type,
   User,
   UserCircle,
+  UserPlus,
   X,
 } from "lucide-react";
 
@@ -165,6 +169,98 @@ function TaskAssigneeCell({
   );
 }
 
+type TaskPriorityValue = NonNullable<WorkspaceTask["priority"]> | "";
+
+const TASK_PRIORITY_OPTIONS: { id: TaskPriorityValue; label: string }[] = [
+  { id: "urgent", label: "Urgent" },
+  { id: "high", label: "High" },
+  { id: "medium", label: "Normal" },
+  { id: "low", label: "Low" },
+  { id: "", label: "Clear" },
+];
+
+function TaskPriorityCell({
+  priority,
+  onChange,
+}: {
+  priority: WorkspaceTask["priority"];
+  onChange: (v: TaskPriorityValue) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const current: TaskPriorityValue = priority ?? "";
+
+  useEffect(() => {
+    if (!open) return;
+    function onDoc(e: MouseEvent) {
+      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  const label =
+    TASK_PRIORITY_OPTIONS.find((p) => p.id === current)?.label ?? "Clear";
+
+  return (
+    <div className="relative flex justify-center px-0.5" ref={wrapRef}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="inline-flex h-8 max-w-[4.5rem] items-center justify-center gap-0.5 rounded-lg border border-border bg-white px-1 dark:border-zinc-600 dark:bg-zinc-800/90"
+        aria-label={`Priority: ${label}`}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+      >
+        {current ? (
+          <PriorityFlagIcon level={current} className="h-4 w-4" />
+        ) : (
+          <span className="text-xs font-medium text-text-secondary dark:text-zinc-500">
+            —
+          </span>
+        )}
+        <ChevronDown
+          className="h-3 w-3 shrink-0 text-text-secondary opacity-70 dark:text-zinc-400"
+          aria-hidden
+        />
+      </button>
+      {open ? (
+        <div
+          className="absolute right-0 top-full z-[60] mt-1 w-48 overflow-hidden rounded-xl border border-border bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-950"
+          role="listbox"
+        >
+          <p className="px-3 py-1.5 text-[11px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+            Priority
+          </p>
+          {TASK_PRIORITY_OPTIONS.map((p) => (
+            <button
+              key={p.id || "clear"}
+              type="button"
+              role="option"
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-text-primary hover:bg-surface/80 dark:text-zinc-100 dark:hover:bg-zinc-800"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                onChange(p.id);
+                setOpen(false);
+              }}
+            >
+              {p.id === "" ? (
+                <Ban className="h-4 w-4 shrink-0 text-zinc-500" aria-hidden />
+              ) : (
+                <PriorityFlagIcon level={p.id} className="h-4 w-4" />
+              )}
+              <span className="flex-1">{p.label}</span>
+              {current === p.id ? (
+                <Check className="h-4 w-4 shrink-0 text-accent" aria-hidden />
+              ) : null}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function statusDisplay(
   s: TaskStatus,
   overrides?: Partial<Record<TaskStatus, string>>
@@ -264,14 +360,6 @@ type Props = {
   onSprintFilterChange: (value: string) => void;
 };
 
-const PRIORITIES: { id: NonNullable<WorkspaceTask["priority"]> | ""; label: string }[] =
-  [
-    { id: "", label: "—" },
-    { id: "low", label: "Low" },
-    { id: "medium", label: "Medium" },
-    { id: "high", label: "High" },
-  ];
-
 const ADD_FIELD_TYPES: {
   type: TaskCustomFieldType;
   label: string;
@@ -312,9 +400,7 @@ export default function ProductTasksLinearTab({
   const [newTitle, setNewTitle] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [newTaskStatus, setNewTaskStatus] = useState<TaskStatus>("not_started");
-  const [newTaskPriority, setNewTaskPriority] = useState<
-    NonNullable<WorkspaceTask["priority"]> | ""
-  >("");
+  const [newTaskPriority, setNewTaskPriority] = useState<TaskPriorityValue>("");
   const [newAssigneeId, setNewAssigneeId] = useState("");
   const [newTargetProjectId, setNewTargetProjectId] = useState(projectId);
   const [newTags, setNewTags] = useState<string[]>([]);
@@ -528,10 +614,9 @@ export default function ProductTasksLinearTab({
   const selectedAssigneeName = newAssigneeId
     ? assigneeOptions.find((m) => m.id === newAssigneeId)?.name ?? "Member"
     : "Assignee";
-  const priorityPillLabel =
-    newTaskPriority === ""
-      ? "Priority"
-      : PRIORITIES.find((p) => p.id === newTaskPriority)?.label ?? "Priority";
+  const newTaskPriorityLabel =
+    TASK_PRIORITY_OPTIONS.find((p) => p.id === newTaskPriority)?.label ??
+    "Priority";
   const milestonePillLabel = newMilestoneId
     ? milestoneById.get(newMilestoneId) ?? "Milestone"
     : "Milestone";
@@ -785,16 +870,20 @@ export default function ProductTasksLinearTab({
               className={pillClass}
               onClick={() => toggleNewMenu("priority")}
               aria-expanded={newTaskMenu === "priority"}
+              aria-label={`Priority: ${newTaskPriorityLabel}`}
             >
-              <PriorityFlagIcon level={newTaskPriority} />
-              {priorityPillLabel}
+              <PriorityFlagIcon level={newTaskPriority} className="h-4 w-4" />
+              <ChevronDown
+                className="h-3.5 w-3.5 shrink-0 text-text-secondary"
+                aria-hidden
+              />
             </button>
             {newTaskMenu === "priority" ? (
               <div className={menuClass}>
                 <p className="border-b border-border px-3 py-2 text-xs text-text-secondary dark:border-zinc-800">
-                  Set priority…
+                  Priority
                 </p>
-                {PRIORITIES.map((p) => (
+                {TASK_PRIORITY_OPTIONS.map((p) => (
                   <button
                     key={p.id || "none"}
                     type="button"
@@ -804,12 +893,14 @@ export default function ProductTasksLinearTab({
                     }}
                     className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-surface/80 dark:hover:bg-zinc-800"
                   >
-                    <PriorityFlagIcon level={p.id} />
-                    <span className="min-w-0 flex-1">
-                      {p.label === "—" ? "No priority" : p.label}
-                    </span>
+                    {p.id === "" ? (
+                      <Ban className="h-4 w-4 shrink-0 text-zinc-500" aria-hidden />
+                    ) : (
+                      <PriorityFlagIcon level={p.id} className="h-4 w-4" />
+                    )}
+                    <span className="min-w-0 flex-1">{p.label}</span>
                     {newTaskPriority === p.id ? (
-                      <Check className="h-4 w-4 shrink-0 text-accent" />
+                      <Check className="h-4 w-4 shrink-0 text-accent" aria-hidden />
                     ) : null}
                   </button>
                 ))}
@@ -1035,7 +1126,8 @@ export default function ProductTasksLinearTab({
                     value={newDueDate}
                     onChange={setNewDueDate}
                     displayFormat="numeric"
-                    triggerClassName="w-full"
+                    compact
+                    triggerClassName="!max-w-none"
                   />
                 </div>
                 <div className="border-t border-border px-1 py-1 dark:border-zinc-800">
@@ -1103,18 +1195,27 @@ export default function ProductTasksLinearTab({
               <th className="min-w-[200px] px-3 py-3 text-xs font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
                 Title
               </th>
-              <th className="w-14 px-1 py-3 text-center text-xs font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
-                <UserCircle
-                  className="mx-auto h-4 w-4 opacity-70 dark:opacity-60"
+              <th className="w-12 px-0.5 py-3 text-center text-xs font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+                <UserPlus
+                  className="mx-auto h-4 w-4 opacity-80 dark:opacity-70"
                   aria-hidden
                 />
                 <span className="sr-only">Assignee</span>
               </th>
-              <th className="w-32 px-2 py-3 text-xs font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
-                Due
+              <th className="w-[5.75rem] px-0.5 py-3 text-center text-xs font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+                <CalendarPlus
+                  className="mx-auto h-4 w-4 opacity-80 dark:opacity-70"
+                  aria-hidden
+                />
+                <span className="sr-only">Due date</span>
               </th>
-              <th className="w-28 px-2 py-3 text-xs font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
-                Priority
+              <th className="w-16 px-0.5 py-3 text-center text-xs font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+                <Flag
+                  className="mx-auto h-4 w-4 opacity-80 dark:opacity-70"
+                  strokeWidth={2}
+                  aria-hidden
+                />
+                <span className="sr-only">Priority</span>
               </th>
               {workspace.taskCustomFields.map((def) => (
                 <th
@@ -1222,7 +1323,7 @@ export default function ProductTasksLinearTab({
                         className="min-w-0 max-w-[7.5rem] truncate rounded border border-transparent bg-transparent py-0.5 text-xs text-text-primary hover:border-border dark:text-zinc-200 dark:hover:border-zinc-600"
                         aria-label="Set status"
                       >
-                        {[...new Set([...cycleOrder, task.status])].map((s) => (
+                        {[...new Set([...cycleOrder, ...DEFAULT_TASK_STATUS_CYCLE, task.status])].map((s) => (
                           <option key={s} value={s}>
                             {statusDisplay(s, workspace.taskStatusLabels)}
                           </option>
@@ -1266,37 +1367,33 @@ export default function ProductTasksLinearTab({
                       }
                     />
                   </td>
-                  <td className="px-2 py-2 align-middle">
+                  <td className="px-0.5 py-2 align-middle">
                     <CrmPopoverDateField
                       id={`linear-task-due-${task.id}`}
                       value={task.endDate}
                       onChange={(v) => updateTask(task.id, { endDate: v })}
                       displayFormat="numeric"
-                      triggerClassName="w-full min-w-0 !min-h-9 text-xs"
+                      compact
+                      triggerClassName="!max-w-[6.75rem]"
                     />
                   </td>
-                  <td className="px-2 py-2 align-middle">
-                    <select
-                      value={task.priority ?? ""}
-                      onChange={(e) => {
-                        const v = e.target.value;
+                  <td className="px-0.5 py-2 align-middle">
+                    <TaskPriorityCell
+                      priority={task.priority}
+                      onChange={(v) =>
                         updateTask(task.id, {
                           priority:
-                            v === "" || v === "low" || v === "medium" || v === "high"
-                              ? v === ""
-                                ? undefined
-                                : v
-                              : undefined,
-                        });
-                      }}
-                      className="w-full rounded-lg border border-border bg-white px-2 py-1 text-xs dark:border-zinc-600 dark:bg-zinc-800"
-                    >
-                      {PRIORITIES.map((p) => (
-                        <option key={p.id || "none"} value={p.id}>
-                          {p.label}
-                        </option>
-                      ))}
-                    </select>
+                            v === ""
+                              ? undefined
+                              : v === "low" ||
+                                  v === "medium" ||
+                                  v === "high" ||
+                                  v === "urgent"
+                                ? v
+                                : undefined,
+                        })
+                      }
+                    />
                   </td>
                   {workspace.taskCustomFields.map((def) => (
                     <td key={def.id} className="px-2 py-2 align-middle">

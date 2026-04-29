@@ -156,3 +156,29 @@ export function applyChildDeliveryStatusUiToMetadata(
   else delete out[METADATA_KEY];
   return out;
 }
+
+/** One row per built-in status. Assumes labels are non-empty (≤64) and colors normalize. */
+export type ChildDeliveryStatusDraftRow = {
+  id: ChildDeliveryStatus;
+  label: string;
+  color: string;
+};
+
+/** Build full UI config from form rows; entries matching defaults are omitted (reset). */
+export function buildChildDeliveryStatusUiFromDrafts(
+  rows: ChildDeliveryStatusDraftRow[]
+): ChildDeliveryStatusUiConfig {
+  const next: ChildDeliveryStatusUiConfig = {};
+  for (const row of rows) {
+    const label = row.label.trim();
+    const color = normalizeHexColor(row.color);
+    if (!label || label.length > 64 || !color) continue;
+    const defLabel = defaultChildDeliveryLabel(row.id);
+    const defColor = DEFAULT_CHILD_DELIVERY_STATUS_COLORS[row.id];
+    const entry: ChildDeliveryStatusUiEntry = {};
+    if (label !== defLabel) entry.label = label;
+    if (color !== defColor) entry.color = color;
+    if (Object.keys(entry).length) next[row.id] = entry;
+  }
+  return next;
+}

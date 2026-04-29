@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -16,9 +17,12 @@ import {
   ArrowUpDown,
   Briefcase,
   Building2,
+  CalendarDays,
+  CalendarPlus,
   Check,
   ChevronDown,
   ExternalLink,
+  Flag,
   FolderKanban,
   ListTodo,
   Loader2,
@@ -31,7 +35,10 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import type { MergedCrmFieldOptions } from "@/lib/crm/field-options";
+import {
+  formatLeadSourceOptionLabel,
+  type MergedCrmFieldOptions,
+} from "@/lib/crm/field-options";
 import ClientsView from "@/components/crm/ClientsView";
 import CrmNewProjectFromLeadModal from "@/components/crm/CrmNewProjectFromLeadModal";
 import CrmQuickTaskModal from "@/components/crm/CrmQuickTaskModal";
@@ -57,9 +64,16 @@ import {
   updateLeadRow,
   updateLeadSourceField,
   updateLeadStage,
+  updateLeadTemperature,
 } from "@/app/(crm)/actions/crm";
 import type { ClientTableRow } from "@/lib/crm/client-table-row";
 import type { LeadTagCatalogRow } from "@/lib/crm/lead-tag-catalog";
+import {
+  LEAD_TEMPERATURE_EMOJI,
+  LEAD_TEMPERATURE_ORDER,
+  parseLeadTemperature,
+  type LeadTemperature,
+} from "@/lib/crm/lead-temperature";
 export interface Lead {
   id: string;
   name: string | null;
@@ -76,6 +90,13 @@ export interface Lead {
   primaryProject?: { title: string | null } | null;
   /** Tags assigned to this lead (from `lead_tag` / `lead_tag_assignment`) */
   leadTags?: { id: string; name: string; color: string }[];
+  /**
+   * Next upcoming appointment `starts_at` for pipeline card, or the most
+   * recent past appointment when there is no future one (ISO timestamptz).
+   */
+  nextAppointmentStartsAt?: string | null;
+  /** Pipeline triage: cold / warm / hot (see `lead.temperature`). */
+  temperature?: string | null;
 }
 
 /** Shared chip shell: white / dark surface, no tinted fill. Text color applied per column. */
@@ -86,9 +107,19 @@ const sourceTextClasses: Record<string, string> = {
   website: "text-sky-700 dark:text-sky-400",
   referral: "text-teal-700 dark:text-teal-400",
   linkedin: "text-blue-700 dark:text-blue-400",
+  upwork: "text-emerald-700 dark:text-emerald-400",
+  "cold email": "text-amber-700 dark:text-amber-400",
+  "cold dm": "text-rose-700 dark:text-rose-400",
+  networking: "text-violet-700 dark:text-violet-400",
+  prospects: "text-slate-700 dark:text-slate-400",
+  "facebook ads": "text-indigo-700 dark:text-indigo-400",
+  "google ads": "text-red-700 dark:text-red-400",
+  "social media": "text-fuchsia-700 dark:text-fuchsia-400",
+  partnerships: "text-teal-700 dark:text-teal-400",
   "cold outreach": "text-orange-700 dark:text-orange-400",
   conference: "text-purple-700 dark:text-purple-400",
   facebook: "text-indigo-700 dark:text-indigo-400",
+  instagram: "text-pink-700 dark:text-pink-400",
 };
 
 function getSourceTextClass(source: string) {
@@ -104,6 +135,9 @@ const leadTableDataPillClass =
 
 const leadTableActionBarClass =
   "inline-flex shrink-0 flex-nowrap items-center gap-0 rounded-lg border border-zinc-200/90 bg-zinc-50/95 p-0.5 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/55";
+
+const leadTableAppointmentBtnClass =
+  "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md align-middle text-sky-600 transition-colors hover:bg-sky-50 hover:text-sky-700 disabled:cursor-not-allowed disabled:opacity-40 dark:text-sky-400 dark:hover:bg-sky-950/45 dark:hover:text-sky-300";
 
 const leadTableActionBtnClass =
   "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-white hover:text-zinc-800 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100";
@@ -362,13 +396,6 @@ function sourceNotInConfiguredList(source: string, leadSources: readonly string[
   return !leadSources.includes(t);
 }
 
-function formatSourceOptionLabel(value: string) {
-  return value
-    .split(/[\s_-]+/)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(" ");
-}
-
 function PillSelect({
   value,
   onChange,
@@ -612,7 +639,10 @@ export default function LeadsView({
   const [savePending, setSavePending] = useState(false);
   const [notesLead, setNotesLead] = useState<Lead | null>(null);
   const [newProjectLeadId, setNewProjectLeadId] = useState<string | null>(null);
-  const [quickTaskLead, setQuickTaskLead] = useState<Lead | null>(null);
+  const [quickScheduleLead, setQuickScheduleLead] = useState<{
+    lead: Lead;
+    variant: "task" | "appointment";
+  } | null>(null);
   const [pipelineEditLeadId, setPipelineEditLeadId] = useState<string | null>(
     null
   );
@@ -662,6 +692,31 @@ export default function LeadsView({
         window.alert(res.error);
         setLeadsSnapshot((prev) =>
           prev.map((l) => (l.id === itemId ? { ...l, stage: fromCol } : l))
+        );
+        return;
+      }
+      router.refresh();
+    })();
+  }
+
+  function handleLeadTemperatureChange(
+    lead: Lead,
+    next: LeadTemperature | null
+  ) {
+    const prevNorm = parseLeadTemperature(lead.temperature);
+    if (prevNorm === next) return;
+    const prevRaw = lead.temperature ?? null;
+    setLeadsSnapshot((p) =>
+      p.map((l) => (l.id === lead.id ? { ...l, temperature: next } : l))
+    );
+    void (async () => {
+      const res = await updateLeadTemperature(lead.id, next);
+      if ("error" in res && res.error) {
+        window.alert(res.error);
+        setLeadsSnapshot((p) =>
+          p.map((l) =>
+            l.id === lead.id ? { ...l, temperature: prevRaw } : l
+          )
         );
         return;
       }
@@ -992,7 +1047,12 @@ export default function LeadsView({
             handleDeleteLead={handleDeleteLead}
             setNotesLead={setNotesLead}
             onCreateProject={(lead) => setNewProjectLeadId(lead.id)}
-            onQuickTask={setQuickTaskLead}
+            onQuickTask={(lead) =>
+              setQuickScheduleLead({ lead, variant: "task" })
+            }
+            onQuickAppointment={(lead) =>
+              setQuickScheduleLead({ lead, variant: "appointment" })
+            }
             onQuickStageChange={handleQuickStageChange}
             onQuickProjectTypeChange={handleQuickProjectTypeChange}
             onQuickSourceChange={handleQuickSourceChange}
@@ -1020,12 +1080,18 @@ export default function LeadsView({
             pipelineModalOpenLeadId={pipelineEditLeadId}
             onNotes={setNotesLead}
             onCreateProject={(lead) => setNewProjectLeadId(lead.id)}
-            onQuickTask={setQuickTaskLead}
+            onQuickTask={(lead) =>
+              setQuickScheduleLead({ lead, variant: "task" })
+            }
+            onQuickAppointment={(lead) =>
+              setQuickScheduleLead({ lead, variant: "appointment" })
+            }
             onEditFromPipeline={(l) => {
               cancelEdit();
               setPipelineEditLeadId(l.id);
             }}
             onDelete={handleDeleteLead}
+            onLeadTemperatureChange={handleLeadTemperatureChange}
           />
         ) : null}
         {view === "clients" ? (
@@ -1071,12 +1137,13 @@ export default function LeadsView({
           onClose={() => setNewProjectLeadId(null)}
         />
       ) : null}
-      {quickTaskLead ? (
+      {quickScheduleLead ? (
         <CrmQuickTaskModal
-          leadId={quickTaskLead.id}
-          contextLabel={leadQuickTaskContextLabel(quickTaskLead)}
-          resetKey={quickTaskLead.id}
-          onClose={() => setQuickTaskLead(null)}
+          leadId={quickScheduleLead.lead.id}
+          contextLabel={leadQuickTaskContextLabel(quickScheduleLead.lead)}
+          resetKey={`${quickScheduleLead.lead.id}-${quickScheduleLead.variant}`}
+          variant={quickScheduleLead.variant}
+          onClose={() => setQuickScheduleLead(null)}
         />
       ) : null}
       {modalOpen && (
@@ -1151,6 +1218,7 @@ type LeadsTableProps = {
   setNotesLead: Dispatch<SetStateAction<Lead | null>>;
   onCreateProject: (lead: Lead) => void;
   onQuickTask: (lead: Lead) => void;
+  onQuickAppointment: (lead: Lead) => void;
   onQuickStageChange: (lead: Lead, stage: string) => void;
   onQuickProjectTypeChange: (lead: Lead, projectType: string) => void;
   onQuickSourceChange: (lead: Lead, source: string) => void;
@@ -1166,6 +1234,163 @@ const LEAD_OUTCOME_COLLAPSIBLE_IDS = new Set(["closed_won", "closed_lost"]);
 const LEAD_PIPELINE_OUTCOME_COLLAPSED_KEY =
   "zenpho_leads_pipeline_outcome_collapsed";
 
+function PipelineLeadTemperaturePicker({
+  lead,
+  disabled,
+  onSelect,
+}: {
+  lead: Lead;
+  disabled: boolean;
+  onSelect: (value: LeadTemperature | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuPos, setMenuPos] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
+
+  const current = parseLeadTemperature(lead.temperature);
+  const busy = disabled;
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setMenuPos(null);
+      return;
+    }
+    const btn = btnRef.current;
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    const menuWidth = 156;
+    const left = Math.min(
+      window.innerWidth - menuWidth - 8,
+      Math.max(8, rect.right - menuWidth)
+    );
+    setMenuPos({ top: rect.bottom + 6, left });
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onScroll = () => setOpen(false);
+    window.addEventListener("scroll", onScroll, true);
+    return () => window.removeEventListener("scroll", onScroll, true);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (btnRef.current?.contains(t)) return;
+      if (menuRef.current?.contains(t)) return;
+      setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  const menu =
+    open &&
+    menuPos &&
+    typeof document !== "undefined" &&
+    createPortal(
+      <div
+        ref={menuRef}
+        className="rounded-xl border border-zinc-200 bg-white p-1.5 shadow-xl ring-1 ring-black/5 dark:border-zinc-600 dark:bg-zinc-900 dark:ring-white/10"
+        style={
+          {
+            position: "fixed",
+            top: menuPos.top,
+            left: menuPos.left,
+            zIndex: 320,
+          } as CSSProperties
+        }
+        role="menu"
+        aria-label="Lead temperature"
+      >
+        <div className="flex gap-1">
+          {LEAD_TEMPERATURE_ORDER.map((key) => (
+            <button
+              key={key}
+              type="button"
+              role="menuitem"
+              className={`flex h-10 w-10 items-center justify-center rounded-lg text-xl leading-none transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800 ${
+                current === key
+                  ? "bg-blue-50 ring-2 ring-blue-500/35 dark:bg-blue-950/50 dark:ring-blue-400/40"
+                  : ""
+              }`}
+              aria-label={
+                key === "cold"
+                  ? "Cold lead"
+                  : key === "warm"
+                    ? "Warm lead"
+                    : "Hot lead"
+              }
+              title={
+                key === "cold"
+                  ? "Cold"
+                  : key === "warm"
+                    ? "Warm"
+                    : "Hot"
+              }
+              onClick={() => {
+                onSelect(key);
+                setOpen(false);
+              }}
+            >
+              <span aria-hidden>{LEAD_TEMPERATURE_EMOJI[key]}</span>
+            </button>
+          ))}
+        </div>
+        {current ? (
+          <button
+            type="button"
+            role="menuitem"
+            className="mt-1.5 w-full rounded-lg py-1.5 text-center text-[11px] font-semibold text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+            onClick={() => {
+              onSelect(null);
+              setOpen(false);
+            }}
+          >
+            Clear
+          </button>
+        ) : null}
+      </div>,
+      document.body
+    );
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        disabled={busy}
+        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-zinc-200/90 bg-white text-zinc-600 shadow-sm transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={
+          current
+            ? `Lead temperature: ${
+                current === "cold" ? "Cold" : current === "warm" ? "Warm" : "Hot"
+              }. Change`
+            : "Set lead temperature (cold, warm, or hot)"
+        }
+        title="Temperature"
+        onClick={() => !busy && setOpen((o) => !o)}
+      >
+        {current ? (
+          <span className="text-lg leading-none" aria-hidden>
+            {LEAD_TEMPERATURE_EMOJI[current]}
+          </span>
+        ) : (
+          <Flag className="h-4 w-4" aria-hidden />
+        )}
+      </button>
+      {menu}
+    </>
+  );
+}
+
 function LeadsPipelineBoard({
   columns,
   onMove,
@@ -1175,8 +1400,10 @@ function LeadsPipelineBoard({
   onNotes,
   onCreateProject,
   onQuickTask,
+  onQuickAppointment,
   onEditFromPipeline,
   onDelete,
+  onLeadTemperatureChange,
 }: {
   columns: KanbanColumn<Lead>[];
   onMove: (itemId: string, fromCol: string, toCol: string) => void;
@@ -1187,8 +1414,10 @@ function LeadsPipelineBoard({
   onNotes: (lead: Lead) => void;
   onCreateProject: (lead: Lead) => void;
   onQuickTask: (lead: Lead) => void;
+  onQuickAppointment: (lead: Lead) => void;
   onEditFromPipeline: (lead: Lead) => void;
   onDelete: (lead: Lead) => void;
+  onLeadTemperatureChange: (lead: Lead, value: LeadTemperature | null) => void;
 }) {
   const stopDragMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -1318,13 +1547,28 @@ function LeadsPipelineBoard({
                 </span>
               </div>
             ) : null}
+            {lead.nextAppointmentStartsAt ? (
+              <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-xs">
+                <CalendarDays
+                  className="h-3.5 w-3.5 shrink-0 text-zinc-400"
+                  aria-hidden
+                />
+                <span className="min-w-0 font-medium text-sky-700 dark:text-sky-400">
+                  Appointment{" "}
+                  {formatPipelineCardDate(lead.nextAppointmentStartsAt)}
+                </span>
+              </div>
+            ) : null}
             <p className="mt-2 text-[11px] text-zinc-400 dark:text-zinc-500">
-              {formatPipelineCardDate(lead.created_at)}
+              {lead.nextAppointmentStartsAt
+                ? `Added ${formatPipelineCardDate(lead.created_at)}`
+                : formatPipelineCardDate(lead.created_at)}
             </p>
             <div
-              className="mt-3 flex flex-wrap items-center gap-1 border-t border-zinc-100 pt-2.5 dark:border-zinc-700/80"
+              className="mt-3 flex items-center gap-1 border-t border-zinc-100 pt-2.5 dark:border-zinc-700/80"
               onMouseDown={stopDragMouseDown}
             >
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
               <button
                 type="button"
                 onClick={() => onCreateProject(lead)}
@@ -1375,6 +1619,22 @@ function LeadsPipelineBoard({
               </button>
               <button
                 type="button"
+                onClick={() => onQuickAppointment(lead)}
+                disabled={
+                  editingId !== null ||
+                  Boolean(
+                    pipelineModalOpenLeadId &&
+                      pipelineModalOpenLeadId !== lead.id
+                  )
+                }
+                title="Add appointment"
+                className="inline-flex items-center justify-center rounded-md p-1.5 text-sky-600 transition-colors hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-40 dark:text-sky-400 dark:hover:bg-sky-950/40"
+                aria-label={`Schedule appointment for ${deleteLabel}`}
+              >
+                <CalendarPlus className="h-4 w-4 shrink-0" aria-hidden />
+              </button>
+              <button
+                type="button"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -1415,6 +1675,18 @@ function LeadsPipelineBoard({
                   <Trash2 className="h-4 w-4 shrink-0" aria-hidden />
                 )}
               </button>
+              </div>
+              <PipelineLeadTemperaturePicker
+                lead={lead}
+                disabled={
+                  editingId !== null ||
+                  Boolean(
+                    pipelineModalOpenLeadId &&
+                      pipelineModalOpenLeadId !== lead.id
+                  )
+                }
+                onSelect={(value) => onLeadTemperatureChange(lead, value)}
+              />
             </div>
           </div>
         );
@@ -1440,6 +1712,7 @@ function LeadsTable({
   setNotesLead,
   onCreateProject,
   onQuickTask,
+  onQuickAppointment,
   onQuickStageChange,
   onQuickProjectTypeChange,
   onQuickSourceChange,
@@ -1936,7 +2209,7 @@ function LeadsTable({
                       textClassName="text-sky-800 dark:text-sky-300"
                       disabled={savePending}
                     >
-                      <option value="">—</option>
+                      <option value="">Not Set</option>
                       {draft.source &&
                         sourceNotInConfiguredList(
                           draft.source,
@@ -1946,7 +2219,7 @@ function LeadsTable({
                       )}
                       {fieldOptions.leadSources.map((o) => (
                         <option key={o} value={o}>
-                          {formatSourceOptionLabel(o)}
+                          {formatLeadSourceOptionLabel(o)}
                         </option>
                       ))}
                     </PillSelect>
@@ -1964,7 +2237,7 @@ function LeadsTable({
                         aria-label={`Source for ${deleteLabel}`}
                         className={`w-full appearance-none rounded-lg border-0 py-1.5 pl-3 pr-8 text-[11px] font-medium capitalize outline-none ring-1 ring-zinc-200/85 focus:ring-2 focus:ring-blue-400/20 disabled:cursor-not-allowed disabled:opacity-60 dark:ring-zinc-600 dark:focus:ring-blue-500/25 ${getSourcePillClass(lead.source ?? "")}`}
                       >
-                        <option value="">Not set</option>
+                        <option value="">Not Set</option>
                         {lead.source &&
                           sourceNotInConfiguredList(
                             lead.source,
@@ -1976,7 +2249,7 @@ function LeadsTable({
                         )}
                         {fieldOptions.leadSources.map((o) => (
                           <option key={o} value={o}>
-                            {formatSourceOptionLabel(o)}
+                            {formatLeadSourceOptionLabel(o)}
                           </option>
                         ))}
                       </select>
@@ -2065,6 +2338,16 @@ function LeadsTable({
                           aria-label={`Add task for ${deleteLabel}`}
                         >
                           <ListTodo className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onQuickAppointment(lead)}
+                          disabled={editingId !== null}
+                          title="Add appointment"
+                          className={leadTableAppointmentBtnClass}
+                          aria-label={`Schedule appointment for ${deleteLabel}`}
+                        >
+                          <CalendarPlus className="h-3.5 w-3.5 shrink-0" aria-hidden />
                         </button>
                         <button
                           type="button"
@@ -2395,14 +2678,14 @@ function PipelineLeadEditModal({
               textClassName="text-sky-800 dark:text-sky-300"
               disabled={savePending}
             >
-              <option value="">Not set</option>
+              <option value="">Not Set</option>
               {draft.source &&
                 sourceNotInConfiguredList(draft.source, fieldOptions.leadSources) && (
                   <option value={draft.source}>{draft.source}</option>
                 )}
               {fieldOptions.leadSources.map((o) => (
                 <option key={o} value={o}>
-                  {formatSourceOptionLabel(o)}
+                  {formatLeadSourceOptionLabel(o)}
                 </option>
               ))}
             </PillSelect>
@@ -2843,10 +3126,10 @@ function NewLeadModal({
               Source
             </label>
             <select name="source" defaultValue="" className={inputClass}>
-              <option value="">Not set</option>
+              <option value="">Not Set</option>
               {fieldOptions.leadSources.map((o) => (
                 <option key={o} value={o}>
-                  {formatSourceOptionLabel(o)}
+                  {formatLeadSourceOptionLabel(o)}
                 </option>
               ))}
             </select>

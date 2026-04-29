@@ -142,7 +142,10 @@ export function normalizeWorkspaceTask(raw: unknown): WorkspaceTask | null {
     progress: typeof raw.progress === "number" ? raw.progress : 0,
     estimateHours: typeof raw.estimateHours === "number" ? raw.estimateHours : 1,
     priority:
-      raw.priority === "low" || raw.priority === "medium" || raw.priority === "high"
+      raw.priority === "low" ||
+      raw.priority === "medium" ||
+      raw.priority === "high" ||
+      raw.priority === "urgent"
         ? raw.priority
         : undefined,
     description:

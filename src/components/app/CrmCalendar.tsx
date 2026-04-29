@@ -1,11 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import FullCalendar from "@fullcalendar/react";
-import dayGridPlugin from "@fullcalendar/daygrid";
-import timeGridPlugin from "@fullcalendar/timegrid";
-import interactionPlugin from "@fullcalendar/interaction";
-import type { DateSelectArg, EventClickArg, EventInput } from "@fullcalendar/core";
 import { createClient } from "@/lib/supabase/client";
 import {
   createAppointmentAction,
@@ -15,14 +10,16 @@ import {
 import CrmPopoverDateTimeField, {
   formatDatetimeLocalInput,
 } from "@/components/crm/CrmPopoverDateTimeField";
-
-type Row = {
-  id: string;
-  title: string;
-  description: string | null;
-  starts_at: string;
-  ends_at: string;
-};
+import AppointmentMonthGrid, {
+  type AppointmentCalendarRow,
+} from "@/components/app/AppointmentMonthGrid";
+import AppointmentStatusBadge from "@/components/app/AppointmentStatusBadge";
+import {
+  APPOINTMENT_STATUS_LIST,
+  appointmentStatusLabel,
+  parseAppointmentStatus,
+  type AppointmentStatus,
+} from "@/lib/crm/appointment-status";
 
 type ViewTab = "upcoming" | "calendar" | "all";
 
@@ -49,9 +46,14 @@ const inputClass =
   "w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/15";
 
 export default function CrmCalendar({ configured }: { configured: boolean }) {
-  const [rows, setRows] = useState<Row[]>([]);
+  const [rows, setRows] = useState<AppointmentCalendarRow[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ViewTab>("calendar");
+
+  const [visibleMonth, setVisibleMonth] = useState(() => {
+    const n = new Date();
+    return new Date(n.getFullYear(), n.getMonth(), 1);
+  });
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -59,6 +61,7 @@ export default function CrmCalendar({ configured }: { configured: boolean }) {
   const [description, setDescription] = useState("");
   const [startsLocal, setStartsLocal] = useState("");
   const [endsLocal, setEndsLocal] = useState("");
+  const [status, setStatus] = useState<AppointmentStatus>("scheduled");
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -68,14 +71,23 @@ export default function CrmCalendar({ configured }: { configured: boolean }) {
       const supabase = createClient();
       const { data, error: qErr } = await supabase
         .from("appointment")
-        .select("id, title, description, starts_at, ends_at")
+        .select("id, title, description, starts_at, ends_at, status")
         .order("starts_at", { ascending: true });
       if (qErr) {
         setLoadError(qErr.message);
         return;
       }
       setLoadError(null);
-      setRows((data ?? []) as Row[]);
+      setRows(
+        (data ?? []).map((r) => ({
+          id: r.id as string,
+          title: r.title as string,
+          description: (r.description as string | null) ?? null,
+          starts_at: r.starts_at as string,
+          ends_at: r.ends_at as string,
+          status: parseAppointmentStatus(r.status as string | null),
+        }))
+      );
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : "Failed to load");
     }
@@ -85,52 +97,49 @@ export default function CrmCalendar({ configured }: { configured: boolean }) {
     void load();
   }, [load]);
 
-  const events: EventInput[] = useMemo(
-    () =>
-      rows.map((r) => ({
-        id: r.id,
-        title: r.title,
-        start: r.starts_at,
-        end: r.ends_at,
-        extendedProps: { description: r.description ?? "" },
-      })),
-    [rows]
-  );
-
   const now = new Date();
   const upcomingRows = rows.filter((r) => new Date(r.starts_at) >= now);
 
-  const plugins = useMemo(
-    () => [dayGridPlugin, timeGridPlugin, interactionPlugin],
-    []
-  );
+  function goPrevMonth() {
+    setVisibleMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1));
+  }
+
+  function goNextMonth() {
+    setVisibleMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1));
+  }
+
+  function goThisMonth() {
+    const n = new Date();
+    setVisibleMonth(new Date(n.getFullYear(), n.getMonth(), 1));
+  }
 
   function openNew(preset?: { start: Date; end: Date }) {
     const { start, end } = preset ?? defaultNextHourWindow();
     setEditingId(null);
     setTitle("");
     setDescription("");
+    setStatus("scheduled");
     setStartsLocal(formatDatetimeLocalInput(start));
     setEndsLocal(formatDatetimeLocalInput(end));
     setFormError(null);
     setModalOpen(true);
   }
 
-  function onSelect(info: DateSelectArg) {
-    openNew({ start: info.start, end: info.end });
+  function openNewForDay(day: Date) {
+    const start = new Date(day);
+    start.setHours(9, 0, 0, 0);
+    const end = new Date(start);
+    end.setHours(10, 0, 0, 0);
+    openNew({ start, end });
   }
 
-  function onEventClick(info: EventClickArg) {
-    info.jsEvent.preventDefault();
-    const start = info.event.start;
-    if (!start) return;
-    const end =
-      info.event.end ?? new Date(start.getTime() + 60 * 60 * 1000);
-    setEditingId(info.event.id);
-    setTitle(info.event.title);
-    setDescription(String(info.event.extendedProps.description ?? ""));
-    setStartsLocal(formatDatetimeLocalInput(start));
-    setEndsLocal(formatDatetimeLocalInput(end));
+  function onEditEvent(row: AppointmentCalendarRow) {
+    setEditingId(row.id);
+    setTitle(row.title);
+    setDescription(row.description ?? "");
+    setStatus(row.status);
+    setStartsLocal(formatDatetimeLocalInput(new Date(row.starts_at)));
+    setEndsLocal(formatDatetimeLocalInput(new Date(row.ends_at)));
     setFormError(null);
     setModalOpen(true);
   }
@@ -160,6 +169,7 @@ export default function CrmCalendar({ configured }: { configured: boolean }) {
           description,
           starts_at: startIso,
           ends_at: endIso,
+          status,
         });
         if ("error" in res && res.error) {
           setFormError(res.error);
@@ -172,6 +182,7 @@ export default function CrmCalendar({ configured }: { configured: boolean }) {
           description,
           starts_at: startIso,
           ends_at: endIso,
+          status,
         });
         if ("error" in res && res.error) {
           setFormError(res.error);
@@ -203,6 +214,26 @@ export default function CrmCalendar({ configured }: { configured: boolean }) {
     await load();
   }
 
+  const tabItems: { id: ViewTab; label: string }[] = [
+    { id: "upcoming", label: "Upcoming" },
+    { id: "calendar", label: "Calendar" },
+    { id: "all", label: "All" },
+  ];
+
+  const monthRangeLabel = useMemo(() => {
+    const y = visibleMonth.getFullYear();
+    const m = visibleMonth.getMonth();
+    const last = new Date(y, m + 1, 0);
+    const a = new Date(y, m, 1);
+    const fmt = (d: Date) =>
+      d.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+    return `${fmt(a)} – ${fmt(last)}`;
+  }, [visibleMonth]);
+
   if (!configured) {
     return (
       <p className="text-sm text-text-secondary">
@@ -211,15 +242,8 @@ export default function CrmCalendar({ configured }: { configured: boolean }) {
     );
   }
 
-  const tabItems: { id: ViewTab; label: string }[] = [
-    { id: "upcoming", label: "Upcoming" },
-    { id: "calendar", label: "Calendar" },
-    { id: "all", label: "All" },
-  ];
-
   return (
     <div>
-      {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="heading-display text-2xl font-bold text-text-primary">
@@ -232,18 +256,16 @@ export default function CrmCalendar({ configured }: { configured: boolean }) {
         <button
           type="button"
           onClick={() => openNew()}
-          className="shrink-0 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-accent-hover"
+          className="shrink-0 rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
         >
-          + New Appointment
+          + Add event
         </button>
       </div>
 
-      {/* Stats */}
       <p className="mt-3 text-sm text-text-secondary">
         {upcomingRows.length} upcoming · {rows.length} total
       </p>
 
-      {/* View toggle */}
       <div className="mt-4 inline-flex rounded-lg border border-border bg-surface/50 p-0.5">
         {tabItems.map((tab) => (
           <button
@@ -261,43 +283,36 @@ export default function CrmCalendar({ configured }: { configured: boolean }) {
         ))}
       </div>
 
+      {activeTab === "calendar" ? (
+        <p className="mt-3 text-sm font-medium text-zinc-600 dark:text-zinc-400">
+          {monthRangeLabel}
+        </p>
+      ) : null}
+
       {loadError && (
         <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
           {loadError}
         </p>
       )}
 
-      {/* Content */}
       <div className="mt-6">
         {activeTab === "calendar" && (
-          <div className="appointments-calendar rounded-2xl border border-border bg-white shadow-sm">
-            <FullCalendar
-              plugins={plugins}
-              initialView="dayGridMonth"
-              headerToolbar={{
-                left: "prev",
-                center: "title",
-                right: "next",
-              }}
-              height="auto"
-              events={events}
-              selectable
-              selectMirror
-              select={onSelect}
-              eventClick={onEventClick}
-              nowIndicator
-              dayMaxEvents={3}
-              eventDisplay="block"
-              eventColor="#2563eb"
-            />
-          </div>
+          <AppointmentMonthGrid
+            rows={rows}
+            visibleMonth={visibleMonth}
+            onPrevMonth={goPrevMonth}
+            onNextMonth={goNextMonth}
+            onToday={goThisMonth}
+            onSelectDay={(day) => openNewForDay(day)}
+            onEditEvent={onEditEvent}
+          />
         )}
 
         {activeTab === "upcoming" && (
           <AppointmentList
             items={upcomingRows}
             emptyMessage="No upcoming appointments."
-            onEdit={openEditFromRow}
+            onEdit={onEditEvent}
           />
         )}
 
@@ -305,12 +320,11 @@ export default function CrmCalendar({ configured }: { configured: boolean }) {
           <AppointmentList
             items={rows}
             emptyMessage="No appointments yet."
-            onEdit={openEditFromRow}
+            onEdit={onEditEvent}
           />
         )}
       </div>
 
-      {/* Modal */}
       {modalOpen && (
         <div
           className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-4 sm:items-center"
@@ -347,6 +361,25 @@ export default function CrmCalendar({ configured }: { configured: boolean }) {
                   className={inputClass}
                   required
                 />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-text-secondary">
+                  Status
+                </label>
+                <select
+                  value={status}
+                  onChange={(e) =>
+                    setStatus(parseAppointmentStatus(e.target.value))
+                  }
+                  className={inputClass}
+                  aria-label="Appointment status"
+                >
+                  {APPOINTMENT_STATUS_LIST.map((s) => (
+                    <option key={s} value={s}>
+                      {appointmentStatusLabel(s)}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-text-secondary">
@@ -421,16 +454,6 @@ export default function CrmCalendar({ configured }: { configured: boolean }) {
       )}
     </div>
   );
-
-  function openEditFromRow(row: Row) {
-    setEditingId(row.id);
-    setTitle(row.title);
-    setDescription(row.description ?? "");
-    setStartsLocal(formatDatetimeLocalInput(new Date(row.starts_at)));
-    setEndsLocal(formatDatetimeLocalInput(new Date(row.ends_at)));
-    setFormError(null);
-    setModalOpen(true);
-  }
 }
 
 function AppointmentList({
@@ -438,9 +461,9 @@ function AppointmentList({
   emptyMessage,
   onEdit,
 }: {
-  items: Row[];
+  items: AppointmentCalendarRow[];
   emptyMessage: string;
-  onEdit: (row: Row) => void;
+  onEdit: (row: AppointmentCalendarRow) => void;
 }) {
   if (items.length === 0) {
     return (
@@ -457,12 +480,15 @@ function AppointmentList({
           <button
             type="button"
             onClick={() => onEdit(row)}
-            className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-surface/50"
+            className="flex w-full items-start justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-surface/50"
           >
-            <div>
+            <div className="min-w-0">
               <p className="font-medium text-text-primary">{row.title}</p>
+              <div className="mt-1.5">
+                <AppointmentStatusBadge status={row.status} />
+              </div>
               {row.description && (
-                <p className="mt-0.5 text-sm text-text-secondary line-clamp-1">
+                <p className="mt-1 text-sm text-text-secondary line-clamp-1">
                   {row.description}
                 </p>
               )}
