@@ -99,6 +99,7 @@ const RAW = [
   "liquor store",
   "locksmith",
   "lodging",
+  "manufacturer",
   "marina",
   "meal delivery",
   "meal takeaway",

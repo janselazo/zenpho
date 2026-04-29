@@ -731,30 +731,6 @@ export default function DashboardView({
         />
       </div>
 
-      {/* Overview — Leads, Appointments, Clients, Revenue (matches pipeline KPI style) */}
-      <section className="space-y-2">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
-          Overview
-        </p>
-        <div className={`${dashCard} p-4`}>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {businessOverviewRows.map((row) => (
-              <BusinessOverviewCard
-                key={row.chartId}
-                title={row.title}
-                value={row.value}
-                sub={businessOverviewSubLabel}
-                trend={row.trend}
-                spark={row.spark}
-                icon={row.icon}
-                chartId={row.chartId}
-                metric={row.metric}
-              />
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Daily Playbook summary */}
       <section className="space-y-2">
         <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
@@ -822,6 +798,30 @@ export default function DashboardView({
               Open Playbook
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Overview — Leads, Appointments, Clients, Revenue (matches pipeline KPI style) */}
+      <section className="space-y-2">
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
+          Overview
+        </p>
+        <div className={`${dashCard} p-4`}>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {businessOverviewRows.map((row) => (
+              <BusinessOverviewCard
+                key={row.chartId}
+                title={row.title}
+                value={row.value}
+                sub={businessOverviewSubLabel}
+                trend={row.trend}
+                spark={row.spark}
+                icon={row.icon}
+                chartId={row.chartId}
+                metric={row.metric}
+              />
+            ))}
           </div>
         </div>
       </section>
