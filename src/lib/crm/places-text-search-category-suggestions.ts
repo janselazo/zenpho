@@ -24,6 +24,9 @@ const RAW = [
   "beauty salon",
   "bicycle shop",
   "bookstore",
+  "boat dealer",
+  "boat rental service",
+  "boat tour agency",
   "bowling alley",
   "brewery",
   "cafe",
@@ -62,6 +65,7 @@ const RAW = [
   "cell phone store",
   "ecommerce agency",
   "ecommerce service",
+  "electronics company",
   "electronics store",
   "event venue",
   "fast food restaurant",
@@ -156,6 +160,8 @@ const RAW = [
   "window service",
   "window service provider",
   "window tinting service",
+  "yacht broker",
+  "yacht club",
   "yoga studio",
 ] as const;
 
