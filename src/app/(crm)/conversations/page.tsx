@@ -1,4 +1,5 @@
 import ConversationsView from "@/components/crm/ConversationsView";
+import { conversationBusinessLogoById } from "@/lib/crm/conversation-business-logos";
 import { conversationPreviewById } from "@/lib/crm/conversationPreviews";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
@@ -18,7 +19,7 @@ export default async function ConversationsPage() {
   const supabase = await createClient();
   const { data: conversations, error } = await supabase
     .from("conversation")
-    .select("id, contact_name, channel, contact_email, contact_phone, last_message_at, unread_count")
+    .select("id, contact_name, channel, contact_email, contact_phone, lead_id, last_message_at, unread_count")
     .order("last_message_at", { ascending: false })
     .limit(200);
 
@@ -38,7 +39,10 @@ export default async function ConversationsPage() {
 
   const list = conversations ?? [];
   const ids = list.map((c) => c.id);
-  const previews = await conversationPreviewById(supabase, ids);
+  const [previews, logoById] = await Promise.all([
+    conversationPreviewById(supabase, ids),
+    conversationBusinessLogoById(supabase, list),
+  ]);
 
   const items = list.map((c) => ({
     id: c.id,
@@ -46,6 +50,7 @@ export default async function ConversationsPage() {
     channel: c.channel,
     last_message_at: c.last_message_at,
     unread_count: c.unread_count ?? 0,
+    logo_url: logoById[c.id] ?? null,
     preview: previews[c.id] ?? null,
   }));
 

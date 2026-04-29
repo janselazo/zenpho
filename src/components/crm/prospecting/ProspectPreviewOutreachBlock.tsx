@@ -1321,6 +1321,7 @@ export default function ProspectPreviewOutreachBlock({
     const extraAttachments = await serializeAttachments();
     const res = await sendProspectPreviewSmsAction({
       previewId: id ?? undefined,
+      leadId: linkedLeadId?.trim() || null,
       to: smsTo.trim(),
       bodyTemplate: shareTemplates[selectedOffer].smsBody,
       businessName: resolvedBusinessName,
@@ -1345,6 +1346,7 @@ export default function ProspectPreviewOutreachBlock({
     resolvedBusinessName,
     yourName,
     attachPreviewImage,
+    linkedLeadId,
     serializeAttachments,
   ]);
 
@@ -1368,6 +1370,7 @@ export default function ProspectPreviewOutreachBlock({
     );
     const res = await sendProspectPreviewEmailAction({
       previewId: id ?? undefined,
+      leadId: linkedLeadId?.trim() || null,
       to: emailTo.trim(),
       subjectTemplate: shareTemplates[selectedOffer].emailSubject,
       bodyTemplate: shareTemplates[selectedOffer].emailBody,
@@ -1397,6 +1400,7 @@ export default function ProspectPreviewOutreachBlock({
     resolvedBusinessName,
     yourName,
     buildBeforeAfterEmailFallback,
+    linkedLeadId,
     serializeAttachments,
   ]);
 

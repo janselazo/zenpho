@@ -43,7 +43,7 @@ export async function findOrCreateEmailConversation(
 
   const { data: existing } = await supabase
     .from("conversation")
-    .select("id")
+    .select("id, lead_id")
     .eq("channel", "email")
     .ilike("contact_email", email)
     .order("last_message_at", { ascending: false })
@@ -51,6 +51,12 @@ export async function findOrCreateEmailConversation(
     .maybeSingle();
 
   if (existing?.id) {
+    if (opts.leadId && !existing.lead_id) {
+      await supabase
+        .from("conversation")
+        .update({ lead_id: opts.leadId })
+        .eq("id", existing.id);
+    }
     return { conversationId: existing.id, created: false };
   }
 

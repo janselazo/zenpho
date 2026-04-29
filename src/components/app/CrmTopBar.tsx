@@ -25,6 +25,10 @@ import {
   clearMoneyJournalHourCompleteBadge,
   readMoneyJournalHourCompleteBadge,
 } from "@/lib/crm/money-journal-hour-complete-notify";
+import {
+  formatUnreadBadgeCount,
+  useConversationUnreadCount,
+} from "@/lib/crm/use-conversation-unread-count";
 
 export type CrmTopBarUser = {
   email: string | null;
@@ -57,6 +61,7 @@ export default function CrmTopBar({
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const wrapRef = useRef<HTMLDivElement>(null);
   const [journalHourBellBadge, setJournalHourBellBadge] = useState(false);
+  const conversationUnreadCount = useConversationUnreadCount();
 
   useEffect(() => {
     const sync = () =>
@@ -121,6 +126,13 @@ export default function CrmTopBar({
     "Account";
   const email = initialUser?.email ?? "";
   const avatarUrl = initialUser?.avatarUrl ?? null;
+  const hasConversationUnread = conversationUnreadCount > 0;
+  const bellHref = hasConversationUnread ? "/conversations" : "/dashboard";
+  const bellLabel = hasConversationUnread
+    ? `Notifications — ${conversationUnreadCount} unread conversation${conversationUnreadCount === 1 ? "" : "s"}`
+    : journalHourBellBadge
+      ? "Notifications — Money Journal hour complete, open journal to log"
+      : "Notifications";
 
   return (
     <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center justify-end gap-1 border-b border-border bg-white/95 px-3 backdrop-blur-md dark:border-zinc-800/80 dark:bg-zinc-900/90 dark:backdrop-blur-md sm:gap-2 sm:px-6">
@@ -163,17 +175,20 @@ export default function CrmTopBar({
       <MoneyJournalTopBarPip />
 
       <Link
-        href="/dashboard"
+        href={bellHref}
         className="relative rounded-full p-2 text-text-secondary transition-colors hover:bg-surface hover:text-text-primary dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-        aria-label={
-          journalHourBellBadge
-            ? "Notifications — Money Journal hour complete, open journal to log"
-            : "Notifications"
-        }
+        aria-label={bellLabel}
         onClick={() => clearMoneyJournalHourCompleteBadge()}
       >
         <Bell className="h-4 w-4" aria-hidden />
-        {journalHourBellBadge ? (
+        {hasConversationUnread ? (
+          <span
+            className="absolute -right-1 -top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[9px] font-bold leading-4 text-white shadow-sm ring-2 ring-white dark:bg-blue-500 dark:ring-zinc-900"
+            aria-hidden
+          >
+            {formatUnreadBadgeCount(conversationUnreadCount)}
+          </span>
+        ) : journalHourBellBadge ? (
           <span
             className="absolute right-1 top-1 h-2 w-2 rounded-full bg-accent shadow-sm ring-2 ring-white dark:bg-emerald-400 dark:ring-zinc-900"
             aria-hidden

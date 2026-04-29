@@ -27,6 +27,10 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { PROSPECTING_SECTIONS } from "@/lib/crm/prospecting-nav";
+import {
+  formatUnreadBadgeCount,
+  useConversationUnreadCount,
+} from "@/lib/crm/use-conversation-unread-count";
 import SoonBadge from "@/components/crm/prospecting/SoonBadge";
 
 const opportunitiesNav: Array<{
@@ -97,6 +101,7 @@ function useSidebarSectionOpen(sectionKey: string, defaultOpen = true) {
 export default function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const conversationUnreadCount = useConversationUnreadCount();
   const [opportunitiesOpen, toggleOpportunities] =
     useSidebarSectionOpen("opportunities");
   const [workOpen, toggleWork] = useSidebarSectionOpen("work");
@@ -166,7 +171,10 @@ export default function AppSidebar() {
           {opportunitiesNav.map(({ href, label, icon: Icon }) => (
             <NavLink key={href} href={href} active={isActive(pathname, href)}>
               <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-              {label}
+              <span className="min-w-0 flex-1 truncate">{label}</span>
+              {href === "/conversations" && conversationUnreadCount > 0 ? (
+                <UnreadBadge count={conversationUnreadCount} />
+              ) : null}
             </NavLink>
           ))}
         </SidebarSection>
@@ -255,6 +263,17 @@ export default function AppSidebar() {
         </button>
       </div>
     </aside>
+  );
+}
+
+function UnreadBadge({ count }: { count: number }) {
+  return (
+    <span
+      className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow-sm ring-1 ring-white/70 dark:bg-blue-500 dark:ring-zinc-900"
+      aria-label={`${count} unread conversation${count === 1 ? "" : "s"}`}
+    >
+      {formatUnreadBadgeCount(count)}
+    </span>
   );
 }
 

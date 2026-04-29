@@ -37,7 +37,7 @@ export async function findOrCreateSmsConversation(
 
   const { data: existing } = await supabase
     .from("conversation")
-    .select("id")
+    .select("id, lead_id")
     .eq("channel", "sms")
     .eq("contact_phone", phone)
     .order("last_message_at", { ascending: false })
@@ -45,6 +45,12 @@ export async function findOrCreateSmsConversation(
     .maybeSingle();
 
   if (existing?.id) {
+    if (opts.leadId && !existing.lead_id) {
+      await supabase
+        .from("conversation")
+        .update({ lead_id: opts.leadId })
+        .eq("id", existing.id);
+    }
     return { conversationId: existing.id, created: false };
   }
 

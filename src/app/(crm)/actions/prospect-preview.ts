@@ -95,6 +95,7 @@ async function fetchInlinePreviewAttachment(
 
 export async function sendProspectPreviewSmsAction(input: {
   previewId?: string;
+  leadId?: string | null;
   to: string;
   bodyTemplate: string;
   businessName: string;
@@ -222,6 +223,7 @@ export async function sendProspectPreviewSmsAction(input: {
       body,
       smsSid: smsResult.sid,
       senderName: input.yourName ?? "You",
+      leadId: input.leadId ?? null,
     });
     return {
       ok: true as const,
@@ -252,6 +254,7 @@ export async function sendProspectPreviewSmsAction(input: {
           body,
           smsSid: smsRetry.sid,
           senderName: input.yourName ?? "You",
+          leadId: input.leadId ?? null,
         });
         return {
           ok: true as const,
@@ -271,6 +274,7 @@ export async function sendProspectPreviewSmsAction(input: {
 
 export async function sendProspectPreviewEmailAction(input: {
   previewId?: string;
+  leadId?: string | null;
   to: string;
   subjectTemplate: string;
   bodyTemplate: string;
@@ -419,6 +423,7 @@ ${previewImageHtml}
       body: textBody,
       emailMessageId: emailMid,
       senderName: input.yourName ?? "You",
+      leadId: input.leadId ?? null,
     });
     return { ok: true as const, emailChannel: "sendgrid" as const };
   }
@@ -464,6 +469,7 @@ ${previewImageHtml}
     body: textBody,
     emailMessageId: emailMid,
     senderName: input.yourName ?? "You",
+    leadId: input.leadId ?? null,
   });
   return { ok: true as const, emailChannel: "resend" as const };
 }
@@ -477,12 +483,14 @@ async function logProspectEmailToConversation(
     body: string;
     emailMessageId: string;
     senderName: string;
+    leadId?: string | null;
   }
 ) {
   try {
     const { conversationId } = await findOrCreateEmailConversation(supabase, {
       contactEmail: opts.to,
       contactName: opts.businessName || opts.to,
+      leadId: opts.leadId,
     });
 
     await insertEmailMessage(supabase, {
@@ -506,12 +514,14 @@ async function logProspectSmsToConversation(
     body: string;
     smsSid: string;
     senderName: string;
+    leadId?: string | null;
   }
 ) {
   try {
     const { conversationId } = await findOrCreateSmsConversation(supabase, {
       contactPhone: opts.to,
       contactName: opts.businessName || opts.to,
+      leadId: opts.leadId,
     });
 
     await insertSmsMessage(supabase, {

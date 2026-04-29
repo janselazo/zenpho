@@ -45,6 +45,7 @@ export type ConversationListItem = {
   channel: string;
   last_message_at: string | null;
   unread_count: number;
+  logo_url?: string | null;
   preview?: string | null;
 };
 
@@ -123,6 +124,15 @@ function channelBadgeStyles(channel: string) {
   return CHANNEL_BADGE_STYLES[channel] ?? CHANNEL_BADGE_STYLES.other;
 }
 
+function avatarInitials(name: string) {
+  return name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
 function ChannelBadge({ channel }: { channel: string }) {
   const label = CHANNEL_LABELS[channel] ?? channel;
   const iconClass = "h-3.5 w-3.5 shrink-0";
@@ -143,6 +153,41 @@ function ChannelBadge({ channel }: { channel: string }) {
     >
       {icon}
       {label}
+    </span>
+  );
+}
+
+function BusinessAvatar({
+  name,
+  logoUrl,
+  className,
+  fallbackClassName,
+}: {
+  name: string;
+  logoUrl?: string | null;
+  className: string;
+  fallbackClassName: string;
+}) {
+  const [failed, setFailed] = useState(!logoUrl);
+  const onError = useCallback(() => setFailed(true), []);
+
+  if (failed || !logoUrl) {
+    return (
+      <span className={fallbackClassName}>
+        {avatarInitials(name)}
+      </span>
+    );
+  }
+
+  return (
+    <span className={className}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- business favicons come from external domains */}
+      <img
+        src={logoUrl}
+        alt=""
+        className="h-full w-full object-contain p-1.5"
+        onError={onError}
+      />
     </span>
   );
 }
@@ -209,6 +254,7 @@ export default function ConversationsView({
     channel: string;
     contact_email?: string | null;
     contact_phone?: string | null;
+    logo_url?: string | null;
   } | null;
   messages: MessageRow[];
 }) {
@@ -545,13 +591,7 @@ export default function ConversationsView({
     return rows;
   }, [tabMessages]);
 
-  const initials = (name: string) =>
-    name
-      .split(" ")
-      .map((w) => w[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
+  const initials = avatarInitials;
 
   return (
     <div>
@@ -601,9 +641,12 @@ export default function ConversationsView({
                             : "hover:bg-surface/80 dark:hover:bg-zinc-800/50"
                         }`}
                       >
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 to-blue-500 text-xs font-bold text-white">
-                          {initials(c.contact_name)}
-                        </span>
+                        <BusinessAvatar
+                          name={c.contact_name}
+                          logoUrl={c.logo_url}
+                          className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border/80 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900"
+                          fallbackClassName="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 to-blue-500 text-xs font-bold text-white"
+                        />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-2">
                             <span
@@ -680,9 +723,12 @@ export default function ConversationsView({
 
               {/* Contact row */}
               <div className="flex items-center gap-3 border-b border-border px-4 py-3 dark:border-zinc-800">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 text-sm font-bold text-white">
-                  {initials(activeConversation.contact_name)}
-                </span>
+                <BusinessAvatar
+                  name={activeConversation.contact_name}
+                  logoUrl={activeConversation.logo_url}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border/80 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  fallbackClassName="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 text-sm font-bold text-white"
+                />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold text-text-primary">
                     {activeConversation.contact_name}
