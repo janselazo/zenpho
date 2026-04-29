@@ -110,7 +110,7 @@ export async function listCrmProjectsForAgency(): Promise<{
   const { data: rows, error } = await supabase
     .from("project")
     .select(
-      "id, client_id, title, description, status, target_date, website, budget, plan_stage, project_type, metadata, parent_project_id"
+      "id, client_id, title, description, status, target_date, website, budget, plan_stage, project_type, metadata, parent_project_id, reference_number"
     )
     .is("parent_project_id", null)
     .order("created_at", { ascending: false })
@@ -160,7 +160,7 @@ export async function listCrmProjectsForAgency(): Promise<{
 
 export async function createCrmProject(
   input: CrmProjectPersistInput
-): Promise<{ ok: true; id: string; phaseId: string } | { error: string }> {
+): Promise<{ ok: true; id: string } | { error: string }> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -214,39 +214,11 @@ export async function createCrmProject(
   const productId = productRow?.id as string | undefined;
   if (!productId) return { error: "Could not create product" };
 
-  const { data: phaseRow, error: phaseErr } = await supabase
-    .from("project")
-    .insert({
-      client_id: clientId,
-      title: "Main",
-      description: null,
-      status: "active",
-      target_date: null,
-      website: null,
-      budget: null,
-      plan_stage: "backlog",
-      project_type: ptRes.projectType,
-      metadata,
-      parent_project_id: productId,
-    })
-    .select("id")
-    .single();
-
-  if (phaseErr) {
-    await supabase.from("project").delete().eq("id", productId);
-    return { error: humanizeProjectDbError(phaseErr.message) };
-  }
-  const phaseId = phaseRow?.id as string | undefined;
-  if (!phaseId) {
-    await supabase.from("project").delete().eq("id", productId);
-    return { error: "Could not create default phase" };
-  }
-
   revalidatePath("/products");
   revalidatePath("/projects");
   revalidatePath("/portal");
   revalidatePath("/dashboard");
-  return { ok: true, id: productId, phaseId };
+  return { ok: true, id: productId };
 }
 
 /** Create project and ensure a client exists for the lead (creates client from lead if needed). */
@@ -254,7 +226,7 @@ export async function createCrmProjectFromLead(
   leadId: string,
   input: CrmProjectPersistInput,
   hints?: { company?: string | null; email?: string | null }
-): Promise<{ ok: true; id: string; phaseId: string } | { error: string }> {
+): Promise<{ ok: true; id: string } | { error: string }> {
   const lid = leadId.trim();
   if (!lid) return { error: "Missing lead id" };
 
@@ -943,8 +915,13 @@ export async function updateCrmChildProjectQuickFields(
 
   if ("leadMemberId" in input) {
     const leadMemberId = input.leadMemberId?.trim() || null;
-    if (leadMemberId) meta.leadMemberId = leadMemberId;
-    else delete meta.leadMemberId;
+    if (leadMemberId) {
+      meta.leadMemberId = leadMemberId;
+      meta.memberIds = [leadMemberId];
+    } else {
+      delete meta.leadMemberId;
+      meta.memberIds = [];
+    }
   }
 
   if ("priority" in input) {
@@ -1357,6 +1334,12 @@ export type IssueRow = {
   related_task_id: string | null;
   workspace_task_id: string | null;
   created_at: string;
+  environment?: string | null;
+  browser_device?: string | null;
+  steps_to_reproduce?: string | null;
+  expected_result?: string | null;
+  actual_result?: string | null;
+  attachment_urls?: unknown;
 };
 
 export async function listIssuesForPhase(
@@ -1374,7 +1357,7 @@ export async function listIssuesForPhase(
   const { data: rows, error } = await supabase
     .from("issue")
     .select(
-      "id, project_id, title, description, status, severity, category, related_task_id, workspace_task_id, created_at"
+      "id, project_id, title, description, status, severity, category, related_task_id, workspace_task_id, created_at, environment, browser_device, steps_to_reproduce, expected_result, actual_result, attachment_urls"
     )
     .eq("project_id", id)
     .order("created_at", { ascending: false });
@@ -1400,6 +1383,16 @@ const ISSUE_CATEGORIES = new Set([
   "feature_request",
   "bug_report",
   "customer_request",
+]);
+
+const BUG_ISSUE_STATUSES = new Set([
+  "new",
+  "confirmed",
+  "in_progress",
+  "ready_for_qa",
+  "fixed",
+  "rejected",
+  "reopened",
 ]);
 
 export async function createCrmIssue(input: {
@@ -1435,7 +1428,7 @@ export async function createCrmIssue(input: {
       description: input.description?.trim() || null,
       severity: sev,
       category: cat,
-      status: "open",
+      status: "new",
       created_by: user.id,
     })
     .select("id")
@@ -1452,13 +1445,20 @@ export async function createCrmIssue(input: {
 export async function updateCrmIssue(
   issueId: string,
   patch: {
-    status?: string;
-    severity?: string;
-    category?: string;
-    title?: string;
-    related_task_id?: string | null;
-    workspace_task_id?: string | null;
-  }
+      status?: string;
+      severity?: string;
+      category?: string;
+      title?: string;
+      related_task_id?: string | null;
+      workspace_task_id?: string | null;
+      description?: string | null;
+      environment?: string | null;
+      browser_device?: string | null;
+      steps_to_reproduce?: string | null;
+      expected_result?: string | null;
+      actual_result?: string | null;
+      attachment_urls?: unknown;
+    }
 ): Promise<{ ok: true } | { error: string }> {
   const supabase = await createClient();
   const {
@@ -1469,16 +1469,18 @@ export async function updateCrmIssue(
   const id = issueId.trim();
   if (!id) return { error: "Missing issue id" };
 
-  const updates: Record<string, string | null> = {};
+  const updates: Record<string, string | null | unknown> = {};
   if (patch.title !== undefined) {
     const t = patch.title.trim();
     if (!t) return { error: "Title required" };
     updates.title = t;
   }
+  if (patch.description !== undefined) {
+    updates.description = patch.description?.trim() || null;
+  }
   if (patch.status !== undefined) {
     const st = patch.status.trim();
-    const allowed = new Set(["open", "in_progress", "resolved", "closed"]);
-    if (!allowed.has(st)) return { error: "Invalid status" };
+    if (!BUG_ISSUE_STATUSES.has(st)) return { error: "Invalid status" };
     updates.status = st;
   }
   if (patch.severity !== undefined) {
@@ -1498,6 +1500,24 @@ export async function updateCrmIssue(
   }
   if (patch.workspace_task_id !== undefined) {
     updates.workspace_task_id = patch.workspace_task_id;
+  }
+  if (patch.environment !== undefined) {
+    updates.environment = patch.environment?.trim() || null;
+  }
+  if (patch.browser_device !== undefined) {
+    updates.browser_device = patch.browser_device?.trim() || null;
+  }
+  if (patch.steps_to_reproduce !== undefined) {
+    updates.steps_to_reproduce = patch.steps_to_reproduce?.trim() || null;
+  }
+  if (patch.expected_result !== undefined) {
+    updates.expected_result = patch.expected_result?.trim() || null;
+  }
+  if (patch.actual_result !== undefined) {
+    updates.actual_result = patch.actual_result?.trim() || null;
+  }
+  if (patch.attachment_urls !== undefined) {
+    updates.attachment_urls = patch.attachment_urls;
   }
 
   if (Object.keys(updates).length === 0) return { ok: true };

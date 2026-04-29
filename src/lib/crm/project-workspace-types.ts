@@ -98,7 +98,7 @@ export interface WorkspaceMeeting {
   notes?: string;
 }
 
-export type ResourceKind = "doc" | "design" | "repo" | "other";
+export type ResourceKind = "doc" | "design" | "repo" | "website" | "other";
 
 export interface WorkspaceResource {
   id: string;

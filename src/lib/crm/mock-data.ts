@@ -96,6 +96,8 @@ export interface MockProject {
   taskCount: number;
   /** Default child project for deep links (`/products/...?project=...`) */
   primaryPhaseId?: string | null;
+  /** Root products only: monotonic label `PRJ-{referenceNumber}` from DB or localStorage */
+  referenceNumber?: number | null;
 }
 
 export interface MockSprint {

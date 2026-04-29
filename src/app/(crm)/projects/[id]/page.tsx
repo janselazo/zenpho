@@ -17,7 +17,7 @@ export default async function LegacyProjectDetailRedirect({
   if (!row) redirect("/products");
   if (row.parent_project_id) {
     redirect(
-      `/products/${row.parent_project_id}?project=${row.id}&tab=tasks`
+      `/products/${row.parent_project_id}?project=${row.id}&tab=backlog`
     );
   }
   redirect(`/products/${row.id}`);

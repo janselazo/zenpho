@@ -190,9 +190,14 @@ export function parseProductResources(metadata: unknown): WorkspaceResource[] {
     const id = typeof item.id === "string" ? item.id : "";
     const label = typeof item.label === "string" ? item.label.trim() : "";
     const url = typeof item.url === "string" ? item.url.trim() : "";
-    const kind = item.kind === "doc" || item.kind === "design" || item.kind === "repo" || item.kind === "other"
-      ? item.kind
-      : "other";
+    const kind =
+      item.kind === "doc" ||
+      item.kind === "design" ||
+      item.kind === "repo" ||
+      item.kind === "website" ||
+      item.kind === "other"
+        ? item.kind
+        : "other";
     if (!id || !label || !url) continue;
     out.push({ id, label, url, kind });
   }

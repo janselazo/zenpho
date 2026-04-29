@@ -34,7 +34,7 @@ export default async function ProductOverviewPage({
   if (error || !row) notFound();
   if (row.parent_project_id) {
     redirect(
-      `/products/${row.parent_project_id as string}?project=${row.id}&tab=tasks`
+      `/products/${row.parent_project_id as string}?project=${row.id}&tab=backlog`
     );
   }
 

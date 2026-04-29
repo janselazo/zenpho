@@ -126,6 +126,7 @@ export function ProjectDetailClient({
     addScopeLine,
     addMeeting,
     addResource,
+    updateResource,
     deleteResource,
     setTaskStatusConfiguration,
   } = useProjectWorkspace(phaseId);
@@ -389,6 +390,7 @@ export function ProjectDetailClient({
           <ProjectResourcesView
             resources={workspace.resources}
             onAdd={addResource}
+            onUpdate={updateResource}
             onDelete={deleteResource}
           />
         </section>
@@ -514,6 +516,7 @@ export function ProjectDetailClient({
       <ProjectResourcesView
         resources={workspace.resources}
         onAdd={addResource}
+        onUpdate={updateResource}
         onDelete={deleteResource}
       />
     );

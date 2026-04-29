@@ -24,7 +24,7 @@ import {
   deleteCrmProject,
   updateCrmProjectPlanStage,
 } from "@/app/(crm)/actions/projects";
-import { crmPayloadFromMock } from "@/lib/crm/map-project-row";
+import { crmPayloadFromMock, productReferenceLabel } from "@/lib/crm/map-project-row";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import {
   ArrowDownUp,
@@ -131,11 +131,6 @@ function planHexForSlug(slug: string): string {
   return EXTRA_PLAN_HEX[h % EXTRA_PLAN_HEX.length];
 }
 
-function projectRefId(id: string) {
-  const tail = id.replace(/\D/g, "").slice(-4) || id.slice(0, 4);
-  return `PRJ-${tail}`.toUpperCase();
-}
-
 function formatCardDate(value: string) {
   if (!value || value === "TBD") return "TBD";
   const t = Date.parse(value);
@@ -144,6 +139,22 @@ function formatCardDate(value: string) {
     month: "short",
     day: "numeric",
   });
+}
+
+function formatProductBudgetPill(
+  value: number | null | undefined
+): { label: string; filled: boolean } {
+  if (value == null || !Number.isFinite(value) || value <= 0) {
+    return { label: "No budget", filled: false };
+  }
+  return {
+    label: new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    }).format(value),
+    filled: true,
+  };
 }
 
 function typeTagStyles(projectType: string | undefined) {
@@ -318,7 +329,7 @@ function ProjectsPageContent({
         team.includes(q) ||
         type.includes(q) ||
         client.includes(q) ||
-        projectRefId(p.id).toLowerCase().includes(q)
+        productReferenceLabel(p).toLowerCase().includes(q)
       );
     });
   }, [projectList, filterPlan, filterTeam, search]);
@@ -616,7 +627,16 @@ function ProjectsPageContent({
               window.dispatchEvent(new Event(CRM_SUPABASE_PROJECTS_CHANGED_EVENT));
             } else {
               setProjectList((prev) => {
-                const next = [...prev, project];
+                const nextRef =
+                  prev.reduce(
+                    (max, row) =>
+                      row.referenceNumber != null &&
+                      row.referenceNumber > max
+                        ? row.referenceNumber
+                        : max,
+                    0
+                  ) + 1;
+                const next = [...prev, { ...project, referenceNumber: nextRef }];
                 writeStoredProjects(next);
                 return next;
               });
@@ -795,12 +815,13 @@ function ProjectCard({
     () => projectCardFooterAvatar(project, roster),
     [project, roster]
   );
+  const budgetPill = formatProductBudgetPill(project.budget);
 
   return (
     <div className="group rounded-xl border border-zinc-200/70 bg-white p-4 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_1px_2px_rgba(15,23,42,0.04)] transition-[box-shadow,transform,border-color] hover:-translate-y-px hover:border-zinc-300/80 hover:shadow-[0_12px_28px_rgba(15,23,42,0.1),0_4px_8px_rgba(15,23,42,0.06)] dark:border-zinc-700/80 dark:bg-zinc-900 dark:hover:border-zinc-600">
       <div className="flex items-start justify-between gap-2">
         <span className="font-mono text-[11px] font-medium tracking-wide text-zinc-400 dark:text-zinc-500">
-          {projectRefId(project.id)}
+          {productReferenceLabel(project)}
         </span>
         <div
           className="-mr-1 -mt-1 flex shrink-0 items-center gap-0.5"
@@ -842,7 +863,7 @@ function ProjectCard({
       <Link
         href={
           project.primaryPhaseId
-            ? `/products/${project.id}?project=${project.primaryPhaseId}&tab=projects`
+            ? `/products/${project.id}?project=${project.primaryPhaseId}&tab=overview`
             : `/products/${project.id}`
         }
         className="mt-0.5 block rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
@@ -871,6 +892,16 @@ function ProjectCard({
           ) : null}
           <span className="inline-flex rounded-md bg-zinc-100 px-2 py-0.5 text-[11px] font-semibold leading-tight text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
             {project.sprintCount} sprint{project.sprintCount === 1 ? "" : "s"}
+          </span>
+          <span
+            className={`inline-flex rounded-md px-2 py-0.5 text-[11px] font-semibold leading-tight ${
+              budgetPill.filled
+                ? "bg-emerald-100 text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-200"
+                : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-500"
+            }`}
+            title={budgetPill.filled ? "Budget" : undefined}
+          >
+            {budgetPill.label}
           </span>
         </div>
         <div className="mt-4 flex items-center justify-between gap-3 border-t border-zinc-100 pt-3.5 dark:border-zinc-800">
@@ -962,7 +993,7 @@ function ProjectTable({
                   <Link
                     href={
                       p.primaryPhaseId
-                        ? `/products/${p.id}?project=${p.primaryPhaseId}&tab=projects`
+                        ? `/products/${p.id}?project=${p.primaryPhaseId}&tab=overview`
                         : `/products/${p.id}`
                     }
                     className="font-medium text-text-primary hover:text-accent"

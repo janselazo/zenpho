@@ -16,7 +16,15 @@ import {
 import { Loader2, Trash2 } from "lucide-react";
 
 const SEVERITIES = ["low", "medium", "high", "critical"] as const;
-const STATUSES = ["open", "in_progress", "resolved", "closed"] as const;
+const STATUSES = [
+  "new",
+  "confirmed",
+  "in_progress",
+  "ready_for_qa",
+  "fixed",
+  "rejected",
+  "reopened",
+] as const;
 
 export default function ProjectIssuesPanel({
   phaseId,

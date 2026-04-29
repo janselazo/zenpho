@@ -87,23 +87,30 @@ export function ProductRowAssigneePicker({
               <Check className="h-4 w-4 shrink-0 text-accent" aria-hidden />
             ) : null}
           </button>
-          {members.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              role="option"
-              className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-text-primary hover:bg-surface/80 dark:text-zinc-100 dark:hover:bg-zinc-800"
-              onClick={() => {
-                onAssign(m.id);
-                setOpen(false);
-              }}
-            >
-              <span className="min-w-0 truncate">{m.name}</span>
-              {memberId === m.id ? (
-                <Check className="h-4 w-4 shrink-0 text-accent" aria-hidden />
-              ) : null}
-            </button>
-          ))}
+          {members.length === 0 ? (
+            <p className="border-t border-border px-3 py-2 text-xs text-text-secondary dark:border-zinc-700 dark:text-zinc-500">
+              No people on the roster. Open <strong>Team</strong> and add
+              members first.
+            </p>
+          ) : (
+            members.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                role="option"
+                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-text-primary hover:bg-surface/80 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                onClick={() => {
+                  onAssign(m.id);
+                  setOpen(false);
+                }}
+              >
+                <span className="min-w-0 truncate">{m.name}</span>
+                {memberId === m.id ? (
+                  <Check className="h-4 w-4 shrink-0 text-accent" aria-hidden />
+                ) : null}
+              </button>
+            ))
+          )}
         </div>
       ) : null}
     </div>

@@ -285,7 +285,7 @@ export default function ProductRoadmapTab({
     });
   }
 
-  const milestonesHref = `/products/${productId}?tab=milestones&project=${encodeURIComponent(projectId)}`;
+  const milestonesHref = `/products/${productId}?tab=releases&project=${encodeURIComponent(projectId)}`;
 
   if (!hydrated) {
     return (

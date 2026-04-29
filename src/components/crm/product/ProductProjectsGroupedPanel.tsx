@@ -40,7 +40,7 @@ import {
   parseChildProjectPriority,
   resolveChildDeliveryGroup,
 } from "@/lib/crm/product-project-metadata";
-import { getMembersForTeam, teamMembers } from "@/lib/crm/mock-data";
+import { useCrmTeamMembers } from "@/lib/crm/use-crm-team-members";
 import {
   ChevronDown,
   ChevronRight,
@@ -63,7 +63,14 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 function parseLeadId(metadata: unknown): string | null {
   if (!isRecord(metadata)) return null;
   const v = metadata.leadMemberId;
-  return typeof v === "string" && v.trim() ? v.trim() : null;
+  if (typeof v === "string" && v.trim()) return v.trim();
+  const mids = metadata.memberIds;
+  if (Array.isArray(mids)) {
+    for (const x of mids) {
+      if (typeof x === "string" && x.trim()) return x.trim();
+    }
+  }
+  return null;
 }
 
 const GROUP_ICON: Record<ChildDeliveryStatus, ReactNode> = {
@@ -190,6 +197,12 @@ type Props = {
   onDeliveryStatusUiSaved: () => void;
   /** After changing a child’s status via the row icon */
   onChildDeliveryChanged?: () => void;
+  /** When false, hides “Edit status columns” (e.g. Overview uses Settings for that). Default true. */
+  showColumnEditor?: boolean;
+  /** When true, only the header + footer (+ New status) render — for Settings. */
+  toolbarOnly?: boolean;
+  /** Hide the primary “+ Project” header button when using a global New Project control. */
+  hideHeaderNewProjectButton?: boolean;
 };
 
 export default function ProductProjectsGroupedPanel({
@@ -202,6 +215,9 @@ export default function ProductProjectsGroupedPanel({
   onNewProject,
   onDeliveryStatusUiSaved,
   onChildDeliveryChanged,
+  showColumnEditor = true,
+  toolbarOnly = false,
+  hideHeaderNewProjectButton = false,
 }: Props) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [statusPicker, setStatusPicker] = useState<{
@@ -222,10 +238,19 @@ export default function ProductProjectsGroupedPanel({
   const [bulkStatusModalOpen, setBulkStatusModalOpen] = useState(false);
   const [rowBusyId, setRowBusyId] = useState<string | null>(null);
 
+  const roster = useCrmTeamMembers();
   const members = useMemo(() => {
-    const t = getMembersForTeam(teamId);
-    return t.length > 0 ? t : teamMembers;
-  }, [teamId]);
+    const label = (m: { id: string; name: string; email: string }) =>
+      m.name.trim() || m.email.trim() || "Member";
+    const pick = (list: typeof roster) =>
+      list.map((m) => ({ id: m.id, name: label(m) }));
+    const tid = teamId?.trim();
+    if (tid && tid !== "team-general") {
+      const onTeam = roster.filter((m) => m.teamId === tid);
+      if (onTeam.length > 0) return pick(onTeam);
+    }
+    return pick(roster);
+  }, [roster, teamId]);
 
   const customStatuses = useMemo(
     () => parseCustomProjectStatuses(productMetadata),
@@ -433,12 +458,13 @@ export default function ProductProjectsGroupedPanel({
   }
 
   return (
-    <section className="overflow-hidden rounded-xl border border-border bg-white dark:border-zinc-800 dark:bg-zinc-950">
+    <section className="rounded-xl border border-border bg-white dark:border-zinc-800 dark:bg-zinc-950">
       <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 dark:border-zinc-800">
         <h2 className="text-sm font-semibold text-text-primary dark:text-zinc-100">
-          Project Features
+          {toolbarOnly ? "Delivery status columns" : "Project Features"}
         </h2>
         <div className="flex shrink-0 items-center gap-1.5">
+          {showColumnEditor ? (
           <div className="relative" ref={columnMenuRef}>
             <button
               type="button"
@@ -496,6 +522,8 @@ export default function ProductProjectsGroupedPanel({
               </div>
             ) : null}
           </div>
+          ) : null}
+          {!hideHeaderNewProjectButton ? (
           <button
             type="button"
             onClick={() => onNewProject(undefined)}
@@ -504,9 +532,11 @@ export default function ProductProjectsGroupedPanel({
             <Plus className="h-3.5 w-3.5" aria-hidden />
             Project
           </button>
+          ) : null}
         </div>
       </div>
 
+      {!toolbarOnly ? (
       <div className="divide-y divide-border dark:divide-zinc-800/90">
         {groups.map((g) => {
           const isCollapsed = collapsed[g.id] === true;
@@ -710,7 +740,9 @@ export default function ProductProjectsGroupedPanel({
           );
         })}
       </div>
+      ) : null}
 
+      {showColumnEditor ? (
       <div className="border-t border-border p-2 dark:border-zinc-800">
         <button
           type="button"
@@ -720,6 +752,7 @@ export default function ProductProjectsGroupedPanel({
           + New status
         </button>
       </div>
+      ) : null}
 
       {statusPicker ? (
         <ProductChildProjectStatusMenu

@@ -8,6 +8,6 @@ export default async function PhaseRedirectPage({
 }) {
   const { productId, phaseId } = await params;
   redirect(
-    `/products/${productId}?project=${encodeURIComponent(phaseId)}&tab=tasks`
+    `/products/${productId}?project=${encodeURIComponent(phaseId)}&tab=backlog`
   );
 }

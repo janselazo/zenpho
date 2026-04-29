@@ -14,25 +14,36 @@ import { projectTypeBadgeClass } from "@/lib/crm/project-type-badge";
 import type { WorkspaceResource } from "@/lib/crm/project-workspace-types";
 import type { ChildDeliveryStatusUiConfig } from "@/lib/crm/child-delivery-status-ui";
 import { parseCustomProjectStatuses } from "@/lib/crm/custom-project-status";
-import { milestonesWithDefaults } from "@/lib/crm/product-project-metadata";
 import NewProductProjectModal from "@/components/crm/product/NewProductProjectModal";
-import ProductProjectsGroupedPanel from "@/components/crm/product/ProductProjectsGroupedPanel";
-import ProductMilestonesTab from "@/components/crm/product/ProductMilestonesTab";
-import ProductSprintsTab from "@/components/crm/product/ProductSprintsTab";
-import ProductTasksLinearTab from "@/components/crm/product/ProductTasksLinearTab";
+import ProductOverviewTab from "@/components/crm/product/ProductOverviewTab";
+import ProductDiscoveryTab from "@/components/crm/product/ProductDiscoveryTab";
+import ProductRoadmapPhasesTab from "@/components/crm/product/ProductRoadmapPhasesTab";
+import ProductBacklogTab from "@/components/crm/product/ProductBacklogTab";
+import ProductSprintBoardTab from "@/components/crm/product/ProductSprintBoardTab";
 import ProductIssuesLinearTab from "@/components/crm/product/ProductIssuesLinearTab";
-import ProductOwnerSummaryField from "@/components/crm/product/ProductOwnerSummaryField";
+import ProductReleasesTab from "@/components/crm/product/ProductReleasesTab";
 import ProductResourcesTab from "@/components/crm/product/ProductResourcesTab";
-import ProductRoadmapTab from "@/components/crm/product/ProductRoadmapTab";
+import ProductSettingsTab from "@/components/crm/product/ProductSettingsTab";
+import ProductOwnerSummaryField from "@/components/crm/product/ProductOwnerSummaryField";
+
+const LEGACY_TAB_MAP: Record<string, string> = {
+  projects: "overview",
+  tasks: "backlog",
+  sprints: "sprint-board",
+  milestones: "releases",
+  issues: "qa-bugs",
+};
 
 const TABS = [
-  { id: "projects", label: "Project" },
-  { id: "tasks", label: "Tasks" },
-  { id: "sprints", label: "Sprints" },
-  { id: "milestones", label: "Milestones" },
+  { id: "overview", label: "Overview" },
+  { id: "discovery", label: "Discovery" },
   { id: "roadmap", label: "Roadmap" },
-  { id: "issues", label: "Issues" },
+  { id: "backlog", label: "Backlog" },
+  { id: "sprint-board", label: "Sprint board" },
+  { id: "qa-bugs", label: "QA / Bugs" },
+  { id: "releases", label: "Releases" },
   { id: "resources", label: "Resources" },
+  { id: "settings", label: "Settings" },
 ] as const;
 
 export type ProductChildRow = {
@@ -91,9 +102,25 @@ export default function ProductDetailShell({
   );
 
   const tabParam = searchParams.get("tab");
-  const activeTab = TABS.some((t) => t.id === tabParam)
-    ? (tabParam as (typeof TABS)[number]["id"])
-    : "projects";
+  const normalizedTabId = useMemo(() => {
+    const raw = tabParam ?? "overview";
+    const mapped = LEGACY_TAB_MAP[raw] ?? raw;
+    return TABS.some((t) => t.id === mapped) ? mapped : "overview";
+  }, [tabParam]);
+
+  const activeTab = normalizedTabId as (typeof TABS)[number]["id"];
+
+  useEffect(() => {
+    if (tabParam && LEGACY_TAB_MAP[tabParam]) {
+      const target = LEGACY_TAB_MAP[tabParam];
+      if (target !== tabParam) {
+        const p = new URLSearchParams(searchParams.toString());
+        p.set("tab", target);
+        const q = p.toString();
+        router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+      }
+    }
+  }, [tabParam, pathname, router, searchParams]);
 
   const projectParam = searchParams.get("project");
   const childIds = useMemo(
@@ -111,7 +138,9 @@ export default function ProductDetailShell({
       const p = new URLSearchParams(searchParams.toString());
       if (next.tab !== undefined) {
         p.set("tab", next.tab);
-        if (next.tab !== "tasks") p.delete("sprint");
+        if (next.tab !== "backlog" && next.tab !== "sprint-board") {
+          p.delete("sprint");
+        }
       }
       if (next.project !== undefined) {
         if (next.project === null) p.delete("project");
@@ -139,22 +168,13 @@ export default function ProductDetailShell({
 
   const sprintParam = searchParams.get("sprint");
 
-  const selectedChild = useMemo(
-    () => childrenProjects.find((c) => c.id === selectedProjectId) ?? null,
-    [childrenProjects, selectedProjectId]
-  );
-
-  const milestoneList = useMemo(
-    () => milestonesWithDefaults(selectedChild?.metadata),
-    [selectedChild?.metadata]
-  );
-
-  const needsProject =
-    activeTab === "milestones" ||
-    activeTab === "sprints" ||
-    activeTab === "tasks" ||
-    activeTab === "roadmap" ||
-    activeTab === "issues";
+  const childNeedsMessage =
+    !selectedProjectId &&
+    (activeTab === "backlog" ||
+      activeTab === "sprint-board" ||
+      activeTab === "qa-bugs" ||
+      activeTab === "releases" ||
+      activeTab === "roadmap");
 
   return (
     <div className="flex flex-col">
@@ -251,6 +271,48 @@ export default function ProductDetailShell({
         </div>
       </div>
 
+      <div className="border-b border-border bg-surface/40 px-8 py-3 dark:border-zinc-800 dark:bg-zinc-900/80">
+        <div className="grid w-full grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-[5.5rem_16rem_minmax(0,1fr)] sm:items-center">
+          <span
+            id="product-detail-project-label"
+            className="text-sm font-medium text-text-secondary dark:text-zinc-400"
+          >
+            Project
+          </span>
+          <select
+            aria-labelledby="product-detail-project-label"
+            value={selectedProjectId ?? ""}
+            onChange={(e) => {
+              const v = e.target.value;
+              setQuery({ project: v || null, sprint: null });
+            }}
+            className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-text-primary dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+          >
+            {childrenProjects.length === 0 ? (
+              <option value="">No projects yet</option>
+            ) : (
+              childrenProjects.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.title}
+                </option>
+              ))
+            )}
+          </select>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setNewProjectGroupPreset(undefined);
+                setModalOpen(true);
+              }}
+              className="text-sm font-medium text-accent hover:underline"
+            >
+              + New project
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div className="border-b border-border bg-white px-8 dark:border-zinc-700 dark:bg-zinc-900">
         <TabBar
           tabs={[...TABS]}
@@ -260,63 +322,23 @@ export default function ProductDetailShell({
         />
       </div>
 
-      {needsProject ? (
-        <div className="border-b border-border bg-surface/40 px-8 py-3 dark:border-zinc-800 dark:bg-zinc-900/80">
-          <div className="grid w-full grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-[5.5rem_16rem_minmax(0,1fr)] sm:items-center">
-            <span
-              id="product-detail-project-label"
-              className="text-sm font-medium text-text-secondary dark:text-zinc-400"
-            >
-              Project
-            </span>
-            <select
-              aria-labelledby="product-detail-project-label"
-              value={selectedProjectId ?? ""}
-              onChange={(e) => {
-                const v = e.target.value;
-                setQuery({ project: v || null, sprint: null });
-              }}
-              className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-text-primary dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
-            >
-              {childrenProjects.length === 0 ? (
-                <option value="">No projects yet</option>
-              ) : (
-                childrenProjects.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.title}
-                  </option>
-                ))
-              )}
-            </select>
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setNewProjectGroupPreset(undefined);
-                  setModalOpen(true);
-                }}
-                className="text-sm font-medium text-accent hover:underline"
-              >
-                + New project
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
       <div className="flex-1 overflow-auto p-8" role="tabpanel">
-        {activeTab === "projects" ? (
-          <ProductProjectsGroupedPanel
+        {childNeedsMessage ? (
+          <p className="text-sm text-text-secondary dark:text-zinc-500">
+            Add a delivery project first, then pick it above.
+          </p>
+        ) : null}
+
+        {activeTab === "overview" ? (
+          <ProductOverviewTab
             productId={productId}
             teamId={product.teamId}
-            projects={childrenProjects}
+            childrenProjects={childrenProjects}
             productMetadata={productMetadata}
             childDeliveryStatusUi={childDeliveryStatusUi}
-            onOpenProject={(id) =>
-              setQuery({ tab: "tasks", project: id })
-            }
-            onNewProject={(presetGroupId) => {
-              setNewProjectGroupPreset(presetGroupId);
+            onOpenProject={(id) => setQuery({ tab: "backlog", project: id })}
+            onNewProject={(preset) => {
+              setNewProjectGroupPreset(preset);
               setModalOpen(true);
             }}
             onDeliveryStatusUiSaved={() => router.refresh()}
@@ -324,91 +346,72 @@ export default function ProductDetailShell({
           />
         ) : null}
 
-        {activeTab === "milestones" ? (
-          !selectedProjectId ? (
-            <p className="text-sm text-text-secondary">
-              Add a project first, then pick it above.
-            </p>
-          ) : (
-            <ProductMilestonesTab
-              productId={productId}
-              childProjectId={selectedProjectId}
-              initialMilestones={milestoneList}
-            />
-          )
+        {activeTab === "discovery" ? (
+          <ProductDiscoveryTab productId={productId} />
         ) : null}
 
-        {activeTab === "sprints" ? (
-          !selectedProjectId ? (
-            <p className="text-sm text-text-secondary">
-              Add a project first, then pick it above.
-            </p>
-          ) : (
-            <ProductSprintsTab
-              projectId={selectedProjectId}
-              milestones={milestoneList}
-              onOpenTasksForSprint={(sprintId) =>
-                setQuery({ tab: "tasks", sprint: sprintId })
-              }
-              onOpenBacklogTasks={() =>
-                setQuery({ tab: "tasks", sprint: "backlog" })
-              }
-            />
-          )
+        {activeTab === "roadmap" && selectedProjectId ? (
+          <ProductRoadmapPhasesTab
+            productId={productId}
+            projectId={selectedProjectId}
+            childrenProjects={childrenProjects}
+          />
         ) : null}
 
-        {activeTab === "roadmap" ? (
-          !selectedProjectId ? (
-            <p className="text-sm text-text-secondary">
-              Add a project first, then pick it above.
-            </p>
-          ) : (
-            <ProductRoadmapTab
-              productId={productId}
-              projectId={selectedProjectId}
-              childrenProjects={childrenProjects}
-              planLabelMap={planLabels}
-            />
-          )
+        {activeTab === "backlog" && selectedProjectId ? (
+          <ProductBacklogTab
+            productId={productId}
+            childProjectId={selectedProjectId}
+            teamId={product.teamId}
+            sprintParam={sprintParam}
+            onSprintFilterChange={(v) => {
+              if (v === "backlog") setQuery({ sprint: "backlog" });
+              else setQuery({ sprint: v });
+            }}
+          />
         ) : null}
 
-        {activeTab === "tasks" ? (
-          !selectedProjectId ? (
-            <p className="text-sm text-text-secondary">
-              Add a project first, then pick it above.
-            </p>
-          ) : (
-            <ProductTasksLinearTab
-              projectId={selectedProjectId}
-              teamId={product.teamId}
-              milestones={milestoneList}
-              childProjects={childrenProjects.map((c) => ({
-                id: c.id,
-                title: c.title,
-              }))}
-              onCreatedOnProject={(id) => setQuery({ project: id })}
-              sprintParam={sprintParam}
-              onSprintFilterChange={(v) =>
-                setQuery({ sprint: v === "all" ? null : v })
-              }
-            />
-          )
+        {activeTab === "sprint-board" && selectedProjectId ? (
+          <ProductSprintBoardTab
+            productId={productId}
+            childProjectId={selectedProjectId}
+          />
         ) : null}
 
-        {activeTab === "issues" ? (
-          !selectedProjectId ? (
-            <p className="text-sm text-text-secondary">
-              Add a project first, then pick it above.
-            </p>
-          ) : (
-            <ProductIssuesLinearTab projectId={selectedProjectId} />
-          )
+        {activeTab === "qa-bugs" && selectedProjectId ? (
+          <ProductIssuesLinearTab
+            productId={productId}
+            projectId={selectedProjectId}
+          />
+        ) : null}
+
+        {activeTab === "releases" && selectedProjectId ? (
+          <ProductReleasesTab
+            productId={productId}
+            childProjectId={selectedProjectId}
+          />
         ) : null}
 
         {activeTab === "resources" ? (
           <ProductResourcesTab
             productId={productId}
             initialResources={initialProductResources}
+          />
+        ) : null}
+
+        {activeTab === "settings" ? (
+          <ProductSettingsTab
+            productId={productId}
+            teamId={product.teamId}
+            selectedChildId={selectedProjectId}
+            childrenProjects={childrenProjects}
+            productMetadata={productMetadata}
+            childDeliveryStatusUi={childDeliveryStatusUi}
+            onNewProject={(preset) => {
+              setNewProjectGroupPreset(preset);
+              setModalOpen(true);
+            }}
+            onDeliveryStatusUiSaved={() => router.refresh()}
           />
         ) : null}
       </div>
@@ -428,7 +431,7 @@ export default function ProductDetailShell({
           setModalOpen(false);
           setNewProjectGroupPreset(undefined);
           router.refresh();
-          setQuery({ tab: "milestones", project: id });
+          setQuery({ tab: activeTab, project: id });
         }}
       />
     </div>

@@ -20,6 +20,22 @@ export type CrmProjectPersistInput = {
   teamName: string | null;
 };
 
+/** Kanban / table product code: `PRJ-001` when `referenceNumber` is set; else legacy id tail. */
+export function productReferenceLabel(p: {
+  id: string;
+  referenceNumber?: number | null;
+}): string {
+  if (
+    typeof p.referenceNumber === "number" &&
+    Number.isFinite(p.referenceNumber) &&
+    p.referenceNumber > 0
+  ) {
+    return `PRJ-${String(Math.floor(p.referenceNumber)).padStart(3, "0")}`;
+  }
+  const tail = p.id.replace(/\D/g, "").slice(-4) || p.id.slice(0, 4);
+  return `PRJ-${tail}`.toUpperCase();
+}
+
 export function crmPayloadFromMock(p: MockProject): CrmProjectPersistInput {
   return {
     clientId: p.clientId.trim(),
@@ -136,6 +152,7 @@ export type ProjectRow = {
   metadata: unknown;
   /** null = top-level product; set = phase row under product */
   parent_project_id?: string | null;
+  reference_number?: number | null;
 };
 
 export function projectRowToMock(
@@ -203,5 +220,12 @@ export function projectRowToMock(
     sprintCount: 0,
     taskCount: 0,
     primaryPhaseId: options?.primaryPhaseId ?? null,
+    referenceNumber: (() => {
+      const raw = row.reference_number;
+      if (raw == null) return null;
+      const n =
+        typeof raw === "number" ? raw : Number(String(raw).trim());
+      return Number.isFinite(n) && n > 0 ? Math.floor(n) : null;
+    })(),
   };
 }

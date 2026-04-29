@@ -500,6 +500,20 @@ export function useProjectWorkspace(projectId: string | undefined) {
     [mutate]
   );
 
+  const updateResource = useCallback(
+    (id: string, label: string, url: string, kind: ResourceKind) => {
+      mutate((w) => ({
+        ...w,
+        resources: w.resources.map((r) =>
+          r.id === id
+            ? { ...r, label: label.trim(), url: url.trim(), kind }
+            : r
+        ),
+      }));
+    },
+    [mutate]
+  );
+
   const deleteResource = useCallback(
     (id: string) => {
       mutate((w) => ({
@@ -539,6 +553,7 @@ export function useProjectWorkspace(projectId: string | undefined) {
     addScopeLine,
     addMeeting,
     addResource,
+    updateResource,
     deleteResource,
   };
 }
