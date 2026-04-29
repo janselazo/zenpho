@@ -9,7 +9,20 @@ type Props = {
   suggestions: readonly string[];
   placeholder?: string;
   "aria-label"?: string;
+  /** Replace default pill input styles (e.g. lead detail `inputClass`). */
+  inputClassName?: string;
+  /** When false, omit the search glyph and use default padding (field row layout). */
+  showSearchIcon?: boolean;
+  /** `id` for the listbox; use unique values when multiple instances exist on one page. */
+  listboxId?: string;
+  /** Max rows in the dropdown. */
+  maxSuggestions?: number;
+  /** Set to `null` to hide the per-row hint under each suggestion. */
+  suggestionHint?: string | null;
 };
+
+const defaultInputClass =
+  "w-full rounded-full border border-border bg-white py-2.5 pl-10 pr-10 text-sm text-text-primary shadow-sm outline-none transition-[box-shadow,border-color] placeholder:text-text-secondary/50 focus:border-accent focus:ring-2 focus:ring-accent/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-blue-500 dark:focus:ring-blue-500/20";
 
 export default function PlacesCategoryAutocomplete({
   value,
@@ -17,6 +30,11 @@ export default function PlacesCategoryAutocomplete({
   suggestions,
   placeholder = "e.g. hair salon, gym, auto repair",
   "aria-label": ariaLabel = "Business category",
+  inputClassName,
+  showSearchIcon = true,
+  listboxId = "prospect-category-suggestions",
+  maxSuggestions = 14,
+  suggestionHint = "Optional city narrows Text Search results",
 }: Props) {
   const [open, setOpen] = useState(false);
   const [highlighted, setHighlighted] = useState(0);
@@ -25,14 +43,14 @@ export default function PlacesCategoryAutocomplete({
 
   const filtered = useMemo(() => {
     const q = value.trim().toLowerCase();
-    if (!q) return [...suggestions].slice(0, 14);
+    if (!q) return [...suggestions].slice(0, maxSuggestions);
     const tokens = q.split(/\s+/).filter(Boolean);
     const list = suggestions.filter((s) => {
       const sl = s.toLowerCase();
       return tokens.every((t) => sl.includes(t));
     });
-    return list.slice(0, 14);
-  }, [value, suggestions]);
+    return list.slice(0, maxSuggestions);
+  }, [value, suggestions, maxSuggestions]);
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
@@ -78,20 +96,25 @@ export default function PlacesCategoryAutocomplete({
 
   const showList = open && filtered.length > 0;
 
+  const inputCls = inputClassName ?? defaultInputClass;
+  const padLeft = inputClassName || showSearchIcon ? "" : "!pl-3";
+
   return (
     <div ref={wrapRef} className="relative">
       <div className="relative">
-        <Search
-          className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary/70 dark:text-zinc-500"
-          aria-hidden
-        />
+        {showSearchIcon ? (
+          <Search
+            className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary/70 dark:text-zinc-500"
+            aria-hidden
+          />
+        ) : null}
         <input
           ref={inputRef}
           type="text"
           value={value}
           aria-label={ariaLabel}
           aria-expanded={showList}
-          aria-controls="prospect-category-suggestions"
+          aria-controls={listboxId}
           aria-autocomplete="list"
           placeholder={placeholder}
           onChange={(e) => {
@@ -101,7 +124,7 @@ export default function PlacesCategoryAutocomplete({
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          className="w-full rounded-full border border-border bg-white py-2.5 pl-10 pr-10 text-sm text-text-primary shadow-sm outline-none transition-[box-shadow,border-color] placeholder:text-text-secondary/50 focus:border-accent focus:ring-2 focus:ring-accent/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-blue-500 dark:focus:ring-blue-500/20"
+          className={`${inputCls} ${padLeft}`.trim()}
         />
         {value ? (
           <button
@@ -128,7 +151,7 @@ export default function PlacesCategoryAutocomplete({
               aria-hidden
             />
             <ul
-              id="prospect-category-suggestions"
+              id={listboxId}
               role="listbox"
               className="relative max-h-72 overflow-auto px-1"
             >
@@ -157,9 +180,11 @@ export default function PlacesCategoryAutocomplete({
                       <span className="mt-0.5 block text-sm font-semibold text-text-primary dark:text-white">
                         {s}
                       </span>
-                      <span className="mt-0.5 block text-xs text-text-secondary dark:text-zinc-400">
-                        Optional city narrows Text Search results
-                      </span>
+                      {suggestionHint ? (
+                        <span className="mt-0.5 block text-xs text-text-secondary dark:text-zinc-400">
+                          {suggestionHint}
+                        </span>
+                      ) : null}
                     </span>
                   </button>
                 </li>

@@ -77,6 +77,14 @@ export default function CrmPopoverDateField({
     triggerTop: number;
   } | null>(null);
   const selected = parseIso(value);
+
+  /** Viewed month — kept in state so prev/next chevrons work (see nav vs caption z-index in shared styles). */
+  const [calendarMonth, setCalendarMonth] = useState<Date>(() => selected ?? new Date());
+
+  useEffect(() => {
+    if (!open) return;
+    setCalendarMonth(selected ?? new Date());
+  }, [open, value]);
   const display = value?.trim()
     ? formatCrmDateTrigger(value, displayFormat)
     : null;
@@ -168,7 +176,8 @@ export default function CrmPopoverDateField({
               setOpen(false);
             }
           }}
-          defaultMonth={selected ?? new Date()}
+          month={calendarMonth}
+          onMonthChange={setCalendarMonth}
           captionLayout="label"
           startMonth={CRM_SINGLE_DATE_PICKER_START_MONTH}
           className="crm-rdp w-full min-w-0 text-text-primary dark:text-zinc-100"

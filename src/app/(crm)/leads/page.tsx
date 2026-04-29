@@ -70,7 +70,7 @@ export default async function LeadsPage({
     supabase
       .from("lead")
       .select(
-        "id, name, email, phone, company, stage, source, notes, project_type, contact_category, temperature, created_at, converted_client_id"
+        "id, name, email, phone, company, website, stage, source, notes, project_type, contact_category, temperature, created_at, converted_client_id"
       )
       .order("created_at", { ascending: false })
       .limit(200),

@@ -560,10 +560,6 @@ const MoneyJournalTimer = forwardRef<MoneyJournalTimerHandle, MoneyJournalTimerP
             Timer stopped. Log this hour below, or reset to start a new block.
           </p>
         ) : null}
-        <p className="mx-auto mt-4 max-w-xs text-xs leading-relaxed text-text-secondary dark:text-zinc-500">
-          60:00 work block. Start records when you begin; Stop freezes the block for logging. You’ll get a chime
-          and (if allowed) a notification at 0:00.
-        </p>
         </div>
       </div>
     );

@@ -39,6 +39,23 @@ export default function ProductOwnerSummaryField({
     return null;
   }, [pointOfContactName, pointOfContactMemberId, members]);
 
+  const ownerAvatarUrl = useMemo(() => {
+    if (pointOfContactMemberId) {
+      const m = members.find((x) => x.id === pointOfContactMemberId);
+      const u = m?.avatarUrl?.trim();
+      if (u) return u;
+    }
+    if (resolvedLabel) {
+      const m = members.find(
+        (x) =>
+          x.name.trim().toLowerCase() === resolvedLabel.toLowerCase()
+      );
+      const u = m?.avatarUrl?.trim();
+      if (u) return u;
+    }
+    return null;
+  }, [members, pointOfContactMemberId, resolvedLabel]);
+
   useEffect(() => {
     if (!open) return;
     function onDoc(e: MouseEvent) {
@@ -94,8 +111,16 @@ export default function ProductOwnerSummaryField({
         <span className="min-w-0 truncate font-medium text-text-primary underline-offset-2 group-hover:underline dark:text-zinc-100">
           {resolvedLabel ?? "Not assigned"}
         </span>
-        <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border text-text-secondary transition-colors group-hover:border-accent group-hover:text-accent dark:border-zinc-600 dark:group-hover:border-accent">
-          <UserCircle2 className="h-4 w-4" strokeWidth={1.75} aria-hidden />
+        <span className="relative inline-flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border text-text-secondary transition-colors group-hover:border-accent dark:border-zinc-600 dark:group-hover:border-accent">
+          {ownerAvatarUrl ? (
+            <img
+              src={ownerAvatarUrl}
+              alt=""
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <UserCircle2 className="h-4 w-4" strokeWidth={1.75} aria-hidden />
+          )}
         </span>
       </button>
       {open ? (

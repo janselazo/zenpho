@@ -78,10 +78,10 @@ export const crmSingleDayClassNames: Partial<ClassNames> = {
   months: "relative w-full",
   month: "relative w-full space-y-0 px-2 pb-1",
   month_caption:
-    "relative z-[1] mb-1 flex h-9 items-center justify-center px-9 sm:px-10",
+    "relative z-0 mb-1 flex h-9 items-center justify-center px-9 sm:px-10",
   caption_label:
     "text-sm font-semibold text-text-primary tabular-nums dark:text-zinc-100",
-  nav: "absolute inset-x-1.5 top-2.5 z-0 flex items-center justify-between",
+  nav: "absolute inset-x-1.5 top-2.5 z-[1] flex items-center justify-between",
   button_previous:
     "inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-zinc-600 transition-colors hover:bg-zinc-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 dark:text-zinc-300 dark:hover:bg-zinc-800",
   button_next:

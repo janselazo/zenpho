@@ -44,9 +44,9 @@ function combineLocalDateTime(ymd: string, hm: string): Date {
 
 const QUICK_TASK_TIME_OPTIONS: { value: string; label: string }[] = (() => {
   const opts: { value: string; label: string }[] = [];
-  for (let h = 8; h <= 17; h++) {
+  /** 30-minute slots from 8:00 through 23:30 (local). */
+  for (let h = 8; h <= 23; h++) {
     for (const m of [0, 30]) {
-      if (h === 17 && m === 30) break;
       const d = new Date(2000, 0, 1, h, m, 0, 0);
       opts.push({
         value: `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`,

@@ -80,6 +80,7 @@ export interface Lead {
   email: string | null;
   phone?: string | null;
   company: string | null;
+  website?: string | null;
   stage: string | null;
   source?: string | null;
   notes?: string | null;
@@ -338,6 +339,7 @@ type LeadDraft = {
   email: string;
   phone: string;
   company: string;
+  website: string;
   source: string;
   stage: string;
   project_type: string;
@@ -382,6 +384,7 @@ function leadToDraft(
     email: lead.email ?? "",
     phone: lead.phone ?? "",
     company: lead.company ?? "",
+    website: lead.website ?? "",
     source: normalizeSourceForSelect(lead.source ?? "", fieldOptions.leadSources),
     stage: normalizeLeadStageForPipeline(lead.stage, pipeline),
     project_type: lead.project_type ?? "",
@@ -774,6 +777,7 @@ export default function LeadsView({
     fd.set("email", draft.email);
     fd.set("phone", draft.phone);
     fd.set("company", draft.company);
+    fd.set("website", draft.website);
     fd.set("source", draft.source);
     fd.set("stage", draft.stage);
     fd.set("notes", draft.notes);
@@ -1314,9 +1318,9 @@ function PipelineLeadTemperaturePicker({
               key={key}
               type="button"
               role="menuitem"
-              className={`flex h-10 w-10 items-center justify-center rounded-lg text-xl leading-none transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800 ${
+              className={`flex min-h-8 min-w-8 items-center justify-center rounded-md p-0.5 text-base leading-none transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800 ${
                 current === key
-                  ? "bg-blue-50 ring-2 ring-blue-500/35 dark:bg-blue-950/50 dark:ring-blue-400/40"
+                  ? "ring-2 ring-blue-500/40 ring-offset-2 ring-offset-white dark:ring-blue-400/45 dark:ring-offset-zinc-900"
                   : ""
               }`}
               aria-label={
@@ -1365,7 +1369,7 @@ function PipelineLeadTemperaturePicker({
         ref={btnRef}
         type="button"
         disabled={busy}
-        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-zinc-200/90 bg-white text-zinc-600 shadow-sm transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+        className="inline-flex min-h-8 min-w-8 shrink-0 items-center justify-center rounded-md border-0 bg-transparent p-0 text-zinc-600 shadow-none outline-none transition-colors hover:bg-zinc-100/60 focus-visible:ring-2 focus-visible:ring-blue-500/30 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-300 dark:hover:bg-zinc-800/50 dark:focus-visible:ring-blue-400/35 dark:focus-visible:ring-offset-zinc-950"
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={
@@ -1379,7 +1383,7 @@ function PipelineLeadTemperaturePicker({
         onClick={() => !busy && setOpen((o) => !o)}
       >
         {current ? (
-          <span className="text-lg leading-none" aria-hidden>
+          <span className="text-base leading-none" aria-hidden>
             {LEAD_TEMPERATURE_EMOJI[current]}
           </span>
         ) : (
@@ -1547,28 +1551,47 @@ function LeadsPipelineBoard({
                 </span>
               </div>
             ) : null}
-            {lead.nextAppointmentStartsAt ? (
-              <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-xs">
-                <CalendarDays
-                  className="h-3.5 w-3.5 shrink-0 text-zinc-400"
-                  aria-hidden
-                />
-                <span className="min-w-0 font-medium text-sky-700 dark:text-sky-400">
-                  Appointment{" "}
+            <div className="mt-2 flex min-w-0 items-center justify-between gap-2 text-[11px] text-zinc-400 dark:text-zinc-500">
+              <span className="min-w-0 truncate">
+                {lead.nextAppointmentStartsAt
+                  ? `Added ${formatPipelineCardDate(lead.created_at)}`
+                  : formatPipelineCardDate(lead.created_at)}
+              </span>
+              {lead.nextAppointmentStartsAt ? (
+                <span
+                  className="inline-flex shrink-0 items-center gap-1 font-medium text-sky-700 dark:text-sky-400"
+                  title={`Appointment ${formatPipelineCardDate(lead.nextAppointmentStartsAt)}`}
+                  aria-label={`Appointment ${formatPipelineCardDate(lead.nextAppointmentStartsAt)}`}
+                >
+                  <CalendarDays
+                    className="h-3.5 w-3.5 shrink-0 text-zinc-400 dark:text-zinc-500"
+                    aria-hidden
+                  />
                   {formatPipelineCardDate(lead.nextAppointmentStartsAt)}
                 </span>
-              </div>
-            ) : null}
-            <p className="mt-2 text-[11px] text-zinc-400 dark:text-zinc-500">
-              {lead.nextAppointmentStartsAt
-                ? `Added ${formatPipelineCardDate(lead.created_at)}`
-                : formatPipelineCardDate(lead.created_at)}
-            </p>
+              ) : null}
+            </div>
             <div
               className="mt-3 flex items-center gap-1 border-t border-zinc-100 pt-2.5 dark:border-zinc-700/80"
               onMouseDown={stopDragMouseDown}
             >
               <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+              <button
+                type="button"
+                onClick={() => onQuickAppointment(lead)}
+                disabled={
+                  editingId !== null ||
+                  Boolean(
+                    pipelineModalOpenLeadId &&
+                      pipelineModalOpenLeadId !== lead.id
+                  )
+                }
+                title="Add appointment"
+                className="inline-flex items-center justify-center rounded-md p-1.5 text-sky-600 transition-colors hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-40 dark:text-sky-400 dark:hover:bg-sky-950/40"
+                aria-label={`Schedule appointment for ${deleteLabel}`}
+              >
+                <CalendarPlus className="h-4 w-4 shrink-0" aria-hidden />
+              </button>
               <button
                 type="button"
                 onClick={() => onCreateProject(lead)}
@@ -1616,22 +1639,6 @@ function LeadsPipelineBoard({
                 aria-label={`Add task for ${deleteLabel}`}
               >
                 <ListTodo className="h-4 w-4 shrink-0" aria-hidden />
-              </button>
-              <button
-                type="button"
-                onClick={() => onQuickAppointment(lead)}
-                disabled={
-                  editingId !== null ||
-                  Boolean(
-                    pipelineModalOpenLeadId &&
-                      pipelineModalOpenLeadId !== lead.id
-                  )
-                }
-                title="Add appointment"
-                className="inline-flex items-center justify-center rounded-md p-1.5 text-sky-600 transition-colors hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-40 dark:text-sky-400 dark:hover:bg-sky-950/40"
-                aria-label={`Schedule appointment for ${deleteLabel}`}
-              >
-                <CalendarPlus className="h-4 w-4 shrink-0" aria-hidden />
               </button>
               <button
                 type="button"
@@ -2311,6 +2318,16 @@ function LeadsTable({
                       <div className={leadTableActionBarClass}>
                         <button
                           type="button"
+                          onClick={() => onQuickAppointment(lead)}
+                          disabled={editingId !== null}
+                          title="Add appointment"
+                          className={leadTableAppointmentBtnClass}
+                          aria-label={`Schedule appointment for ${deleteLabel}`}
+                        >
+                          <CalendarPlus className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => onCreateProject(lead)}
                           disabled={editingId !== null}
                           className={leadTableActionBtnClass}
@@ -2338,16 +2355,6 @@ function LeadsTable({
                           aria-label={`Add task for ${deleteLabel}`}
                         >
                           <ListTodo className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onQuickAppointment(lead)}
-                          disabled={editingId !== null}
-                          title="Add appointment"
-                          className={leadTableAppointmentBtnClass}
-                          aria-label={`Schedule appointment for ${deleteLabel}`}
-                        >
-                          <CalendarPlus className="h-3.5 w-3.5 shrink-0" aria-hidden />
                         </button>
                         <button
                           type="button"
@@ -2455,6 +2462,7 @@ function PipelineLeadEditModal({
     fd.set("email", draft.email);
     fd.set("phone", draft.phone);
     fd.set("company", draft.company);
+    fd.set("website", draft.website);
     fd.set("source", draft.source);
     fd.set("stage", draft.stage);
     fd.set("notes", draft.notes);
@@ -2664,6 +2672,24 @@ function PipelineLeadEditModal({
               }
               className={pipelineModalInputClass}
               disabled={savePending}
+            />
+          </div>
+
+          <div className="mt-4">
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-text-secondary">
+              Website
+            </label>
+            <input
+              type="url"
+              inputMode="url"
+              value={draft.website}
+              onChange={(e) =>
+                setDraft((d) => ({ ...d, website: e.target.value }))
+              }
+              placeholder="https://company.com"
+              className={pipelineModalInputClass}
+              disabled={savePending}
+              autoComplete="url"
             />
           </div>
 

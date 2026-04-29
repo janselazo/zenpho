@@ -256,7 +256,7 @@ export default function CrmCalendar({ configured }: { configured: boolean }) {
         <button
           type="button"
           onClick={() => openNew()}
-          className="shrink-0 rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+          className="shrink-0 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-accent-hover"
         >
           + Add event
         </button>

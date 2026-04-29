@@ -455,6 +455,7 @@ export async function createLeadFromProspectIntelAction(input: {
   if (input.company?.trim()) fd.set("company", input.company.trim());
   if (input.email?.trim()) fd.set("email", input.email.trim());
   if (input.phone?.trim()) fd.set("phone", input.phone.trim());
+  if (web) fd.set("website", web);
   if (input.facebook?.trim()) fd.set("facebook", input.facebook.trim());
   if (input.instagram?.trim()) fd.set("instagram", input.instagram.trim());
   if (input.google_business_category?.trim()) {

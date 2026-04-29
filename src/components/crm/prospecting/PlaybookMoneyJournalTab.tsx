@@ -7,6 +7,7 @@ import {
   Briefcase,
   CheckCircle2,
   ChevronDown,
+  Clock,
   DollarSign,
   ExternalLink,
   FolderOpen,
@@ -78,6 +79,16 @@ function resolveTimeEntryProjectTask(
     return { projectId: workLink.slice(5), taskId: "" };
   }
   return { projectId: "", taskId: "" };
+}
+
+function formatJournalBlockInstant(ms: number): string {
+  return new Date(ms).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 const inputClass =
@@ -576,18 +587,6 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
         </p>
       ) : null}
       {err ? <p className="text-sm text-red-600 dark:text-red-400">{err}</p> : null}
-      {msg ? (
-        <p className="flex flex-wrap items-center gap-2 text-sm text-emerald-700 dark:text-emerald-300/90">
-          {msg}
-          <Link
-            href="/time-tracking"
-            className="inline-flex items-center gap-1 font-medium text-accent underline-offset-2 hover:underline dark:text-blue-400"
-          >
-            Open Time Tracking
-            <ExternalLink className="h-3.5 w-3.5" />
-          </Link>
-        </p>
-      ) : null}
 
       <div className="overflow-hidden rounded-[1.75rem] border border-border bg-zinc-50/80 text-text-primary shadow-sm ring-1 ring-black/[0.03] dark:border-zinc-800 dark:bg-zinc-950/70 dark:text-zinc-100 dark:ring-white/[0.04]">
         <div className="border-b border-border bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.14),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(248,250,252,0.82))] px-5 py-6 dark:border-zinc-800 dark:bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_34%),linear-gradient(135deg,rgba(24,24,27,0.95),rgba(9,9,11,0.84))] sm:px-7 lg:px-8">
@@ -791,6 +790,37 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
                 </div>
               </div>
 
+              {sessionStartAtMs != null && sessionStopAtMs != null ? (
+                <div
+                  className="mb-4 rounded-xl border border-border bg-zinc-50/90 px-3 py-3 dark:border-zinc-700 dark:bg-zinc-900/50"
+                  role="status"
+                  aria-label="Timer block start and finish times for this log"
+                >
+                  <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-secondary/80 dark:text-zinc-500">
+                    <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    Start and finish hour
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-text-secondary/70 dark:text-zinc-500">
+                        Start
+                      </p>
+                      <p className="mt-0.5 font-mono text-sm font-semibold tabular-nums text-text-primary dark:text-zinc-100">
+                        {formatJournalBlockInstant(sessionStartAtMs)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-text-secondary/70 dark:text-zinc-500">
+                        Finish
+                      </p>
+                      <p className="mt-0.5 font-mono text-sm font-semibold tabular-nums text-text-primary dark:text-zinc-100">
+                        {formatJournalBlockInstant(sessionStopAtMs)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
               <button
                 type="button"
                 onClick={() => setBillable((b) => !b)}
@@ -874,6 +904,18 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                 Log this hour
               </button>
+              {msg ? (
+                <p className="mt-4 flex flex-wrap items-center gap-2 text-sm text-emerald-700 dark:text-emerald-300/90">
+                  {msg}
+                  <Link
+                    href="/time-tracking"
+                    className="inline-flex items-center gap-1 font-medium text-accent underline-offset-2 hover:underline dark:text-blue-400"
+                  >
+                    Open Time Tracking
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </Link>
+                </p>
+              ) : null}
             </section>
           </aside>
         </div>
@@ -897,6 +939,10 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
           <div className="max-h-[min(22rem,52vh)] overflow-y-auto overflow-x-hidden pr-1">
             <JournalPergaminoLeaves entries={pamphletEntries} />
           </div>
+          <p className="mt-4 text-xs leading-relaxed text-text-secondary dark:text-zinc-500">
+            60:00 work block. Start records when you begin; Stop freezes the block
+            for logging. You’ll get a chime and (if allowed) a notification at 0:00.
+          </p>
         </div>
       </div>
     </div>

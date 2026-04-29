@@ -6,10 +6,10 @@ export const LEAD_TEMPERATURE_ORDER: readonly LeadTemperature[] = [
   "hot",
 ];
 
-/** Display-only: cold extreme, cozy warm, hot. */
+/** Display-only: cold extreme, warm, hot. */
 export const LEAD_TEMPERATURE_EMOJI: Record<LeadTemperature, string> = {
   cold: "🥶",
-  warm: "🧸",
+  warm: "😎",
   hot: "🔥",
 };
 

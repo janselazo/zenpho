@@ -21,7 +21,7 @@ export async function fetchLeadPrefillForNewProject(
   const sb = createClient();
   const { data: lead, error: lErr } = await sb
     .from("lead")
-    .select("name, email, company, converted_client_id, project_type")
+    .select("name, email, company, converted_client_id, project_type, website")
     .eq("id", trimmed)
     .maybeSingle();
   if (lErr || !lead) return null;
@@ -54,7 +54,7 @@ export async function fetchLeadPrefillForNewProject(
       ? String(Math.round(valueNum))
       : "";
 
-  const website = String(deal?.website ?? "").trim();
+  const website = String(deal?.website ?? lead.website ?? "").trim();
   const pt = lead.project_type?.trim() || null;
   const allow = allowedProjectTypeSet(allowedProjectTypes);
   const projectTypeValid = !!pt && allow.has(pt);

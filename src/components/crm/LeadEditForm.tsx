@@ -33,10 +33,12 @@ import CrmNewProjectFromLeadModal from "@/components/crm/CrmNewProjectFromLeadMo
 import CrmQuickTaskModal from "@/components/crm/CrmQuickTaskModal";
 import LeadAppointmentEditModal from "@/components/crm/LeadAppointmentEditModal";
 import LeadAppointmentsMonthCalendar from "@/components/crm/LeadAppointmentsMonthCalendar";
+import PlacesCategoryAutocomplete from "@/components/crm/prospecting/PlacesCategoryAutocomplete";
 import AppointmentStatusBadge from "@/components/app/AppointmentStatusBadge";
 import type { LeadFollowUpAppointment } from "@/lib/crm/lead-follow-up-appointment";
 import { parseAppointmentStatus } from "@/lib/crm/appointment-status";
 import { prospectPreviewPageUrl } from "@/lib/crm/prospect-preview-public-url";
+import { PLACES_TEXT_SEARCH_CATEGORY_SUGGESTIONS } from "@/lib/crm/places-text-search-category-suggestions";
 import {
   DEFAULT_LEAD_PIPELINE_COLUMNS,
   leadStageLabelColor,
@@ -75,8 +77,8 @@ const inputClass =
 
 const LEAD_TABS = [
   { id: "contact", label: "Contact", icon: UserCircle },
-  { id: "projects", label: "Projects", icon: FolderKanban },
   { id: "appointments", label: "Appointments", icon: CalendarPlus },
+  { id: "projects", label: "Projects", icon: FolderKanban },
   { id: "calendar", label: "Calendar", icon: CalendarDays },
 ] as const;
 
@@ -124,6 +126,7 @@ type Lead = {
   email: string | null;
   company: string | null;
   phone: string | null;
+  website: string | null;
   facebook: string | null;
   instagram: string | null;
   google_business_category: string | null;
@@ -359,6 +362,9 @@ export default function LeadEditForm({
   const [stagePreview, setStagePreview] = useState(defaultStage);
   const currentSource = (lead.source ?? "").trim();
   const [sourcePreview, setSourcePreview] = useState(currentSource);
+  const [googleBusinessCategory, setGoogleBusinessCategory] = useState(
+    () => lead.google_business_category ?? ""
+  );
 
   const leadStageOptions: PipelineColumnDef[] = (() => {
     const list = leadPipelineColumns.map((c) => ({ ...c }));
@@ -411,6 +417,10 @@ export default function LeadEditForm({
   useEffect(() => {
     setSourcePreview(currentSource);
   }, [currentSource, lead.id]);
+
+  useEffect(() => {
+    setGoogleBusinessCategory(lead.google_business_category ?? "");
+  }, [lead.id, lead.google_business_category]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -584,13 +594,33 @@ export default function LeadEditForm({
                       className={inputClass}
                     />
                   </FieldRow>
+                  <FieldRow icon={Globe} label="Website">
+                    <input
+                      name="website"
+                      type="url"
+                      inputMode="url"
+                      defaultValue={lead.website ?? ""}
+                      className={inputClass}
+                      placeholder="https://company.com"
+                    />
+                  </FieldRow>
                   <FieldRow icon={Sparkles} label="Google business category">
                     <input
+                      type="hidden"
                       name="google_business_category"
-                      type="text"
-                      defaultValue={lead.google_business_category ?? ""}
-                      className={inputClass}
-                      placeholder="From Google Places listing"
+                      value={googleBusinessCategory}
+                    />
+                    <PlacesCategoryAutocomplete
+                      value={googleBusinessCategory}
+                      onChange={setGoogleBusinessCategory}
+                      suggestions={PLACES_TEXT_SEARCH_CATEGORY_SUGGESTIONS}
+                      placeholder="Search or type a category"
+                      aria-label="Google business category"
+                      inputClassName={`${inputClass} pr-10`}
+                      showSearchIcon={false}
+                      listboxId="lead-google-category-suggestions"
+                      maxSuggestions={20}
+                      suggestionHint={null}
                     />
                   </FieldRow>
                   <FieldRow icon={Facebook} label="Facebook">

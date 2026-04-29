@@ -171,6 +171,7 @@ export async function createLead(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
   const company = String(formData.get("company") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
+  const website = String(formData.get("website") ?? "").trim();
   const facebook = String(formData.get("facebook") ?? "").trim();
   const instagram = String(formData.get("instagram") ?? "").trim();
   const google_business_category = String(
@@ -232,6 +233,7 @@ export async function createLead(formData: FormData) {
       email: email || null,
       company: company || null,
       phone: phone || null,
+      website: website || null,
       facebook: facebook || null,
       instagram: instagram || null,
       google_business_category: google_business_category || null,
@@ -288,6 +290,7 @@ export async function updateLeadRow(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
   const company = String(formData.get("company") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
+  const website = String(formData.get("website") ?? "").trim();
   const facebook = String(formData.get("facebook") ?? "").trim();
   const instagram = String(formData.get("instagram") ?? "").trim();
   const google_business_category = String(
@@ -344,15 +347,24 @@ export async function updateLeadRow(formData: FormData) {
     email: email || null,
     company: company || null,
     phone: phone || null,
-    facebook: facebook || null,
-    instagram: instagram || null,
-    google_business_category: google_business_category || null,
     source: source || null,
     stage,
     notes: notes || null,
     project_type,
     contact_category,
   };
+  if (formData.has("website")) {
+    leadUpdate.website = website || null;
+  }
+  if (formData.has("facebook")) {
+    leadUpdate.facebook = facebook || null;
+  }
+  if (formData.has("instagram")) {
+    leadUpdate.instagram = instagram || null;
+  }
+  if (formData.has("google_business_category")) {
+    leadUpdate.google_business_category = google_business_category || null;
+  }
   if (formData.has("google_place_types_json")) {
     leadUpdate.google_place_types =
       google_place_types && google_place_types.length > 0 ? google_place_types : null;

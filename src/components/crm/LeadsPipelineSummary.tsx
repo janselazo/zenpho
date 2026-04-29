@@ -510,13 +510,13 @@ export default function LeadsPipelineSummary({
             type="button"
             onClick={exportCsv}
             aria-label="Export leads as CSV for the selected period"
-            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-xs font-medium text-text-primary transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:hover:bg-zinc-800/80"
+            title="Export leads as CSV"
+            className="inline-flex shrink-0 items-center justify-center rounded-lg border border-border bg-white p-2 text-xs font-medium text-text-primary transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:hover:bg-zinc-800/80"
           >
             <Download
               className="h-3.5 w-3.5 shrink-0 text-orange-600 dark:text-orange-400"
               aria-hidden
             />
-            Export
           </button>
           <div className="flex min-w-0 flex-1 flex-col gap-1 sm:min-w-[11rem] sm:flex-initial">
             <div className="relative">

@@ -712,6 +712,7 @@ function projectCardFooterAvatar(
   display: string;
   variant: "solid" | "gradient";
   solidBg: string | null;
+  imageUrl: string | null;
 } {
   const mid = project.pointOfContactMemberId?.trim();
   const member = mid ? roster.find((m) => m.id === mid) : undefined;
@@ -727,16 +728,30 @@ function projectCardFooterAvatar(
         : "#6366f1");
     const title =
       project.pointOfContactName?.trim() || member.name.trim();
-    return { title, display, variant: "solid", solidBg };
+    const imageUrl =
+      typeof member.avatarUrl === "string" && member.avatarUrl.trim().length > 0
+        ? member.avatarUrl.trim()
+        : null;
+    return { title, display, variant: "solid", solidBg, imageUrl };
   }
 
   const pocName = project.pointOfContactName?.trim();
   if (pocName) {
+    const match = roster.find(
+      (m) => m.name.trim().toLowerCase() === pocName.toLowerCase()
+    );
+    const imageUrl =
+      match &&
+      typeof match.avatarUrl === "string" &&
+      match.avatarUrl.trim().length > 0
+        ? match.avatarUrl.trim()
+        : null;
     return {
       title: pocName,
       display: initialsFromPersonName(pocName),
       variant: "solid",
       solidBg: "#6366f1",
+      imageUrl,
     };
   }
 
@@ -755,6 +770,7 @@ function projectCardFooterAvatar(
     display,
     variant: "gradient",
     solidBg: null,
+    imageUrl: null,
   };
 }
 
@@ -858,21 +874,34 @@ function ProjectCard({
           </span>
         </div>
         <div className="mt-4 flex items-center justify-between gap-3 border-t border-zinc-100 pt-3.5 dark:border-zinc-800">
-          <span
-            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ring-2 ring-white dark:ring-zinc-900 ${
-              avatar.variant === "solid"
-                ? "text-white"
-                : "bg-gradient-to-br from-violet-100 to-violet-200 text-violet-800 dark:from-violet-900/80 dark:to-violet-800/60 dark:text-violet-200"
-            }`}
-            style={
-              avatar.variant === "solid" && avatar.solidBg
-                ? { backgroundColor: avatar.solidBg }
-                : undefined
-            }
-            title={avatar.title}
-          >
-            {avatar.display}
-          </span>
+          {avatar.imageUrl ? (
+            <span
+              className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full ring-2 ring-white dark:ring-zinc-900"
+              title={avatar.title}
+            >
+              <img
+                src={avatar.imageUrl}
+                alt=""
+                className="h-full w-full object-cover"
+              />
+            </span>
+          ) : (
+            <span
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ring-2 ring-white dark:ring-zinc-900 ${
+                avatar.variant === "solid"
+                  ? "text-white"
+                  : "bg-gradient-to-br from-violet-100 to-violet-200 text-violet-800 dark:from-violet-900/80 dark:to-violet-800/60 dark:text-violet-200"
+              }`}
+              style={
+                avatar.variant === "solid" && avatar.solidBg
+                  ? { backgroundColor: avatar.solidBg }
+                  : undefined
+              }
+              title={avatar.title}
+            >
+              {avatar.display}
+            </span>
+          )}
           <div className="flex items-center gap-2.5 text-xs text-zinc-500 dark:text-zinc-400">
             <Flag
               className={`h-3.5 w-3.5 shrink-0 ${priorityFlagColor(project.plan)}`}
