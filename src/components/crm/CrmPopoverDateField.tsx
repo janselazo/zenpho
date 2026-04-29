@@ -52,6 +52,8 @@ type Props = {
   /** Tighter trigger for dense tables (smaller height, less horizontal padding). */
   compact?: boolean;
   disabled?: boolean;
+  /** When `value` is empty, show this instead of the default format placeholder (e.g. "Due"). */
+  emptyLabel?: string;
   "aria-label"?: string;
 };
 
@@ -65,6 +67,7 @@ export default function CrmPopoverDateField({
   showTriggerChevron = false,
   compact = false,
   disabled = false,
+  emptyLabel,
   "aria-label": ariaLabel,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -88,7 +91,9 @@ export default function CrmPopoverDateField({
   const display = value?.trim()
     ? formatCrmDateTrigger(value, displayFormat)
     : null;
-  const placeholder = crmDatePlaceholder(displayFormat);
+  const placeholder =
+    emptyLabel?.trim() ||
+    crmDatePlaceholder(displayFormat);
   const triggerClasses = compact
     ? [
         "relative flex w-full min-h-8 max-w-[6.75rem] items-center rounded-lg border border-zinc-200 bg-white py-0.5 pl-6 pr-1 text-left text-xs font-medium text-text-primary shadow-sm outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-600 dark:bg-zinc-800/60 dark:text-zinc-100 dark:focus:border-blue-500",

@@ -14,6 +14,7 @@ import {
   updateCrmChildProjectQuickFields,
 } from "@/app/(crm)/actions/projects";
 import type { ProductChildRow } from "@/components/crm/product/ProductDetailShell";
+import CrmPopoverDateField from "@/components/crm/CrmPopoverDateField";
 import { PriorityFlagIcon } from "@/components/crm/product/PriorityFlagIcon";
 import ProductChildDeliveryStatusModal from "@/components/crm/product/ProductChildDeliveryStatusModal";
 import ProductChildDeliveryStatusesBulkModal from "@/components/crm/product/ProductChildDeliveryStatusesBulkModal";
@@ -40,7 +41,7 @@ import {
 } from "@/lib/crm/product-project-metadata";
 import { getMemberById, getMembersForTeam, teamMembers } from "@/lib/crm/mock-data";
 import {
-  Calendar,
+  Check,
   ChevronDown,
   ChevronRight,
   Circle,
@@ -84,6 +85,101 @@ const CHILD_PROJECT_PRIORITY_OPTIONS: {
   { value: "medium", label: CHILD_PROJECT_PRIORITY_LABELS.medium },
   { value: "low", label: CHILD_PROJECT_PRIORITY_LABELS.low },
 ];
+
+function ChildProjectAssigneePicker({
+  leadId,
+  leadName,
+  members,
+  disabled,
+  projectTitle,
+  onAssign,
+}: {
+  leadId: string | null;
+  leadName: string | null;
+  members: { id: string; name: string }[];
+  disabled: boolean;
+  projectTitle: string;
+  onAssign: (memberId: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDoc(e: MouseEvent) {
+      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  return (
+    <div className="relative min-w-0" ref={wrapRef}>
+      <button
+        type="button"
+        disabled={disabled}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        title={leadName ? `Assignee: ${leadName}` : "Assign project"}
+        aria-label={`Assignee for ${projectTitle}`}
+        onClick={() => !disabled && setOpen((o) => !o)}
+        className={`flex h-8 w-full min-w-0 items-center justify-center gap-1.5 overflow-hidden rounded-lg border px-2 text-xs font-medium transition-colors disabled:cursor-wait disabled:opacity-60 ${
+          leadName
+            ? "border-border bg-white text-text-primary shadow-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+            : "border-transparent text-text-secondary hover:border-border hover:bg-white hover:text-text-primary dark:text-zinc-500 dark:hover:border-zinc-700 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
+        }`}
+      >
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[10px] font-bold text-zinc-500 ring-1 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:ring-zinc-700">
+          {leadName ? (
+            leadName.slice(0, 2).toUpperCase()
+          ) : (
+            <UserPlus className="h-3.5 w-3.5" aria-hidden />
+          )}
+        </span>
+        <span className="min-w-0 truncate">{leadName ?? "Assign"}</span>
+        <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" aria-hidden />
+      </button>
+      {open ? (
+        <div
+          role="listbox"
+          className="absolute left-0 top-full z-[70] mt-1 max-h-64 w-56 overflow-y-auto rounded-xl border border-border bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-950"
+        >
+          <button
+            type="button"
+            role="option"
+            className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-text-primary hover:bg-surface/80 dark:text-zinc-100 dark:hover:bg-zinc-800"
+            onClick={() => {
+              onAssign(null);
+              setOpen(false);
+            }}
+          >
+            Unassigned
+            {!leadId ? (
+              <Check className="h-4 w-4 shrink-0 text-accent" aria-hidden />
+            ) : null}
+          </button>
+          {members.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              role="option"
+              className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-text-primary hover:bg-surface/80 dark:text-zinc-100 dark:hover:bg-zinc-800"
+              onClick={() => {
+                onAssign(m.id);
+                setOpen(false);
+              }}
+            >
+              <span className="min-w-0 truncate">{m.name}</span>
+              {leadId === m.id ? (
+                <Check className="h-4 w-4 shrink-0 text-accent" aria-hidden />
+              ) : null}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 function RowStatusDot({
   status,
@@ -567,7 +663,9 @@ export default function ProductProjectsGroupedPanel({
                       g.items.map((p) => {
                         const lead = parseLeadId(p.metadata);
                         const leadName = lead
-                          ? getMemberById(lead)?.name ?? members.find((m) => m.id === lead)?.name
+                          ? getMemberById(lead)?.name ??
+                            members.find((m) => m.id === lead)?.name ??
+                            null
                           : null;
                         const priLevel = parseChildProjectPriority(p.metadata);
                         const priLabel = priLevel
@@ -612,69 +710,44 @@ export default function ProductProjectsGroupedPanel({
                               >
                                 {p.title}
                               </button>
-                              <label
-                                className="relative flex h-8 min-w-0 cursor-pointer items-center justify-center gap-1.5 overflow-hidden rounded-lg border border-transparent px-2 text-xs font-medium text-text-secondary transition-colors hover:border-border hover:bg-white hover:text-text-primary dark:text-zinc-500 dark:hover:border-zinc-700 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
-                                title={
-                                  leadName ? `Assignee: ${leadName}` : "Assign project"
+                              <ChildProjectAssigneePicker
+                                leadId={lead}
+                                leadName={leadName}
+                                members={members}
+                                disabled={rowBusyId === p.id}
+                                projectTitle={p.title}
+                                onAssign={(id) =>
+                                  void updateChildQuickField(p.id, {
+                                    leadMemberId: id,
+                                  })
                                 }
-                              >
-                                <span className="pointer-events-none flex min-w-0 items-center gap-1.5">
-                                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[10px] font-bold text-zinc-500 ring-1 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:ring-zinc-700">
-                                    {leadName ? (
-                                      leadName.slice(0, 2).toUpperCase()
-                                    ) : (
-                                      <UserPlus className="h-3.5 w-3.5" aria-hidden />
-                                    )}
-                                  </span>
-                                  <span className="truncate">
-                                    {leadName ?? "Assign"}
-                                  </span>
-                                  <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" aria-hidden />
-                                </span>
-                                <select
-                                  value={lead ?? ""}
-                                  disabled={rowBusyId === p.id}
-                                  onChange={(e) =>
-                                    void updateChildQuickField(p.id, {
-                                      leadMemberId: e.target.value || null,
-                                    })
-                                  }
-                                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-wait"
-                                  aria-label={`Assignee for ${p.title}`}
-                                >
-                                  <option value="">Assign</option>
-                                  {members.map((m) => (
-                                    <option key={m.id} value={m.id}>
-                                      {m.name}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
-                              <label
-                                className={`relative flex h-8 min-w-0 cursor-pointer items-center justify-center gap-1.5 overflow-hidden rounded-lg border px-2 text-xs font-medium transition-colors ${
-                                  due
-                                    ? "border-border bg-white text-text-primary shadow-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                                    : "border-transparent text-text-secondary hover:border-border hover:bg-white hover:text-text-primary dark:text-zinc-500 dark:hover:border-zinc-700 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
-                                }`}
+                              />
+                              <div
+                                className="min-w-0"
                                 title={due ? `Due ${due}` : "Set due date"}
                               >
-                                <span className="pointer-events-none flex min-w-0 items-center gap-1.5">
-                                  <Calendar className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
-                                  <span className="truncate">{due ?? "Due"}</span>
-                                </span>
-                                <input
-                                  type="date"
-                                  value={p.target_date ?? ""}
-                                  disabled={rowBusyId === p.id}
-                                  onChange={(e) =>
+                                <CrmPopoverDateField
+                                  id={`product-child-due-${p.id}`}
+                                  value={
+                                    typeof p.target_date === "string"
+                                      ? p.target_date.slice(0, 10)
+                                      : ""
+                                  }
+                                  onChange={(v) =>
                                     void updateChildQuickField(p.id, {
-                                      target_date: e.target.value || null,
+                                      target_date: v.trim() ? v : null,
                                     })
                                   }
-                                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-wait"
+                                  displayFormat="numeric"
+                                  compact
+                                  showFooter
+                                  showTriggerChevron
+                                  emptyLabel="Due"
+                                  disabled={rowBusyId === p.id}
+                                  triggerClassName="!max-w-none w-full min-h-8"
                                   aria-label={`Due date for ${p.title}`}
                                 />
-                              </label>
+                              </div>
                               <label
                                 className={`relative flex h-8 min-w-0 cursor-pointer items-center justify-center gap-1.5 overflow-hidden rounded-lg border px-2 text-xs font-medium transition-colors ${
                                   priLevel
