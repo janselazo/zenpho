@@ -20,6 +20,7 @@ export const LEAD_SOURCE_DEFAULT_OPTIONS = [
   "Google Ads",
   "Social Media",
   "Partnerships",
+  "Revenue Leak Audit",
 ] as const;
 
 /** Display label for lead source picklist (legacy all-lowercase values get title case). */

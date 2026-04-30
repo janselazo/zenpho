@@ -1,6 +1,39 @@
 /** Google-hosted pinlets (v2), same family as Google Maps category markers. */
 const GSTATIC_PINLETS = "https://maps.gstatic.com/mapfiles/place_api/icons/v2";
 
+function hexLuminance(hexRaw: string): number {
+  const hex = hexRaw.replace(/^#/, "").trim();
+  if (!/^[0-9a-f]{6}$/i.test(hex)) return 0.35;
+  const n = parseInt(hex, 16);
+  const r = ((n >> 16) & 0xff) / 255;
+  const g = ((n >> 8) & 0xff) / 255;
+  const b = (n & 0xff) / 255;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/**
+ * Places API often returns very dark hex colors. Combined with a failed mask load,
+ * the marker reads as a black dot on the map.
+ */
+function brightenDiskColor(hex: string, minLuminance = 0.22): string {
+  if (hexLuminance(hex) >= minLuminance) return hex;
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  const base = m ? parseInt(m[1], 16) : 0x78909c;
+  let r = (base >> 16) & 0xff;
+  let g = (base >> 8) & 0xff;
+  let b = base & 0xff;
+  for (let i = 0; i < 10; i++) {
+    const lum = hexLuminance(
+      `#${[r, g, b].map((x) => x.toString(16).padStart(2, "0")).join("")}`
+    );
+    if (lum >= minLuminance) break;
+    r = Math.min(255, Math.round(r + (255 - r) * 0.35));
+    g = Math.min(255, Math.round(g + (255 - g) * 0.35));
+    b = Math.min(255, Math.round(b + (255 - b) * 0.35));
+  }
+  return `#${[r, g, b].map((x) => x.toString(16).padStart(2, "0")).join("")}`;
+}
+
 export type CategoryMarkerStyle = {
   backgroundColor: string;
   maskSrc: string;
@@ -78,7 +111,10 @@ function primaryPlaceType(types: string[]): string {
 export function resolveCategoryMarkerStyle(input: MapMarkerPointInput): CategoryMarkerStyle {
   const fromApiMask = maskSrcFromPlaceApiBase(input.iconMaskBaseUri);
   if (fromApiMask && input.iconBackgroundColor) {
-    return { backgroundColor: input.iconBackgroundColor, maskSrc: fromApiMask };
+    return {
+      backgroundColor: brightenDiskColor(input.iconBackgroundColor),
+      maskSrc: fromApiMask,
+    };
   }
   const p = primaryPlaceType(input.types);
   for (const rule of TYPE_RULES) {
@@ -93,8 +129,9 @@ export function buildCategoryMarkerElement(opts: {
   isSelected: boolean;
 }): HTMLElement {
   const size = opts.isSelected ? 44 : 38;
+  const diskBg = brightenDiskColor(opts.style.backgroundColor);
   const root = document.createElement("div");
-  root.style.cssText = `position:relative;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;`;
+  root.style.cssText = `position:relative;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;color-scheme:light;forced-color-adjust:none;`;
 
   const disk = document.createElement("div");
   const inner = size - 6;
@@ -102,11 +139,13 @@ export function buildCategoryMarkerElement(opts: {
     `width:${inner}px`,
     `height:${inner}px`,
     `border-radius:50%`,
-    `background:${opts.style.backgroundColor}`,
+    `background:${diskBg}`,
     `display:flex`,
     `align-items:center`,
     `justify-content:center`,
     `box-shadow:0 2px 8px rgba(0,0,0,.35)`,
+    `color-scheme:light`,
+    `forced-color-adjust:none`,
     opts.isSelected
       ? "border:3px solid #fff;outline:2px solid rgba(0,0,0,.12)"
       : "border:2px solid rgba(255,255,255,.9)",
@@ -118,8 +157,24 @@ export function buildCategoryMarkerElement(opts: {
   const glyph = Math.round(inner * 0.52);
   img.width = glyph;
   img.height = glyph;
-  img.style.objectFit = "contain";
+  img.style.cssText = "object-fit:contain;display:block;filter:brightness(0) invert(1);opacity:0.95;";
   img.draggable = false;
+  const fallbackMask = `${GSTATIC_PINLETS}/generic_pinlet.png`;
+  img.addEventListener(
+    "error",
+    () => {
+      if (img.src !== fallbackMask) {
+        img.src = fallbackMask;
+        return;
+      }
+      const trySvg = opts.style.maskSrc.replace(/\.png$/i, ".svg");
+      if (trySvg !== opts.style.maskSrc && !img.dataset.svgTried) {
+        img.dataset.svgTried = "1";
+        img.src = trySvg;
+      }
+    },
+    { once: false }
+  );
   disk.appendChild(img);
   root.appendChild(disk);
 
@@ -163,28 +218,38 @@ export async function compositeCategoryMarkerDataUrl(
   const r = size / 2 - 2;
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.fillStyle = style.backgroundColor;
+  ctx.fillStyle = brightenDiskColor(style.backgroundColor);
   ctx.fill();
   ctx.strokeStyle = "rgba(255,255,255,0.92)";
   ctx.lineWidth = 2;
   ctx.stroke();
 
-  try {
-    await new Promise<void>((resolve, reject) => {
+  const loadMask = (src: string) =>
+    new Promise<HTMLImageElement>((resolve, reject) => {
       const img = new Image();
       img.crossOrigin = "anonymous";
-      img.onload = () => {
-        try {
-          const gw = size * 0.5;
-          ctx.drawImage(img, cx - gw / 2, cy - gw / 2, gw, gw);
-          resolve();
-        } catch {
-          reject(new Error("drawImage failed"));
-        }
-      };
+      img.onload = () => resolve(img);
       img.onerror = () => reject(new Error("mask load failed"));
-      img.src = style.maskSrc;
+      img.src = src;
     });
+
+  let imgEl: HTMLImageElement;
+  try {
+    imgEl = await loadMask(style.maskSrc);
+  } catch {
+    try {
+      imgEl = await loadMask(`${GSTATIC_PINLETS}/generic_pinlet.png`);
+    } catch {
+      return null;
+    }
+  }
+
+  try {
+    const gw = size * 0.5;
+    ctx.save();
+    ctx.filter = "brightness(0) invert(1)";
+    ctx.drawImage(imgEl, cx - gw / 2, cy - gw / 2, gw, gw);
+    ctx.restore();
   } catch {
     return null;
   }

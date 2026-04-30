@@ -48,7 +48,47 @@ export function gradeFromScore(score: number): AuditGrade {
 }
 
 function clampScore(score: number): number {
-  return Math.max(0, Math.min(100, Math.round(score)));
+  /** Avoid a literal 0 — stacked heuristics can overshoot; floor keeps Poor vs "no data" distinct. */
+  const floor = 10;
+  return Math.max(floor, Math.min(100, Math.round(score)));
+}
+
+/** Sums penalties but caps how much they can drag the score down (many gaps shouldn't collapse to the minimum). */
+function scoreAfterPenalties(base: number, penalties: number[], maxTotalPenalty: number): number {
+  const total = penalties.reduce((a, b) => a + b, 0);
+  return base - Math.min(maxTotalPenalty, total);
+}
+
+/** Any common analytics / paid-media tag we look for in homepage HTML. */
+function hasPaidOrAnalyticsBaseline(audit: WebsiteAudit): boolean {
+  if (!audit.available) return false;
+  return (
+    audit.hasGoogleAnalytics ||
+    audit.hasGoogleTagManager ||
+    audit.hasGoogleAdsTag ||
+    audit.hasMetaPixel ||
+    audit.hasTikTokPixel ||
+    audit.hasBingUet ||
+    audit.hasLinkedInInsight ||
+    audit.hasPinterestPixel ||
+    audit.hasTwitterPixel ||
+    audit.hasSnapchatPixel
+  );
+}
+
+function formatDetectedMarketingTags(audit: WebsiteAudit): string {
+  const tags: string[] = [];
+  if (audit.hasGoogleTagManager) tags.push("Google Tag Manager");
+  if (audit.hasGoogleAnalytics) tags.push("Google Analytics (GA4 / gtag)");
+  if (audit.hasGoogleAdsTag) tags.push("Google Ads conversion");
+  if (audit.hasMetaPixel) tags.push("Meta (Facebook / Instagram) Pixel");
+  if (audit.hasTikTokPixel) tags.push("TikTok Pixel");
+  if (audit.hasBingUet) tags.push("Microsoft Advertising UET (Bing)");
+  if (audit.hasLinkedInInsight) tags.push("LinkedIn Insight Tag");
+  if (audit.hasPinterestPixel) tags.push("Pinterest Tag");
+  if (audit.hasTwitterPixel) tags.push("X (Twitter) Ads Pixel");
+  if (audit.hasSnapchatPixel) tags.push("Snapchat Pixel");
+  return tags.length ? tags.join("; ") : "none";
 }
 
 function avg(nums: number[]): number {
@@ -883,6 +923,36 @@ function buildFindings(input: BuildInput): AuditFinding[] {
     );
   }
 
+  if (
+    websiteAudit.available &&
+    (websiteAudit.hasPhoneLink || websiteAudit.hasPhoneText) &&
+    !websiteAudit.hasTextEnabledPhone
+  ) {
+    const impact = moneyImpact(assumptions, 0.02, 0.07);
+    findings.push(
+      finding(
+        {
+          category: "Website Trust & Visual Proof",
+          severity: "Medium",
+          title: "No Text-Enabled Phone Path Detected",
+          whatWeFound:
+            "The homepage shows a phone number or click-to-call, but no SMS (sms:/smsto:) link, WhatsApp chat link, or clear “text us” / click-to-text signal was detected.",
+          whyItMatters:
+            "Many local buyers prefer texting for quick questions or after-hours contact. Without an obvious text path, those leads default to competitors or never engage.",
+          evidence: `Click-to-call: ${websiteAudit.hasPhoneLink ? "yes" : "no"}. Phone number in copy: ${websiteAudit.hasPhoneText ? "yes" : "no"}. Text/SMS channels in HTML: not detected.`,
+          estimatedRevenueImpactLow: impact.low,
+          estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
+          recommendedFix:
+            "Add an `sms:` link next to the phone number, a WhatsApp or business-texting widget (Podium, TextUs, etc.), or a visible “Text us” CTA with the mobile number.",
+          priorityScore: 65,
+        },
+        i++
+      )
+    );
+  }
+
   if (websiteAudit.blurryImageSignals > 0) {
     const impact = moneyImpact(assumptions, 0.02, 0.06);
     findings.push(
@@ -908,24 +978,27 @@ function buildFindings(input: BuildInput): AuditFinding[] {
     );
   }
 
-  if (!websiteAudit.hasGoogleAnalytics && !websiteAudit.hasGoogleTagManager) {
+  if (websiteAudit.available && !hasPaidOrAnalyticsBaseline(websiteAudit)) {
     const impact = moneyImpact(assumptions, 0.02, 0.08);
     findings.push(
       finding(
         {
           category: "Tracking & Ads Readiness",
           severity: "Medium",
-          title: "No Analytics or Tag Manager Detected",
-          whatWeFound: "GA4/GTM tracking was not detected on the homepage.",
+          title: "Limited Marketing Analytics & Ad Pixels Detected",
+          whatWeFound:
+            "Homepage HTML did not show recognizable Google Analytics (GA4 / gtag), Google Tag Manager, Google Ads conversion snippets, Meta (Facebook) Pixel, TikTok Pixel, Microsoft Advertising UET (Bing), LinkedIn Insight Tag, Pinterest Tag, X (Twitter) Pixel, or Snapchat Pixel.",
           whyItMatters:
-            "Without tracking, it is hard to know which channels are producing calls, forms, and jobs.",
-          evidence: "No GA4 or GTM script signals detected.",
+            "Paid campaigns and organic traffic need measurable conversion signals (calls, forms, quotes). Without at least one of these tags, channel ROI and optimization stay guesswork.",
+          evidence:
+            "Checked script URLs and common signatures in the fetched HTML. Detected: " +
+            formatDetectedMarketingTags(websiteAudit),
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
           leakRateLow: impact.leakRateLow,
           leakRateHigh: impact.leakRateHigh,
           recommendedFix:
-            "Install GTM/GA4 and configure call, form, and quote request conversion events.",
+            "Use Google Tag Manager as the container where possible: deploy GA4, add pixels for each ad platform you use (Meta, TikTok, Microsoft Ads, etc.), and fire conversion events for calls, lead forms, and quote requests.",
           priorityScore: 72,
         },
         i++
@@ -948,7 +1021,7 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           whatWeFound: "Google Tag Manager is on the site, but no GA4/Universal Analytics signal was detected.",
           whyItMatters:
             "GTM without GA leaves the business blind to which channels actually produce the calls and forms it pays for.",
-          evidence: `GTM detected: yes. GA detected: no.`,
+          evidence: `GTM: detected. GA/gtag in initial HTML: not detected. Snapshot of tags visible in HTML: ${formatDetectedMarketingTags(websiteAudit)}. (GA may still load through the container — confirm in Google Tag Assistant / preview mode.)`,
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
           leakRateLow: impact.leakRateLow,
@@ -962,7 +1035,7 @@ function buildFindings(input: BuildInput): AuditFinding[] {
     );
   }
 
-  if (websiteAudit.available && !websiteAudit.hasMetaPixel) {
+  if (websiteAudit.available && !websiteAudit.hasMetaPixel && hasPaidOrAnalyticsBaseline(websiteAudit)) {
     const impact = moneyImpact(assumptions, 0.01, 0.04);
     findings.push(
       finding(
@@ -973,7 +1046,9 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           whatWeFound: "The Meta Pixel was not detected on the homepage.",
           whyItMatters:
             "Without the Pixel, Meta cannot retarget visitors who didn't call, which leaves a cheap remarketing channel unused.",
-          evidence: "fbq()/connect.facebook.net pixel signature not present.",
+          evidence:
+            "Meta Pixel (fbq / connect.facebook.net) not found in initial HTML. " +
+            `Other marketing tags detected in HTML: ${formatDetectedMarketingTags(websiteAudit)}.`,
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
           leakRateLow: impact.leakRateLow,
@@ -1361,8 +1436,15 @@ function buildFindings(input: BuildInput): AuditFinding[] {
 }
 
 function computeScores(input: BuildInput): AuditScores {
-  const { business, competitors, websiteAudit, reviewSentiment, photoAnalysis, rankingSnapshot } =
-    input;
+  const {
+    business,
+    competitors,
+    websiteAudit,
+    reviewSentiment,
+    photoAnalysis,
+    rankingSnapshot,
+    competitorStrengths,
+  } = input;
   const comp = competitorAverages(competitors);
   let gbp = 100;
   if (!business.website) gbp -= 25;
@@ -1376,24 +1458,39 @@ function computeScores(input: BuildInput): AuditScores {
   if (comp.reviews > (business.reviewCount ?? 0) * 2) reviews -= 20;
   if ((business.rating ?? 5) < comp.rating) reviews -= 8;
 
-  let websiteConversion = websiteAudit.available ? 100 : 25;
-  if (!websiteAudit.https) websiteConversion -= 15;
-  if (!websiteAudit.hasPrimaryCta) websiteConversion -= 25;
-  if (!websiteAudit.hasPhoneLink) websiteConversion -= 18;
-  if (!websiteAudit.hasContactForm) websiteConversion -= 18;
-  if (!websiteAudit.hasQuoteCta) websiteConversion -= 12;
+  const conversionPenalties: number[] = [];
+  if (!websiteAudit.https) conversionPenalties.push(15);
+  if (!websiteAudit.hasPrimaryCta) conversionPenalties.push(25);
+  if (!websiteAudit.hasPhoneLink) conversionPenalties.push(18);
+  if (!websiteAudit.hasContactForm) conversionPenalties.push(18);
+  if (!websiteAudit.hasQuoteCta) conversionPenalties.push(12);
   if (websiteAudit.pageSpeedMobileScore !== null && websiteAudit.pageSpeedMobileScore < 55) {
-    websiteConversion -= 15;
+    conversionPenalties.push(15);
   }
-  if (!websiteAudit.mobileFriendly) websiteConversion -= 12;
-  if (websiteAudit.available && !websiteAudit.hasWebChat) websiteConversion -= 8;
+  if (!websiteAudit.mobileFriendly) conversionPenalties.push(12);
+  if (websiteAudit.available && !websiteAudit.hasWebChat) conversionPenalties.push(8);
 
-  let websiteTrust = websiteAudit.available ? 100 : 25;
-  if (!websiteAudit.hasTestimonials) websiteTrust -= 25;
-  if (!websiteAudit.hasProjectPhotos) websiteTrust -= 20;
-  if (!websiteAudit.hasClientPhotos) websiteTrust -= 15;
-  if (!websiteAudit.hasBeforeAfter) websiteTrust -= 10;
-  if (websiteAudit.blurryImageSignals > 0) websiteTrust -= 12;
+  let websiteConversion = websiteAudit.available
+    ? scoreAfterPenalties(100, conversionPenalties, 68)
+    : scoreAfterPenalties(32, conversionPenalties, 22);
+
+  const trustPenalties: number[] = [];
+  if (!websiteAudit.hasTestimonials) trustPenalties.push(25);
+  if (!websiteAudit.hasProjectPhotos) trustPenalties.push(20);
+  if (!websiteAudit.hasClientPhotos) trustPenalties.push(15);
+  if (!websiteAudit.hasBeforeAfter) trustPenalties.push(10);
+  if (websiteAudit.blurryImageSignals > 0) trustPenalties.push(12);
+  if (
+    websiteAudit.available &&
+    (websiteAudit.hasPhoneLink || websiteAudit.hasPhoneText) &&
+    !websiteAudit.hasTextEnabledPhone
+  ) {
+    trustPenalties.push(10);
+  }
+
+  let websiteTrust = websiteAudit.available
+    ? scoreAfterPenalties(100, trustPenalties, 72)
+    : scoreAfterPenalties(30, trustPenalties, 22);
 
   let localSeo = 100;
   if (!websiteAudit.hasLocalBusinessSchema) localSeo -= 20;
@@ -1430,11 +1527,52 @@ function computeScores(input: BuildInput): AuditScores {
   if (comp.reviews > (business.reviewCount ?? 0) * 2) competitorGap -= 25;
   if (comp.rating > (business.rating ?? 0) + 0.2) competitorGap -= 15;
 
-  let trackingAds = 100;
-  if (!websiteAudit.hasGoogleAnalytics) trackingAds -= 25;
-  if (!websiteAudit.hasGoogleTagManager) trackingAds -= 20;
-  if (!websiteAudit.hasGoogleAdsTag) trackingAds -= 20;
-  if (!websiteAudit.hasMetaPixel) trackingAds -= 10;
+  /** When reviewers praise competitors on a theme far more than you, we surface a Medium finding — score must reflect that gap (never a perfect 100). */
+  if (competitorStrengths.topGap) {
+    const g = competitorStrengths.topGap;
+    let penalty = 0;
+    if (g.ownMentions === 0) {
+      if (g.competitorMentions >= 10) penalty = 38;
+      else if (g.competitorMentions >= 6) penalty = 32;
+      else if (g.competitorMentions >= 3) penalty = 26;
+      else penalty = 20;
+    } else {
+      const ratio = g.competitorMentions / Math.max(1, g.ownMentions);
+      if (ratio >= 6) penalty = 34;
+      else if (ratio >= 4) penalty = 28;
+      else if (ratio >= 2.5) penalty = 22;
+      else penalty = 15;
+    }
+    competitorGap -= penalty;
+  }
+
+  const googleMeasurementCore =
+    websiteAudit.hasGoogleAnalytics || websiteAudit.hasGoogleTagManager;
+  const nonGooglePixels =
+    websiteAudit.hasMetaPixel ||
+    websiteAudit.hasTikTokPixel ||
+    websiteAudit.hasBingUet ||
+    websiteAudit.hasLinkedInInsight ||
+    websiteAudit.hasPinterestPixel ||
+    websiteAudit.hasTwitterPixel ||
+    websiteAudit.hasSnapchatPixel;
+
+  const trackingPenalties: number[] = [];
+  if (!googleMeasurementCore) {
+    trackingPenalties.push(
+      websiteAudit.hasGoogleAdsTag || nonGooglePixels ? 30 : 42
+    );
+  } else if (websiteAudit.hasGoogleTagManager && !websiteAudit.hasGoogleAnalytics) {
+    trackingPenalties.push(10);
+  }
+  if (!websiteAudit.hasGoogleAdsTag) trackingPenalties.push(18);
+  if (!websiteAudit.hasMetaPixel) trackingPenalties.push(9);
+  if (!websiteAudit.hasTikTokPixel) trackingPenalties.push(3);
+  if (!websiteAudit.hasBingUet) trackingPenalties.push(3);
+
+  let trackingAds = scoreAfterPenalties(100, trackingPenalties, 54);
+  if (!googleMeasurementCore && nonGooglePixels) trackingAds += 20;
+  if (!googleMeasurementCore && !nonGooglePixels && websiteAudit.hasGoogleAdsTag) trackingAds += 8;
 
   let photos = 100;
   if (photoAnalysis.hasLowQuantity) photos -= 40;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import {
   AlertTriangle,
   BadgeCheck,
@@ -15,6 +15,7 @@ import {
   Target,
 } from "lucide-react";
 import ContactChannelStrip from "@/components/crm/ContactChannelStrip";
+import RevenueLeakFixLeaksCta from "@/components/revenue-leak-audit/RevenueLeakFixLeaksCta";
 import Button from "@/components/ui/Button";
 import { EMPTY_PROSPECT_SOCIAL_URLS } from "@/lib/crm/prospect-enrichment-types";
 import type {
@@ -74,6 +75,112 @@ type AnalyzeResponse = {
 
 function formatMoney(value: number): string {
   return `$${Math.round(value).toLocaleString()}`;
+}
+
+/** User-facing timestamp for when this audit snapshot was generated. */
+function formatAuditLastUpdated(iso: string | undefined): string | null {
+  if (!iso?.trim()) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(d);
+}
+
+function formatLeadJobDisplay(value: number): string {
+  return value.toFixed(1);
+}
+
+function easeOutCubic(t: number): number {
+  return 1 - (1 - t) ** 3;
+}
+
+function useMoneySummaryCountUp(
+  key: string,
+  sectionRef: RefObject<HTMLElement | null>,
+  totalIssues: number,
+  monthlyLow: number,
+  monthlyHigh: number,
+  annualLow: number,
+  annualHigh: number,
+  leadsLow: number,
+  leadsHigh: number,
+  jobsLow: number,
+  jobsHigh: number
+) {
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    setProgress(0);
+  }, [key]);
+
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+
+    let started = false;
+    let raf = 0;
+
+    const run = () => {
+      if (started) return;
+      started = true;
+      const begin = performance.now();
+      const duration = 1300;
+      const tick = (now: number) => {
+        const t = Math.min(1, (now - begin) / duration);
+        setProgress(easeOutCubic(t));
+        if (t < 1) raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+    };
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) run();
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -8% 0px" }
+    );
+    observer.observe(el);
+
+    const rect = el.getBoundingClientRect();
+    const vh = window.innerHeight || 1;
+    if (rect.top < vh * 0.92 && rect.bottom > vh * 0.06) {
+      run();
+    }
+
+    return () => {
+      cancelAnimationFrame(raf);
+      observer.disconnect();
+    };
+  }, [
+    key,
+    sectionRef,
+    totalIssues,
+    monthlyLow,
+    monthlyHigh,
+    annualLow,
+    annualHigh,
+    leadsLow,
+    leadsHigh,
+    jobsLow,
+    jobsHigh,
+  ]);
+
+  const p = progress >= 1 ? 1 : progress;
+  const lerp = (a: number, b: number) => a + (b - a) * p;
+
+  return {
+    issues: p >= 1 ? totalIssues : Math.max(0, Math.round(lerp(0, totalIssues))),
+    monthlyLow: p >= 1 ? monthlyLow : Math.round(lerp(0, monthlyLow)),
+    monthlyHigh: p >= 1 ? monthlyHigh : Math.round(lerp(0, monthlyHigh)),
+    annualLow: p >= 1 ? annualLow : Math.round(lerp(0, annualLow)),
+    annualHigh: p >= 1 ? annualHigh : Math.round(lerp(0, annualHigh)),
+    leadsLow: p >= 1 ? leadsLow : lerp(0, leadsLow),
+    leadsHigh: p >= 1 ? leadsHigh : lerp(0, leadsHigh),
+    jobsLow: p >= 1 ? jobsLow : lerp(0, jobsLow),
+    jobsHigh: p >= 1 ? jobsHigh : lerp(0, jobsHigh),
+  };
 }
 
 function percent(value: number): string {
@@ -145,6 +252,67 @@ function ScoreGauge({ score, grade, size = 148 }: { score: number; grade: AuditG
       >
         {grade}
       </span>
+    </div>
+  );
+}
+
+function AuditPdfIconButton({ audit }: { audit: RevenueLeakAudit }) {
+  const [downloading, setDownloading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function download() {
+    setDownloading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/revenue-leak-audit/pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ audit }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(data?.error ?? "Could not generate PDF.");
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${audit.business.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-revenue-leak-audit.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not generate PDF.");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  return (
+    <div className="flex w-full flex-col items-center gap-1 sm:max-w-none lg:items-end">
+      <button
+        type="button"
+        onClick={download}
+        disabled={downloading}
+        title="Download PDF report"
+        aria-label="Download PDF report"
+        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border bg-white text-accent shadow-sm transition hover:border-accent/35 hover:bg-accent/5 disabled:cursor-not-allowed disabled:opacity-55"
+      >
+        {downloading ? (
+          <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+        ) : (
+          <Download className="h-5 w-5" aria-hidden />
+        )}
+      </button>
+      {error ? (
+        <p
+          className="max-w-[240px] text-center text-[10px] font-semibold leading-snug text-red-600 lg:text-right"
+          role="alert"
+        >
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -509,7 +677,10 @@ function GoogleBusinessProfileSummary({ audit }: { audit: RevenueLeakAudit }) {
             />
           </div>
         </div>
-        <ScoreGauge score={audit.scores.overall} grade={audit.scores.grade} />
+        <div className="flex shrink-0 flex-col items-center gap-4 self-start lg:items-end">
+          <ScoreGauge score={audit.scores.overall} grade={audit.scores.grade} />
+          <AuditPdfIconButton audit={audit} />
+        </div>
       </div>
     </section>
   );
@@ -517,17 +688,94 @@ function GoogleBusinessProfileSummary({ audit }: { audit: RevenueLeakAudit }) {
 
 function FoundIssuesMoneySummary({ audit }: { audit: RevenueLeakAudit }) {
   const m = audit.moneySummary;
+  const asm = audit.assumptions;
   const leakLowPct = Math.round(m.combinedLeakRateLow * 100);
   const leakHighPct = Math.round(m.combinedLeakRateHigh * 100);
+  const sectionRef = useRef<HTMLElement>(null);
+  const animKey = useMemo(
+    () =>
+      [
+        audit.business.placeId,
+        m.totalIssues,
+        m.estimatedMonthlyCostLow,
+        m.estimatedMonthlyCostHigh,
+        m.estimatedAnnualCostLow,
+        m.estimatedAnnualCostHigh,
+        m.lostLeadsPerMonthLow,
+        m.lostLeadsPerMonthHigh,
+        m.lostJobsPerMonthLow,
+        m.lostJobsPerMonthHigh,
+        m.addressableMonthlyRevenue,
+        m.combinedLeakRateLow,
+        m.combinedLeakRateHigh,
+        asm.averageJobValue,
+        asm.closeRate,
+        asm.estimatedMonthlyLeads,
+      ].join("|"),
+    [
+      audit.business.placeId,
+      m.totalIssues,
+      m.estimatedMonthlyCostLow,
+      m.estimatedMonthlyCostHigh,
+      m.estimatedAnnualCostLow,
+      m.estimatedAnnualCostHigh,
+      m.lostLeadsPerMonthLow,
+      m.lostLeadsPerMonthHigh,
+      m.lostJobsPerMonthLow,
+      m.lostJobsPerMonthHigh,
+      m.addressableMonthlyRevenue,
+      m.combinedLeakRateLow,
+      m.combinedLeakRateHigh,
+      asm.averageJobValue,
+      asm.closeRate,
+      asm.estimatedMonthlyLeads,
+    ]
+  );
+  const a = useMoneySummaryCountUp(
+    animKey,
+    sectionRef,
+    m.totalIssues,
+    m.estimatedMonthlyCostLow,
+    m.estimatedMonthlyCostHigh,
+    m.estimatedAnnualCostLow,
+    m.estimatedAnnualCostHigh,
+    m.lostLeadsPerMonthLow,
+    m.lostLeadsPerMonthHigh,
+    m.lostJobsPerMonthLow,
+    m.lostJobsPerMonthHigh
+  );
+  const leakWord = a.issues === 1 ? "revenue leak" : "revenue leaks";
+  const closePct = Math.round(asm.closeRate * 100);
+  const summaryPill =
+    "rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/95";
+  const notePill =
+    "rounded-full border border-white/20 bg-white/5 px-3 py-1.5 text-[11px] font-medium leading-snug text-white/80";
   return (
-    <section className="rounded-[2rem] border border-accent/15 bg-gradient-to-br from-accent to-accent-hover p-6 text-white shadow-soft-lg sm:p-8">
+    <section
+      ref={sectionRef}
+      className="rounded-[2rem] border border-accent/15 bg-gradient-to-br from-accent to-accent-hover p-6 text-white shadow-soft-lg sm:p-8"
+    >
       <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/70">Found issues & estimated cost</p>
-          <h2 className="mt-3 text-4xl font-black tracking-tight">
-            We found {m.totalIssues} revenue leaks
+          <h2 className="text-4xl font-black tracking-tight tabular-nums">
+            {a.issues} {leakWord} are costing you {formatMoney(a.monthlyLow)}–{formatMoney(a.monthlyHigh)}
           </h2>
-          <p className="mt-4 max-w-3xl text-sm leading-6 text-white/80">{m.assumptionsExplanation}</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className={`${summaryPill} tabular-nums`}>Avg job {formatMoney(asm.averageJobValue)}</span>
+            <span className={`${summaryPill} tabular-nums`}>{closePct}% close rate</span>
+            <span className={`${summaryPill} tabular-nums`}>{asm.estimatedMonthlyLeads} leads / mo</span>
+            <span className={`${summaryPill} tabular-nums`}>{formatMoney(m.addressableMonthlyRevenue)} addressable / mo</span>
+            <span className={`${summaryPill} tabular-nums`}>
+              ~{leakLowPct}–{leakHighPct}% of leads at risk
+            </span>
+            <span className={`${summaryPill} tabular-nums`}>
+              ~{formatLeadJobDisplay(a.leadsLow)}–{formatLeadJobDisplay(a.leadsHigh)} leads slipping / mo
+            </span>
+            <span className={`${summaryPill} tabular-nums`}>
+              ~{formatLeadJobDisplay(a.jobsLow)}–{formatLeadJobDisplay(a.jobsHigh)} jobs / mo
+            </span>
+            <span className={notePill}>Blended funnel math (no double-count) · Max 85% of opportunity</span>
+          </div>
           <div className="mt-5 flex flex-wrap gap-2">
             {Object.entries(m.severityCounts).map(([severity, count]) => (
               <span key={severity} className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-bold">
@@ -538,8 +786,8 @@ function FoundIssuesMoneySummary({ audit }: { audit: RevenueLeakAudit }) {
         </div>
         <div className="rounded-3xl bg-white p-6 text-text-primary shadow-soft">
           <p className="text-sm font-bold text-text-secondary">Estimated monthly cost</p>
-          <p className="mt-2 text-3xl font-black">
-            {formatMoney(m.estimatedMonthlyCostLow)}-{formatMoney(m.estimatedMonthlyCostHigh)}
+          <p className="mt-2 text-3xl font-black tabular-nums">
+            {formatMoney(a.monthlyLow)}–{formatMoney(a.monthlyHigh)}
           </p>
           <p className="mt-1 text-xs font-semibold text-text-secondary">
             ~{leakLowPct}%-{leakHighPct}% of {formatMoney(m.addressableMonthlyRevenue)} addressable / mo
@@ -547,20 +795,20 @@ function FoundIssuesMoneySummary({ audit }: { audit: RevenueLeakAudit }) {
           <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
             <div className="rounded-2xl bg-surface/80 px-3 py-2">
               <p className="font-semibold text-text-secondary">Leads lost / mo</p>
-              <p className="mt-0.5 text-base font-black text-text-primary">
-                {m.lostLeadsPerMonthLow}-{m.lostLeadsPerMonthHigh}
+              <p className="mt-0.5 text-base font-black text-text-primary tabular-nums">
+                {formatLeadJobDisplay(a.leadsLow)}–{formatLeadJobDisplay(a.leadsHigh)}
               </p>
             </div>
             <div className="rounded-2xl bg-surface/80 px-3 py-2">
               <p className="font-semibold text-text-secondary">Jobs lost / mo</p>
-              <p className="mt-0.5 text-base font-black text-text-primary">
-                {m.lostJobsPerMonthLow}-{m.lostJobsPerMonthHigh}
+              <p className="mt-0.5 text-base font-black text-text-primary tabular-nums">
+                {formatLeadJobDisplay(a.jobsLow)}–{formatLeadJobDisplay(a.jobsHigh)}
               </p>
             </div>
           </div>
           <p className="mt-4 text-sm font-bold text-text-secondary">Annualized risk</p>
-          <p className="mt-1 text-xl font-black">
-            {formatMoney(m.estimatedAnnualCostLow)}-{formatMoney(m.estimatedAnnualCostHigh)}
+          <p className="mt-1 text-xl font-black tabular-nums">
+            {formatMoney(a.annualLow)}–{formatMoney(a.annualHigh)}
           </p>
         </div>
       </div>
@@ -969,7 +1217,7 @@ function LocalRankingSnapshotAside({ audit }: { audit: RevenueLeakAudit }) {
 }
 
 function LowestReviewAnalysis({ audit }: { audit: RevenueLeakAudit }) {
-  const lowestReviews = selectLowestRatedReviews(audit.business.reviews, 5);
+  const lowestReviews = selectLowestRatedReviews(audit.business.reviews, 4);
   const combined = lowestReviews
     .map((review) => review.text ?? "")
     .join(" ")
@@ -988,7 +1236,7 @@ function LowestReviewAnalysis({ audit }: { audit: RevenueLeakAudit }) {
             Lowest review analysis
           </p>
           <h2 className="mt-2 text-3xl font-black tracking-tight text-text-primary">
-            Top 5 lowest reviews
+            Top 4 lowest reviews
           </h2>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-text-secondary">
             These reviews show the complaints most likely to reduce trust when buyers compare you against competitors.
@@ -1053,55 +1301,6 @@ function LowestReviewAnalysis({ audit }: { audit: RevenueLeakAudit }) {
   );
 }
 
-function DownloadPdfBanner({ audit }: { audit: RevenueLeakAudit }) {
-  const [downloading, setDownloading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  async function download() {
-    setDownloading(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/revenue-leak-audit/pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ audit }),
-      });
-      if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(data?.error ?? "Could not generate PDF.");
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${audit.business.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-revenue-leak-audit.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not generate PDF.");
-    } finally {
-      setDownloading(false);
-    }
-  }
-  return (
-    <section className="rounded-[2rem] border border-accent/20 bg-white p-6 shadow-soft-lg sm:p-8">
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Final export step</p>
-          <h2 className="mt-2 text-2xl font-black text-text-primary">Ready to share this audit?</h2>
-          <p className="mt-2 text-sm text-text-secondary">The PDF is generated only when you click this button, after reviewing the interactive report.</p>
-          {error ? <p className="mt-2 text-sm font-semibold text-red-600">{error}</p> : null}
-        </div>
-        <Button onClick={download} disabled={downloading} size="lg">
-          {downloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-          Download PDF Report
-        </Button>
-      </div>
-    </section>
-  );
-}
-
 function InteractiveReport({
   audit,
   onRestart,
@@ -1111,9 +1310,18 @@ function InteractiveReport({
   onRestart: () => void;
   googleMapsApiKey?: string | null;
 }) {
+  const lastUpdated = formatAuditLastUpdated(audit.createdAt);
   return (
     <section className="px-4 py-12 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-6">
+        {lastUpdated ? (
+          <p
+            className="text-xs font-semibold tracking-wide text-text-secondary sm:text-right"
+            title={audit.createdAt}
+          >
+            Last updated {lastUpdated}
+          </p>
+        ) : null}
         <GoogleBusinessProfileSummary audit={audit} />
         <BrandSummary audit={audit} />
         <FoundIssuesMoneySummary audit={audit} />
@@ -1149,7 +1357,7 @@ function InteractiveReport({
             ))}
           </div>
         </section>
-        <DownloadPdfBanner audit={audit} />
+        <RevenueLeakFixLeaksCta audit={audit} />
         <div className="flex justify-center">
           <button type="button" onClick={onRestart} className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-5 py-3 text-sm font-bold text-text-primary shadow-sm hover:border-accent/30">
             <RotateCcw className="h-4 w-4" />

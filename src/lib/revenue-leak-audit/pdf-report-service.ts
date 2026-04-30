@@ -481,6 +481,21 @@ function drawCover(ctx: Ctx, audit: RevenueLeakAudit): void {
     color: WHITE,
   });
 
+  if (audit.createdAt?.trim()) {
+    const lu = new Date(audit.createdAt);
+    if (!Number.isNaN(lu.getTime())) {
+      const luText = `Last updated ${lu.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}`;
+      const luSan = sanitize(luText);
+      ctx.page.drawText(luSan, {
+        x: PAGE_W - MARGIN - ctx.font.widthOfTextAtSize(luSan, 7.5),
+        y: heroTop - 52,
+        size: 7.5,
+        font: ctx.font,
+        color: rgb(0.88, 0.92, 0.98),
+      });
+    }
+  }
+
   // Business name — wrap to two lines if needed
   const nameLines = wrapText(audit.business.name, ctx.bold, 26, CONTENT_W - 200);
   let ny = heroTop - 70;
@@ -1365,7 +1380,7 @@ function drawLowestReviews(ctx: Ctx, audit: RevenueLeakAudit): void {
   newPage(ctx);
   sectionHeading(ctx, "Reviews & reputation", "Lowest review analysis", {
     description:
-      "Reviews ordered by lowest star rating in the public Google sample (max 5). Use these to spot recurring objections and coach the team toward fixes. Homepage review visibility affects conversion on your own site.",
+      "Reviews ordered by lowest star rating in the public Google sample (up to 4 shown; Google may return at most five per place in this snapshot). Use these to spot recurring objections and coach the team toward fixes. Homepage review visibility affects conversion on your own site.",
   });
 
   const business = audit.business;
@@ -1404,7 +1419,7 @@ function drawLowestReviews(ctx: Ctx, audit: RevenueLeakAudit): void {
     }
   }
 
-  const reviews = selectLowestRatedReviews(audit.business.reviews, 5);
+  const reviews = selectLowestRatedReviews(audit.business.reviews, 4);
   if (reviews.length === 0) {
     ensure(ctx, 60);
     card(ctx, MARGIN, ctx.y, CONTENT_W, 50, SURFACE_LIGHT, BORDER_SOFT);

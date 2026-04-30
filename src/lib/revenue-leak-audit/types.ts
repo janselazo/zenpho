@@ -201,6 +201,8 @@ export type WebsiteAudit = {
   hasViewport: boolean;
   hasPhoneLink: boolean;
   hasPhoneText: boolean;
+  /** SMS / WhatsApp / click-to-text style paths detected in homepage HTML. */
+  hasTextEnabledPhone: boolean;
   hasPrimaryCta: boolean;
   hasContactForm: boolean;
   hasQuoteCta: boolean;
@@ -217,6 +219,18 @@ export type WebsiteAudit = {
   hasGoogleTagManager: boolean;
   hasGoogleAdsTag: boolean;
   hasMetaPixel: boolean;
+  /** TikTok for Business / TikTok Pixel */
+  hasTikTokPixel: boolean;
+  /** Microsoft Advertising (Bing) Universal Event Tracking */
+  hasBingUet: boolean;
+  /** LinkedIn Insight Tag */
+  hasLinkedInInsight: boolean;
+  /** Pinterest base code / tag */
+  hasPinterestPixel: boolean;
+  /** X (Twitter) / X Ads pixel */
+  hasTwitterPixel: boolean;
+  /** Snapchat Pixel */
+  hasSnapchatPixel: boolean;
   hasWebChat: boolean;
   webChatProvider: string | null;
   socialLinks: {
@@ -354,6 +368,7 @@ export type RevenueLeakAudit = {
   actionPlan: ActionPlanItem[];
   recommendedNextStep: string;
   warnings: string[];
+  /** ISO-8601 timestamp when this audit snapshot was generated; shown as "Last updated" in the UI and PDF. */
   createdAt: string;
 };
 

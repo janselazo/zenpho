@@ -51,7 +51,7 @@ export function parsePlaceReviewRating(value: unknown): number | null {
 }
 
 /** Prefer the lowest numeric ratings; when Google only returns high-star samples, break ties with complaint-like language. */
-export function selectLowestRatedReviews(reviews: BusinessReview[], limit = 5): BusinessReview[] {
+export function selectLowestRatedReviews(reviews: BusinessReview[], limit = 4): BusinessReview[] {
   const eligible = reviews.filter((r) => Boolean(r.text?.trim()) || r.rating !== null);
 
   const rated = eligible.filter((r) => typeof r.rating === "number" && !Number.isNaN(r.rating));

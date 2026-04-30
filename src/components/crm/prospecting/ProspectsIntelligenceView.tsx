@@ -774,10 +774,13 @@ function IntelHighlightsCarousel({
   glanceFacts,
   /** Google listing heuristic chips; omit for URL reports. `active` = gap (amber); inactive = pass copy + green tint. */
   placeListingSignals,
+  /** Hide the card's "Highlights" label when a parent `ReportSection` already titles the block. */
+  omitOuterTitle = false,
 }: {
   report: MarketIntelReport;
   glanceFacts: IntelGlanceFact[];
   placeListingSignals?: IntelHighlightSignalTag[];
+  omitOuterTitle?: boolean;
 }) {
   const [index, setIndex] = useState(0);
   const n = HIGHLIGHT_SLIDES.length;
@@ -786,15 +789,25 @@ function IntelHighlightsCarousel({
 
   return (
     <div className="flex h-full min-h-0 flex-col rounded-xl border border-border/80 p-4 dark:border-zinc-700/60">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/60 dark:text-zinc-500">
-          Highlights
-        </p>
-        <span className="text-[11px] tabular-nums text-text-secondary/70 dark:text-zinc-500">
-          {index + 1} / {n}
-        </span>
-      </div>
-      <div className="mt-3 rounded-lg border border-border/50 bg-surface/25 p-3 dark:border-zinc-700/40 dark:bg-zinc-900/35">
+      {omitOuterTitle ? (
+        <div className="flex justify-end">
+          <span className="text-[11px] tabular-nums text-text-secondary/70 dark:text-zinc-500">
+            {index + 1} / {n}
+          </span>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary/60 dark:text-zinc-500">
+            Highlights
+          </p>
+          <span className="text-[11px] tabular-nums text-text-secondary/70 dark:text-zinc-500">
+            {index + 1} / {n}
+          </span>
+        </div>
+      )}
+      <div
+        className={`rounded-lg border border-border/50 bg-surface/25 p-3 dark:border-zinc-700/40 dark:bg-zinc-900/35 ${omitOuterTitle ? "mt-2" : "mt-3"}`}
+      >
         {glanceFacts.length > 0 ? (
           <>
             <p className="text-[10px] font-semibold uppercase tracking-wide text-text-secondary/55 dark:text-zinc-500">
@@ -1863,13 +1876,163 @@ function ProspectsIntelligenceViewInner({
                 </div>
               </div>
               <div className="min-w-0 sm:flex sm:flex-col">
-                <IntelHighlightsCarousel
-                  report={activeReport.report}
-                  glanceFacts={intelGlanceFacts}
-                  placeListingSignals={
-                    activeReport.kind === "place" ? intelHighlightSignalTags : undefined
-                  }
-                />
+                <ReportSection step="02" title="Lead" noTopRule className="min-w-0">
+                  <div className="min-w-0">
+                    <div className="rounded-xl border border-border/80 p-4 dark:border-zinc-700/60">
+                      <h3 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
+                        Add as Lead
+                      </h3>
+                      <p className="mt-1 text-xs text-text-secondary dark:text-zinc-500">
+                        Project type is required for CRM Leads. Prefilled from research—you can edit
+                        before saving.
+                      </p>
+                      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-text-secondary">
+                            Name
+                          </label>
+                          <input
+                            value={leadName}
+                            onChange={(e) => setLeadName(e.target.value)}
+                            className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-text-secondary">
+                            Company
+                          </label>
+                          <input
+                            value={leadCompany}
+                            onChange={(e) => setLeadCompany(e.target.value)}
+                            className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                          />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="mb-1 block text-xs font-medium text-text-secondary">
+                            Google business category (from listing)
+                          </label>
+                          <input
+                            value={leadGoogleBusinessCategory}
+                            onChange={(e) => setLeadGoogleBusinessCategory(e.target.value)}
+                            className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                            placeholder="e.g. Beauty Salon"
+                          />
+                          <p className="mt-1 text-[10px] text-text-secondary dark:text-zinc-500">
+                            Filled from Google Places types for local listings; editable before create. Separate from
+                            CRM contact category.
+                          </p>
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-text-secondary">
+                            Email (optional)
+                          </label>
+                          <input
+                            type="email"
+                            value={leadEmail}
+                            onChange={(e) => {
+                              setLeadEmail(e.target.value);
+                              setLeadContactTouched((p) => ({ ...p, email: true }));
+                            }}
+                            className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-text-secondary">
+                            Phone (optional)
+                          </label>
+                          <input
+                            type="tel"
+                            value={leadPhone}
+                            onChange={(e) => setLeadPhone(e.target.value)}
+                            className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-text-secondary">
+                            Facebook (optional)
+                          </label>
+                          <input
+                            type="url"
+                            inputMode="url"
+                            placeholder="https://facebook.com/…"
+                            value={leadFacebook}
+                            onChange={(e) => {
+                              setLeadFacebook(e.target.value);
+                              setLeadContactTouched((p) => ({ ...p, facebook: true }));
+                            }}
+                            className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-text-secondary">
+                            Instagram (optional)
+                          </label>
+                          <input
+                            type="url"
+                            inputMode="url"
+                            placeholder="https://instagram.com/…"
+                            value={leadInstagram}
+                            onChange={(e) => {
+                              setLeadInstagram(e.target.value);
+                              setLeadContactTouched((p) => ({ ...p, instagram: true }));
+                            }}
+                            className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                          />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="mb-1 block text-xs font-medium text-text-secondary">
+                            Project type
+                          </label>
+                          <select
+                            value={projectType}
+                            onChange={(e) => setProjectType(e.target.value)}
+                            className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                          >
+                            {fieldOptions.leadProjectTypes.map((opt) => (
+                              <option key={opt} value={opt}>
+                                {opt}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="mb-1 block text-xs font-medium text-text-secondary">
+                            Notes
+                          </label>
+                          <p className="mb-1.5 text-[11px] leading-snug text-text-secondary dark:text-zinc-500">
+                            Filled from research—edit before saving. Sections use short
+                            labels; lines use • bullets (not Markdown).
+                          </p>
+                          <textarea
+                            value={leadNotes}
+                            onChange={(e) => setLeadNotes(e.target.value)}
+                            rows={12}
+                            className="min-h-[13rem] w-full resize-y rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-xs leading-relaxed text-zinc-800 shadow-sm placeholder:text-zinc-400 focus:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-400/20 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-500 dark:focus:ring-zinc-500/20"
+                          />
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={leadPending || !leadName.trim()}
+                        onClick={() => void submitLead()}
+                        className="mt-4 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-50"
+                      >
+                        {leadPending ? "Creating…" : "Create Lead"}
+                      </button>
+                      {leadMessage ? (
+                        <p
+                          className={
+                            leadMessage.startsWith("Lead created")
+                              ? "mt-2 text-sm text-emerald-700 dark:text-emerald-400"
+                              : "mt-2 text-sm text-red-600 dark:text-red-400"
+                          }
+                        >
+                          {leadMessage}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                </ReportSection>
               </div>
             </div>
             <div className="mt-6">
@@ -1891,166 +2054,19 @@ function ProspectsIntelligenceViewInner({
 
           <div className="border-t border-border/80 pt-6 dark:border-zinc-800">
             <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
-              <ReportSection step="02" title="Lead" noTopRule className="min-w-0">
-            <div className="min-w-0">
-              <div className="rounded-xl border border-border/80 p-4 dark:border-zinc-700/60">
-                <h3 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
-                  Add as Lead
-                </h3>
-              <p className="mt-1 text-xs text-text-secondary dark:text-zinc-500">
-                Project type is required for CRM Leads. Prefilled from research—you can edit
-                before saving.
-              </p>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-text-secondary">
-                    Name
-                  </label>
-                  <input
-                    value={leadName}
-                    onChange={(e) => setLeadName(e.target.value)}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-text-secondary">
-                    Company
-                  </label>
-                  <input
-                    value={leadCompany}
-                    onChange={(e) => setLeadCompany(e.target.value)}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="mb-1 block text-xs font-medium text-text-secondary">
-                    Google business category (from listing)
-                  </label>
-                  <input
-                    value={leadGoogleBusinessCategory}
-                    onChange={(e) => setLeadGoogleBusinessCategory(e.target.value)}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-                    placeholder="e.g. Beauty Salon"
-                  />
-                  <p className="mt-1 text-[10px] text-text-secondary dark:text-zinc-500">
-                    Filled from Google Places types for local listings; editable before create. Separate from
-                    CRM contact category.
-                  </p>
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-text-secondary">
-                    Email (optional)
-                  </label>
-                  <input
-                    type="email"
-                    value={leadEmail}
-                    onChange={(e) => {
-                      setLeadEmail(e.target.value);
-                      setLeadContactTouched((p) => ({ ...p, email: true }));
-                    }}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-text-secondary">
-                    Phone (optional)
-                  </label>
-                  <input
-                    type="tel"
-                    value={leadPhone}
-                    onChange={(e) => setLeadPhone(e.target.value)}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-text-secondary">
-                    Facebook (optional)
-                  </label>
-                  <input
-                    type="url"
-                    inputMode="url"
-                    placeholder="https://facebook.com/…"
-                    value={leadFacebook}
-                    onChange={(e) => {
-                      setLeadFacebook(e.target.value);
-                      setLeadContactTouched((p) => ({ ...p, facebook: true }));
-                    }}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-text-secondary">
-                    Instagram (optional)
-                  </label>
-                  <input
-                    type="url"
-                    inputMode="url"
-                    placeholder="https://instagram.com/…"
-                    value={leadInstagram}
-                    onChange={(e) => {
-                      setLeadInstagram(e.target.value);
-                      setLeadContactTouched((p) => ({ ...p, instagram: true }));
-                    }}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="mb-1 block text-xs font-medium text-text-secondary">
-                    Project type
-                  </label>
-                  <select
-                    value={projectType}
-                    onChange={(e) => setProjectType(e.target.value)}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-                  >
-                    {fieldOptions.leadProjectTypes.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="mb-1 block text-xs font-medium text-text-secondary">
-                    Notes
-                  </label>
-                  <p className="mb-1.5 text-[11px] leading-snug text-text-secondary dark:text-zinc-500">
-                    Filled from research—edit before saving. Sections use short
-                    labels; lines use • bullets (not Markdown).
-                  </p>
-                  <textarea
-                    value={leadNotes}
-                    onChange={(e) => setLeadNotes(e.target.value)}
-                    rows={12}
-                    className="min-h-[13rem] w-full resize-y rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-xs leading-relaxed text-zinc-800 shadow-sm placeholder:text-zinc-400 focus:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-400/20 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-500 dark:focus:ring-zinc-500/20"
-                  />
-                </div>
-              </div>
-              <button
-                type="button"
-                disabled={leadPending || !leadName.trim()}
-                onClick={() => void submitLead()}
-                className="mt-4 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-50"
-              >
-                {leadPending ? "Creating…" : "Create Lead"}
-              </button>
-              {leadMessage ? (
-                <p
-                  className={
-                    leadMessage.startsWith("Lead created")
-                      ? "mt-2 text-sm text-emerald-700 dark:text-emerald-400"
-                      : "mt-2 text-sm text-red-600 dark:text-red-400"
+              <ReportSection step="03" title="Highlights" noTopRule className="min-w-0">
+                <IntelHighlightsCarousel
+                  omitOuterTitle
+                  report={activeReport.report}
+                  glanceFacts={intelGlanceFacts}
+                  placeListingSignals={
+                    activeReport.kind === "place" ? intelHighlightSignalTags : undefined
                   }
-                >
-                  {leadMessage}
-                </p>
-              ) : null}
-            </div>
-            </div>
-          </ReportSection>
+                />
+              </ReportSection>
 
               <ReportSection
-                step="03"
+                step="04"
                 title="Enrichment tools"
                 noTopRule
                 className="min-w-0 border-t border-border/80 pt-8 dark:border-zinc-800 lg:border-t-0 lg:pt-0"

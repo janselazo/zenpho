@@ -10,9 +10,10 @@ import { MOCK_WEBSITE_AUDIT } from "./mock-data";
 import {
   countImageTags,
   CTA_TERMS,
+  detectHomepageReviewShowcase,
+  detectTextEnabledPhone,
   detectWebChat,
   extractFirstTagText,
-  detectHomepageReviewShowcase,
   extractMeta,
   extractWebsiteSocialLinks,
   hasAny,
@@ -22,6 +23,42 @@ import type { ServiceResult, WebsiteAudit } from "./types";
 
 /** PSI/Lighthouse runs often exceed 60s on slower sites; aborting too early surfaces as a false failure. */
 const PAGESPEED_TIMEOUT_MS = 100_000;
+
+const AUDIT_FETCH_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (compatible; ZenphoRevenueLeakAudit/1.0; +https://zenpho.com)",
+  Accept: "text/html,application/xhtml+xml",
+} as const;
+
+/** Richer headers for sites/CDNs that challenge non-browser clients (false “unavailable” in production). */
+const BROWSERLIKE_FETCH_HEADERS = {
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  "Accept-Language": "en-US,en;q=0.9",
+} as const;
+
+function contentTypeSuggestsHtml(contentType: string): boolean {
+  return /html|xml/i.test(contentType);
+}
+
+/** When `Content-Type` is missing or wrong, still accept obvious HTML after download. */
+function bodyLooksLikeHtml(text: string): boolean {
+  const head = text.slice(0, 12_000).trimStart();
+  return (
+    /<!doctype\s+html\b/i.test(head) ||
+    /<html[\s>]/i.test(head) ||
+    (/<head[\s>]/i.test(head) && /<body[\s>]/i.test(head))
+  );
+}
+
+function shouldRetryStatus(status: number): boolean {
+  return (
+    status === 403 ||
+    status === 429 ||
+    status === 503 ||
+    (status >= 520 && status <= 523)
+  );
+}
 
 function extractIdentityAttributes(html: string): WebsiteAudit["identityAttributes"] {
   if (/\blatino[-\s]?owned\b|\blatina[-\s]?owned\b|\blatinx[-\s]?owned\b|\bhispanic[-\s]?owned\b/i.test(html)) {
@@ -42,48 +79,68 @@ async function fetchHtml(url: string): Promise<{
   status: string;
   warnings: string[];
 }> {
-  try {
-    const res = await fetch(url, {
-      redirect: "follow",
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (compatible; ZenphoRevenueLeakAudit/1.0; +https://zenpho.com)",
-        Accept: "text/html,application/xhtml+xml",
-      },
-    });
-    if (!res.ok) {
-      return {
-        html: null,
-        status: `Website returned ${res.status}.`,
-        warnings: [`Website unavailable or blocked (${res.status}).`],
-      };
-    }
-    const contentType = res.headers.get("content-type") ?? "";
-    if (!/html|xml/i.test(contentType)) {
-      return {
-        html: null,
-        status: "Website did not return HTML.",
+  const headerSets = [AUDIT_FETCH_HEADERS, BROWSERLIKE_FETCH_HEADERS];
+  let lastError: { status: string; warnings: string[] } | null = null;
+
+  for (let attempt = 0; attempt < headerSets.length; attempt++) {
+    try {
+      const res = await fetch(url, {
+        redirect: "follow",
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        headers: headerSets[attempt],
+      });
+      if (!res.ok) {
+        lastError = {
+          status: `Website returned ${res.status}.`,
+          warnings: [`Website unavailable or blocked (${res.status}).`],
+        };
+        if (attempt < headerSets.length - 1 && shouldRetryStatus(res.status)) {
+          continue;
+        }
+        return { html: null, ...lastError };
+      }
+
+      const contentLength = Number(res.headers.get("content-length") ?? NaN);
+      if (Number.isFinite(contentLength) && contentLength > MAX_FETCH_BYTES * 2) {
+        lastError = {
+          status: "Website HTML was too large to safely analyze.",
+          warnings: ["Website HTML exceeded the safe size limit for this audit."],
+        };
+        break;
+      }
+
+      const contentType = res.headers.get("content-type") ?? "";
+      const html = decodeFetchedHtmlBuffer(await res.arrayBuffer());
+      if (!contentTypeSuggestsHtml(contentType) && !bodyLooksLikeHtml(html)) {
+        lastError = {
+          status: "Website did not return HTML.",
+          warnings: ["Website did not return recognizable HTML (unexpected content type)."],
+        };
+        if (attempt < headerSets.length - 1) {
+          continue;
+        }
+        return { html: null, ...lastError };
+      }
+
+      return { html, status: "Website analyzed.", warnings: [] };
+    } catch {
+      lastError = {
+        status: "Website unreachable from the audit server (timeout, TLS, or network).",
         warnings: ["Website unavailable or blocked."],
       };
+      if (attempt < headerSets.length - 1) {
+        continue;
+      }
     }
-    const contentLength = Number(res.headers.get("content-length") ?? NaN);
-    if (Number.isFinite(contentLength) && contentLength > MAX_FETCH_BYTES * 2) {
-      return {
-        html: null,
-        status: "Website HTML was too large to safely analyze.",
-        warnings: ["Website unavailable or blocked."],
-      };
-    }
-    const html = decodeFetchedHtmlBuffer(await res.arrayBuffer());
-    return { html, status: "Website analyzed.", warnings: [] };
-  } catch {
-    return {
-      html: null,
+  }
+
+  return {
+    html: null,
+    ...(lastError ?? {
       status: "Website unavailable or blocked.",
       warnings: ["Website unavailable or blocked."],
-    };
-  }
+    }),
+  };
 }
 
 const LIGHTHOUSE_IMAGE_AUDIT_IDS = [
@@ -254,6 +311,7 @@ export async function auditWebsite(
   const hasViewport = /<meta[^>]+name=["']viewport["']/i.test(html);
   const hasPhoneLink = /href=["']tel:/i.test(html);
   const hasPhoneText = /\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/.test(html);
+  const hasTextEnabledPhone = detectTextEnabledPhone(html);
   const hasPrimaryCta = hasAny(html, CTA_TERMS);
   const hasContactForm = /<form[\s>]/i.test(html);
   const hasQuoteCta = /quote|estimate|pricing|consultation/i.test(lower);
@@ -264,9 +322,35 @@ export async function auditWebsite(
   const hasLocalBusinessSchema =
     /application\/ld\+json/i.test(html) && /LocalBusiness|Organization|Service/i.test(html);
   const hasGoogleTagManager = /googletagmanager\.com\/gtm\.js|GTM-[A-Z0-9]+/i.test(html);
-  const hasGoogleAnalytics = /gtag\(|google-analytics\.com|G-[A-Z0-9]+/i.test(html);
+  const hasGoogleAnalytics =
+    /gtag\s*\(\s*["']config["']\s*,\s*["']G-[A-Z0-9]+/i.test(html) ||
+    /googletagmanager\.com\/gtag\/js/i.test(html) ||
+    /google-analytics\.com\/g\/collect/i.test(html) ||
+    /google-analytics\.com\/analytics\.js/i.test(html) ||
+    /UA-\d{4,10}-\d{1,4}\b/i.test(html) ||
+    /\bG-[A-Z0-9]{6,12}\b/i.test(html);
   const hasGoogleAdsTag = /AW-\d+|googleadservices\.com|conversion_async/i.test(html);
-  const hasMetaPixel = /fbq\(|connect\.facebook\.net\/.*fbevents/i.test(html);
+  const hasMetaPixel =
+    /fbq\s*\(|connect\.facebook\.net\/[^"']*fbevents/i.test(html) ||
+    /facebook\.net\/tr\?/i.test(html);
+  const hasTikTokPixel =
+    /analytics\.tiktok\.com/i.test(html) ||
+    /ttq\.(?:load|page|track|identify)/i.test(html) ||
+    /TiktokAnalyticsObject/i.test(html);
+  const hasBingUet =
+    /bat\.bing\.com/i.test(html) ||
+    /\buetq\b/i.test(html) ||
+    /bing\.com\/bat\.js/i.test(html);
+  const hasLinkedInInsight =
+    /snap\.licdn\.com\/li\.lms-analytics/i.test(html) ||
+    /linkedin\.com\/px/i.test(html) ||
+    /_linkedin_partner_id/i.test(html);
+  const hasPinterestPixel = /pintrk\s*\(|ct\.pinterest\.com/i.test(html);
+  const hasTwitterPixel =
+    /static\.ads-twitter\.com\/uwt\.js/i.test(html) ||
+    /\btwq\s*\(/i.test(html) ||
+    /ads-twitter\.com/i.test(html);
+  const hasSnapchatPixel = /sc-static\.net\/scevent/i.test(html) || /\bsnaptr\s*\(/i.test(html);
   const webChat = detectWebChat(html);
   const socialLinks = extractWebsiteSocialLinks(html);
   const contactHints = extractPublicContactHints(html);
@@ -296,6 +380,7 @@ export async function auditWebsite(
       hasViewport,
       hasPhoneLink,
       hasPhoneText,
+      hasTextEnabledPhone,
       hasPrimaryCta,
       hasContactForm,
       hasQuoteCta,
@@ -311,6 +396,12 @@ export async function auditWebsite(
       hasGoogleTagManager,
       hasGoogleAdsTag,
       hasMetaPixel,
+      hasTikTokPixel,
+      hasBingUet,
+      hasLinkedInInsight,
+      hasPinterestPixel,
+      hasTwitterPixel,
+      hasSnapchatPixel,
       hasWebChat: webChat.detected,
       webChatProvider: webChat.provider,
       socialLinks,

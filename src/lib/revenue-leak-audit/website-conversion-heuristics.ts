@@ -250,6 +250,40 @@ export function detectWebChat(html: string): WebChatDetection {
   return { detected: false, provider: null };
 }
 
+/**
+ * SMS / mobile-text contact paths (native `sms:` links, common business-texting widgets, WhatsApp, or explicit copy).
+ */
+export function detectTextEnabledPhone(html: string): boolean {
+  if (/href\s*=\s*["']sms:/i.test(html) || /href\s*=\s*["']smsto:/i.test(html)) return true;
+  if (/href\s*=\s*["']imessage:/i.test(html)) return true;
+  if (/href\s*=\s*["']https?:\/\/wa\.me\//i.test(html)) return true;
+  if (/href\s*=\s*["']https?:\/\/api\.whatsapp\.com\/send/i.test(html)) return true;
+  if (/href\s*=\s*["']https?:\/\/web\.whatsapp\.com\/send/i.test(html)) return true;
+
+  const lower = html.toLowerCase();
+  if (
+    /\btextus\b|\.textus\.|gubagoo|kenect\.|podiumassets|assets\.podium|zipwhip|sleeknote[^\n]{0,80}sms|click\s*to\s*text\b|txt-?2-?join|join\.txt|birdeye[^\n]{0,40}\/sms/i.test(
+      lower
+    )
+  ) {
+    return true;
+  }
+
+  if (
+    /\b(?:text|sms)\s+us\b/i.test(html) ||
+    /\bsend\s+(?:us\s+)?a\s+text\b/i.test(html) ||
+    /\btext\s+(?:the\s+)?(?:office|team|practice)\b/i.test(html) ||
+    /\bclick\s+to\s+text\b/i.test(html) ||
+    /\btext\s+for\s+(?:a\s+)?(?:appointment|appt|quote|estimate)\b/i.test(html)
+  ) {
+    return true;
+  }
+
+  if (/\bdata-sms-link\b/i.test(html) || /\bdata-action\s*=\s*["']sms:/i.test(html)) return true;
+
+  return false;
+}
+
 export const TRUST_TERMS = [
   /testimonial/i,
   /reviews?/i,
