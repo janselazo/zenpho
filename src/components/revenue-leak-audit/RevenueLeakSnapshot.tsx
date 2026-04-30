@@ -213,10 +213,7 @@ function SnapshotIssuesWheelPicker({ findings }: { findings: AuditFinding[] }) {
   const viewportCenterInContent = scrollTop + viewH / 2;
 
   return (
-    <div className="mt-8">
-      <p className="mb-2 text-center text-[11px] font-medium text-text-secondary sm:text-xs">
-        Scroll to browse — top items are highest impact.
-      </p>
+    <div className="mt-4">
       <div
         className="relative overflow-hidden rounded-2xl border border-border [perspective:900px] [perspective-origin:center_center]"
         style={{
