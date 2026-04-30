@@ -19,6 +19,7 @@ import {
   LayoutDashboard,
   LogOut,
   MessageSquare,
+  SearchCheck,
   Settings,
   Timer,
   Users,
@@ -38,6 +39,7 @@ const opportunitiesNav: Array<{
   label: string;
   icon: LucideIcon;
 }> = [
+  { href: "/audit", label: "Audit", icon: SearchCheck },
   { href: "/leads", label: "Leads", icon: UsersRound },
   { href: "/calendar", label: "Appointments", icon: Calendar },
   { href: "/conversations", label: "Conversations", icon: MessageSquare },

@@ -6,6 +6,7 @@ const AUTH_PATHS = ["/login", "/register", "/forgot-password"];
 
 const AGENCY_APP_PREFIXES = [
   "/dashboard",
+  "/audit",
   "/leads",
   "/deals",
   "/clients",
