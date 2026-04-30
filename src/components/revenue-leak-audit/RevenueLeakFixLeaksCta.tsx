@@ -109,9 +109,7 @@ export default function RevenueLeakFixLeaksCta({ audit }: Props) {
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-text-secondary">
               Share your contact details and we&apos;ll follow up to prioritize fixes, plug the biggest leaks first,
-              and line up implementation. You&apos;ll see the lead in your CRM under{" "}
-              <span className="font-semibold text-text-primary">Leads</span> with source{" "}
-              <span className="font-semibold text-text-primary">Revenue Leak Audit</span>.
+              and line up implementation.
             </p>
           </div>
           <Button type="button" size="lg" onClick={openFresh} className="shrink-0">

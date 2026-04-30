@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   ChevronDown,
   Download,
-  Globe,
   Loader2,
   MapPin,
   RotateCcw,
@@ -34,6 +33,7 @@ import {
 } from "@/lib/revenue-leak-audit/review-selection";
 import {
   buildCategoryMarkerElement,
+  CLASSIC_MARKER_PIN_LAYOUT,
   compositeCategoryMarkerDataUrl,
   resolveCategoryMarkerStyle,
 } from "@/lib/revenue-leak-audit/map-marker-style";
@@ -50,6 +50,9 @@ const progressSteps = [
   "Estimating revenue leaks",
   "Preparing interactive report",
 ];
+
+/** Do not auto-advance past this index while waiting on `/analyze` — the API often runs 1–3+ minutes. */
+const PROGRESS_AUTOSTEP_CAP = Math.max(0, progressSteps.length - 2);
 
 type Stage = "search" | "analyzing" | "report";
 
@@ -97,6 +100,9 @@ function easeOutCubic(t: number): number {
   return 1 - (1 - t) ** 3;
 }
 
+/** Count-up duration when the money summary scrolls into view — longer so values read as “growing” rather than snapping. */
+const MONEY_SUMMARY_COUNT_UP_MS = 2800;
+
 function useMoneySummaryCountUp(
   key: string,
   sectionRef: RefObject<HTMLElement | null>,
@@ -127,7 +133,7 @@ function useMoneySummaryCountUp(
       if (started) return;
       started = true;
       const begin = performance.now();
-      const duration = 1300;
+      const duration = MONEY_SUMMARY_COUNT_UP_MS;
       const tick = (now: number) => {
         const t = Math.min(1, (now - begin) / duration);
         setProgress(easeOutCubic(t));
@@ -198,6 +204,28 @@ function gradeClasses(grade: AuditGrade): string {
       return "border-blue-200 bg-blue-50 text-blue-700";
     case "Excellent":
       return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+}
+
+function actionPlanImpactTagClasses(impact: "High" | "Medium" | "Low"): string {
+  switch (impact) {
+    case "High":
+      return "border border-red-200/90 bg-red-50 text-red-800";
+    case "Medium":
+      return "border border-amber-200/90 bg-amber-50 text-amber-900";
+    case "Low":
+      return "border border-slate-200/90 bg-slate-50 text-slate-700";
+  }
+}
+
+function actionPlanDifficultyTagClasses(difficulty: "Low" | "Medium" | "High"): string {
+  switch (difficulty) {
+    case "High":
+      return "border border-red-200/90 bg-red-50 text-red-800";
+    case "Medium":
+      return "border border-amber-200/90 bg-amber-50 text-amber-900";
+    case "Low":
+      return "border border-emerald-200/90 bg-emerald-50 text-emerald-900";
   }
 }
 
@@ -333,12 +361,11 @@ function HeroSearch({
   onSelectBusiness,
   searching,
 }: {
-  onSearch: (businessName: string, websiteUrl?: string) => void | Promise<void>;
-  onSelectBusiness: (result: BusinessSearchResult, websiteUrl?: string) => void | Promise<void>;
+  onSearch: (businessName: string) => void | Promise<void>;
+  onSelectBusiness: (result: BusinessSearchResult) => void | Promise<void>;
   searching: boolean;
 }) {
   const [businessName, setBusinessName] = useState("");
-  const [websiteUrl, setWebsiteUrl] = useState("");
   const [suggestions, setSuggestions] = useState<BusinessSearchResult[]>([]);
   const [suggesting, setSuggesting] = useState(false);
   const [open, setOpen] = useState(false);
@@ -400,11 +427,11 @@ function HeroSearch({
         </div>
 
         <form
-          className="mx-auto mt-10 grid max-w-5xl gap-3 rounded-[2rem] border border-white/80 bg-white/90 p-3 shadow-soft-lg backdrop-blur lg:grid-cols-[minmax(0,1fr)_minmax(16rem,0.75fr)_auto]"
+          className="mx-auto mt-10 grid max-w-5xl gap-3 rounded-[2rem] border border-white/80 bg-white/90 p-3 shadow-soft-lg backdrop-blur lg:grid-cols-[minmax(0,1fr)_auto]"
           onSubmit={(e) => {
             e.preventDefault();
             setOpen(false);
-            void onSearch(businessName, websiteUrl.trim() || undefined);
+            void onSearch(businessName);
           }}
         >
           <label className="relative block">
@@ -437,7 +464,7 @@ function HeroSearch({
                     onClick={() => {
                       setBusinessName(result.name);
                       setOpen(false);
-                      void onSelectBusiness(result, websiteUrl.trim() || undefined);
+                      void onSelectBusiness(result);
                     }}
                     className="block w-full border-t border-border/60 px-4 py-3 text-left transition-colors first:border-t-0 hover:bg-surface"
                   >
@@ -457,18 +484,6 @@ function HeroSearch({
               </div>
             ) : null}
           </label>
-          <label className="relative block">
-            <span className="sr-only">Business website URL</span>
-            <Globe className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" />
-            <input
-              value={websiteUrl}
-              onChange={(e) => setWebsiteUrl(e.target.value)}
-              className={`${inputClass} pl-11`}
-              placeholder="Website URL (optional)"
-              autoComplete="url"
-              inputMode="url"
-            />
-          </label>
           <Button type="submit" size="lg" disabled={searching} className="h-full whitespace-nowrap">
             {searching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
             Find Revenue Leaks
@@ -483,6 +498,8 @@ function HeroSearch({
 }
 
 function AnalyzingScreen({ step }: { step: number }) {
+  const headlineIndex = Math.min(step, progressSteps.length - 1);
+  const showLongWaitHint = step >= PROGRESS_AUTOSTEP_CAP;
   return (
     <section className="px-4 py-20 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-3xl rounded-[2rem] border border-border bg-white p-8 shadow-soft-lg">
@@ -492,7 +509,14 @@ function AnalyzingScreen({ step }: { step: number }) {
           </div>
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Running audit</p>
-            <h2 className="text-2xl font-black text-text-primary">{progressSteps[Math.min(step, progressSteps.length - 1)]}</h2>
+            <h2 className="text-2xl font-black text-text-primary">{progressSteps[headlineIndex]}</h2>
+            {showLongWaitHint ? (
+              <p className="mt-2 max-w-xl text-sm leading-relaxed text-text-secondary">
+                Competitor scoring and report generation usually take{" "}
+                <span className="font-semibold text-text-primary">1–3 minutes</span>. This step is not stuck — the
+                server is still working.
+              </p>
+            ) : null}
           </div>
         </div>
         <div className="mt-8 space-y-3">
@@ -1133,8 +1157,8 @@ function CompetitorMap({
               if (dataUrl) {
                 markerOptions.icon = {
                   url: dataUrl,
-                  scaledSize: new gmaps.Size(48, 48),
-                  anchor: new gmaps.Point(24, 24),
+                  scaledSize: new gmaps.Size(CLASSIC_MARKER_PIN_LAYOUT.width, CLASSIC_MARKER_PIN_LAYOUT.height),
+                  anchor: new gmaps.Point(CLASSIC_MARKER_PIN_LAYOUT.anchorX, CLASSIC_MARKER_PIN_LAYOUT.anchorY),
                 };
               } else {
                 markerOptions.label = point.isSelectedBusiness
@@ -1359,16 +1383,18 @@ function InteractiveReport({
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-surface px-2 py-0.5 text-[11px] font-bold text-text-secondary">
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-tight ${actionPlanImpactTagClasses(item.impact)}`}
+                    >
                       Impact: {item.impact}
                     </span>
-                    <span className="rounded-full bg-surface px-2 py-0.5 text-[11px] font-bold text-text-secondary">
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-tight ${actionPlanDifficultyTagClasses(item.difficulty)}`}
+                    >
                       Difficulty: {item.difficulty}
                     </span>
                   </div>
-                  <h3 className="mt-2 font-black leading-snug text-text-primary">
-                    {item.fix}
-                  </h3>
+                  <p className="mt-2 text-sm font-normal leading-relaxed text-text-primary">{item.fix}</p>
                 </div>
               </div>
             ))}
@@ -1400,7 +1426,7 @@ export default function RevenueLeakAuditClient({
 
   const warningList = useMemo(() => [...new Set(warnings)], [warnings]);
 
-  async function startAuditFromSearch(businessName: string, websiteUrl?: string) {
+  async function startAuditFromSearch(businessName: string) {
     if (businessName.trim().length < 2) {
       setError("Enter a business name.");
       return;
@@ -1422,7 +1448,7 @@ export default function RevenueLeakAuditClient({
       if (!firstMatch) {
         throw new Error("No Google Business Profile matches were found.");
       }
-      await selectBusiness(firstMatch, websiteUrl);
+      await selectBusiness(firstMatch);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Search failed.");
     } finally {
@@ -1430,7 +1456,7 @@ export default function RevenueLeakAuditClient({
     }
   }
 
-  async function selectBusiness(result: BusinessSearchResult, websiteUrl?: string) {
+  async function selectBusiness(result: BusinessSearchResult) {
     setSearching(true);
     setError(null);
     try {
@@ -1444,16 +1470,8 @@ export default function RevenueLeakAuditClient({
         throw new Error(data.error ?? "Could not load business details.");
       }
       const profile = data.business;
-      const providedWebsite = websiteUrl?.trim();
-      const business = providedWebsite ? { ...profile, website: providedWebsite } : profile;
-      setWarnings((prev) => [
-        ...prev,
-        ...(data.warnings ?? []),
-        providedWebsite && !profile.website?.trim()
-          ? "Using the provided website URL because Google Places did not provide websiteUri."
-          : null,
-      ].filter((warning): warning is string => Boolean(warning)));
-      await startAudit(business);
+      setWarnings((prev) => [...prev, ...(data.warnings ?? [])]);
+      await startAudit(profile);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load business details.");
     } finally {
@@ -1466,7 +1484,7 @@ export default function RevenueLeakAuditClient({
     setError(null);
     setProgressStep(0);
     const interval = window.setInterval(() => {
-      setProgressStep((step) => Math.min(progressSteps.length - 1, step + 1));
+      setProgressStep((s) => Math.min(PROGRESS_AUTOSTEP_CAP, s + 1));
     }, 900);
     try {
       const res = await fetch("/api/revenue-leak-audit/analyze", {
@@ -1476,6 +1494,7 @@ export default function RevenueLeakAuditClient({
       });
       const data = (await res.json()) as AnalyzeResponse;
       if (!res.ok || !data.ok || !data.audit) throw new Error(data.error ?? "Audit failed.");
+      setProgressStep(progressSteps.length - 1);
       setAudit(data.audit);
       setWarnings((prev) => [...prev, ...(data.warnings ?? [])]);
       setStage("report");

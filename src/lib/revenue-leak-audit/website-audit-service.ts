@@ -21,8 +21,10 @@ import {
 } from "./website-conversion-heuristics";
 import type { ServiceResult, WebsiteAudit } from "./types";
 
-/** PSI/Lighthouse runs often exceed 60s on slower sites; aborting too early surfaces as a false failure. */
-const PAGESPEED_TIMEOUT_MS = 100_000;
+/** PSI/Lighthouse often needs 60–120s+; Google’s side can occasionally exceed 100s on heavy homepages. */
+const PAGESPEED_TIMEOUT_MS = 120_000;
+/** Second attempt (after a timeout) uses a slightly shorter cap so two tries still fit under the audit route budget. */
+const PAGESPEED_RETRY_TIMEOUT_MS = 90_000;
 
 const AUDIT_FETCH_HEADERS = {
   "User-Agent": "Mozilla/5.0 (compatible; ZenphoRevenueLeakAudit/1.0; +https://zenpho.com)",
@@ -183,7 +185,7 @@ type PageSpeedAttempt = {
   imageWasteBytes: number | null;
 };
 
-async function pageSpeedAttempt(url: string, key: string): Promise<PageSpeedAttempt> {
+async function pageSpeedAttempt(url: string, key: string, timeoutMs = PAGESPEED_TIMEOUT_MS): Promise<PageSpeedAttempt> {
   try {
     const qs = new URLSearchParams({
       url,
@@ -193,7 +195,7 @@ async function pageSpeedAttempt(url: string, key: string): Promise<PageSpeedAtte
     });
     const res = await fetch(
       `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?${qs.toString()}`,
-      { signal: AbortSignal.timeout(PAGESPEED_TIMEOUT_MS) }
+      { signal: AbortSignal.timeout(timeoutMs) }
     );
     if (!res.ok) {
       const lighthouseTransient =
@@ -228,9 +230,10 @@ async function pageSpeedAttempt(url: string, key: string): Promise<PageSpeedAtte
       score: null,
       imageWasteBytes: null,
       warning: isTimeout
-        ? `PageSpeed timed out after ${Math.round(PAGESPEED_TIMEOUT_MS / 1000)}s.`
+        ? `PageSpeed timed out after ${Math.round(timeoutMs / 1000)}s.`
         : "PageSpeed unavailable.",
-      retryable: !isTimeout,
+      /** Timeouts are often transient (Google queue); retry once like 5xx. */
+      retryable: true,
     };
   }
 }
@@ -253,10 +256,26 @@ async function fetchPageSpeedScore(url: string): Promise<{
     };
   }
   await new Promise((resolve) => setTimeout(resolve, 1500));
-  const second = await pageSpeedAttempt(url, key);
+  const firstWasTimeout = Boolean(first.warning?.toLowerCase().includes("timed out"));
+  const second = await pageSpeedAttempt(
+    url,
+    key,
+    firstWasTimeout ? PAGESPEED_RETRY_TIMEOUT_MS : PAGESPEED_TIMEOUT_MS
+  );
+  if (second.score !== null) {
+    return {
+      score: second.score,
+      warning: null,
+      imageWasteBytes: second.imageWasteBytes,
+    };
+  }
+  const combinedWarning =
+    first.warning && second.warning?.includes("timed out")
+      ? "PageSpeed timed out twice (mobile score unavailable); the rest of the audit used HTML and other signals."
+      : (second.warning ?? first.warning);
   return {
     score: second.score,
-    warning: second.warning,
+    warning: combinedWarning,
     imageWasteBytes: second.imageWasteBytes,
   };
 }

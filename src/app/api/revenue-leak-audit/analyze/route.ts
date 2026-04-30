@@ -7,7 +7,7 @@ import type {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-/** PageSpeed can take ~90s+; allow headroom for a single retry after transient 5xx + parallel Places/competitor work. */
+/** PageSpeed can take ~90–120s+; route budget allows two attempts (timeout + 5xx retry) plus parallel fetches. */
 export const maxDuration = 240;
 
 type Body = {

@@ -123,41 +123,78 @@ export function resolveCategoryMarkerStyle(input: MapMarkerPointInput): Category
   return GENERIC_FALLBACK;
 }
 
+/** Teardrop pin in viewBox units (dome + taper); tip at bottom center. */
+const PIN_PATH_D = "M 24 54 L 8 22 A 16 16 0 0 1 40 22 Z";
+
+/** Layout for classic `google.maps.Marker` bitmap + anchor (tip at bottom center). */
+export const CLASSIC_MARKER_PIN_LAYOUT = {
+  width: 48,
+  height: 56,
+  anchorX: 24,
+  anchorY: 54,
+} as const;
+
+function pinPath2d(): Path2D {
+  return new Path2D(PIN_PATH_D);
+}
+
 export function buildCategoryMarkerElement(opts: {
   style: CategoryMarkerStyle;
   badgeText: string | null;
   isSelected: boolean;
 }): HTMLElement {
-  const size = opts.isSelected ? 44 : 38;
   const diskBg = brightenDiskColor(opts.style.backgroundColor);
+  const scale = opts.isSelected ? 1.12 : 1;
+  const w = Math.round(CLASSIC_MARKER_PIN_LAYOUT.width * scale);
+  const h = Math.round(CLASSIC_MARKER_PIN_LAYOUT.height * scale);
   const root = document.createElement("div");
-  root.style.cssText = `position:relative;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;color-scheme:light;forced-color-adjust:none;`;
+  root.style.cssText = [
+    "position:relative",
+    `width:${w}px`,
+    `height:${h}px`,
+    "color-scheme:light",
+    "forced-color-adjust:none",
+    "filter:drop-shadow(0 2px 4px rgba(0,0,0,.28)) drop-shadow(0 1px 1px rgba(0,0,0,.18))",
+  ].join(";");
 
-  const disk = document.createElement("div");
-  const inner = size - 6;
-  disk.style.cssText = [
-    `width:${inner}px`,
-    `height:${inner}px`,
-    `border-radius:50%`,
-    `background:${diskBg}`,
-    `display:flex`,
-    `align-items:center`,
-    `justify-content:center`,
-    `box-shadow:0 2px 8px rgba(0,0,0,.35)`,
-    `color-scheme:light`,
-    `forced-color-adjust:none`,
-    opts.isSelected
-      ? "border:3px solid #fff;outline:2px solid rgba(0,0,0,.12)"
-      : "border:2px solid rgba(255,255,255,.9)",
+  const svgNs = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNs, "svg");
+  svg.setAttribute("viewBox", "0 0 48 56");
+  svg.setAttribute("width", String(w));
+  svg.setAttribute("height", String(h));
+  svg.setAttribute("aria-hidden", "true");
+  svg.style.cssText = "display:block;overflow:visible";
+
+  const path = document.createElementNS(svgNs, "path");
+  path.setAttribute("d", PIN_PATH_D);
+  path.setAttribute("fill", diskBg);
+  path.setAttribute("stroke", opts.isSelected ? "#ffffff" : "rgba(255,255,255,0.94)");
+  path.setAttribute("stroke-width", opts.isSelected ? "2.25" : "1.65");
+  path.setAttribute("stroke-linejoin", "round");
+  svg.appendChild(path);
+  root.appendChild(svg);
+
+  const glyphWrap = document.createElement("div");
+  const glyphPx = Math.round(20 * scale);
+  glyphWrap.style.cssText = [
+    "position:absolute",
+    "left:50%",
+    "top:18%",
+    "transform:translateX(-50%)",
+    `width:${glyphPx}px`,
+    `height:${glyphPx}px`,
+    "display:flex",
+    "align-items:center",
+    "justify-content:center",
+    "pointer-events:none",
   ].join(";");
 
   const img = document.createElement("img");
   img.src = opts.style.maskSrc;
   img.alt = "";
-  const glyph = Math.round(inner * 0.52);
-  img.width = glyph;
-  img.height = glyph;
-  img.style.cssText = "object-fit:contain;display:block;filter:brightness(0) invert(1);opacity:0.95;";
+  img.width = glyphPx;
+  img.height = glyphPx;
+  img.style.cssText = "object-fit:contain;display:block;filter:brightness(0) invert(1);opacity:0.96;";
   img.draggable = false;
   const fallbackMask = `${GSTATIC_PINLETS}/generic_pinlet.png`;
   img.addEventListener(
@@ -175,16 +212,16 @@ export function buildCategoryMarkerElement(opts: {
     },
     { once: false }
   );
-  disk.appendChild(img);
-  root.appendChild(disk);
+  glyphWrap.appendChild(img);
+  root.appendChild(glyphWrap);
 
   if (opts.badgeText) {
     const badge = document.createElement("div");
     badge.textContent = opts.badgeText;
     badge.style.cssText = [
       "position:absolute",
-      "right:-4px",
-      "bottom:-2px",
+      "right:-2px",
+      "bottom:10px",
       "min-width:18px",
       "height:18px",
       "padding:0 5px",
@@ -202,27 +239,23 @@ export function buildCategoryMarkerElement(opts: {
 }
 
 /** Raster marker icon for classic `google.maps.Marker` when no Map ID is configured. */
-export async function compositeCategoryMarkerDataUrl(
-  style: CategoryMarkerStyle,
-  size = 48
-): Promise<string | null> {
+export async function compositeCategoryMarkerDataUrl(style: CategoryMarkerStyle): Promise<string | null> {
   if (typeof document === "undefined") return null;
+  const { width: cw, height: ch } = CLASSIC_MARKER_PIN_LAYOUT;
   const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
+  canvas.width = cw;
+  canvas.height = ch;
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
 
-  const cx = size / 2;
-  const cy = size / 2;
-  const r = size / 2 - 2;
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.fillStyle = brightenDiskColor(style.backgroundColor);
-  ctx.fill();
-  ctx.strokeStyle = "rgba(255,255,255,0.92)";
-  ctx.lineWidth = 2;
-  ctx.stroke();
+  const fill = brightenDiskColor(style.backgroundColor);
+  const pin = pinPath2d();
+  ctx.fillStyle = fill;
+  ctx.fill(pin);
+  ctx.strokeStyle = "rgba(255,255,255,0.94)";
+  ctx.lineWidth = 1.65;
+  ctx.lineJoin = "round";
+  ctx.stroke(pin);
 
   const loadMask = (src: string) =>
     new Promise<HTMLImageElement>((resolve, reject) => {
@@ -245,8 +278,14 @@ export async function compositeCategoryMarkerDataUrl(
   }
 
   try {
-    const gw = size * 0.5;
+    const cx = 24;
+    const cy = 16;
+    const gr = 9.5;
     ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, gr, 0, Math.PI * 2);
+    ctx.clip();
+    const gw = gr * 2;
     ctx.filter = "brightness(0) invert(1)";
     ctx.drawImage(imgEl, cx - gw / 2, cy - gw / 2, gw, gw);
     ctx.restore();
