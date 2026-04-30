@@ -171,6 +171,8 @@ export type WebsiteAudit = {
   hasGoogleTagManager: boolean;
   hasGoogleAdsTag: boolean;
   hasMetaPixel: boolean;
+  hasWebChat: boolean;
+  webChatProvider: string | null;
   socialLinks: {
     facebook: string | null;
     instagram: string | null;

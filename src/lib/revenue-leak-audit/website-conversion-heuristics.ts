@@ -87,6 +87,40 @@ export const CTA_TERMS = [
   /contact\s+us/i,
 ];
 
+export type WebChatDetection = {
+  detected: boolean;
+  provider: string | null;
+};
+
+const WEB_CHAT_SIGNATURES: Array<{ provider: string; pattern: RegExp }> = [
+  { provider: "Intercom", pattern: /intercom\.io|widget\.intercom\.io|intercomcdn\.com|window\.Intercom\b|Intercom\(['"]boot['"]/i },
+  { provider: "Drift", pattern: /js\.driftt\.com|drift\.com\/buid|drift\.load\(/i },
+  { provider: "Zendesk Chat", pattern: /static\.zdassets\.com\/ekr\/snippet\.js|zopim\.com|\$zopim|zEACLoader/i },
+  { provider: "Tidio", pattern: /code\.tidio\.co|tidiochat|tidio-chat-iframe|tidio\.com\b/i },
+  { provider: "Crisp", pattern: /client\.crisp\.chat|window\.\$crisp|crisp\.chat\b/i },
+  { provider: "LiveChat", pattern: /cdn\.livechatinc\.com|livechatinc\b/i },
+  { provider: "HubSpot Chat", pattern: /js\.hs-scripts\.com|hubspot-conversations|hs-messages-iframe/i },
+  { provider: "Tawk.to", pattern: /embed\.tawk\.to|tawk\.to\/chat\b|Tawk_API\b/i },
+  { provider: "Olark", pattern: /static\.olark\.com|olark\.identify\(/i },
+  { provider: "Facebook Messenger", pattern: /fb-customerchat|connect\.facebook\.net\/[^"']+\/sdk\/xfbml\.customerchat\.js/i },
+  { provider: "WhatsApp", pattern: /href=["'](?:https?:)?\/\/(?:wa\.me|api\.whatsapp\.com\/send)/i },
+  { provider: "LeadConnector / GoHighLevel", pattern: /widgets\.leadconnectorhq\.com|leadconnector\.chat|gohighlevel\.chat/i },
+  { provider: "Smartsupp", pattern: /smartsuppchat\.com|_smartsupp\b/i },
+  { provider: "Gorgias", pattern: /config\.gorgias\.chat|gorgias\.chat\b/i },
+  { provider: "Freshchat", pattern: /wchat\.freshchat\.com|fcWidget\b/i },
+  { provider: "Pure Chat", pattern: /app\.purechat\.com\/VisitorWidget/i },
+  { provider: "Generic chat widget", pattern: /id=["'][^"']*(?:chat-widget|live-chat|chatbot|chat_bubble)[^"']*["']|class=["'][^"']*(?:chat-widget|live-chat|chatbot|chat-bubble)[^"']*["']/i },
+];
+
+export function detectWebChat(html: string): WebChatDetection {
+  for (const { provider, pattern } of WEB_CHAT_SIGNATURES) {
+    if (pattern.test(html)) {
+      return { detected: true, provider };
+    }
+  }
+  return { detected: false, provider: null };
+}
+
 export const TRUST_TERMS = [
   /testimonial/i,
   /reviews?/i,

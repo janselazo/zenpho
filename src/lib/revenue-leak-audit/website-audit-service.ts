@@ -10,6 +10,7 @@ import { MOCK_WEBSITE_AUDIT } from "./mock-data";
 import {
   countImageTags,
   CTA_TERMS,
+  detectWebChat,
   extractFirstTagText,
   extractMeta,
   hasAny,
@@ -233,6 +234,7 @@ export async function auditWebsite(
   const hasGoogleAnalytics = /gtag\(|google-analytics\.com|G-[A-Z0-9]+/i.test(html);
   const hasGoogleAdsTag = /AW-\d+|googleadservices\.com|conversion_async/i.test(html);
   const hasMetaPixel = /fbq\(|connect\.facebook\.net\/.*fbevents/i.test(html);
+  const webChat = detectWebChat(html);
   const socialLinks = extractSocialLinks(html);
   const contactHints = extractPublicContactHints(html);
   const identityAttributes = extractIdentityAttributes(html);
@@ -275,6 +277,8 @@ export async function auditWebsite(
       hasGoogleTagManager,
       hasGoogleAdsTag,
       hasMetaPixel,
+      hasWebChat: webChat.detected,
+      webChatProvider: webChat.provider,
       socialLinks,
       contactLinks: {
         phone: contactHints.phones[0] ?? null,

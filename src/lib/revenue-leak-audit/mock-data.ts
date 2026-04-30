@@ -215,6 +215,8 @@ export const MOCK_WEBSITE_AUDIT: WebsiteAudit = {
   hasGoogleTagManager: false,
   hasGoogleAdsTag: false,
   hasMetaPixel: false,
+  hasWebChat: false,
+  webChatProvider: null,
   socialLinks: {
     facebook: "https://facebook.com",
     instagram: "https://instagram.com",

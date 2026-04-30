@@ -717,6 +717,33 @@ function buildFindings(input: BuildInput): AuditFinding[] {
     );
   }
 
+  if (websiteAudit.available && !websiteAudit.hasWebChat) {
+    const impact = moneyImpact(assumptions, 0.02, 0.07);
+    findings.push(
+      finding(
+        {
+          category: "Website Conversion",
+          severity: "Medium",
+          title: "No Live Chat or Messaging Widget Detected",
+          whatWeFound:
+            "The homepage does not appear to include a live chat, messenger, or click-to-text widget.",
+          whyItMatters:
+            "Many local-service buyers want to message instead of calling, especially after hours. A chat or text widget captures leads that would otherwise leave without a call or form fill.",
+          evidence:
+            "No chat-widget signatures detected (Intercom, Drift, Tidio, Tawk.to, HubSpot Chat, LeadConnector, Crisp, LiveChat, Zendesk, Olark, Facebook Messenger, WhatsApp click-to-chat, etc.).",
+          estimatedRevenueImpactLow: impact.low,
+          estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
+          recommendedFix:
+            "Add a chat or click-to-text widget routed to a phone (Tidio, Tawk.to, HubSpot Chat, Intercom, or a WhatsApp/SMS button). Reply within 5 minutes during business hours.",
+          priorityScore: 74,
+        },
+        i++
+      )
+    );
+  }
+
   if (
     websiteAudit.pageSpeedMobileScore !== null &&
     websiteAudit.pageSpeedMobileScore < 55
@@ -1186,6 +1213,7 @@ function computeScores(input: BuildInput): AuditScores {
     websiteConversion -= 15;
   }
   if (!websiteAudit.mobileFriendly) websiteConversion -= 12;
+  if (websiteAudit.available && !websiteAudit.hasWebChat) websiteConversion -= 8;
 
   let websiteTrust = websiteAudit.available ? 100 : 25;
   if (!websiteAudit.hasTestimonials) websiteTrust -= 25;
