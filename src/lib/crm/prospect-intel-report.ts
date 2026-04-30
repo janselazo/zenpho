@@ -40,7 +40,7 @@ function humanizePlaceType(t: string): string {
 }
 
 /** Primary Google categories for outreach copy (drops generic types). */
-function formatPrimaryCategories(placeTypes: string[] | null | undefined): string | null {
+export function formatPrimaryCategories(placeTypes: string[] | null | undefined): string | null {
   const skip = new Set(["point_of_interest", "establishment", "geocode"]);
   const picked = (placeTypes ?? []).filter((t) => !skip.has(t));
   const s = picked.slice(0, 4).map(humanizePlaceType).join(" · ");
@@ -249,12 +249,22 @@ function buildInsightSummary(signals: IntelSignals): string {
       nonEmpty(signals.formattedAddress)
   );
 
+  /** Shown in Business snapshot header; keep summary prose from repeating the same facts. */
+  const listingFactsInSnapshot =
+    Boolean(primary) ||
+    signals.rating != null ||
+    (signals.reviewCount != null && signals.reviewCount > 0);
+
   const sentences: string[] = [];
 
   if (primary) {
-    sentences.push(
-      `${name} shows on Google as ${primary}${loc ? `, located at ${loc}` : ""}.`
-    );
+    if (listingFactsInSnapshot) {
+      sentences.push(`${name}${loc ? ` is listed at ${loc}` : "."}`);
+    } else {
+      sentences.push(
+        `${name} shows on Google as ${primary}${loc ? `, located at ${loc}` : ""}.`
+      );
+    }
   } else if (signals.placeTypes && signals.placeTypes.length > 0) {
     sentences.push(
       `${name} has a Google Business listing${loc ? ` (${loc})` : ""}; categories on Maps are generic, so confirm services on a call or site visit.`
@@ -282,14 +292,16 @@ function buildInsightSummary(signals: IntelSignals): string {
     sentences.push(`${name} is a prospect you’re researching; add a listing or URL to sharpen this summary.`);
   }
 
-  if (signals.rating != null && signals.reviewCount != null) {
-    sentences.push(
-      `On Google they show ${signals.rating.toFixed(1)}★ from ${signals.reviewCount} reviews.`
-    );
-  } else if (signals.rating != null) {
-    sentences.push(`Google lists an average rating of ${signals.rating.toFixed(1)}★.`);
-  } else if (signals.reviewCount != null && signals.reviewCount > 0) {
-    sentences.push(`The Maps listing has ${signals.reviewCount} reviews.`);
+  if (!listingFactsInSnapshot) {
+    if (signals.rating != null && signals.reviewCount != null) {
+      sentences.push(
+        `On Google they show ${signals.rating.toFixed(1)}★ from ${signals.reviewCount} reviews.`
+      );
+    } else if (signals.rating != null) {
+      sentences.push(`Google lists an average rating of ${signals.rating.toFixed(1)}★.`);
+    } else if (signals.reviewCount != null && signals.reviewCount > 0) {
+      sentences.push(`The Maps listing has ${signals.reviewCount} reviews.`);
+    }
   }
 
   if (fromPlaceListing) {

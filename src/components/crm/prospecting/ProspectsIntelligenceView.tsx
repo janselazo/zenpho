@@ -11,6 +11,7 @@ import {
 } from "react";
 import {
   buildMarketIntelReport,
+  formatPrimaryCategories,
   type MarketIntelReport,
 } from "@/lib/crm/prospect-intel-report";
 import { signalsFromPlace } from "@/lib/crm/prospect-intel-place-signals";
@@ -1861,6 +1862,17 @@ function ProspectsIntelligenceViewInner({
                     socialUrls={snapshotSocialUrls}
                     onPickPhone={(phone) => setLeadPhone((cur) => cur.trim() || phone)}
                     onPickEmail={applyPickedEmail}
+                    listingGoogleRating={
+                      activeReport.kind === "place" ? activeReport.place.rating : null
+                    }
+                    listingGoogleReviewCount={
+                      activeReport.kind === "place" ? activeReport.place.userRatingCount : null
+                    }
+                    listingCategoriesLabel={
+                      activeReport.kind === "place"
+                        ? formatPrimaryCategories(activeReport.place.types)
+                        : null
+                    }
                   />
                   <IntelContactHintsPanel
                     embedded

@@ -293,13 +293,16 @@ export default function TechStartupsTab({
     }
   }
 
+  const startupsContextBlurb = (
+    <p className="text-xs text-text-secondary dark:text-zinc-500">
+      Discover tech founders via Apollo company data and multi-channel signal monitoring —
+      funding, launches, social intent, and LinkedIn activity — then score the moment for a custom
+      web app pitch.
+    </p>
+  );
+
   return (
     <div className="space-y-4">
-      <p className="text-xs text-text-secondary dark:text-zinc-500">
-        Discover tech founders via Apollo company data and multi-channel signal
-        monitoring — funding, launches, social intent, and LinkedIn activity — then
-        score the moment for a custom web app pitch.
-      </p>
       <IconTabBar
         tabs={[
           { id: "tech-startups-companies", label: "Tech", icon: Rocket },
@@ -313,6 +316,8 @@ export default function TechStartupsTab({
         onTabChange={(id) => setSubTab(TECH_STARTUP_TAB_BY_ID[id] ?? "companies")}
         ariaLabel="Tech Startups sources"
       />
+
+      {subTab !== "companies" ? <div className="mt-1">{startupsContextBlurb}</div> : null}
 
       <div
         id="tech-startups-ecom-brands-panel"
@@ -529,6 +534,8 @@ export default function TechStartupsTab({
           </p>
         ) : null}
       </div>
+
+      {startupsContextBlurb}
 
       {results.length === 0 && !loading ? (
         <div className="rounded-2xl border border-dashed border-border bg-white/50 p-8 text-center text-sm text-text-secondary dark:border-zinc-800 dark:bg-zinc-900/30 dark:text-zinc-500">
