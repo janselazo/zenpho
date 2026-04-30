@@ -5,6 +5,7 @@ import {
   mockRankingSnapshot,
 } from "./mock-data";
 import type {
+  BusinessIdentityAttribute,
   BusinessPhoto,
   BusinessProfile,
   BusinessReview,
@@ -124,6 +125,31 @@ function normalizeReviews(reviews: GooglePlaceReview[] | undefined): BusinessRev
   }));
 }
 
+function detectGoogleIdentityAttributes(p: GooglePlace): BusinessIdentityAttribute[] {
+  const haystack = [
+    p.displayName?.text,
+    p.formattedAddress,
+    p.primaryTypeDisplayName?.text,
+    ...(p.types ?? []),
+    ...(p.reviews ?? []).map((r) => r.text?.text ?? r.originalText?.text ?? ""),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  if (/\blatino[-\s]?owned\b|\blatina[-\s]?owned\b|\blatinx[-\s]?owned\b|\bhispanic[-\s]?owned\b/.test(haystack)) {
+    return [
+      {
+        id: "latino_owned",
+        label: "Identifies as Latino-owned",
+        detected: true,
+        source: "google",
+      },
+    ];
+  }
+  return [];
+}
+
 function normalizeBusiness(p: GooglePlace): BusinessProfile | null {
   const placeId = p.id?.trim();
   const name = p.displayName?.text?.trim();
@@ -155,6 +181,7 @@ function normalizeBusiness(p: GooglePlace): BusinessProfile | null {
     hours: p.regularOpeningHours?.weekdayDescriptions ?? [],
     googleMapsUri: p.googleMapsUri?.trim() || null,
     businessStatus: p.businessStatus?.trim() || null,
+    identityAttributes: detectGoogleIdentityAttributes(p),
   };
 }
 

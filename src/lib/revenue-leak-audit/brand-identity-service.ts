@@ -9,15 +9,30 @@ import type { BrandIdentitySummary, ServiceResult } from "./types";
 const FONT_FAMILY_RE = /font-family\s*:\s*([^;}{]+)/gi;
 const GOOGLE_FONT_RE = /fonts\.googleapis\.com\/css[^"')\s]*/gi;
 
-function cleanFontFamily(value: string): string | null {
-  const cleaned = value
+function humanizeFontName(value: string): string | null {
+  const trimmed = value.trim();
+  const wpVar = trimmed.match(/var\(--wp--preset--font-family--([^)]+)\)/i);
+  const raw = wpVar ? wpVar[1] : trimmed;
+  const cleaned = raw
+    .replace(/!important/gi, "")
+    .replace(/["']/g, "")
+    .replace(/^var\(|\)$/g, "")
+    .replace(/^--wp--preset--font-family--/i, "")
+    .replace(/[-_]+/g, " ")
+    .trim();
+  if (!cleaned || /inherit|initial|unset|system-ui|-apple-system/i.test(cleaned)) {
+    return null;
+  }
+  return cleaned.replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function cleanFontFamilies(value: string): string[] {
+  return value
     .replace(/!important/gi, "")
     .replace(/["']/g, "")
     .split(",")
-    .map((x) => x.trim())
-    .filter(Boolean)
-    .find((x) => !/inherit|initial|unset|system-ui|-apple-system/i.test(x));
-  return cleaned || null;
+    .map(humanizeFontName)
+    .filter((x): x is string => Boolean(x));
 }
 
 function typographyNotesFromHtml(html: string | null): string[] {
@@ -26,8 +41,10 @@ function typographyNotesFromHtml(html: string | null): string[] {
   let match: RegExpExecArray | null;
   const fontRe = new RegExp(FONT_FAMILY_RE.source, "gi");
   while ((match = fontRe.exec(html)) !== null && families.size < 4) {
-    const cleaned = cleanFontFamily(match[1]);
-    if (cleaned) families.add(cleaned);
+    for (const cleaned of cleanFontFamilies(match[1])) {
+      if (families.size >= 4) break;
+      families.add(cleaned);
+    }
   }
   const googleFonts = new Set<string>();
   const googleRe = new RegExp(GOOGLE_FONT_RE.source, "gi");
@@ -39,10 +56,10 @@ function typographyNotesFromHtml(html: string | null): string[] {
 
   const notes: string[] = [];
   if (googleFonts.size > 0) {
-    notes.push([...googleFonts].join(", "));
+    notes.push(...googleFonts);
   }
   if (families.size > 0) {
-    notes.push([...families].join(", "));
+    notes.push(...families);
   }
   if (notes.length === 0) {
     notes.push("No distinctive website typography was detected from the homepage HTML.");

@@ -43,6 +43,14 @@ export const MOCK_BUSINESS: BusinessProfile = {
   hours: ["Monday: 8:00 AM - 5:00 PM", "Tuesday: 8:00 AM - 5:00 PM"],
   googleMapsUri: "https://maps.google.com/?cid=mock",
   businessStatus: "OPERATIONAL",
+  identityAttributes: [
+    {
+      id: "latino_owned",
+      label: "Identifies as Latino-owned",
+      detected: true,
+      source: "mock",
+    },
+  ],
 };
 
 export const MOCK_SEARCH_RESULTS: BusinessSearchResult[] = [
@@ -185,6 +193,18 @@ export const MOCK_WEBSITE_AUDIT: WebsiteAudit = {
     tiktok: null,
     youtube: null,
   },
+  contactLinks: {
+    phone: "+15125550148",
+    email: "hello@example.com",
+  },
+  identityAttributes: [
+    {
+      id: "latino_owned",
+      label: "Identifies as Latino-owned",
+      detected: true,
+      source: "mock",
+    },
+  ],
   imageCount: 4,
   blurryImageSignals: 2,
   warnings: ["Mock website audit shown for local development."],

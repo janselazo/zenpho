@@ -1,4 +1,5 @@
 import { fetchMicrolinkScreenshotUrl } from "@/lib/crm/microlink-screenshot";
+import { extractPublicContactHints } from "@/lib/crm/prospect-contact-extract";
 import {
   decodeFetchedHtmlBuffer,
   FETCH_TIMEOUT_MS,
@@ -38,6 +39,20 @@ function extractSocialLinks(html: string): WebsiteAudit["socialLinks"] {
     tiktok: firstSocialLink(html, /(?:^|\/\/)(?:www\.)?tiktok\.com/i),
     youtube: firstSocialLink(html, /(?:^|\/\/)(?:www\.)?(?:youtube\.com|youtu\.be)/i),
   };
+}
+
+function extractIdentityAttributes(html: string): WebsiteAudit["identityAttributes"] {
+  if (/\blatino[-\s]?owned\b|\blatina[-\s]?owned\b|\blatinx[-\s]?owned\b|\bhispanic[-\s]?owned\b/i.test(html)) {
+    return [
+      {
+        id: "latino_owned",
+        label: "Identifies as Latino-owned",
+        detected: true,
+        source: "website",
+      },
+    ];
+  }
+  return [];
 }
 
 async function fetchHtml(url: string): Promise<{
@@ -180,6 +195,8 @@ export async function auditWebsite(
   const hasGoogleAdsTag = /AW-\d+|googleadservices\.com|conversion_async/i.test(html);
   const hasMetaPixel = /fbq\(|connect\.facebook\.net\/.*fbevents/i.test(html);
   const socialLinks = extractSocialLinks(html);
+  const contactHints = extractPublicContactHints(html);
+  const identityAttributes = extractIdentityAttributes(html);
   const mobileFriendly =
     hasViewport && (pageSpeed.score === null || pageSpeed.score >= 50) ? true : false;
 
@@ -220,6 +237,11 @@ export async function auditWebsite(
       hasGoogleAdsTag,
       hasMetaPixel,
       socialLinks,
+      contactLinks: {
+        phone: contactHints.phones[0] ?? null,
+        email: contactHints.emails[0] ?? null,
+      },
+      identityAttributes,
       imageCount: imageSignals.imageCount,
       blurryImageSignals: imageSignals.blurryImageSignals,
       warnings: auditWarnings,

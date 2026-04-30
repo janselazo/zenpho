@@ -647,10 +647,10 @@ function buildRevenueEstimate(
     estimatedRevenueLow: monthlyLow,
     estimatedRevenueHigh: monthlyHigh,
     assumptions: [
-      `Average job value: $${assumptions.averageJobValue.toLocaleString()}`,
-      `Close rate: ${Math.round(assumptions.closeRate * 100)}%`,
-      `Estimated monthly leads: ${assumptions.estimatedMonthlyLeads}`,
-      "Revenue estimates use conservative lead recovery ranges and are not guaranteed.",
+      `Estimated average job value: $${assumptions.averageJobValue.toLocaleString()}`,
+      `Estimated close rate: ${Math.round(assumptions.closeRate * 100)}%`,
+      `Estimated monthly leads at risk: ${assumptions.estimatedMonthlyLeads}`,
+      "Money-loss estimates use conservative recovery ranges for what the business may keep losing if the issues are not fixed.",
     ],
   };
 }
@@ -680,9 +680,9 @@ function buildMoneySummary(
     estimatedMonthlyCostHigh: monthlyHigh,
     estimatedAnnualCostLow: monthlyLow * 12,
     estimatedAnnualCostHigh: monthlyHigh * 12,
-    assumptionsExplanation: `Based on an average job value of $${assumptions.averageJobValue.toLocaleString()}, ${Math.round(
+    assumptionsExplanation: `Money-loss estimates use an estimated average job value of $${assumptions.averageJobValue.toLocaleString()}, ${Math.round(
       assumptions.closeRate * 100
-    )}% close rate, ${assumptions.estimatedMonthlyLeads} estimated monthly leads, and conservative recovery assumptions.`,
+    )}% close rate, ${assumptions.estimatedMonthlyLeads} monthly leads at risk, and conservative recovery assumptions for what the business may keep losing if these issues are not fixed.`,
     fixFirstRecommendation: fixFirst,
   };
 }

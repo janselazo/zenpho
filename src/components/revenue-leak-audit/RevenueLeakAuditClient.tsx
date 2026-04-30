@@ -3,17 +3,22 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
-  ArrowRight,
+  BadgeCheck,
   Building2,
   CheckCircle2,
   ChevronDown,
   Download,
-  ExternalLink,
+  Facebook,
+  Globe2,
+  Instagram,
   Loader2,
+  Mail,
   MapPin,
+  Phone,
   RotateCcw,
   Search,
   Target,
+  Youtube,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import type {
@@ -38,7 +43,7 @@ const progressSteps = [
   "Preparing interactive report",
 ];
 
-type Stage = "search" | "assumptions" | "analyzing" | "report";
+type Stage = "search" | "analyzing" | "report";
 
 type SearchResponse = {
   ok: boolean;
@@ -59,15 +64,6 @@ type AnalyzeResponse = {
   audit?: RevenueLeakAudit | null;
   error?: string;
   warnings?: string[];
-};
-
-type AssumptionFormValues = {
-  industry: string;
-  averageJobValue: number;
-  closeRate: number;
-  estimatedMonthlyLeads: number;
-  serviceArea: string;
-  monthlyAdSpend: number | null;
 };
 
 function formatMoney(value: number): string {
@@ -104,43 +100,45 @@ function ScoreGauge({ score, grade, size = 148 }: { score: number; grade: AuditG
   const dash = (score / 100) * circumference;
   const compact = size < 110;
   return (
-    <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
-      <svg viewBox="0 0 140 140" className="h-full w-full -rotate-90">
-        <circle
-          cx="70"
-          cy="70"
-          r={radius}
-          fill="none"
-          stroke="#e8ecf1"
-          strokeWidth={compact ? "11" : "13"}
-        />
-        <circle
-          cx="70"
-          cy="70"
-          r={radius}
-          fill="none"
-          stroke={scoreColor(score)}
-          strokeLinecap="round"
-          strokeWidth={compact ? "11" : "13"}
-          strokeDasharray={`${dash} ${circumference}`}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center pt-1">
-        <span
-          className={`font-black leading-none tracking-tight text-text-primary ${
-            compact ? "text-2xl" : "text-4xl"
-          }`}
-        >
-          {score}
-        </span>
-        <span
-          className={`mt-1 rounded-full border font-bold leading-none ${
-            compact ? "px-2 py-1 text-[10px]" : "px-2.5 py-1 text-xs"
-          } ${gradeClasses(grade)}`}
-        >
-          {grade}
-        </span>
+    <div className="inline-flex flex-col items-center justify-center">
+      <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
+        <svg viewBox="0 0 140 140" className="h-full w-full -rotate-90">
+          <circle
+            cx="70"
+            cy="70"
+            r={radius}
+            fill="none"
+            stroke="#e8ecf1"
+            strokeWidth={compact ? "11" : "13"}
+          />
+          <circle
+            cx="70"
+            cy="70"
+            r={radius}
+            fill="none"
+            stroke={scoreColor(score)}
+            strokeLinecap="round"
+            strokeWidth={compact ? "11" : "13"}
+            strokeDasharray={`${dash} ${circumference}`}
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span
+            className={`font-black leading-none tracking-tight text-text-primary ${
+              compact ? "text-xl" : "text-4xl"
+            }`}
+          >
+            {score}
+          </span>
+        </div>
       </div>
+      <span
+        className={`mt-1 rounded-full border font-bold leading-none ${
+          compact ? "px-2 py-1 text-[10px]" : "px-2.5 py-1 text-xs"
+        } ${gradeClasses(grade)}`}
+      >
+        {grade}
+      </span>
     </div>
   );
 }
@@ -150,8 +148,8 @@ function HeroSearch({
   onSelectBusiness,
   searching,
 }: {
-  onSearch: (businessName: string) => void;
-  onSelectBusiness: (result: BusinessSearchResult) => void;
+  onSearch: (businessName: string) => void | Promise<void>;
+  onSelectBusiness: (result: BusinessSearchResult) => void | Promise<void>;
   searching: boolean;
 }) {
   const [businessName, setBusinessName] = useState("");
@@ -220,7 +218,7 @@ function HeroSearch({
           onSubmit={(e) => {
             e.preventDefault();
             setOpen(false);
-            onSearch(businessName);
+            void onSearch(businessName);
           }}
         >
           <label className="relative block">
@@ -253,7 +251,7 @@ function HeroSearch({
                     onClick={() => {
                       setBusinessName(result.name);
                       setOpen(false);
-                      onSelectBusiness(result);
+                      void onSelectBusiness(result);
                     }}
                     className="block w-full border-t border-border/60 px-4 py-3 text-left transition-colors first:border-t-0 hover:bg-surface"
                   >
@@ -281,148 +279,6 @@ function HeroSearch({
         <p className="mt-4 text-center text-sm text-text-secondary">
           Search your Google Business Profile to start your audit.
         </p>
-      </div>
-    </section>
-  );
-}
-
-function SearchResults({
-  results,
-  onSelect,
-  loadingId,
-}: {
-  results: BusinessSearchResult[];
-  onSelect: (result: BusinessSearchResult) => void;
-  loadingId: string | null;
-}) {
-  if (results.length === 0) return null;
-  return (
-    <section className="px-4 py-12 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-5 flex items-end justify-between gap-4">
-          <div>
-            <p className="text-sm font-bold uppercase tracking-[0.18em] text-accent">Choose your business</p>
-            <h2 className="mt-2 text-3xl font-black tracking-tight text-text-primary">Google Business matches</h2>
-          </div>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          {results.map((result) => (
-            <button
-              key={result.placeId}
-              type="button"
-              onClick={() => onSelect(result)}
-              className="group rounded-3xl border border-border bg-white p-6 text-left shadow-soft transition-all hover:border-accent/30 hover:shadow-soft-lg"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h3 className="text-xl font-black text-text-primary">{result.name}</h3>
-                  <p className="mt-2 text-sm leading-6 text-text-secondary">{result.address ?? "Address unavailable"}</p>
-                </div>
-                {loadingId === result.placeId ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-accent" />
-                ) : (
-                  <ArrowRight className="h-5 w-5 text-text-secondary transition-transform group-hover:translate-x-1 group-hover:text-accent" />
-                )}
-              </div>
-              <div className="mt-5 flex flex-wrap gap-2 text-xs font-semibold">
-                <span className="rounded-full bg-surface px-3 py-1 text-text-secondary">{result.category ?? "Local business"}</span>
-                <span className="rounded-full bg-amber-50 px-3 py-1 text-amber-700">{result.rating ?? "N/A"} rating</span>
-                <span className="rounded-full bg-blue-50 px-3 py-1 text-blue-700">{result.reviewCount ?? 0} reviews</span>
-                <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">
-                  {result.website ? "Website linked" : "No website"}
-                </span>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function AssumptionsForm({
-  business,
-  onBack,
-  onSubmit,
-}: {
-  business: BusinessProfile;
-  onBack: () => void;
-  onSubmit: (values: AssumptionFormValues) => void;
-}) {
-  const [industry, setIndustry] = useState(business.category ?? "");
-  const [averageJobValue, setAverageJobValue] = useState("2500");
-  const [closeRate, setCloseRate] = useState("25");
-  const [estimatedMonthlyLeads, setEstimatedMonthlyLeads] = useState("40");
-  const [serviceArea, setServiceArea] = useState(business.address?.split(",").slice(-2, -1)[0]?.trim() ?? "");
-  const [monthlyAdSpend, setMonthlyAdSpend] = useState("");
-  return (
-    <section className="px-4 py-16 sm:px-6 lg:px-8">
-      <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.8fr_1.2fr]">
-        <div className="rounded-3xl border border-border bg-white p-6 shadow-soft">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Selected business</p>
-          <h2 className="mt-3 text-3xl font-black tracking-tight text-text-primary">{business.name}</h2>
-          <p className="mt-3 text-sm leading-6 text-text-secondary">{business.address}</p>
-          <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
-            <div className="rounded-2xl bg-surface p-4">
-              <p className="text-text-secondary">Rating</p>
-              <p className="mt-1 font-black text-text-primary">{business.rating ?? "N/A"}</p>
-            </div>
-            <div className="rounded-2xl bg-surface p-4">
-              <p className="text-text-secondary">Reviews</p>
-              <p className="mt-1 font-black text-text-primary">{business.reviewCount ?? 0}</p>
-            </div>
-          </div>
-          <button type="button" onClick={onBack} className="mt-6 text-sm font-bold text-accent hover:text-accent-hover">
-            Choose another business
-          </button>
-        </div>
-        <form
-          className="rounded-3xl border border-border bg-white p-6 shadow-soft sm:p-8"
-          onSubmit={(e) => {
-            e.preventDefault();
-            onSubmit({
-              industry,
-              averageJobValue: Number(averageJobValue),
-              closeRate: Number(closeRate) / 100,
-              estimatedMonthlyLeads: Number(estimatedMonthlyLeads),
-              serviceArea,
-              monthlyAdSpend: monthlyAdSpend ? Number(monthlyAdSpend) : null,
-            });
-          }}
-        >
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Audit assumptions</p>
-          <h2 className="mt-3 text-3xl font-black tracking-tight text-text-primary">Confirm the revenue math</h2>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2">
-            <label className="space-y-2">
-              <span className="text-sm font-bold text-text-primary">Industry/category</span>
-              <input className={inputClass} value={industry} onChange={(e) => setIndustry(e.target.value)} />
-            </label>
-            <label className="space-y-2">
-              <span className="text-sm font-bold text-text-primary">Service area/city</span>
-              <input className={inputClass} value={serviceArea} onChange={(e) => setServiceArea(e.target.value)} />
-            </label>
-            <label className="space-y-2">
-              <span className="text-sm font-bold text-text-primary">Average job value</span>
-              <input className={inputClass} type="number" min="1" value={averageJobValue} onChange={(e) => setAverageJobValue(e.target.value)} />
-            </label>
-            <label className="space-y-2">
-              <span className="text-sm font-bold text-text-primary">Estimated close rate (%)</span>
-              <input className={inputClass} type="number" min="1" max="100" value={closeRate} onChange={(e) => setCloseRate(e.target.value)} />
-            </label>
-            <label className="space-y-2">
-              <span className="text-sm font-bold text-text-primary">Estimated monthly leads</span>
-              <input className={inputClass} type="number" min="1" value={estimatedMonthlyLeads} onChange={(e) => setEstimatedMonthlyLeads(e.target.value)} />
-            </label>
-            <label className="space-y-2">
-              <span className="text-sm font-bold text-text-primary">Monthly ad spend (optional)</span>
-              <input className={inputClass} type="number" min="0" value={monthlyAdSpend} onChange={(e) => setMonthlyAdSpend(e.target.value)} />
-            </label>
-          </div>
-          <Button type="submit" size="lg" className="mt-8 w-full sm:w-auto">
-            Start Findings
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </form>
       </div>
     </section>
   );
@@ -461,6 +317,15 @@ function AnalyzingScreen({ step }: { step: number }) {
 }
 
 function BrandSummary({ audit }: { audit: RevenueLeakAudit }) {
+  const businessProfilePhoto = audit.business.photos.find((photo) => photo.name)?.name;
+  const brandImageUrl =
+    audit.brandIdentity.logoUrl ||
+    (businessProfilePhoto
+      ? `/api/revenue-leak-audit/place-photo?name=${encodeURIComponent(
+          businessProfilePhoto
+        )}`
+      : null);
+
   return (
     <section className="rounded-[2rem] border border-border bg-white p-6 shadow-soft sm:p-8">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -471,9 +336,9 @@ function BrandSummary({ audit }: { audit: RevenueLeakAudit }) {
         </div>
         <div className="flex items-center gap-4">
           <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border border-border bg-surface">
-            {audit.brandIdentity.logoUrl ? (
+            {brandImageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={audit.brandIdentity.logoUrl} alt={`${audit.business.name} logo`} className="max-h-full max-w-full object-contain" />
+              <img src={brandImageUrl} alt={`${audit.business.name} logo`} className="h-full w-full object-contain" />
             ) : (
               <Building2 className="h-8 w-8 text-text-secondary" />
             )}
@@ -489,7 +354,7 @@ function BrandSummary({ audit }: { audit: RevenueLeakAudit }) {
         <div className="rounded-2xl bg-surface p-4">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-text-secondary">Primary</p>
           {audit.brandIdentity.primaryColor ? (
-            <div className="mt-3 h-10 rounded-xl border border-black/10 shadow-sm" style={{ backgroundColor: audit.brandIdentity.primaryColor }} />
+            <div className="mt-3 h-9 w-9 rounded-full border border-black/10 shadow-sm" style={{ backgroundColor: audit.brandIdentity.primaryColor }} />
           ) : (
             <p className="mt-2 font-black text-text-primary">Not found</p>
           )}
@@ -497,14 +362,27 @@ function BrandSummary({ audit }: { audit: RevenueLeakAudit }) {
         <div className="rounded-2xl bg-surface p-4">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-text-secondary">Accent</p>
           {audit.brandIdentity.accentColor ? (
-            <div className="mt-3 h-10 rounded-xl border border-black/10 shadow-sm" style={{ backgroundColor: audit.brandIdentity.accentColor }} />
+            <div className="mt-3 h-9 w-9 rounded-full border border-black/10 shadow-sm" style={{ backgroundColor: audit.brandIdentity.accentColor }} />
           ) : (
             <p className="mt-2 font-black text-text-primary">Not found</p>
           )}
         </div>
         <div className="rounded-2xl bg-surface p-4">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-text-secondary">Typography</p>
-          <p className="mt-2 text-sm font-semibold text-text-primary">{audit.brandIdentity.typographyNotes[0] ?? "No typography signal found"}</p>
+          {audit.brandIdentity.typographyNotes.length > 0 ? (
+            <ul className="mt-3 space-y-1.5">
+              {audit.brandIdentity.typographyNotes.slice(0, 4).map((font) => (
+                <li key={font} className="flex items-center gap-2 text-sm font-semibold text-text-primary">
+                  <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden />
+                  {font}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-sm font-semibold text-text-primary">
+              No typography signal found
+            </p>
+          )}
         </div>
       </div>
     </section>
@@ -624,12 +502,19 @@ function loadGoogleMaps(key: string): Promise<void> {
   return w.__revenueLeakGoogleMapsPromise;
 }
 
-function CompetitorMap({ points }: { points: CompetitorMapPoint[] }) {
+function CompetitorMap({
+  audit,
+  points,
+}: {
+  audit: RevenueLeakAudit;
+  points: CompetitorMapPoint[];
+}) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState(points[0]?.id ?? "");
   const [mapStatus, setMapStatus] = useState<string | null>(null);
   const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const selectedPoint = points.find((p) => p.id === selected) ?? points[0];
+  const businessPosition = audit.rankingSnapshot.selectedBusinessPosition;
 
   useEffect(() => {
     if (!key || !mapRef.current || points.length === 0) return;
@@ -654,7 +539,11 @@ function CompetitorMap({ points }: { points: CompetitorMapPoint[] }) {
             position: point.coordinates,
             map,
             title: point.name,
-            label: point.isSelectedBusiness ? "You" : String(point.rank ?? ""),
+            label: point.isSelectedBusiness
+              ? businessPosition
+                ? String(businessPosition)
+                : "You"
+              : String(point.rank ?? ""),
           });
           marker.addListener("click", () => {
             setSelected(point.id);
@@ -703,7 +592,11 @@ function CompetitorMap({ points }: { points: CompetitorMapPoint[] }) {
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="font-black text-text-primary">{point.isSelectedBusiness ? "Your business" : `#${point.rank ?? "-"} ${point.name}`}</p>
+                  <p className="font-black text-text-primary">
+                    {point.isSelectedBusiness
+                      ? `${businessPosition ? `#${businessPosition} ` : ""}${point.name}`
+                      : `#${point.rank ?? "-"} ${point.name}`}
+                  </p>
                   <p className="mt-1 text-xs text-text-secondary">{point.address}</p>
                 </div>
                 <span className="rounded-full bg-surface px-2 py-1 text-xs font-bold text-text-secondary">{point.marketStrengthScore}</span>
@@ -759,22 +652,22 @@ function RankingSnapshot({ audit }: { audit: RevenueLeakAudit }) {
 }
 
 function ScoreBreakdown({ audit }: { audit: RevenueLeakAudit }) {
-  const rows = [
-    ["GBP Health", audit.scores.gbpHealth],
-    ["Reviews", audit.scores.reviews],
-    ["Website Conversion", audit.scores.websiteConversion],
-    ["Website Trust", audit.scores.websiteTrust],
-    ["Local SEO", audit.scores.localSeo],
-    ["Competitor Gap", audit.scores.competitorGap],
-    ["Tracking & Ads", audit.scores.trackingAds],
-    ["Photos", audit.scores.photos],
-  ] as const;
+  const rows: { label: string; score: number }[] = [
+    { label: "GBP Health", score: audit.scores.gbpHealth },
+    { label: "Reviews", score: audit.scores.reviews },
+    { label: "Website Conversion", score: audit.scores.websiteConversion },
+    { label: "Website Trust", score: audit.scores.websiteTrust },
+    { label: "Local SEO", score: audit.scores.localSeo },
+    { label: "Competitor Gap", score: audit.scores.competitorGap },
+    { label: "Tracking & Ads", score: audit.scores.trackingAds },
+    { label: "Photos", score: audit.scores.photos },
+  ].sort((a, b) => b.score - a.score);
   return (
     <section className="rounded-[2rem] border border-border bg-white p-6 shadow-soft sm:p-8">
       <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Score breakdown</p>
       <h2 className="mt-2 text-3xl font-black tracking-tight text-text-primary">What is driving the grade</h2>
       <div className="mt-6 grid gap-4 md:grid-cols-2">
-        {rows.map(([label, score]) => (
+        {rows.map(({ label, score }) => (
           <div key={label} className="rounded-2xl bg-surface p-4">
             <div className="flex items-center justify-between gap-4">
               <p className="font-bold text-text-primary">{label}</p>
@@ -786,6 +679,99 @@ function ScoreBreakdown({ audit }: { audit: RevenueLeakAudit }) {
           </div>
         ))}
       </div>
+    </section>
+  );
+}
+
+function LowestReviewAnalysis({ audit }: { audit: RevenueLeakAudit }) {
+  const lowestReviews = audit.business.reviews
+    .filter((review) => review.text?.trim() || review.rating !== null)
+    .sort((a, b) => (a.rating ?? 5) - (b.rating ?? 5))
+    .slice(0, 5);
+  const issueTerms = [
+    "slow",
+    "late",
+    "rude",
+    "expensive",
+    "price",
+    "quote",
+    "call",
+    "phone",
+    "follow up",
+    "no show",
+    "appointment",
+    "wait",
+    "never",
+    "poor",
+    "bad",
+  ];
+  const combined = lowestReviews
+    .map((review) => review.text ?? "")
+    .join(" ")
+    .toLowerCase();
+  const themes = issueTerms.filter((term) => combined.includes(term)).slice(0, 6);
+
+  return (
+    <section className="rounded-[2rem] border border-border bg-white p-6 shadow-soft sm:p-8">
+      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">
+            Lowest review analysis
+          </p>
+          <h2 className="mt-2 text-3xl font-black tracking-tight text-text-primary">
+            Top 5 lowest reviews
+          </h2>
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-text-secondary">
+            These reviews show the complaints most likely to reduce trust when buyers compare you against competitors.
+          </p>
+        </div>
+        {themes.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {themes.map((theme) => (
+              <span
+                key={theme}
+                className="rounded-full bg-red-50 px-3 py-1 text-xs font-bold capitalize text-red-700"
+              >
+                {theme}
+              </span>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      {lowestReviews.length === 0 ? (
+        <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800">
+          Review text was not available from the current Google sample.
+        </div>
+      ) : (
+        <div className="mt-6 divide-y divide-border overflow-hidden rounded-3xl border border-border">
+          {lowestReviews.map((review, index) => (
+            <div key={`${review.authorName ?? "review"}-${index}`} className="bg-white p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-red-50 text-sm font-black text-red-700">
+                    {index + 1}
+                  </span>
+                  <div>
+                    <p className="font-black text-text-primary">
+                      {review.authorName ?? "Google reviewer"}
+                    </p>
+                    <p className="text-xs text-text-secondary">
+                      {review.relativePublishTime ?? review.publishTime ?? "Date unavailable"}
+                    </p>
+                  </div>
+                </div>
+                <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
+                  {review.rating ?? "N/A"} star{review.rating === 1 ? "" : "s"}
+                </span>
+              </div>
+              <p className="mt-3 text-sm leading-6 text-text-secondary">
+                {review.text ?? "No written review text available."}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -842,21 +828,38 @@ function DownloadPdfBanner({ audit }: { audit: RevenueLeakAudit }) {
 function InteractiveReport({ audit, onRestart }: { audit: RevenueLeakAudit; onRestart: () => void }) {
   const reportLinks = [
     audit.business.website
-      ? { label: "Website", href: audit.business.website }
+      ? { label: "Website", href: audit.business.website, icon: Globe2 }
+      : null,
+    audit.business.phone || audit.websiteAudit.contactLinks.phone
+      ? {
+          label: "Phone",
+          href: `tel:${audit.business.phone ?? audit.websiteAudit.contactLinks.phone}`,
+          icon: Phone,
+        }
+      : null,
+    audit.websiteAudit.contactLinks.email
+      ? {
+          label: "Email",
+          href: `mailto:${audit.websiteAudit.contactLinks.email}`,
+          icon: Mail,
+        }
       : null,
     audit.websiteAudit.socialLinks.facebook
-      ? { label: "Facebook", href: audit.websiteAudit.socialLinks.facebook }
+      ? { label: "Facebook", href: audit.websiteAudit.socialLinks.facebook, icon: Facebook }
       : null,
     audit.websiteAudit.socialLinks.instagram
-      ? { label: "Instagram", href: audit.websiteAudit.socialLinks.instagram }
+      ? { label: "Instagram", href: audit.websiteAudit.socialLinks.instagram, icon: Instagram }
       : null,
     audit.websiteAudit.socialLinks.tiktok
-      ? { label: "TikTok", href: audit.websiteAudit.socialLinks.tiktok }
+      ? { label: "TikTok", href: audit.websiteAudit.socialLinks.tiktok, icon: Target }
       : null,
     audit.websiteAudit.socialLinks.youtube
-      ? { label: "YouTube", href: audit.websiteAudit.socialLinks.youtube }
+      ? { label: "YouTube", href: audit.websiteAudit.socialLinks.youtube, icon: Youtube }
       : null,
-  ].filter((link): link is { label: string; href: string } => Boolean(link));
+  ].filter((link): link is { label: string; href: string; icon: typeof Globe2 } => Boolean(link));
+  const identityAttributes = audit.business.identityAttributes.filter(
+    (attribute) => attribute.detected
+  );
 
   return (
     <section className="px-4 py-12 sm:px-6 lg:px-8">
@@ -864,13 +867,23 @@ function InteractiveReport({ audit, onRestart }: { audit: RevenueLeakAudit; onRe
         <div className="rounded-[2rem] border border-border bg-white p-6 shadow-soft sm:p-8">
           <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Interactive report</p>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Revenue Leak Audit</p>
               <h1 className="mt-2 text-4xl font-black tracking-tight text-text-primary">{audit.business.name}</h1>
               <p className="mt-3 text-sm leading-6 text-text-secondary">{audit.business.address} · {audit.business.category}</p>
               <div className="mt-5 flex flex-wrap gap-2 text-xs font-bold">
                 <span className="rounded-full bg-amber-50 px-3 py-1 text-amber-700">{audit.business.rating ?? "N/A"} rating</span>
                 <span className="rounded-full bg-blue-50 px-3 py-1 text-blue-700">{audit.business.reviewCount ?? 0} reviews</span>
                 <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">{audit.business.website ? "Website linked" : "No website"}</span>
+                {identityAttributes.map((attribute) => (
+                  <span
+                    key={attribute.id}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-violet-50 px-3 py-1 text-violet-700"
+                    title={`Detected from ${attribute.source}`}
+                  >
+                    <BadgeCheck className="h-3.5 w-3.5" aria-hidden />
+                    {attribute.label}
+                  </span>
+                ))}
               </div>
               {reportLinks.length > 0 ? (
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -880,10 +893,11 @@ function InteractiveReport({ audit, onRestart }: { audit: RevenueLeakAudit; onRe
                       href={link.href}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-3 py-1.5 text-xs font-bold text-text-secondary transition-colors hover:border-accent/30 hover:text-accent"
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-white text-text-secondary transition-colors hover:border-accent/30 hover:text-accent"
+                      aria-label={link.label}
+                      title={link.label}
                     >
-                      {link.label}
-                      <ExternalLink className="h-3 w-3" aria-hidden />
+                      <link.icon className="h-4 w-4" aria-hidden />
                     </a>
                   ))}
                 </div>
@@ -896,11 +910,12 @@ function InteractiveReport({ audit, onRestart }: { audit: RevenueLeakAudit; onRe
         <BrandSummary audit={audit} />
         <FoundIssuesMoneySummary audit={audit} />
         <SectionProblemAccordion sections={audit.sectionSummaries} />
+        <LowestReviewAnalysis audit={audit} />
         <div className="grid gap-6 xl:grid-cols-2">
           <RankingSnapshot audit={audit} />
           <ScoreBreakdown audit={audit} />
         </div>
-        <CompetitorMap points={audit.competitorMapPoints} />
+        <CompetitorMap audit={audit} points={audit.competitorMapPoints} />
         <section className="rounded-[2rem] border border-border bg-white p-6 shadow-soft sm:p-8">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Action plan</p>
           <h2 className="mt-2 text-3xl font-black tracking-tight text-text-primary">What to fix first</h2>
@@ -915,9 +930,6 @@ function InteractiveReport({ audit, onRestart }: { audit: RevenueLeakAudit; onRe
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">
-                      {item.timeline}
-                    </p>
                     <span className="rounded-full bg-surface px-2 py-0.5 text-[11px] font-bold text-text-secondary">
                       Impact: {item.impact}
                     </span>
@@ -948,9 +960,6 @@ function InteractiveReport({ audit, onRestart }: { audit: RevenueLeakAudit; onRe
 export default function RevenueLeakAuditClient() {
   const [stage, setStage] = useState<Stage>("search");
   const [searching, setSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<BusinessSearchResult[]>([]);
-  const [selectedBusiness, setSelectedBusiness] = useState<BusinessProfile | null>(null);
-  const [loadingBusinessId, setLoadingBusinessId] = useState<string | null>(null);
   const [audit, setAudit] = useState<RevenueLeakAudit | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -958,7 +967,7 @@ export default function RevenueLeakAuditClient() {
 
   const warningList = useMemo(() => [...new Set(warnings)], [warnings]);
 
-  async function runSearch(businessName: string) {
+  async function startAuditFromSearch(businessName: string) {
     if (businessName.trim().length < 2) {
       setError("Enter a business name.");
       return;
@@ -966,6 +975,7 @@ export default function RevenueLeakAuditClient() {
     setSearching(true);
     setError(null);
     setWarnings([]);
+    setAudit(null);
     try {
       const res = await fetch("/api/revenue-leak-audit/business-search", {
         method: "POST",
@@ -974,8 +984,12 @@ export default function RevenueLeakAuditClient() {
       });
       const data = (await res.json()) as SearchResponse;
       if (!res.ok || !data.ok) throw new Error(data.error ?? "Search failed.");
-      setSearchResults(data.businesses ?? []);
       setWarnings(data.warnings ?? []);
+      const firstMatch = data.businesses?.[0];
+      if (!firstMatch) {
+        throw new Error("No Google Business Profile matches were found.");
+      }
+      await selectBusiness(firstMatch);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Search failed.");
     } finally {
@@ -984,7 +998,7 @@ export default function RevenueLeakAuditClient() {
   }
 
   async function selectBusiness(result: BusinessSearchResult) {
-    setLoadingBusinessId(result.placeId);
+    setSearching(true);
     setError(null);
     try {
       const res = await fetch("/api/revenue-leak-audit/business-details", {
@@ -996,18 +1010,16 @@ export default function RevenueLeakAuditClient() {
       if (!res.ok || !data.ok || !data.business) {
         throw new Error(data.error ?? "Could not load business details.");
       }
-      setSelectedBusiness(data.business);
       setWarnings((prev) => [...prev, ...(data.warnings ?? [])]);
-      setStage("assumptions");
+      await startAudit(data.business);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load business details.");
     } finally {
-      setLoadingBusinessId(null);
+      setSearching(false);
     }
   }
 
-  async function startAudit(assumptions: AssumptionFormValues) {
-    if (!selectedBusiness) return;
+  async function startAudit(business: BusinessProfile) {
     setStage("analyzing");
     setError(null);
     setProgressStep(0);
@@ -1018,7 +1030,7 @@ export default function RevenueLeakAuditClient() {
       const res = await fetch("/api/revenue-leak-audit/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ business: selectedBusiness, assumptions }),
+        body: JSON.stringify({ business, assumptions: {} }),
       });
       const data = (await res.json()) as AnalyzeResponse;
       if (!res.ok || !data.ok || !data.audit) throw new Error(data.error ?? "Audit failed.");
@@ -1027,7 +1039,7 @@ export default function RevenueLeakAuditClient() {
       setStage("report");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Audit failed.");
-      setStage("assumptions");
+      setStage("search");
     } finally {
       window.clearInterval(interval);
     }
@@ -1035,8 +1047,6 @@ export default function RevenueLeakAuditClient() {
 
   function restart() {
     setStage("search");
-    setSearchResults([]);
-    setSelectedBusiness(null);
     setAudit(null);
     setError(null);
     setWarnings([]);
@@ -1048,18 +1058,11 @@ export default function RevenueLeakAuditClient() {
       {stage === "search" ? (
         <>
           <HeroSearch
-            onSearch={runSearch}
+            onSearch={startAuditFromSearch}
             onSelectBusiness={selectBusiness}
             searching={searching}
           />
           {error ? <InlineAlert message={error} tone="error" /> : null}
-          <SearchResults results={searchResults} onSelect={selectBusiness} loadingId={loadingBusinessId} />
-        </>
-      ) : null}
-      {stage === "assumptions" && selectedBusiness ? (
-        <>
-          {error ? <InlineAlert message={error} tone="error" /> : null}
-          <AssumptionsForm business={selectedBusiness} onBack={() => setStage("search")} onSubmit={startAudit} />
         </>
       ) : null}
       {stage === "analyzing" ? <AnalyzingScreen step={progressStep} /> : null}

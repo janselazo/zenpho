@@ -32,6 +32,13 @@ export type BusinessPhoto = {
   authorAttributions?: string[];
 };
 
+export type BusinessIdentityAttribute = {
+  id: "latino_owned";
+  label: "Identifies as Latino-owned";
+  detected: boolean;
+  source: "google" | "website" | "mock";
+};
+
 export type BusinessProfile = {
   placeId: string;
   name: string;
@@ -49,6 +56,7 @@ export type BusinessProfile = {
   hours: string[];
   googleMapsUri: string | null;
   businessStatus: string | null;
+  identityAttributes: BusinessIdentityAttribute[];
 };
 
 export type BusinessSearchResult = Pick<
@@ -169,6 +177,11 @@ export type WebsiteAudit = {
     tiktok: string | null;
     youtube: string | null;
   };
+  contactLinks: {
+    phone: string | null;
+    email: string | null;
+  };
+  identityAttributes: BusinessIdentityAttribute[];
   imageCount: number;
   blurryImageSignals: number;
   warnings: string[];

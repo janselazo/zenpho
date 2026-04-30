@@ -78,11 +78,22 @@ export async function generateRevenueLeakAudit(input: {
     analyzeCompetitors({ business, serviceArea: assumptions.serviceArea }),
     auditWebsite(business.website),
   ]);
+  const identityAttributes = [
+    ...business.identityAttributes,
+    ...website.data.identityAttributes,
+  ].filter(
+    (attribute, index, all) =>
+      attribute.detected && all.findIndex((item) => item.id === attribute.id) === index
+  );
+  const businessWithIdentity = {
+    ...business,
+    identityAttributes,
+  };
 
-  const reviewSentiment = analyzeReviewSentiment(business);
-  const photoAnalysis = analyzePhotos(business, competitorsResult.data.competitors);
+  const reviewSentiment = analyzeReviewSentiment(businessWithIdentity);
+  const photoAnalysis = analyzePhotos(businessWithIdentity, competitorsResult.data.competitors);
   const scored = scoreAudit({
-    business,
+    business: businessWithIdentity,
     assumptions,
     competitors: competitorsResult.data.competitors,
     rankingSnapshot: competitorsResult.data.rankingSnapshot,
@@ -91,7 +102,7 @@ export async function generateRevenueLeakAudit(input: {
     photoAnalysis,
   });
   const competitorMapPoints = buildCompetitorMapPoints(
-    business,
+    businessWithIdentity,
     competitorsResult.data.competitors
   );
 
@@ -107,7 +118,7 @@ export async function generateRevenueLeakAudit(input: {
   return {
     data: {
       id: slugId(business.name),
-      business,
+      business: businessWithIdentity,
       assumptions,
       competitors: competitorsResult.data.competitors,
       competitorMapPoints,

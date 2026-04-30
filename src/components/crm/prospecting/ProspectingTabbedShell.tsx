@@ -16,13 +16,19 @@ export default function ProspectingTabbedShell({
   description,
   tabs,
   ariaLabel,
+  activeTab,
+  onActiveTabChange,
 }: {
   title: string;
   description: string;
   tabs: ProspectingShellTab[];
   ariaLabel?: string;
+  activeTab?: string;
+  onActiveTabChange?: (tabId: string) => void;
 }) {
-  const [active, setActive] = useState(tabs[0]?.id ?? "");
+  const [internalActive, setInternalActive] = useState(tabs[0]?.id ?? "");
+  const active = activeTab ?? internalActive;
+  const setActive = onActiveTabChange ?? setInternalActive;
 
   return (
     <div>

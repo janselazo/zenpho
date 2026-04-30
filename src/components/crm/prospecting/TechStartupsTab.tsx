@@ -11,14 +11,17 @@ import {
   Radio,
   Rocket,
   Search,
+  ShoppingBag,
   Sparkles,
   Users,
 } from "lucide-react";
 import IconTabBar from "@/components/crm/prospecting/IconTabBar";
+import EcomBrandsTab from "@/components/crm/prospecting/EcomBrandsTab";
 import FundingSignalsTab from "@/components/crm/prospecting/startup-signals/FundingSignalsTab";
 import LaunchSignalsTab from "@/components/crm/prospecting/startup-signals/LaunchSignalsTab";
 import LinkedInActivitySignalsTab from "@/components/crm/prospecting/startup-signals/LinkedInActivitySignalsTab";
 import SocialIntentSignalsTab from "@/components/crm/prospecting/startup-signals/SocialIntentSignalsTab";
+import type { MergedCrmFieldOptions } from "@/lib/crm/field-options";
 import type {
   ApolloPersonRow,
   TechStartupOrgRow,
@@ -154,6 +157,7 @@ function tidyDomain(org: TechStartupOrgRow): string | null {
 
 type TechStartupsSubTab =
   | "companies"
+  | "ecom-brands"
   | "funding"
   | "launches"
   | "social-intent"
@@ -161,6 +165,7 @@ type TechStartupsSubTab =
 
 const TECH_STARTUP_TAB_BY_ID: Record<string, TechStartupsSubTab> = {
   "tech-startups-companies": "companies",
+  "tech-startups-ecom-brands": "ecom-brands",
   "tech-startups-funding": "funding",
   "tech-startups-launches": "launches",
   "tech-startups-social-intent": "social-intent",
@@ -169,13 +174,18 @@ const TECH_STARTUP_TAB_BY_ID: Record<string, TechStartupsSubTab> = {
 
 const TECH_STARTUP_ID_BY_TAB: Record<TechStartupsSubTab, string> = {
   companies: "tech-startups-companies",
+  "ecom-brands": "tech-startups-ecom-brands",
   funding: "tech-startups-funding",
   launches: "tech-startups-launches",
   "social-intent": "tech-startups-social-intent",
   "linkedin-activity": "tech-startups-linkedin-activity",
 };
 
-export default function TechStartupsTab() {
+export default function TechStartupsTab({
+  fieldOptions,
+}: {
+  fieldOptions: MergedCrmFieldOptions;
+}) {
   const [subTab, setSubTab] = useState<TechStartupsSubTab>("companies");
   const [keyword, setKeyword] = useState("");
   const [industries, setIndustries] = useState<string[]>([]);
@@ -292,7 +302,8 @@ export default function TechStartupsTab() {
       </p>
       <IconTabBar
         tabs={[
-          { id: "tech-startups-companies", label: "Apollo", icon: Rocket },
+          { id: "tech-startups-companies", label: "Tech", icon: Rocket },
+          { id: "tech-startups-ecom-brands", label: "Ecom Brands", icon: ShoppingBag },
           { id: "tech-startups-funding", label: "Funding", icon: BadgeDollarSign },
           { id: "tech-startups-launches", label: "Launches", icon: Newspaper },
           { id: "tech-startups-social-intent", label: "Social Intent", icon: Radio },
@@ -302,6 +313,15 @@ export default function TechStartupsTab() {
         onTabChange={(id) => setSubTab(TECH_STARTUP_TAB_BY_ID[id] ?? "companies")}
         ariaLabel="Tech Startups sources"
       />
+
+      <div
+        id="tech-startups-ecom-brands-panel"
+        role="tabpanel"
+        aria-labelledby="tech-startups-ecom-brands-tab"
+        hidden={subTab !== "ecom-brands"}
+      >
+        <EcomBrandsTab fieldOptions={fieldOptions} />
+      </div>
 
       <div
         id="tech-startups-funding-panel"
@@ -350,7 +370,7 @@ export default function TechStartupsTab() {
         <div className="flex items-center gap-2">
           <Rocket className="h-5 w-5 text-accent dark:text-blue-400" aria-hidden />
           <h2 className="heading-display text-lg font-semibold text-text-primary dark:text-zinc-100">
-            Apollo
+            Tech
           </h2>
         </div>
         <p className="mt-1 text-xs text-text-secondary dark:text-zinc-500">

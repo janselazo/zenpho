@@ -36,9 +36,8 @@ import ProspectPreviewOutreachBlock, {
 } from "@/components/crm/prospecting/ProspectPreviewOutreachBlock";
 import { useRouter, useSearchParams } from "next/navigation";
 import { primaryPlaceTypeLabel } from "@/lib/crm/places-search-ui";
-import { Building2, ChevronLeft, ChevronRight, Rocket, ShoppingBag } from "lucide-react";
+import { Building2, ChevronLeft, ChevronRight, Rocket } from "lucide-react";
 import TechStartupsTab from "@/components/crm/prospecting/TechStartupsTab";
-import EcomBrandsTab from "@/components/crm/prospecting/EcomBrandsTab";
 import ProspectingTabbedShell from "@/components/crm/prospecting/ProspectingTabbedShell";
 import PlacesBusinessAutocomplete from "@/components/crm/prospecting/PlacesBusinessAutocomplete";
 import PlacesCategoryAutocomplete from "@/components/crm/prospecting/PlacesCategoryAutocomplete";
@@ -902,6 +901,7 @@ function ProspectsIntelligenceViewInner({
   const defaultProjectType =
     fieldOptions.leadProjectTypes[0] ?? DEFAULT_LEAD_PROJECT_TYPE;
   const [businessName, setBusinessName] = useState("");
+  const [prospectsTab, setProspectsTab] = useState("local-business");
   const [category, setCategory] = useState("");
   const [city, setCity] = useState("");
   const [onlyNoWebsite, setOnlyNoWebsite] = useState(false);
@@ -1745,6 +1745,8 @@ function ProspectsIntelligenceViewInner({
         title="Prospects"
         description={prospectsDescription}
         ariaLabel="Prospects"
+        activeTab={prospectsTab}
+        onActiveTabChange={setProspectsTab}
         tabs={[
           {
             id: "local-business",
@@ -1754,20 +1756,14 @@ function ProspectsIntelligenceViewInner({
           },
           {
             id: "tech-startups",
-            label: "Tech Startups",
+            label: "Startups",
             icon: Rocket,
-            body: <TechStartupsTab />,
-          },
-          {
-            id: "ecom-brands",
-            label: "Ecom Brands",
-            icon: ShoppingBag,
-            body: <EcomBrandsTab fieldOptions={fieldOptions} />,
+            body: <TechStartupsTab fieldOptions={fieldOptions} />,
           },
         ]}
       />
 
-      {activeReport ? (
+      {prospectsTab === "local-business" && activeReport ? (
         <div
           id="prospect-market-intel-report"
           className={`${cardClass} scroll-mt-6 space-y-0`}

@@ -148,6 +148,18 @@ export default function AppSidebar() {
               <LayoutDashboard className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
               Dashboard
             </NavLink>
+            {playbookSection && PlaybookNavIcon ? (
+              <NavLink
+                href={playbookSection.href}
+                active={
+                  pathname === playbookSection.href ||
+                  pathname.startsWith(`${playbookSection.href}/`)
+                }
+              >
+                <PlaybookNavIcon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+                {playbookSection.label}
+              </NavLink>
+            ) : null}
           </nav>
         </div>
 
@@ -204,18 +216,6 @@ export default function AppSidebar() {
           open={prospectingOpen}
           onToggle={toggleProspecting}
         >
-          {playbookSection && PlaybookNavIcon ? (
-            <NavLink
-              href={playbookSection.href}
-              active={
-                pathname === playbookSection.href ||
-                pathname.startsWith(`${playbookSection.href}/`)
-              }
-            >
-              <PlaybookNavIcon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-              {playbookSection.label}
-            </NavLink>
-          ) : null}
           <NavLink
             href="/prospecting/product-led"
             active={
