@@ -8,10 +8,12 @@ import {
 } from "pdf-lib";
 import { buildLastReviewsSentimentBlock } from "./review-sentiment-service";
 import { formatReviewStarLabel } from "./review-selection";
+import { buildGoogleBusinessProfileChecklist } from "./gbp-checklist";
 import type {
   AuditFinding,
   AuditGrade,
   AuditSeverity,
+  BusinessProfile,
   RevenueLeakAudit,
 } from "./types";
 
@@ -1045,6 +1047,42 @@ function drawLabelledLines(
   }
 }
 
+function drawGbpChecklistPdf(ctx: Ctx, business: BusinessProfile): void {
+  const items = buildGoogleBusinessProfileChecklist(business);
+  ensure(ctx, 28);
+  ctx.page.drawText(sanitize("Google Business Profile checklist"), {
+    x: MARGIN,
+    y: ctx.y,
+    size: 9,
+    font: ctx.bold,
+    color: INK,
+  });
+  let y = ctx.y - 12;
+  for (const item of items) {
+    const tag =
+      item.status === "pass"
+        ? "[OK]"
+        : item.status === "warn"
+          ? "[!]"
+          : item.status === "fail"
+            ? "[X]"
+            : "[?]";
+    const text = sanitize(`${tag} ${item.label} — ${item.hint}`);
+    ensure(ctx, 40);
+    y = drawText(ctx, text, {
+      x: MARGIN,
+      y,
+      size: 8,
+      font: ctx.font,
+      color: INK_SOFT,
+      maxWidth: CONTENT_W,
+      lineGap: 2,
+    });
+    y -= 4;
+  }
+  ctx.y = y - 6;
+}
+
 // ─── Problems by section ─────────────────────────────────────────────────────
 function drawProblemsBySection(ctx: Ctx, audit: RevenueLeakAudit): void {
   newPage(ctx);
@@ -1100,7 +1138,24 @@ function drawProblemsBySection(ctx: Ctx, audit: RevenueLeakAudit): void {
     }
     ctx.y = top - headerH - 10;
 
+    if (section.category === "Google Business Profile") {
+      drawGbpChecklistPdf(ctx, audit.business);
+    }
+
     if (section.findings.length === 0) {
+      if (section.category === "Google Business Profile") {
+        ensure(ctx, 28);
+        ctx.y = drawText(ctx, sanitize("No flagged GBP issues in the priority list above."), {
+          y: ctx.y,
+          size: 9,
+          font: ctx.font,
+          color: MUTED,
+          maxWidth: CONTENT_W,
+          lineGap: 2,
+        });
+        ctx.y -= 8;
+        continue;
+      }
       ensure(ctx, 36);
       card(ctx, MARGIN, ctx.y, CONTENT_W, 28, SURFACE_LIGHT, BORDER_SOFT);
       ctx.page.drawText("No major issues found in this section.", {

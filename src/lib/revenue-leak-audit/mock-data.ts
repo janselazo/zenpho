@@ -26,6 +26,7 @@ export const MOCK_BUSINESS: BusinessProfile = {
       text: "Terrible experience — rude on the phone, late to the appointment, and the quote was way too expensive.",
       publishTime: null,
       relativePublishTime: "3 weeks ago",
+      hasOwnerReply: false,
     },
     {
       authorName: "Drew P.",
@@ -33,6 +34,7 @@ export const MOCK_BUSINESS: BusinessProfile = {
       text: "Hard to reach by phone and nobody followed up on the quote.",
       publishTime: null,
       relativePublishTime: "1 month ago",
+      hasOwnerReply: true,
     },
     {
       authorName: "Sam L.",
@@ -40,6 +42,7 @@ export const MOCK_BUSINESS: BusinessProfile = {
       text: "Work was okay but I had to wait almost an hour past the window.",
       publishTime: null,
       relativePublishTime: "6 weeks ago",
+      hasOwnerReply: false,
     },
     {
       authorName: "Priya N.",
@@ -47,6 +50,7 @@ export const MOCK_BUSINESS: BusinessProfile = {
       text: "Professional crew but pricing was higher than I expected.",
       publishTime: null,
       relativePublishTime: "2 months ago",
+      hasOwnerReply: true,
     },
     {
       authorName: "Maria G.",
@@ -54,6 +58,7 @@ export const MOCK_BUSINESS: BusinessProfile = {
       text: "They arrived fast and fixed the leak the same day.",
       publishTime: null,
       relativePublishTime: "2 weeks ago",
+      hasOwnerReply: true,
     },
     {
       authorName: "Chris T.",
@@ -61,6 +66,7 @@ export const MOCK_BUSINESS: BusinessProfile = {
       text: "I highly recommend them!",
       publishTime: null,
       relativePublishTime: "5 months ago",
+      hasOwnerReply: false,
     },
   ],
   photos: [

@@ -1478,7 +1478,6 @@ function computeScores(input: BuildInput): AuditScores {
   if (business.hours.length === 0) gbp -= 10;
   if ((business.reviewCount ?? 0) < 20) gbp -= 15;
   if ((business.photoCount ?? 0) < 10) gbp -= 10;
-  if ((business.rating ?? 5) < 4.3) gbp -= 15;
 
   let reviews = reviewSentiment.sentimentScore;
   if (comp.reviews > (business.reviewCount ?? 0) * 2) reviews -= 20;

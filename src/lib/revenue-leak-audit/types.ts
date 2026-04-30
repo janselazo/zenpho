@@ -23,6 +23,11 @@ export type BusinessReview = {
   text: string | null;
   publishTime: string | null;
   relativePublishTime: string | null;
+  /**
+   * Whether a merchant/owner reply exists on this review row when Places returns it.
+   * Often omitted by the API — see `formatReviewOwnerReplyAuditNote`.
+   */
+  hasOwnerReply?: boolean;
 };
 
 export type BusinessPhoto = {

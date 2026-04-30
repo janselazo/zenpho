@@ -7,18 +7,21 @@ import {
   Building2,
   CheckCircle2,
   ChevronDown,
+  CircleHelp,
   Download,
   Loader2,
   MapPin,
   RotateCcw,
   Search,
   Target,
+  XCircle,
 } from "lucide-react";
 import ContactChannelStrip from "@/components/crm/ContactChannelStrip";
 import RevenueLeakFixLeaksCta from "@/components/revenue-leak-audit/RevenueLeakFixLeaksCta";
 import RevenueLeakSnapshot, { RevenueLeakTopLeaksSection } from "@/components/revenue-leak-audit/RevenueLeakSnapshot";
 import Button from "@/components/ui/Button";
 import { EMPTY_PROSPECT_SOCIAL_URLS } from "@/lib/crm/prospect-enrichment-types";
+import { buildGoogleBusinessProfileChecklist } from "@/lib/revenue-leak-audit/gbp-checklist";
 import {
   applyAssumptionsToFindings,
   buildMoneySummaryFromAssumptions,
@@ -38,11 +41,11 @@ import {
 import {
   formatReviewStarLabel,
 } from "@/lib/revenue-leak-audit/review-selection";
+import { formatReviewOwnerReplyAuditNote } from "@/lib/revenue-leak-audit/review-owner-reply";
 import {
   buildCategoryMarkerElement,
   CLASSIC_MARKER_PIN_LAYOUT,
   compositeCategoryMarkerDataUrl,
-  competitorMapLightBlueStyles,
   resolveCategoryMarkerStyle,
 } from "@/lib/revenue-leak-audit/map-marker-style";
 
@@ -62,8 +65,9 @@ const progressSteps = [
 /** Do not auto-advance past this index while waiting on `/analyze` — the API often runs 1–3+ minutes. */
 const PROGRESS_AUTOSTEP_CAP = Math.max(0, progressSteps.length - 2);
 
-/** Wall ETA for the analyzing ring before the indeterminate cap; `/analyze` often runs longer. */
-const ESTIMATED_ANALYSIS_MS = 120_000;
+/** Ring + countdown use this duration; progress caps at 92% until the API returns. */
+const ANALYSIS_COUNTDOWN_SECONDS = 60;
+const ESTIMATED_ANALYSIS_MS = ANALYSIS_COUNTDOWN_SECONDS * 1_000;
 /** Do not show a full ring until the server responds. */
 const ANALYSIS_RING_INDETERMINATE_CAP = 0.92;
 
@@ -412,46 +416,62 @@ function HeroSearch({
   );
 }
 
-function AuditAnalyzingRing({ progress }: { progress: number }) {
+function AuditAnalyzingRing({ progress, secondsLeft }: { progress: number; secondsLeft: number }) {
   const radius = 22;
   const circumference = 2 * Math.PI * radius;
   const clamped = Math.min(1, Math.max(0, progress));
   const dash = clamped * circumference;
   const pct = Math.round(clamped * 100);
   return (
-    <svg
-      viewBox="0 0 56 56"
-      role="progressbar"
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-valuenow={pct}
-      aria-label={`Audit progress, about ${pct} percent of estimated wait time`}
-      className="h-7 w-7 -rotate-90"
-    >
-      <circle cx="28" cy="28" r={radius} fill="none" stroke="rgba(255,255,255,0.38)" strokeWidth="4" />
-      <circle
-        cx="28"
-        cy="28"
-        r={radius}
-        fill="none"
-        stroke="white"
-        strokeLinecap="round"
-        strokeWidth="4"
-        strokeDasharray={`${dash} ${circumference}`}
-        className="transition-[stroke-dasharray] duration-300 ease-out"
-      />
-    </svg>
+    <div className="relative h-10 w-10 shrink-0">
+      <svg
+        viewBox="0 0 56 56"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={pct}
+        aria-label={`Audit running, about ${secondsLeft} seconds on the timer and ${pct} percent of the progress ring`}
+        className="absolute inset-0 h-full w-full -rotate-90"
+      >
+        <circle cx="28" cy="28" r={radius} fill="none" stroke="rgba(255,255,255,0.38)" strokeWidth="4" />
+        <circle
+          cx="28"
+          cy="28"
+          r={radius}
+          fill="none"
+          stroke="white"
+          strokeLinecap="round"
+          strokeWidth="4"
+          strokeDasharray={`${dash} ${circumference}`}
+        />
+      </svg>
+      <span
+        className="absolute inset-0 flex items-center justify-center text-sm font-black tabular-nums leading-none tracking-tight text-white"
+        style={{ textShadow: "0 1px 2px rgba(0,0,0,0.35)" }}
+        aria-hidden
+      >
+        {secondsLeft}
+      </span>
+    </div>
   );
 }
 
-function AnalyzingScreen({ step, ringProgress }: { step: number; ringProgress: number }) {
+function AnalyzingScreen({
+  step,
+  ringProgress,
+  secondsLeft,
+}: {
+  step: number;
+  ringProgress: number;
+  secondsLeft: number;
+}) {
   const headlineIndex = Math.min(step, progressSteps.length - 1);
   return (
     <section className="px-4 py-20 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-3xl rounded-[2rem] border border-border bg-white p-8 shadow-soft-lg">
         <div className="flex items-center gap-4">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-accent text-white">
-            <AuditAnalyzingRing progress={ringProgress} />
+            <AuditAnalyzingRing progress={ringProgress} secondsLeft={secondsLeft} />
           </div>
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Running audit</p>
@@ -749,6 +769,36 @@ function CompetitorStrengthsPanel({ audit }: { audit: RevenueLeakAudit }) {
   );
 }
 
+function GoogleBusinessProfileChecklist({ business }: { business: BusinessProfile }) {
+  const items = useMemo(() => buildGoogleBusinessProfileChecklist(business), [business]);
+  return (
+    <div className="rounded-2xl border border-border bg-white p-4">
+      <p className="text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">Profile checklist</p>
+      <ul className="mt-3 space-y-2.5">
+        {items.map((item) => (
+          <li key={item.id} className="flex gap-3 text-sm">
+            <span className="mt-0.5 shrink-0" aria-hidden>
+              {item.status === "pass" ? (
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              ) : item.status === "warn" ? (
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+              ) : item.status === "fail" ? (
+                <XCircle className="h-4 w-4 text-red-600" />
+              ) : (
+                <CircleHelp className="h-4 w-4 text-text-secondary/80" />
+              )}
+            </span>
+            <div className="min-w-0">
+              <p className="font-bold text-text-primary">{item.label}</p>
+              <p className="text-xs leading-relaxed text-text-secondary">{item.hint}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function SectionProblemAccordion({
   sections,
   audit,
@@ -784,10 +834,29 @@ function SectionProblemAccordion({
                   {section.category === "My Business vs Google Competitors" ? (
                     <CompetitorStrengthsPanel audit={audit} />
                   ) : null}
+                  {section.category === "Reviews & Reputation" ? (
+                    <p className="mb-4 rounded-2xl border border-border bg-white px-4 py-3 text-sm leading-relaxed text-text-secondary">
+                      <span className="font-semibold text-text-primary">Owner responses: </span>
+                      {formatReviewOwnerReplyAuditNote(audit.business.reviews)}
+                    </p>
+                  ) : null}
+                  {section.category === "Google Business Profile" ? (
+                    <GoogleBusinessProfileChecklist business={audit.business} />
+                  ) : null}
                   {section.findings.length === 0 ? (
-                    <p className="text-sm text-text-secondary">No major issues found in this section.</p>
+                    section.category === "Google Business Profile" ? (
+                      <p className="mt-4 text-sm text-text-secondary">
+                        No flagged GBP issues in the priority list above.
+                      </p>
+                    ) : (
+                      <p className="text-sm text-text-secondary">No major issues found in this section.</p>
+                    )
                   ) : (
-                    <div className="space-y-3">
+                    <div
+                      className={
+                        section.category === "Google Business Profile" ? "mt-4 space-y-3" : "space-y-3"
+                      }
+                    >
                       {section.findings.map((finding) => {
                         const sevColor =
                           finding.severity === "Critical"
@@ -842,15 +911,25 @@ function SectionProblemAccordion({
 
 type MapMarkerHandle = { addListener: (event: string, cb: () => void) => void };
 
+/** Minimal map surface used by the competitor map (full Maps typings not injected). */
+type RevenueLeakGoogleMap = {
+  fitBounds: (bounds: unknown, padding?: number | { top?: number; right?: number; bottom?: number; left?: number }) => void;
+  getZoom: () => number | undefined;
+  setZoom: (zoom: number) => void;
+};
+
 type WindowWithGoogle = Window & {
   google?: {
     maps: {
-      Map: new (element: HTMLElement, options: Record<string, unknown>) => { fitBounds: (bounds: unknown) => void };
+      Map: new (element: HTMLElement, options: Record<string, unknown>) => RevenueLeakGoogleMap;
       Marker: new (options: Record<string, unknown>) => MapMarkerHandle;
       Size: new (w: number, h: number) => { width: number; height: number };
       Point: new (x: number, y: number) => { x: number; y: number };
       InfoWindow: new () => { setContent: (content: string) => void; open: (options: Record<string, unknown>) => void };
       LatLngBounds: new () => { extend: (point: { lat: number; lng: number }) => void };
+      event?: {
+        addListenerOnce: (instance: unknown, eventName: string, handler: () => void) => void;
+      };
       marker?: {
         AdvancedMarkerElement: new (options: Record<string, unknown>) => MapMarkerHandle;
       };
@@ -902,7 +981,8 @@ function CompetitorMap({
   const [runtimeKey, setRuntimeKey] = useState<string | null>(initialKey);
   const [keyResolved, setKeyResolved] = useState(Boolean(initialKey));
   const key = runtimeKey;
-  const businessPosition = audit.rankingSnapshot.selectedBusinessPosition;
+  const businessPosition =
+    audit.rankingSnapshot.selectedBusinessRankItem?.position ?? audit.rankingSnapshot.selectedBusinessPosition;
 
   useEffect(() => {
     if (runtimeKey) {
@@ -945,10 +1025,9 @@ function CompetitorMap({
           mapTypeControl: false,
           streetViewControl: false,
           fullscreenControl: false,
-          styles: [...competitorMapLightBlueStyles],
         };
         if (mapId) mapOptions.mapId = mapId;
-        const map = new gmaps.Map(mapRef.current, mapOptions);
+        const map = new gmaps.Map(mapRef.current, mapOptions) as RevenueLeakGoogleMap;
         const bounds = new gmaps.LatLngBounds();
         const info = new gmaps.InfoWindow();
         const AdvancedMarkerElement = gmaps.marker?.AdvancedMarkerElement;
@@ -1016,7 +1095,15 @@ function CompetitorMap({
         }
 
         if (cancelled || !mapRef.current) return;
-        map.fitBounds(bounds);
+        map.fitBounds(bounds, { top: 96, right: 96, bottom: 96, left: 96 });
+        const addListenerOnce = gmaps.event?.addListenerOnce;
+        if (addListenerOnce) {
+          addListenerOnce(map, "idle", () => {
+            if (cancelled) return;
+            const z = map.getZoom();
+            if (typeof z === "number" && z < 15) map.setZoom(Math.min(15, z + 1));
+          });
+        }
       })
       .catch(() => setMapStatus("Map unavailable."));
     return () => {
@@ -1033,7 +1120,16 @@ function CompetitorMap({
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Google competitors</p>
           <h2 className="mt-2 text-3xl font-black tracking-tight text-text-primary">Competitor Map</h2>
         </div>
-        <p className="text-sm text-text-secondary">{points.filter((p) => !p.isSelectedBusiness).length} direct competitors mapped</p>
+        <p className="text-sm text-text-secondary">
+          {businessPosition != null ? (
+            <>
+              Your business is located in position{" "}
+              <span className="font-black tabular-nums text-text-primary">#{businessPosition}</span> for this search.
+            </>
+          ) : (
+            <>Your business&apos;s ranking position for this search isn&apos;t available.</>
+          )}
+        </p>
       </div>
       <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
         {key && !mapStatus ? (
@@ -1110,10 +1206,6 @@ function RecentReviewSentimentSection({ audit }: { audit: RevenueLeakAudit }) {
         <div className="min-w-0 flex-1">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Review sentiment</p>
           <h2 className="mt-2 text-3xl font-black tracking-tight text-text-primary">Last 5 reviews</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-text-secondary">
-            Newest Google review first (by publish time in this Places snapshot). Themes and score use only these rows —
-            not your full Google history.
-          </p>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <span className="rounded-full border border-accent/25 bg-accent/10 px-4 py-2 text-sm font-black tabular-nums text-accent">
               Score {sentiment.sentimentScore}/100
@@ -1304,6 +1396,7 @@ export default function RevenueLeakAuditClient({
   const [warnings, setWarnings] = useState<string[]>([]);
   const [progressStep, setProgressStep] = useState(0);
   const [analysisRingProgress, setAnalysisRingProgress] = useState(0);
+  const [analysisSecondsLeft, setAnalysisSecondsLeft] = useState(ANALYSIS_COUNTDOWN_SECONDS);
 
   const warningList = useMemo(() => [...new Set(warnings)], [warnings]);
 
@@ -1365,6 +1458,7 @@ export default function RevenueLeakAuditClient({
     setError(null);
     setProgressStep(0);
     setAnalysisRingProgress(0);
+    setAnalysisSecondsLeft(ANALYSIS_COUNTDOWN_SECONDS);
 
     const analysisStart = Date.now();
     let ringRafId = 0;
@@ -1374,6 +1468,7 @@ export default function RevenueLeakAuditClient({
       if (ringLoopCancelled) return;
       const elapsed = Date.now() - analysisStart;
       setAnalysisRingProgress(Math.min(ANALYSIS_RING_INDETERMINATE_CAP, elapsed / ESTIMATED_ANALYSIS_MS));
+      setAnalysisSecondsLeft(Math.max(0, Math.ceil((ESTIMATED_ANALYSIS_MS - elapsed) / 1000)));
       ringRafId = requestAnimationFrame(tickRing);
     };
     ringRafId = requestAnimationFrame(tickRing);
@@ -1392,6 +1487,7 @@ export default function RevenueLeakAuditClient({
 
       ringLoopCancelled = true;
       cancelAnimationFrame(ringRafId);
+      setAnalysisSecondsLeft(0);
       setAnalysisRingProgress(1);
       await new Promise<void>((resolve) => {
         window.setTimeout(resolve, 240);
@@ -1418,6 +1514,7 @@ export default function RevenueLeakAuditClient({
     setWarnings([]);
     setProgressStep(0);
     setAnalysisRingProgress(0);
+    setAnalysisSecondsLeft(ANALYSIS_COUNTDOWN_SECONDS);
   }
 
   return (
@@ -1433,7 +1530,11 @@ export default function RevenueLeakAuditClient({
         </>
       ) : null}
       {stage === "analyzing" ? (
-        <AnalyzingScreen step={progressStep} ringProgress={analysisRingProgress} />
+        <AnalyzingScreen
+          step={progressStep}
+          ringProgress={analysisRingProgress}
+          secondsLeft={analysisSecondsLeft}
+        />
       ) : null}
       {stage === "report" && audit ? (
         <InteractiveReport audit={audit} onRestart={restart} googleMapsApiKey={googleMapsApiKey} />

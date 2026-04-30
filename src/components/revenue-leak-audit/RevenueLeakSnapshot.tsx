@@ -277,7 +277,6 @@ export default function RevenueLeakSnapshot({
     };
   }, [findingsWithMoney]);
 
-  const leakCount = findingsWithMoney.length;
   const monthlyRange = formatUsdRange(
     moneySummary.estimatedMonthlyCostLow,
     moneySummary.estimatedMonthlyCostHigh
@@ -287,16 +286,6 @@ export default function RevenueLeakSnapshot({
     moneySummary.estimatedAnnualCostHigh
   );
   const jobsRange = `${moneySummary.lostJobsPerMonthLow.toFixed(1)}–${moneySummary.lostJobsPerMonthHigh.toFixed(1)}`;
-
-  const severityLine = useMemo(() => {
-    const c = moneySummary.severityCounts;
-    const parts: string[] = [];
-    if (c.Critical > 0) parts.push(`${c.Critical} critical`);
-    if (c.High > 0) parts.push(`${c.High} high`);
-    if (c.Medium > 0) parts.push(`${c.Medium} medium`);
-    if (c.Low > 0) parts.push(`${c.Low} low`);
-    return parts.length ? `Severity mix: ${parts.join(" · ")}.` : null;
-  }, [moneySummary.severityCounts]);
 
   const suggestedJob = suggestedAverageJobFromCategory(audit.business.category);
   const showJobHint =
@@ -310,20 +299,8 @@ export default function RevenueLeakSnapshot({
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Revenue Leak Snapshot</p>
           <h2 className="mt-2 text-2xl font-black tracking-tight text-text-primary sm:text-3xl lg:text-4xl">
-            {leakCount} Google Business Profile + website {leakCount === 1 ? "leak" : "leaks"} could be putting{" "}
-            <span className="text-accent">{monthlyRange}</span> / mo at risk
+            Revenue Leaks are costing you <span className="text-accent">{monthlyRange}</span> / month
           </h2>
-          <p className="mt-3 max-w-xl text-sm leading-relaxed text-text-secondary">
-            Your estimate is based on visible conversion and local search gaps found in your website and Google Business
-            Profile audit.
-          </p>
-          <p className="mt-2 max-w-xl text-xs leading-relaxed text-text-secondary">
-            It reflects your audit findings together with monthly opportunities, close rate, and average job value
-            (editable below). We did not audit CRM, follow-up, missed calls, or internal operations.
-          </p>
-          {severityLine ? (
-            <p className="mt-3 text-xs font-semibold text-text-secondary">{severityLine}</p>
-          ) : null}
         </div>
 
         <div className="rounded-2xl border border-border bg-surface/60 p-5 sm:p-6">

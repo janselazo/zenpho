@@ -1,20 +1,6 @@
 /** Google-hosted pinlets (v2), same family as Google Maps category markers. */
 const GSTATIC_PINLETS = "https://maps.gstatic.com/mapfiles/place_api/icons/v2";
 
-/**
- * Light-blue base map for the revenue leak competitor map (`google.maps.Map` `styles`).
- */
-export const competitorMapLightBlueStyles = [
-  { featureType: "landscape", stylers: [{ color: "#e6f2fa" }] },
-  { featureType: "landscape.man_made", stylers: [{ color: "#dceef7" }] },
-  { featureType: "poi", stylers: [{ color: "#ddeef8" }] },
-  { featureType: "poi.park", stylers: [{ color: "#d4e9df" }] },
-  { featureType: "road", elementType: "geometry.fill", stylers: [{ color: "#f7fbff" }] },
-  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#cfe2f0" }] },
-  { featureType: "water", stylers: [{ color: "#b9dff3" }] },
-  { featureType: "administrative", elementType: "geometry.stroke", stylers: [{ color: "#bcd8eb" }] },
-] as const;
-
 function hexLuminance(hexRaw: string): number {
   const hex = hexRaw.replace(/^#/, "").trim();
   if (!/^[0-9a-f]{6}$/i.test(hex)) return 0.35;

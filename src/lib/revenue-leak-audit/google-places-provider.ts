@@ -34,6 +34,10 @@ type GooglePlaceReview = {
   originalText?: GoogleText;
   publishTime?: string;
   authorAttribution?: { displayName?: string };
+  /** Rare: if Google attaches merchant reply objects, we detect them (field names vary). */
+  reply?: unknown;
+  reviewReply?: unknown;
+  merchantReply?: unknown;
 };
 
 type GooglePlace = {
@@ -125,14 +129,47 @@ function normalizePhotos(photos: GooglePlacePhoto[] | undefined): BusinessPhoto[
   }));
 }
 
+function replyLooksPresent(reply: unknown): boolean {
+  if (reply == null) return false;
+  if (typeof reply === "string") return reply.trim().length > 0;
+  if (typeof reply !== "object") return false;
+  const o = reply as Record<string, unknown>;
+  const candidates = [o.text, o.comment, o.body, o.reply, o.message];
+  for (const c of candidates) {
+    if (typeof c === "string" && c.trim()) return true;
+    if (c && typeof c === "object" && "text" in c) {
+      const t = (c as { text?: string }).text;
+      if (typeof t === "string" && t.trim()) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * `true` / `false` when the payload includes a known reply field; `undefined` when absent (cannot infer).
+ */
+function extractHasOwnerReply(r: GooglePlaceReview): boolean | undefined {
+  const any = r as Record<string, unknown>;
+  const keys = ["reply", "reviewReply", "merchantReply"] as const;
+  for (const k of keys) {
+    if (!Object.prototype.hasOwnProperty.call(any, k)) continue;
+    return replyLooksPresent(any[k]);
+  }
+  return undefined;
+}
+
 function normalizeReviews(reviews: GooglePlaceReview[] | undefined): BusinessReview[] {
-  return (reviews ?? []).map((r) => ({
-    authorName: r.authorAttribution?.displayName?.trim() || null,
-    rating: parsePlaceReviewRating(r.rating) ?? parseStarRatingEnum(r.starRating),
-    text: r.text?.text?.trim() || r.originalText?.text?.trim() || null,
-    publishTime: r.publishTime?.trim() || null,
-    relativePublishTime: r.relativePublishTimeDescription?.trim() || null,
-  }));
+  return (reviews ?? []).map((r) => {
+    const hasOwnerReply = extractHasOwnerReply(r);
+    return {
+      authorName: r.authorAttribution?.displayName?.trim() || null,
+      rating: parsePlaceReviewRating(r.rating) ?? parseStarRatingEnum(r.starRating),
+      text: r.text?.text?.trim() || r.originalText?.text?.trim() || null,
+      publishTime: r.publishTime?.trim() || null,
+      relativePublishTime: r.relativePublishTimeDescription?.trim() || null,
+      ...(hasOwnerReply !== undefined ? { hasOwnerReply } : {}),
+    };
+  });
 }
 
 function detectGoogleIdentityAttributes(p: GooglePlace): BusinessIdentityAttribute[] {
@@ -424,7 +461,10 @@ export async function discoverCompetitors(input: {
   const competitors = places
     .filter((p) => p.placeId !== input.business.placeId)
     .slice(0, 12)
-    .map((p, index) => toCompetitor(p, input.business, index + 1));
+    .map((p) => {
+      const serpPosition = places.findIndex((pl) => pl.placeId === p.placeId) + 1;
+      return toCompetitor(p, input.business, serpPosition);
+    });
 
   const topForReviews = competitors.slice(0, 3);
   if (topForReviews.length > 0) {
@@ -443,7 +483,6 @@ export async function discoverCompetitors(input: {
   const topFive = places
     .slice(0, 5)
     .map((p, index) => rankItemFromBusiness(p, index + 1, input.business.placeId));
-  const selectedBusinessPosition = selectedIndex >= 0 ? selectedIndex + 1 : null;
   const selectedBusinessRankItem =
     selectedIndex >= 0
       ? rankItemFromBusiness(places[selectedIndex], selectedIndex + 1, input.business.placeId)
@@ -457,9 +496,6 @@ export async function discoverCompetitors(input: {
     ...(warning ? [warning] : []),
     competitors.length < 10
       ? `Only ${competitors.length} direct competitors were returned for this market sample.`
-      : null,
-    selectedBusinessPosition === null
-      ? `Selected business was not found in the first ${places.length} Google results checked; shown after checked results.`
       : null,
   ].filter((x): x is string => Boolean(x));
 
