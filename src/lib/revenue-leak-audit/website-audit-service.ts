@@ -106,12 +106,13 @@ async function fetchHtml(url: string): Promise<{
   }
 }
 
-async function fetchPageSpeedScore(url: string): Promise<{
+type PageSpeedAttempt = {
   score: number | null;
   warning: string | null;
-}> {
-  const key = process.env.GOOGLE_PAGESPEED_API_KEY?.trim();
-  if (!key) return { score: null, warning: "PageSpeed API key is missing." };
+  retryable: boolean;
+};
+
+async function pageSpeedAttempt(url: string, key: string): Promise<PageSpeedAttempt> {
   try {
     const qs = new URLSearchParams({
       url,
@@ -124,10 +125,14 @@ async function fetchPageSpeedScore(url: string): Promise<{
       { signal: AbortSignal.timeout(PAGESPEED_TIMEOUT_MS) }
     );
     if (!res.ok) {
-      const detail = (await res.text().catch(() => "")).slice(0, 180);
+      const lighthouseTransient =
+        res.status === 500 || res.status === 502 || res.status === 503 || res.status === 504;
       return {
         score: null,
-        warning: `PageSpeed failed (${res.status})${detail ? `: ${detail}` : "."}`,
+        warning: lighthouseTransient
+          ? "PageSpeed could not analyze the website right now."
+          : `PageSpeed failed (${res.status}).`,
+        retryable: lighthouseTransient,
       };
     }
     const json = (await res.json()) as {
@@ -137,6 +142,7 @@ async function fetchPageSpeedScore(url: string): Promise<{
     return {
       score: typeof raw === "number" ? Math.round(raw * 100) : null,
       warning: null,
+      retryable: false,
     };
   } catch (error) {
     const isTimeout =
@@ -147,8 +153,24 @@ async function fetchPageSpeedScore(url: string): Promise<{
       warning: isTimeout
         ? `PageSpeed timed out after ${Math.round(PAGESPEED_TIMEOUT_MS / 1000)}s.`
         : "PageSpeed unavailable.",
+      retryable: !isTimeout,
     };
   }
+}
+
+async function fetchPageSpeedScore(url: string): Promise<{
+  score: number | null;
+  warning: string | null;
+}> {
+  const key = process.env.GOOGLE_PAGESPEED_API_KEY?.trim();
+  if (!key) return { score: null, warning: "PageSpeed API key is missing." };
+  const first = await pageSpeedAttempt(url, key);
+  if (first.score !== null || !first.retryable) {
+    return { score: first.score, warning: first.warning };
+  }
+  await new Promise((resolve) => setTimeout(resolve, 1500));
+  const second = await pageSpeedAttempt(url, key);
+  return { score: second.score, warning: second.warning };
 }
 
 export async function auditWebsite(

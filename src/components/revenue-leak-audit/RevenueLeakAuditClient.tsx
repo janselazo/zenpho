@@ -723,11 +723,15 @@ function CompetitorMap({
   const [mapStatus, setMapStatus] = useState<string | null>(null);
   const initialKey = googleMapsApiKey || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || null;
   const [runtimeKey, setRuntimeKey] = useState<string | null>(initialKey);
+  const [keyResolved, setKeyResolved] = useState(Boolean(initialKey));
   const key = runtimeKey;
   const businessPosition = audit.rankingSnapshot.selectedBusinessPosition;
 
   useEffect(() => {
-    if (runtimeKey) return;
+    if (runtimeKey) {
+      setKeyResolved(true);
+      return;
+    }
     let cancelled = false;
     void fetch("/api/revenue-leak-audit/map-key", { cache: "no-store" })
       .then(async (res) => {
@@ -735,11 +739,13 @@ function CompetitorMap({
         return (await res.json()) as { googleMapsApiKey?: string | null };
       })
       .then((data) => {
+        if (cancelled) return;
         const nextKey = data?.googleMapsApiKey?.trim();
-        if (!cancelled && nextKey) setRuntimeKey(nextKey);
+        if (nextKey) setRuntimeKey(nextKey);
+        setKeyResolved(true);
       })
       .catch(() => {
-        // Keep the explicit "not configured" message when runtime config is absent.
+        if (!cancelled) setKeyResolved(true);
       });
     return () => {
       cancelled = true;
@@ -804,7 +810,9 @@ function CompetitorMap({
           <div className="flex min-h-[420px] items-center justify-center rounded-3xl border border-dashed border-border bg-surface p-8 text-center">
             <div>
               <MapPin className="mx-auto h-10 w-10 text-accent" />
-              <p className="mt-4 font-bold text-text-primary">{mapStatus ?? "Map key not configured"}</p>
+              <p className="mt-4 font-bold text-text-primary">
+                {mapStatus ?? (keyResolved ? "Map key not configured" : "Loading map…")}
+              </p>
               <p className="mt-2 text-sm text-text-secondary">The local ranking snapshot and PDF export still work.</p>
             </div>
           </div>
