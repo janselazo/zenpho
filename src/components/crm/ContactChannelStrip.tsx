@@ -41,6 +41,7 @@ type ContactChannelStripProps = {
   contactEmail: string | null;
   socialUrls: ProspectSocialUrls | null;
   onPickEmail?: (email: string) => void;
+  trailingItem?: ReactNode;
   /** Optional short note below the icon row. */
   footnote?: string | null;
 };
@@ -53,6 +54,7 @@ export default function ContactChannelStrip({
   contactEmail,
   socialUrls,
   onPickEmail,
+  trailingItem = null,
   footnote = null,
 }: ContactChannelStripProps) {
   const s = socialUrls;
@@ -239,6 +241,7 @@ export default function ContactChannelStrip({
           ),
           "Not linked from scanned pages"
         )}
+        {trailingItem}
       </div>
       {footnote?.trim() ? (
         <p className="text-[10px] leading-snug text-text-secondary/90 dark:text-zinc-500">{footnote.trim()}</p>

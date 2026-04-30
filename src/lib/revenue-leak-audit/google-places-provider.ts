@@ -4,7 +4,7 @@ import {
   mockCompetitors,
   mockRankingSnapshot,
 } from "./mock-data";
-import { parsePlaceReviewRating } from "./review-selection";
+import { parsePlaceReviewRating, parseStarRatingEnum } from "./review-selection";
 import type {
   BusinessIdentityAttribute,
   BusinessPhoto,
@@ -28,6 +28,8 @@ type GooglePlaceReview = {
   name?: string;
   relativePublishTimeDescription?: string;
   rating?: number;
+  /** Present on some Places payloads as an enum string (e.g. `FIVE`). */
+  starRating?: string;
   text?: GoogleText;
   originalText?: GoogleText;
   publishTime?: string;
@@ -125,7 +127,7 @@ function normalizePhotos(photos: GooglePlacePhoto[] | undefined): BusinessPhoto[
 function normalizeReviews(reviews: GooglePlaceReview[] | undefined): BusinessReview[] {
   return (reviews ?? []).map((r) => ({
     authorName: r.authorAttribution?.displayName?.trim() || null,
-    rating: parsePlaceReviewRating(r.rating),
+    rating: parsePlaceReviewRating(r.rating) ?? parseStarRatingEnum(r.starRating),
     text: r.text?.text?.trim() || r.originalText?.text?.trim() || null,
     publishTime: r.publishTime?.trim() || null,
     relativePublishTime: r.relativePublishTimeDescription?.trim() || null,

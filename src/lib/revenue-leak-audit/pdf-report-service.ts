@@ -1380,7 +1380,7 @@ function drawLowestReviews(ctx: Ctx, audit: RevenueLeakAudit): void {
   newPage(ctx);
   sectionHeading(ctx, "Reviews & reputation", "Lowest review analysis", {
     description:
-      "Reviews ordered by lowest star rating in the public Google sample (up to 4 shown; Google may return at most five per place in this snapshot). Use these to spot recurring objections and coach the team toward fixes. Homepage review visibility affects conversion on your own site.",
+      "Reviews ordered by lowest star rating first (all 1★ in the Google sample, then 2★, and so on; oldest publish date first when stars tie). Google may return at most five reviews per place in this snapshot, sorted for relevance, so very low-star reviews can be missing even when they exist on the profile. Use these to spot objections and coach the team toward fixes. Homepage review visibility affects conversion on your own site.",
   });
 
   const business = audit.business;

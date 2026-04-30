@@ -1,6 +1,6 @@
 import type { BusinessReview } from "./types";
 
-/** Keywords used to surface complaint-heavy reviews when star ratings tie (e.g. API returns only five-star samples). */
+/** Keywords for tagging complaint themes in review text (used for highlights, not for picking lowest-star rows). */
 export const REVIEW_COMPLAINT_TERMS = [
   "slow",
   "late",
@@ -50,7 +50,40 @@ export function parsePlaceReviewRating(value: unknown): number | null {
   return null;
 }
 
-/** Prefer the lowest numeric ratings; when Google only returns high-star samples, break ties with complaint-like language. */
+/** Maps Places API-style enum strings (if present) to a 1–5 star count. */
+export function parseStarRatingEnum(raw: unknown): number | null {
+  if (typeof raw !== "string") return null;
+  const key = raw.trim().toUpperCase().replace(/^STAR_RATING_/, "");
+  const map: Record<string, number> = {
+    UNSPECIFIED: NaN,
+    ONE: 1,
+    TWO: 2,
+    THREE: 3,
+    FOUR: 4,
+    FIVE: 5,
+  };
+  const n = map[key];
+  return typeof n === "number" && !Number.isNaN(n) ? n : null;
+}
+
+function reviewPublishTimeMs(r: BusinessReview): number | null {
+  if (!r.publishTime?.trim()) return null;
+  const t = Date.parse(r.publishTime);
+  return Number.isNaN(t) ? null : t;
+}
+
+/**
+ * Star tier for ordering: 1★ rows first, then 2★, etc. Uses rounding so 1.0–1.4 sorts before 2.0.
+ */
+function starTier(rating: number): number {
+  return Math.min(5, Math.max(1, Math.round(rating)));
+}
+
+/**
+ * Lowest-rated reviews for the audit: all available 1★ first, then 2★, and so on (within the Google sample).
+ * Ties use numeric rating, then oldest `publishTime` first so age does not hide lower-star rows.
+ * Does not use “complaint keyword” weighting (it falsely ranked glowing 5★ reviews that mentioned e.g. “call” or “wait”).
+ */
 export function selectLowestRatedReviews(reviews: BusinessReview[], limit = 4): BusinessReview[] {
   const eligible = reviews.filter((r) => Boolean(r.text?.trim()) || r.rating !== null);
 
@@ -58,11 +91,26 @@ export function selectLowestRatedReviews(reviews: BusinessReview[], limit = 4): 
   const unrated = eligible.filter((r) => !(typeof r.rating === "number" && !Number.isNaN(r.rating)));
 
   rated.sort((a, b) => {
+    const tierA = starTier(a.rating!);
+    const tierB = starTier(b.rating!);
+    if (tierA !== tierB) return tierA - tierB;
     const diff = a.rating! - b.rating!;
     if (diff !== 0) return diff;
-    return complaintScoreFromText(b.text) - complaintScoreFromText(a.text);
+    const ta = reviewPublishTimeMs(a);
+    const tb = reviewPublishTimeMs(b);
+    if (ta != null && tb != null) return ta - tb;
+    if (ta != null) return -1;
+    if (tb != null) return 1;
+    return 0;
   });
-  unrated.sort((a, b) => complaintScoreFromText(b.text) - complaintScoreFromText(a.text));
+  unrated.sort((a, b) => {
+    const ta = reviewPublishTimeMs(a);
+    const tb = reviewPublishTimeMs(b);
+    if (ta != null && tb != null) return ta - tb;
+    if (ta != null) return -1;
+    if (tb != null) return 1;
+    return 0;
+  });
 
   return [...rated, ...unrated].slice(0, limit);
 }

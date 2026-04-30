@@ -290,24 +290,27 @@ function AuditPdfIconButton({ audit }: { audit: RevenueLeakAudit }) {
   }
 
   return (
-    <div className="flex w-full flex-col items-center gap-1 sm:max-w-none lg:items-end">
+    <div className="relative flex flex-col items-center gap-1">
       <button
         type="button"
         onClick={download}
         disabled={downloading}
         title="Download PDF report"
         aria-label="Download PDF report"
-        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border bg-white text-accent shadow-sm transition hover:border-accent/35 hover:bg-accent/5 disabled:cursor-not-allowed disabled:opacity-55"
+        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border/80 text-accent transition hover:border-accent/50 hover:bg-surface disabled:cursor-not-allowed disabled:opacity-55 dark:border-zinc-600 dark:hover:border-blue-500/40 dark:hover:bg-zinc-800/80"
       >
         {downloading ? (
-          <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
         ) : (
-          <Download className="h-5 w-5" aria-hidden />
+          <Download className="h-4 w-4" aria-hidden />
         )}
       </button>
+      <span className="max-w-[4.5rem] truncate text-center text-[9px] font-medium uppercase tracking-wide text-text-secondary/70 dark:text-zinc-500">
+        PDF
+      </span>
       {error ? (
         <p
-          className="max-w-[240px] text-center text-[10px] font-semibold leading-snug text-red-600 lg:text-right"
+          className="absolute left-1/2 top-full z-10 mt-1 w-40 -translate-x-1/2 rounded-lg border border-red-100 bg-white p-2 text-center text-[11px] font-semibold leading-snug text-red-600 shadow-sm"
           role="alert"
         >
           {error}
@@ -673,12 +676,12 @@ function GoogleBusinessProfileSummary({ audit }: { audit: RevenueLeakAudit }) {
               websiteUrl={business.website}
               contactEmail={audit.websiteAudit.contactLinks.email}
               socialUrls={socialUrls}
+              trailingItem={<AuditPdfIconButton audit={audit} />}
             />
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-center gap-4 self-start lg:items-end">
           <ScoreGauge score={audit.scores.overall} grade={audit.scores.grade} />
-          <AuditPdfIconButton audit={audit} />
         </div>
       </div>
     </section>
@@ -746,17 +749,17 @@ function FoundIssuesMoneySummary({ audit }: { audit: RevenueLeakAudit }) {
   const leakWord = a.issues === 1 ? "revenue leak" : "revenue leaks";
   const closePct = Math.round(asm.closeRate * 100);
   const summaryPill =
-    "rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/95";
+    "rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-text-secondary";
   const notePill =
-    "rounded-full border border-white/20 bg-white/5 px-3 py-1.5 text-[11px] font-medium leading-snug text-white/80";
+    "rounded-full border border-border bg-surface/70 px-3 py-1.5 text-[11px] font-medium leading-snug text-text-secondary";
   return (
     <section
       ref={sectionRef}
-      className="rounded-[2rem] border border-accent/15 bg-gradient-to-br from-accent to-accent-hover p-6 text-white shadow-soft-lg sm:p-8"
+      className="rounded-[2rem] border border-border bg-white p-6 shadow-soft sm:p-8"
     >
       <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
         <div>
-          <h2 className="text-4xl font-black tracking-tight tabular-nums">
+          <h2 className="text-4xl font-black tracking-tight text-text-primary tabular-nums">
             {a.issues} {leakWord} are costing you {formatMoney(a.monthlyLow)}–{formatMoney(a.monthlyHigh)}
           </h2>
           <div className="mt-4 flex flex-wrap gap-2">
@@ -777,13 +780,13 @@ function FoundIssuesMoneySummary({ audit }: { audit: RevenueLeakAudit }) {
           </div>
           <div className="mt-5 flex flex-wrap gap-2">
             {Object.entries(m.severityCounts).map(([severity, count]) => (
-              <span key={severity} className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-bold">
+              <span key={severity} className="rounded-full border border-border bg-surface px-3 py-1 text-xs font-bold text-text-secondary">
                 {severity}: {count}
               </span>
             ))}
           </div>
         </div>
-        <div className="rounded-3xl bg-white p-6 text-text-primary shadow-soft">
+        <div className="rounded-3xl border border-border bg-surface/70 p-6 text-text-primary">
           <p className="text-sm font-bold text-text-secondary">Estimated monthly cost</p>
           <p className="mt-2 text-3xl font-black tabular-nums">
             {formatMoney(a.monthlyLow)}–{formatMoney(a.monthlyHigh)}
@@ -792,13 +795,13 @@ function FoundIssuesMoneySummary({ audit }: { audit: RevenueLeakAudit }) {
             ~{leakLowPct}%-{leakHighPct}% of {formatMoney(m.addressableMonthlyRevenue)} addressable / mo
           </p>
           <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
-            <div className="rounded-2xl bg-surface/80 px-3 py-2">
+            <div className="rounded-2xl bg-white px-3 py-2 shadow-sm">
               <p className="font-semibold text-text-secondary">Leads lost / mo</p>
               <p className="mt-0.5 text-base font-black text-text-primary tabular-nums">
                 {formatLeadJobDisplay(a.leadsLow)}–{formatLeadJobDisplay(a.leadsHigh)}
               </p>
             </div>
-            <div className="rounded-2xl bg-surface/80 px-3 py-2">
+            <div className="rounded-2xl bg-white px-3 py-2 shadow-sm">
               <p className="font-semibold text-text-secondary">Jobs lost / mo</p>
               <p className="mt-0.5 text-base font-black text-text-primary tabular-nums">
                 {formatLeadJobDisplay(a.jobsLow)}–{formatLeadJobDisplay(a.jobsHigh)}
@@ -1238,7 +1241,8 @@ function LowestReviewAnalysis({ audit }: { audit: RevenueLeakAudit }) {
             Top 4 lowest reviews
           </h2>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-text-secondary">
-            These reviews show the complaints most likely to reduce trust when buyers compare you against competitors.
+            We list every 1★ review in Google&rsquo;s sample first, then 2★, and so on (oldest first when stars tie). Recency
+            does not push higher-star reviews ahead of lower ones.
           </p>
         </div>
         {themes.length > 0 ? (
@@ -1258,8 +1262,8 @@ function LowestReviewAnalysis({ audit }: { audit: RevenueLeakAudit }) {
       {onlyHighStarsInSample ? (
         <div className="mt-6 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm leading-6 text-sky-900">
           Google returns at most five reviews per place, sorted for relevance, so this list may not include
-          lower-star reviews even when they exist on your profile. We still ordered this sample by the lowest
-          ratings available and surfaced reviews with complaint-like wording first when stars tie.
+          lower-star reviews even when they exist on your profile. Within this sample we only order by star count
+          (lowest first) and review date — not by &ldquo;sounding negative&rdquo; keywords.
         </div>
       ) : null}
 
