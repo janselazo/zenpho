@@ -12,6 +12,7 @@ import {
   CTA_TERMS,
   detectWebChat,
   extractFirstTagText,
+  detectHomepageReviewShowcase,
   extractMeta,
   extractWebsiteSocialLinks,
   hasAny,
@@ -85,10 +86,44 @@ async function fetchHtml(url: string): Promise<{
   }
 }
 
+const LIGHTHOUSE_IMAGE_AUDIT_IDS = [
+  "uses-optimized-images",
+  "modern-image-formats",
+  "uses-responsive-images",
+] as const;
+
+function sumLighthouseAuditWastedBytes(audit: unknown): number {
+  if (!audit || typeof audit !== "object") return 0;
+  const details = (audit as { details?: { items?: unknown[] } }).details;
+  const items = details?.items;
+  if (!Array.isArray(items)) return 0;
+  let sum = 0;
+  for (const item of items) {
+    if (!item || typeof item !== "object") continue;
+    const w = (item as { wastedBytes?: unknown }).wastedBytes;
+    if (typeof w === "number" && Number.isFinite(w) && w > 0) sum += w;
+  }
+  return sum;
+}
+
+function extractImageWasteBytesFromLighthouseJson(json: unknown): number | null {
+  if (!json || typeof json !== "object") return null;
+  const lr = (json as { lighthouseResult?: { audits?: Record<string, unknown> } })
+    .lighthouseResult;
+  const audits = lr?.audits;
+  if (!audits || typeof audits !== "object") return null;
+  let total = 0;
+  for (const id of LIGHTHOUSE_IMAGE_AUDIT_IDS) {
+    total += sumLighthouseAuditWastedBytes(audits[id]);
+  }
+  return total > 0 ? Math.round(total) : null;
+}
+
 type PageSpeedAttempt = {
   score: number | null;
   warning: string | null;
   retryable: boolean;
+  imageWasteBytes: number | null;
 };
 
 async function pageSpeedAttempt(url: string, key: string): Promise<PageSpeedAttempt> {
@@ -108,18 +143,23 @@ async function pageSpeedAttempt(url: string, key: string): Promise<PageSpeedAtte
         res.status === 500 || res.status === 502 || res.status === 503 || res.status === 504;
       return {
         score: null,
+        imageWasteBytes: null,
         warning: lighthouseTransient
           ? "PageSpeed could not analyze the website right now."
           : `PageSpeed failed (${res.status}).`,
         retryable: lighthouseTransient,
       };
     }
-    const json = (await res.json()) as {
-      lighthouseResult?: { categories?: { performance?: { score?: number } } };
-    };
-    const raw = json.lighthouseResult?.categories?.performance?.score;
+    const json: unknown = await res.json();
+    const raw = (
+      json as {
+        lighthouseResult?: { categories?: { performance?: { score?: number } } };
+      }
+    ).lighthouseResult?.categories?.performance?.score;
+    const imageWasteBytes = extractImageWasteBytesFromLighthouseJson(json);
     return {
       score: typeof raw === "number" ? Math.round(raw * 100) : null,
+      imageWasteBytes,
       warning: null,
       retryable: false,
     };
@@ -129,6 +169,7 @@ async function pageSpeedAttempt(url: string, key: string): Promise<PageSpeedAtte
       (error.name === "TimeoutError" || /timeout|aborted/i.test(error.message));
     return {
       score: null,
+      imageWasteBytes: null,
       warning: isTimeout
         ? `PageSpeed timed out after ${Math.round(PAGESPEED_TIMEOUT_MS / 1000)}s.`
         : "PageSpeed unavailable.",
@@ -140,16 +181,27 @@ async function pageSpeedAttempt(url: string, key: string): Promise<PageSpeedAtte
 async function fetchPageSpeedScore(url: string): Promise<{
   score: number | null;
   warning: string | null;
+  imageWasteBytes: number | null;
 }> {
   const key = process.env.GOOGLE_PAGESPEED_API_KEY?.trim();
-  if (!key) return { score: null, warning: "PageSpeed API key is missing." };
+  if (!key) {
+    return { score: null, warning: "PageSpeed API key is missing.", imageWasteBytes: null };
+  }
   const first = await pageSpeedAttempt(url, key);
   if (first.score !== null || !first.retryable) {
-    return { score: first.score, warning: first.warning };
+    return {
+      score: first.score,
+      warning: first.warning,
+      imageWasteBytes: first.imageWasteBytes,
+    };
   }
   await new Promise((resolve) => setTimeout(resolve, 1500));
   const second = await pageSpeedAttempt(url, key);
-  return { score: second.score, warning: second.warning };
+  return {
+    score: second.score,
+    warning: second.warning,
+    imageWasteBytes: second.imageWasteBytes,
+  };
 }
 
 export async function auditWebsite(
@@ -185,6 +237,8 @@ export async function auditWebsite(
         available: false,
         status,
         screenshotUrl,
+        pageSpeedImageWasteBytes: pageSpeed.imageWasteBytes,
+        imageSeo: null,
         warnings: [...warnings, pageSpeed.warning].filter((x): x is string => Boolean(x)),
       },
       warnings: [...warnings, pageSpeed.warning].filter((x): x is string => Boolean(x)),
@@ -204,6 +258,7 @@ export async function auditWebsite(
   const hasContactForm = /<form[\s>]/i.test(html);
   const hasQuoteCta = /quote|estimate|pricing|consultation/i.test(lower);
   const hasTestimonials = hasAny(html, TRUST_TERMS);
+  const homepageFeaturesReviews = detectHomepageReviewShowcase(html);
   const hasServicePages = /services?|solutions?|what\s+we\s+do/i.test(lower);
   const hasLocationPages = /areas?\s+served|locations?|near\s+me|city|county/i.test(lower);
   const hasLocalBusinessSchema =
@@ -245,6 +300,7 @@ export async function auditWebsite(
       hasContactForm,
       hasQuoteCta,
       hasTestimonials,
+      homepageFeaturesReviews,
       hasClientPhotos: imageSignals.clientPhotoSignals,
       hasProjectPhotos: imageSignals.projectPhotoSignals,
       hasBeforeAfter: imageSignals.beforeAfterSignals,
@@ -265,6 +321,8 @@ export async function auditWebsite(
       identityAttributes,
       imageCount: imageSignals.imageCount,
       blurryImageSignals: imageSignals.blurryImageSignals,
+      imageSeo: imageSignals.imageSeo,
+      pageSpeedImageWasteBytes: pageSpeed.imageWasteBytes,
       warnings: auditWarnings,
     },
     warnings: auditWarnings,

@@ -1,4 +1,4 @@
-import type { WebsiteAudit } from "./types";
+import type { WebsiteAudit, WebsiteImageSeoSummary } from "./types";
 
 export function stripTags(html: string): string {
   return html
@@ -37,24 +37,77 @@ export function hasAny(html: string, terms: RegExp[]): boolean {
   return terms.some((term) => term.test(html));
 }
 
+function imgSrcBasename(src: string): string {
+  try {
+    const pathOnly = src.split("?")[0].split("#")[0];
+    const last = pathOnly.split("/").pop() ?? "";
+    return decodeURIComponent(last);
+  } catch {
+    return src.split("/").pop() ?? "";
+  }
+}
+
+function isGenericImageFilename(basename: string): boolean {
+  const withoutExt = basename.replace(/\.(jpg|jpeg|png|gif|webp|svg|avif)$/i, "");
+  const base = withoutExt.trim();
+  if (base.length < 4) return true;
+  if (/^[a-f0-9]{10,}$/i.test(base)) return true;
+  if (/^\d{1,5}$/.test(base)) return true;
+  if (/^dsc_?\d+/i.test(base)) return true;
+  const lower = base.toLowerCase();
+  const stem = lower.replace(/\d+$/g, "");
+  const genericTokens =
+    /^(image|img|photo|pic|picture|banner|hero|header|footer|slide|slider|thumb|thumbnail|logo|icon|favicon|sprite|pixel|spacer|screenshot|untitled|asset|file|upload|temp|tmp|ad|ads)$/;
+  if (genericTokens.test(lower) || genericTokens.test(stem)) return true;
+  return /^[^a-z]*$/.test(base) && base.length < 12;
+}
+
+function isDecorativeImgTag(tag: string): boolean {
+  return (
+    /\brole=["']presentation["']/i.test(tag) ||
+    /\baria-hidden=["']true["']/i.test(tag)
+  );
+}
+
+function hasAltAttribute(tag: string): boolean {
+  return /\balt\s*=/i.test(tag);
+}
+
+function getAltText(tag: string): string | null {
+  const quoted = tag.match(/\balt\s*=\s*["']([^"']*)["']/i);
+  if (quoted) return quoted[1];
+  const unquoted = tag.match(/\balt\s*=\s*([^\s>]+)/i);
+  return unquoted ? unquoted[1] : null;
+}
+
+function hasTitleAttribute(tag: string): boolean {
+  return /\btitle\s*=/i.test(tag);
+}
+
 export function countImageTags(html: string): {
   imageCount: number;
   blurryImageSignals: number;
   clientPhotoSignals: boolean;
   projectPhotoSignals: boolean;
   beforeAfterSignals: boolean;
+  imageSeo: WebsiteImageSeoSummary;
 } {
-  const tags = html.match(/<img\s+[^>]*>/gi) ?? [];
+  const tags = html.match(/<img\b[^>]*>/gi) ?? [];
   let blurry = 0;
   let client = false;
   let project = false;
   let beforeAfter = false;
+  let missingAltAttribute = 0;
+  let weakOrMissingAlt = 0;
+  let missingTitle = 0;
+  let genericFilename = 0;
+  let largeDeclaredDimensions = 0;
+  const genericFilenameSamples: string[] = [];
   for (const tag of tags) {
     const width = Number(tag.match(/\bwidth=["']?(\d+)/i)?.[1] ?? NaN);
     const height = Number(tag.match(/\bheight=["']?(\d+)/i)?.[1] ?? NaN);
-    const srcAlt = `${tag.match(/\bsrc=["']([^"']*)/i)?.[1] ?? ""} ${
-      tag.match(/\balt=["']([^"']*)/i)?.[1] ?? ""
-    }`;
+    const srcRaw = tag.match(/\bsrc=["']([^"']*)["']/i)?.[1] ?? tag.match(/\bsrc=([^\s>]+)/i)?.[1] ?? "";
+    const srcAlt = `${srcRaw} ${tag.match(/\balt=["']([^"']*)/i)?.[1] ?? ""}`;
     if (
       Number.isFinite(width) &&
       Number.isFinite(height) &&
@@ -69,6 +122,34 @@ export function countImageTags(html: string): {
       project = true;
     }
     if (/before|after/i.test(srcAlt)) beforeAfter = true;
+
+    const decorative = isDecorativeImgTag(tag);
+    if (!hasAltAttribute(tag)) {
+      missingAltAttribute += 1;
+      if (!decorative) weakOrMissingAlt += 1;
+    } else {
+      const altVal = getAltText(tag);
+      const altTrim = altVal === null ? "" : altVal.trim();
+      if (!decorative && altTrim.length === 0) {
+        weakOrMissingAlt += 1;
+      }
+    }
+    if (!hasTitleAttribute(tag)) missingTitle += 1;
+    if (
+      Number.isFinite(width) &&
+      Number.isFinite(height) &&
+      width >= 1920 &&
+      height >= 1920
+    ) {
+      largeDeclaredDimensions += 1;
+    }
+    const base = imgSrcBasename(srcRaw);
+    if (base && isGenericImageFilename(base)) {
+      genericFilename += 1;
+      if (genericFilenameSamples.length < 2 && !genericFilenameSamples.includes(base)) {
+        genericFilenameSamples.push(base.length > 48 ? `${base.slice(0, 45)}…` : base);
+      }
+    }
   }
   return {
     imageCount: tags.length,
@@ -76,7 +157,53 @@ export function countImageTags(html: string): {
     clientPhotoSignals: client,
     projectPhotoSignals: project,
     beforeAfterSignals: beforeAfter,
+    imageSeo: {
+      missingAltAttribute,
+      weakOrMissingAlt,
+      missingTitle,
+      genericFilename,
+      largeDeclaredDimensions,
+      genericFilenameSamples,
+    },
   };
+}
+
+/**
+ * Heuristic: homepage HTML appears to showcase customer/Google reviews or ratings (conversion social proof).
+ */
+export function detectHomepageReviewShowcase(html: string): boolean {
+  const lower = html.toLowerCase();
+  if (/aggregateRating|reviewCount|"@type"\s*:\s*"\s*Review\s*"/i.test(html)) return true;
+  if (/application\/ld\+json/i.test(html) && /aggregaterating|\breviews?\b.*rating/i.test(lower)) return true;
+  if (
+    /google\.com\/maps\/embed|reviews?\.google\.com\/embed|!1m4!1m3!1s/i.test(lower)
+  ) {
+    return true;
+  }
+  if (
+    /trustpilot|birdeye|podium|reputation\.com|gatherup|grade\.us|reviewsonmywebsite|embedsocial|senja\.io|widg\.io\/review/i.test(
+      lower,
+    )
+  ) {
+    return true;
+  }
+  if (
+    /class=["'][^"']*(?:testimonial|review|google-review|reviews-section|customer-review|star-rating)[^"']*["']/i.test(
+      html,
+    )
+  ) {
+    return true;
+  }
+  if (/id=["'][^"']*(?:testimonial|reviews|google-reviews)[^"']*["']/i.test(html)) return true;
+  if (
+    /\b(what\s+our\s+customers?\s+say|customer\s+reviews?\s+&|read\s+our\s+reviews|see\s+our\s+reviews|google\s+reviews?)\b/i.test(
+      lower,
+    )
+  ) {
+    return true;
+  }
+  if (/\b\d\.\d\s*(?:stars?|out\s+of\s+5|\/\s*5)\b/i.test(lower) && /\breview/i.test(lower)) return true;
+  return false;
 }
 
 export const CTA_TERMS = [

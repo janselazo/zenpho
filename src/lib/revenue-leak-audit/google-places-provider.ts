@@ -51,6 +51,8 @@ type GooglePlace = {
   regularOpeningHours?: { weekdayDescriptions?: string[] };
   photos?: GooglePlacePhoto[];
   reviews?: GooglePlaceReview[];
+  iconBackgroundColor?: string;
+  iconMaskBaseUri?: string;
 };
 
 const TEXT_SEARCH_FIELD_MASK = [
@@ -68,6 +70,8 @@ const TEXT_SEARCH_FIELD_MASK = [
   "places.businessStatus",
   "places.location",
   "places.photos",
+  "places.iconBackgroundColor",
+  "places.iconMaskBaseUri",
 ].join(",");
 
 const DETAILS_FIELD_MASK = [
@@ -87,6 +91,8 @@ const DETAILS_FIELD_MASK = [
   "regularOpeningHours",
   "photos",
   "reviews",
+  "iconBackgroundColor",
+  "iconMaskBaseUri",
 ].join(",");
 
 function apiKey(): string | null {
@@ -151,6 +157,18 @@ function detectGoogleIdentityAttributes(p: GooglePlace): BusinessIdentityAttribu
   return [];
 }
 
+function normalizeIconBackgroundColor(raw: string | undefined): string | null {
+  const s = raw?.trim();
+  if (!s) return null;
+  return s.startsWith("#") ? s : `#${s}`;
+}
+
+function normalizeIconMaskBaseUri(raw: string | undefined): string | null {
+  const s = raw?.trim();
+  if (!s) return null;
+  return s.replace(/\/+$/, "");
+}
+
 function normalizeBusiness(p: GooglePlace): BusinessProfile | null {
   const placeId = p.id?.trim();
   const name = p.displayName?.text?.trim();
@@ -167,6 +185,8 @@ function normalizeBusiness(p: GooglePlace): BusinessProfile | null {
       null,
     website: p.websiteUri?.trim() || null,
     category: cleanCategory(types, p.primaryTypeDisplayName),
+    iconBackgroundColor: normalizeIconBackgroundColor(p.iconBackgroundColor),
+    iconMaskBaseUri: normalizeIconMaskBaseUri(p.iconMaskBaseUri),
     types,
     rating: typeof p.rating === "number" ? p.rating : null,
     reviewCount:
@@ -243,6 +263,9 @@ function toCompetitor(
     reviewCount: b.reviewCount,
     photoCount: b.photoCount,
     category: b.category,
+    types: b.types,
+    iconBackgroundColor: b.iconBackgroundColor,
+    iconMaskBaseUri: b.iconMaskBaseUri,
     coordinates: b.coordinates,
     marketStrengthScore: marketStrengthScore(b),
     distanceMiles: haversineMiles(selected.coordinates, b.coordinates),

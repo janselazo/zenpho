@@ -709,7 +709,7 @@ function drawBrandSummary(ctx: Ctx, audit: RevenueLeakAudit): void {
     ensure(ctx, cardH + 10);
     const top = ctx.y;
     card(ctx, MARGIN, top, CONTENT_W, cardH, WHITE, BORDER);
-    ctx.page.drawText("PALETTE", {
+    ctx.page.drawText("BRAND PALETTE", {
       x: MARGIN + 14,
       y: top - 18,
       size: 7,
@@ -1365,8 +1365,44 @@ function drawLowestReviews(ctx: Ctx, audit: RevenueLeakAudit): void {
   newPage(ctx);
   sectionHeading(ctx, "Reviews & reputation", "Lowest review analysis", {
     description:
-      "Reviews ordered by lowest star rating in the public Google sample (max 5). Use these to spot recurring objections and coach the team toward fixes.",
+      "Reviews ordered by lowest star rating in the public Google sample (max 5). Use these to spot recurring objections and coach the team toward fixes. Homepage review visibility affects conversion on your own site.",
   });
+
+  const business = audit.business;
+  if (business.website?.trim()) {
+    ensure(ctx, 80);
+    flowText(ctx, "Not featuring or responding to reviews hurts sales.", {
+      size: 10,
+      font: ctx.bold,
+      color: INK_SOFT,
+      maxWidth: CONTENT_W,
+      gapAfter: 8,
+    });
+    const wa = audit.websiteAudit;
+    if (wa.available) {
+      if (!wa.homepageFeaturesReviews) {
+        flowText(ctx, "Reviews are not featured on your homepage.", {
+          size: 9.5,
+          color: INK_SOFT,
+          maxWidth: CONTENT_W,
+          gapAfter: 6,
+        });
+        flowText(ctx, "Customer reviews are not visible on your homepage, which hurts conversion rate.", {
+          size: 9.5,
+          color: MUTED,
+          maxWidth: CONTENT_W,
+          gapAfter: 14,
+        });
+      }
+    } else {
+      flowText(ctx, "Homepage could not be analyzed for this report, so on-site review visibility was not verified.", {
+        size: 9,
+        color: MUTED,
+        maxWidth: CONTENT_W,
+        gapAfter: 14,
+      });
+    }
+  }
 
   const reviews = selectLowestRatedReviews(audit.business.reviews, 5);
   if (reviews.length === 0) {

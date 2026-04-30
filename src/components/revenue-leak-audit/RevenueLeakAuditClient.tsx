@@ -30,6 +30,11 @@ import {
   formatReviewStarLabel,
   selectLowestRatedReviews,
 } from "@/lib/revenue-leak-audit/review-selection";
+import {
+  buildCategoryMarkerElement,
+  compositeCategoryMarkerDataUrl,
+  resolveCategoryMarkerStyle,
+} from "@/lib/revenue-leak-audit/map-marker-style";
 
 const inputClass =
   "w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm text-text-primary placeholder:text-text-secondary/45 outline-none shadow-sm transition-all focus:border-accent focus:ring-2 focus:ring-accent/15";
@@ -334,7 +339,7 @@ function BrandSummary({ audit }: { audit: RevenueLeakAudit }) {
       <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Brand summary</p>
-          <h2 className="mt-2 text-3xl font-black tracking-tight text-text-primary">Extracted brand signals</h2>
+          <h2 className="mt-2 text-3xl font-black tracking-tight text-text-primary">Brand palette</h2>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-text-secondary">{audit.brandIdentity.brandPresenceSummary}</p>
         </div>
         <div className="flex items-center gap-4">
@@ -501,7 +506,6 @@ function GoogleBusinessProfileSummary({ audit }: { audit: RevenueLeakAudit }) {
               contactEmail={audit.websiteAudit.contactLinks.email}
               socialUrls={socialUrls}
               showFootnote={false}
-              footnote="Icons reflect links found on the business website from this audit. Listing phone and Maps appear above."
             />
           </div>
         </div>
@@ -716,13 +720,20 @@ function SectionProblemAccordion({
   );
 }
 
+type MapMarkerHandle = { addListener: (event: string, cb: () => void) => void };
+
 type WindowWithGoogle = Window & {
   google?: {
     maps: {
       Map: new (element: HTMLElement, options: Record<string, unknown>) => { fitBounds: (bounds: unknown) => void };
-      Marker: new (options: Record<string, unknown>) => { addListener: (event: string, cb: () => void) => void };
+      Marker: new (options: Record<string, unknown>) => MapMarkerHandle;
+      Size: new (w: number, h: number) => { width: number; height: number };
+      Point: new (x: number, y: number) => { x: number; y: number };
       InfoWindow: new () => { setContent: (content: string) => void; open: (options: Record<string, unknown>) => void };
       LatLngBounds: new () => { extend: (point: { lat: number; lng: number }) => void };
+      marker?: {
+        AdvancedMarkerElement: new (options: Record<string, unknown>) => MapMarkerHandle;
+      };
     };
   };
   __revenueLeakGoogleMapsPromise?: Promise<void>;
@@ -736,7 +747,7 @@ function loadGoogleMaps(key: string): Promise<void> {
   w.__revenueLeakGoogleMapsPromise = new Promise((resolve, reject) => {
     w.initRevenueLeakGoogleMaps = () => resolve();
     const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&callback=initRevenueLeakGoogleMaps`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=marker&v=weekly&callback=initRevenueLeakGoogleMaps`;
     script.async = true;
     script.onerror = () => reject(new Error("Google Maps failed to load."));
     document.head.appendChild(script);
@@ -789,51 +800,108 @@ function CompetitorMap({
   useEffect(() => {
     if (!key || !mapRef.current || points.length === 0) return;
     let cancelled = false;
+    const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID?.trim() ?? "";
     void loadGoogleMaps(key)
-      .then(() => {
+      .then(async () => {
         if (cancelled || !mapRef.current) return;
         const w = window as WindowWithGoogle;
-        if (!w.google?.maps) return;
-        const map = new w.google.maps.Map(mapRef.current, {
+        const gmaps = w.google?.maps;
+        if (!gmaps) return;
+        const mapOptions: Record<string, unknown> = {
           center: points[0].coordinates,
           zoom: 12,
           mapTypeControl: false,
           streetViewControl: false,
           fullscreenControl: false,
-        });
-        const bounds = new w.google.maps.LatLngBounds();
-        const info = new w.google.maps.InfoWindow();
-        for (const point of points) {
-          bounds.extend(point.coordinates);
-          const marker = new w.google.maps.Marker({
-            position: point.coordinates,
-            map,
-            title: point.name,
-            label: point.isSelectedBusiness
-              ? businessPosition
-                ? String(businessPosition)
-                : "You"
-              : String(point.rank ?? ""),
-          });
+        };
+        if (mapId) mapOptions.mapId = mapId;
+        const map = new gmaps.Map(mapRef.current, mapOptions);
+        const bounds = new gmaps.LatLngBounds();
+        const info = new gmaps.InfoWindow();
+        const AdvancedMarkerElement = gmaps.marker?.AdvancedMarkerElement;
+        const useAdvanced = Boolean(mapId && AdvancedMarkerElement);
+
+        const attachOpen = (marker: MapMarkerHandle, point: CompetitorMapPoint) => {
           marker.addListener("click", () => {
-            info.setContent(`<strong>${point.name}</strong><br/>${point.address ?? ""}<br/>${point.reviewCount ?? 0} reviews`);
+            info.setContent(
+              `<strong>${point.name}</strong><br/>${point.address ?? ""}<br/>${point.reviewCount ?? 0} reviews`
+            );
             info.open({ anchor: marker, map });
           });
+        };
+
+        if (useAdvanced && AdvancedMarkerElement) {
+          for (const point of points) {
+            bounds.extend(point.coordinates);
+            const style = resolveCategoryMarkerStyle(point);
+            const badgeText = point.isSelectedBusiness
+              ? businessPosition != null
+                ? String(businessPosition)
+                : "You"
+              : point.rank != null
+                ? String(point.rank)
+                : "";
+            const content = buildCategoryMarkerElement({
+              style,
+              isSelected: point.isSelectedBusiness,
+              badgeText: badgeText || null,
+            });
+            const marker = new AdvancedMarkerElement({
+              map,
+              position: point.coordinates,
+              content,
+              title: point.name,
+            });
+            attachOpen(marker, point);
+          }
+        } else {
+          await Promise.all(
+            points.map(async (point) => {
+              if (cancelled) return;
+              bounds.extend(point.coordinates);
+              const style = resolveCategoryMarkerStyle(point);
+              const dataUrl = await compositeCategoryMarkerDataUrl(style);
+              const markerOptions: Record<string, unknown> = {
+                position: point.coordinates,
+                map,
+                title: point.name,
+              };
+              if (dataUrl) {
+                markerOptions.icon = {
+                  url: dataUrl,
+                  scaledSize: new gmaps.Size(48, 48),
+                  anchor: new gmaps.Point(24, 24),
+                };
+              } else {
+                markerOptions.label = point.isSelectedBusiness
+                  ? businessPosition != null
+                    ? String(businessPosition)
+                    : "You"
+                  : String(point.rank ?? "");
+              }
+              const marker = new gmaps.Marker(markerOptions);
+              attachOpen(marker, point);
+            })
+          );
         }
+
+        if (cancelled || !mapRef.current) return;
         map.fitBounds(bounds);
       })
       .catch(() => setMapStatus("Map unavailable."));
     return () => {
       cancelled = true;
+      const el = mapRef.current;
+      if (el) el.replaceChildren();
     };
-  }, [key, points]);
+  }, [key, points, businessPosition]);
 
   return (
     <section className="rounded-[2rem] border border-border bg-white p-6 shadow-soft sm:p-8">
       <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Google competitors</p>
-          <h2 className="mt-2 text-3xl font-black tracking-tight text-text-primary">Interactive competitor map</h2>
+          <h2 className="mt-2 text-3xl font-black tracking-tight text-text-primary">Competitor Map</h2>
         </div>
         <p className="text-sm text-text-secondary">{points.filter((p) => !p.isSelectedBusiness).length} direct competitors mapped</p>
       </div>
@@ -1054,7 +1122,7 @@ function InteractiveReport({
         <CompetitorMap audit={audit} points={audit.competitorMapPoints} googleMapsApiKey={googleMapsApiKey} />
         <section className="rounded-[2rem] border border-border bg-white p-6 shadow-soft sm:p-8">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Action plan</p>
-          <h2 className="mt-2 text-3xl font-black tracking-tight text-text-primary">What to fix first</h2>
+          <h2 className="mt-2 text-3xl font-black tracking-tight text-text-primary">Things to Improve</h2>
           <div className="mt-6 divide-y divide-border overflow-hidden rounded-3xl border border-border">
             {audit.actionPlan.map((item, index) => (
               <div

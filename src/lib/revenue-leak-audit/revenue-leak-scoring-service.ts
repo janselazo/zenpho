@@ -1113,6 +1113,144 @@ function buildFindings(input: BuildInput): AuditFinding[] {
     );
   }
 
+  const minImagesForImageSeo = 5;
+  const imgSeo = websiteAudit.imageSeo;
+  const imgN = websiteAudit.imageCount;
+  if (websiteAudit.available && imgSeo && imgN >= minImagesForImageSeo) {
+    const altRatio = imgSeo.weakOrMissingAlt / imgN;
+    if (altRatio >= 0.25 || imgSeo.weakOrMissingAlt >= 5) {
+      const impact = moneyImpact(assumptions, 0.02, 0.07);
+      const pct = Math.round(altRatio * 100);
+      findings.push(
+        finding(
+          {
+            category: "Local SEO & Market Positioning",
+            severity: altRatio >= 0.4 || imgSeo.weakOrMissingAlt >= 12 ? "Medium" : "Low",
+            title: "Images Are Missing Useful Alt Text",
+            whatWeFound: `On analyzed homepage HTML: ${imgSeo.weakOrMissingAlt} of ${imgN} images (${pct}%) have no alt attribute, empty alt, or whitespace-only alt (excluding decorative markers). ${imgSeo.missingAltAttribute} omit the alt attribute entirely.`,
+            whyItMatters:
+              "Search engines rely entirely on alt text to understand image content — without it, images are invisible to crawlers.",
+            evidence: `Decorative images excluded when marked role=presentation or aria-hidden=true. Counts: weakOrMissingAlt=${imgSeo.weakOrMissingAlt}, missingAltAttribute=${imgSeo.missingAltAttribute}, total <img>=${imgN}.`,
+            estimatedRevenueImpactLow: impact.low,
+            estimatedRevenueImpactHigh: impact.high,
+            leakRateLow: impact.leakRateLow,
+            leakRateHigh: impact.leakRateHigh,
+            recommendedFix:
+              "Add concise, descriptive alt text for every non-decorative image (service, location, team, results). Keep decorative images explicitly marked and alt=\"\" with role=\"presentation\" where appropriate.",
+            priorityScore: altRatio >= 0.4 ? 66 : 62,
+          },
+          i++
+        )
+      );
+    }
+
+    const titleRatio = imgSeo.missingTitle / imgN;
+    if (titleRatio >= 0.5) {
+      const impact = moneyImpact(assumptions, 0.01, 0.04);
+      const pct = Math.round(titleRatio * 100);
+      findings.push(
+        finding(
+          {
+            category: "Local SEO & Market Positioning",
+            severity: "Low",
+            title: "Images Are Missing Title Attributes",
+            whatWeFound: `${imgSeo.missingTitle} of ${imgN} images (${pct}%) have no title attribute in the homepage HTML.`,
+            whyItMatters:
+              "Title attributes provide additional context for search engines and improve accessibility for screen readers.",
+            evidence: `missingTitle=${imgSeo.missingTitle}, images=${imgN}.`,
+            estimatedRevenueImpactLow: impact.low,
+            estimatedRevenueImpactHigh: impact.high,
+            leakRateLow: impact.leakRateLow,
+            leakRateHigh: impact.leakRateHigh,
+            recommendedFix:
+              "Where helpful (not duplicative of alt), add short title attributes describing the image for humans and assistive tech.",
+            priorityScore: 54,
+          },
+          i++
+        )
+      );
+    }
+
+    const genRatio = imgN > 0 ? imgSeo.genericFilename / imgN : 0;
+    if (imgSeo.genericFilename >= 3 || genRatio >= 0.35) {
+      const impact = moneyImpact(assumptions, 0.015, 0.05);
+      const samples =
+        imgSeo.genericFilenameSamples.length > 0
+          ? ` Examples: ${imgSeo.genericFilenameSamples.join(", ")}.`
+          : "";
+      findings.push(
+        finding(
+          {
+            category: "Local SEO & Market Positioning",
+            severity: imgSeo.genericFilename >= 6 || genRatio >= 0.45 ? "Medium" : "Low",
+            title: "Images Use Non-Descriptive Filenames",
+            whatWeFound: `${imgSeo.genericFilename} of ${imgN} image sources look generically named (short tokens, numbers-only, hashes, etc.).${samples}`,
+            whyItMatters:
+              "Descriptive filenames (e.g. fresh-pasta-rome.jpg) help Google understand the content of your images.",
+            evidence: `genericFilename=${imgSeo.genericFilename}, images=${imgN}. Heuristic flags common CMS/upload patterns.`,
+            estimatedRevenueImpactLow: impact.low,
+            estimatedRevenueImpactHigh: impact.high,
+            leakRateLow: impact.leakRateLow,
+            leakRateHigh: impact.leakRateHigh,
+            recommendedFix:
+              "Rename key images with short, readable slugs (service + location or topic) before upload; avoid default camera or upload names.",
+            priorityScore: genRatio >= 0.45 ? 63 : 58,
+          },
+          i++
+        )
+      );
+    }
+
+    const wasteBytes = websiteAudit.pageSpeedImageWasteBytes;
+    const wasteThreshold = 200 * 1024;
+    let compressible = false;
+    let compressEvidence = "";
+    if (wasteBytes !== null && wasteBytes >= wasteThreshold) {
+      compressible = true;
+      const mib = wasteBytes / (1024 * 1024);
+      const label =
+        mib >= 1
+          ? `${mib.toFixed(1)} MiB`
+          : `${Math.round(wasteBytes / 1024)} KiB`;
+      compressEvidence = `Lighthouse (mobile) estimated image-related byte savings ~${label} across optimization audits.`;
+    } else if (
+      wasteBytes === null &&
+      imgSeo.largeDeclaredDimensions >= 2 &&
+      websiteAudit.pageSpeedMobileScore !== null &&
+      websiteAudit.pageSpeedMobileScore < 70
+    ) {
+      compressible = true;
+      compressEvidence = `No Lighthouse image-byte breakdown in this run; homepage has ${imgSeo.largeDeclaredDimensions} images with width/height ≥1920px and mobile PageSpeed ${websiteAudit.pageSpeedMobileScore}/100 — large images often hurt load and rankings.`;
+    }
+    if (compressible) {
+      const impact = moneyImpact(assumptions, 0.02, 0.08);
+      findings.push(
+        finding(
+          {
+            category: "Local SEO & Market Positioning",
+            severity: wasteBytes !== null && wasteBytes >= 500 * 1024 ? "Medium" : "Low",
+            title: "Images Appear Uncompressed or Oversized for the Web",
+            whatWeFound:
+              wasteBytes !== null && wasteBytes >= wasteThreshold
+                ? `Mobile Lighthouse reports substantial image optimization opportunity (~${Math.round(wasteBytes / 1024)} KiB combined across image audits).`
+                : `Several images declare very large dimensions and mobile PageSpeed is below 70, suggesting heavy imagery may be slowing the page.`,
+            whyItMatters:
+              "Large image file sizes slow down page load speed, which negatively affects your search ranking.",
+            evidence: compressEvidence,
+            estimatedRevenueImpactLow: impact.low,
+            estimatedRevenueImpactHigh: impact.high,
+            leakRateLow: impact.leakRateLow,
+            leakRateHigh: impact.leakRateHigh,
+            recommendedFix:
+              "Compress and resize images to displayed dimensions; prefer WebP/AVIF; use responsive srcset and lazy-load below-the-fold images.",
+            priorityScore: wasteBytes !== null && wasteBytes >= 500 * 1024 ? 65 : 60,
+          },
+          i++
+        )
+      );
+    }
+  }
+
   if (websiteAudit.available && !websiteAudit.title) {
     const impact = moneyImpact(assumptions, 0.01, 0.05);
     findings.push(
@@ -1263,6 +1401,26 @@ function computeScores(input: BuildInput): AuditScores {
   if (!websiteAudit.hasLocationPages) localSeo -= 20;
   if (rankingSnapshot.selectedBusinessPosition && rankingSnapshot.selectedBusinessPosition > 5) {
     localSeo -= 20;
+  }
+
+  if (websiteAudit.available && websiteAudit.imageSeo && websiteAudit.imageCount >= 5) {
+    const seo = websiteAudit.imageSeo;
+    const n = websiteAudit.imageCount;
+    const altRatio = seo.weakOrMissingAlt / n;
+    if (altRatio >= 0.25 || seo.weakOrMissingAlt >= 5) localSeo -= 7;
+    if (seo.missingTitle / n >= 0.5) localSeo -= 3;
+    if (seo.genericFilename >= 3 || seo.genericFilename / n >= 0.35) localSeo -= 4;
+    const waste = websiteAudit.pageSpeedImageWasteBytes;
+    if (waste !== null && waste >= 200 * 1024) {
+      localSeo -= 8;
+    } else if (
+      waste === null &&
+      seo.largeDeclaredDimensions >= 2 &&
+      websiteAudit.pageSpeedMobileScore !== null &&
+      websiteAudit.pageSpeedMobileScore < 70
+    ) {
+      localSeo -= 5;
+    }
   }
 
   let competitorGap = 100;
@@ -1507,6 +1665,9 @@ export function buildCompetitorMapPoints(
       marketStrengthScore: 100,
       rank: null,
       isSelectedBusiness: true,
+      types: business.types,
+      iconBackgroundColor: business.iconBackgroundColor,
+      iconMaskBaseUri: business.iconMaskBaseUri,
     });
   }
   for (const c of competitors) {
@@ -1521,6 +1682,9 @@ export function buildCompetitorMapPoints(
       marketStrengthScore: c.marketStrengthScore,
       rank: c.rank,
       isSelectedBusiness: false,
+      types: c.types,
+      iconBackgroundColor: c.iconBackgroundColor,
+      iconMaskBaseUri: c.iconMaskBaseUri,
     });
   }
   return points;

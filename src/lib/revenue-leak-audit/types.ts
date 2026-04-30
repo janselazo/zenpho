@@ -46,6 +46,10 @@ export type BusinessProfile = {
   phone: string | null;
   website: string | null;
   category: string | null;
+  /** Google Places category disk color (hex), when returned by the API. */
+  iconBackgroundColor: string | null;
+  /** Google Places mask base URI (append .png for the mask asset). */
+  iconMaskBaseUri: string | null;
   types: string[];
   rating: number | null;
   reviewCount: number | null;
@@ -91,6 +95,9 @@ export type Competitor = {
   reviewCount: number | null;
   photoCount: number | null;
   category: string | null;
+  types: string[];
+  iconBackgroundColor: string | null;
+  iconMaskBaseUri: string | null;
   coordinates: Coordinates | null;
   marketStrengthScore: number;
   distanceMiles: number | null;
@@ -125,6 +132,9 @@ export type CompetitorMapPoint = {
   marketStrengthScore: number;
   rank: number | null;
   isSelectedBusiness: boolean;
+  types: string[];
+  iconBackgroundColor: string | null;
+  iconMaskBaseUri: string | null;
 };
 
 export type GoogleLocalRankItem = {
@@ -160,6 +170,22 @@ export type BrandIdentitySummary = {
   warnings: string[];
 };
 
+/** Heuristic image SEO signals from homepage HTML (<img> scan). */
+export type WebsiteImageSeoSummary = {
+  /** `<img>` tags with no `alt` attribute at all. */
+  missingAltAttribute: number;
+  /** Missing, empty, or whitespace-only `alt` unless flagged decorative (role=presentation / aria-hidden). */
+  weakOrMissingAlt: number;
+  /** No `title` attribute. */
+  missingTitle: number;
+  /** `src` filename looks generic (short token, hash-like, etc.). */
+  genericFilename: number;
+  /** Both width and height attributes ≥ 1920 (heavy display hints). */
+  largeDeclaredDimensions: number;
+  /** Example basenames for evidence strings (capped). */
+  genericFilenameSamples: string[];
+};
+
 export type WebsiteAudit = {
   url: string | null;
   normalizedUrl: string | null;
@@ -179,6 +205,8 @@ export type WebsiteAudit = {
   hasContactForm: boolean;
   hasQuoteCta: boolean;
   hasTestimonials: boolean;
+  /** Homepage HTML appears to feature reviews, ratings, or testimonial widgets (social proof on site). */
+  homepageFeaturesReviews: boolean;
   hasClientPhotos: boolean;
   hasProjectPhotos: boolean;
   hasBeforeAfter: boolean;
@@ -206,6 +234,12 @@ export type WebsiteAudit = {
   identityAttributes: BusinessIdentityAttribute[];
   imageCount: number;
   blurryImageSignals: number;
+  /** Null when website HTML was not analyzed. */
+  imageSeo: WebsiteImageSeoSummary | null;
+  /**
+   * Sum of Lighthouse “wasted bytes” from image-related audits (mobile performance run), when available.
+   */
+  pageSpeedImageWasteBytes: number | null;
   warnings: string[];
 };
 
