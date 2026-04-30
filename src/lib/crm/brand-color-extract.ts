@@ -546,33 +546,125 @@ export async function fetchAndExtractBrandColors(
 
 // ── Logo extraction ──────────────────────────────────────────────────────────
 
+type LogoCandidate = { url: string; score: number; index: number };
+
+type LogoExtractionOptions = {
+  businessName?: string | null;
+};
+
+function brandTokens(value: string | null | undefined): string[] {
+  if (!value) return [];
+  const stop = new Set([
+    "the",
+    "and",
+    "company",
+    "co",
+    "llc",
+    "inc",
+    "corp",
+    "corporation",
+    "service",
+    "services",
+  ]);
+  return value
+    .toLowerCase()
+    .replace(/&amp;/g, " and ")
+    .split(/[^a-z0-9]+/g)
+    .filter((token) => token.length >= 3 && !stop.has(token))
+    .slice(0, 8);
+}
+
+function businessMatchScore(context: string, tokens: readonly string[]): number {
+  if (tokens.length === 0) return 0;
+  const text = context.toLowerCase();
+  const matches = tokens.filter((token) => text.includes(token)).length;
+  return matches === 0 ? 0 : 18 + matches * 10;
+}
+
+function pushLogoCandidate(
+  candidates: LogoCandidate[],
+  seen: Set<string>,
+  rawUrl: string,
+  baseUrl: string,
+  score: number,
+  index: number,
+): void {
+  if (!rawUrl || /^data:/i.test(rawUrl)) return;
+  if (/\/funnel\/icons\/|social-media-icon|facebook|instagram|youtube|tiktok/i.test(rawUrl)) return;
+  const url = resolveUrl(rawUrl, baseUrl);
+  if (!url || seen.has(url)) return;
+  seen.add(url);
+  candidates.push({ url, score, index });
+}
+
+function imageSrcFromTag(tag: string): string {
+  return (
+    tag.match(/data-(?:lazy-)?src=["']([^"']+)["']/i)?.[1] ??
+    tag.match(/data-srcset=["']([^"'\s,]+)/i)?.[1] ??
+    tag.match(/\bsrc=["']([^"']+)["']/i)?.[1] ??
+    ""
+  ).trim();
+}
+
+function imageDimensionScore(tag: string): number {
+  const style = tag.match(/\bstyle=["']([^"']+)["']/i)?.[1] ?? "";
+  const width =
+    Number.parseInt(style.match(/\bwidth\s*:\s*(\d+)px/i)?.[1] ?? "", 10) ||
+    Number.parseInt(tag.match(/\bwidth=["']?(\d+)/i)?.[1] ?? "", 10);
+  const height =
+    Number.parseInt(style.match(/\bheight\s*:\s*(\d+)px/i)?.[1] ?? "", 10) ||
+    Number.parseInt(tag.match(/\bheight=["']?(\d+)/i)?.[1] ?? "", 10);
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    return 0;
+  }
+  const ratio = width / height;
+  let score = 0;
+  if (width >= 80 && height >= 30 && width <= 900 && height <= 320) score += 12;
+  if (ratio >= 1.1 && ratio <= 6) score += 8;
+  return score;
+}
+
 /**
  * Best-effort logo URL extraction from raw HTML.
- * Priority: <img> with "logo" (data-src/data-srcset/src) → <a class="logo">
- * wrapper → Wix wix-image/data-pin-media → apple-touch-icon → large favicon →
- * og:image (fallback — often a social banner) → any favicon.
+ * Returns ranked candidates because builders such as LeadConnector often render
+ * multiple header/logo images, and the one literally labelled "Brand Logo" is
+ * not always the visible business logo.
  */
-export function extractLogoUrl(html: string, baseUrl: string): string | null {
-  if (!html || typeof html !== "string") return null;
+export function extractLogoUrls(
+  html: string,
+  baseUrl: string,
+  options: LogoExtractionOptions = {},
+): string[] {
+  if (!html || typeof html !== "string") return [];
+
+  const candidates: LogoCandidate[] = [];
+  const seen = new Set<string>();
+  const tokens = brandTokens(options.businessName ?? extractTitle(html));
 
   let m: RegExpExecArray | null;
 
-  // ── 1. <img> with "logo" in tag attributes — the strongest signal ──────
-  // Many sites lazy-load with data-src, data-lazy-src, or data-srcset while
-  // using a transparent placeholder in src. Check all data-* variants first.
-  const imgRe = /<img\s+[^>]*(?:src|alt|class|id)=[^>]*>/gi;
+  // ── 1. Ranked <img> candidates near logo/header/nav contexts ───────────
+  const imgRe = /<img\s+[^>]*(?:src|alt|class|id|style)=[^>]*>/gi;
   while ((m = imgRe.exec(html)) !== null) {
     const tag = m[0];
-    if (!/logo/i.test(tag)) continue;
-    const dataSrc = tag.match(/data-(?:lazy-)?src=["']([^"']+)["']/i);
-    const dataSrcset = tag.match(/data-srcset=["']([^"'\s,]+)/i);
-    const plainSrc = tag.match(/\bsrc=["']([^"']+)["']/i);
-    const src = (
-      dataSrc?.[1] ?? dataSrcset?.[1] ?? plainSrc?.[1] ?? ""
-    ).trim();
-    if (!src || /^data:/i.test(src)) continue;
-    const u = resolveUrl(src, baseUrl);
-    if (u) return u;
+    if (/social media icon|avatar|testimonial|review/i.test(tag)) continue;
+    const context = html.slice(Math.max(0, m.index - 420), Math.min(html.length, m.index + tag.length + 420));
+    let score = 0;
+    if (/logo|brand/i.test(tag)) score += 36;
+    if (/logo|brand/i.test(context)) score += 18;
+    if (/header|nav|navbar|menu|masthead/i.test(context)) score += 18;
+    if (/<a\b[^>]*>[\s\S]{0,650}$/i.test(context.slice(0, 650))) score += 10;
+    score += businessMatchScore(`${tag} ${context}`, tokens);
+    if (
+      /idx|property search|mortgage|buyers|sellers|communities|powered by|exp realty|realtor/i.test(context) &&
+      businessMatchScore(`${tag} ${context}`, tokens) === 0
+    ) {
+      score -= 24;
+    }
+    score += imageDimensionScore(tag);
+    score += Math.max(0, 10 - Math.floor((m.index / Math.max(html.length, 1)) * 30));
+    if (score < 24) continue;
+    pushLogoCandidate(candidates, seen, imageSrcFromTag(tag), baseUrl, score, m.index);
   }
 
   // ── 2. <a> with "logo" class/id wrapping an <img> or <source> ──────────
@@ -586,10 +678,7 @@ export function extractLogoUrl(html: string, baseUrl: string): string | null {
     const candidate = (
       srcsetMatch?.[1] ?? imgSrcMatch?.[1] ?? plainSrcMatch?.[1] ?? ""
     ).trim();
-    if (candidate && !/^data:/i.test(candidate)) {
-      const u = resolveUrl(candidate, baseUrl);
-      if (u) return u;
-    }
+    pushLogoCandidate(candidates, seen, candidate, baseUrl, 72, m.index);
   }
 
   // ── 3. Wix: wix:image or data-pin-media with "logo" nearby ────────────
@@ -597,27 +686,22 @@ export function extractLogoUrl(html: string, baseUrl: string): string | null {
   while ((m = wixImgRe.exec(html)) !== null) {
     const ctx = html.slice(Math.max(0, m.index - 200), m.index + m[0].length + 200);
     if (!/logo/i.test(ctx)) continue;
-    const raw = m[1].trim();
-    if (/^https?:\/\//i.test(raw)) return raw;
-    const u = resolveUrl(raw, baseUrl);
-    if (u) return u;
+    pushLogoCandidate(candidates, seen, m[1].trim(), baseUrl, 58, m.index);
   }
 
   // ── 4. apple-touch-icon ────────────────────────────────────────────────
   const touchRe = /<link\s+[^>]*rel=["']apple-touch-icon[^"']*["'][^>]*href=["']([^"']+)["']/gi;
   if ((m = touchRe.exec(html)) !== null) {
-    const u = resolveUrl(m[1].trim(), baseUrl);
-    if (u) return u;
+    pushLogoCandidate(candidates, seen, m[1].trim(), baseUrl, 28, m.index);
   }
   const touchRev = /<link\s+[^>]*href=["']([^"']+)["'][^>]*rel=["']apple-touch-icon[^"']*["']/gi;
   if ((m = touchRev.exec(html)) !== null) {
-    const u = resolveUrl(m[1].trim(), baseUrl);
-    if (u) return u;
+    pushLogoCandidate(candidates, seen, m[1].trim(), baseUrl, 28, m.index);
   }
 
   // ── 5. Large favicon (>= 64px, rel="icon") ────────────────────────────
   const iconRe = /<link\s+[^>]*rel=["'](?:shortcut )?icon["'][^>]*href=["']([^"']+)["']/gi;
-  let bestIcon: string | null = null;
+  let bestIcon: { url: string; index: number } | null = null;
   let bestSize = 0;
   while ((m = iconRe.exec(html)) !== null) {
     const tag = m[0];
@@ -626,27 +710,45 @@ export function extractLogoUrl(html: string, baseUrl: string): string | null {
     if (size > bestSize) {
       bestSize = size;
       const u = resolveUrl(m[1].trim(), baseUrl);
-      if (u) bestIcon = u;
+      if (u) bestIcon = { url: u, index: m.index };
     }
   }
-  if (bestIcon && bestSize >= 64) return bestIcon;
+  if (bestIcon && bestSize >= 64) {
+    pushLogoCandidate(candidates, seen, bestIcon.url, baseUrl, 20, bestIcon.index);
+  }
 
   // ── 6. og:image (fallback — often a social banner, not a logo) ─────────
   const ogRe = /<meta\s+[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/gi;
   if ((m = ogRe.exec(html)) !== null) {
-    const u = resolveUrl(m[1].trim(), baseUrl);
-    if (u) return u;
+    pushLogoCandidate(candidates, seen, m[1].trim(), baseUrl, 10, m.index);
   }
   const ogRev = /<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["']/gi;
   if ((m = ogRev.exec(html)) !== null) {
-    const u = resolveUrl(m[1].trim(), baseUrl);
-    if (u) return u;
+    pushLogoCandidate(candidates, seen, m[1].trim(), baseUrl, 10, m.index);
   }
 
   // ── 7. Any favicon as last resort ──────────────────────────────────────
-  if (bestIcon) return bestIcon;
+  if (bestIcon) {
+    pushLogoCandidate(candidates, seen, bestIcon.url, baseUrl, 4, bestIcon.index);
+  }
 
-  return resolveUrl("/favicon.ico", baseUrl);
+  const ranked = candidates
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .map((c) => c.url);
+  const fallback = resolveUrl("/favicon.ico", baseUrl);
+  return fallback && !seen.has(fallback) ? [...ranked, fallback] : ranked;
+}
+
+/**
+ * Best-effort single logo URL for older callers. Newer brand extraction should
+ * use `extractLogoUrls` and inspect the candidates.
+ */
+export function extractLogoUrl(
+  html: string,
+  baseUrl: string,
+  options: LogoExtractionOptions = {},
+): string | null {
+  return extractLogoUrls(html, baseUrl, options)[0] ?? null;
 }
 
 // ── Combined brand asset extraction ──────────────────────────────────────────
@@ -654,6 +756,7 @@ export function extractLogoUrl(html: string, baseUrl: string): string | null {
 export type BrandAssets = {
   colors: BrandColorResult | null;
   logoUrl: string | null;
+  logoUrls: string[];
   sourceFacts: WebsiteBrandFacts | null;
 };
 
@@ -666,9 +769,10 @@ export type BrandAssets = {
 export async function fetchBrandAssetsFromUrl(
   url: string,
   timeoutMs = 8000,
+  options: LogoExtractionOptions = {},
 ): Promise<BrandAssets> {
   const html = await fetchPageHtml(url, timeoutMs);
-  if (!html) return { colors: null, logoUrl: null, sourceFacts: null };
+  if (!html) return { colors: null, logoUrl: null, logoUrls: [], sourceFacts: null };
   const normalized = normalizeUrl(url);
 
   const cssUrls = extractLinkedStylesheetUrls(html, normalized);
@@ -680,9 +784,12 @@ export async function fetchBrandAssetsFromUrl(
 
   const colors = extractBrandColors(combined);
 
+  const logoUrls = extractLogoUrls(html, normalized, options);
+
   return {
     colors,
-    logoUrl: extractLogoUrl(html, normalized),
+    logoUrl: logoUrls[0] ?? null,
+    logoUrls,
     sourceFacts: extractWebsiteBrandFacts(html, normalized),
   };
 }

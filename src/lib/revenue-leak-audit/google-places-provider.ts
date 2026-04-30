@@ -407,7 +407,11 @@ export async function discoverCompetitors(input: {
   const selectedBusinessRankItem =
     selectedIndex >= 0
       ? rankItemFromBusiness(places[selectedIndex], selectedIndex + 1, input.business.placeId)
-      : null;
+      : rankItemFromBusiness(
+          input.business,
+          Math.max(places.length, topFive.length) + 1,
+          input.business.placeId
+        );
 
   const warnings = [
     ...(warning ? [warning] : []),
@@ -415,7 +419,7 @@ export async function discoverCompetitors(input: {
       ? `Only ${competitors.length} direct competitors were returned for this market sample.`
       : null,
     selectedBusinessPosition === null
-      ? `Selected business was not found in the first ${places.length} Google results checked.`
+      ? `Selected business was not found in the first ${places.length} Google results checked; shown after checked results.`
       : null,
   ].filter((x): x is string => Boolean(x));
 
@@ -426,7 +430,7 @@ export async function discoverCompetitors(input: {
         query,
         location,
         topFive,
-        selectedBusinessPosition,
+        selectedBusinessPosition: selectedBusinessRankItem.position,
         selectedBusinessRankItem,
         totalResultsChecked: places.length,
         warnings,

@@ -713,13 +713,15 @@ function loadGoogleMaps(key: string): Promise<void> {
 function CompetitorMap({
   audit,
   points,
+  googleMapsApiKey,
 }: {
   audit: RevenueLeakAudit;
   points: CompetitorMapPoint[];
+  googleMapsApiKey?: string | null;
 }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [mapStatus, setMapStatus] = useState<string | null>(null);
-  const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  const key = googleMapsApiKey || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const businessPosition = audit.rankingSnapshot.selectedBusinessPosition;
 
   useEffect(() => {
@@ -968,7 +970,15 @@ function DownloadPdfBanner({ audit }: { audit: RevenueLeakAudit }) {
   );
 }
 
-function InteractiveReport({ audit, onRestart }: { audit: RevenueLeakAudit; onRestart: () => void }) {
+function InteractiveReport({
+  audit,
+  onRestart,
+  googleMapsApiKey,
+}: {
+  audit: RevenueLeakAudit;
+  onRestart: () => void;
+  googleMapsApiKey?: string | null;
+}) {
   return (
     <section className="px-4 py-12 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-6">
@@ -977,7 +987,7 @@ function InteractiveReport({ audit, onRestart }: { audit: RevenueLeakAudit; onRe
         <FoundIssuesMoneySummary audit={audit} />
         <SectionProblemAccordion sections={audit.sectionSummaries} />
         <LowestReviewAnalysis audit={audit} />
-        <CompetitorMap audit={audit} points={audit.competitorMapPoints} />
+        <CompetitorMap audit={audit} points={audit.competitorMapPoints} googleMapsApiKey={googleMapsApiKey} />
         <section className="rounded-[2rem] border border-border bg-white p-6 shadow-soft sm:p-8">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Action plan</p>
           <h2 className="mt-2 text-3xl font-black tracking-tight text-text-primary">What to fix first</h2>
@@ -1019,7 +1029,11 @@ function InteractiveReport({ audit, onRestart }: { audit: RevenueLeakAudit; onRe
   );
 }
 
-export default function RevenueLeakAuditClient() {
+export default function RevenueLeakAuditClient({
+  googleMapsApiKey = null,
+}: {
+  googleMapsApiKey?: string | null;
+}) {
   const [stage, setStage] = useState<Stage>("search");
   const [searching, setSearching] = useState(false);
   const [audit, setAudit] = useState<RevenueLeakAudit | null>(null);
@@ -1128,7 +1142,9 @@ export default function RevenueLeakAuditClient() {
         </>
       ) : null}
       {stage === "analyzing" ? <AnalyzingScreen step={progressStep} /> : null}
-      {stage === "report" && audit ? <InteractiveReport audit={audit} onRestart={restart} /> : null}
+      {stage === "report" && audit ? (
+        <InteractiveReport audit={audit} onRestart={restart} googleMapsApiKey={googleMapsApiKey} />
+      ) : null}
       {warningList.length > 0 ? (
         <div className="mx-auto max-w-6xl px-4 pb-10 sm:px-6 lg:px-8">
           <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">

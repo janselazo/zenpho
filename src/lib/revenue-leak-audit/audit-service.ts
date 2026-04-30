@@ -74,7 +74,7 @@ export async function generateRevenueLeakAudit(input: {
   const assumptions = normalizeAssumptions(input.assumptions, business);
 
   const [brand, competitorsResult, website] = await Promise.all([
-    analyzeBrandIdentity(business.website),
+    analyzeBrandIdentity(business.website, business.name),
     analyzeCompetitors({ business, serviceArea: assumptions.serviceArea }),
     auditWebsite(business.website),
   ]);

@@ -10,5 +10,6 @@ export const metadata: Metadata = {
 };
 
 export default function RevenueLeakAuditPage() {
-  return <RevenueLeakAuditClient />;
+  const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim() || null;
+  return <RevenueLeakAuditClient googleMapsApiKey={googleMapsApiKey} />;
 }

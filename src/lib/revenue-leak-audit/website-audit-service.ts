@@ -17,6 +17,8 @@ import {
 } from "./website-conversion-heuristics";
 import type { ServiceResult, WebsiteAudit } from "./types";
 
+const PAGESPEED_TIMEOUT_MS = 65_000;
+
 function firstSocialLink(html: string, hostPattern: RegExp): string | null {
   const hrefRe = /href=["']([^"']+)["']/gi;
   let match: RegExpExecArray | null;
@@ -114,13 +116,20 @@ async function fetchPageSpeedScore(url: string): Promise<{
     const qs = new URLSearchParams({
       url,
       strategy: "mobile",
+      category: "performance",
       key,
     });
     const res = await fetch(
       `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?${qs.toString()}`,
-      { signal: AbortSignal.timeout(25_000) }
+      { signal: AbortSignal.timeout(PAGESPEED_TIMEOUT_MS) }
     );
-    if (!res.ok) return { score: null, warning: `PageSpeed failed (${res.status}).` };
+    if (!res.ok) {
+      const detail = (await res.text().catch(() => "")).slice(0, 180);
+      return {
+        score: null,
+        warning: `PageSpeed failed (${res.status})${detail ? `: ${detail}` : "."}`,
+      };
+    }
     const json = (await res.json()) as {
       lighthouseResult?: { categories?: { performance?: { score?: number } } };
     };
@@ -129,8 +138,16 @@ async function fetchPageSpeedScore(url: string): Promise<{
       score: typeof raw === "number" ? Math.round(raw * 100) : null,
       warning: null,
     };
-  } catch {
-    return { score: null, warning: "PageSpeed unavailable." };
+  } catch (error) {
+    const isTimeout =
+      error instanceof Error &&
+      (error.name === "TimeoutError" || /timeout|aborted/i.test(error.message));
+    return {
+      score: null,
+      warning: isTimeout
+        ? `PageSpeed timed out after ${Math.round(PAGESPEED_TIMEOUT_MS / 1000)}s.`
+        : "PageSpeed unavailable.",
+    };
   }
 }
 

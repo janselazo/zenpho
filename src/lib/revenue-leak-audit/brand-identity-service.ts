@@ -1,7 +1,7 @@
 import {
-  fetchBrandAssetsFromUrl,
   fetchPageHtml,
 } from "@/lib/crm/brand-color-extract";
+import { resolveProspectBrandAssets } from "@/lib/crm/prospect-branding-asset-resolve";
 import { normalizeUrlForFetch } from "@/lib/crm/safe-url-fetch";
 import { MOCK_BRAND_IDENTITY } from "./mock-data";
 import type { BrandIdentitySummary, ServiceResult } from "./types";
@@ -68,7 +68,8 @@ function typographyNotesFromHtml(html: string | null): string[] {
 }
 
 export async function analyzeBrandIdentity(
-  websiteUrl: string | null
+  websiteUrl: string | null,
+  businessName: string | null = null,
 ): Promise<ServiceResult<BrandIdentitySummary>> {
   const normalized = websiteUrl ? normalizeUrlForFetch(websiteUrl) : null;
   if (!normalized) {
@@ -87,25 +88,25 @@ export async function analyzeBrandIdentity(
 
   try {
     const [assets, html] = await Promise.all([
-      fetchBrandAssetsFromUrl(normalized),
+      resolveProspectBrandAssets({ websiteUrl: normalized, businessName }),
       fetchPageHtml(normalized, 8000),
     ]);
-    const palette = assets.colors?.palette ?? [];
+    const palette = assets.palette;
     const summary: BrandIdentitySummary = {
-      logoUrl: assets.logoUrl,
+      logoUrl: assets.logoSourceUrl,
       palette,
-      primaryColor: assets.colors?.primary ?? palette[0] ?? null,
-      accentColor: assets.colors?.accent ?? palette[1] ?? null,
+      primaryColor: assets.primary ?? palette[0] ?? null,
+      accentColor: assets.accent ?? palette[1] ?? null,
       typographyNotes: typographyNotesFromHtml(html),
       sourceUrl: normalized,
       brandPresenceSummary:
-        palette.length > 0 || assets.logoUrl
+        palette.length > 0 || assets.logoSourceUrl
           ? "Brand identity signals were extracted from the live website and can be used to personalize the audit report."
           : "The website was reachable, but logo and color signals were limited.",
       warnings: [],
     };
     const warnings =
-      palette.length === 0 && !assets.logoUrl
+      palette.length === 0 && !assets.logoSourceUrl
         ? ["Brand assets were limited on the selected website."]
         : [];
     return { data: { ...summary, warnings }, warnings };
