@@ -41,9 +41,7 @@ type ContactChannelStripProps = {
   contactEmail: string | null;
   socialUrls: ProspectSocialUrls | null;
   onPickEmail?: (email: string) => void;
-  /** When false, hides the long Prospects footnote; optional shorter footnote from `footnote` if set. */
-  showFootnote?: boolean;
-  /** Replaces default footnote when `showFootnote` is false; ignored when `showFootnote` is true (default). */
+  /** Optional short note below the icon row. */
   footnote?: string | null;
 };
 
@@ -55,7 +53,6 @@ export default function ContactChannelStrip({
   contactEmail,
   socialUrls,
   onPickEmail,
-  showFootnote = true,
   footnote = null,
 }: ContactChannelStripProps) {
   const s = socialUrls;
@@ -243,12 +240,7 @@ export default function ContactChannelStrip({
           "Not linked from scanned pages"
         )}
       </div>
-      {showFootnote ? (
-        <p className="text-[10px] leading-snug text-text-secondary/90 dark:text-zinc-500">
-          Website and listing phone come from Google Business Profile when you open a local listing. Email and social
-          icons fill in after we fetch and parse the public site (not returned by the Places fields used here).
-        </p>
-      ) : footnote?.trim() ? (
+      {footnote?.trim() ? (
         <p className="text-[10px] leading-snug text-text-secondary/90 dark:text-zinc-500">{footnote.trim()}</p>
       ) : null}
     </div>

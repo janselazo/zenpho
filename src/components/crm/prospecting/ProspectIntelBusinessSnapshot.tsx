@@ -181,7 +181,7 @@ export default function ProspectIntelBusinessSnapshot({
                   <dt className="text-[10px] font-medium uppercase tracking-wide text-text-secondary/60 dark:text-zinc-500">
                     Google rating
                   </dt>
-                  <dd className="mt-0.5 text-sm leading-snug text-text-primary dark:text-zinc-200">
+                  <dd className="mt-0.5 text-xs leading-snug text-text-primary dark:text-zinc-200">
                     {ratingDisplay}
                   </dd>
                 </div>
@@ -191,7 +191,7 @@ export default function ProspectIntelBusinessSnapshot({
                   <dt className="text-[10px] font-medium uppercase tracking-wide text-text-secondary/60 dark:text-zinc-500">
                     Categories
                   </dt>
-                  <dd className="mt-0.5 text-sm leading-snug text-text-primary dark:text-zinc-200">
+                  <dd className="mt-0.5 text-xs leading-snug text-text-primary dark:text-zinc-200">
                     {categoriesTrimmed}
                   </dd>
                 </div>

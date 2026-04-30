@@ -673,7 +673,6 @@ function GoogleBusinessProfileSummary({ audit }: { audit: RevenueLeakAudit }) {
               websiteUrl={business.website}
               contactEmail={audit.websiteAudit.contactLinks.email}
               socialUrls={socialUrls}
-              showFootnote={false}
             />
           </div>
         </div>
