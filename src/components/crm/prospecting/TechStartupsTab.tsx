@@ -213,7 +213,7 @@ export default function TechStartupsTab({
 }: {
   fieldOptions: MergedCrmFieldOptions;
 }) {
-  const [subTab, setSubTab] = useState<TechStartupsSubTab>("companies");
+  const [subTab, setSubTab] = useState<TechStartupsSubTab>("enrichment");
   const [keyword, setKeyword] = useState("");
   const [industries, setIndustries] = useState<string[]>([]);
   const [employeeRanges, setEmployeeRanges] = useState<string[]>(["1,10", "11,50"]);
@@ -339,8 +339,8 @@ export default function TechStartupsTab({
     <div className="space-y-4">
       <IconTabBar
         tabs={[
-          { id: "tech-startups-companies", label: "Tech", icon: Rocket },
           { id: "tech-startups-enrichment", label: "Enrichment", icon: Wrench },
+          { id: "tech-startups-companies", label: "Tech", icon: Rocket },
           { id: "tech-startups-ecom-brands", label: "Ecom", icon: ShoppingBag },
           { id: "tech-startups-funding", label: "Funding", icon: BadgeDollarSign },
           { id: "tech-startups-launches", label: "Launches", icon: Newspaper },
@@ -348,7 +348,7 @@ export default function TechStartupsTab({
           { id: "tech-startups-linkedin-activity", label: "LinkedIn Activity", icon: Bell },
         ]}
         activeTab={TECH_STARTUP_ID_BY_TAB[subTab]}
-        onTabChange={(id) => setSubTab(TECH_STARTUP_TAB_BY_ID[id] ?? "companies")}
+        onTabChange={(id) => setSubTab(TECH_STARTUP_TAB_BY_ID[id] ?? "enrichment")}
         ariaLabel="Tech Startups sources"
       />
 
