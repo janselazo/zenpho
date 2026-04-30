@@ -26,6 +26,8 @@ import {
   createLeadFromProspectIntelAction,
   createLeadFromPlacesListingAction,
   fingerprintProspectSiteAction,
+  enrichWebsiteContactsDeepAction,
+  fetchHomepageWebsiteContactsAction,
 } from "@/app/(crm)/actions/prospect-intel";
 import { saveLeadBrandingFunnelPdfAction } from "@/app/(crm)/actions/crm";
 import {
@@ -50,9 +52,7 @@ import ProspectingTabbedShell from "@/components/crm/prospecting/ProspectingTabb
 import PlacesBusinessAutocomplete from "@/components/crm/prospecting/PlacesBusinessAutocomplete";
 import PlacesCategoryAutocomplete from "@/components/crm/prospecting/PlacesCategoryAutocomplete";
 import PlacesSearchResultsList from "@/components/crm/prospecting/PlacesSearchResultsList";
-import ProspectIntelEnrichment, {
-  type ProspectWebsiteDeepStatus,
-} from "@/components/crm/prospecting/ProspectIntelEnrichment";
+import type { ProspectWebsiteDeepStatus } from "@/components/crm/prospecting/ProspectIntelEnrichment";
 import ProspectIntelBusinessSnapshot from "@/components/crm/prospecting/ProspectIntelBusinessSnapshot";
 import type { HomepageContactHints } from "@/app/(crm)/actions/prospect-intel";
 import { formatReportAsPlainNotes } from "@/lib/crm/prospect-intel-notes-format";
@@ -61,7 +61,10 @@ import {
   firstUsableContactEmailInOrder,
   isPlaceholderOrExampleEmail,
 } from "@/lib/crm/prospect-email-heuristics";
-import { EMPTY_PROSPECT_SOCIAL_URLS } from "@/lib/crm/prospect-enrichment-types";
+import {
+  EMPTY_PROSPECT_SOCIAL_URLS,
+  type MergedWebsiteContacts,
+} from "@/lib/crm/prospect-enrichment-types";
 import type { SocialEnrichmentResult } from "@/lib/crm/social-profile-scrape";
 
 type SocialEnrichmentOk = Extract<SocialEnrichmentResult, { ok: true }>;
@@ -1116,6 +1119,16 @@ function ProspectsIntelligenceViewInner({
     return null;
   }, [activeReport, socialEnrichResult?.website]);
 
+  /** Mirrors ProspectIntelEnrichment website crawl so contact hints stay populated without the scrapers UI here. */
+  const reportWebsiteUrlForDeep = useMemo(() => {
+    if (!activeReport) return null;
+    if (activeReport.kind === "url") {
+      const u = activeReport.urlMeta.url?.trim();
+      return u || null;
+    }
+    return effectivePlaceWebsiteUri;
+  }, [activeReport, effectivePlaceWebsiteUri]);
+
   const snapshotSocialUrls = useMemo(() => {
     const deep = websiteDeepStatus.contacts?.socialUrls;
     if (activeReport?.kind === "url" && urlHomepageHints) {
@@ -1339,6 +1352,62 @@ function ProspectsIntelligenceViewInner({
       setWebsiteDeepStatus(INITIAL_WEBSITE_DEEP);
     }
   }, [activeReport]);
+
+  useEffect(() => {
+    const websiteUrl = reportWebsiteUrlForDeep;
+    if (!websiteUrl?.trim()) {
+      setWebsiteCrawlEmails([]);
+      setWebsiteDeepStatus(INITIAL_WEBSITE_DEEP);
+      return;
+    }
+    let cancelled = false;
+    setWebsiteDeepStatus({ loading: true, contacts: null, error: null });
+    setWebsiteCrawlEmails([]);
+    let homepageContacts: MergedWebsiteContacts | null = null;
+    void (async () => {
+      const homepage = await fetchHomepageWebsiteContactsAction(websiteUrl);
+      if (cancelled) return;
+      if (homepage.ok) {
+        homepageContacts = homepage.contacts;
+        setWebsiteDeepStatus({
+          loading: true,
+          contacts: homepage.contacts,
+          error: null,
+        });
+        const emails = homepage.contacts.emailsRanked;
+        setWebsiteCrawlEmails(emails);
+        const first = emails[0];
+        if (first) applyPickedEmail(first);
+        const ph = homepage.contacts.phones[0];
+        if (ph) setLeadPhone((cur) => cur.trim() || ph);
+      }
+
+      const r = await enrichWebsiteContactsDeepAction(websiteUrl);
+      if (cancelled) return;
+      if (r.ok) {
+        setWebsiteDeepStatus({
+          loading: false,
+          contacts: r.contacts,
+          error: null,
+        });
+        setWebsiteCrawlEmails(r.contacts.emailsRanked);
+        const first = r.contacts.emailsRanked[0];
+        if (first) applyPickedEmail(first);
+        const ph = r.contacts.phones[0];
+        if (ph) setLeadPhone((cur) => cur.trim() || ph);
+      } else {
+        setWebsiteDeepStatus({
+          loading: false,
+          contacts: homepageContacts,
+          error: r.error,
+        });
+        setWebsiteCrawlEmails(homepageContacts?.emailsRanked ?? []);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [reportWebsiteUrlForDeep, applyPickedEmail]);
 
   async function runPlacesSearch() {
     setPlacesFormError(null);
@@ -1798,9 +1867,9 @@ function ProspectsIntelligenceViewInner({
               <p className="mt-1 max-w-2xl text-[11px] text-text-secondary dark:text-zinc-500">
                 Overview: business snapshot with GTM insight and website scan; highlights use live signals plus
                 custom websites, web apps, mobile apps, and AI audit signals (PDF on the prospect card). Then add a
-                lead and run enrichment tools.
-                Notes use plain sections
-                (not markdown lists).
+                lead. For Maps export, Apollo people search, and Hunter domain emails, open{" "}
+                <strong className="text-text-primary dark:text-zinc-300">Startups → Enrichment</strong>.
+                Notes use plain sections (not markdown lists).
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -2082,59 +2151,16 @@ function ProspectsIntelligenceViewInner({
           </ReportSection>
 
           <div className="border-t border-border/80 pt-6 dark:border-zinc-800">
-            <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
-              <ReportSection step="03" title="Highlights" noTopRule className="min-w-0">
-                <IntelHighlightsCarousel
-                  omitOuterTitle
-                  report={activeReport.report}
-                  glanceFacts={intelGlanceFacts}
-                  placeListingSignals={
-                    activeReport.kind === "place" ? intelHighlightSignalTags : undefined
-                  }
-                />
-              </ReportSection>
-
-              <ReportSection
-                step="04"
-                title="Enrichment tools"
-                noTopRule
-                className="min-w-0 border-t border-border/80 pt-8 dark:border-zinc-800 lg:border-t-0 lg:pt-0"
-              >
-                <ProspectIntelEnrichment
-                  omitBusinessSnapshot
-                  websiteUrl={
-                    activeReport.kind === "url"
-                      ? activeReport.urlMeta.url
-                      : effectivePlaceWebsiteUri
-                  }
-                  listingPhone={
-                    activeReport.kind === "place"
-                      ? activeReport.place.nationalPhoneNumber?.trim() ||
-                        activeReport.place.internationalPhoneNumber?.trim() ||
-                        null
-                      : null
-                  }
-                  googleMapsUri={
-                    activeReport.kind === "place"
-                      ? activeReport.place.googleMapsUri?.trim() || null
-                      : null
-                  }
-                  businessLabel={
-                    activeReport.kind === "url"
-                      ? activeReport.urlMeta.pageTitle?.slice(0, 200) || activeReport.urlMeta.url
-                      : activeReport.place.name
-                  }
-                  addressLabel={
-                    activeReport.kind === "place" ? activeReport.place.formattedAddress : null
-                  }
-                  homepageContactHints={activeReport.kind === "url" ? urlHomepageHints : null}
-                  onPickEmail={applyPickedEmail}
-                  onPickPhone={(phone) => setLeadPhone((cur) => cur.trim() || phone)}
-                  onWebsiteEmailsChange={setWebsiteCrawlEmails}
-                  onWebsiteDeepStatusChange={setWebsiteDeepStatus}
-                />
-              </ReportSection>
-            </div>
+            <ReportSection step="03" title="Highlights" noTopRule className="min-w-0">
+              <IntelHighlightsCarousel
+                omitOuterTitle
+                report={activeReport.report}
+                glanceFacts={intelGlanceFacts}
+                placeListingSignals={
+                  activeReport.kind === "place" ? intelHighlightSignalTags : undefined
+                }
+              />
+            </ReportSection>
           </div>
         </div>
       ) : null}

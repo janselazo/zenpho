@@ -14,6 +14,7 @@ import {
   ShoppingBag,
   Sparkles,
   Users,
+  Wrench,
 } from "lucide-react";
 import IconTabBar from "@/components/crm/prospecting/IconTabBar";
 import EcomBrandsTab from "@/components/crm/prospecting/EcomBrandsTab";
@@ -31,6 +32,7 @@ import {
   stackLabel,
   type StackKind,
 } from "@/lib/crm/tech-stack-fingerprint";
+import ProspectIntelEnrichment from "@/components/crm/prospecting/ProspectIntelEnrichment";
 import {
   STACK_KIND_PILL_COLOR,
   TIER_PILL_COLOR,
@@ -157,6 +159,7 @@ function tidyDomain(org: TechStartupOrgRow): string | null {
 
 type TechStartupsSubTab =
   | "companies"
+  | "enrichment"
   | "ecom-brands"
   | "funding"
   | "launches"
@@ -165,6 +168,7 @@ type TechStartupsSubTab =
 
 const TECH_STARTUP_TAB_BY_ID: Record<string, TechStartupsSubTab> = {
   "tech-startups-companies": "companies",
+  "tech-startups-enrichment": "enrichment",
   "tech-startups-ecom-brands": "ecom-brands",
   "tech-startups-funding": "funding",
   "tech-startups-launches": "launches",
@@ -174,12 +178,35 @@ const TECH_STARTUP_TAB_BY_ID: Record<string, TechStartupsSubTab> = {
 
 const TECH_STARTUP_ID_BY_TAB: Record<TechStartupsSubTab, string> = {
   companies: "tech-startups-companies",
+  enrichment: "tech-startups-enrichment",
   "ecom-brands": "tech-startups-ecom-brands",
   funding: "tech-startups-funding",
   launches: "tech-startups-launches",
   "social-intent": "tech-startups-social-intent",
   "linkedin-activity": "tech-startups-linkedin-activity",
 };
+
+function safeProspectWebsiteUrl(raw: string): string | null {
+  const t = raw.trim();
+  if (!t) return null;
+  const withProto = /^https?:/i.test(t) ? t : `https://${t}`;
+  try {
+    const u = new URL(withProto);
+    if (!u.hostname) return null;
+    return u.href.replace(/\/$/, "") || u.href;
+  } catch {
+    return null;
+  }
+}
+
+function hostLabelFromUrl(url: string | null): string {
+  if (!url) return "";
+  try {
+    return new URL(url).hostname.replace(/^www\./i, "");
+  } catch {
+    return "";
+  }
+}
 
 export default function TechStartupsTab({
   fieldOptions,
@@ -201,6 +228,13 @@ export default function TechStartupsTab({
   const [creatingIdx, setCreatingIdx] = useState<number | null>(null);
   const [createdIdx, setCreatedIdx] = useState<Set<number>>(new Set());
   const [createError, setCreateError] = useState<string | null>(null);
+
+  const [enrichWebsite, setEnrichWebsite] = useState("");
+  const [enrichCompany, setEnrichCompany] = useState("");
+  const [enrichLocation, setEnrichLocation] = useState("");
+  const enrichmentWebsiteUrl = safeProspectWebsiteUrl(enrichWebsite);
+  const enrichmentBusinessLabel =
+    enrichCompany.trim() || hostLabelFromUrl(enrichmentWebsiteUrl) || "Company";
 
   function toggle(list: string[], val: string, setter: (v: string[]) => void) {
     setter(list.includes(val) ? list.filter((x) => x !== val) : [...list, val]);
@@ -306,6 +340,7 @@ export default function TechStartupsTab({
       <IconTabBar
         tabs={[
           { id: "tech-startups-companies", label: "Tech", icon: Rocket },
+          { id: "tech-startups-enrichment", label: "Enrichment", icon: Wrench },
           { id: "tech-startups-ecom-brands", label: "Ecom", icon: ShoppingBag },
           { id: "tech-startups-funding", label: "Funding", icon: BadgeDollarSign },
           { id: "tech-startups-launches", label: "Launches", icon: Newspaper },
@@ -317,7 +352,89 @@ export default function TechStartupsTab({
         ariaLabel="Tech Startups sources"
       />
 
-      {subTab !== "companies" ? <div className="mt-1">{startupsContextBlurb}</div> : null}
+      {subTab !== "companies" && subTab !== "enrichment" ? (
+        <div className="mt-1">{startupsContextBlurb}</div>
+      ) : null}
+
+      <div
+        id="tech-startups-enrichment-panel"
+        role="tabpanel"
+        aria-labelledby="tech-startups-enrichment-tab"
+        hidden={subTab !== "enrichment"}
+      >
+        <div className="rounded-2xl border border-border bg-white p-5 shadow-sm dark:border-zinc-800/70 dark:bg-zinc-900/60">
+          <div className="mb-4 flex flex-wrap items-baseline gap-2">
+            <span className="font-mono text-[10px] font-semibold tabular-nums text-text-secondary/80 dark:text-zinc-400">
+              04
+            </span>
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-text-secondary dark:text-zinc-300">
+              Enrichment tools
+            </h2>
+          </div>
+          <p className="text-xs text-text-secondary dark:text-zinc-500">
+            Paste a company website from your startup search (or any domain) to run Apollo people search and Hunter
+            domain emails. Maps export uses the optional business / location fields below. Requires the same API keys as
+            Prospects research (
+            <code className="rounded bg-surface px-1 font-mono text-[11px] dark:bg-zinc-800">
+              OUTSCRAPER_API_KEY
+            </code>
+            ,{" "}
+            <code className="rounded bg-surface px-1 font-mono text-[11px] dark:bg-zinc-800">
+              APOLLO_API_KEY
+            </code>
+            ,{" "}
+            <code className="rounded bg-surface px-1 font-mono text-[11px] dark:bg-zinc-800">
+              HUNTER_API_KEY
+            </code>
+            ).
+          </p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <label className="block text-xs font-medium text-text-secondary dark:text-zinc-400">
+              Company website{" "}
+              <span className="font-normal text-text-secondary/80 dark:text-zinc-500">(Apollo / Hunter / site crawl)</span>
+              <input
+                type="url"
+                inputMode="url"
+                value={enrichWebsite}
+                onChange={(e) => setEnrichWebsite(e.target.value)}
+                placeholder="https://example.com"
+                className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              />
+            </label>
+            <label className="block text-xs font-medium text-text-secondary dark:text-zinc-400">
+              Business name{" "}
+              <span className="font-normal text-text-secondary/80 dark:text-zinc-500">(optional, seeds Maps query)</span>
+              <input
+                value={enrichCompany}
+                onChange={(e) => setEnrichCompany(e.target.value)}
+                placeholder="e.g. Acme SaaS"
+                className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              />
+            </label>
+            <label className="sm:col-span-2 block text-xs font-medium text-text-secondary dark:text-zinc-400">
+              City / region{" "}
+              <span className="font-normal text-text-secondary/80 dark:text-zinc-500">(optional, seeds Maps query)</span>
+              <input
+                value={enrichLocation}
+                onChange={(e) => setEnrichLocation(e.target.value)}
+                placeholder="e.g. Austin TX"
+                className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              />
+            </label>
+          </div>
+          <div className="mt-6">
+            <ProspectIntelEnrichment
+              omitBusinessSnapshot
+              websiteUrl={enrichmentWebsiteUrl}
+              listingPhone={null}
+              googleMapsUri={null}
+              businessLabel={enrichmentBusinessLabel}
+              addressLabel={enrichLocation.trim() || null}
+              homepageContactHints={null}
+            />
+          </div>
+        </div>
+      </div>
 
       <div
         id="tech-startups-ecom-brands-panel"
