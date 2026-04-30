@@ -400,6 +400,20 @@ export async function discoverCompetitors(input: {
     .slice(0, 12)
     .map((p, index) => toCompetitor(p, input.business, index + 1));
 
+  const topForReviews = competitors.slice(0, 3);
+  if (topForReviews.length > 0) {
+    const detailResults = await Promise.allSettled(
+      topForReviews.map((c) => getBusinessDetails(c.placeId))
+    );
+    detailResults.forEach((result, idx) => {
+      if (result.status !== "fulfilled") return;
+      const detail = result.value.data;
+      if (!detail || !detail.reviews?.length) return;
+      const target = competitors.find((c) => c.placeId === topForReviews[idx].placeId);
+      if (target) target.reviews = detail.reviews.slice(0, 5);
+    });
+  }
+
   const topFive = places
     .slice(0, 5)
     .map((p, index) => rankItemFromBusiness(p, index + 1, input.business.placeId));

@@ -10,6 +10,7 @@ import type {
   BusinessProfile,
   Competitor,
   CompetitorMapPoint,
+  CompetitorStrengthsInsight,
   FoundIssuesMoneySummary,
   GoogleLocalRankingSnapshot,
   RevenueEstimate,
@@ -25,10 +26,11 @@ type BuildInput = {
   websiteAudit: WebsiteAudit;
   reviewSentiment: ReviewSentimentSummary;
   photoAnalysis: PhotoAnalysisSummary;
+  competitorStrengths: CompetitorStrengthsInsight;
 };
 
 const CATEGORIES: AuditCategory[] = [
-  "Business vs Google Competitors",
+  "My Business vs Google Competitors",
   "Google Business Profile",
   "Reviews & Reputation",
   "Website Conversion",
@@ -167,6 +169,7 @@ function buildFindings(input: BuildInput): AuditFinding[] {
     websiteAudit,
     reviewSentiment,
     photoAnalysis,
+    competitorStrengths,
   } = input;
   const comp = competitorAverages(competitors);
   const findings: AuditFinding[] = [];
@@ -177,7 +180,7 @@ function buildFindings(input: BuildInput): AuditFinding[] {
     findings.push(
       finding(
         {
-          category: "Business vs Google Competitors",
+          category: "My Business vs Google Competitors",
           severity: "High",
           title: "Competitors Have Significantly More Google Reviews",
           whatWeFound: `${business.name} has ${business.reviewCount ?? 0} reviews. Top competitors average ${comp.reviews} reviews.`,
@@ -205,7 +208,7 @@ function buildFindings(input: BuildInput): AuditFinding[] {
     findings.push(
       finding(
         {
-          category: "Business vs Google Competitors",
+          category: "My Business vs Google Competitors",
           severity:
             rankingSnapshot.selectedBusinessPosition > 15 ? "Critical" : "High",
           title: "Your Business Is Not Showing in the Top Google Positions",
@@ -231,7 +234,7 @@ function buildFindings(input: BuildInput): AuditFinding[] {
     findings.push(
       finding(
         {
-          category: "Business vs Google Competitors",
+          category: "My Business vs Google Competitors",
           severity: comp.rating - (business.rating ?? 0) >= 0.5 ? "High" : "Medium",
           title: "Star Rating Is Lower Than Top Competitors",
           whatWeFound: `${business.name} averages ${(business.rating ?? 0).toFixed(1)} stars while top competitors average ${comp.rating.toFixed(1)}.`,
@@ -251,6 +254,38 @@ function buildFindings(input: BuildInput): AuditFinding[] {
     );
   }
 
+  if (competitorStrengths.topGap) {
+    const gap = competitorStrengths.topGap;
+    const impact = moneyImpact(assumptions, 0.03, 0.09);
+    const competitorList = gap.praisedCompetitors.slice(0, 3).join(", ");
+    const ownNote =
+      gap.ownMentions === 0
+        ? "this praise theme is essentially missing from your own public reviews"
+        : `your reviews mention it ~${gap.ownMentions}× vs ~${gap.competitorMentions}× for top competitors`;
+    findings.push(
+      finding(
+        {
+          category: "My Business vs Google Competitors",
+          severity: "Medium",
+          title: `Competitors Win on ${gap.label}`,
+          whatWeFound: `Top competitors (${competitorList}) are repeatedly praised by Google reviewers for ${gap.label.toLowerCase()} — ${ownNote}.`,
+          whyItMatters:
+            "Public review themes are the first thing buyers read before choosing. When competitors visibly own a strength, they shortlist faster and you don't get a call.",
+          evidence: gap.exampleQuote
+            ? `Example competitor review: "${gap.exampleQuote}"`
+            : `Detected ${gap.competitorMentions} competitor mention${gap.competitorMentions === 1 ? "" : "s"} of this theme across the top ${competitorStrengths.themes.length > 0 ? Math.min(3, competitors.length) : 0} competitors.`,
+          estimatedRevenueImpactLow: impact.low,
+          estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
+          recommendedFix: competitorStrengths.recommendation,
+          priorityScore: 81,
+        },
+        i++
+      )
+    );
+  }
+
   if (
     comp.photos > 0 &&
     (business.photoCount ?? 0) > 0 &&
@@ -260,7 +295,7 @@ function buildFindings(input: BuildInput): AuditFinding[] {
     findings.push(
       finding(
         {
-          category: "Business vs Google Competitors",
+          category: "My Business vs Google Competitors",
           severity: "Medium",
           title: "Competitors Have a Stronger Photo Footprint on Google",
           whatWeFound: `${business.name} has ~${business.photoCount ?? 0} Google photos. Top competitors average ~${comp.photos}.`,
@@ -1278,7 +1313,7 @@ function computeScores(input: BuildInput): AuditScores {
 
 function scoreForCategory(scores: AuditScores, category: AuditCategory): number {
   switch (category) {
-    case "Business vs Google Competitors":
+    case "My Business vs Google Competitors":
       return scores.competitorGap;
     case "Google Business Profile":
       return scores.gbpHealth;

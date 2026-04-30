@@ -650,7 +650,73 @@ function FoundIssuesMoneySummary({ audit }: { audit: RevenueLeakAudit }) {
   );
 }
 
-function SectionProblemAccordion({ sections }: { sections: SectionProblemSummary[] }) {
+function CompetitorStrengthsPanel({ audit }: { audit: RevenueLeakAudit }) {
+  const insight = audit.competitorStrengths;
+  if (!insight || (insight.themes.length === 0 && !insight.topGap)) {
+    return (
+      <div className="mt-4 rounded-2xl border border-dashed border-border bg-white p-4 text-sm text-text-secondary">
+        {insight?.summary ?? "Competitor review samples were not available for this market."}
+      </div>
+    );
+  }
+  return (
+    <div className="mt-4 rounded-2xl border border-border bg-white p-4">
+      <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">
+        What competitors are praised for
+      </p>
+      <p className="mt-2 text-sm leading-6 text-text-primary">{insight.summary}</p>
+      {insight.themes.length > 0 ? (
+        <ul className="mt-3 space-y-2">
+          {insight.themes.slice(0, 5).map((theme) => {
+            const isGap = insight.topGap?.theme === theme.theme;
+            return (
+              <li
+                key={theme.theme}
+                className={`rounded-xl border px-3 py-2 ${isGap ? "border-accent/40 bg-accent/5" : "border-border bg-surface/60"}`}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-bold text-text-primary">
+                    {theme.label}
+                    {isGap ? (
+                      <span className="ml-2 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent">
+                        biggest gap
+                      </span>
+                    ) : null}
+                  </p>
+                  <p className="text-xs text-text-secondary">
+                    competitors {theme.competitorMentions}× · you {theme.ownMentions}×
+                  </p>
+                </div>
+                {theme.praisedCompetitors.length > 0 ? (
+                  <p className="mt-1 text-xs text-text-secondary">
+                    Praised in: {theme.praisedCompetitors.slice(0, 3).join(", ")}
+                  </p>
+                ) : null}
+                {theme.exampleQuote ? (
+                  <p className="mt-1 text-xs italic text-text-secondary">
+                    “{theme.exampleQuote}”
+                  </p>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+      <p className="mt-3 rounded-xl bg-surface/80 p-3 text-sm leading-6 text-text-primary">
+        <span className="font-bold">Suggestion: </span>
+        {insight.recommendation}
+      </p>
+    </div>
+  );
+}
+
+function SectionProblemAccordion({
+  sections,
+  audit,
+}: {
+  sections: SectionProblemSummary[];
+  audit: RevenueLeakAudit;
+}) {
   const [open, setOpen] = useState<string | null>(sections[0]?.category ?? null);
   return (
     <section className="rounded-[2rem] border border-border bg-white p-6 shadow-soft sm:p-8">
@@ -676,6 +742,9 @@ function SectionProblemAccordion({ sections }: { sections: SectionProblemSummary
               </button>
               {isOpen ? (
                 <div className="border-t border-border bg-surface/50 p-5">
+                  {section.category === "My Business vs Google Competitors" ? (
+                    <CompetitorStrengthsPanel audit={audit} />
+                  ) : null}
                   {section.findings.length === 0 ? (
                     <p className="text-sm text-text-secondary">No major issues found in this section.</p>
                   ) : (
@@ -1066,7 +1135,7 @@ function InteractiveReport({
         <GoogleBusinessProfileSummary audit={audit} />
         <BrandSummary audit={audit} />
         <FoundIssuesMoneySummary audit={audit} />
-        <SectionProblemAccordion sections={audit.sectionSummaries} />
+        <SectionProblemAccordion sections={audit.sectionSummaries} audit={audit} />
         <LowestReviewAnalysis audit={audit} />
         <CompetitorMap audit={audit} points={audit.competitorMapPoints} googleMapsApiKey={googleMapsApiKey} />
         <section className="rounded-[2rem] border border-border bg-white p-6 shadow-soft sm:p-8">

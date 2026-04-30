@@ -3,7 +3,7 @@ export type AuditGrade = "Poor" | "Average" | "Good" | "Excellent";
 export type AuditSeverity = "Critical" | "High" | "Medium" | "Low";
 
 export type AuditCategory =
-  | "Business vs Google Competitors"
+  | "My Business vs Google Competitors"
   | "Google Business Profile"
   | "Reviews & Reputation"
   | "Website Conversion"
@@ -95,6 +95,24 @@ export type Competitor = {
   marketStrengthScore: number;
   distanceMiles: number | null;
   rank: number | null;
+  reviews?: BusinessReview[];
+};
+
+export type CompetitorStrengthTheme = {
+  theme: string;
+  label: string;
+  competitorMentions: number;
+  ownMentions: number;
+  praisedCompetitors: string[];
+  exampleQuote: string | null;
+};
+
+export type CompetitorStrengthsInsight = {
+  themes: CompetitorStrengthTheme[];
+  topGap: CompetitorStrengthTheme | null;
+  summary: string;
+  recommendation: string;
+  warnings: string[];
 };
 
 export type CompetitorMapPoint = {
@@ -290,6 +308,7 @@ export type RevenueLeakAudit = {
   competitorMapPoints: CompetitorMapPoint[];
   rankingSnapshot: GoogleLocalRankingSnapshot;
   brandIdentity: BrandIdentitySummary;
+  competitorStrengths: CompetitorStrengthsInsight;
   websiteAudit: WebsiteAudit;
   scores: AuditScores;
   findings: AuditFinding[];

@@ -1,5 +1,6 @@
 import { analyzeBrandIdentity } from "./brand-identity-service";
 import { analyzeCompetitors } from "./competitor-analysis-service";
+import { analyzeCompetitorStrengths } from "./competitor-strengths-service";
 import { getBusinessDetails } from "./google-places-provider";
 import { analyzePhotos } from "./photo-analysis-service";
 import { analyzeReviewSentiment } from "./review-sentiment-service";
@@ -92,6 +93,10 @@ export async function generateRevenueLeakAudit(input: {
 
   const reviewSentiment = analyzeReviewSentiment(businessWithIdentity);
   const photoAnalysis = analyzePhotos(businessWithIdentity, competitorsResult.data.competitors);
+  const competitorStrengths = analyzeCompetitorStrengths(
+    businessWithIdentity,
+    competitorsResult.data.competitors
+  );
   const scored = scoreAudit({
     business: businessWithIdentity,
     assumptions,
@@ -100,6 +105,7 @@ export async function generateRevenueLeakAudit(input: {
     websiteAudit: website.data,
     reviewSentiment,
     photoAnalysis,
+    competitorStrengths,
   });
   const competitorMapPoints = buildCompetitorMapPoints(
     businessWithIdentity,
@@ -124,6 +130,7 @@ export async function generateRevenueLeakAudit(input: {
       competitorMapPoints,
       rankingSnapshot: competitorsResult.data.rankingSnapshot,
       brandIdentity: brand.data,
+      competitorStrengths,
       websiteAudit: website.data,
       scores: scored.scores,
       findings: scored.findings,
