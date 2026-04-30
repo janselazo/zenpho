@@ -1,5 +1,12 @@
 import type { BusinessReview } from "./types";
 
+/**
+ * Google Places (New) place details return a **small, relevance-sorted** review sample (often ~5).
+ * We cannot request “all 1★ reviews” from that endpoint — if Google omits low stars from the sample,
+ * the UI cannot show them until we add another data source (e.g. owner Google Business Profile API,
+ * or a compliant reviews aggregator). `selectLowestRatedReviews` only **re-orders** what we already have.
+ */
+
 /** Keywords for tagging complaint themes in review text (used for highlights, not for picking lowest-star rows). */
 export const REVIEW_COMPLAINT_TERMS = [
   "slow",
@@ -113,6 +120,17 @@ export function selectLowestRatedReviews(reviews: BusinessReview[], limit = 4): 
   });
 
   return [...rated, ...unrated].slice(0, limit);
+}
+
+/**
+ * Most recent reviews first (newest `publishTime`), then rows without a parseable date
+ * (stable order). Uses the same Google Places sample as the rest of the audit.
+ */
+export function selectMostRecentReviews(reviews: BusinessReview[], limit = 5): BusinessReview[] {
+  const withTime = reviews.filter((r) => reviewPublishTimeMs(r) != null);
+  const withoutTime = reviews.filter((r) => reviewPublishTimeMs(r) == null);
+  withTime.sort((a, b) => reviewPublishTimeMs(b)! - reviewPublishTimeMs(a)!);
+  return [...withTime, ...withoutTime].slice(0, limit);
 }
 
 export function formatReviewStarLabel(rating: number | null): string {

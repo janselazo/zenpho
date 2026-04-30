@@ -137,6 +137,29 @@ function moneyImpact(
   };
 }
 
+/** Recompute per-finding dollar impacts when estimate assumptions change (leak rates unchanged). */
+export function applyAssumptionsToFindings(
+  assumptions: AuditAssumptions,
+  findings: AuditFinding[]
+): AuditFinding[] {
+  const cap = addressableMonthlyRevenue(assumptions);
+  return findings.map((f) => ({
+    ...f,
+    estimatedRevenueImpactLow: Math.round(cap * clampRate(f.leakRateLow)),
+    estimatedRevenueImpactHigh: Math.round(
+      cap * clampRate(Math.max(f.leakRateHigh, f.leakRateLow))
+    ),
+  }));
+}
+
+/** Rebuild money summary totals using edited assumptions while keeping the same detected leaks. */
+export function buildMoneySummaryFromAssumptions(
+  assumptions: AuditAssumptions,
+  findings: AuditFinding[]
+): FoundIssuesMoneySummary {
+  return buildMoneySummary(assumptions, applyAssumptionsToFindings(assumptions, findings));
+}
+
 function finding(
   input: Omit<AuditFinding, "id">,
   index: number
@@ -958,13 +981,13 @@ function buildFindings(input: BuildInput): AuditFinding[] {
     findings.push(
       finding(
         {
-          category: "Website Trust & Visual Proof",
+          category: "Photo Quality & Quantity",
           severity: "Medium",
-          title: "Website Images May Look Low Quality",
-          whatWeFound: `${websiteAudit.blurryImageSignals} image signals look low-resolution or undersized.`,
+          title: "Homepage images may look low quality (small display dimensions)",
+          whatWeFound: `${websiteAudit.blurryImageSignals} homepage <img> tag(s) use small width/height attributes, which often renders soft or pixelated on modern screens.`,
           whyItMatters:
-            "Blurry imagery makes a business feel less premium and can weaken buyer trust.",
-          evidence: `${websiteAudit.blurryImageSignals} image tags had small width/height attributes.`,
+            "Poorly sized web images hurt trust the same way weak Google profile photos do — buyers equate visual polish with workmanship.",
+          evidence: `${websiteAudit.blurryImageSignals} image tags had small width/height attributes in fetched HTML.`,
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
           leakRateLow: impact.leakRateLow,
@@ -1094,8 +1117,11 @@ function buildFindings(input: BuildInput): AuditFinding[] {
         {
           category: "Photo Quality & Quantity",
           severity: "Medium",
-          title: "Some Google Photos Look Low Resolution",
-          whatWeFound: "At least one published Google photo was below 500×350 pixels.",
+          title: "Some Google profile photos look low resolution",
+          whatWeFound:
+            photoAnalysis.profileLowResolutionCount === 1
+              ? "At least one Google Business Profile photo has declared dimensions below 500×350 pixels."
+              : `${photoAnalysis.profileLowResolutionCount} Google Business Profile photos have declared dimensions below 500×350 pixels.`,
           whyItMatters:
             "Low-resolution profile photos make the business look amateur and reduce trust before the click.",
           evidence: photoAnalysis.notes.join(" "),
@@ -1188,7 +1214,7 @@ function buildFindings(input: BuildInput): AuditFinding[] {
     );
   }
 
-  const minImagesForImageSeo = 5;
+  const minImagesForImageSeo = 3;
   const imgSeo = websiteAudit.imageSeo;
   const imgN = websiteAudit.imageCount;
   if (websiteAudit.available && imgSeo && imgN >= minImagesForImageSeo) {
@@ -1199,10 +1225,10 @@ function buildFindings(input: BuildInput): AuditFinding[] {
       findings.push(
         finding(
           {
-            category: "Local SEO & Market Positioning",
+            category: "Photo Quality & Quantity",
             severity: altRatio >= 0.4 || imgSeo.weakOrMissingAlt >= 12 ? "Medium" : "Low",
-            title: "Images Are Missing Useful Alt Text",
-            whatWeFound: `On analyzed homepage HTML: ${imgSeo.weakOrMissingAlt} of ${imgN} images (${pct}%) have no alt attribute, empty alt, or whitespace-only alt (excluding decorative markers). ${imgSeo.missingAltAttribute} omit the alt attribute entirely.`,
+            title: "Homepage images are missing useful alt text",
+            whatWeFound: `${imgSeo.weakOrMissingAlt} of ${imgN} homepage images (${pct}%) are missing or have weak alt text.`,
             whyItMatters:
               "Search engines rely entirely on alt text to understand image content — without it, images are invisible to crawlers.",
             evidence: `Decorative images excluded when marked role=presentation or aria-hidden=true. Counts: weakOrMissingAlt=${imgSeo.weakOrMissingAlt}, missingAltAttribute=${imgSeo.missingAltAttribute}, total <img>=${imgN}.`,
@@ -1226,9 +1252,9 @@ function buildFindings(input: BuildInput): AuditFinding[] {
       findings.push(
         finding(
           {
-            category: "Local SEO & Market Positioning",
+            category: "Photo Quality & Quantity",
             severity: "Low",
-            title: "Images Are Missing Title Attributes",
+            title: "Many homepage images lack a title attribute",
             whatWeFound: `${imgSeo.missingTitle} of ${imgN} images (${pct}%) have no title attribute in the homepage HTML.`,
             whyItMatters:
               "Title attributes provide additional context for search engines and improve accessibility for screen readers.",
@@ -1256,9 +1282,9 @@ function buildFindings(input: BuildInput): AuditFinding[] {
       findings.push(
         finding(
           {
-            category: "Local SEO & Market Positioning",
-            severity: imgSeo.genericFilename >= 6 || genRatio >= 0.45 ? "Medium" : "Low",
-            title: "Images Use Non-Descriptive Filenames",
+            category: "Photo Quality & Quantity",
+            severity: genRatio >= 0.45 ? "Medium" : "Low",
+            title: "Homepage images use generic filenames",
             whatWeFound: `${imgSeo.genericFilename} of ${imgN} image sources look generically named (short tokens, numbers-only, hashes, etc.).${samples}`,
             whyItMatters:
               "Descriptive filenames (e.g. fresh-pasta-rome.jpg) help Google understand the content of your images.",
@@ -1302,9 +1328,9 @@ function buildFindings(input: BuildInput): AuditFinding[] {
       findings.push(
         finding(
           {
-            category: "Local SEO & Market Positioning",
-            severity: wasteBytes !== null && wasteBytes >= 500 * 1024 ? "Medium" : "Low",
-            title: "Images Appear Uncompressed or Oversized for the Web",
+            category: "Photo Quality & Quantity",
+            severity: wasteBytes !== null && wasteBytes >= 500 * 1024 ? "High" : "Medium",
+            title: "Heavy or oversized homepage images hurt mobile performance",
             whatWeFound:
               wasteBytes !== null && wasteBytes >= wasteThreshold
                 ? `Mobile Lighthouse reports substantial image optimization opportunity (~${Math.round(wasteBytes / 1024)} KiB combined across image audits).`
@@ -1479,7 +1505,7 @@ function computeScores(input: BuildInput): AuditScores {
   if (!websiteAudit.hasProjectPhotos) trustPenalties.push(20);
   if (!websiteAudit.hasClientPhotos) trustPenalties.push(15);
   if (!websiteAudit.hasBeforeAfter) trustPenalties.push(10);
-  if (websiteAudit.blurryImageSignals > 0) trustPenalties.push(12);
+  if (!websiteAudit.hasBeforeAfter) trustPenalties.push(10);
   if (
     websiteAudit.available &&
     (websiteAudit.hasPhoneLink || websiteAudit.hasPhoneText) &&
@@ -1498,26 +1524,6 @@ function computeScores(input: BuildInput): AuditScores {
   if (!websiteAudit.hasLocationPages) localSeo -= 20;
   if (rankingSnapshot.selectedBusinessPosition && rankingSnapshot.selectedBusinessPosition > 5) {
     localSeo -= 20;
-  }
-
-  if (websiteAudit.available && websiteAudit.imageSeo && websiteAudit.imageCount >= 5) {
-    const seo = websiteAudit.imageSeo;
-    const n = websiteAudit.imageCount;
-    const altRatio = seo.weakOrMissingAlt / n;
-    if (altRatio >= 0.25 || seo.weakOrMissingAlt >= 5) localSeo -= 7;
-    if (seo.missingTitle / n >= 0.5) localSeo -= 3;
-    if (seo.genericFilename >= 3 || seo.genericFilename / n >= 0.35) localSeo -= 4;
-    const waste = websiteAudit.pageSpeedImageWasteBytes;
-    if (waste !== null && waste >= 200 * 1024) {
-      localSeo -= 8;
-    } else if (
-      waste === null &&
-      seo.largeDeclaredDimensions >= 2 &&
-      websiteAudit.pageSpeedMobileScore !== null &&
-      websiteAudit.pageSpeedMobileScore < 70
-    ) {
-      localSeo -= 5;
-    }
   }
 
   let competitorGap = 100;
@@ -1580,6 +1586,8 @@ function computeScores(input: BuildInput): AuditScores {
   if (photoAnalysis.competitorAveragePhotoCount > photoAnalysis.businessPhotoCount * 2) {
     photos -= 20;
   }
+  if (photoAnalysis.hasWebsiteLowResolutionHtmlSignals) photos -= 12;
+  if (photoAnalysis.hasWebsiteImageOptimizationGaps) photos -= 14;
 
   const scores = {
     gbpHealth: clampScore(gbp),
@@ -1694,11 +1702,20 @@ function aggregateLeak(
   };
 }
 
+function midpointMoney(low: number, high: number): number {
+  return Math.round((low + high) / 2);
+}
+
+function midpointLeadsJobs(low: number, high: number): number {
+  return Math.round(((low + high) / 2) * 10) / 10;
+}
+
 function buildRevenueEstimate(
   assumptions: AuditAssumptions,
   findings: AuditFinding[]
 ): RevenueEstimate {
   const aggregate = aggregateLeak(assumptions, findings);
+  const estLeakPct = Math.round(((aggregate.combinedLeakLow + aggregate.combinedLeakHigh) / 2) * 100);
   return {
     averageJobValue: assumptions.averageJobValue,
     closeRate: assumptions.closeRate,
@@ -1716,9 +1733,7 @@ function buildRevenueEstimate(
       `Total addressable monthly revenue: $${Math.round(
         aggregate.addressableMonthlyRevenue
       ).toLocaleString()} (leads × close rate × avg job value)`,
-      `Combined leak rate across all detected issues: ${Math.round(
-        aggregate.combinedLeakLow * 100
-      )}%–${Math.round(aggregate.combinedLeakHigh * 100)}% of monthly leads.`,
+      `Combined leak rate across all detected issues: ~${estLeakPct}% of monthly leads (midpoint of the model band).`,
       "Multiple leaks are combined with funnel math (1 − product of survival rates) so issues do not double-count and the total is capped at 85% of addressable revenue.",
     ],
   };
@@ -1739,35 +1754,46 @@ function buildMoneySummary(
     .sort((a, b) => b.estimatedRevenueImpactHigh - a.estimatedRevenueImpactHigh)
     .slice(0, 5);
   const aggregate = aggregateLeak(assumptions, findings);
-  const fixFirst = findings[0]?.recommendedFix ?? "Install a lead-to-revenue tracking system.";
+  const fixFirst =
+    findings[0]?.recommendedFix ??
+    "Review your Google Business Profile and website for conversion and local visibility gaps.";
   const lostLeadsLowR = Math.round(aggregate.lostLeadsLow * 10) / 10;
   const lostLeadsHighR = Math.round(aggregate.lostLeadsHigh * 10) / 10;
   const lostJobsLowR = Math.round(aggregate.lostJobsLow * 10) / 10;
   const lostJobsHighR = Math.round(aggregate.lostJobsHigh * 10) / 10;
+  const estimatedMonthlyCost = midpointMoney(aggregate.monthlyRevenueLow, aggregate.monthlyRevenueHigh);
+  const estimatedAnnualCost = estimatedMonthlyCost * 12;
+  const estimatedCombinedLeakRate = (aggregate.combinedLeakLow + aggregate.combinedLeakHigh) / 2;
+  const estimatedLostLeadsPerMonth = midpointLeadsJobs(aggregate.lostLeadsLow, aggregate.lostLeadsHigh);
+  const estimatedLostJobsPerMonth = midpointLeadsJobs(aggregate.lostJobsLow, aggregate.lostJobsHigh);
+  const estLeakPct = Math.round(estimatedCombinedLeakRate * 100);
   return {
     totalIssues: findings.length,
     severityCounts,
     topExpensiveLeaks,
     estimatedMonthlyCostLow: aggregate.monthlyRevenueLow,
     estimatedMonthlyCostHigh: aggregate.monthlyRevenueHigh,
+    estimatedMonthlyCost,
     estimatedAnnualCostLow: aggregate.monthlyRevenueLow * 12,
     estimatedAnnualCostHigh: aggregate.monthlyRevenueHigh * 12,
+    estimatedAnnualCost,
     addressableMonthlyRevenue: Math.round(aggregate.addressableMonthlyRevenue),
     combinedLeakRateLow: aggregate.combinedLeakLow,
     combinedLeakRateHigh: aggregate.combinedLeakHigh,
+    estimatedCombinedLeakRate,
     lostLeadsPerMonthLow: lostLeadsLowR,
     lostLeadsPerMonthHigh: lostLeadsHighR,
+    estimatedLostLeadsPerMonth,
     lostJobsPerMonthLow: lostJobsLowR,
     lostJobsPerMonthHigh: lostJobsHighR,
+    estimatedLostJobsPerMonth,
     assumptionsExplanation: `Inputs used: $${assumptions.averageJobValue.toLocaleString()} avg job value, ${Math.round(
       assumptions.closeRate * 100
     )}% close rate, ${assumptions.estimatedMonthlyLeads} monthly leads at risk = $${Math.round(
       aggregate.addressableMonthlyRevenue
     ).toLocaleString()} addressable monthly revenue. With the ${findings.length} detected issue${
       findings.length === 1 ? "" : "s"
-    }, the combined leak is ${Math.round(aggregate.combinedLeakLow * 100)}%–${Math.round(
-      aggregate.combinedLeakHigh * 100
-    )}% of monthly leads (~${lostLeadsLowR}–${lostLeadsHighR} leads / ~${lostJobsLowR}–${lostJobsHighR} jobs per month). Issues are combined with funnel math so they don't double-count, and the total is capped at 85% of addressable revenue.`,
+    }, the combined leak is ~${estLeakPct}% of monthly leads (~${estimatedLostLeadsPerMonth} leads / ~${estimatedLostJobsPerMonth} jobs per month, midpoint estimates). Issues are combined with funnel math so they don't double-count, and the total is capped at 85% of addressable revenue.`,
     fixFirstRecommendation: fixFirst,
   };
 }

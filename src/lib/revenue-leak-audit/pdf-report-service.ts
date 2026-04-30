@@ -6,7 +6,8 @@ import {
   type PDFPage,
   type RGB,
 } from "pdf-lib";
-import { formatReviewStarLabel, selectLowestRatedReviews } from "./review-selection";
+import { buildLastReviewsSentimentBlock } from "./review-sentiment-service";
+import { formatReviewStarLabel } from "./review-selection";
 import type {
   AuditFinding,
   AuditGrade,
@@ -579,7 +580,7 @@ function drawCover(ctx: Ctx, audit: RevenueLeakAudit): void {
     font: ctx.bold,
     color: MUTED,
   });
-  const costStr = `${money(m.estimatedMonthlyCostLow)}–${money(m.estimatedMonthlyCostHigh)}`;
+  const costStr = money(m.estimatedMonthlyCost);
   ctx.page.drawText(costStr, {
     x: MARGIN + 14,
     y: ctx.y - 50,
@@ -587,10 +588,9 @@ function drawCover(ctx: Ctx, audit: RevenueLeakAudit): void {
     font: ctx.bold,
     color: INK,
   });
-  const leakLow = Math.round(m.combinedLeakRateLow * 100);
-  const leakHigh = Math.round(m.combinedLeakRateHigh * 100);
+  const leakPct = Math.round(m.estimatedCombinedLeakRate * 100);
   ctx.page.drawText(
-    `~${leakLow}%–${leakHigh}% of ${money(m.addressableMonthlyRevenue)} addressable / mo`,
+    `~${leakPct}% of ${money(m.addressableMonthlyRevenue)} addressable / mo`,
     {
       x: MARGIN + 14,
       y: ctx.y - 68,
@@ -850,7 +850,7 @@ function drawMoneySummary(ctx: Ctx, audit: RevenueLeakAudit): void {
     font: ctx.bold,
     color: MUTED,
   });
-  const costStr = `${money(m.estimatedMonthlyCostLow)}–${money(m.estimatedMonthlyCostHigh)}`;
+  const costStr = money(m.estimatedMonthlyCost);
   ctx.page.drawText(costStr, {
     x: panelX + 16,
     y: panelTop - 50,
@@ -858,9 +858,8 @@ function drawMoneySummary(ctx: Ctx, audit: RevenueLeakAudit): void {
     font: ctx.bold,
     color: INK,
   });
-  const leakLow = Math.round(m.combinedLeakRateLow * 100);
-  const leakHigh = Math.round(m.combinedLeakRateHigh * 100);
-  drawText(ctx, `~${leakLow}%–${leakHigh}% of ${money(m.addressableMonthlyRevenue)} addressable / mo`, {
+  const leakPctPanel = Math.round(m.estimatedCombinedLeakRate * 100);
+  drawText(ctx, `~${leakPctPanel}% of ${money(m.addressableMonthlyRevenue)} addressable / mo`, {
     x: panelX + 16,
     y: panelTop - 68,
     size: 7.5,
@@ -874,8 +873,8 @@ function drawMoneySummary(ctx: Ctx, audit: RevenueLeakAudit): void {
   const microTop = panelTop - 92;
   const microH = 38;
   [
-    ["LEADS LOST / MO", `${m.lostLeadsPerMonthLow}–${m.lostLeadsPerMonthHigh}`],
-    ["JOBS LOST / MO", `${m.lostJobsPerMonthLow}–${m.lostJobsPerMonthHigh}`],
+    ["LEADS LOST / MO", String(m.estimatedLostLeadsPerMonth)],
+    ["JOBS LOST / MO", String(m.estimatedLostJobsPerMonth)],
   ].forEach((entry, i) => {
     const [label, value] = entry;
     const cx = panelX + 16 + i * (microW + 8);
@@ -902,16 +901,13 @@ function drawMoneySummary(ctx: Ctx, audit: RevenueLeakAudit): void {
     font: ctx.bold,
     color: MUTED,
   });
-  ctx.page.drawText(
-    `${money(m.estimatedAnnualCostLow)}–${money(m.estimatedAnnualCostHigh)}`,
-    {
-      x: panelX + 16,
-      y: microTop - microH - 38,
-      size: 14,
-      font: ctx.bold,
-      color: rgb(0.86, 0.15, 0.15),
-    },
-  );
+  ctx.page.drawText(money(m.estimatedAnnualCost), {
+    x: panelX + 16,
+    y: microTop - microH - 38,
+    size: 14,
+    font: ctx.bold,
+    color: rgb(0.86, 0.15, 0.15),
+  });
 
   ctx.y = heroTop - heroH - 24;
 
@@ -994,7 +990,8 @@ function drawFindingCard(ctx: Ctx, finding: AuditFinding, index: number): void {
   lineY -= blockH(fix);
 
   if (impactRow) {
-    const impactStr = `~${money(finding.estimatedRevenueImpactLow)}–${money(finding.estimatedRevenueImpactHigh)} / mo at risk`;
+    const impactMid = Math.round((finding.estimatedRevenueImpactLow + finding.estimatedRevenueImpactHigh) / 2);
+    const impactStr = `~${money(impactMid)} / mo at risk`;
     ctx.page.drawText(impactStr, {
       x: MARGIN + 14,
       y: top - cardH + 14,
@@ -1375,12 +1372,12 @@ function drawLocalRanking(ctx: Ctx, audit: RevenueLeakAudit): void {
   );
 }
 
-// ─── Lowest review analysis ──────────────────────────────────────────────────
-function drawLowestReviews(ctx: Ctx, audit: RevenueLeakAudit): void {
+// ─── Recent review sentiment (last 5 in Places sample) ──────────────────────
+function drawRecentReviewSentiment(ctx: Ctx, audit: RevenueLeakAudit): void {
   newPage(ctx);
-  sectionHeading(ctx, "Reviews & reputation", "Lowest review analysis", {
+  sectionHeading(ctx, "Reviews & reputation", "Review sentiment (last 5 reviews)", {
     description:
-      "Reviews ordered by lowest star rating first (all 1★ in the Google sample, then 2★, and so on; oldest publish date first when stars tie). Google may return at most five reviews per place in this snapshot, sorted for relevance, so very low-star reviews can be missing even when they exist on the profile. Use these to spot objections and coach the team toward fixes. Homepage review visibility affects conversion on your own site.",
+      "The five most recent rows in this audit’s Google Places snapshot (newest publish time first). Keyword themes and score are computed from those rows only; recommendations summarize what to do next.",
   });
 
   const business = audit.business;
@@ -1419,11 +1416,38 @@ function drawLowestReviews(ctx: Ctx, audit: RevenueLeakAudit): void {
     }
   }
 
-  const reviews = selectLowestRatedReviews(audit.business.reviews, 4);
+  const { recent: reviews, sentiment, recommendations } = buildLastReviewsSentimentBlock(
+    audit.business.reviews,
+    5
+  );
+
+  ensure(ctx, 36);
+  flowText(
+    ctx,
+    `Sentiment score (this slice): ${sentiment.sentimentScore}/100 · ${sentiment.sampleSize} review row${sentiment.sampleSize === 1 ? "" : "s"}`,
+    {
+      size: 10,
+      font: ctx.bold,
+      color: INK,
+      maxWidth: CONTENT_W,
+      gapAfter: 6,
+    },
+  );
+  const posLine =
+    sentiment.positiveThemes.length > 0
+      ? `Positive signals in wording: ${sentiment.positiveThemes.join(", ")}.`
+      : "No strong praise phrases matched in review wording.";
+  const negLine =
+    sentiment.negativeThemes.length > 0
+      ? `Watch words: ${sentiment.negativeThemes.join(", ")}.`
+      : "No recurring negative keywords matched in this slice.";
+  flowText(ctx, posLine, { size: 9, color: MUTED, maxWidth: CONTENT_W, gapAfter: 4 });
+  flowText(ctx, negLine, { size: 9, color: MUTED, maxWidth: CONTENT_W, gapAfter: 12 });
+
   if (reviews.length === 0) {
     ensure(ctx, 60);
     card(ctx, MARGIN, ctx.y, CONTENT_W, 50, SURFACE_LIGHT, BORDER_SOFT);
-    ctx.page.drawText("No public review text was available for this business.", {
+    ctx.page.drawText("No review rows were available in this Google snapshot.", {
       x: MARGIN + 16,
       y: ctx.y - 26,
       size: 10,
@@ -1431,54 +1455,79 @@ function drawLowestReviews(ctx: Ctx, audit: RevenueLeakAudit): void {
       color: MUTED,
     });
     ctx.y -= 70;
-    return;
+  } else {
+    for (const review of reviews) {
+      const bodyText = sanitize(review.text ?? "No written review text available.");
+      const bodyLines = wrapText(bodyText, ctx.font, 9, CONTENT_W - 100);
+      const cardH = Math.max(60, 42 + bodyLines.length * 12);
+      ensure(ctx, cardH + 12);
+      const top = ctx.y;
+      card(ctx, MARGIN, top, CONTENT_W, cardH, WHITE, BORDER);
+
+      ctx.page.drawText(formatReviewStarLabel(review.rating), {
+        x: MARGIN + 16,
+        y: top - 24,
+        size: 12,
+        font: ctx.bold,
+        color: rgb(0.96, 0.62, 0.04),
+      });
+      const author = sanitize(review.authorName ?? "Google reviewer");
+      ctx.page.drawText(author, {
+        x: MARGIN + 70,
+        y: top - 24,
+        size: 10,
+        font: ctx.bold,
+        color: INK,
+      });
+      if (review.relativePublishTime) {
+        const t = sanitize(review.relativePublishTime);
+        ctx.page.drawText(t, {
+          x: PAGE_W - MARGIN - ctx.font.widthOfTextAtSize(t, 8.5) - 14,
+          y: top - 24,
+          size: 8.5,
+          font: ctx.font,
+          color: MUTED,
+        });
+      }
+      let by = top - 42;
+      for (const line of bodyLines) {
+        ctx.page.drawText(line, {
+          x: MARGIN + 70,
+          y: by,
+          size: 9,
+          font: ctx.font,
+          color: MUTED,
+        });
+        by -= 12;
+      }
+      ctx.y = top - cardH - 10;
+    }
   }
 
-  for (const review of reviews) {
-    const bodyText = sanitize(review.text ?? "No written review text available.");
-    const bodyLines = wrapText(bodyText, ctx.font, 9, CONTENT_W - 100);
-    const cardH = Math.max(60, 42 + bodyLines.length * 12);
-    ensure(ctx, cardH + 12);
-    const top = ctx.y;
-    card(ctx, MARGIN, top, CONTENT_W, cardH, WHITE, BORDER);
-
-    ctx.page.drawText(formatReviewStarLabel(review.rating), {
-      x: MARGIN + 16,
-      y: top - 24,
-      size: 12,
-      font: ctx.bold,
-      color: rgb(0.96, 0.62, 0.04),
-    });
-    const author = sanitize(review.authorName ?? "Google reviewer");
-    ctx.page.drawText(author, {
-      x: MARGIN + 70,
-      y: top - 24,
-      size: 10,
-      font: ctx.bold,
-      color: INK,
-    });
-    if (review.relativePublishTime) {
-      const t = sanitize(review.relativePublishTime);
-      ctx.page.drawText(t, {
-        x: PAGE_W - MARGIN - ctx.font.widthOfTextAtSize(t, 8.5) - 14,
-        y: top - 24,
-        size: 8.5,
-        font: ctx.font,
-        color: MUTED,
-      });
-    }
-    let by = top - 42;
-    for (const line of bodyLines) {
+  ensure(ctx, 28);
+  flowText(ctx, "Recommendations", {
+    size: 11,
+    font: ctx.bold,
+    color: INK,
+    maxWidth: CONTENT_W,
+    gapAfter: 8,
+  });
+  for (const rec of recommendations) {
+    const lines = wrapText(`• ${rec}`, ctx.font, 9, CONTENT_W - 18);
+    const h = lines.length * 12 + 6;
+    ensure(ctx, h);
+    let ry = ctx.y;
+    for (const line of lines) {
       ctx.page.drawText(line, {
-        x: MARGIN + 70,
-        y: by,
+        x: MARGIN + 14,
+        y: ry,
         size: 9,
         font: ctx.font,
         color: MUTED,
       });
-      by -= 12;
+      ry -= 12;
     }
-    ctx.y = top - cardH - 10;
+    ctx.y = ry - 4;
   }
 }
 
@@ -1604,7 +1653,7 @@ export async function generateRevenueLeakAuditPdf(
   drawProblemsBySection(ctx, audit);
   drawCompetitorStrengths(ctx, audit);
   drawLocalRanking(ctx, audit);
-  drawLowestReviews(ctx, audit);
+  drawRecentReviewSentiment(ctx, audit);
   drawActionPlan(ctx, audit);
   drawFooter(ctx);
 

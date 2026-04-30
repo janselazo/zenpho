@@ -78,7 +78,7 @@ export function renderAuditShareImage(audit: RevenueLeakAudit): AuditShareImageR
   const businessName = clamp(audit.business.name, 52);
   const grade = audit.scores.grade;
   const score = audit.scores.overall;
-  const costBand = `${money(m.estimatedMonthlyCostLow)}–${money(m.estimatedMonthlyCostHigh)}/mo est. at risk`;
+  const costBand = `${money(m.estimatedMonthlyCost)}/mo est. at risk`;
   const rankLine = rankingSummary(audit);
   const findings = pickFindingsForCard(audit.findings);
   const bulletYs = [388, 424, 460, 496, 532];

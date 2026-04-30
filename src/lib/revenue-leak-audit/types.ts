@@ -118,6 +118,13 @@ export type CompetitorStrengthsInsight = {
   themes: CompetitorStrengthTheme[];
   topGap: CompetitorStrengthTheme | null;
   summary: string;
+  /**
+   * When set with `summaryCompetitorNames` and `summarySuffix`, the UI renders the opening
+   * fragment, bold competitor names (comma-separated), then the suffix (should start with `)`).
+   */
+  summaryPrefix?: string;
+  summaryCompetitorNames?: string[];
+  summarySuffix?: string;
   recommendation: string;
   warnings: string[];
 };
@@ -313,8 +320,12 @@ export type FoundIssuesMoneySummary = {
   topExpensiveLeaks: AuditFinding[];
   estimatedMonthlyCostLow: number;
   estimatedMonthlyCostHigh: number;
+  /** Midpoint of monthly low/high — single headline estimate. */
+  estimatedMonthlyCost: number;
   estimatedAnnualCostLow: number;
   estimatedAnnualCostHigh: number;
+  /** Midpoint of annual low/high (`estimatedMonthlyCost` × 12). */
+  estimatedAnnualCost: number;
   /**
    * Total addressable monthly revenue (estimatedMonthlyLeads * closeRate * averageJobValue).
    * Used as the ceiling for combined leak math.
@@ -323,12 +334,18 @@ export type FoundIssuesMoneySummary = {
   /** Combined share of monthly leads currently being lost (0..1). */
   combinedLeakRateLow: number;
   combinedLeakRateHigh: number;
+  /** Midpoint of combined leak rate (0..1). */
+  estimatedCombinedLeakRate: number;
   /** Lost leads per month at low/high band (after combining all findings). */
   lostLeadsPerMonthLow: number;
   lostLeadsPerMonthHigh: number;
+  /** Midpoint of lost leads / month. */
+  estimatedLostLeadsPerMonth: number;
   /** Lost closed jobs per month at low/high band. */
   lostJobsPerMonthLow: number;
   lostJobsPerMonthHigh: number;
+  /** Midpoint of lost jobs / month. */
+  estimatedLostJobsPerMonth: number;
   assumptionsExplanation: string;
   fixFirstRecommendation: string;
 };

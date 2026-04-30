@@ -245,14 +245,26 @@ export function analyzeCompetitorStrengths(
     summary = "We could not pull review text for top competitors in this market, so the public praise comparison is unavailable.";
     recommendation = "Re-run the audit when Google returns review samples for the top three competitors to surface a precise strength comparison.";
   } else if (topGap) {
-    const competitorList = topGap.praisedCompetitors.slice(0, 3).join(", ");
+    const names = topGap.praisedCompetitors.slice(0, 3);
+    const competitorList = names.join(", ");
     const ownNote =
       topGap.ownMentions === 0
         ? "this theme is essentially missing from your own public reviews"
         : `your own reviews mention it ~${topGap.ownMentions}x compared to ~${topGap.competitorMentions}x for competitors`;
-    summary = `Top competitors (${competitorList}) are repeatedly praised for ${topGap.label.toLowerCase()} — ${ownNote}.`;
+    const summarySuffix = `) are repeatedly praised for ${topGap.label.toLowerCase()} — ${ownNote}.`;
+    summary = `Top competitors (${competitorList}${summarySuffix}`;
     const def = THEME_DEFINITIONS.find((d) => d.theme === topGap.theme);
     recommendation = def?.recommendation ?? "Match this competitor strength on the website and in the review-request script.";
+    return {
+      themes: ranked,
+      topGap,
+      summary,
+      summaryPrefix: "Top competitors (",
+      summaryCompetitorNames: names,
+      summarySuffix,
+      recommendation,
+      warnings,
+    };
   } else if (ranked.length > 0) {
     const top3 = ranked.slice(0, 3).map((t) => t.label.toLowerCase()).join(", ");
     summary = `Top competitors are most often praised for ${top3}, and your own reviews already cover those themes.`;

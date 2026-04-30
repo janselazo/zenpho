@@ -12,6 +12,8 @@ type AuditMeta = {
   placeId?: string;
   auditId?: string;
   overallScore?: number;
+  /** Single headline estimate (midpoint of model band). */
+  monthlyLeakEstimate?: number;
   monthlyLeakLow?: number;
   monthlyLeakHigh?: number;
 };
@@ -26,10 +28,13 @@ function buildNotes(meta: AuditMeta | undefined, prospectName: string): string {
   if (meta?.placeId) lines.push(`Google Place ID: ${meta.placeId}`);
   if (meta?.auditId) lines.push(`Audit id: ${meta.auditId}`);
   if (typeof meta?.overallScore === "number") lines.push(`Overall score: ${meta.overallScore}/100`);
-  if (typeof meta?.monthlyLeakLow === "number" && typeof meta?.monthlyLeakHigh === "number") {
+  if (typeof meta?.monthlyLeakEstimate === "number") {
     lines.push(
-      `Est. monthly revenue at risk: $${Math.round(meta.monthlyLeakLow).toLocaleString()}–$${Math.round(meta.monthlyLeakHigh).toLocaleString()}`
+      `Est. monthly revenue at risk: ~$${Math.round(meta.monthlyLeakEstimate).toLocaleString()}`
     );
+  } else if (typeof meta?.monthlyLeakLow === "number" && typeof meta?.monthlyLeakHigh === "number") {
+    const mid = Math.round((meta.monthlyLeakLow + meta.monthlyLeakHigh) / 2);
+    lines.push(`Est. monthly revenue at risk: ~$${mid.toLocaleString()}`);
   }
   return lines.join("\n");
 }

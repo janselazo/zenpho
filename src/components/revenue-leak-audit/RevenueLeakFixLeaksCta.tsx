@@ -10,9 +10,25 @@ const inputClass =
 
 type Props = {
   audit: RevenueLeakAudit;
+  /** When true, omit outer section chrome (for embedding inside another card). */
+  embedSurface?: boolean;
+  surfaceEyebrow?: string;
+  surfaceTitle?: string;
+  surfaceBody?: string;
+  surfaceCtaLabel?: string;
+  /** Midpoint monthly estimate for lead notes when assumptions were edited client-side. */
+  monthlyLeakOverride?: number;
 };
 
-export default function RevenueLeakFixLeaksCta({ audit }: Props) {
+export default function RevenueLeakFixLeaksCta({
+  audit,
+  embedSurface = false,
+  surfaceEyebrow = "Next step",
+  surfaceTitle = "Ready to recover lost revenue?",
+  surfaceBody = "We'll help you identify the highest-value fixes, prioritize implementation, and build a plan to recover lost revenue.",
+  surfaceCtaLabel = "Start fixing leaks",
+  monthlyLeakOverride,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -67,8 +83,7 @@ export default function RevenueLeakFixLeaksCta({ audit }: Props) {
             placeId: audit.business.placeId,
             auditId: audit.id,
             overallScore: audit.scores.overall,
-            monthlyLeakLow: audit.moneySummary.estimatedMonthlyCostLow,
-            monthlyLeakHigh: audit.moneySummary.estimatedMonthlyCostHigh,
+            monthlyLeakEstimate: monthlyLeakOverride ?? audit.moneySummary.estimatedMonthlyCost,
           },
         }),
       });
@@ -98,25 +113,26 @@ export default function RevenueLeakFixLeaksCta({ audit }: Props) {
     setOpen(true);
   }
 
+  const banner = (
+    <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">{surfaceEyebrow}</p>
+        <h2 className="mt-2 text-2xl font-black tracking-tight text-text-primary">{surfaceTitle}</h2>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-text-secondary">{surfaceBody}</p>
+      </div>
+      <Button type="button" size="lg" onClick={openFresh} className="shrink-0">
+        {surfaceCtaLabel}
+      </Button>
+    </div>
+  );
+
   return (
     <>
-      <section className="rounded-[2rem] border border-accent/20 bg-white p-6 shadow-soft-lg sm:p-8">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Next step</p>
-            <h2 className="mt-2 text-2xl font-black tracking-tight text-text-primary">
-              Ready to fix these revenue leaks?
-            </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-text-secondary">
-              Share your contact details and we&apos;ll follow up to prioritize fixes, plug the biggest leaks first,
-              and line up implementation.
-            </p>
-          </div>
-          <Button type="button" size="lg" onClick={openFresh} className="shrink-0">
-            Request help
-          </Button>
-        </div>
-      </section>
+      {embedSurface ? (
+        banner
+      ) : (
+        <section className="rounded-[2rem] border border-accent/20 bg-white p-6 shadow-soft-lg sm:p-8">{banner}</section>
+      )}
 
       {open ? (
         <div

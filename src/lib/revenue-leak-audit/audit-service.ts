@@ -103,7 +103,11 @@ export async function generateRevenueLeakAudit(input: {
   };
 
   const reviewSentiment = analyzeReviewSentiment(businessWithIdentity);
-  const photoAnalysis = analyzePhotos(businessWithIdentity, competitorsResult.data.competitors);
+  const photoAnalysis = analyzePhotos(
+    businessWithIdentity,
+    competitorsResult.data.competitors,
+    website.data
+  );
   const competitorStrengths = analyzeCompetitorStrengths(
     businessWithIdentity,
     competitorsResult.data.competitors

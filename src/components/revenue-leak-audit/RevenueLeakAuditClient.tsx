@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   BadgeCheck,
@@ -16,9 +16,15 @@ import {
 } from "lucide-react";
 import ContactChannelStrip from "@/components/crm/ContactChannelStrip";
 import RevenueLeakFixLeaksCta from "@/components/revenue-leak-audit/RevenueLeakFixLeaksCta";
+import RevenueLeakSnapshot from "@/components/revenue-leak-audit/RevenueLeakSnapshot";
 import Button from "@/components/ui/Button";
 import { EMPTY_PROSPECT_SOCIAL_URLS } from "@/lib/crm/prospect-enrichment-types";
+import {
+  applyAssumptionsToFindings,
+  buildMoneySummaryFromAssumptions,
+} from "@/lib/revenue-leak-audit/revenue-leak-scoring-service";
 import type {
+  AuditAssumptions,
   AuditGrade,
   BusinessProfile,
   BusinessSearchResult,
@@ -27,14 +33,16 @@ import type {
   SectionProblemSummary,
 } from "@/lib/revenue-leak-audit/types";
 import {
-  extractComplaintThemes,
+  buildLastReviewsSentimentBlock,
+} from "@/lib/revenue-leak-audit/review-sentiment-service";
+import {
   formatReviewStarLabel,
-  selectLowestRatedReviews,
 } from "@/lib/revenue-leak-audit/review-selection";
 import {
   buildCategoryMarkerElement,
   CLASSIC_MARKER_PIN_LAYOUT,
   compositeCategoryMarkerDataUrl,
+  competitorMapLightBlueStyles,
   resolveCategoryMarkerStyle,
 } from "@/lib/revenue-leak-audit/map-marker-style";
 
@@ -90,104 +98,6 @@ function formatAuditLastUpdated(iso: string | undefined): string | null {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(d);
-}
-
-function formatLeadJobDisplay(value: number): string {
-  return value.toFixed(1);
-}
-
-function easeOutCubic(t: number): number {
-  return 1 - (1 - t) ** 3;
-}
-
-/** Count-up duration when the money summary scrolls into view — longer so values read as “growing” rather than snapping. */
-const MONEY_SUMMARY_COUNT_UP_MS = 2800;
-
-function useMoneySummaryCountUp(
-  key: string,
-  sectionRef: RefObject<HTMLElement | null>,
-  totalIssues: number,
-  monthlyLow: number,
-  monthlyHigh: number,
-  annualLow: number,
-  annualHigh: number,
-  leadsLow: number,
-  leadsHigh: number,
-  jobsLow: number,
-  jobsHigh: number
-) {
-  const [progress, setProgress] = useState(0);
-
-  useEffect(() => {
-    setProgress(0);
-  }, [key]);
-
-  useEffect(() => {
-    const el = sectionRef.current;
-    if (!el) return;
-
-    let started = false;
-    let raf = 0;
-
-    const run = () => {
-      if (started) return;
-      started = true;
-      const begin = performance.now();
-      const duration = MONEY_SUMMARY_COUNT_UP_MS;
-      const tick = (now: number) => {
-        const t = Math.min(1, (now - begin) / duration);
-        setProgress(easeOutCubic(t));
-        if (t < 1) raf = requestAnimationFrame(tick);
-      };
-      raf = requestAnimationFrame(tick);
-    };
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) run();
-      },
-      { threshold: 0.12, rootMargin: "0px 0px -8% 0px" }
-    );
-    observer.observe(el);
-
-    const rect = el.getBoundingClientRect();
-    const vh = window.innerHeight || 1;
-    if (rect.top < vh * 0.92 && rect.bottom > vh * 0.06) {
-      run();
-    }
-
-    return () => {
-      cancelAnimationFrame(raf);
-      observer.disconnect();
-    };
-  }, [
-    key,
-    sectionRef,
-    totalIssues,
-    monthlyLow,
-    monthlyHigh,
-    annualLow,
-    annualHigh,
-    leadsLow,
-    leadsHigh,
-    jobsLow,
-    jobsHigh,
-  ]);
-
-  const p = progress >= 1 ? 1 : progress;
-  const lerp = (a: number, b: number) => a + (b - a) * p;
-
-  return {
-    issues: p >= 1 ? totalIssues : Math.max(0, Math.round(lerp(0, totalIssues))),
-    monthlyLow: p >= 1 ? monthlyLow : Math.round(lerp(0, monthlyLow)),
-    monthlyHigh: p >= 1 ? monthlyHigh : Math.round(lerp(0, monthlyHigh)),
-    annualLow: p >= 1 ? annualLow : Math.round(lerp(0, annualLow)),
-    annualHigh: p >= 1 ? annualHigh : Math.round(lerp(0, annualHigh)),
-    leadsLow: p >= 1 ? leadsLow : lerp(0, leadsLow),
-    leadsHigh: p >= 1 ? leadsHigh : lerp(0, leadsHigh),
-    jobsLow: p >= 1 ? jobsLow : lerp(0, jobsLow),
-    jobsHigh: p >= 1 ? jobsHigh : lerp(0, jobsHigh),
-  };
 }
 
 function percent(value: number): string {
@@ -499,7 +409,6 @@ function HeroSearch({
 
 function AnalyzingScreen({ step }: { step: number }) {
   const headlineIndex = Math.min(step, progressSteps.length - 1);
-  const showLongWaitHint = step >= PROGRESS_AUTOSTEP_CAP;
   return (
     <section className="px-4 py-20 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-3xl rounded-[2rem] border border-border bg-white p-8 shadow-soft-lg">
@@ -510,13 +419,6 @@ function AnalyzingScreen({ step }: { step: number }) {
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Running audit</p>
             <h2 className="text-2xl font-black text-text-primary">{progressSteps[headlineIndex]}</h2>
-            {showLongWaitHint ? (
-              <p className="mt-2 max-w-xl text-sm leading-relaxed text-text-secondary">
-                Competitor scoring and report generation usually take{" "}
-                <span className="font-semibold text-text-primary">1–3 minutes</span>. This step is not stuck — the
-                server is still working.
-              </p>
-            ) : null}
           </div>
         </div>
         <div className="mt-8 space-y-3">
@@ -726,136 +628,6 @@ function GoogleBusinessProfileSummary({ audit }: { audit: RevenueLeakAudit }) {
   );
 }
 
-function FoundIssuesMoneySummary({ audit }: { audit: RevenueLeakAudit }) {
-  const m = audit.moneySummary;
-  const asm = audit.assumptions;
-  const leakLowPct = Math.round(m.combinedLeakRateLow * 100);
-  const leakHighPct = Math.round(m.combinedLeakRateHigh * 100);
-  const sectionRef = useRef<HTMLElement>(null);
-  const animKey = useMemo(
-    () =>
-      [
-        audit.business.placeId,
-        m.totalIssues,
-        m.estimatedMonthlyCostLow,
-        m.estimatedMonthlyCostHigh,
-        m.estimatedAnnualCostLow,
-        m.estimatedAnnualCostHigh,
-        m.lostLeadsPerMonthLow,
-        m.lostLeadsPerMonthHigh,
-        m.lostJobsPerMonthLow,
-        m.lostJobsPerMonthHigh,
-        m.addressableMonthlyRevenue,
-        m.combinedLeakRateLow,
-        m.combinedLeakRateHigh,
-        asm.averageJobValue,
-        asm.closeRate,
-        asm.estimatedMonthlyLeads,
-      ].join("|"),
-    [
-      audit.business.placeId,
-      m.totalIssues,
-      m.estimatedMonthlyCostLow,
-      m.estimatedMonthlyCostHigh,
-      m.estimatedAnnualCostLow,
-      m.estimatedAnnualCostHigh,
-      m.lostLeadsPerMonthLow,
-      m.lostLeadsPerMonthHigh,
-      m.lostJobsPerMonthLow,
-      m.lostJobsPerMonthHigh,
-      m.addressableMonthlyRevenue,
-      m.combinedLeakRateLow,
-      m.combinedLeakRateHigh,
-      asm.averageJobValue,
-      asm.closeRate,
-      asm.estimatedMonthlyLeads,
-    ]
-  );
-  const a = useMoneySummaryCountUp(
-    animKey,
-    sectionRef,
-    m.totalIssues,
-    m.estimatedMonthlyCostLow,
-    m.estimatedMonthlyCostHigh,
-    m.estimatedAnnualCostLow,
-    m.estimatedAnnualCostHigh,
-    m.lostLeadsPerMonthLow,
-    m.lostLeadsPerMonthHigh,
-    m.lostJobsPerMonthLow,
-    m.lostJobsPerMonthHigh
-  );
-  const leakWord = a.issues === 1 ? "revenue leak" : "revenue leaks";
-  const closePct = Math.round(asm.closeRate * 100);
-  const summaryPill =
-    "rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-text-secondary";
-  const notePill =
-    "rounded-full border border-border bg-surface/70 px-3 py-1.5 text-[11px] font-medium leading-snug text-text-secondary";
-  return (
-    <section
-      ref={sectionRef}
-      className="rounded-[2rem] border border-border bg-white p-6 shadow-soft sm:p-8"
-    >
-      <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
-        <div>
-          <h2 className="text-4xl font-black tracking-tight text-text-primary tabular-nums">
-            {a.issues} {leakWord} are costing you {formatMoney(a.monthlyLow)}–{formatMoney(a.monthlyHigh)}
-          </h2>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <span className={`${summaryPill} tabular-nums`}>Avg job {formatMoney(asm.averageJobValue)}</span>
-            <span className={`${summaryPill} tabular-nums`}>{closePct}% close rate</span>
-            <span className={`${summaryPill} tabular-nums`}>{asm.estimatedMonthlyLeads} leads / mo</span>
-            <span className={`${summaryPill} tabular-nums`}>{formatMoney(m.addressableMonthlyRevenue)} addressable / mo</span>
-            <span className={`${summaryPill} tabular-nums`}>
-              ~{leakLowPct}–{leakHighPct}% of leads at risk
-            </span>
-            <span className={`${summaryPill} tabular-nums`}>
-              ~{formatLeadJobDisplay(a.leadsLow)}–{formatLeadJobDisplay(a.leadsHigh)} leads slipping / mo
-            </span>
-            <span className={`${summaryPill} tabular-nums`}>
-              ~{formatLeadJobDisplay(a.jobsLow)}–{formatLeadJobDisplay(a.jobsHigh)} jobs / mo
-            </span>
-            <span className={notePill}>Blended funnel math (no double-count) · Max 85% of opportunity</span>
-          </div>
-          <div className="mt-5 flex flex-wrap gap-2">
-            {Object.entries(m.severityCounts).map(([severity, count]) => (
-              <span key={severity} className="rounded-full border border-border bg-surface px-3 py-1 text-xs font-bold text-text-secondary">
-                {severity}: {count}
-              </span>
-            ))}
-          </div>
-        </div>
-        <div className="rounded-3xl border border-border bg-surface/70 p-6 text-text-primary">
-          <p className="text-sm font-bold text-text-secondary">Estimated monthly cost</p>
-          <p className="mt-2 text-3xl font-black tabular-nums">
-            {formatMoney(a.monthlyLow)}–{formatMoney(a.monthlyHigh)}
-          </p>
-          <p className="mt-1 text-xs font-semibold text-text-secondary">
-            ~{leakLowPct}%-{leakHighPct}% of {formatMoney(m.addressableMonthlyRevenue)} addressable / mo
-          </p>
-          <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
-            <div className="rounded-2xl bg-white px-3 py-2 shadow-sm">
-              <p className="font-semibold text-text-secondary">Leads lost / mo</p>
-              <p className="mt-0.5 text-base font-black text-text-primary tabular-nums">
-                {formatLeadJobDisplay(a.leadsLow)}–{formatLeadJobDisplay(a.leadsHigh)}
-              </p>
-            </div>
-            <div className="rounded-2xl bg-white px-3 py-2 shadow-sm">
-              <p className="font-semibold text-text-secondary">Jobs lost / mo</p>
-              <p className="mt-0.5 text-base font-black text-text-primary tabular-nums">
-                {formatLeadJobDisplay(a.jobsLow)}–{formatLeadJobDisplay(a.jobsHigh)}
-              </p>
-            </div>
-          </div>
-          <p className="mt-4 text-sm font-bold text-text-secondary">Annualized risk</p>
-          <p className="mt-1 text-xl font-black tabular-nums">
-            {formatMoney(a.annualLow)}–{formatMoney(a.annualHigh)}
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function CompetitorStrengthsPanel({ audit }: { audit: RevenueLeakAudit }) {
   const insight = audit.competitorStrengths;
   if (!insight || (insight.themes.length === 0 && !insight.topGap)) {
@@ -870,7 +642,25 @@ function CompetitorStrengthsPanel({ audit }: { audit: RevenueLeakAudit }) {
       <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">
         What competitors are praised for
       </p>
-      <p className="mt-2 text-sm leading-6 text-text-primary">{insight.summary}</p>
+      <p className="mt-2 text-sm leading-6 text-text-primary">
+        {insight.summaryCompetitorNames &&
+        insight.summaryCompetitorNames.length > 0 &&
+        insight.summarySuffix != null &&
+        insight.summaryPrefix != null ? (
+          <>
+            {insight.summaryPrefix}
+            {insight.summaryCompetitorNames.map((name, i) => (
+              <span key={`${name}-${i}`}>
+                {i > 0 ? ", " : null}
+                <span className="font-bold">{name}</span>
+              </span>
+            ))}
+            {insight.summarySuffix}
+          </>
+        ) : (
+          insight.summary
+        )}
+      </p>
       {insight.themes.length > 0 ? (
         <ul className="mt-3 space-y-2">
           {insight.themes.slice(0, 5).map((theme) => {
@@ -895,7 +685,13 @@ function CompetitorStrengthsPanel({ audit }: { audit: RevenueLeakAudit }) {
                 </div>
                 {theme.praisedCompetitors.length > 0 ? (
                   <p className="mt-1 text-xs text-text-secondary">
-                    Praised in: {theme.praisedCompetitors.slice(0, 3).join(", ")}
+                    <span>Praised in: </span>
+                    {theme.praisedCompetitors.slice(0, 3).map((name, i) => (
+                      <span key={`${theme.theme}-pr-${i}`}>
+                        {i > 0 ? ", " : null}
+                        <span className="font-bold text-text-primary">{name}</span>
+                      </span>
+                    ))}
                   </p>
                 ) : null}
                 {theme.exampleQuote ? (
@@ -964,12 +760,11 @@ function SectionProblemAccordion({
                               : finding.severity === "Medium"
                                 ? "bg-amber-50 text-amber-700"
                                 : "bg-slate-100 text-slate-700";
-                        const impactLow = Math.round(finding.estimatedRevenueImpactLow);
-                        const impactHigh = Math.round(finding.estimatedRevenueImpactHigh);
-                        const impactRange =
-                          impactLow > 0 || impactHigh > 0
-                            ? `~$${impactLow.toLocaleString()}–$${impactHigh.toLocaleString()}/mo at risk`
-                            : null;
+                        const impactMid = Math.round(
+                          (finding.estimatedRevenueImpactLow + finding.estimatedRevenueImpactHigh) / 2
+                        );
+                        const impactLabel =
+                          impactMid > 0 ? `~$${impactMid.toLocaleString()}/mo at risk` : null;
                         return (
                           <div key={finding.id} className="rounded-2xl border border-border bg-white p-4">
                             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -988,9 +783,9 @@ function SectionProblemAccordion({
                               <span className="font-semibold text-text-primary">Recommended fix: </span>
                               {finding.recommendedFix}
                             </p>
-                            {impactRange ? (
+                            {impactLabel ? (
                               <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-accent">
-                                {impactRange}
+                                {impactLabel}
                               </p>
                             ) : null}
                           </div>
@@ -1041,6 +836,18 @@ function loadGoogleMaps(key: string): Promise<void> {
     document.head.appendChild(script);
   });
   return w.__revenueLeakGoogleMapsPromise;
+}
+
+function competitorPinHeadLabel(
+  point: CompetitorMapPoint,
+  businessPosition: number | null | undefined,
+  fallbackIndex: number
+): string {
+  if (point.isSelectedBusiness) {
+    return businessPosition != null ? String(businessPosition) : "You";
+  }
+  if (point.rank != null) return String(point.rank);
+  return String(fallbackIndex + 1);
 }
 
 function CompetitorMap({
@@ -1101,6 +908,7 @@ function CompetitorMap({
           mapTypeControl: false,
           streetViewControl: false,
           fullscreenControl: false,
+          styles: [...competitorMapLightBlueStyles],
         };
         if (mapId) mapOptions.mapId = mapId;
         const map = new gmaps.Map(mapRef.current, mapOptions);
@@ -1119,20 +927,15 @@ function CompetitorMap({
         };
 
         if (useAdvanced && AdvancedMarkerElement) {
-          for (const point of points) {
+          for (let i = 0; i < points.length; i++) {
+            const point = points[i]!;
             bounds.extend(point.coordinates);
             const style = resolveCategoryMarkerStyle(point);
-            const badgeText = point.isSelectedBusiness
-              ? businessPosition != null
-                ? String(businessPosition)
-                : "You"
-              : point.rank != null
-                ? String(point.rank)
-                : "";
+            const headLabel = competitorPinHeadLabel(point, businessPosition, i);
             const content = buildCategoryMarkerElement({
               style,
               isSelected: point.isSelectedBusiness,
-              badgeText: badgeText || null,
+              headLabel,
             });
             const marker = new AdvancedMarkerElement({
               map,
@@ -1144,11 +947,12 @@ function CompetitorMap({
           }
         } else {
           await Promise.all(
-            points.map(async (point) => {
+            points.map(async (point, index) => {
               if (cancelled) return;
               bounds.extend(point.coordinates);
               const style = resolveCategoryMarkerStyle(point);
-              const dataUrl = await compositeCategoryMarkerDataUrl(style);
+              const headLabel = competitorPinHeadLabel(point, businessPosition, index);
+              const dataUrl = await compositeCategoryMarkerDataUrl(style, headLabel);
               const markerOptions: Record<string, unknown> = {
                 position: point.coordinates,
                 map,
@@ -1161,11 +965,12 @@ function CompetitorMap({
                   anchor: new gmaps.Point(CLASSIC_MARKER_PIN_LAYOUT.anchorX, CLASSIC_MARKER_PIN_LAYOUT.anchorY),
                 };
               } else {
-                markerOptions.label = point.isSelectedBusiness
-                  ? businessPosition != null
-                    ? String(businessPosition)
-                    : "You"
-                  : String(point.rank ?? "");
+                markerOptions.label = {
+                  text: competitorPinHeadLabel(point, businessPosition, index),
+                  color: "#ffffff",
+                  fontWeight: "bold",
+                  fontSize: "13px",
+                };
               }
               const marker = new gmaps.Marker(markerOptions);
               attachOpen(marker, point);
@@ -1256,72 +1061,66 @@ function LocalRankingSnapshotAside({ audit }: { audit: RevenueLeakAudit }) {
   );
 }
 
-function LowestReviewAnalysis({ audit }: { audit: RevenueLeakAudit }) {
-  const lowestReviews = selectLowestRatedReviews(audit.business.reviews, 4);
-  const combined = lowestReviews
-    .map((review) => review.text ?? "")
-    .join(" ")
-    .toLowerCase();
-  const themes = extractComplaintThemes(combined, 6);
-  const sampleStarRatings = lowestReviews.filter((r) => typeof r.rating === "number").map((r) => r.rating!);
-  const minSampleRating =
-    sampleStarRatings.length > 0 ? Math.min(...sampleStarRatings) : null;
-  const onlyHighStarsInSample = minSampleRating !== null && minSampleRating >= 5;
+function RecentReviewSentimentSection({ audit }: { audit: RevenueLeakAudit }) {
+  const { recent, sentiment, recommendations } = useMemo(
+    () => buildLastReviewsSentimentBlock(audit.business.reviews, 5),
+    [audit.business.reviews, audit.business.placeId]
+  );
 
   return (
     <section className="rounded-[2rem] border border-border bg-white p-6 shadow-soft sm:p-8">
-      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">
-            Lowest review analysis
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Review sentiment</p>
+          <h2 className="mt-2 text-3xl font-black tracking-tight text-text-primary">Last 5 reviews</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-text-secondary">
+            Newest Google review first (by publish time in this Places snapshot). Themes and score use only these rows —
+            not your full Google history.
           </p>
-          <h2 className="mt-2 text-3xl font-black tracking-tight text-text-primary">
-            Top 4 lowest reviews
-          </h2>
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-text-secondary">
-            We list every 1★ review in Google&rsquo;s sample first, then 2★, and so on (oldest first when stars tie). Recency
-            does not push higher-star reviews ahead of lower ones.
-          </p>
-        </div>
-        {themes.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {themes.map((theme) => (
-              <span
-                key={theme}
-                className="rounded-full bg-red-50 px-3 py-1 text-xs font-bold capitalize text-red-700"
-              >
-                {theme}
-              </span>
-            ))}
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <span className="rounded-full border border-accent/25 bg-accent/10 px-4 py-2 text-sm font-black tabular-nums text-accent">
+              Score {sentiment.sentimentScore}/100
+            </span>
+            <span className="text-xs font-semibold text-text-secondary">
+              {sentiment.sampleSize} row{sentiment.sampleSize === 1 ? "" : "s"} in slice
+            </span>
           </div>
-        ) : null}
+        </div>
+        <div className="flex max-w-xl flex-wrap justify-end gap-2">
+          {sentiment.positiveThemes.map((theme) => (
+            <span
+              key={`pos-${theme}`}
+              className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold capitalize text-emerald-800"
+            >
+              {theme}
+            </span>
+          ))}
+          {sentiment.negativeThemes.map((theme) => (
+            <span
+              key={`neg-${theme}`}
+              className="rounded-full bg-red-50 px-3 py-1 text-xs font-bold capitalize text-red-700"
+            >
+              {theme}
+            </span>
+          ))}
+        </div>
       </div>
 
-      {onlyHighStarsInSample ? (
-        <div className="mt-6 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm leading-6 text-sky-900">
-          Google returns at most five reviews per place, sorted for relevance, so this list may not include
-          lower-star reviews even when they exist on your profile. Within this sample we only order by star count
-          (lowest first) and review date — not by &ldquo;sounding negative&rdquo; keywords.
-        </div>
-      ) : null}
-
-      {lowestReviews.length === 0 ? (
+      {recent.length === 0 ? (
         <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800">
-          Review text was not available from the current Google sample.
+          No review rows were returned in the current Google sample.
         </div>
       ) : (
         <div className="mt-6 divide-y divide-border overflow-hidden rounded-3xl border border-border">
-          {lowestReviews.map((review, index) => (
-            <div key={`${review.authorName ?? "review"}-${index}`} className="bg-white p-5">
+          {recent.map((review, index) => (
+            <div key={`${review.authorName ?? "review"}-${review.publishTime ?? index}`} className="bg-white p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-red-50 text-sm font-black text-red-700">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/15 text-sm font-black text-accent">
                     {index + 1}
                   </span>
                   <div>
-                    <p className="font-black text-text-primary">
-                      {review.authorName ?? "Google reviewer"}
-                    </p>
+                    <p className="font-black text-text-primary">{review.authorName ?? "Google reviewer"}</p>
                     <p className="text-xs text-text-secondary">
                       {review.relativePublishTime ?? review.publishTime ?? "Date unavailable"}
                     </p>
@@ -1338,6 +1137,15 @@ function LowestReviewAnalysis({ audit }: { audit: RevenueLeakAudit }) {
           ))}
         </div>
       )}
+
+      <div className="mt-6 rounded-2xl border border-border bg-surface/70 p-5">
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Recommendations</p>
+        <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-text-primary">
+          {recommendations.map((line, i) => (
+            <li key={i}>{line}</li>
+          ))}
+        </ul>
+      </div>
     </section>
   );
 }
@@ -1352,6 +1160,21 @@ function InteractiveReport({
   googleMapsApiKey?: string | null;
 }) {
   const lastUpdated = formatAuditLastUpdated(audit.createdAt);
+  const [assumptions, setAssumptions] = useState<AuditAssumptions>(() => ({ ...audit.assumptions }));
+
+  useEffect(() => {
+    setAssumptions({ ...audit.assumptions });
+  }, [audit.id]);
+
+  const findingsWithMoney = useMemo(
+    () => applyAssumptionsToFindings(assumptions, audit.findings),
+    [assumptions, audit.findings]
+  );
+  const liveMoneySummary = useMemo(
+    () => buildMoneySummaryFromAssumptions(assumptions, audit.findings),
+    [assumptions, audit.findings]
+  );
+
   return (
     <section className="px-4 py-12 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-6">
@@ -1365,9 +1188,15 @@ function InteractiveReport({
         ) : null}
         <GoogleBusinessProfileSummary audit={audit} />
         <BrandSummary audit={audit} />
-        <FoundIssuesMoneySummary audit={audit} />
+        <RevenueLeakSnapshot
+          audit={audit}
+          assumptions={assumptions}
+          onAssumptionsChange={setAssumptions}
+          moneySummary={liveMoneySummary}
+          findingsWithMoney={findingsWithMoney}
+        />
         <SectionProblemAccordion sections={audit.sectionSummaries} audit={audit} />
-        <LowestReviewAnalysis audit={audit} />
+        <RecentReviewSentimentSection audit={audit} />
         <CompetitorMap audit={audit} points={audit.competitorMapPoints} googleMapsApiKey={googleMapsApiKey} />
         <section className="rounded-[2rem] border border-border bg-white p-6 shadow-soft sm:p-8">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Action plan</p>
@@ -1400,7 +1229,6 @@ function InteractiveReport({
             ))}
           </div>
         </section>
-        <RevenueLeakFixLeaksCta audit={audit} />
         <div className="flex justify-center">
           <button type="button" onClick={onRestart} className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-5 py-3 text-sm font-bold text-text-primary shadow-sm hover:border-accent/30">
             <RotateCcw className="h-4 w-4" />

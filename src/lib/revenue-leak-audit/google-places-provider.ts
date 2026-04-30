@@ -92,6 +92,7 @@ const DETAILS_FIELD_MASK = [
   "location",
   "regularOpeningHours",
   "photos",
+  /** Places returns a small relevance-sorted sample; see `review-selection.ts`. */
   "reviews",
   "iconBackgroundColor",
   "iconMaskBaseUri",

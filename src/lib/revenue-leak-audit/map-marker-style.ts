@@ -1,6 +1,20 @@
 /** Google-hosted pinlets (v2), same family as Google Maps category markers. */
 const GSTATIC_PINLETS = "https://maps.gstatic.com/mapfiles/place_api/icons/v2";
 
+/**
+ * Light-blue base map for the revenue leak competitor map (`google.maps.Map` `styles`).
+ */
+export const competitorMapLightBlueStyles = [
+  { featureType: "landscape", stylers: [{ color: "#e6f2fa" }] },
+  { featureType: "landscape.man_made", stylers: [{ color: "#dceef7" }] },
+  { featureType: "poi", stylers: [{ color: "#ddeef8" }] },
+  { featureType: "poi.park", stylers: [{ color: "#d4e9df" }] },
+  { featureType: "road", elementType: "geometry.fill", stylers: [{ color: "#f7fbff" }] },
+  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#cfe2f0" }] },
+  { featureType: "water", stylers: [{ color: "#b9dff3" }] },
+  { featureType: "administrative", elementType: "geometry.stroke", stylers: [{ color: "#bcd8eb" }] },
+] as const;
+
 function hexLuminance(hexRaw: string): number {
   const hex = hexRaw.replace(/^#/, "").trim();
   if (!/^[0-9a-f]{6}$/i.test(hex)) return 0.35;
@@ -140,8 +154,9 @@ function pinPath2d(): Path2D {
 
 export function buildCategoryMarkerElement(opts: {
   style: CategoryMarkerStyle;
-  badgeText: string | null;
   isSelected: boolean;
+  /** Rank / position shown inside the pin head (e.g. `1` … `5`, or `You`). */
+  headLabel: string;
 }): HTMLElement {
   const diskBg = brightenDiskColor(opts.style.backgroundColor);
   const scale = opts.isSelected ? 1.12 : 1;
@@ -174,72 +189,45 @@ export function buildCategoryMarkerElement(opts: {
   svg.appendChild(path);
   root.appendChild(svg);
 
+  const label = opts.headLabel.trim() || "?";
+  const fontPx =
+    label.length <= 2 ? Math.round(17 * scale) : label.length <= 3 ? Math.round(14 * scale) : Math.round(12 * scale);
+
   const glyphWrap = document.createElement("div");
-  const glyphPx = Math.round(20 * scale);
   glyphWrap.style.cssText = [
     "position:absolute",
     "left:50%",
     "top:18%",
     "transform:translateX(-50%)",
-    `width:${glyphPx}px`,
-    `height:${glyphPx}px`,
+    "min-width:22px",
+    "padding:0 4px",
     "display:flex",
     "align-items:center",
     "justify-content:center",
     "pointer-events:none",
   ].join(";");
 
-  const img = document.createElement("img");
-  img.src = opts.style.maskSrc;
-  img.alt = "";
-  img.width = glyphPx;
-  img.height = glyphPx;
-  img.style.cssText = "object-fit:contain;display:block;filter:brightness(0) invert(1);opacity:0.96;";
-  img.draggable = false;
-  const fallbackMask = `${GSTATIC_PINLETS}/generic_pinlet.png`;
-  img.addEventListener(
-    "error",
-    () => {
-      if (img.src !== fallbackMask) {
-        img.src = fallbackMask;
-        return;
-      }
-      const trySvg = opts.style.maskSrc.replace(/\.png$/i, ".svg");
-      if (trySvg !== opts.style.maskSrc && !img.dataset.svgTried) {
-        img.dataset.svgTried = "1";
-        img.src = trySvg;
-      }
-    },
-    { once: false }
-  );
-  glyphWrap.appendChild(img);
+  const text = document.createElement("div");
+  text.textContent = label;
+  text.style.cssText = [
+    `font:800 ${fontPx}px/1 system-ui,-apple-system,sans-serif`,
+    "color:#fff",
+    "text-align:center",
+    "letter-spacing:-0.02em",
+    "text-shadow:0 1px 2px rgba(0,0,0,.45),0 0 1px rgba(0,0,0,.35)",
+    "white-space:nowrap",
+  ].join(";");
+  glyphWrap.appendChild(text);
   root.appendChild(glyphWrap);
-
-  if (opts.badgeText) {
-    const badge = document.createElement("div");
-    badge.textContent = opts.badgeText;
-    badge.style.cssText = [
-      "position:absolute",
-      "right:-2px",
-      "bottom:10px",
-      "min-width:18px",
-      "height:18px",
-      "padding:0 5px",
-      "border-radius:999px",
-      "background:#fff",
-      "color:#c5221f",
-      "font:bold 10px/18px system-ui,sans-serif",
-      "box-shadow:0 1px 3px rgba(0,0,0,.35)",
-      "text-align:center",
-    ].join(";");
-    root.appendChild(badge);
-  }
 
   return root;
 }
 
 /** Raster marker icon for classic `google.maps.Marker` when no Map ID is configured. */
-export async function compositeCategoryMarkerDataUrl(style: CategoryMarkerStyle): Promise<string | null> {
+export async function compositeCategoryMarkerDataUrl(
+  style: CategoryMarkerStyle,
+  headLabel: string
+): Promise<string | null> {
   if (typeof document === "undefined") return null;
   const { width: cw, height: ch } = CLASSIC_MARKER_PIN_LAYOUT;
   const canvas = document.createElement("canvas");
@@ -257,37 +245,23 @@ export async function compositeCategoryMarkerDataUrl(style: CategoryMarkerStyle)
   ctx.lineJoin = "round";
   ctx.stroke(pin);
 
-  const loadMask = (src: string) =>
-    new Promise<HTMLImageElement>((resolve, reject) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error("mask load failed"));
-      img.src = src;
-    });
-
-  let imgEl: HTMLImageElement;
+  const label = headLabel.trim() || "?";
+  const cx = 24;
+  const cy = 16;
+  const gr = 10;
   try {
-    imgEl = await loadMask(style.maskSrc);
-  } catch {
-    try {
-      imgEl = await loadMask(`${GSTATIC_PINLETS}/generic_pinlet.png`);
-    } catch {
-      return null;
-    }
-  }
-
-  try {
-    const cx = 24;
-    const cy = 16;
-    const gr = 9.5;
     ctx.save();
     ctx.beginPath();
     ctx.arc(cx, cy, gr, 0, Math.PI * 2);
     ctx.clip();
-    const gw = gr * 2;
-    ctx.filter = "brightness(0) invert(1)";
-    ctx.drawImage(imgEl, cx - gw / 2, cy - gw / 2, gw, gw);
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const fontSize = label.length <= 2 ? 16 : label.length <= 3 ? 13 : 11;
+    ctx.font = `800 ${fontSize}px system-ui,-apple-system,sans-serif`;
+    ctx.shadowColor = "rgba(0,0,0,0.35)";
+    ctx.shadowBlur = 2;
+    ctx.fillText(label, cx, cy);
     ctx.restore();
   } catch {
     return null;
