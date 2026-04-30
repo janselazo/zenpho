@@ -1443,12 +1443,13 @@ export default function RevenueLeakAuditClient({
       if (!res.ok || !data.ok || !data.business) {
         throw new Error(data.error ?? "Could not load business details.");
       }
+      const profile = data.business;
       const providedWebsite = websiteUrl?.trim();
-      const business = providedWebsite ? { ...data.business, website: providedWebsite } : data.business;
+      const business = providedWebsite ? { ...profile, website: providedWebsite } : profile;
       setWarnings((prev) => [
         ...prev,
         ...(data.warnings ?? []),
-        providedWebsite && !data.business.website
+        providedWebsite && !profile.website?.trim()
           ? "Using the provided website URL because Google Places did not provide websiteUri."
           : null,
       ].filter((warning): warning is string => Boolean(warning)));
