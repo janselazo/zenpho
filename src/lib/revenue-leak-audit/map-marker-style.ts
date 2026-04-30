@@ -137,19 +137,16 @@ export function resolveCategoryMarkerStyle(input: MapMarkerPointInput): Category
   return GENERIC_FALLBACK;
 }
 
-/** Teardrop pin in viewBox units (dome + taper); tip at bottom center. */
-const PIN_PATH_D = "M 24 54 L 8 22 A 16 16 0 0 1 40 22 Z";
-
-/** Layout for classic `google.maps.Marker` bitmap + anchor (tip at bottom center). */
+/** Layout for classic `google.maps.Marker` bitmap + anchor (tip at bottom center of tail). */
 export const CLASSIC_MARKER_PIN_LAYOUT = {
-  width: 48,
-  height: 56,
-  anchorX: 24,
-  anchorY: 54,
+  width: 40,
+  height: 42,
+  anchorX: 20,
+  anchorY: 42,
 } as const;
 
-function pinPath2d(): Path2D {
-  return new Path2D(PIN_PATH_D);
+function pinDiskGradient(bg: string): string {
+  return `linear-gradient(180deg, rgba(255,255,255,0.26) 0%, rgba(255,255,255,0) 52%), ${bg}`;
 }
 
 export function buildCategoryMarkerElement(opts: {
@@ -159,66 +156,70 @@ export function buildCategoryMarkerElement(opts: {
   headLabel: string;
 }): HTMLElement {
   const diskBg = brightenDiskColor(opts.style.backgroundColor);
-  const scale = opts.isSelected ? 1.12 : 1;
-  const w = Math.round(CLASSIC_MARKER_PIN_LAYOUT.width * scale);
-  const h = Math.round(CLASSIC_MARKER_PIN_LAYOUT.height * scale);
+  const scale = opts.isSelected ? 1.1 : 1;
+  const headPx = Math.round(32 * scale);
+  const tailHalf = Math.round(5 * scale);
+  const tailH = Math.round(6 * scale);
+  const borderW = opts.isSelected ? 3 : 2;
   const root = document.createElement("div");
   root.style.cssText = [
-    "position:relative",
-    `width:${w}px`,
-    `height:${h}px`,
+    "display:flex",
+    "flex-direction:column",
+    "align-items:center",
+    "width:max-content",
     "color-scheme:light",
     "forced-color-adjust:none",
-    "filter:drop-shadow(0 2px 4px rgba(0,0,0,.28)) drop-shadow(0 1px 1px rgba(0,0,0,.18))",
+    "pointer-events:auto",
+    "filter:drop-shadow(0 3px 10px rgba(15,23,42,0.18)) drop-shadow(0 1px 3px rgba(15,23,42,0.12))",
   ].join(";");
 
-  const svgNs = "http://www.w3.org/2000/svg";
-  const svg = document.createElementNS(svgNs, "svg");
-  svg.setAttribute("viewBox", "0 0 48 56");
-  svg.setAttribute("width", String(w));
-  svg.setAttribute("height", String(h));
-  svg.setAttribute("aria-hidden", "true");
-  svg.style.cssText = "display:block;overflow:visible";
-
-  const path = document.createElementNS(svgNs, "path");
-  path.setAttribute("d", PIN_PATH_D);
-  path.setAttribute("fill", diskBg);
-  path.setAttribute("stroke", opts.isSelected ? "#ffffff" : "rgba(255,255,255,0.94)");
-  path.setAttribute("stroke-width", opts.isSelected ? "2.25" : "1.65");
-  path.setAttribute("stroke-linejoin", "round");
-  svg.appendChild(path);
-  root.appendChild(svg);
-
-  const label = opts.headLabel.trim() || "?";
-  const fontPx =
-    label.length <= 2 ? Math.round(17 * scale) : label.length <= 3 ? Math.round(14 * scale) : Math.round(12 * scale);
-
-  const glyphWrap = document.createElement("div");
-  glyphWrap.style.cssText = [
-    "position:absolute",
-    "left:50%",
-    "top:18%",
-    "transform:translateX(-50%)",
-    "min-width:22px",
-    "padding:0 4px",
+  const head = document.createElement("div");
+  head.style.cssText = [
+    `width:${headPx}px`,
+    `height:${headPx}px`,
+    "flex-shrink:0",
+    "border-radius:50%",
+    "box-sizing:border-box",
+    `border:${borderW}px solid rgba(255,255,255,0.94)`,
     "display:flex",
     "align-items:center",
     "justify-content:center",
+    `background:${pinDiskGradient(diskBg)}`,
+    opts.isSelected ? "box-shadow:0 0 0 2px rgba(37,99,235,0.42)" : "",
+  ]
+    .filter(Boolean)
+    .join(";");
+
+  const label = opts.headLabel.trim() || "?";
+  const fontPx =
+    label.length <= 2 ? Math.round(14 * scale) : label.length <= 3 ? Math.round(12 * scale) : Math.round(10 * scale);
+
+  const text = document.createElement("span");
+  text.textContent = label;
+  text.style.cssText = [
+    `font:800 ${fontPx}px/1 ui-sans-serif,system-ui,-apple-system,sans-serif`,
+    "color:#fff",
+    "letter-spacing:-0.03em",
+    "text-shadow:0 1px 2px rgba(0,0,0,0.32)",
+    "font-variant-numeric:tabular-nums",
+    "white-space:nowrap",
+  ].join(";");
+  head.appendChild(text);
+
+  const tail = document.createElement("div");
+  tail.setAttribute("aria-hidden", "true");
+  tail.style.cssText = [
+    "width:0",
+    "height:0",
+    "margin-top:-2px",
+    `border-left:${tailHalf}px solid transparent`,
+    `border-right:${tailHalf}px solid transparent`,
+    `border-top:${tailH}px solid ${diskBg}`,
     "pointer-events:none",
   ].join(";");
 
-  const text = document.createElement("div");
-  text.textContent = label;
-  text.style.cssText = [
-    `font:800 ${fontPx}px/1 system-ui,-apple-system,sans-serif`,
-    "color:#fff",
-    "text-align:center",
-    "letter-spacing:-0.02em",
-    "text-shadow:0 1px 2px rgba(0,0,0,.45),0 0 1px rgba(0,0,0,.35)",
-    "white-space:nowrap",
-  ].join(";");
-  glyphWrap.appendChild(text);
-  root.appendChild(glyphWrap);
+  root.appendChild(head);
+  root.appendChild(tail);
 
   return root;
 }
@@ -237,30 +238,45 @@ export async function compositeCategoryMarkerDataUrl(
   if (!ctx) return null;
 
   const fill = brightenDiskColor(style.backgroundColor);
-  const pin = pinPath2d();
-  ctx.fillStyle = fill;
-  ctx.fill(pin);
+  const cx = 20;
+  const cy = 16;
+  const r = 15;
+
+  const grd = ctx.createLinearGradient(0, cy - r, 0, cy + r);
+  grd.addColorStop(0, "rgba(255,255,255,0.22)");
+  grd.addColorStop(0.52, fill);
+  grd.addColorStop(1, fill);
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = grd;
+  ctx.fill();
   ctx.strokeStyle = "rgba(255,255,255,0.94)";
-  ctx.lineWidth = 1.65;
-  ctx.lineJoin = "round";
-  ctx.stroke(pin);
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(12, ch);
+  ctx.lineTo(28, ch);
+  ctx.lineTo(20, cy + r);
+  ctx.closePath();
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,0.94)";
+  ctx.lineWidth = 2;
+  ctx.stroke();
 
   const label = headLabel.trim() || "?";
-  const cx = 24;
-  const cy = 16;
-  const gr = 10;
   try {
     ctx.save();
-    ctx.beginPath();
-    ctx.arc(cx, cy, gr, 0, Math.PI * 2);
-    ctx.clip();
     ctx.fillStyle = "#ffffff";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    const fontSize = label.length <= 2 ? 16 : label.length <= 3 ? 13 : 11;
-    ctx.font = `800 ${fontSize}px system-ui,-apple-system,sans-serif`;
-    ctx.shadowColor = "rgba(0,0,0,0.35)";
+    const fontSize = label.length <= 2 ? 14 : label.length <= 3 ? 11 : 10;
+    ctx.font = `800 ${fontSize}px ui-sans-serif,system-ui,sans-serif`;
+    ctx.shadowColor = "rgba(0,0,0,0.32)";
     ctx.shadowBlur = 2;
+    ctx.shadowOffsetY = 1;
     ctx.fillText(label, cx, cy);
     ctx.restore();
   } catch {

@@ -10,7 +10,6 @@ import type {
   FoundIssuesMoneySummary,
   RevenueLeakAudit,
 } from "@/lib/revenue-leak-audit/types";
-import RevenueLeakFixLeaksCta from "@/components/revenue-leak-audit/RevenueLeakFixLeaksCta";
 
 const GBP_CATEGORIES = new Set<AuditCategory>([
   "My Business vs Google Competitors",
@@ -208,12 +207,50 @@ function CompactLeakRow({ finding }: { finding: AuditFinding }) {
   );
 }
 
+export function RevenueLeakTopLeaksSection({
+  audit,
+  findingsWithMoney,
+}: {
+  audit: RevenueLeakAudit;
+  findingsWithMoney: AuditFinding[];
+}) {
+  const top3 = useMemo(() => {
+    const s = [...findingsWithMoney].sort(
+      (a, b) => b.estimatedRevenueImpactHigh - a.estimatedRevenueImpactHigh
+    );
+    return s.slice(0, 3);
+  }, [findingsWithMoney]);
+
+  return (
+    <div className="mt-8">
+      <h3 className="text-lg font-black text-text-primary">Your biggest revenue leaks</h3>
+      <p className="mt-1 text-sm text-text-secondary">
+        Fix order follows estimated impact. Only issues observed in your Google Business Profile and website audit are
+        shown.
+      </p>
+      {top3.length === 0 ? (
+        <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 text-sm font-semibold text-emerald-900">
+          No major issues were flagged in this snapshot.
+        </p>
+      ) : (
+        <div className="mt-5 grid gap-4 lg:grid-cols-3">
+          {top3.map((f) => (
+            <TopLeakCard key={f.id} finding={f} audit={audit} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export type RevenueLeakSnapshotProps = {
   audit: RevenueLeakAudit;
   assumptions: AuditAssumptions;
   onAssumptionsChange: (next: AuditAssumptions) => void;
   moneySummary: FoundIssuesMoneySummary;
   findingsWithMoney: AuditFinding[];
+  /** Omit top leak cards when rendering them inside the action plan section. */
+  hideTopLeaks?: boolean;
 };
 
 export default function RevenueLeakSnapshot({
@@ -222,6 +259,7 @@ export default function RevenueLeakSnapshot({
   onAssumptionsChange,
   moneySummary,
   findingsWithMoney,
+  hideTopLeaks = false,
 }: RevenueLeakSnapshotProps) {
   const [showAllLeaks, setShowAllLeaks] = useState(false);
   const confidence = useMemo(() => estimateConfidence(audit), [audit]);
@@ -414,24 +452,26 @@ export default function RevenueLeakSnapshot({
         </div>
       </div>
 
-      <div className="mt-10">
-        <h3 className="text-lg font-black text-text-primary">Your biggest revenue leaks</h3>
-        <p className="mt-1 text-sm text-text-secondary">
-          Fix order follows estimated impact. Only issues observed in your Google Business Profile and website audit are
-          shown.
-        </p>
-        {top3.length === 0 ? (
-          <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 text-sm font-semibold text-emerald-900">
-            No major issues were flagged in this snapshot.
+      {!hideTopLeaks ? (
+        <div className="mt-10">
+          <h3 className="text-lg font-black text-text-primary">Your biggest revenue leaks</h3>
+          <p className="mt-1 text-sm text-text-secondary">
+            Fix order follows estimated impact. Only issues observed in your Google Business Profile and website audit
+            are shown.
           </p>
-        ) : (
-          <div className="mt-5 grid gap-4 lg:grid-cols-3">
-            {top3.map((f) => (
-              <TopLeakCard key={f.id} finding={f} audit={audit} />
-            ))}
-          </div>
-        )}
-      </div>
+          {top3.length === 0 ? (
+            <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 text-sm font-semibold text-emerald-900">
+              No major issues were flagged in this snapshot.
+            </p>
+          ) : (
+            <div className="mt-5 grid gap-4 lg:grid-cols-3">
+              {top3.map((f) => (
+                <TopLeakCard key={f.id} finding={f} audit={audit} />
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
 
       {restGbp.length + restWeb.length > 0 ? (
         <div className="mt-8">
@@ -480,18 +520,6 @@ export default function RevenueLeakSnapshot({
         Individual leak estimates may overlap, so use this as a prioritization guide, not a guaranteed loss
         calculation.
       </p>
-
-      <div className="mt-8">
-        <RevenueLeakFixLeaksCta
-          audit={audit}
-          embedSurface
-          monthlyLeakOverride={moneySummary.estimatedMonthlyCost}
-          surfaceEyebrow="Next step"
-          surfaceTitle="Want help recovering the highest-value leaks first?"
-          surfaceBody="We'll review your audit, validate the assumptions, and map out the fastest fixes for your Google Business Profile and website."
-          surfaceCtaLabel="Get my recovery plan"
-        />
-      </div>
     </section>
   );
 }

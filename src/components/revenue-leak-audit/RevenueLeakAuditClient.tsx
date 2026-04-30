@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import ContactChannelStrip from "@/components/crm/ContactChannelStrip";
 import RevenueLeakFixLeaksCta from "@/components/revenue-leak-audit/RevenueLeakFixLeaksCta";
-import RevenueLeakSnapshot from "@/components/revenue-leak-audit/RevenueLeakSnapshot";
+import RevenueLeakSnapshot, { RevenueLeakTopLeaksSection } from "@/components/revenue-leak-audit/RevenueLeakSnapshot";
 import Button from "@/components/ui/Button";
 import { EMPTY_PROSPECT_SOCIAL_URLS } from "@/lib/crm/prospect-enrichment-types";
 import {
@@ -61,6 +61,11 @@ const progressSteps = [
 
 /** Do not auto-advance past this index while waiting on `/analyze` — the API often runs 1–3+ minutes. */
 const PROGRESS_AUTOSTEP_CAP = Math.max(0, progressSteps.length - 2);
+
+/** Wall ETA for the analyzing ring before the indeterminate cap; `/analyze` often runs longer. */
+const ESTIMATED_ANALYSIS_MS = 120_000;
+/** Do not show a full ring until the server responds. */
+const ANALYSIS_RING_INDETERMINATE_CAP = 0.92;
 
 type Stage = "search" | "analyzing" | "report";
 
@@ -407,14 +412,46 @@ function HeroSearch({
   );
 }
 
-function AnalyzingScreen({ step }: { step: number }) {
+function AuditAnalyzingRing({ progress }: { progress: number }) {
+  const radius = 22;
+  const circumference = 2 * Math.PI * radius;
+  const clamped = Math.min(1, Math.max(0, progress));
+  const dash = clamped * circumference;
+  const pct = Math.round(clamped * 100);
+  return (
+    <svg
+      viewBox="0 0 56 56"
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={pct}
+      aria-label={`Audit progress, about ${pct} percent of estimated wait time`}
+      className="h-7 w-7 -rotate-90"
+    >
+      <circle cx="28" cy="28" r={radius} fill="none" stroke="rgba(255,255,255,0.38)" strokeWidth="4" />
+      <circle
+        cx="28"
+        cy="28"
+        r={radius}
+        fill="none"
+        stroke="white"
+        strokeLinecap="round"
+        strokeWidth="4"
+        strokeDasharray={`${dash} ${circumference}`}
+        className="transition-[stroke-dasharray] duration-300 ease-out"
+      />
+    </svg>
+  );
+}
+
+function AnalyzingScreen({ step, ringProgress }: { step: number; ringProgress: number }) {
   const headlineIndex = Math.min(step, progressSteps.length - 1);
   return (
     <section className="px-4 py-20 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-3xl rounded-[2rem] border border-border bg-white p-8 shadow-soft-lg">
         <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent text-white">
-            <Loader2 className="h-7 w-7 animate-spin" />
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-accent text-white">
+            <AuditAnalyzingRing progress={ringProgress} />
           </div>
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Running audit</p>
@@ -1194,13 +1231,15 @@ function InteractiveReport({
           onAssumptionsChange={setAssumptions}
           moneySummary={liveMoneySummary}
           findingsWithMoney={findingsWithMoney}
+          hideTopLeaks
         />
         <SectionProblemAccordion sections={audit.sectionSummaries} audit={audit} />
         <RecentReviewSentimentSection audit={audit} />
         <CompetitorMap audit={audit} points={audit.competitorMapPoints} googleMapsApiKey={googleMapsApiKey} />
         <section className="rounded-[2rem] border border-border bg-white p-6 shadow-soft sm:p-8">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Action plan</p>
-          <h2 className="mt-2 text-3xl font-black tracking-tight text-text-primary">Things to Improve</h2>
+          <RevenueLeakTopLeaksSection audit={audit} findingsWithMoney={findingsWithMoney} />
+          <h2 className="mt-8 text-3xl font-black tracking-tight text-text-primary">Things to Improve</h2>
           <div className="mt-6 divide-y divide-border overflow-hidden rounded-3xl border border-border">
             {audit.actionPlan.map((item, index) => (
               <div
@@ -1235,6 +1274,19 @@ function InteractiveReport({
             Start New Audit
           </button>
         </div>
+        <div className="pt-2">
+          <section className="rounded-[2rem] border border-accent/20 bg-white p-6 shadow-soft-lg sm:p-8">
+            <RevenueLeakFixLeaksCta
+              audit={audit}
+              embedSurface
+              monthlyLeakOverride={liveMoneySummary.estimatedMonthlyCost}
+              surfaceEyebrow="Next step"
+              surfaceTitle="Want help recovering the highest-value leaks first?"
+              surfaceBody="We'll review your audit, validate the assumptions, and map out the fastest fixes for your Google Business Profile and website."
+              surfaceCtaLabel="Get my recovery plan"
+            />
+          </section>
+        </div>
       </div>
     </section>
   );
@@ -1251,6 +1303,7 @@ export default function RevenueLeakAuditClient({
   const [error, setError] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [progressStep, setProgressStep] = useState(0);
+  const [analysisRingProgress, setAnalysisRingProgress] = useState(0);
 
   const warningList = useMemo(() => [...new Set(warnings)], [warnings]);
 
@@ -1311,6 +1364,20 @@ export default function RevenueLeakAuditClient({
     setStage("analyzing");
     setError(null);
     setProgressStep(0);
+    setAnalysisRingProgress(0);
+
+    const analysisStart = Date.now();
+    let ringRafId = 0;
+    let ringLoopCancelled = false;
+
+    const tickRing = () => {
+      if (ringLoopCancelled) return;
+      const elapsed = Date.now() - analysisStart;
+      setAnalysisRingProgress(Math.min(ANALYSIS_RING_INDETERMINATE_CAP, elapsed / ESTIMATED_ANALYSIS_MS));
+      ringRafId = requestAnimationFrame(tickRing);
+    };
+    ringRafId = requestAnimationFrame(tickRing);
+
     const interval = window.setInterval(() => {
       setProgressStep((s) => Math.min(PROGRESS_AUTOSTEP_CAP, s + 1));
     }, 900);
@@ -1322,6 +1389,14 @@ export default function RevenueLeakAuditClient({
       });
       const data = (await res.json()) as AnalyzeResponse;
       if (!res.ok || !data.ok || !data.audit) throw new Error(data.error ?? "Audit failed.");
+
+      ringLoopCancelled = true;
+      cancelAnimationFrame(ringRafId);
+      setAnalysisRingProgress(1);
+      await new Promise<void>((resolve) => {
+        window.setTimeout(resolve, 240);
+      });
+
       setProgressStep(progressSteps.length - 1);
       setAudit(data.audit);
       setWarnings((prev) => [...prev, ...(data.warnings ?? [])]);
@@ -1330,6 +1405,8 @@ export default function RevenueLeakAuditClient({
       setError(e instanceof Error ? e.message : "Audit failed.");
       setStage("search");
     } finally {
+      ringLoopCancelled = true;
+      cancelAnimationFrame(ringRafId);
       window.clearInterval(interval);
     }
   }
@@ -1340,6 +1417,7 @@ export default function RevenueLeakAuditClient({
     setError(null);
     setWarnings([]);
     setProgressStep(0);
+    setAnalysisRingProgress(0);
   }
 
   return (
@@ -1354,7 +1432,9 @@ export default function RevenueLeakAuditClient({
           {error ? <InlineAlert message={error} tone="error" /> : null}
         </>
       ) : null}
-      {stage === "analyzing" ? <AnalyzingScreen step={progressStep} /> : null}
+      {stage === "analyzing" ? (
+        <AnalyzingScreen step={progressStep} ringProgress={analysisRingProgress} />
+      ) : null}
       {stage === "report" && audit ? (
         <InteractiveReport audit={audit} onRestart={restart} googleMapsApiKey={googleMapsApiKey} />
       ) : null}
