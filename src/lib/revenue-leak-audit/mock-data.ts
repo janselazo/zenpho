@@ -19,11 +19,11 @@ export const MOCK_BUSINESS: BusinessProfile = {
   reviewCount: 64,
   reviews: [
     {
-      authorName: "Maria G.",
-      rating: 5,
-      text: "They arrived fast and fixed the leak the same day.",
+      authorName: "Jordan K.",
+      rating: 1,
+      text: "Terrible experience — rude on the phone, late to the appointment, and the quote was way too expensive.",
       publishTime: null,
-      relativePublishTime: "2 weeks ago",
+      relativePublishTime: "3 weeks ago",
     },
     {
       authorName: "Drew P.",
@@ -31,6 +31,34 @@ export const MOCK_BUSINESS: BusinessProfile = {
       text: "Hard to reach by phone and nobody followed up on the quote.",
       publishTime: null,
       relativePublishTime: "1 month ago",
+    },
+    {
+      authorName: "Sam L.",
+      rating: 3,
+      text: "Work was okay but I had to wait almost an hour past the window.",
+      publishTime: null,
+      relativePublishTime: "6 weeks ago",
+    },
+    {
+      authorName: "Priya N.",
+      rating: 4,
+      text: "Professional crew but pricing was higher than I expected.",
+      publishTime: null,
+      relativePublishTime: "2 months ago",
+    },
+    {
+      authorName: "Maria G.",
+      rating: 5,
+      text: "They arrived fast and fixed the leak the same day.",
+      publishTime: null,
+      relativePublishTime: "2 weeks ago",
+    },
+    {
+      authorName: "Chris T.",
+      rating: 5,
+      text: "I highly recommend them!",
+      publishTime: null,
+      relativePublishTime: "5 months ago",
     },
   ],
   photos: [

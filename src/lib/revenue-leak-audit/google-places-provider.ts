@@ -4,6 +4,7 @@ import {
   mockCompetitors,
   mockRankingSnapshot,
 } from "./mock-data";
+import { parsePlaceReviewRating } from "./review-selection";
 import type {
   BusinessIdentityAttribute,
   BusinessPhoto,
@@ -118,7 +119,7 @@ function normalizePhotos(photos: GooglePlacePhoto[] | undefined): BusinessPhoto[
 function normalizeReviews(reviews: GooglePlaceReview[] | undefined): BusinessReview[] {
   return (reviews ?? []).map((r) => ({
     authorName: r.authorAttribution?.displayName?.trim() || null,
-    rating: typeof r.rating === "number" ? r.rating : null,
+    rating: parsePlaceReviewRating(r.rating),
     text: r.text?.text?.trim() || r.originalText?.text?.trim() || null,
     publishTime: r.publishTime?.trim() || null,
     relativePublishTime: r.relativePublishTimeDescription?.trim() || null,

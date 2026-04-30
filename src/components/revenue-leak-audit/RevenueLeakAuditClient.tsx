@@ -14,6 +14,7 @@ import {
   Loader2,
   Mail,
   MapPin,
+  MapPinned,
   Phone,
   RotateCcw,
   Search,
@@ -30,6 +31,11 @@ import type {
   RevenueLeakAudit,
   SectionProblemSummary,
 } from "@/lib/revenue-leak-audit/types";
+import {
+  extractComplaintThemes,
+  formatReviewStarLabel,
+  selectLowestRatedReviews,
+} from "@/lib/revenue-leak-audit/review-selection";
 
 const inputClass =
   "w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm text-text-primary placeholder:text-text-secondary/45 outline-none shadow-sm transition-all focus:border-accent focus:ring-2 focus:ring-accent/15";
@@ -395,33 +401,114 @@ function BrandSummary({ audit }: { audit: RevenueLeakAudit }) {
 function GoogleBusinessProfileSummary({ audit }: { audit: RevenueLeakAudit }) {
   const business = audit.business;
   const profileImageUrl = googleBusinessProfilePhotoUrl(business) || audit.brandIdentity.logoUrl;
-  const contactRows = [
-    business.address
-      ? { label: "Address", value: business.address, icon: MapPin }
+  const reportLinks = [
+    audit.websiteAudit.contactLinks.email
+      ? {
+          label: "Email",
+          href: `mailto:${audit.websiteAudit.contactLinks.email}`,
+          icon: Mail,
+          btnClass:
+            "border-indigo-200 bg-indigo-50 text-indigo-600 hover:border-indigo-300 hover:bg-indigo-100",
+        }
       : null,
-    business.phone
-      ? { label: "Phone", value: business.phone, icon: Phone }
+    audit.websiteAudit.socialLinks.facebook
+      ? {
+          label: "Facebook",
+          href: audit.websiteAudit.socialLinks.facebook,
+          icon: Facebook,
+          btnClass:
+            "border-[#1877F2]/35 bg-[#1877F2]/12 text-[#1877F2] hover:border-[#1877F2]/50 hover:bg-[#1877F2]/18",
+        }
+      : null,
+    audit.websiteAudit.socialLinks.instagram
+      ? {
+          label: "Instagram",
+          href: audit.websiteAudit.socialLinks.instagram,
+          icon: Instagram,
+          btnClass:
+            "border-pink-200 bg-gradient-to-br from-[#f09433] via-[#dc2743] to-[#bc1888] text-white shadow-sm hover:opacity-95",
+        }
+      : null,
+    audit.websiteAudit.socialLinks.tiktok
+      ? {
+          label: "TikTok",
+          href: audit.websiteAudit.socialLinks.tiktok,
+          icon: Target,
+          btnClass:
+            "border-slate-800 bg-slate-900 text-[#25F4EE] hover:border-slate-700 hover:bg-slate-800",
+        }
+      : null,
+    audit.websiteAudit.socialLinks.youtube
+      ? {
+          label: "YouTube",
+          href: audit.websiteAudit.socialLinks.youtube,
+          icon: Youtube,
+          btnClass:
+            "border-red-200 bg-red-50 text-red-600 hover:border-red-300 hover:bg-red-100",
+        }
+      : null,
+  ].filter((link): link is { label: string; href: string; icon: LucideIcon; btnClass: string } => Boolean(link));
+  const identityAttributes = business.identityAttributes.filter((attribute) => attribute.detected);
+  const profileQuickLinks = [
+    business.address
+      ? {
+          label: "Address",
+          detail: business.address,
+          href: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.address)}`,
+          icon: MapPin,
+          external: true,
+          btnClass:
+            "border-sky-200 bg-sky-50 text-sky-600 hover:border-sky-300 hover:bg-sky-100",
+        }
+      : null,
+    business.phone || audit.websiteAudit.contactLinks.phone
+      ? {
+          label: "Phone",
+          detail: business.phone ?? audit.websiteAudit.contactLinks.phone ?? "",
+          href: `tel:${business.phone ?? audit.websiteAudit.contactLinks.phone}`,
+          icon: Phone,
+          external: false,
+          btnClass:
+            "border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-100",
+        }
       : null,
     business.website
-      ? { label: "Website", value: business.website, icon: Globe2, href: business.website }
+      ? {
+          label: "Website",
+          detail: business.website,
+          href: business.website,
+          icon: Globe2,
+          external: true,
+          btnClass:
+            "border-blue-200 bg-blue-50 text-blue-600 hover:border-blue-300 hover:bg-blue-100",
+        }
       : null,
     business.googleMapsUri
-      ? { label: "Google Maps", value: "Open listing", icon: MapPin, href: business.googleMapsUri }
+      ? {
+          label: "Google Maps",
+          detail: "Open listing",
+          href: business.googleMapsUri,
+          icon: MapPinned,
+          external: true,
+          btnClass:
+            "border-green-200 bg-green-50 text-green-700 hover:border-green-300 hover:bg-green-100",
+        }
       : null,
   ].filter(
     (
-      row
-    ): row is {
+      item
+    ): item is {
       label: string;
-      value: string;
+      detail: string;
+      href: string;
       icon: LucideIcon;
-      href?: string;
-    } => Boolean(row)
+      external: boolean;
+      btnClass: string;
+    } => Boolean(item)
   );
   const statusLabel = business.businessStatus
     ? business.businessStatus.replace(/_/g, " ").toLowerCase()
     : "Status unavailable";
-  const hoursPreview = business.hours.slice(0, 3);
 
   return (
     <section className="rounded-[2rem] border border-border bg-white p-6 shadow-soft sm:p-8">
@@ -462,72 +549,50 @@ function GoogleBusinessProfileSummary({ audit }: { audit: RevenueLeakAudit }) {
               <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">
                 {business.website ? "Website linked" : "No website linked"}
               </span>
+              {identityAttributes.map((attribute) => (
+                <span
+                  key={attribute.id}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-violet-50 px-3 py-1 text-violet-700"
+                  title={`Detected from ${attribute.source}`}
+                >
+                  <BadgeCheck className="h-3.5 w-3.5" aria-hidden />
+                  {attribute.label}
+                </span>
+              ))}
             </div>
-          </div>
-        </div>
-        <ScoreGauge
-          score={audit.scores.gbpHealth}
-          grade={
-            audit.scores.gbpHealth < 50
-              ? "Poor"
-              : audit.scores.gbpHealth < 70
-                ? "Average"
-                : audit.scores.gbpHealth < 85
-                  ? "Good"
-                  : "Excellent"
-          }
-          size={104}
-        />
-      </div>
-
-      <div className="mt-6 grid gap-3 md:grid-cols-2">
-        {contactRows.map(({ label, value, icon: Icon, href }) => {
-          const content = (
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent">
-                <Icon className="h-4 w-4" aria-hidden />
-              </span>
-              <div className="min-w-0">
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">
-                  {label}
-                </p>
-                <p className="mt-1 truncate text-sm font-semibold text-text-primary">{value}</p>
+            {(profileQuickLinks.length > 0 || reportLinks.length > 0) ? (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {profileQuickLinks.map((link) => (
+                  <a
+                    key={`profile-${link.label}-${link.href}`}
+                    href={link.href}
+                    {...(link.external ? { target: "_blank", rel: "noreferrer" } : {})}
+                    className={`inline-flex h-10 w-10 items-center justify-center rounded-full border transition-colors ${link.btnClass}`}
+                    aria-label={`${link.label}: ${link.detail}`}
+                    title={`${link.label}: ${link.detail}`}
+                  >
+                    <link.icon className="h-4 w-4" aria-hidden />
+                  </a>
+                ))}
+                {reportLinks.map((link) => (
+                  <a
+                    key={`${link.label}-${link.href}`}
+                    href={link.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`inline-flex h-10 w-10 items-center justify-center rounded-full border transition-colors ${link.btnClass}`}
+                    aria-label={link.label}
+                    title={link.label}
+                  >
+                    <link.icon className="h-4 w-4" aria-hidden />
+                  </a>
+                ))}
               </div>
-            </div>
-          );
-
-          return href ? (
-            <a
-              key={`${label}-${value}`}
-              href={href}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-2xl bg-surface p-4 transition-colors hover:bg-accent/5"
-            >
-              {content}
-            </a>
-          ) : (
-            <div key={`${label}-${value}`} className="rounded-2xl bg-surface p-4">
-              {content}
-            </div>
-          );
-        })}
-      </div>
-
-      {hoursPreview.length > 0 ? (
-        <div className="mt-4 rounded-2xl border border-border bg-white p-4">
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">
-            Hours shown on Google
-          </p>
-          <div className="mt-3 grid gap-2 text-sm font-semibold text-text-primary md:grid-cols-3">
-            {hoursPreview.map((hour) => (
-              <span key={hour} className="rounded-full bg-surface px-3 py-2">
-                {hour}
-              </span>
-            ))}
+            ) : null}
           </div>
         </div>
-      ) : null}
+        <ScoreGauge score={audit.scores.overall} grade={audit.scores.grade} />
+      </div>
     </section>
   );
 }
@@ -653,10 +718,8 @@ function CompetitorMap({
   points: CompetitorMapPoint[];
 }) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const [selected, setSelected] = useState(points[0]?.id ?? "");
   const [mapStatus, setMapStatus] = useState<string | null>(null);
   const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-  const selectedPoint = points.find((p) => p.id === selected) ?? points[0];
   const businessPosition = audit.rankingSnapshot.selectedBusinessPosition;
 
   useEffect(() => {
@@ -689,14 +752,13 @@ function CompetitorMap({
               : String(point.rank ?? ""),
           });
           marker.addListener("click", () => {
-            setSelected(point.id);
             info.setContent(`<strong>${point.name}</strong><br/>${point.address ?? ""}<br/>${point.reviewCount ?? 0} reviews`);
             info.open({ anchor: marker, map });
           });
         }
         map.fitBounds(bounds);
       })
-      .catch(() => setMapStatus("Map unavailable. Showing competitor list instead."));
+      .catch(() => setMapStatus("Map unavailable."));
     return () => {
       cancelled = true;
     };
@@ -719,46 +781,24 @@ function CompetitorMap({
             <div>
               <MapPin className="mx-auto h-10 w-10 text-accent" />
               <p className="mt-4 font-bold text-text-primary">{mapStatus ?? "Map key not configured"}</p>
-              <p className="mt-2 text-sm text-text-secondary">The competitor list remains interactive and the PDF can still be generated.</p>
+              <p className="mt-2 text-sm text-text-secondary">The local ranking snapshot and PDF export still work.</p>
             </div>
           </div>
         )}
-        <div className="max-h-[420px] space-y-2 overflow-auto pr-1">
-          {points.map((point) => (
-            <button
-              type="button"
-              key={point.id}
-              onClick={() => setSelected(point.id)}
-              className={`w-full rounded-2xl border p-4 text-left transition-all ${
-                selectedPoint?.id === point.id ? "border-accent bg-accent/5" : "border-border bg-white hover:border-accent/25"
-              }`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-black text-text-primary">
-                    {point.isSelectedBusiness
-                      ? `${businessPosition ? `#${businessPosition} ` : ""}${point.name}`
-                      : `#${point.rank ?? "-"} ${point.name}`}
-                  </p>
-                  <p className="mt-1 text-xs text-text-secondary">{point.address}</p>
-                </div>
-                <span className="rounded-full bg-surface px-2 py-1 text-xs font-bold text-text-secondary">{point.marketStrengthScore}</span>
-              </div>
-              <p className="mt-2 text-xs text-text-secondary">{point.rating ?? "N/A"} stars · {point.reviewCount ?? 0} reviews</p>
-            </button>
-          ))}
+        <div className="max-h-[420px] min-h-0 overflow-auto pr-1">
+          <LocalRankingSnapshotAside audit={audit} />
         </div>
       </div>
     </section>
   );
 }
 
-function RankingSnapshot({ audit }: { audit: RevenueLeakAudit }) {
+function LocalRankingSnapshotAside({ audit }: { audit: RevenueLeakAudit }) {
   const selectedInTopFive = audit.rankingSnapshot.topFive.some((item) => item.isSelectedBusiness);
   return (
-    <section className="rounded-[2rem] border border-border bg-white p-6 shadow-soft sm:p-8">
+    <div>
       <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Who's beating you on Google</p>
-      <h2 className="mt-2 text-3xl font-black tracking-tight text-text-primary">Local ranking snapshot</h2>
+      <h2 className="mt-2 text-2xl font-black tracking-tight text-text-primary sm:text-3xl">Local ranking snapshot</h2>
       <p className="mt-3 text-sm text-text-secondary">Query: {audit.rankingSnapshot.query}</p>
       <div className="mt-6 space-y-3">
         {audit.rankingSnapshot.topFive.map((item) => (
@@ -790,69 +830,21 @@ function RankingSnapshot({ audit }: { audit: RevenueLeakAudit }) {
           </div>
         ) : null}
       </div>
-    </section>
-  );
-}
-
-function ScoreBreakdown({ audit }: { audit: RevenueLeakAudit }) {
-  const rows: { label: string; score: number }[] = [
-    { label: "GBP Health", score: audit.scores.gbpHealth },
-    { label: "Reviews", score: audit.scores.reviews },
-    { label: "Website Conversion", score: audit.scores.websiteConversion },
-    { label: "Website Trust", score: audit.scores.websiteTrust },
-    { label: "Local SEO", score: audit.scores.localSeo },
-    { label: "Competitor Gap", score: audit.scores.competitorGap },
-    { label: "Tracking & Ads", score: audit.scores.trackingAds },
-    { label: "Photos", score: audit.scores.photos },
-  ].sort((a, b) => b.score - a.score);
-  return (
-    <section className="rounded-[2rem] border border-border bg-white p-6 shadow-soft sm:p-8">
-      <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Score breakdown</p>
-      <h2 className="mt-2 text-3xl font-black tracking-tight text-text-primary">What is driving the grade</h2>
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
-        {rows.map(({ label, score }) => (
-          <div key={label} className="rounded-2xl bg-surface p-4">
-            <div className="flex items-center justify-between gap-4">
-              <p className="font-bold text-text-primary">{label}</p>
-              <p className="font-black" style={{ color: scoreColor(score) }}>{score}/100</p>
-            </div>
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
-              <div className="h-full rounded-full" style={{ width: `${score}%`, backgroundColor: scoreColor(score) }} />
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
+    </div>
   );
 }
 
 function LowestReviewAnalysis({ audit }: { audit: RevenueLeakAudit }) {
-  const lowestReviews = audit.business.reviews
-    .filter((review) => review.text?.trim() || review.rating !== null)
-    .sort((a, b) => (a.rating ?? 5) - (b.rating ?? 5))
-    .slice(0, 5);
-  const issueTerms = [
-    "slow",
-    "late",
-    "rude",
-    "expensive",
-    "price",
-    "quote",
-    "call",
-    "phone",
-    "follow up",
-    "no show",
-    "appointment",
-    "wait",
-    "never",
-    "poor",
-    "bad",
-  ];
+  const lowestReviews = selectLowestRatedReviews(audit.business.reviews, 5);
   const combined = lowestReviews
     .map((review) => review.text ?? "")
     .join(" ")
     .toLowerCase();
-  const themes = issueTerms.filter((term) => combined.includes(term)).slice(0, 6);
+  const themes = extractComplaintThemes(combined, 6);
+  const sampleStarRatings = lowestReviews.filter((r) => typeof r.rating === "number").map((r) => r.rating!);
+  const minSampleRating =
+    sampleStarRatings.length > 0 ? Math.min(...sampleStarRatings) : null;
+  const onlyHighStarsInSample = minSampleRating !== null && minSampleRating >= 5;
 
   return (
     <section className="rounded-[2rem] border border-border bg-white p-6 shadow-soft sm:p-8">
@@ -882,6 +874,14 @@ function LowestReviewAnalysis({ audit }: { audit: RevenueLeakAudit }) {
         ) : null}
       </div>
 
+      {onlyHighStarsInSample ? (
+        <div className="mt-6 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm leading-6 text-sky-900">
+          Google returns at most five reviews per place, sorted for relevance, so this list may not include
+          lower-star reviews even when they exist on your profile. We still ordered this sample by the lowest
+          ratings available and surfaced reviews with complaint-like wording first when stars tie.
+        </div>
+      ) : null}
+
       {lowestReviews.length === 0 ? (
         <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800">
           Review text was not available from the current Google sample.
@@ -905,7 +905,7 @@ function LowestReviewAnalysis({ audit }: { audit: RevenueLeakAudit }) {
                   </div>
                 </div>
                 <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
-                  {review.rating ?? "N/A"} star{review.rating === 1 ? "" : "s"}
+                  {formatReviewStarLabel(review.rating)}
                 </span>
               </div>
               <p className="mt-3 text-sm leading-6 text-text-secondary">
@@ -969,96 +969,14 @@ function DownloadPdfBanner({ audit }: { audit: RevenueLeakAudit }) {
 }
 
 function InteractiveReport({ audit, onRestart }: { audit: RevenueLeakAudit; onRestart: () => void }) {
-  const reportLinks = [
-    audit.business.website
-      ? { label: "Website", href: audit.business.website, icon: Globe2 }
-      : null,
-    audit.business.phone || audit.websiteAudit.contactLinks.phone
-      ? {
-          label: "Phone",
-          href: `tel:${audit.business.phone ?? audit.websiteAudit.contactLinks.phone}`,
-          icon: Phone,
-        }
-      : null,
-    audit.websiteAudit.contactLinks.email
-      ? {
-          label: "Email",
-          href: `mailto:${audit.websiteAudit.contactLinks.email}`,
-          icon: Mail,
-        }
-      : null,
-    audit.websiteAudit.socialLinks.facebook
-      ? { label: "Facebook", href: audit.websiteAudit.socialLinks.facebook, icon: Facebook }
-      : null,
-    audit.websiteAudit.socialLinks.instagram
-      ? { label: "Instagram", href: audit.websiteAudit.socialLinks.instagram, icon: Instagram }
-      : null,
-    audit.websiteAudit.socialLinks.tiktok
-      ? { label: "TikTok", href: audit.websiteAudit.socialLinks.tiktok, icon: Target }
-      : null,
-    audit.websiteAudit.socialLinks.youtube
-      ? { label: "YouTube", href: audit.websiteAudit.socialLinks.youtube, icon: Youtube }
-      : null,
-  ].filter((link): link is { label: string; href: string; icon: typeof Globe2 } => Boolean(link));
-  const identityAttributes = audit.business.identityAttributes.filter(
-    (attribute) => attribute.detected
-  );
-
   return (
     <section className="px-4 py-12 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-6">
-        <div className="rounded-[2rem] border border-border bg-white p-6 shadow-soft sm:p-8">
-          <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Revenue Leak Audit</p>
-              <h1 className="mt-2 text-4xl font-black tracking-tight text-text-primary">{audit.business.name}</h1>
-              <p className="mt-3 text-sm leading-6 text-text-secondary">{audit.business.address} · {audit.business.category}</p>
-              <div className="mt-5 flex flex-wrap gap-2 text-xs font-bold">
-                <span className="rounded-full bg-amber-50 px-3 py-1 text-amber-700">{audit.business.rating ?? "N/A"} rating</span>
-                <span className="rounded-full bg-blue-50 px-3 py-1 text-blue-700">{audit.business.reviewCount ?? 0} reviews</span>
-                <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">{audit.business.website ? "Website linked" : "No website"}</span>
-                {identityAttributes.map((attribute) => (
-                  <span
-                    key={attribute.id}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-violet-50 px-3 py-1 text-violet-700"
-                    title={`Detected from ${attribute.source}`}
-                  >
-                    <BadgeCheck className="h-3.5 w-3.5" aria-hidden />
-                    {attribute.label}
-                  </span>
-                ))}
-              </div>
-              {reportLinks.length > 0 ? (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {reportLinks.map((link) => (
-                    <a
-                      key={`${link.label}-${link.href}`}
-                      href={link.href}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-white text-text-secondary transition-colors hover:border-accent/30 hover:text-accent"
-                      aria-label={link.label}
-                      title={link.label}
-                    >
-                      <link.icon className="h-4 w-4" aria-hidden />
-                    </a>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-            <ScoreGauge score={audit.scores.overall} grade={audit.scores.grade} />
-          </div>
-        </div>
-
         <GoogleBusinessProfileSummary audit={audit} />
         <BrandSummary audit={audit} />
         <FoundIssuesMoneySummary audit={audit} />
         <SectionProblemAccordion sections={audit.sectionSummaries} />
         <LowestReviewAnalysis audit={audit} />
-        <div className="grid gap-6 xl:grid-cols-2">
-          <RankingSnapshot audit={audit} />
-          <ScoreBreakdown audit={audit} />
-        </div>
         <CompetitorMap audit={audit} points={audit.competitorMapPoints} />
         <section className="rounded-[2rem] border border-border bg-white p-6 shadow-soft sm:p-8">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Action plan</p>

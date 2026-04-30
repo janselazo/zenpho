@@ -50,14 +50,6 @@ const EMPLOYEE_RANGES: { id: string; label: string }[] = [
   { id: "201,500", label: "201–500" },
 ];
 
-const FUNDING_STAGES: { id: string; label: string }[] = [
-  { id: "pre_seed", label: "Pre-seed" },
-  { id: "seed", label: "Seed" },
-  { id: "series_a", label: "Series A" },
-  { id: "series_b", label: "Series B" },
-  { id: "series_c", label: "Series C" },
-];
-
 const INDUSTRY_PRESETS = [
   "Apparel",
   "Beauty",
@@ -178,7 +170,6 @@ export default function EcomBrandsTab({
   const [keyword, setKeyword] = useState("");
   const [industries, setIndustries] = useState<string[]>([]);
   const [employeeRanges, setEmployeeRanges] = useState<string[]>(["1,10", "11,50"]);
-  const [fundingStages, setFundingStages] = useState<string[]>([]);
   const [location, setLocation] = useState("");
   const [platforms, setPlatforms] = useState<EcomPlatform[]>([
     "shopify",
@@ -213,7 +204,6 @@ export default function EcomBrandsTab({
         keyword: keyword.trim() || undefined,
         industries: industries.length ? industries : undefined,
         employeeRanges: employeeRanges.length ? employeeRanges : undefined,
-        fundingStages: fundingStages.length ? fundingStages : undefined,
         locations: location.trim() ? [location.trim()] : undefined,
         platforms: platforms.length ? platforms : undefined,
         includeFounders: foundersOnly,
@@ -387,7 +377,7 @@ export default function EcomBrandsTab({
             </div>
           </div>
 
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="mt-4">
             <div>
               <p className="mb-1.5 text-xs font-medium text-text-secondary">Employees</p>
               <div className="flex flex-wrap gap-1.5">
@@ -405,28 +395,6 @@ export default function EcomBrandsTab({
                       }`}
                     >
                       {r.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <div>
-              <p className="mb-1.5 text-xs font-medium text-text-secondary">Funding stage</p>
-              <div className="flex flex-wrap gap-1.5">
-                {FUNDING_STAGES.map((s) => {
-                  const on = fundingStages.includes(s.id);
-                  return (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => toggle(fundingStages, s.id, setFundingStages)}
-                      className={`${chipBase} border ${
-                        on
-                          ? "border-accent bg-accent/10 text-accent dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-300"
-                          : "border-border text-text-secondary hover:bg-surface dark:border-zinc-700 dark:text-zinc-400"
-                      }`}
-                    >
-                      {s.label}
                     </button>
                   );
                 })}

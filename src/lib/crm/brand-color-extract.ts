@@ -1,6 +1,8 @@
 /**
  * Extracts dominant brand colors from a website's HTML by parsing CSS custom properties,
- * meta theme-color, inline styles on key elements, and common CSS patterns.
+ * meta theme-color, inline styles, and weighted header/logo-area CSS backgrounds, then
+ * ranking chromatic colors (max zone weight × frequency, with a small hue tie-break for
+ * green/teal vs magenta/orange theme variants).
  * Runs server-side — no DOM required.
  */
 
@@ -58,6 +60,97 @@ function colorDistance(a: RGBTuple, b: RGBTuple): number {
   return Math.sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2);
 }
 
+/** Higher weight = stronger signal for “primary” brand color (logo strip beats generic top bar). */
+function headerSelectorWeight(selectorRaw: string): number {
+  const s = selectorRaw.toLowerCase().replace(/\\/g, "");
+  if (/mainheader|btlogoarea|logo-area|brand-logo|site-title|custom-logo|navbar-brand/.test(s)) {
+    return 26;
+  }
+  if (/topbar|belowlogo|preheader|announcement-bar|utilitybar/.test(s)) {
+    return 7;
+  }
+  if (/\bheader\b|masthead|site-header|\.header|navbar|navigation|nav\s|main-nav/.test(s)) {
+    return 12;
+  }
+  if (/\bnav\b|menuport|primary-menu|main-menu/.test(s)) {
+    return 9;
+  }
+  return 0;
+}
+
+type WeightedColor = { rgb: RGBTuple; weight: number };
+
+/**
+ * Pull solid header/nav/logo background colors. Uses selector-aware weights so the main
+ * logo strip (e.g. Bold Themes `.mainHeader .btLogoArea`) beats accent top bars and beats
+ * counting orange CTA variables that appear first in the document.
+ */
+function extractHeaderZoneBackgrounds(html: string): WeightedColor[] {
+  const out: WeightedColor[] = [];
+  const blockRe = /([^{]{1,520})\{([^}]{1,1400})\}/gi;
+  let m: RegExpExecArray | null;
+  while ((m = blockRe.exec(html)) !== null) {
+    const selector = m[1];
+    if (!/header|nav|logo|topbar|masthead|belowlogo|mainheader|menuport|navbar/i.test(selector)) {
+      continue;
+    }
+    const zoneW = headerSelectorWeight(selector);
+    if (zoneW === 0) continue;
+    const block = m[2];
+    const bgRe = /background(?:-color)?\s*:\s*([^;]+)/gi;
+    let bm: RegExpExecArray | null;
+    while ((bm = bgRe.exec(block)) !== null) {
+      const raw = bm[1].trim();
+      if (/gradient|url\(|image\/|var\(/i.test(raw)) continue;
+      const c = parseColorValue(raw.split(/\s+/)[0] ?? raw);
+      if (c && !isNeutral(c) && !isNearWhiteOrBlack(c)) {
+        out.push({ rgb: c, weight: zoneW });
+      }
+    }
+  }
+  return out;
+}
+
+function extractMetaThemeWeighted(html: string): WeightedColor[] {
+  const out: WeightedColor[] = [];
+  const themeColorRe = /<meta\s+name=["']theme-color["']\s+content=["']([^"']+)["']/gi;
+  let m: RegExpExecArray | null;
+  while ((m = themeColorRe.exec(html)) !== null) {
+    const rgb = parseColorValue(m[1].trim());
+    if (rgb && !isNeutral(rgb) && !isNearWhiteOrBlack(rgb)) out.push({ rgb, weight: 15 });
+  }
+  const msColorRe = /<meta\s+name=["']msapplication-TileColor["']\s+content=["']([^"']+)["']/gi;
+  while ((m = msColorRe.exec(html)) !== null) {
+    const rgb = parseColorValue(m[1].trim());
+    if (rgb && !isNeutral(rgb) && !isNearWhiteOrBlack(rgb)) out.push({ rgb, weight: 12 });
+  }
+  return out;
+}
+
+function cssVarNameWeight(varName: string): number {
+  const n = varName.toLowerCase();
+  if (WP_DEFAULT_VAR_RE.test(varName)) return 0;
+  if (/(?:^|-)primary\b|brand|theme-color-1|global-color-1|color_1\b/.test(n)) return 10;
+  if (/header|masthead|toolbar|navbar/.test(n) && /color/.test(n)) return 8;
+  if (/accent|secondary|cta|button|highlight|link|call-to-action/.test(n)) return 3;
+  return 4;
+}
+
+function extractCssVarsWeighted(html: string): WeightedColor[] {
+  const out: WeightedColor[] = [];
+  const cssVarRe = /(--(?:[a-z0-9_-]*(?:color|primary|brand|accent)[a-z0-9_-]*)):\s*([^;}{]+)/gi;
+  let m: RegExpExecArray | null;
+  while ((m = cssVarRe.exec(html)) !== null) {
+    const w = cssVarNameWeight(m[1]);
+    if (w === 0) continue;
+    const rgb = parseColorValue(m[2].trim().split(/\s+/)[0] ?? m[2].trim());
+    if (rgb && !isNeutral(rgb) && !isNearWhiteOrBlack(rgb)) {
+      out.push({ rgb, weight: w });
+    }
+  }
+  return out;
+}
+
 function dedupeColors(colors: RGBTuple[], minDist = 40): RGBTuple[] {
   const out: RGBTuple[] = [];
   for (const c of colors) {
@@ -109,47 +202,52 @@ function parseColorValue(val: string): RGBTuple | null {
  */
 const WP_DEFAULT_VAR_RE = /^--wp-(?:admin-theme|block-synced|bound-block)|^--wp--preset--color--(?:black|white|cyan-bluish-gray|pale-pink|vivid-red|luminous-vivid-orange|luminous-vivid-amber|light-green-cyan|vivid-green-cyan|pale-cyan-blue|vivid-cyan-blue|vivid-purple)/i;
 
-/** Extracts colors from high-signal areas: CSS vars, meta tags, nav/header styles, brand classes. */
-function extractPriorityColors(html: string): RGBTuple[] {
-  const priority: RGBTuple[] = [];
-
-  const themeColorRe = /<meta\s+name=["']theme-color["']\s+content=["']([^"']+)["']/gi;
-  let m: RegExpExecArray | null;
-  while ((m = themeColorRe.exec(html)) !== null) {
-    const rgb = parseColorValue(m[1].trim());
-    if (rgb) priority.push(rgb);
+function mergeMaxWeight(byHex: Map<string, number>, list: WeightedColor[]): void {
+  for (const { rgb, weight } of list) {
+    if (isNeutral(rgb) || isNearWhiteOrBlack(rgb)) continue;
+    const k = rgbToHex(rgb);
+    byHex.set(k, Math.max(byHex.get(k) ?? 0, weight));
   }
+}
 
-  const msColorRe = /<meta\s+name=["']msapplication-TileColor["']\s+content=["']([^"']+)["']/gi;
-  while ((m = msColorRe.exec(html)) !== null) {
-    const rgb = parseColorValue(m[1].trim());
-    if (rgb) priority.push(rgb);
-  }
+/** Slight nudge so logo-strip greens/blues beat equally-weighted magenta/orange theme variants (common on WP/Bold). */
+function primaryHueNudge(rgb: RGBTuple): number {
+  const [r, g, b] = rgb.map((x) => x / 255);
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const d = max - min;
+  if (d < 0.04) return 0;
+  let h: number;
+  if (max === r) h = ((((g - b) / d) % 6) * 60 + 360) % 360;
+  else if (max === g) h = ((b - r) / d + 2) * 60;
+  else h = ((r - g) / d + 4) * 60;
+  if (h >= 80 && h <= 168) return 22;
+  if (h >= 175 && h <= 255) return 12;
+  if (h >= 285 && h <= 345) return -14;
+  if (h >= 10 && h <= 48) return -6;
+  return 0;
+}
 
-  // Match any CSS custom property containing "color", "primary", "brand", or "accent"
-  // in its name. Covers Astra (--ast-global-color-*), Elementor (--e-global-color-*),
-  // Wix (--color_N), Squarespace (--accent-*), WordPress (--wp--preset--color-*), etc.
-  // Skip known WordPress default variables that are generic palette colors, not brand.
-  const cssVarRe = /(--(?:[a-z0-9_-]*(?:color|primary|brand|accent)[a-z0-9_-]*)):\s*([^;}{]+)/gi;
-  while ((m = cssVarRe.exec(html)) !== null) {
-    const varName = m[1];
-    if (WP_DEFAULT_VAR_RE.test(varName)) continue;
-    const rgb = parseColorValue(m[2].trim());
-    if (rgb) priority.push(rgb);
-  }
+function scoreColorKey(
+  hexKey: string,
+  maxWeightByHex: Map<string, number>,
+  countMap: Map<string, { count: number; rgb: RGBTuple }>
+): number {
+  const rgb = hexToRgb(hexKey);
+  if (!rgb || isNeutral(rgb) || isNearWhiteOrBlack(rgb)) return -1;
+  const w = maxWeightByHex.get(hexKey) ?? 0;
+  const cnt = countMap.get(hexKey)?.count ?? 0;
+  return w * 100 + Math.sqrt(cnt + 1) * 4 + primaryHueNudge(rgb);
+}
 
-  const navHeaderRe = /(?:nav|header|\.navbar|\.header|\.logo|\.brand|\.site-header)[^{}]*\{([^}]{1,600})\}/gi;
-  while ((m = navHeaderRe.exec(html)) !== null) {
-    const block = m[1];
-    const bgColorRe = /(?:background-color|background|color)\s*:\s*([^;]+)/gi;
-    let bm: RegExpExecArray | null;
-    while ((bm = bgColorRe.exec(block)) !== null) {
-      const c = parseColorValue(bm[1].trim());
-      if (c && !isNearWhiteOrBlack(c)) priority.push(c);
-    }
-  }
-
-  return priority;
+function rankColorKeys(
+  maxWeightByHex: Map<string, number>,
+  countMap: Map<string, { count: number; rgb: RGBTuple }>
+): string[] {
+  const keys = new Set<string>([...maxWeightByHex.keys(), ...countMap.keys()]);
+  return [...keys].filter((k) => scoreColorKey(k, maxWeightByHex, countMap) >= 0).sort(
+    (a, b) => scoreColorKey(b, maxWeightByHex, countMap) - scoreColorKey(a, maxWeightByHex, countMap)
+  );
 }
 
 export type BrandColorResult = {
@@ -166,13 +264,9 @@ export type BrandColorResult = {
 export function extractBrandColors(html: string): BrandColorResult | null {
   if (!html || typeof html !== "string") return null;
 
-  const priorityRaw = extractPriorityColors(html);
   const allRaw = extractAllColors(html);
-
-  const priorityChromatic = priorityRaw.filter((c) => !isNeutral(c) && !isNearWhiteOrBlack(c));
   const allChromatic = allRaw.filter((c) => !isNeutral(c) && !isNearWhiteOrBlack(c));
-
-  if (priorityChromatic.length === 0 && allChromatic.length === 0) return null;
+  if (allChromatic.length === 0) return null;
 
   const countMap = new Map<string, { count: number; rgb: RGBTuple }>();
   for (const c of allChromatic) {
@@ -182,33 +276,38 @@ export function extractBrandColors(html: string): BrandColorResult | null {
     else countMap.set(key, { count: 1, rgb: c });
   }
 
-  const byFrequency = [...countMap.values()].sort((a, b) => b.count - a.count);
+  const maxWeightByHex = new Map<string, number>();
+  mergeMaxWeight(maxWeightByHex, extractMetaThemeWeighted(html));
+  mergeMaxWeight(maxWeightByHex, extractCssVarsWeighted(html));
+  mergeMaxWeight(maxWeightByHex, extractHeaderZoneBackgrounds(html));
 
-  let primary: RGBTuple;
-  if (priorityChromatic.length > 0) {
-    primary = priorityChromatic[0];
-  } else if (byFrequency.length > 0) {
-    primary = byFrequency[0].rgb;
-  } else {
-    return null;
+  const rankedKeys = rankColorKeys(maxWeightByHex, countMap);
+  if (rankedKeys.length === 0) return null;
+
+  const orderedRgb: RGBTuple[] = [];
+  for (const k of rankedKeys) {
+    const c = hexToRgb(k);
+    if (!c) continue;
+    if (orderedRgb.every((o) => colorDistance(o, c) >= 28)) {
+      orderedRgb.push(c);
+      if (orderedRgb.length >= 8) break;
+    }
   }
+  if (orderedRgb.length === 0) return null;
 
-  const candidates = dedupeColors(
-    [
-      primary,
-      ...priorityChromatic.slice(1),
-      ...byFrequency.map((e) => e.rgb),
-    ],
-    35,
-  );
-
-  const accent = candidates.length > 1 ? candidates[1] : null;
-  const palette = candidates.slice(0, 5).map(rgbToHex);
+  const primary = orderedRgb[0];
+  let accent: RGBTuple | null = orderedRgb[1] ?? null;
+  if (accent && colorDistance(primary, accent) < 35) {
+    accent = orderedRgb.find((c) => colorDistance(primary, c) >= 35) ?? null;
+  }
+  const palette = dedupeColors(orderedRgb, 32)
+    .slice(0, 5)
+    .map(rgbToHex);
 
   return {
     primary: rgbToHex(primary),
     accent: accent ? rgbToHex(accent) : null,
-    palette,
+    palette: palette.length > 0 ? palette : [rgbToHex(primary)],
   };
 }
 

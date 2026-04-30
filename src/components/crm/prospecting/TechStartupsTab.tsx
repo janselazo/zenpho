@@ -303,7 +303,7 @@ export default function TechStartupsTab({
       <IconTabBar
         tabs={[
           { id: "tech-startups-companies", label: "Tech", icon: Rocket },
-          { id: "tech-startups-ecom-brands", label: "Ecom Brands", icon: ShoppingBag },
+          { id: "tech-startups-ecom-brands", label: "Ecom", icon: ShoppingBag },
           { id: "tech-startups-funding", label: "Funding", icon: BadgeDollarSign },
           { id: "tech-startups-launches", label: "Launches", icon: Newspaper },
           { id: "tech-startups-social-intent", label: "Social Intent", icon: Radio },
