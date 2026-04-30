@@ -721,8 +721,30 @@ function CompetitorMap({
 }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [mapStatus, setMapStatus] = useState<string | null>(null);
-  const key = googleMapsApiKey || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  const initialKey = googleMapsApiKey || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || null;
+  const [runtimeKey, setRuntimeKey] = useState<string | null>(initialKey);
+  const key = runtimeKey;
   const businessPosition = audit.rankingSnapshot.selectedBusinessPosition;
+
+  useEffect(() => {
+    if (runtimeKey) return;
+    let cancelled = false;
+    void fetch("/api/revenue-leak-audit/map-key", { cache: "no-store" })
+      .then(async (res) => {
+        if (!res.ok) return null;
+        return (await res.json()) as { googleMapsApiKey?: string | null };
+      })
+      .then((data) => {
+        const nextKey = data?.googleMapsApiKey?.trim();
+        if (!cancelled && nextKey) setRuntimeKey(nextKey);
+      })
+      .catch(() => {
+        // Keep the explicit "not configured" message when runtime config is absent.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [runtimeKey]);
 
   useEffect(() => {
     if (!key || !mapRef.current || points.length === 0) return;
