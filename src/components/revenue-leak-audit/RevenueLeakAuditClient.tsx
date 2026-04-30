@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   ChevronDown,
   Download,
+  Globe,
   Loader2,
   MapPin,
   RotateCcw,
@@ -332,11 +333,12 @@ function HeroSearch({
   onSelectBusiness,
   searching,
 }: {
-  onSearch: (businessName: string) => void | Promise<void>;
-  onSelectBusiness: (result: BusinessSearchResult) => void | Promise<void>;
+  onSearch: (businessName: string, websiteUrl?: string) => void | Promise<void>;
+  onSelectBusiness: (result: BusinessSearchResult, websiteUrl?: string) => void | Promise<void>;
   searching: boolean;
 }) {
   const [businessName, setBusinessName] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
   const [suggestions, setSuggestions] = useState<BusinessSearchResult[]>([]);
   const [suggesting, setSuggesting] = useState(false);
   const [open, setOpen] = useState(false);
@@ -398,11 +400,11 @@ function HeroSearch({
         </div>
 
         <form
-          className="mx-auto mt-10 grid max-w-4xl gap-3 rounded-[2rem] border border-white/80 bg-white/90 p-3 shadow-soft-lg backdrop-blur md:grid-cols-[1fr_auto]"
+          className="mx-auto mt-10 grid max-w-5xl gap-3 rounded-[2rem] border border-white/80 bg-white/90 p-3 shadow-soft-lg backdrop-blur lg:grid-cols-[minmax(0,1fr)_minmax(16rem,0.75fr)_auto]"
           onSubmit={(e) => {
             e.preventDefault();
             setOpen(false);
-            void onSearch(businessName);
+            void onSearch(businessName, websiteUrl.trim() || undefined);
           }}
         >
           <label className="relative block">
@@ -435,7 +437,7 @@ function HeroSearch({
                     onClick={() => {
                       setBusinessName(result.name);
                       setOpen(false);
-                      void onSelectBusiness(result);
+                      void onSelectBusiness(result, websiteUrl.trim() || undefined);
                     }}
                     className="block w-full border-t border-border/60 px-4 py-3 text-left transition-colors first:border-t-0 hover:bg-surface"
                   >
@@ -454,6 +456,18 @@ function HeroSearch({
                 ) : null}
               </div>
             ) : null}
+          </label>
+          <label className="relative block">
+            <span className="sr-only">Business website URL</span>
+            <Globe className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" />
+            <input
+              value={websiteUrl}
+              onChange={(e) => setWebsiteUrl(e.target.value)}
+              className={`${inputClass} pl-11`}
+              placeholder="Website URL (optional)"
+              autoComplete="url"
+              inputMode="url"
+            />
           </label>
           <Button type="submit" size="lg" disabled={searching} className="h-full whitespace-nowrap">
             {searching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
@@ -1386,7 +1400,7 @@ export default function RevenueLeakAuditClient({
 
   const warningList = useMemo(() => [...new Set(warnings)], [warnings]);
 
-  async function startAuditFromSearch(businessName: string) {
+  async function startAuditFromSearch(businessName: string, websiteUrl?: string) {
     if (businessName.trim().length < 2) {
       setError("Enter a business name.");
       return;
@@ -1408,7 +1422,7 @@ export default function RevenueLeakAuditClient({
       if (!firstMatch) {
         throw new Error("No Google Business Profile matches were found.");
       }
-      await selectBusiness(firstMatch);
+      await selectBusiness(firstMatch, websiteUrl);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Search failed.");
     } finally {
@@ -1416,7 +1430,7 @@ export default function RevenueLeakAuditClient({
     }
   }
 
-  async function selectBusiness(result: BusinessSearchResult) {
+  async function selectBusiness(result: BusinessSearchResult, websiteUrl?: string) {
     setSearching(true);
     setError(null);
     try {
@@ -1429,8 +1443,16 @@ export default function RevenueLeakAuditClient({
       if (!res.ok || !data.ok || !data.business) {
         throw new Error(data.error ?? "Could not load business details.");
       }
-      setWarnings((prev) => [...prev, ...(data.warnings ?? [])]);
-      await startAudit(data.business);
+      const providedWebsite = websiteUrl?.trim();
+      const business = providedWebsite ? { ...data.business, website: providedWebsite } : data.business;
+      setWarnings((prev) => [
+        ...prev,
+        ...(data.warnings ?? []),
+        providedWebsite && !data.business.website
+          ? "Using the provided website URL because Google Places did not provide websiteUri."
+          : null,
+      ].filter((warning): warning is string => Boolean(warning)));
+      await startAudit(business);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load business details.");
     } finally {

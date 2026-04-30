@@ -9,6 +9,7 @@ import {
   scoreAudit,
 } from "./revenue-leak-scoring-service";
 import { auditWebsite } from "./website-audit-service";
+import { discoverBusinessWebsite } from "./website-discovery-service";
 import type {
   AuditAssumptions,
   BusinessProfile,
@@ -71,7 +72,17 @@ export async function generateRevenueLeakAudit(input: {
   assumptions: Partial<AuditAssumptions>;
 }): Promise<ServiceResult<RevenueLeakAudit>> {
   const detailResult = await getBusinessDetails(input.business.placeId);
-  const business = detailResult.data ?? input.business;
+  const businessFromGoogle = detailResult.data ?? input.business;
+  /** Places details can omit `websiteUri` even when the client passed a URL from search UI. */
+  const mergedFromClient = {
+    ...businessFromGoogle,
+    website:
+      businessFromGoogle.website?.trim() || input.business.website?.trim() || null,
+  };
+  const websiteDiscovery = await discoverBusinessWebsite(mergedFromClient);
+  const business = websiteDiscovery.website
+    ? { ...mergedFromClient, website: websiteDiscovery.website }
+    : mergedFromClient;
   const assumptions = normalizeAssumptions(input.assumptions, business);
 
   const [brand, competitorsResult, website] = await Promise.all([
@@ -114,6 +125,7 @@ export async function generateRevenueLeakAudit(input: {
 
   const warnings = [
     ...detailResult.warnings,
+    websiteDiscovery.warning,
     ...brand.warnings,
     ...competitorsResult.warnings,
     ...website.warnings,
