@@ -27,6 +27,21 @@ alwaysApply: true
 - Add to **`.env.local`**: **`WATCHPACK_POLLING=true`** (polling is slower but uses fewer file descriptors). Restart **`npm run dev`**.
 - If limits are still too low, raise the **system** open-file limit (e.g. macOS `launchctl limit maxfiles`).
 
+## Git on macOS: `failed to store: 100001` after `git push`
+
+That line comes from the **credential helper** (usually **`osxkeychain`**) trying to save GitHub credentials in your login Keychain after a successful HTTPS push. Common causes: duplicate keychain items, access denied on first prompt, or **`origin` embedding a username + token in the URL** (the helper still tries to “store” what it saw, which fights Keychain).
+
+**Safer setup (recommended):**
+
+1. **Remove secrets from the remote URL** — use a clean URL only:
+   - `git remote set-url origin https://github.com/<you>/<repo>.git`
+   - Or switch to **SSH**: `git remote set-url origin git@github.com:<you>/<repo>.git` and use an SSH key in GitHub.
+2. **If you ever had a token in the URL**, assume it was exposed: **revoke that token** in GitHub → Settings → Developer settings → Personal access tokens → generate a new one if needed.
+3. **Keychain cleanup**: open **Keychain Access** → search **`github`** → delete stale **Internet password** / duplicate entries for `github.com` → push again; when prompted, allow access (**Always Allow**).
+4. **Newer Git**: `brew upgrade git` (2.46+ reduces races when multiple processes update credentials).
+
+Push can still succeed even when “failed to store” prints — verify with `git log origin/main -1` or the GitHub UI.
+
 ## App Router gotchas (this repo)
 
 - Client pages that use **`useSearchParams()`** must be wrapped in **`<Suspense>`** (see e.g. [`src/app/(crm)/projects/page.tsx`](src/app/(crm)/projects/page.tsx)) or the route can hang or show a blank page.
