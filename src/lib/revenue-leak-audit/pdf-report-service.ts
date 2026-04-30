@@ -534,7 +534,7 @@ function drawFoundIssuesAndLeaks(ctx: Ctx, audit: RevenueLeakAudit): void {
     })
     .filter((x): x is string => Boolean(x));
   if (sevParts.length > 0) {
-    advanceText(sevParts.join("   "), {
+    advanceText(ctx, sevParts.join("   "), {
       size: 9,
       font: ctx.bold,
       color: INK,
