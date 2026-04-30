@@ -1798,7 +1798,7 @@ function buildMoneySummary(
 }
 
 function buildActionPlan(findings: AuditFinding[]): ActionPlanItem[] {
-  return findings.slice(0, 6).map((f, index) => ({
+  return findings.map((f, index) => ({
     fix: f.recommendedFix,
     impact:
       f.severity === "Critical" || f.leakRateHigh >= 0.15
@@ -1806,8 +1806,8 @@ function buildActionPlan(findings: AuditFinding[]): ActionPlanItem[] {
         : f.severity === "High" || f.leakRateHigh >= 0.08
           ? "Medium"
           : "Low",
-    difficulty: index < 2 ? "Low" : index < 4 ? "Medium" : "High",
-    timeline: index < 2 ? "This week" : index < 4 ? "Next 30 days" : "60-90 days",
+    difficulty: index < 2 ? "Low" : index < 6 ? "Medium" : "High",
+    timeline: index < 2 ? "This week" : index < 6 ? "Next 30 days" : "60-90 days",
     expectedBenefit: f.whyItMatters,
   }));
 }

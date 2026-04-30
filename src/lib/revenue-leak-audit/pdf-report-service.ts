@@ -1594,7 +1594,7 @@ function drawActionPlan(ctx: Ctx, audit: RevenueLeakAudit): void {
       "Prioritized fixes ordered by impact. Tackle the first two this week, the next two over the next 30 days, and the rest over 60–90 days.",
   });
 
-  audit.actionPlan.slice(0, 8).forEach((item, index) => {
+  audit.actionPlan.forEach((item, index) => {
     const fixLines = wrapText(item.fix, ctx.bold, 10, CONTENT_W - 84);
     const benefitLines = wrapText(item.expectedBenefit, ctx.font, 8.5, CONTENT_W - 84);
     const cardH = Math.max(72, 32 + fixLines.length * 13 + benefitLines.length * 11 + 26);

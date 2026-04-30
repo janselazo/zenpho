@@ -7,8 +7,8 @@ import type {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-/** PageSpeed can take ~90–120s+; route budget allows two attempts (timeout + 5xx retry) plus parallel fetches. */
-export const maxDuration = 240;
+/** Interactive audit targets ~60s; keep in sync with client `AbortSignal.timeout` and PageSpeed budget. */
+export const maxDuration = 60;
 
 type Body = {
   business?: unknown;

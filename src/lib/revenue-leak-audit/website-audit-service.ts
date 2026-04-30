@@ -21,10 +21,8 @@ import {
 } from "./website-conversion-heuristics";
 import type { ServiceResult, WebsiteAudit } from "./types";
 
-/** PSI/Lighthouse often needs 60–120s+; Google’s side can occasionally exceed 100s on heavy homepages. */
-const PAGESPEED_TIMEOUT_MS = 120_000;
-/** Second attempt (after a timeout) uses a slightly shorter cap so two tries still fit under the audit route budget. */
-const PAGESPEED_RETRY_TIMEOUT_MS = 90_000;
+/** One PageSpeed attempt; full revenue-leak audit targets ~60s server wall clock. */
+const PAGESPEED_TIMEOUT_MS = 40_000;
 
 const AUDIT_FETCH_HEADERS = {
   "User-Agent": "Mozilla/5.0 (compatible; ZenphoRevenueLeakAudit/1.0; +https://zenpho.com)",
@@ -181,7 +179,6 @@ function extractImageWasteBytesFromLighthouseJson(json: unknown): number | null 
 type PageSpeedAttempt = {
   score: number | null;
   warning: string | null;
-  retryable: boolean;
   imageWasteBytes: number | null;
 };
 
@@ -206,7 +203,6 @@ async function pageSpeedAttempt(url: string, key: string, timeoutMs = PAGESPEED_
         warning: lighthouseTransient
           ? "PageSpeed could not analyze the website right now."
           : `PageSpeed failed (${res.status}).`,
-        retryable: lighthouseTransient,
       };
     }
     const json: unknown = await res.json();
@@ -220,7 +216,6 @@ async function pageSpeedAttempt(url: string, key: string, timeoutMs = PAGESPEED_
       score: typeof raw === "number" ? Math.round(raw * 100) : null,
       imageWasteBytes,
       warning: null,
-      retryable: false,
     };
   } catch (error) {
     const isTimeout =
@@ -232,8 +227,6 @@ async function pageSpeedAttempt(url: string, key: string, timeoutMs = PAGESPEED_
       warning: isTimeout
         ? `PageSpeed timed out after ${Math.round(timeoutMs / 1000)}s.`
         : "PageSpeed unavailable.",
-      /** Timeouts are often transient (Google queue); retry once like 5xx. */
-      retryable: true,
     };
   }
 }
@@ -247,36 +240,11 @@ async function fetchPageSpeedScore(url: string): Promise<{
   if (!key) {
     return { score: null, warning: "PageSpeed API key is missing.", imageWasteBytes: null };
   }
-  const first = await pageSpeedAttempt(url, key);
-  if (first.score !== null || !first.retryable) {
-    return {
-      score: first.score,
-      warning: first.warning,
-      imageWasteBytes: first.imageWasteBytes,
-    };
-  }
-  await new Promise((resolve) => setTimeout(resolve, 1500));
-  const firstWasTimeout = Boolean(first.warning?.toLowerCase().includes("timed out"));
-  const second = await pageSpeedAttempt(
-    url,
-    key,
-    firstWasTimeout ? PAGESPEED_RETRY_TIMEOUT_MS : PAGESPEED_TIMEOUT_MS
-  );
-  if (second.score !== null) {
-    return {
-      score: second.score,
-      warning: null,
-      imageWasteBytes: second.imageWasteBytes,
-    };
-  }
-  const combinedWarning =
-    first.warning && second.warning?.includes("timed out")
-      ? "PageSpeed timed out twice (mobile score unavailable); the rest of the audit used HTML and other signals."
-      : (second.warning ?? first.warning);
+  const attempt = await pageSpeedAttempt(url, key, PAGESPEED_TIMEOUT_MS);
   return {
-    score: second.score,
-    warning: combinedWarning,
-    imageWasteBytes: second.imageWasteBytes,
+    score: attempt.score,
+    warning: attempt.warning,
+    imageWasteBytes: attempt.imageWasteBytes,
   };
 }
 
@@ -301,7 +269,7 @@ export async function auditWebsite(
   const [{ html, status, warnings }, pageSpeed, screenshotUrl] = await Promise.all([
     fetchHtml(normalized),
     fetchPageSpeedScore(normalized),
-    fetchMicrolinkScreenshotUrl(normalized, 25_000),
+    fetchMicrolinkScreenshotUrl(normalized, 14_000),
   ]);
 
   if (!html) {

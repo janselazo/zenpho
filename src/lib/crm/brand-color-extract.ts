@@ -332,6 +332,22 @@ function normalizeUrl(url: string): string {
   return /^https?:\/\//i.test(url) ? url : `https://${url}`;
 }
 
+/**
+ * Use the site root for brand HTML/CSS so deep links (e.g. /contact/...) still load the same
+ * header, JSON-LD, and logo as the homepage.
+ */
+export function brandHomepageForFetch(url: string): string {
+  const trimmed = url.trim();
+  if (!trimmed) return trimmed;
+  const withProto = normalizeUrl(trimmed);
+  try {
+    const u = new URL(withProto);
+    return `${u.origin}/`;
+  } catch {
+    return withProto;
+  }
+}
+
 function decodeHtmlEntities(value: string): string {
   return value
     .replace(/&nbsp;/gi, " ")
@@ -597,6 +613,94 @@ function pushLogoCandidate(
   candidates.push({ url, score, index });
 }
 
+const LD_ORG_TYPE_RE =
+  /Organization|LocalBusiness|Brand|Corporation|HomeAndConstructionBusiness|ProfessionalService|RoofingContractor|WebSite/i;
+
+function collectLogoUrlsFromLdObject(node: unknown, acc: string[], visited: Set<unknown>): void {
+  if (node == null || typeof node !== "object") return;
+  if (visited.has(node)) return;
+  visited.add(node);
+  const o = node as Record<string, unknown>;
+  const logo = o.logo;
+  if (typeof logo === "string" && logo.trim()) {
+    acc.push(logo.trim());
+  } else if (logo && typeof logo === "object") {
+    const url = (logo as { url?: unknown }).url;
+    if (typeof url === "string" && url.trim()) acc.push(url.trim());
+  }
+  for (const key of ["publisher", "brand", "parentOrganization", "subOrganization", "mainEntity"]) {
+    const child = o[key];
+    if (Array.isArray(child)) {
+      for (const c of child) collectLogoUrlsFromLdObject(c, acc, visited);
+    } else {
+      collectLogoUrlsFromLdObject(child, acc, visited);
+    }
+  }
+}
+
+function shouldScanLdNode(node: unknown): boolean {
+  if (!node || typeof node !== "object") return false;
+  const o = node as Record<string, unknown>;
+  const t = o["@type"];
+  const types = Array.isArray(t) ? t.map((x) => String(x)) : t != null ? [String(t)] : [];
+  return types.some((x) => LD_ORG_TYPE_RE.test(x));
+}
+
+function flattenLdJsonNodes(raw: unknown): unknown[] {
+  if (raw == null) return [];
+  if (Array.isArray(raw)) return raw.flatMap(flattenLdJsonNodes);
+  if (typeof raw === "object" && raw !== null && "@graph" in raw) {
+    return flattenLdJsonNodes((raw as { "@graph": unknown })["@graph"]);
+  }
+  return [raw];
+}
+
+/** High-priority logo URLs from JSON-LD (Organization / LocalBusiness / WebSite publisher, etc.). */
+function extractJsonLdLogoRefs(html: string): { url: string; index: number }[] {
+  const out: { url: string; index: number }[] = [];
+  const scriptRe = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = scriptRe.exec(html)) !== null) {
+    let data: unknown;
+    try {
+      data = JSON.parse(m[1].trim());
+    } catch {
+      continue;
+    }
+    const index = m.index;
+    const nodes = flattenLdJsonNodes(data);
+    const visited = new Set<unknown>();
+    for (const node of nodes) {
+      if (!shouldScanLdNode(node)) continue;
+      const urls: string[] = [];
+      collectLogoUrlsFromLdObject(node, urls, visited);
+      for (const u of urls) {
+        out.push({ url: u, index });
+      }
+    }
+  }
+  return out;
+}
+
+/** Images that look like trust seals / badges, not the business wordmark. */
+function isLikelyTrustBadgeOrSeal(tag: string, context: string): boolean {
+  const blob = `${tag} ${context}`.toLowerCase();
+  if (
+    /\b(badge|shield|seal|truste|trusted|verify|verif|award|accredit|ssl[-_]?secure|mcafee|norton|equifax|bbb\.org\/|licensed\s*(?:&|and)\s*insured)\b/i.test(
+      blob,
+    )
+  ) {
+    return true;
+  }
+  if (/alt=["'][^"']*(shield|badge|seal|trust badge|verified|accredit)[^"']*["']/i.test(tag)) {
+    return true;
+  }
+  if (/class=["'][^"']*(trust-seal|trust-badge|shield-icon|badge-icon|verified-badge)[^"']*["']/i.test(tag)) {
+    return true;
+  }
+  return false;
+}
+
 function imageSrcFromTag(tag: string): string {
   return (
     tag.match(/data-(?:lazy-)?src=["']([^"']+)["']/i)?.[1] ??
@@ -641,6 +745,10 @@ export function extractLogoUrls(
   const seen = new Set<string>();
   const tokens = brandTokens(options.businessName ?? extractTitle(html));
 
+  for (const { url: logoRef, index } of extractJsonLdLogoRefs(html)) {
+    pushLogoCandidate(candidates, seen, logoRef, baseUrl, 94, index);
+  }
+
   let m: RegExpExecArray | null;
 
   // ── 1. Ranked <img> candidates near logo/header/nav contexts ───────────
@@ -663,6 +771,9 @@ export function extractLogoUrls(
     }
     score += imageDimensionScore(tag);
     score += Math.max(0, 10 - Math.floor((m.index / Math.max(html.length, 1)) * 30));
+    if (isLikelyTrustBadgeOrSeal(tag, context)) {
+      score -= 55;
+    }
     if (score < 24) continue;
     pushLogoCandidate(candidates, seen, imageSrcFromTag(tag), baseUrl, score, m.index);
   }
@@ -771,9 +882,10 @@ export async function fetchBrandAssetsFromUrl(
   timeoutMs = 8000,
   options: LogoExtractionOptions = {},
 ): Promise<BrandAssets> {
-  const html = await fetchPageHtml(url, timeoutMs);
+  const fetchUrl = brandHomepageForFetch(url);
+  const html = await fetchPageHtml(fetchUrl, timeoutMs);
   if (!html) return { colors: null, logoUrl: null, logoUrls: [], sourceFacts: null };
-  const normalized = normalizeUrl(url);
+  const normalized = fetchUrl;
 
   const cssUrls = extractLinkedStylesheetUrls(html, normalized);
   let combined = html;

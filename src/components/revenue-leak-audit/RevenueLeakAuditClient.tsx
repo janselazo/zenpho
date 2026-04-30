@@ -63,12 +63,14 @@ const progressSteps = [
   "Preparing interactive report",
 ];
 
-/** Do not auto-advance past this index while waiting on `/analyze` — the API often runs 1–3+ minutes. */
+/** Do not auto-advance past this index while waiting on `/analyze` (canceled at ANALYSIS_COUNTDOWN_SECONDS). */
 const PROGRESS_AUTOSTEP_CAP = Math.max(0, progressSteps.length - 2);
 
 /** Ring + countdown use this duration; progress caps at 92% until the API returns. */
 const ANALYSIS_COUNTDOWN_SECONDS = 60;
 const ESTIMATED_ANALYSIS_MS = ANALYSIS_COUNTDOWN_SECONDS * 1_000;
+/** Collapsed "Things to Improve" rows before "+ N more". */
+const THINGS_TO_IMPROVE_INITIAL = 6;
 /** Do not show a full ring until the server responds. */
 const ANALYSIS_RING_INDETERMINATE_CAP = 0.92;
 
@@ -1298,9 +1300,14 @@ function InteractiveReport({
 }) {
   const lastUpdated = formatAuditLastUpdated(audit.createdAt);
   const [assumptions, setAssumptions] = useState<AuditAssumptions>(() => ({ ...audit.assumptions }));
+  const [showAllThingsToImprove, setShowAllThingsToImprove] = useState(false);
 
   useEffect(() => {
     setAssumptions({ ...audit.assumptions });
+  }, [audit.id]);
+
+  useEffect(() => {
+    setShowAllThingsToImprove(false);
   }, [audit.id]);
 
   const findingsWithMoney = useMemo(
@@ -1341,9 +1348,11 @@ function InteractiveReport({
           <RevenueLeakTopLeaksSection audit={audit} findingsWithMoney={findingsWithMoney} />
           <h2 className="mt-8 text-3xl font-black tracking-tight text-text-primary">Things to Improve</h2>
           <div className="mt-6 divide-y divide-border overflow-hidden rounded-3xl border border-border">
-            {audit.actionPlan.map((item, index) => (
+            {audit.actionPlan.map((item, index) => {
+              if (!showAllThingsToImprove && index >= THINGS_TO_IMPROVE_INITIAL) return null;
+              return (
               <div
-                key={`${item.fix}-${index}`}
+                key={`action-plan-${index}`}
                 className="flex gap-4 bg-white p-5 transition-colors hover:bg-surface/60"
               >
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-sm font-black text-accent">
@@ -1365,15 +1374,23 @@ function InteractiveReport({
                   <p className="mt-2 text-sm font-normal leading-relaxed text-text-primary">{item.fix}</p>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
+          {audit.actionPlan.length > THINGS_TO_IMPROVE_INITIAL ? (
+            <div className="mt-3 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setShowAllThingsToImprove((v) => !v)}
+                className="text-sm font-bold text-accent underline decoration-accent/30 underline-offset-2 hover:decoration-accent"
+              >
+                {showAllThingsToImprove
+                  ? "Show fewer"
+                  : `+ ${audit.actionPlan.length - THINGS_TO_IMPROVE_INITIAL} more`}
+              </button>
+            </div>
+          ) : null}
         </section>
-        <div className="flex justify-center">
-          <button type="button" onClick={onRestart} className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-5 py-3 text-sm font-bold text-text-primary shadow-sm hover:border-accent/30">
-            <RotateCcw className="h-4 w-4" />
-            Start New Audit
-          </button>
-        </div>
         <div className="pt-2">
           <section className="rounded-[2rem] border border-accent/20 bg-white p-6 shadow-soft-lg sm:p-8">
             <RevenueLeakFixLeaksCta
@@ -1386,6 +1403,12 @@ function InteractiveReport({
               surfaceCtaLabel="Start fixing leaks"
             />
           </section>
+        </div>
+        <div className="flex justify-center pt-6">
+          <button type="button" onClick={onRestart} className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-5 py-3 text-sm font-bold text-text-primary shadow-sm hover:border-accent/30">
+            <RotateCcw className="h-4 w-4" />
+            Start New Audit
+          </button>
         </div>
       </div>
     </section>
@@ -1489,6 +1512,7 @@ export default function RevenueLeakAuditClient({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ business, assumptions: {} }),
+        signal: AbortSignal.timeout(ESTIMATED_ANALYSIS_MS),
       });
       const data = (await res.json()) as AnalyzeResponse;
       if (!res.ok || !data.ok || !data.audit) throw new Error(data.error ?? "Audit failed.");
@@ -1506,7 +1530,18 @@ export default function RevenueLeakAuditClient({
       setWarnings((prev) => [...prev, ...(data.warnings ?? [])]);
       setStage("report");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Audit failed.");
+      const aborted =
+        (typeof DOMException !== "undefined" &&
+          e instanceof DOMException &&
+          e.name === "AbortError") ||
+        (e instanceof Error && e.name === "AbortError");
+      setError(
+        aborted
+          ? "Audit took longer than 60 seconds — try again."
+          : e instanceof Error
+            ? e.message
+            : "Audit failed."
+      );
       setStage("search");
     } finally {
       ringLoopCancelled = true;
