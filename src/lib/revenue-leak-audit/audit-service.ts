@@ -76,6 +76,8 @@ export async function generateRevenueLeakAudit(input: {
   /** Places details can omit `websiteUri` even when the client passed a URL from search UI. */
   const mergedFromClient = {
     ...businessFromGoogle,
+    /** Details often omit `location` for service-area businesses; keep search coords for maps and distance. */
+    coordinates: businessFromGoogle.coordinates ?? input.business.coordinates ?? null,
     website:
       businessFromGoogle.website?.trim() || input.business.website?.trim() || null,
   };
@@ -90,15 +92,19 @@ export async function generateRevenueLeakAudit(input: {
     analyzeCompetitors({ business, serviceArea: assumptions.serviceArea }),
     auditWebsite(business.website),
   ]);
+  const businessWithCoords = {
+    ...business,
+    coordinates: business.coordinates ?? competitorsResult.data.resolvedBusinessCoordinates ?? null,
+  };
   const identityAttributes = [
-    ...business.identityAttributes,
+    ...businessWithCoords.identityAttributes,
     ...website.data.identityAttributes,
   ].filter(
     (attribute, index, all) =>
       attribute.detected && all.findIndex((item) => item.id === attribute.id) === index
   );
   const businessWithIdentity = {
-    ...business,
+    ...businessWithCoords,
     identityAttributes,
   };
 
@@ -139,7 +145,7 @@ export async function generateRevenueLeakAudit(input: {
 
   return {
     data: {
-      id: slugId(business.name),
+      id: slugId(businessWithCoords.name),
       business: businessWithIdentity,
       assumptions,
       competitors: competitorsResult.data.competitors,

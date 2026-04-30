@@ -25,7 +25,7 @@ export type BusinessReview = {
   relativePublishTime: string | null;
   /**
    * Whether a merchant/owner reply exists on this review row when Places returns it.
-   * Often omitted by the API — see `formatReviewOwnerReplyAuditNote`.
+   * Often omitted by the API.
    */
   hasOwnerReply?: boolean;
 };

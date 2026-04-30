@@ -18,6 +18,7 @@
  */
 import {
   fetchBrandAssetsFromUrl,
+  isDecorativeContactIconUrl,
   type BrandColorResult,
 } from "@/lib/crm/brand-color-extract";
 import { normalizeUrlForFetch } from "@/lib/crm/safe-url-fetch";
@@ -411,27 +412,40 @@ export async function resolveProspectBrandAssets(input: {
         quality: number;
       }
     | null = null;
-  for (const logoUrl of candidateLogoUrls.slice(0, 6)) {
+  for (const logoUrl of candidateLogoUrls.slice(0, 8)) {
     const fetched = await safeFetchLogoAsset(logoUrl);
-    if (fetched) {
-      const candidatePalette = logoPaletteFromFetch(fetched);
-      if (isUsefulLogoPalette(candidatePalette)) {
-        const quality = logoPaletteQuality(candidatePalette);
-        if (!bestLogo || quality > bestLogo.quality) {
-          bestLogo = {
-            buffer: fetched.buffer,
-            svg: fetched.svg,
-            sourceUrl: fetched.sourceUrl,
-            palette: candidatePalette,
-            quality,
-          };
-        }
+    if (!fetched) continue;
+    if (isDecorativeContactIconUrl(fetched.sourceUrl)) continue;
+    const candidatePalette = logoPaletteFromFetch(fetched);
+    const rasterFmt = fetched.buffer ? sniffRasterFormat(fetched.buffer) : null;
+    if (isUsefulLogoPalette(candidatePalette)) {
+      const quality = logoPaletteQuality(candidatePalette);
+      if (!bestLogo || quality > bestLogo.quality) {
+        bestLogo = {
+          buffer: fetched.buffer,
+          svg: fetched.svg,
+          sourceUrl: fetched.sourceUrl,
+          palette: candidatePalette,
+          quality,
+        };
       }
-      if (!logoSourceUrl) {
-        logoPng = fetched.buffer;
-        logoSvg = fetched.svg;
-        logoSourceUrl = fetched.sourceUrl;
+    } else if (rasterFmt === "jpeg" && fetched.buffer) {
+      /** Header wordmarks are often JPEG; PNG sampling fails so use a moderate fixed quality. */
+      const quality = 36;
+      if (!bestLogo || quality > bestLogo.quality) {
+        bestLogo = {
+          buffer: fetched.buffer,
+          svg: null,
+          sourceUrl: fetched.sourceUrl,
+          palette: [],
+          quality,
+        };
       }
+    }
+    if (!logoSourceUrl) {
+      logoPng = fetched.buffer;
+      logoSvg = fetched.svg;
+      logoSourceUrl = fetched.sourceUrl;
     }
   }
   if (bestLogo) {

@@ -113,3 +113,12 @@ export function buildGoogleBusinessProfileChecklist(business: BusinessProfile): 
     },
   ];
 }
+
+/** Items to surface in the report UI: not fully met (fail) or weak signals (warn). Omits passes and unknown. */
+export function getGoogleBusinessProfileChecklistIssues(
+  business: BusinessProfile,
+): GoogleBusinessProfileChecklistItem[] {
+  return buildGoogleBusinessProfileChecklist(business).filter(
+    (i) => i.status === "fail" || i.status === "warn",
+  );
+}

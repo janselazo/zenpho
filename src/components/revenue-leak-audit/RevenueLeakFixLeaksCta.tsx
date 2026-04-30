@@ -171,7 +171,7 @@ export default function RevenueLeakFixLeaksCta({
               ) : (
                 <form onSubmit={onSubmit} className="space-y-4">
                   <p className="text-sm text-text-secondary">
-                    We&apos;ll attach context from this audit ({audit.business.name}) to the lead notes.
+                    We&apos;ll be in touch shortly and will send a copy of your Audit PDF to your email.
                   </p>
                   <div className="sr-only" aria-hidden>
                     <label htmlFor="rva-company-website">Company website</label>

@@ -7,7 +7,6 @@ import {
   Building2,
   CheckCircle2,
   ChevronDown,
-  CircleHelp,
   Download,
   Loader2,
   MapPin,
@@ -21,14 +20,12 @@ import RevenueLeakFixLeaksCta from "@/components/revenue-leak-audit/RevenueLeakF
 import RevenueLeakSnapshot, { RevenueLeakTopLeaksSection } from "@/components/revenue-leak-audit/RevenueLeakSnapshot";
 import Button from "@/components/ui/Button";
 import { EMPTY_PROSPECT_SOCIAL_URLS } from "@/lib/crm/prospect-enrichment-types";
-import { buildGoogleBusinessProfileChecklist } from "@/lib/revenue-leak-audit/gbp-checklist";
+import { getGoogleBusinessProfileChecklistIssues } from "@/lib/revenue-leak-audit/gbp-checklist";
 import {
   applyAssumptionsToFindings,
-  buildMoneySummaryFromAssumptions,
   COMPETITOR_MAP_LOCAL_RADIUS_MILES,
 } from "@/lib/revenue-leak-audit/revenue-leak-scoring-service";
 import type {
-  AuditAssumptions,
   AuditGrade,
   BusinessProfile,
   BusinessSearchResult,
@@ -42,7 +39,6 @@ import {
 import {
   formatReviewStarLabel,
 } from "@/lib/revenue-leak-audit/review-selection";
-import { formatReviewOwnerReplyAuditNote } from "@/lib/revenue-leak-audit/review-owner-reply";
 import {
   buildCategoryMarkerElement,
   CLASSIC_MARKER_PIN_LAYOUT,
@@ -773,22 +769,19 @@ function CompetitorStrengthsPanel({ audit }: { audit: RevenueLeakAudit }) {
 }
 
 function GoogleBusinessProfileChecklist({ business }: { business: BusinessProfile }) {
-  const items = useMemo(() => buildGoogleBusinessProfileChecklist(business), [business]);
+  const issueItems = useMemo(() => getGoogleBusinessProfileChecklistIssues(business), [business]);
+  if (issueItems.length === 0) return null;
   return (
     <div className="rounded-2xl border border-border bg-white p-4">
-      <p className="text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">Profile checklist</p>
+      <p className="text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">Profile gaps</p>
       <ul className="mt-3 space-y-2.5">
-        {items.map((item) => (
+        {issueItems.map((item) => (
           <li key={item.id} className="flex gap-3 text-sm">
             <span className="mt-0.5 shrink-0" aria-hidden>
-              {item.status === "pass" ? (
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-              ) : item.status === "warn" ? (
+              {item.status === "warn" ? (
                 <AlertTriangle className="h-4 w-4 text-amber-600" />
-              ) : item.status === "fail" ? (
-                <XCircle className="h-4 w-4 text-red-600" />
               ) : (
-                <CircleHelp className="h-4 w-4 text-text-secondary/80" />
+                <XCircle className="h-4 w-4 text-red-600" />
               )}
             </span>
             <div className="min-w-0">
@@ -837,20 +830,16 @@ function SectionProblemAccordion({
                   {section.category === "My Business vs Google Competitors" ? (
                     <CompetitorStrengthsPanel audit={audit} />
                   ) : null}
-                  {section.category === "Reviews & Reputation" ? (
-                    <p className="mb-4 rounded-2xl border border-border bg-white px-4 py-3 text-sm leading-relaxed text-text-secondary">
-                      <span className="font-semibold text-text-primary">Owner responses: </span>
-                      {formatReviewOwnerReplyAuditNote(audit.business.reviews)}
-                    </p>
-                  ) : null}
                   {section.category === "Google Business Profile" ? (
                     <GoogleBusinessProfileChecklist business={audit.business} />
                   ) : null}
                   {section.findings.length === 0 ? (
                     section.category === "Google Business Profile" ? (
-                      <p className="mt-4 text-sm text-text-secondary">
-                        No flagged GBP issues in the priority list above.
-                      </p>
+                      getGoogleBusinessProfileChecklistIssues(audit.business).length === 0 ? (
+                        <p className="mt-4 text-sm text-text-secondary">
+                          No flagged GBP issues in the priority list above.
+                        </p>
+                      ) : null
                     ) : (
                       <p className="text-sm text-text-secondary">No major issues found in this section.</p>
                     )
@@ -1299,24 +1288,15 @@ function InteractiveReport({
   googleMapsApiKey?: string | null;
 }) {
   const lastUpdated = formatAuditLastUpdated(audit.createdAt);
-  const [assumptions, setAssumptions] = useState<AuditAssumptions>(() => ({ ...audit.assumptions }));
   const [showAllThingsToImprove, setShowAllThingsToImprove] = useState(false);
-
-  useEffect(() => {
-    setAssumptions({ ...audit.assumptions });
-  }, [audit.id]);
 
   useEffect(() => {
     setShowAllThingsToImprove(false);
   }, [audit.id]);
 
   const findingsWithMoney = useMemo(
-    () => applyAssumptionsToFindings(assumptions, audit.findings),
-    [assumptions, audit.findings]
-  );
-  const liveMoneySummary = useMemo(
-    () => buildMoneySummaryFromAssumptions(assumptions, audit.findings),
-    [assumptions, audit.findings]
+    () => applyAssumptionsToFindings(audit.assumptions, audit.findings),
+    [audit.assumptions, audit.findings, audit.id]
   );
 
   return (
@@ -1334,9 +1314,7 @@ function InteractiveReport({
         <BrandSummary audit={audit} />
         <RevenueLeakSnapshot
           audit={audit}
-          assumptions={assumptions}
-          onAssumptionsChange={setAssumptions}
-          moneySummary={liveMoneySummary}
+          moneySummary={audit.moneySummary}
           findingsWithMoney={findingsWithMoney}
           hideTopLeaks
         />
@@ -1396,7 +1374,6 @@ function InteractiveReport({
             <RevenueLeakFixLeaksCta
               audit={audit}
               embedSurface
-              monthlyLeakOverride={liveMoneySummary.estimatedMonthlyCost}
               surfaceEyebrow="Next step"
               surfaceTitle="Ready to recover lost revenue?"
               surfaceBody="We'll review your audit results with you, highlight the biggest opportunities, and recommend where to start."

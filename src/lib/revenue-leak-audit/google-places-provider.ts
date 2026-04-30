@@ -53,7 +53,8 @@ type GooglePlace = {
   internationalPhoneNumber?: string;
   googleMapsUri?: string;
   businessStatus?: string;
-  location?: { latitude?: number; longitude?: number };
+  /** Places can return numbers; some JSON shapes use numeric strings. */
+  location?: { latitude?: number | string; longitude?: number | string };
   regularOpeningHours?: { weekdayDescriptions?: string[] };
   photos?: GooglePlacePhoto[];
   reviews?: GooglePlaceReview[];
@@ -209,10 +210,35 @@ function normalizeIconMaskBaseUri(raw: string | undefined): string | null {
   return s.replace(/\/+$/, "");
 }
 
+/** Google Place resource IDs may be `ChIJ…` or `places/ChIJ…`; compare canonical suffixes. */
+export function samePlaceId(a: string, b: string): boolean {
+  return stripPlacesResourcePrefix(a) === stripPlacesResourcePrefix(b);
+}
+
+function stripPlacesResourcePrefix(id: string): string {
+  return id.trim().replace(/^places\//, "");
+}
+
+/** Places API (New) GET uses `/v1/places/{placeId}` where {placeId} is the ID without a `places/` prefix. */
+function placeIdForDetailsRequest(placeId: string): string {
+  return stripPlacesResourcePrefix(placeId);
+}
+
+function parseLocationCoordinates(
+  location: GooglePlace["location"] | undefined
+): { lat: number; lng: number } | null {
+  if (!location) return null;
+  const lat = Number(location.latitude);
+  const lng = Number(location.longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return { lat, lng };
+}
+
 function normalizeBusiness(p: GooglePlace): BusinessProfile | null {
-  const placeId = p.id?.trim();
+  const rawId = p.id?.trim();
   const name = p.displayName?.text?.trim();
-  if (!placeId || !name) return null;
+  if (!rawId || !name) return null;
+  const placeId = rawId.startsWith("places/") ? rawId : `places/${stripPlacesResourcePrefix(rawId)}`;
   const types = Array.isArray(p.types) ? p.types : [];
   const photos = normalizePhotos(p.photos);
   return {
@@ -234,11 +260,7 @@ function normalizeBusiness(p: GooglePlace): BusinessProfile | null {
     reviews: normalizeReviews(p.reviews),
     photos,
     photoCount: photos.length || null,
-    coordinates:
-      typeof p.location?.latitude === "number" &&
-      typeof p.location?.longitude === "number"
-        ? { lat: p.location.latitude, lng: p.location.longitude }
-        : null,
+    coordinates: parseLocationCoordinates(p.location),
     hours: p.regularOpeningHours?.weekdayDescriptions ?? [],
     googleMapsUri: p.googleMapsUri?.trim() || null,
     businessStatus: p.businessStatus?.trim() || null,
@@ -382,13 +404,13 @@ export async function getBusinessDetails(
 ): Promise<ServiceResult<BusinessProfile | null>> {
   if (!apiKey()) {
     return {
-      data: placeId === MOCK_BUSINESS.placeId ? MOCK_BUSINESS : { ...MOCK_BUSINESS, placeId },
+      data: samePlaceId(placeId, MOCK_BUSINESS.placeId) ? MOCK_BUSINESS : { ...MOCK_BUSINESS, placeId },
       warnings: ["Google Places API key is missing. Showing mock business details."],
     };
   }
 
   const res = await fetch(
-    `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`,
+    `https://places.googleapis.com/v1/places/${encodeURIComponent(placeIdForDetailsRequest(placeId))}`,
     {
       method: "GET",
       headers: {
@@ -427,7 +449,7 @@ function rankItemFromBusiness(
     reviewCount: b.reviewCount,
     category: b.category,
     website: b.website,
-    isSelectedBusiness: b.placeId === selectedId,
+    isSelectedBusiness: samePlaceId(b.placeId, selectedId),
   };
 }
 
@@ -438,6 +460,7 @@ export async function discoverCompetitors(input: {
   ServiceResult<{
     competitors: Competitor[];
     rankingSnapshot: GoogleLocalRankingSnapshot;
+    resolvedBusinessCoordinates: { lat: number; lng: number } | null;
   }>
 > {
   if (!apiKey()) {
@@ -445,6 +468,7 @@ export async function discoverCompetitors(input: {
       data: {
         competitors: mockCompetitors(),
         rankingSnapshot: mockRankingSnapshot(),
+        resolvedBusinessCoordinates: input.business.coordinates ?? MOCK_BUSINESS.coordinates ?? null,
       },
       warnings: ["Google Places API key is missing. Showing mock competitor data."],
     };
@@ -457,13 +481,21 @@ export async function discoverCompetitors(input: {
     "near me";
   const query = `${category} near ${location}`;
   const { places, warning } = await placesTextSearch(query, 20);
-  const selectedIndex = places.findIndex((p) => p.placeId === input.business.placeId);
+  const selectedIndex = places.findIndex((p) => samePlaceId(p.placeId, input.business.placeId));
+  const resolvedBusinessCoordinates =
+    input.business.coordinates ??
+    (selectedIndex >= 0 ? (places[selectedIndex]?.coordinates ?? null) : null);
+  const anchorProfile: BusinessProfile = {
+    ...input.business,
+    coordinates: resolvedBusinessCoordinates,
+  };
+
   const competitors = places
-    .filter((p) => p.placeId !== input.business.placeId)
+    .filter((p) => !samePlaceId(p.placeId, input.business.placeId))
     .slice(0, 12)
     .map((p) => {
-      const serpPosition = places.findIndex((pl) => pl.placeId === p.placeId) + 1;
-      return toCompetitor(p, input.business, serpPosition);
+      const serpPosition = places.findIndex((pl) => samePlaceId(pl.placeId, p.placeId)) + 1;
+      return toCompetitor(p, anchorProfile, serpPosition);
     });
 
   const topForReviews = competitors.slice(0, 3);
@@ -474,10 +506,28 @@ export async function discoverCompetitors(input: {
     detailResults.forEach((result, idx) => {
       if (result.status !== "fulfilled") return;
       const detail = result.value.data;
-      if (!detail || !detail.reviews?.length) return;
-      const target = competitors.find((c) => c.placeId === topForReviews[idx].placeId);
-      if (target) target.reviews = detail.reviews.slice(0, 5);
+      if (!detail) return;
+      const target = competitors.find((c) => samePlaceId(c.placeId, topForReviews[idx]!.placeId));
+      if (!target) return;
+      if (detail.reviews?.length) target.reviews = detail.reviews.slice(0, 5);
+      if (!target.coordinates && detail.coordinates) target.coordinates = detail.coordinates;
     });
+  }
+
+  const needCoords = competitors.filter((c) => !c.coordinates);
+  if (needCoords.length > 0) {
+    const coordResults = await Promise.allSettled(needCoords.map((c) => getBusinessDetails(c.placeId)));
+    coordResults.forEach((result, idx) => {
+      if (result.status !== "fulfilled") return;
+      const detail = result.value.data;
+      if (!detail?.coordinates) return;
+      const target = competitors.find((c) => samePlaceId(c.placeId, needCoords[idx]!.placeId));
+      if (target && !target.coordinates) target.coordinates = detail.coordinates;
+    });
+  }
+
+  for (const c of competitors) {
+    c.distanceMiles = haversineMiles(anchorProfile.coordinates, c.coordinates);
   }
 
   const topFive = places
@@ -511,6 +561,7 @@ export async function discoverCompetitors(input: {
         totalResultsChecked: places.length,
         warnings,
       },
+      resolvedBusinessCoordinates,
     },
     warnings,
   };

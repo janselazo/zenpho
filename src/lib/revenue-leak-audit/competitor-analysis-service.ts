@@ -8,6 +8,7 @@ export async function analyzeCompetitors(input: {
   ServiceResult<{
     competitors: Competitor[];
     rankingSnapshot: GoogleLocalRankingSnapshot;
+    resolvedBusinessCoordinates: { lat: number; lng: number } | null;
   }>
 > {
   return discoverCompetitors(input);

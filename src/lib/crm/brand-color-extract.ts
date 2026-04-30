@@ -597,6 +597,23 @@ function businessMatchScore(context: string, tokens: readonly string[]): number 
   return matches === 0 ? 0 : 18 + matches * 10;
 }
 
+/**
+ * Map pin, phone, email, and similar row icons — not the business wordmark.
+ * Matches Weebly-style `/icon-map_3.png`, contact sprites, etc.
+ */
+export function isDecorativeContactIconUrl(resolvedUrl: string): boolean {
+  if (!resolvedUrl.trim()) return false;
+  let path = resolvedUrl.toLowerCase();
+  try {
+    path = new URL(resolvedUrl).pathname.toLowerCase();
+  } catch {
+    /* compare full string */
+  }
+  return /\/icon-map|\/icon-phone|\/icon-email|\/icon-fax|map-marker|map_pin|\/pin-icon|location-pin|location_pin|marker-icon|marker_pin|\/map[_-]?icon|\/marker[_-]?(small|tiny)/i.test(
+    path,
+  );
+}
+
 function pushLogoCandidate(
   candidates: LogoCandidate[],
   seen: Set<string>,
@@ -609,6 +626,7 @@ function pushLogoCandidate(
   if (/\/funnel\/icons\/|social-media-icon|facebook|instagram|youtube|tiktok/i.test(rawUrl)) return;
   const url = resolveUrl(rawUrl, baseUrl);
   if (!url || seen.has(url)) return;
+  if (isDecorativeContactIconUrl(url)) return;
   seen.add(url);
   candidates.push({ url, score, index });
 }
@@ -756,13 +774,21 @@ export function extractLogoUrls(
   while ((m = imgRe.exec(html)) !== null) {
     const tag = m[0];
     if (/social media icon|avatar|testimonial|review/i.test(tag)) continue;
+    const srcEarly = imageSrcFromTag(tag);
+    const earlyResolved = srcEarly ? resolveUrl(srcEarly, baseUrl) : null;
+    if (earlyResolved && isDecorativeContactIconUrl(earlyResolved)) continue;
     const context = html.slice(Math.max(0, m.index - 420), Math.min(html.length, m.index + tag.length + 420));
     let score = 0;
     if (/logo|brand/i.test(tag)) score += 36;
     if (/logo|brand/i.test(context)) score += 18;
     if (/header|nav|navbar|menu|masthead/i.test(context)) score += 18;
+    if (/wsite-logo|id=["']sitename["']/i.test(context)) score += 48;
     if (/<a\b[^>]*>[\s\S]{0,650}$/i.test(context.slice(0, 650))) score += 10;
     score += businessMatchScore(`${tag} ${context}`, tokens);
+    const altMatch = tag.match(/\balt=["']([^"']+)["']/i);
+    if (altMatch && tokens.length > 0 && businessMatchScore(altMatch[1], tokens) > 0) {
+      score += 28;
+    }
     if (
       /idx|property search|mortgage|buyers|sellers|communities|powered by|exp realty|realtor/i.test(context) &&
       businessMatchScore(`${tag} ${context}`, tokens) === 0

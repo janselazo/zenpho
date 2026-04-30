@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 import type {
-  AuditAssumptions,
   AuditCategory,
   AuditFinding,
   AuditSeverity,
@@ -28,55 +27,17 @@ function roundMoneyDisplay(n: number): number {
   return Math.round(n / step) * step;
 }
 
-function formatUsdRange(low: number, high: number): string {
-  const rl = roundMoneyDisplay(low);
-  const rh = roundMoneyDisplay(high);
-  if (rl === rh) return usd.format(rl);
-  return `${usd.format(rl)}–${usd.format(rh)}`;
-}
-
 function formatUsdSingle(n: number): string {
   return usd.format(roundMoneyDisplay(n));
 }
 
+/** Midpoint of low/high impact, same rounding as other snapshot money. */
+function formatFindingImpactAverage(low: number, high: number): string {
+  return formatUsdSingle((low + high) / 2);
+}
+
 function leakSourceLabel(category: AuditCategory): "Google Business Profile" | "Website" {
   return GBP_CATEGORIES.has(category) ? "Google Business Profile" : "Website";
-}
-
-function estimateConfidence(audit: RevenueLeakAudit): "Low" | "Medium" | "High" {
-  let score = 0;
-  if (audit.websiteAudit.available) score += 2;
-  else score -= 1;
-  if ((audit.business.reviewCount ?? 0) >= 8) score += 1;
-  if (audit.warnings.length <= 2) score += 1;
-  else score -= 1;
-  if (audit.business.rating != null) score += 1;
-  if (audit.findings.length >= 3) score += 1;
-  if (score >= 5) return "High";
-  if (score >= 2) return "Medium";
-  return "Low";
-}
-
-function confidencePillClasses(level: "Low" | "Medium" | "High"): string {
-  switch (level) {
-    case "High":
-      return "border border-emerald-200/90 bg-emerald-50 px-3 py-1 text-sm font-bold text-emerald-900";
-    case "Medium":
-      return "border border-amber-200/90 bg-amber-50 px-3 py-1 text-sm font-bold text-amber-900";
-    case "Low":
-      return "border border-border bg-white px-3 py-1 text-sm font-bold text-text-primary";
-  }
-}
-
-function suggestedAverageJobFromCategory(category: string | null): number | null {
-  if (!category?.trim()) return null;
-  const c = category.toLowerCase();
-  if (/hvac|plumb|electric|roof|landscap|pool|garage|locksmith|pest/i.test(c)) return 4500;
-  if (/legal|attorney|law\b|cpa|account/i.test(c)) return 800;
-  if (/dental|medical|clinic|chiropract|veterinar/i.test(c)) return 350;
-  if (/restaurant|food|cafe|coffee/i.test(c)) return 45;
-  if (/auto|repair|tire|collision/i.test(c)) return 800;
-  return null;
 }
 
 function effortLabel(finding: AuditFinding, audit: RevenueLeakAudit): "Easy" | "Medium" | "Hard" {
@@ -147,8 +108,12 @@ function TopLeakCard({ finding, audit }: { finding: AuditFinding; audit: Revenue
           <>
             Estimated monthly revenue at risk:{" "}
             <span className="tabular-nums text-accent">
-              {formatUsdRange(finding.estimatedRevenueImpactLow, finding.estimatedRevenueImpactHigh)}
-            </span>
+              {formatFindingImpactAverage(
+                finding.estimatedRevenueImpactLow,
+                finding.estimatedRevenueImpactHigh
+              )}
+            </span>{" "}
+            average
           </>
         ) : (
           <span className="font-semibold text-text-secondary">Not enough data to estimate cost for this item.</span>
@@ -206,10 +171,25 @@ export function RevenueLeakTopLeaksSection({
   );
 }
 
+function SnapshotWarningIcon() {
+  return (
+    <span className="relative flex h-9 w-9 shrink-0 items-center justify-center" aria-hidden>
+      <span className="absolute inset-[-2px] rounded-lg bg-red-500/30 blur-[7px]" />
+      <svg viewBox="0 0 24 24" className="relative h-7 w-7 drop-shadow-md" aria-hidden>
+        <path fill="#dc2626" d="M12 2.5L22.5 21H1.5L12 2.5z" />
+        <path
+          fill="#ffffff"
+          d="M11.25 8.25h1.5v5.25h-1.5V8.25zm0 6.75h1.5v1.5h-1.5v-1.5z"
+        />
+      </svg>
+    </span>
+  );
+}
+
+const SNAPSHOT_TOP_ISSUES = 5;
+
 export type RevenueLeakSnapshotProps = {
   audit: RevenueLeakAudit;
-  assumptions: AuditAssumptions;
-  onAssumptionsChange: (next: AuditAssumptions) => void;
   moneySummary: FoundIssuesMoneySummary;
   findingsWithMoney: AuditFinding[];
   /** Omit top leak cards when rendering them inside the action plan section. */
@@ -218,14 +198,10 @@ export type RevenueLeakSnapshotProps = {
 
 export default function RevenueLeakSnapshot({
   audit,
-  assumptions,
-  onAssumptionsChange,
   moneySummary,
   findingsWithMoney,
   hideTopLeaks = false,
 }: RevenueLeakSnapshotProps) {
-  const confidence = useMemo(() => estimateConfidence(audit), [audit]);
-
   const top3 = useMemo(() => {
     const s = [...findingsWithMoney].sort(
       (a, b) => b.estimatedRevenueImpactHigh - a.estimatedRevenueImpactHigh
@@ -233,157 +209,49 @@ export default function RevenueLeakSnapshot({
     return s.slice(0, 3);
   }, [findingsWithMoney]);
 
-  const monthlyRange = formatUsdRange(
-    moneySummary.estimatedMonthlyCostLow,
-    moneySummary.estimatedMonthlyCostHigh
-  );
-  const annualRange = formatUsdRange(
-    moneySummary.estimatedAnnualCostLow,
-    moneySummary.estimatedAnnualCostHigh
-  );
-  const jobsRange = `${moneySummary.lostJobsPerMonthLow.toFixed(1)}–${moneySummary.lostJobsPerMonthHigh.toFixed(1)}`;
+  const topIssueRows = useMemo(() => {
+    const s = [...findingsWithMoney].sort(
+      (a, b) => b.estimatedRevenueImpactHigh - a.estimatedRevenueImpactHigh
+    );
+    return s.slice(0, SNAPSHOT_TOP_ISSUES);
+  }, [findingsWithMoney]);
 
-  const suggestedJob = suggestedAverageJobFromCategory(audit.business.category);
-  const showJobHint =
-    suggestedJob != null && assumptions.usingDefaults?.includes("averageJobValue") === true;
-
-  const closePctInput = Math.round(assumptions.closeRate * 100);
+  const issueCount = moneySummary.totalIssues;
+  const avgMonthly = formatUsdSingle(moneySummary.estimatedMonthlyCost);
 
   return (
     <section className="rounded-[2rem] border border-border bg-white p-6 shadow-soft sm:p-8">
       <div className="min-w-0">
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Revenue Leak Snapshot</p>
-        <h2 className="mt-2 flex flex-wrap items-baseline gap-x-1.5 text-2xl font-black tracking-tight text-text-primary sm:gap-x-2 sm:text-nowrap sm:text-3xl lg:text-4xl">
-          <span>Revenue Leaks are costing you</span>
-          <span className="text-accent">{monthlyRange}</span>
-          <span className="text-text-primary">/ month</span>
+        <h2 className="mt-2 text-2xl font-black tracking-tight text-text-primary sm:text-3xl lg:text-4xl">
+          {issueCount === 0 ? (
+            <>No major revenue leaks were flagged in this snapshot.</>
+          ) : (
+            <>
+              <span className="tabular-nums">{issueCount}</span>{" "}
+              {issueCount === 1 ? "issue" : "issues"} are costing you{" "}
+              <span className="text-accent">{avgMonthly}</span> average / month
+            </>
+          )}
         </h2>
       </div>
 
-      <div className="mt-8 rounded-2xl border border-border bg-surface/40 p-5 sm:p-6">
-        <h3 className="text-sm font-black uppercase tracking-[0.14em] text-text-primary">Estimate assumptions</h3>
-        <p className="mt-1 text-xs text-text-secondary">Adjust these to see how the opportunity changes for your business.</p>
-        {showJobHint && suggestedJob != null ? (
-          <p className="mt-2 text-xs text-text-secondary">
-            Suggested starting point for <span className="font-semibold text-text-primary">{audit.business.category}</span>
-            : {usd.format(suggestedJob)} average job — tap to use, then refine.
-            <button
-              type="button"
-              className="ml-2 font-bold text-accent underline decoration-accent/30 underline-offset-2"
-              onClick={() =>
-                onAssumptionsChange({
-                  ...assumptions,
-                  averageJobValue: suggestedJob,
-                  usingDefaults: (assumptions.usingDefaults ?? []).filter((x) => x !== "averageJobValue"),
-                })
-              }
-            >
-              Use {usd.format(suggestedJob)}
-            </button>
-          </p>
-        ) : null}
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <label htmlFor="rva-avg-job" className="block text-xs font-bold text-text-secondary">
-              Average job value
-            </label>
-            <div className="relative mt-1">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-text-secondary">
-                $
+      {topIssueRows.length > 0 ? (
+        <ul className="mt-8 space-y-4">
+          {topIssueRows.map((finding, index) => (
+            <li key={finding.id} className="flex gap-3.5">
+              <SnapshotWarningIcon />
+              <span
+                className={`min-w-0 pt-0.5 text-[15px] font-semibold leading-snug sm:text-base ${
+                  index >= 3 ? "text-text-secondary" : "text-text-primary"
+                }`}
+              >
+                {finding.title}
               </span>
-              <input
-                id="rva-avg-job"
-                type="number"
-                min={1}
-                step={10}
-                className="w-full rounded-xl border border-border bg-white py-2.5 pl-7 pr-3 text-sm font-semibold tabular-nums outline-none focus:border-accent focus:ring-2 focus:ring-accent/15"
-                value={assumptions.averageJobValue || ""}
-                onChange={(e) =>
-                  onAssumptionsChange({
-                    ...assumptions,
-                    averageJobValue: Math.max(1, Math.round(Number(e.target.value) || 0)),
-                    usingDefaults: (assumptions.usingDefaults ?? []).filter((x) => x !== "averageJobValue"),
-                  })
-                }
-              />
-            </div>
-          </div>
-          <div>
-            <label htmlFor="rva-leads" className="block text-xs font-bold text-text-secondary">
-              Monthly leads (opportunities)
-            </label>
-            <input
-              id="rva-leads"
-              type="number"
-              min={1}
-              step={1}
-              className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm font-semibold tabular-nums outline-none focus:border-accent focus:ring-2 focus:ring-accent/15"
-              value={assumptions.estimatedMonthlyLeads || ""}
-              onChange={(e) =>
-                onAssumptionsChange({
-                  ...assumptions,
-                  estimatedMonthlyLeads: Math.max(1, Math.round(Number(e.target.value) || 0)),
-                  usingDefaults: (assumptions.usingDefaults ?? []).filter((x) => x !== "estimatedMonthlyLeads"),
-                })
-              }
-            />
-          </div>
-          <div>
-            <label htmlFor="rva-close" className="block text-xs font-bold text-text-secondary">
-              Close rate (%)
-            </label>
-            <input
-              id="rva-close"
-              type="number"
-              min={1}
-              max={100}
-              step={1}
-              className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm font-semibold tabular-nums outline-none focus:border-accent focus:ring-2 focus:ring-accent/15"
-              value={closePctInput}
-              onChange={(e) => {
-                const raw = Math.min(100, Math.max(1, Math.round(Number(e.target.value) || 0)));
-                onAssumptionsChange({
-                  ...assumptions,
-                  closeRate: raw / 100,
-                  usingDefaults: (assumptions.usingDefaults ?? []).filter((x) => x !== "closeRate"),
-                });
-              }}
-            />
-          </div>
-          <div>
-            <span className="block text-xs font-bold text-text-secondary">Addressable monthly revenue</span>
-            <p className="mt-3 text-sm font-black tabular-nums text-text-primary">
-              {formatUsdSingle(moneySummary.addressableMonthlyRevenue)}
-            </p>
-            <p className="mt-0.5 text-[11px] text-text-secondary">Leads × close × avg job</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-8 rounded-2xl border border-border bg-surface/40 p-5 sm:p-6">
-        <dl className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 md:gap-6">
-          <div>
-            <dt className="text-xs font-bold uppercase tracking-wide text-text-secondary">Estimated monthly risk</dt>
-            <dd className="mt-1 text-xl font-black tabular-nums text-text-primary sm:text-2xl">{monthlyRange}</dd>
-          </div>
-          <div>
-            <dt className="text-xs font-bold uppercase tracking-wide text-text-secondary">Estimated annualized risk</dt>
-            <dd className="mt-1 text-lg font-black tabular-nums text-text-primary sm:text-xl">{annualRange}</dd>
-          </div>
-          <div>
-            <dt className="text-xs font-bold uppercase tracking-wide text-text-secondary">Jobs at risk / mo</dt>
-            <dd className="mt-1 text-base font-bold tabular-nums text-text-primary sm:text-lg">{jobsRange}</dd>
-          </div>
-          <div>
-            <dt className="text-xs font-bold uppercase tracking-wide text-text-secondary">Estimate confidence</dt>
-            <dd className="mt-1">
-              <span className={`inline-flex rounded-full ${confidencePillClasses(confidence)}`} aria-label={`Estimate confidence: ${confidence}`}>
-                {confidence}
-              </span>
-            </dd>
-          </div>
-        </dl>
-      </div>
+            </li>
+          ))}
+        </ul>
+      ) : null}
 
       {!hideTopLeaks ? (
         <div className="mt-10">
