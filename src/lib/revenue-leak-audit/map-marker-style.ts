@@ -1,6 +1,9 @@
 /** Google-hosted pinlets (v2), same family as Google Maps category markers. */
 const GSTATIC_PINLETS = "https://maps.gstatic.com/mapfiles/place_api/icons/v2";
 
+/** Solid fill for the audited business (matches product accent). */
+export const SELECTED_BUSINESS_PIN_HEX = "#2563eb";
+
 function hexLuminance(hexRaw: string): number {
   const hex = hexRaw.replace(/^#/, "").trim();
   if (!/^[0-9a-f]{6}$/i.test(hex)) return 0.35;
@@ -141,7 +144,9 @@ export function buildCategoryMarkerElement(opts: {
   /** Rank / position shown inside the pin head (e.g. `1` … `5`, or `You`). */
   headLabel: string;
 }): HTMLElement {
-  const diskBg = brightenDiskColor(opts.style.backgroundColor);
+  const diskBg = brightenDiskColor(
+    opts.isSelected ? SELECTED_BUSINESS_PIN_HEX : opts.style.backgroundColor
+  );
   const scale = opts.isSelected ? 1.1 : 1;
   const headPx = Math.round(32 * scale);
   const tailHalf = Math.round(5 * scale);
@@ -213,7 +218,8 @@ export function buildCategoryMarkerElement(opts: {
 /** Raster marker icon for classic `google.maps.Marker` when no Map ID is configured. */
 export async function compositeCategoryMarkerDataUrl(
   style: CategoryMarkerStyle,
-  headLabel: string
+  headLabel: string,
+  isSelected = false
 ): Promise<string | null> {
   if (typeof document === "undefined") return null;
   const { width: cw, height: ch } = CLASSIC_MARKER_PIN_LAYOUT;
@@ -223,7 +229,7 @@ export async function compositeCategoryMarkerDataUrl(
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
 
-  const fill = brightenDiskColor(style.backgroundColor);
+  const fill = brightenDiskColor(isSelected ? SELECTED_BUSINESS_PIN_HEX : style.backgroundColor);
   const cx = 20;
   const cy = 16;
   const r = 15;
@@ -238,7 +244,7 @@ export async function compositeCategoryMarkerDataUrl(
   ctx.fillStyle = grd;
   ctx.fill();
   ctx.strokeStyle = "rgba(255,255,255,0.94)";
-  ctx.lineWidth = 2;
+  ctx.lineWidth = isSelected ? 3 : 2;
   ctx.stroke();
 
   ctx.beginPath();
@@ -249,7 +255,7 @@ export async function compositeCategoryMarkerDataUrl(
   ctx.fillStyle = fill;
   ctx.fill();
   ctx.strokeStyle = "rgba(255,255,255,0.94)";
-  ctx.lineWidth = 2;
+  ctx.lineWidth = isSelected ? 3 : 2;
   ctx.stroke();
 
   const label = headLabel.trim() || "?";

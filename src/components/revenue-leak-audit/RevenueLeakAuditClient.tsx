@@ -25,6 +25,7 @@ import { buildGoogleBusinessProfileChecklist } from "@/lib/revenue-leak-audit/gb
 import {
   applyAssumptionsToFindings,
   buildMoneySummaryFromAssumptions,
+  COMPETITOR_MAP_LOCAL_RADIUS_MILES,
 } from "@/lib/revenue-leak-audit/revenue-leak-scoring-service";
 import type {
   AuditAssumptions,
@@ -1019,8 +1020,9 @@ function CompetitorMap({
         const w = window as WindowWithGoogle;
         const gmaps = w.google?.maps;
         if (!gmaps) return;
+        const centerPoint = points.find((p) => p.isSelectedBusiness) ?? points[0];
         const mapOptions: Record<string, unknown> = {
-          center: points[0].coordinates,
+          center: centerPoint.coordinates,
           zoom: 12,
           mapTypeControl: false,
           streetViewControl: false,
@@ -1068,7 +1070,7 @@ function CompetitorMap({
               bounds.extend(point.coordinates);
               const style = resolveCategoryMarkerStyle(point);
               const headLabel = competitorPinHeadLabel(point, businessPosition, index);
-              const dataUrl = await compositeCategoryMarkerDataUrl(style, headLabel);
+              const dataUrl = await compositeCategoryMarkerDataUrl(style, headLabel, point.isSelectedBusiness);
               const markerOptions: Record<string, unknown> = {
                 position: point.coordinates,
                 map,
@@ -1101,7 +1103,9 @@ function CompetitorMap({
           addListenerOnce(map, "idle", () => {
             if (cancelled) return;
             const z = map.getZoom();
-            if (typeof z === "number" && z < 15) map.setZoom(Math.min(15, z + 1));
+            if (typeof z !== "number") return;
+            if (z > 17) map.setZoom(17);
+            else if (z < 11 && points.length > 1) map.setZoom(11);
           });
         }
       })
@@ -1119,6 +1123,10 @@ function CompetitorMap({
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Google competitors</p>
           <h2 className="mt-2 text-3xl font-black tracking-tight text-text-primary">Competitor Map</h2>
+          <p className="mt-2 max-w-xl text-xs leading-relaxed text-text-secondary">
+            Pins are limited to businesses within about {COMPETITOR_MAP_LOCAL_RADIUS_MILES} miles of your listing when
+            distance data is available (wider if needed so the map stays useful).
+          </p>
         </div>
         <p className="text-sm text-text-secondary">
           {businessPosition != null ? (
@@ -1373,9 +1381,9 @@ function InteractiveReport({
               embedSurface
               monthlyLeakOverride={liveMoneySummary.estimatedMonthlyCost}
               surfaceEyebrow="Next step"
-              surfaceTitle="Want help recovering the highest-value leaks first?"
-              surfaceBody="We'll review your audit, validate the assumptions, and map out the fastest fixes for your Google Business Profile and website."
-              surfaceCtaLabel="Get my recovery plan"
+              surfaceTitle="Ready to recover lost revenue?"
+              surfaceBody="We'll review your audit results with you, highlight the biggest opportunities, and recommend where to start."
+              surfaceCtaLabel="Start fixing leaks"
             />
           </section>
         </div>

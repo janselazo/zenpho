@@ -1812,9 +1812,16 @@ function buildActionPlan(findings: AuditFinding[]): ActionPlanItem[] {
   }));
 }
 
-export function buildCompetitorMapPoints(
+export const COMPETITOR_MAP_LOCAL_RADIUS_MILES = 45;
+
+const WIDENED_COMPETITOR_MAP_RADIUS_MILES = COMPETITOR_MAP_LOCAL_RADIUS_MILES * 2;
+/** Keep at least this many competitor pins when possible before widening radius or showing all. */
+const MIN_LOCAL_COMPETITOR_MARKERS = 3;
+
+function buildCompetitorMapPointsForRadius(
   business: BusinessProfile,
-  competitors: Competitor[]
+  competitors: Competitor[],
+  maxDistanceMiles: number | null
 ): CompetitorMapPoint[] {
   const points: CompetitorMapPoint[] = [];
   if (business.coordinates) {
@@ -1833,8 +1840,17 @@ export function buildCompetitorMapPoints(
       iconMaskBaseUri: business.iconMaskBaseUri,
     });
   }
+  const hasAnchor = Boolean(business.coordinates);
   for (const c of competitors) {
     if (!c.coordinates) continue;
+    if (
+      hasAnchor &&
+      maxDistanceMiles != null &&
+      c.distanceMiles != null &&
+      c.distanceMiles > maxDistanceMiles
+    ) {
+      continue;
+    }
     points.push({
       id: c.placeId,
       name: c.name,
@@ -1849,6 +1865,33 @@ export function buildCompetitorMapPoints(
       iconBackgroundColor: c.iconBackgroundColor,
       iconMaskBaseUri: c.iconMaskBaseUri,
     });
+  }
+  return points;
+}
+
+export function buildCompetitorMapPoints(
+  business: BusinessProfile,
+  competitors: Competitor[]
+): CompetitorMapPoint[] {
+  if (!business.coordinates) {
+    return buildCompetitorMapPointsForRadius(business, competitors, null);
+  }
+  let points = buildCompetitorMapPointsForRadius(
+    business,
+    competitors,
+    COMPETITOR_MAP_LOCAL_RADIUS_MILES
+  );
+  let competitorCount = points.filter((p) => !p.isSelectedBusiness).length;
+  if (competitorCount < MIN_LOCAL_COMPETITOR_MARKERS) {
+    points = buildCompetitorMapPointsForRadius(
+      business,
+      competitors,
+      WIDENED_COMPETITOR_MAP_RADIUS_MILES
+    );
+    competitorCount = points.filter((p) => !p.isSelectedBusiness).length;
+  }
+  if (competitorCount < MIN_LOCAL_COMPETITOR_MARKERS) {
+    points = buildCompetitorMapPointsForRadius(business, competitors, null);
   }
   return points;
 }
