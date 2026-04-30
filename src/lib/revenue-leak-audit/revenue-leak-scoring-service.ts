@@ -55,22 +55,43 @@ function avg(nums: number[]): number {
     : nums.reduce((sum, n) => sum + n, 0) / nums.length;
 }
 
+type LeakImpact = {
+  /** Standalone monthly revenue at risk for this finding. */
+  low: number;
+  high: number;
+  /** Per-finding leak rate as a fraction of monthly leads (0..1). */
+  leakRateLow: number;
+  leakRateHigh: number;
+};
+
+function addressableMonthlyRevenue(assumptions: AuditAssumptions): number {
+  return Math.max(
+    0,
+    assumptions.estimatedMonthlyLeads *
+      assumptions.closeRate *
+      assumptions.averageJobValue
+  );
+}
+
+function clampRate(rate: number): number {
+  if (!Number.isFinite(rate) || rate < 0) return 0;
+  if (rate > 0.95) return 0.95;
+  return rate;
+}
+
 function moneyImpact(
   assumptions: AuditAssumptions,
   lowLift: number,
   highLift: number
-): { low: number; high: number; lostLow: number; lostHigh: number; jobsLow: number; jobsHigh: number } {
-  const lostLow = assumptions.estimatedMonthlyLeads * lowLift;
-  const lostHigh = assumptions.estimatedMonthlyLeads * highLift;
-  const jobsLow = lostLow * assumptions.closeRate;
-  const jobsHigh = lostHigh * assumptions.closeRate;
+): LeakImpact {
+  const cap = addressableMonthlyRevenue(assumptions);
+  const leakRateLow = clampRate(lowLift);
+  const leakRateHigh = clampRate(Math.max(highLift, lowLift));
   return {
-    low: Math.round(jobsLow * assumptions.averageJobValue),
-    high: Math.round(jobsHigh * assumptions.averageJobValue),
-    lostLow,
-    lostHigh,
-    jobsLow,
-    jobsHigh,
+    low: Math.round(cap * leakRateLow),
+    high: Math.round(cap * leakRateHigh),
+    leakRateLow,
+    leakRateHigh,
   };
 }
 
@@ -82,6 +103,21 @@ function finding(
     id: `${input.category.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${index}`,
     ...input,
   };
+}
+
+/**
+ * Combine independent leak rates with funnel math:
+ *   combinedLeak = 1 - product(1 - r_i)
+ * Capped at 0.85 so the model never claims the business is losing
+ * effectively all of its addressable revenue.
+ */
+function combineLeakRates(rates: readonly number[]): number {
+  if (rates.length === 0) return 0;
+  const survival = rates.reduce(
+    (acc, rate) => acc * (1 - clampRate(rate)),
+    1
+  );
+  return Math.min(0.85, 1 - survival);
 }
 
 function competitorAverages(competitors: Competitor[]) {
@@ -150,6 +186,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: `Competitor review average: ${comp.reviews}. Business review count: ${business.reviewCount ?? 0}.`,
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Install an automated review request workflow after completed jobs and ask every happy customer for a Google review.",
           priorityScore: 92,
@@ -177,6 +215,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: `Top 5 results are competitors; selected business position: #${rankingSnapshot.selectedBusinessPosition}.`,
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Improve local SEO signals: category relevance, review velocity, photos, service pages, location content, and Google profile completeness.",
           priorityScore: 95,
@@ -200,6 +240,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: `Selected rating: ${(business.rating ?? 0).toFixed(1)}. Competitor average: ${comp.rating.toFixed(1)}.`,
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Run a structured review-recovery sequence: fix top complaints, follow up after every job, and ask satisfied customers for fresh reviews.",
           priorityScore: 80,
@@ -227,6 +269,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: `Selected photo count: ${business.photoCount ?? 0}. Competitor average: ${comp.photos}.`,
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Upload fresh team, truck, project, and before/after photos to Google Business Profile every month.",
           priorityScore: 64,
@@ -237,7 +281,7 @@ function buildFindings(input: BuildInput): AuditFinding[] {
   }
 
   if (!business.website) {
-    const impact = moneyImpact(assumptions, 0.06, 0.18);
+    const impact = moneyImpact(assumptions, 0.12, 0.3);
     findings.push(
       finding(
         {
@@ -250,6 +294,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: "websiteUri was not present in Google Places data.",
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Add a conversion-focused website or landing page to the Google profile immediately.",
           priorityScore: 96,
@@ -273,6 +319,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: "nationalPhoneNumber/internationalPhoneNumber missing.",
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix: "Add and verify the correct primary call number in Google Business Profile.",
           priorityScore: 90,
         },
@@ -295,6 +343,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: "regularOpeningHours not populated in Google Places data.",
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Add accurate weekday + weekend hours, plus holiday/special hours when relevant.",
           priorityScore: 76,
@@ -318,6 +368,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: "primaryType / category not present in Google Places data.",
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Set the most specific primary category that matches the highest-value service, and add 2–4 supporting categories.",
           priorityScore: 78,
@@ -341,6 +393,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: `photoCount: ${business.photoCount ?? 0}.`,
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Upload 10+ recent photos: storefront/truck, team, finished work, before/after, and customer-facing details.",
           priorityScore: 62,
@@ -364,6 +418,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: `userRatingCount: ${business.reviewCount ?? 0}.`,
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Install an automated review request flow that fires after every completed job (SMS + email).",
           priorityScore: 82,
@@ -374,7 +430,7 @@ function buildFindings(input: BuildInput): AuditFinding[] {
   }
 
   if (business.businessStatus && /CLOSED|SUSPEND/i.test(business.businessStatus)) {
-    const impact = moneyImpact(assumptions, 0.05, 0.15);
+    const impact = moneyImpact(assumptions, 0.3, 0.7);
     findings.push(
       finding(
         {
@@ -387,6 +443,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: `businessStatus: ${business.businessStatus}.`,
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Reclaim/verify the listing, correct status, and re-publish key info (hours, photos, services).",
           priorityScore: 97,
@@ -412,6 +470,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: `Sentiment score: ${reviewSentiment.sentimentScore}/100 from ${reviewSentiment.sampleSize} review samples.`,
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Request fresh positive reviews, respond to unhappy customers, and fix recurring complaint patterns.",
           priorityScore: 86,
@@ -435,6 +495,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: `Negative themes detected from a ${reviewSentiment.sampleSize}-review sample.`,
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Pick the top two complaint themes and create a written process change. Reply to each negative review with the fix.",
           priorityScore: 75,
@@ -460,6 +522,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
             evidence: `Most recent review publishTime ≈ ${newest} days ago across ${business.reviews.length} sampled reviews.`,
             estimatedRevenueImpactLow: impact.low,
             estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
             recommendedFix:
               "Trigger a review request after every completed job and aim for 4–8 fresh reviews per month.",
             priorityScore: 73,
@@ -486,6 +550,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           }.`,
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Coach the team to ask for reviews that name the result (“finished on time”, “fair price”, “clean job site”) so positive themes show up in the public review text.",
           priorityScore: 68,
@@ -510,6 +576,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: `Primary CTA detected: ${websiteAudit.hasPrimaryCta ? "yes" : "no"}. Quote CTA detected: ${websiteAudit.hasQuoteCta ? "yes" : "no"}.`,
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Add a clear above-the-fold CTA: “Get a Free Estimate”, “Call Now”, and “Book Service”.",
           priorityScore: 93,
@@ -533,6 +601,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: "No href=\"tel:\" link detected in homepage HTML.",
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Add a sticky mobile call button and clickable phone links in the header and hero.",
           priorityScore: 88,
@@ -556,6 +626,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: "No <form> element detected.",
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Add a short quote request form with name, phone, service needed, and preferred time.",
           priorityScore: 87,
@@ -579,6 +651,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: `normalizedUrl: ${websiteAudit.normalizedUrl ?? websiteAudit.url ?? "n/a"}.`,
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Force HTTPS at the host/CDN, install a valid certificate, and 301 redirect every HTTP URL.",
           priorityScore: 85,
@@ -602,6 +676,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: "<meta name=\"viewport\"> not detected.",
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Add `<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">` and re-test on mobile.",
           priorityScore: 70,
@@ -630,6 +706,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           }.`,
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Switch to a responsive theme, fix tap targets, and run a real device test on a mid-range Android phone.",
           priorityScore: 83,
@@ -656,6 +734,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: `PageSpeed mobile performance score: ${websiteAudit.pageSpeedMobileScore}.`,
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Compress images, reduce blocking scripts, improve hosting/cache, and simplify the mobile landing page.",
           priorityScore: 78,
@@ -680,6 +760,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: `Testimonials: ${websiteAudit.hasTestimonials ? "yes" : "no"}. Project photos: ${websiteAudit.hasProjectPhotos ? "yes" : "no"}.`,
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Add testimonials, Google review highlights, client/project photos, team photos, and before/after examples.",
           priorityScore: 89,
@@ -703,6 +785,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: "No <img> tags matched client/team/owner/staff/customer signals.",
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Add 4–8 candid team and customer photos in the hero, about, and trust sections. Use descriptive alt text.",
           priorityScore: 67,
@@ -726,6 +810,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: "No image src/alt matched before/after patterns.",
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Build a small before/after gallery on the homepage and the most-visited service pages.",
           priorityScore: 64,
@@ -749,6 +835,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: `${websiteAudit.blurryImageSignals} image tags had small width/height attributes.`,
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Replace low-resolution images with clear team, project, service, and before/after photos.",
           priorityScore: 66,
@@ -772,6 +860,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: "No GA4 or GTM script signals detected.",
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Install GTM/GA4 and configure call, form, and quote request conversion events.",
           priorityScore: 72,
@@ -799,6 +889,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: `GTM detected: yes. GA detected: no.`,
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Publish a GA4 tag in GTM and verify pageview + key conversion events in real-time.",
           priorityScore: 71,
@@ -822,6 +914,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: "fbq()/connect.facebook.net pixel signature not present.",
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Install Meta Pixel via GTM and configure Lead/Contact custom events.",
           priorityScore: 50,
@@ -845,6 +939,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: `Monthly ad spend assumption: $${assumptions.monthlyAdSpend}. Google Ads tag: not detected.`,
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Connect Google Ads conversion tracking, call tracking, and landing page events through GTM.",
           priorityScore: 84,
@@ -868,6 +964,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: photoAnalysis.notes.join(" "),
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Replace small/blurry photos with high-resolution shots taken on a recent phone (≥ 1920×1080) and re-upload.",
           priorityScore: 56,
@@ -891,6 +989,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: photoAnalysis.notes.join(" "),
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Add team, truck, project, before/after, and location photos to Google every month.",
           priorityScore: 70,
@@ -915,6 +1015,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: `Service signals: ${websiteAudit.hasServicePages ? "yes" : "no"}. Location signals: ${websiteAudit.hasLocationPages ? "yes" : "no"}.`,
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Create service pages and location/service-area pages tied to the highest-value jobs.",
           priorityScore: 74,
@@ -938,6 +1040,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: "No application/ld+json LocalBusiness/Organization/Service block detected.",
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Add LocalBusiness JSON-LD with name, address, phone, hours, areaServed, sameAs (social/Google), and main services.",
           priorityScore: 69,
@@ -961,6 +1065,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: "title / og:title not detected.",
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Set a title in the format `Primary Service in City | Brand Name`. Keep it under 60 characters.",
           priorityScore: 72,
@@ -984,6 +1090,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: "meta name=description / og:description not detected.",
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Write a 140–160 character description that names the service, the city, the differentiator, and a CTA.",
           priorityScore: 55,
@@ -1012,6 +1120,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: "Title contains no token from the business address.",
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Update the homepage title to include the primary service + city (e.g., `Roofing in Houston | Brand`).",
           priorityScore: 58,
@@ -1036,6 +1146,8 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           evidence: "Initial heuristics returned healthy signals.",
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
           recommendedFix:
             "Install lead-to-revenue tracking and monitor GBP, website, ads, reviews, and referrals monthly.",
           priorityScore: 40,
@@ -1191,35 +1303,64 @@ function buildSectionSummaries(
   });
 }
 
+function aggregateLeak(
+  assumptions: AuditAssumptions,
+  findings: AuditFinding[]
+): {
+  combinedLeakLow: number;
+  combinedLeakHigh: number;
+  monthlyRevenueLow: number;
+  monthlyRevenueHigh: number;
+  lostLeadsLow: number;
+  lostLeadsHigh: number;
+  lostJobsLow: number;
+  lostJobsHigh: number;
+  addressableMonthlyRevenue: number;
+} {
+  const cap = addressableMonthlyRevenue(assumptions);
+  const combinedLeakLow = combineLeakRates(findings.map((f) => f.leakRateLow));
+  const combinedLeakHigh = combineLeakRates(findings.map((f) => f.leakRateHigh));
+  const lostLeadsLow = assumptions.estimatedMonthlyLeads * combinedLeakLow;
+  const lostLeadsHigh = assumptions.estimatedMonthlyLeads * combinedLeakHigh;
+  return {
+    combinedLeakLow,
+    combinedLeakHigh,
+    monthlyRevenueLow: Math.round(cap * combinedLeakLow),
+    monthlyRevenueHigh: Math.round(cap * combinedLeakHigh),
+    lostLeadsLow,
+    lostLeadsHigh,
+    lostJobsLow: lostLeadsLow * assumptions.closeRate,
+    lostJobsHigh: lostLeadsHigh * assumptions.closeRate,
+    addressableMonthlyRevenue: cap,
+  };
+}
+
 function buildRevenueEstimate(
   assumptions: AuditAssumptions,
   findings: AuditFinding[]
 ): RevenueEstimate {
-  const monthlyLow = Math.max(...findings.map((f) => f.estimatedRevenueImpactLow), 0);
-  const monthlyHigh = Math.max(...findings.map((f) => f.estimatedRevenueImpactHigh), 0);
-  const estimatedLostOpportunitiesLow =
-    assumptions.averageJobValue * assumptions.closeRate > 0
-      ? monthlyLow / (assumptions.averageJobValue * assumptions.closeRate)
-      : 0;
-  const estimatedLostOpportunitiesHigh =
-    assumptions.averageJobValue * assumptions.closeRate > 0
-      ? monthlyHigh / (assumptions.averageJobValue * assumptions.closeRate)
-      : 0;
+  const aggregate = aggregateLeak(assumptions, findings);
   return {
     averageJobValue: assumptions.averageJobValue,
     closeRate: assumptions.closeRate,
     estimatedMonthlyLeads: assumptions.estimatedMonthlyLeads,
-    estimatedLostOpportunitiesLow: Math.round(estimatedLostOpportunitiesLow),
-    estimatedLostOpportunitiesHigh: Math.round(estimatedLostOpportunitiesHigh),
-    potentialRecoveredJobsLow: Math.round(estimatedLostOpportunitiesLow * assumptions.closeRate * 10) / 10,
-    potentialRecoveredJobsHigh: Math.round(estimatedLostOpportunitiesHigh * assumptions.closeRate * 10) / 10,
-    estimatedRevenueLow: monthlyLow,
-    estimatedRevenueHigh: monthlyHigh,
+    estimatedLostOpportunitiesLow: Math.round(aggregate.lostLeadsLow),
+    estimatedLostOpportunitiesHigh: Math.round(aggregate.lostLeadsHigh),
+    potentialRecoveredJobsLow: Math.round(aggregate.lostJobsLow * 10) / 10,
+    potentialRecoveredJobsHigh: Math.round(aggregate.lostJobsHigh * 10) / 10,
+    estimatedRevenueLow: aggregate.monthlyRevenueLow,
+    estimatedRevenueHigh: aggregate.monthlyRevenueHigh,
     assumptions: [
       `Estimated average job value: $${assumptions.averageJobValue.toLocaleString()}`,
       `Estimated close rate: ${Math.round(assumptions.closeRate * 100)}%`,
       `Estimated monthly leads at risk: ${assumptions.estimatedMonthlyLeads}`,
-      "Money-loss estimates use conservative recovery ranges for what the business may keep losing if the issues are not fixed.",
+      `Total addressable monthly revenue: $${Math.round(
+        aggregate.addressableMonthlyRevenue
+      ).toLocaleString()} (leads × close rate × avg job value)`,
+      `Combined leak rate across all detected issues: ${Math.round(
+        aggregate.combinedLeakLow * 100
+      )}%–${Math.round(aggregate.combinedLeakHigh * 100)}% of monthly leads.`,
+      "Multiple leaks are combined with funnel math (1 − product of survival rates) so issues do not double-count and the total is capped at 85% of addressable revenue.",
     ],
   };
 }
@@ -1238,20 +1379,36 @@ function buildMoneySummary(
   const topExpensiveLeaks = [...findings]
     .sort((a, b) => b.estimatedRevenueImpactHigh - a.estimatedRevenueImpactHigh)
     .slice(0, 5);
-  const monthlyLow = Math.max(...topExpensiveLeaks.map((f) => f.estimatedRevenueImpactLow), 0);
-  const monthlyHigh = Math.max(...topExpensiveLeaks.map((f) => f.estimatedRevenueImpactHigh), 0);
+  const aggregate = aggregateLeak(assumptions, findings);
   const fixFirst = findings[0]?.recommendedFix ?? "Install a lead-to-revenue tracking system.";
+  const lostLeadsLowR = Math.round(aggregate.lostLeadsLow * 10) / 10;
+  const lostLeadsHighR = Math.round(aggregate.lostLeadsHigh * 10) / 10;
+  const lostJobsLowR = Math.round(aggregate.lostJobsLow * 10) / 10;
+  const lostJobsHighR = Math.round(aggregate.lostJobsHigh * 10) / 10;
   return {
     totalIssues: findings.length,
     severityCounts,
     topExpensiveLeaks,
-    estimatedMonthlyCostLow: monthlyLow,
-    estimatedMonthlyCostHigh: monthlyHigh,
-    estimatedAnnualCostLow: monthlyLow * 12,
-    estimatedAnnualCostHigh: monthlyHigh * 12,
-    assumptionsExplanation: `Money-loss estimates use an estimated average job value of $${assumptions.averageJobValue.toLocaleString()}, ${Math.round(
+    estimatedMonthlyCostLow: aggregate.monthlyRevenueLow,
+    estimatedMonthlyCostHigh: aggregate.monthlyRevenueHigh,
+    estimatedAnnualCostLow: aggregate.monthlyRevenueLow * 12,
+    estimatedAnnualCostHigh: aggregate.monthlyRevenueHigh * 12,
+    addressableMonthlyRevenue: Math.round(aggregate.addressableMonthlyRevenue),
+    combinedLeakRateLow: aggregate.combinedLeakLow,
+    combinedLeakRateHigh: aggregate.combinedLeakHigh,
+    lostLeadsPerMonthLow: lostLeadsLowR,
+    lostLeadsPerMonthHigh: lostLeadsHighR,
+    lostJobsPerMonthLow: lostJobsLowR,
+    lostJobsPerMonthHigh: lostJobsHighR,
+    assumptionsExplanation: `Inputs used: $${assumptions.averageJobValue.toLocaleString()} avg job value, ${Math.round(
       assumptions.closeRate * 100
-    )}% close rate, ${assumptions.estimatedMonthlyLeads} monthly leads at risk, and conservative recovery assumptions for what the business may keep losing if these issues are not fixed.`,
+    )}% close rate, ${assumptions.estimatedMonthlyLeads} monthly leads at risk = $${Math.round(
+      aggregate.addressableMonthlyRevenue
+    ).toLocaleString()} addressable monthly revenue. With the ${findings.length} detected issue${
+      findings.length === 1 ? "" : "s"
+    }, the combined leak is ${Math.round(aggregate.combinedLeakLow * 100)}%–${Math.round(
+      aggregate.combinedLeakHigh * 100
+    )}% of monthly leads (~${lostLeadsLowR}–${lostLeadsHighR} leads / ~${lostJobsLowR}–${lostJobsHighR} jobs per month). Issues are combined with funnel math so they don't double-count, and the total is capped at 85% of addressable revenue.`,
     fixFirstRecommendation: fixFirst,
   };
 }
@@ -1260,9 +1417,9 @@ function buildActionPlan(findings: AuditFinding[]): ActionPlanItem[] {
   return findings.slice(0, 6).map((f, index) => ({
     fix: f.recommendedFix,
     impact:
-      f.estimatedRevenueImpactHigh > 5000 || f.severity === "Critical"
+      f.severity === "Critical" || f.leakRateHigh >= 0.15
         ? "High"
-        : f.severity === "High"
+        : f.severity === "High" || f.leakRateHigh >= 0.08
           ? "Medium"
           : "Low",
     difficulty: index < 2 ? "Low" : index < 4 ? "Medium" : "High",

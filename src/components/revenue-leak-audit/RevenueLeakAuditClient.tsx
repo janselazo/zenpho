@@ -598,17 +598,20 @@ function GoogleBusinessProfileSummary({ audit }: { audit: RevenueLeakAudit }) {
 }
 
 function FoundIssuesMoneySummary({ audit }: { audit: RevenueLeakAudit }) {
+  const m = audit.moneySummary;
+  const leakLowPct = Math.round(m.combinedLeakRateLow * 100);
+  const leakHighPct = Math.round(m.combinedLeakRateHigh * 100);
   return (
     <section className="rounded-[2rem] border border-accent/15 bg-gradient-to-br from-accent to-accent-hover p-6 text-white shadow-soft-lg sm:p-8">
       <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/70">Found issues & estimated cost</p>
           <h2 className="mt-3 text-4xl font-black tracking-tight">
-            We found {audit.moneySummary.totalIssues} revenue leaks
+            We found {m.totalIssues} revenue leaks
           </h2>
-          <p className="mt-4 max-w-3xl text-sm leading-6 text-white/80">{audit.moneySummary.assumptionsExplanation}</p>
+          <p className="mt-4 max-w-3xl text-sm leading-6 text-white/80">{m.assumptionsExplanation}</p>
           <div className="mt-5 flex flex-wrap gap-2">
-            {Object.entries(audit.moneySummary.severityCounts).map(([severity, count]) => (
+            {Object.entries(m.severityCounts).map(([severity, count]) => (
               <span key={severity} className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-bold">
                 {severity}: {count}
               </span>
@@ -618,11 +621,28 @@ function FoundIssuesMoneySummary({ audit }: { audit: RevenueLeakAudit }) {
         <div className="rounded-3xl bg-white p-6 text-text-primary shadow-soft">
           <p className="text-sm font-bold text-text-secondary">Estimated monthly cost</p>
           <p className="mt-2 text-3xl font-black">
-            {formatMoney(audit.moneySummary.estimatedMonthlyCostLow)}-{formatMoney(audit.moneySummary.estimatedMonthlyCostHigh)}
+            {formatMoney(m.estimatedMonthlyCostLow)}-{formatMoney(m.estimatedMonthlyCostHigh)}
           </p>
+          <p className="mt-1 text-xs font-semibold text-text-secondary">
+            ~{leakLowPct}%-{leakHighPct}% of {formatMoney(m.addressableMonthlyRevenue)} addressable / mo
+          </p>
+          <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+            <div className="rounded-2xl bg-surface/80 px-3 py-2">
+              <p className="font-semibold text-text-secondary">Leads lost / mo</p>
+              <p className="mt-0.5 text-base font-black text-text-primary">
+                {m.lostLeadsPerMonthLow}-{m.lostLeadsPerMonthHigh}
+              </p>
+            </div>
+            <div className="rounded-2xl bg-surface/80 px-3 py-2">
+              <p className="font-semibold text-text-secondary">Jobs lost / mo</p>
+              <p className="mt-0.5 text-base font-black text-text-primary">
+                {m.lostJobsPerMonthLow}-{m.lostJobsPerMonthHigh}
+              </p>
+            </div>
+          </div>
           <p className="mt-4 text-sm font-bold text-text-secondary">Annualized risk</p>
           <p className="mt-1 text-xl font-black">
-            {formatMoney(audit.moneySummary.estimatedAnnualCostLow)}-{formatMoney(audit.moneySummary.estimatedAnnualCostHigh)}
+            {formatMoney(m.estimatedAnnualCostLow)}-{formatMoney(m.estimatedAnnualCostHigh)}
           </p>
         </div>
       </div>

@@ -208,8 +208,18 @@ export type AuditFinding = {
   whatWeFound: string;
   whyItMatters: string;
   evidence: string;
+  /**
+   * Stand-alone monthly revenue at risk if this single issue was the
+   * only leak (low/high band of expected leakRate * addressable revenue).
+   */
   estimatedRevenueImpactLow: number;
   estimatedRevenueImpactHigh: number;
+  /**
+   * Share of monthly leads (0..1) that this issue is expected to leak
+   * away. Used to combine multiple findings with funnel math.
+   */
+  leakRateLow: number;
+  leakRateHigh: number;
   recommendedFix: string;
   priorityScore: number;
 };
@@ -235,6 +245,20 @@ export type FoundIssuesMoneySummary = {
   estimatedMonthlyCostHigh: number;
   estimatedAnnualCostLow: number;
   estimatedAnnualCostHigh: number;
+  /**
+   * Total addressable monthly revenue (estimatedMonthlyLeads * closeRate * averageJobValue).
+   * Used as the ceiling for combined leak math.
+   */
+  addressableMonthlyRevenue: number;
+  /** Combined share of monthly leads currently being lost (0..1). */
+  combinedLeakRateLow: number;
+  combinedLeakRateHigh: number;
+  /** Lost leads per month at low/high band (after combining all findings). */
+  lostLeadsPerMonthLow: number;
+  lostLeadsPerMonthHigh: number;
+  /** Lost closed jobs per month at low/high band. */
+  lostJobsPerMonthLow: number;
+  lostJobsPerMonthHigh: number;
   assumptionsExplanation: string;
   fixFirstRecommendation: string;
 };
