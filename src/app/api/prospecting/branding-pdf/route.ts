@@ -5,7 +5,8 @@ import { generateProspectBrandingPdfAction } from "@/app/(crm)/actions/prospect-
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 300;
+/** Pro / Enterprise: up to 800s (see vercel.json). Hobby is capped at 300s — use BRANDING_GENERATE_LEGACY_IMAGES=false to shorten runs. */
+export const maxDuration = 800;
 
 type Body = {
   businessName?: unknown;
