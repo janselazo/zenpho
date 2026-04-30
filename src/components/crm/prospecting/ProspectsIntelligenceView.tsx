@@ -36,7 +36,14 @@ import ProspectPreviewOutreachBlock, {
 } from "@/components/crm/prospecting/ProspectPreviewOutreachBlock";
 import { useRouter, useSearchParams } from "next/navigation";
 import { primaryPlaceTypeLabel } from "@/lib/crm/places-search-ui";
-import { Building2, ChevronLeft, ChevronRight, Rocket } from "lucide-react";
+import {
+  Building2,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Rocket,
+  UserPlus,
+} from "lucide-react";
 import TechStartupsTab from "@/components/crm/prospecting/TechStartupsTab";
 import ProspectingTabbedShell from "@/components/crm/prospecting/ProspectingTabbedShell";
 import PlacesBusinessAutocomplete from "@/components/crm/prospecting/PlacesBusinessAutocomplete";
@@ -1879,13 +1886,31 @@ function ProspectsIntelligenceViewInner({
                 <ReportSection step="02" title="Lead" noTopRule className="min-w-0">
                   <div className="min-w-0">
                     <div className="rounded-xl border border-border/80 p-4 dark:border-zinc-700/60">
-                      <h3 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
-                        Add as Lead
-                      </h3>
-                      <p className="mt-1 text-xs text-text-secondary dark:text-zinc-500">
-                        Project type is required for CRM Leads. Prefilled from research—you can edit
-                        before saving.
-                      </p>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/70 dark:text-zinc-500">
+                            Add as Lead
+                          </h3>
+                          <p className="mt-1 text-xs text-text-secondary dark:text-zinc-500">
+                            Project type is required for CRM Leads. Prefilled from research—you can edit
+                            before saving.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={leadPending || !leadName.trim()}
+                          onClick={() => void submitLead()}
+                          title={leadPending ? "Creating…" : "Create lead"}
+                          aria-label={leadPending ? "Creating lead…" : "Create lead"}
+                          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-zinc-200/80 bg-white text-zinc-900 shadow-md outline-none ring-offset-2 transition-[box-shadow,transform] hover:shadow-lg focus-visible:ring-2 focus-visible:ring-accent/30 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-45 dark:border-zinc-500/40 dark:bg-white dark:text-zinc-900 dark:shadow-lg dark:shadow-black/30 dark:focus-visible:ring-blue-500/40"
+                        >
+                          {leadPending ? (
+                            <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+                          ) : (
+                            <UserPlus className="h-5 w-5" strokeWidth={1.75} aria-hidden />
+                          )}
+                        </button>
+                      </div>
                       <div className="mt-4 grid gap-3 sm:grid-cols-2">
                         <div>
                           <label className="mb-1 block text-xs font-medium text-text-secondary">
@@ -2011,20 +2036,12 @@ function ProspectsIntelligenceViewInner({
                           />
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        disabled={leadPending || !leadName.trim()}
-                        onClick={() => void submitLead()}
-                        className="mt-4 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-50"
-                      >
-                        {leadPending ? "Creating…" : "Create Lead"}
-                      </button>
                       {leadMessage ? (
                         <p
                           className={
                             leadMessage.startsWith("Lead created")
-                              ? "mt-2 text-sm text-emerald-700 dark:text-emerald-400"
-                              : "mt-2 text-sm text-red-600 dark:text-red-400"
+                              ? "mt-3 text-sm text-emerald-700 dark:text-emerald-400"
+                              : "mt-3 text-sm text-red-600 dark:text-red-400"
                           }
                         >
                           {leadMessage}
