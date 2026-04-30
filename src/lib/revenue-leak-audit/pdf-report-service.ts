@@ -680,9 +680,35 @@ function drawBrandSummary(ctx: Ctx, audit: RevenueLeakAudit): void {
   ].filter((c, i, all): c is string => Boolean(c) && all.indexOf(c) === i);
 
   if (swatches.length > 0) {
-    ensure(ctx, 76);
+    const circleR = 11;
+    const fontSize = 7.5;
+    const circleLabelGap = 6;
+    const itemHGap = 14;
+    const rowHeight = 26;
+    const innerLeft = MARGIN + 14;
+    const innerRight = PAGE_W - MARGIN - 14;
+
+    type Placed = { row: number; x: number; label: string; rawHex: string };
+    const placed: Placed[] = [];
+    let row = 0;
+    let x = innerLeft;
+    for (const raw of swatches.slice(0, 8)) {
+      const label = raw.toUpperCase();
+      const tw = ctx.bold.widthOfTextAtSize(label, fontSize);
+      const itemW = circleR * 2 + circleLabelGap + tw;
+      if (x > innerLeft && x + itemW > innerRight) {
+        row += 1;
+        x = innerLeft;
+      }
+      placed.push({ row, x, label, rawHex: raw });
+      x += itemW + itemHGap;
+    }
+    const rowCount = row + 1;
+    const cardH = 24 + rowCount * rowHeight + 12;
+
+    ensure(ctx, cardH + 10);
     const top = ctx.y;
-    card(ctx, MARGIN, top, CONTENT_W, 64, WHITE, BORDER);
+    card(ctx, MARGIN, top, CONTENT_W, cardH, WHITE, BORDER);
     ctx.page.drawText("PALETTE", {
       x: MARGIN + 14,
       y: top - 18,
@@ -690,26 +716,27 @@ function drawBrandSummary(ctx: Ctx, audit: RevenueLeakAudit): void {
       font: ctx.bold,
       color: MUTED,
     });
-    swatches.slice(0, 8).forEach((hex, i) => {
-      const sx = MARGIN + 14 + i * 50;
-      const sy = top - 40;
+
+    const baseY = top - 40;
+    for (const p of placed) {
+      const sy = baseY - p.row * rowHeight;
       ctx.page.drawCircle({
-        x: sx + 14,
+        x: p.x + circleR,
         y: sy,
-        size: 11,
-        color: hexToRgb(hex, ACCENT),
+        size: circleR,
+        color: hexToRgb(p.rawHex, ACCENT),
         borderColor: BORDER,
         borderWidth: 0.6,
       });
-      ctx.page.drawText(hex.toUpperCase(), {
-        x: sx + 30,
+      ctx.page.drawText(p.label, {
+        x: p.x + circleR * 2 + circleLabelGap,
         y: sy - 3,
-        size: 7.5,
+        size: fontSize,
         font: ctx.bold,
         color: INK_SOFT,
       });
-    });
-    ctx.y = top - 64 - 16;
+    }
+    ctx.y = top - cardH - 16;
   }
 
   if (audit.brandIdentity.typographyNotes.length > 0) {
@@ -1278,20 +1305,30 @@ function drawLocalRanking(ctx: Ctx, audit: RevenueLeakAudit): void {
       pill(ctx, MARGIN + 56, top - 36 - nameLines.length * 6, "You", ACCENT_HOVER, WHITE, 7);
     }
 
-    // Stats on the right
+    // Stats on the right (measure both; layout from right edge so rating + reviews never overlap)
     const ratingStr = `${item.rating ?? "N/A"} stars`;
     const reviewsStr = `${item.reviewCount ?? 0} reviews`;
+    const ratingSize = 10;
+    const reviewsSize = 9;
+    const statsRightPad = 14;
+    const statsGap = 8;
+    const ratingW = ctx.bold.widthOfTextAtSize(ratingStr, ratingSize);
+    const reviewsW = ctx.font.widthOfTextAtSize(reviewsStr, reviewsSize);
+    const statsRightEdge = PAGE_W - MARGIN - statsRightPad;
+    const reviewsX = statsRightEdge - reviewsW;
+    const ratingX = reviewsX - statsGap - ratingW;
+
     ctx.page.drawText(ratingStr, {
-      x: PAGE_W - MARGIN - 100,
+      x: ratingX,
       y: top - 22,
-      size: 10,
+      size: ratingSize,
       font: ctx.bold,
       color: rgb(0.96, 0.62, 0.04),
     });
     ctx.page.drawText(reviewsStr, {
-      x: PAGE_W - MARGIN - ctx.font.widthOfTextAtSize(reviewsStr, 9) - 14,
+      x: reviewsX,
       y: top - 22,
-      size: 9,
+      size: reviewsSize,
       font: ctx.font,
       color: MUTED,
     });

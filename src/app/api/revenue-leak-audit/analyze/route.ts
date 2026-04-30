@@ -7,7 +7,8 @@ import type {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 120;
+/** PageSpeed can take ~90s+; allow headroom for a single retry after transient 5xx + parallel Places/competitor work. */
+export const maxDuration = 240;
 
 type Body = {
   business?: unknown;

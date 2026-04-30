@@ -196,6 +196,8 @@ export type WebsiteAudit = {
     instagram: string | null;
     tiktok: string | null;
     youtube: string | null;
+    linkedin: string | null;
+    whatsapp: string | null;
   };
   contactLinks: {
     phone: string | null;

@@ -27,6 +27,8 @@ import {
 import {
   composeBeforeAfterImage,
 } from "@/lib/crm/prospect-before-after-image";
+import { renderAuditShareImage } from "@/lib/revenue-leak-audit/audit-share-image";
+import type { RevenueLeakAudit } from "@/lib/revenue-leak-audit/types";
 import type { PlacesSearchPlace } from "@/lib/crm/places-types";
 import type { MarketIntelReport } from "@/lib/crm/prospect-intel-report";
 import type {
@@ -272,16 +274,16 @@ function defaultShareTemplatesForOffer(offer: SelectedOffer): ShareTemplates {
     case "audit":
       return {
         smsBody:
-          "Hi {{businessName}} — I ran a Revenue Leak Audit on your Google profile and website. The PDF shows where leads are leaking, what it likely costs you each month, and the fixes ranked by impact. Want me to send it over?",
-        emailSubject: "Revenue Leak Audit for {{businessName}}",
+          "Hi {{businessName}} — I put together a quick Revenue Leak Audit summary image (score, $ at risk, top findings). If useful, I can send the full PDF with every issue and suggested fixes. Want the PDF?",
+        emailSubject: "Revenue Leak Audit snapshot for {{businessName}}",
         emailBody:
-          "Hi {{businessName}},\n\nI ran a Revenue Leak Audit on your Google Business Profile and website. The attached PDF covers:\n\n• Local ranking vs your top Google competitors\n• Review trust + recurring praise themes competitors win on\n• Website conversion (CTAs, forms, click-to-call, web chat, mobile speed)\n• Tracking & ads readiness (GA4 / GTM / Meta Pixel / Ads tag)\n• Photos, schema, and local SEO\n• Estimated monthly $ at risk + the prioritized action plan\n\nHablamos español también — happy to walk through it on a quick call.\n\nBest,\n{{yourName}}",
+          "Hi {{businessName}},\n\nI ran a Revenue Leak Audit on your Google Business Profile and website. Attached is a one-page summary (score, estimated monthly $ at risk, and top findings).\n\nIf you’d like the full report, I can send the PDF next — it walks through local ranking vs competitors, reviews, website conversion, tracking/ads readiness, photos/schema/local SEO, and a prioritized action plan with suggested fixes.\n\nHablamos español también.\n\nBest,\n{{yourName}}",
         instagramBody:
-          "Hi {{businessName}}! I ran a quick Revenue Leak Audit on your Google profile and website — the PDF lists what's costing you leads each month and the fixes ranked by impact. Want me to send it?\n\n— {{yourName}}",
+          "Hi {{businessName}}! Quick Revenue Leak Audit summary image attached (score + top findings). Want the full PDF with all issues & fixes?\n\n— {{yourName}}",
         whatsappBody:
-          "Hi {{businessName}}! I ran a Revenue Leak Audit on your Google profile and website — PDF shows where leads are leaking and ~$ at risk per month, with fixes ranked by impact. Want it?\n\n— {{yourName}}",
+          "Hi {{businessName}}! Sending a one-page Revenue Leak Audit summary — score, $ at risk, top findings. Want the full PDF with all issues & suggested fixes?\n\n— {{yourName}}",
         facebookBody:
-          "Hi {{businessName}}! I ran a Revenue Leak Audit on your Google profile and website — PDF shows where leads are leaking and the fixes ranked by impact. Want me to send it?\n\n— {{yourName}}",
+          "Hi {{businessName}}! Quick Revenue Leak Audit summary — score, money at risk, top findings. I can send the full PDF with every issue & suggested fixes if you want it.\n\n— {{yourName}}",
       };
     case "branding":
       return {
@@ -765,6 +767,32 @@ function BeforeAfterComparison({
   );
 }
 
+function minimalBusinessFromPlace(place: PlacesSearchPlace) {
+  return {
+    placeId: place.id,
+    name: place.name,
+    address: place.formattedAddress ?? null,
+    phone:
+      place.nationalPhoneNumber?.trim() ||
+      place.internationalPhoneNumber?.trim() ||
+      null,
+    website: place.websiteUri?.trim() || null,
+    category: null,
+    types: place.types ?? [],
+    rating: typeof place.rating === "number" ? place.rating : null,
+    reviewCount:
+      typeof place.userRatingCount === "number" ? Math.round(place.userRatingCount) : null,
+    reviews: [],
+    photos: [],
+    photoCount: null,
+    coordinates: null,
+    hours: [],
+    googleMapsUri: place.googleMapsUri ?? null,
+    businessStatus: place.businessStatus ?? null,
+    identityAttributes: [],
+  };
+}
+
 type Props = {
   stitchContext?: ProspectStitchContext | null;
   reportKey?: string;
@@ -892,6 +920,12 @@ export default function ProspectPreviewOutreachBlock({
   const [auditMsg, setAuditMsg] = useState<string | null>(null);
   const [auditFilename, setAuditFilename] = useState<string | null>(null);
   const [auditBlob, setAuditBlob] = useState<Blob | null>(null);
+  const [auditSnapshot, setAuditSnapshot] = useState<RevenueLeakAudit | null>(null);
+  const [auditSnapshotPlaceId, setAuditSnapshotPlaceId] = useState<string | null>(null);
+  const [auditShareBusy, setAuditShareBusy] = useState(false);
+  const [auditShareMsg, setAuditShareMsg] = useState<string | null>(null);
+  const [auditShareFilename, setAuditShareFilename] = useState<string | null>(null);
+  const [auditShareBlob, setAuditShareBlob] = useState<Blob | null>(null);
 
   const [brandingBusy, setBrandingBusy] = useState(false);
   const [brandingMsg, setBrandingMsg] = useState<string | null>(null);
@@ -938,6 +972,28 @@ export default function ProspectPreviewOutreachBlock({
   const hasAuditReportAttachment = outreachAttachments.some(
     (att) => att.id === "audit-report-pdf",
   );
+  const hasAuditShareAttachment = outreachAttachments.some(
+    (att) => att.id === "audit-share-image",
+  );
+
+  const stitchPlaceId = useMemo(
+    () => (stitchContext?.kind === "place" ? stitchContext.place.id : null),
+    [stitchContext],
+  );
+
+  useEffect(() => {
+    setAuditSnapshot(null);
+    setAuditSnapshotPlaceId(null);
+    setAuditBlob(null);
+    setAuditFilename(null);
+    setAuditMsg(null);
+    setAuditShareBlob(null);
+    setAuditShareFilename(null);
+    setAuditShareMsg(null);
+    setOutreachAttachments((prev) =>
+      prev.filter((a) => a.id !== "audit-report-pdf" && a.id !== "audit-share-image"),
+    );
+  }, [stitchPlaceId]);
 
   const activeShareTpl = shareTemplates[selectedOffer];
 
@@ -1021,9 +1077,22 @@ export default function ProspectPreviewOutreachBlock({
     setShareMsg(null);
     setPdfMsg(null);
     setPdfFilename(null);
+    setAuditBusy(false);
+    setAuditMsg(null);
+    setAuditFilename(null);
+    setAuditBlob(null);
+    setAuditSnapshot(null);
+    setAuditSnapshotPlaceId(null);
+    setAuditShareBusy(false);
+    setAuditShareMsg(null);
+    setAuditShareFilename(null);
+    setAuditShareBlob(null);
     setBrandingMsg(null);
     setBrandingFilename(null);
     setBrandingPdfUrl(null);
+    setOutreachAttachments((prev) =>
+      prev.filter((a) => a.id !== "audit-report-pdf" && a.id !== "audit-share-image"),
+    );
   }, [reportKey]);
 
   const copyAndFlash = useCallback(async (text: string) => {
@@ -1241,8 +1310,10 @@ export default function ProspectPreviewOutreachBlock({
     selectedOffer === "branding"
       ? Boolean(resolvedBusinessName && hasBrandShareAttachment)
       : selectedOffer === "audit"
-        ? Boolean(resolvedBusinessName && hasAuditReportAttachment)
-        : selectedOffer !== "automations" &&
+        ? Boolean(
+            resolvedBusinessName && (hasAuditShareAttachment || hasAuditReportAttachment),
+          )
+      : selectedOffer !== "automations" &&
           Boolean(hostedPreviewIdForSelection && resolvedBusinessName);
 
   const mergedPreviewUrlForSelection = useMemo(() => {
@@ -1346,7 +1417,7 @@ export default function ProspectPreviewOutreachBlock({
         selectedOffer === "branding"
           ? "Add a phone number and generate the brand share image first."
           : selectedOffer === "audit"
-            ? "Add a phone number and generate the Revenue Leak Audit PDF first."
+            ? "Add a phone number and generate the summary image or the Revenue Leak Audit PDF first."
             : "Add a phone number and select a card with a hosted preview.",
       );
       return;
@@ -1392,7 +1463,7 @@ export default function ProspectPreviewOutreachBlock({
         selectedOffer === "branding"
           ? "Add an email address and generate the brand share image first."
           : selectedOffer === "audit"
-            ? "Add an email address and generate the Revenue Leak Audit PDF first."
+            ? "Add an email address and generate the summary image or the Revenue Leak Audit PDF first."
             : "Add an email address and select a card with a hosted preview.",
       );
       return;
@@ -1570,6 +1641,64 @@ export default function ProspectPreviewOutreachBlock({
     }
   }, [marketIntelReport, resolvedBusinessName]);
 
+  const fetchAuditPayload = useCallback(async (): Promise<
+    { ok: true; audit: RevenueLeakAudit } | { ok: false; error: string }
+  > => {
+    if (stitchContext?.kind !== "place") {
+      return {
+        ok: false,
+        error: "Select a Google Business listing to run the Revenue Leak Audit.",
+      };
+    }
+    const place = stitchContext.place;
+    if (auditSnapshot && auditSnapshotPlaceId === place.id) {
+      return { ok: true, audit: auditSnapshot };
+    }
+
+    const minimalBusiness = minimalBusinessFromPlace(place);
+
+    const analyzeRes = await fetch("/api/revenue-leak-audit/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ business: minimalBusiness, assumptions: {} }),
+    });
+    const analyzeText = await analyzeRes.text();
+    let analyzeJson: { ok?: boolean; audit?: unknown; error?: string } | null = null;
+    try {
+      analyzeJson = analyzeText ? JSON.parse(analyzeText) : null;
+    } catch {
+      analyzeJson = null;
+    }
+    if (!analyzeRes.ok || !analyzeJson?.ok || !analyzeJson.audit) {
+      return {
+        ok: false,
+        error:
+          analyzeJson?.error ||
+          `Audit analysis failed (${analyzeRes.status}). ${analyzeText.slice(0, 200)}`,
+      };
+    }
+    const raw = analyzeJson.audit;
+    if (
+      !raw ||
+      typeof raw !== "object" ||
+      typeof (raw as { business?: unknown }).business !== "object" ||
+      (raw as { business: unknown }).business === null ||
+      typeof (raw as { business: { name?: unknown } }).business.name !== "string" ||
+      typeof (raw as { scores?: unknown }).scores !== "object" ||
+      (raw as { scores: unknown }).scores === null ||
+      typeof (raw as { moneySummary?: unknown }).moneySummary !== "object" ||
+      (raw as { moneySummary: unknown }).moneySummary === null ||
+      !Array.isArray((raw as { findings?: unknown }).findings)
+    ) {
+      return { ok: false, error: "Audit analysis returned an unexpected shape." };
+    }
+    const audit = raw as RevenueLeakAudit;
+    setAuditSnapshot(audit);
+    setAuditSnapshotPlaceId(place.id);
+    return { ok: true, audit };
+  }, [auditSnapshot, auditSnapshotPlaceId, stitchContext]);
+
   const generateAuditReportPdf = useCallback(async () => {
     if (stitchContext?.kind !== "place") {
       setAuditMsg("Select a Google Business listing to run the Revenue Leak Audit.");
@@ -1577,63 +1706,24 @@ export default function ProspectPreviewOutreachBlock({
     }
     const place = stitchContext.place;
     setAuditBusy(true);
-    setAuditMsg("Running Revenue Leak Audit…");
     setAuditBlob(null);
     setAuditFilename(null);
+    const cacheHit = Boolean(auditSnapshot && auditSnapshotPlaceId === place.id);
+    setAuditMsg(cacheHit ? "Building PDF report…" : "Running Revenue Leak Audit…");
     try {
-      const minimalBusiness = {
-        placeId: place.id,
-        name: place.name,
-        address: place.formattedAddress ?? null,
-        phone:
-          place.nationalPhoneNumber?.trim() ||
-          place.internationalPhoneNumber?.trim() ||
-          null,
-        website: place.websiteUri?.trim() || null,
-        category: null,
-        types: place.types ?? [],
-        rating: typeof place.rating === "number" ? place.rating : null,
-        reviewCount:
-          typeof place.userRatingCount === "number"
-            ? Math.round(place.userRatingCount)
-            : null,
-        reviews: [],
-        photos: [],
-        photoCount: null,
-        coordinates: null,
-        hours: [],
-        googleMapsUri: place.googleMapsUri ?? null,
-        businessStatus: place.businessStatus ?? null,
-        identityAttributes: [],
-      };
-
-      const analyzeRes = await fetch("/api/revenue-leak-audit/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify({ business: minimalBusiness, assumptions: {} }),
-      });
-      const analyzeText = await analyzeRes.text();
-      let analyzeJson: { ok?: boolean; audit?: unknown; error?: string } | null = null;
-      try {
-        analyzeJson = analyzeText ? JSON.parse(analyzeText) : null;
-      } catch {
-        analyzeJson = null;
-      }
-      if (!analyzeRes.ok || !analyzeJson?.ok || !analyzeJson.audit) {
-        setAuditMsg(
-          analyzeJson?.error ||
-            `Audit analysis failed (${analyzeRes.status}). ${analyzeText.slice(0, 200)}`,
-        );
+      const payloadResult = await fetchAuditPayload();
+      if (!payloadResult.ok) {
+        setAuditMsg(payloadResult.error);
         return;
       }
+      const audit = payloadResult.audit;
 
       setAuditMsg("Building PDF report…");
       const pdfRes = await fetch("/api/revenue-leak-audit/pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ audit: analyzeJson.audit }),
+        body: JSON.stringify({ audit }),
       });
       if (!pdfRes.ok) {
         const errText = await pdfRes.text().catch(() => "");
@@ -1678,7 +1768,52 @@ export default function ProspectPreviewOutreachBlock({
     } finally {
       setAuditBusy(false);
     }
-  }, [addOutreachAttachment, stitchContext]);
+  }, [
+    addOutreachAttachment,
+    auditSnapshot,
+    auditSnapshotPlaceId,
+    fetchAuditPayload,
+    stitchContext,
+  ]);
+
+  const generateAuditShareImage = useCallback(async () => {
+    if (stitchContext?.kind !== "place") {
+      setAuditShareMsg("Select a Google Business listing to run the Revenue Leak Audit.");
+      return;
+    }
+    setAuditShareBusy(true);
+    setAuditShareMsg(null);
+    setAuditShareBlob(null);
+    setAuditShareFilename(null);
+    try {
+      const payloadResult = await fetchAuditPayload();
+      if (!payloadResult.ok) {
+        setAuditShareMsg(payloadResult.error);
+        return;
+      }
+      const { svg, width, height, filename } = renderAuditShareImage(payloadResult.audit);
+      const blob = await convertSvgToPngBlob(svg, width, height);
+      setAuditShareBlob(blob);
+      setAuditShareFilename(filename);
+      addOutreachAttachment({
+        id: "audit-share-image",
+        name: filename,
+        blob,
+        source: "suggested",
+      });
+      setSelectedOffer("audit");
+      try {
+        downloadBlob(blob, filename);
+      } catch {
+        // Summary PNG is still attached for outreach.
+      }
+      setAuditShareMsg("Summary image ready and attached for outreach.");
+    } catch (e) {
+      setAuditShareMsg(e instanceof Error ? e.message : "Summary image request failed.");
+    } finally {
+      setAuditShareBusy(false);
+    }
+  }, [addOutreachAttachment, fetchAuditPayload, stitchContext]);
 
   const generateBrandingShareImage = useCallback(async () => {
     setBrandingShareBusy(true);
@@ -1892,8 +2027,8 @@ export default function ProspectPreviewOutreachBlock({
           card type and update when you switch cards. Use{" "}
           <span className="font-mono">{"{{previewUrl}}"}</span> and{" "}
           <span className="font-mono">{"{{businessName}}"}</span> for Website, Web app, and Mobile; email defaults
-          also use <span className="font-mono">{"{{yourName}}"}</span> (from your CRM context when provided). AI
-          audit templates focus on the PDF follow-up.
+          also use <span className="font-mono">{"{{yourName}}"}</span> (from your CRM context when provided).
+          Revenue Leak Audit templates default to a summary image first and the full PDF as follow-up.
         </p>
         {stitchContext ? (
           <p className="mt-3 rounded-lg border border-border/60 bg-white/40 px-2.5 py-2 text-[11px] text-text-secondary dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
@@ -2159,23 +2294,54 @@ export default function ProspectPreviewOutreachBlock({
               <ShieldAlert className="h-4 w-4 shrink-0 text-text-secondary opacity-70 dark:text-zinc-500" aria-hidden />
             </div>
             <p className="mt-2 text-[11px] leading-snug text-text-secondary dark:text-zinc-400">
-              Full Revenue Leak Audit PDF for the selected Google listing: ranking vs competitors, GBP health, review
-              trust + competitor praise themes, website conversion (CTAs, forms, click-to-call, web chat, mobile speed),
-              tracking & ads readiness, photos, schema, local SEO, and money-loss estimates with a prioritized fix
-              plan. Same report as the Revenue Leak Audit tool.
+              Start with a 1200×900 summary image for SMS, email, or DMs (score, money at risk, top findings). Generate
+              the full Revenue Leak Audit PDF as the follow-up: ranking vs competitors, GBP health, review trust +
+              competitor themes, website conversion, tracking &amp; ads readiness, photos, schema, local SEO, and
+              money-loss estimates with a prioritized fix plan. Same engine as the Revenue Leak Audit tool.
             </p>
             <p className="mt-2 text-[10px] text-text-secondary/90 dark:text-zinc-500">
-              Generation can take 30–90 seconds (Google Places + PageSpeed + competitor reviews). Auto-attaches the PDF
-              for SMS / email / WhatsApp.
+              Analysis can take 30–90 seconds (Google Places + PageSpeed + competitor reviews). Assets auto-attach for
+              SMS / email / WhatsApp.
             </p>
             <button
               type="button"
-              disabled={stitchContext?.kind !== "place" || auditBusy}
+              disabled={stitchContext?.kind !== "place" || auditBusy || auditShareBusy}
+              onClick={(e) => {
+                e.stopPropagation();
+                void generateAuditShareImage();
+              }}
+              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-500/[0.14] disabled:opacity-50 dark:border-emerald-400/35 dark:bg-emerald-500/15 dark:text-emerald-200 dark:hover:bg-emerald-500/20"
+            >
+              {auditShareBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <ImageDown className="h-3.5 w-3.5" aria-hidden />}
+              {auditShareBusy ? "Composing summary…" : "Generate summary image"}
+            </button>
+            {auditShareMsg ? (
+              <p className="mt-2 text-[11px] text-text-secondary dark:text-zinc-400" role="status">
+                {auditShareMsg}
+                {auditShareFilename ? <span className="ml-1 font-mono text-[10px]">{auditShareFilename}</span> : null}
+              </p>
+            ) : null}
+            {auditShareBlob && auditShareFilename ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  downloadBlob(auditShareBlob, auditShareFilename);
+                }}
+                className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-500/[0.14] dark:border-emerald-400/35 dark:bg-emerald-500/15 dark:text-emerald-200 dark:hover:bg-emerald-500/20"
+              >
+                <ImageDown className="h-3.5 w-3.5" aria-hidden />
+                Download image
+              </button>
+            ) : null}
+            <button
+              type="button"
+              disabled={stitchContext?.kind !== "place" || auditBusy || auditShareBusy}
               onClick={(e) => {
                 e.stopPropagation();
                 void generateAuditReportPdf();
               }}
-              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 hover:bg-blue-500/[0.14] disabled:opacity-50 dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200 dark:hover:bg-blue-500/20"
+              className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 hover:bg-blue-500/[0.14] disabled:opacity-50 dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200 dark:hover:bg-blue-500/20"
             >
               {auditBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <FileDown className="h-3.5 w-3.5" aria-hidden />}
               {auditBusy ? "Building report…" : "Generate report (PDF)"}
@@ -2198,7 +2364,7 @@ export default function ProspectPreviewOutreachBlock({
                   e.stopPropagation();
                   downloadBlob(auditBlob, auditFilename);
                 }}
-                className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-500/[0.14] dark:border-emerald-400/35 dark:bg-emerald-500/15 dark:text-emerald-200 dark:hover:bg-emerald-500/20"
+                className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-blue-500/35 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 hover:bg-blue-500/[0.14] dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200 dark:hover:bg-blue-500/20"
               >
                 <FileDown className="h-3.5 w-3.5" aria-hidden />
                 Download PDF
@@ -2319,8 +2485,8 @@ export default function ProspectPreviewOutreachBlock({
               <>
                 {" "}
                 · templates for{" "}
-                <span className="text-text-primary dark:text-zinc-200">Revenue Leak Audit</span> (generate the PDF first
-                to attach it)
+                <span className="text-text-primary dark:text-zinc-200">Revenue Leak Audit</span> (generate the summary
+                image or PDF first to attach it)
               </>
             ) : (
               <>
@@ -2689,7 +2855,8 @@ export default function ProspectPreviewOutreachBlock({
           {outreachAttachments.length > 0 ||
           (hasVideoBlob && parentVideoBlobRef.current && !hasWalkthroughAttachment) ||
           (existingWebsiteUrl && stitchWebResult && !hasBeforeAfterAttachment) ||
-          (brandingShareBlob && brandingShareFilename && !hasBrandShareAttachment) ? (
+          (brandingShareBlob && brandingShareFilename && !hasBrandShareAttachment) ||
+          (auditShareBlob && auditShareFilename && !hasAuditShareAttachment) ? (
             <div className="mt-4 rounded-xl border border-border/70 bg-white/50 p-3 dark:border-zinc-700/70 dark:bg-zinc-900/35">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -2714,7 +2881,8 @@ export default function ProspectPreviewOutreachBlock({
 
               {(hasVideoBlob && parentVideoBlobRef.current && !hasWalkthroughAttachment) ||
               (existingWebsiteUrl && stitchWebResult && !hasBeforeAfterAttachment) ||
-              (brandingShareBlob && brandingShareFilename && !hasBrandShareAttachment) ? (
+              (brandingShareBlob && brandingShareFilename && !hasBrandShareAttachment) ||
+              (auditShareBlob && auditShareFilename && !hasAuditShareAttachment) ? (
                 <div className="mt-3 flex flex-wrap gap-2">
                   {brandingShareBlob && brandingShareFilename && !hasBrandShareAttachment ? (
                     <button
@@ -2732,6 +2900,24 @@ export default function ProspectPreviewOutreachBlock({
                       <Plus className="h-3 w-3" aria-hidden />
                       <ImageDown className="h-3.5 w-3.5" aria-hidden />
                       Brand Image
+                    </button>
+                  ) : null}
+                  {auditShareBlob && auditShareFilename && !hasAuditShareAttachment ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        addOutreachAttachment({
+                          id: "audit-share-image",
+                          name: auditShareFilename,
+                          blob: auditShareBlob,
+                          source: "suggested",
+                        });
+                      }}
+                      className="inline-flex items-center gap-1 rounded-full border border-dashed border-teal-400/60 px-2.5 py-1 text-[11px] font-medium text-teal-800 hover:bg-teal-50 dark:border-teal-500/40 dark:text-teal-300 dark:hover:bg-teal-500/10"
+                    >
+                      <Plus className="h-3 w-3" aria-hidden />
+                      <ImageDown className="h-3.5 w-3.5" aria-hidden />
+                      Audit summary image
                     </button>
                   ) : null}
                   {hasVideoBlob && parentVideoBlobRef.current && !hasWalkthroughAttachment ? (

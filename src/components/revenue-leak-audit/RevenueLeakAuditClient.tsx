@@ -8,21 +8,15 @@ import {
   CheckCircle2,
   ChevronDown,
   Download,
-  Facebook,
-  Globe2,
-  Instagram,
   Loader2,
-  Mail,
   MapPin,
-  MapPinned,
-  Phone,
   RotateCcw,
   Search,
   Target,
-  Youtube,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import ContactChannelStrip from "@/components/crm/ContactChannelStrip";
 import Button from "@/components/ui/Button";
+import { EMPTY_PROSPECT_SOCIAL_URLS } from "@/lib/crm/prospect-enrichment-types";
 import type {
   AuditGrade,
   BusinessProfile,
@@ -401,114 +395,21 @@ function BrandSummary({ audit }: { audit: RevenueLeakAudit }) {
 function GoogleBusinessProfileSummary({ audit }: { audit: RevenueLeakAudit }) {
   const business = audit.business;
   const profileImageUrl = googleBusinessProfilePhotoUrl(business) || audit.brandIdentity.logoUrl;
-  const reportLinks = [
-    audit.websiteAudit.contactLinks.email
-      ? {
-          label: "Email",
-          href: `mailto:${audit.websiteAudit.contactLinks.email}`,
-          icon: Mail,
-          btnClass:
-            "border-indigo-200 bg-indigo-50 text-indigo-600 hover:border-indigo-300 hover:bg-indigo-100",
-        }
-      : null,
-    audit.websiteAudit.socialLinks.facebook
-      ? {
-          label: "Facebook",
-          href: audit.websiteAudit.socialLinks.facebook,
-          icon: Facebook,
-          btnClass:
-            "border-[#1877F2]/35 bg-[#1877F2]/12 text-[#1877F2] hover:border-[#1877F2]/50 hover:bg-[#1877F2]/18",
-        }
-      : null,
-    audit.websiteAudit.socialLinks.instagram
-      ? {
-          label: "Instagram",
-          href: audit.websiteAudit.socialLinks.instagram,
-          icon: Instagram,
-          btnClass:
-            "border-pink-200 bg-gradient-to-br from-[#f09433] via-[#dc2743] to-[#bc1888] text-white shadow-sm hover:opacity-95",
-        }
-      : null,
-    audit.websiteAudit.socialLinks.tiktok
-      ? {
-          label: "TikTok",
-          href: audit.websiteAudit.socialLinks.tiktok,
-          icon: Target,
-          btnClass:
-            "border-slate-800 bg-slate-900 text-[#25F4EE] hover:border-slate-700 hover:bg-slate-800",
-        }
-      : null,
-    audit.websiteAudit.socialLinks.youtube
-      ? {
-          label: "YouTube",
-          href: audit.websiteAudit.socialLinks.youtube,
-          icon: Youtube,
-          btnClass:
-            "border-red-200 bg-red-50 text-red-600 hover:border-red-300 hover:bg-red-100",
-        }
-      : null,
-  ].filter((link): link is { label: string; href: string; icon: LucideIcon; btnClass: string } => Boolean(link));
   const identityAttributes = business.identityAttributes.filter((attribute) => attribute.detected);
-  const profileQuickLinks = [
-    business.address
-      ? {
-          label: "Address",
-          detail: business.address,
-          href: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.address)}`,
-          icon: MapPin,
-          external: true,
-          btnClass:
-            "border-sky-200 bg-sky-50 text-sky-600 hover:border-sky-300 hover:bg-sky-100",
-        }
-      : null,
-    business.phone || audit.websiteAudit.contactLinks.phone
-      ? {
-          label: "Phone",
-          detail: business.phone ?? audit.websiteAudit.contactLinks.phone ?? "",
-          href: `tel:${business.phone ?? audit.websiteAudit.contactLinks.phone}`,
-          icon: Phone,
-          external: false,
-          btnClass:
-            "border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-100",
-        }
-      : null,
-    business.website
-      ? {
-          label: "Website",
-          detail: business.website,
-          href: business.website,
-          icon: Globe2,
-          external: true,
-          btnClass:
-            "border-blue-200 bg-blue-50 text-blue-600 hover:border-blue-300 hover:bg-blue-100",
-        }
-      : null,
-    business.googleMapsUri
-      ? {
-          label: "Google Maps",
-          detail: "Open listing",
-          href: business.googleMapsUri,
-          icon: MapPinned,
-          external: true,
-          btnClass:
-            "border-green-200 bg-green-50 text-green-700 hover:border-green-300 hover:bg-green-100",
-        }
-      : null,
-  ].filter(
-    (
-      item
-    ): item is {
-      label: string;
-      detail: string;
-      href: string;
-      icon: LucideIcon;
-      external: boolean;
-      btnClass: string;
-    } => Boolean(item)
-  );
   const statusLabel = business.businessStatus
     ? business.businessStatus.replace(/_/g, " ").toLowerCase()
     : "Status unavailable";
+
+  const primaryPhone = business.phone ?? audit.websiteAudit.contactLinks.phone ?? null;
+  const socialUrls = {
+    ...EMPTY_PROSPECT_SOCIAL_URLS,
+    facebook: audit.websiteAudit.socialLinks.facebook,
+    instagram: audit.websiteAudit.socialLinks.instagram,
+    tiktok: audit.websiteAudit.socialLinks.tiktok,
+    youtube: audit.websiteAudit.socialLinks.youtube,
+    linkedin: audit.websiteAudit.socialLinks.linkedin,
+    whatsapp: audit.websiteAudit.socialLinks.whatsapp,
+  };
 
   return (
     <section className="rounded-[2rem] border border-border bg-white p-6 shadow-soft sm:p-8">
@@ -536,6 +437,9 @@ function GoogleBusinessProfileSummary({ audit }: { audit: RevenueLeakAudit }) {
             <p className="mt-2 text-sm font-semibold text-text-secondary">
               {business.category ?? "Local business"} · {statusLabel}
             </p>
+            {business.address?.trim() ? (
+              <p className="mt-2 text-sm leading-relaxed text-text-secondary">{business.address}</p>
+            ) : null}
             <div className="mt-4 flex flex-wrap gap-2 text-xs font-bold">
               <span className="rounded-full bg-amber-50 px-3 py-1 text-amber-700">
                 {business.rating ?? "N/A"} rating
@@ -560,35 +464,45 @@ function GoogleBusinessProfileSummary({ audit }: { audit: RevenueLeakAudit }) {
                 </span>
               ))}
             </div>
-            {(profileQuickLinks.length > 0 || reportLinks.length > 0) ? (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {profileQuickLinks.map((link) => (
-                  <a
-                    key={`profile-${link.label}-${link.href}`}
-                    href={link.href}
-                    {...(link.external ? { target: "_blank", rel: "noreferrer" } : {})}
-                    className={`inline-flex h-10 w-10 items-center justify-center rounded-full border transition-colors ${link.btnClass}`}
-                    aria-label={`${link.label}: ${link.detail}`}
-                    title={`${link.label}: ${link.detail}`}
-                  >
-                    <link.icon className="h-4 w-4" aria-hidden />
+            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-text-secondary">
+              {primaryPhone ? (
+                <span>
+                  Phone:{" "}
+                  <a href={`tel:${primaryPhone}`} className="font-mono font-semibold text-accent hover:underline">
+                    {primaryPhone}
                   </a>
-                ))}
-                {reportLinks.map((link) => (
-                  <a
-                    key={`${link.label}-${link.href}`}
-                    href={link.href}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={`inline-flex h-10 w-10 items-center justify-center rounded-full border transition-colors ${link.btnClass}`}
-                    aria-label={link.label}
-                    title={link.label}
-                  >
-                    <link.icon className="h-4 w-4" aria-hidden />
-                  </a>
-                ))}
-              </div>
-            ) : null}
+                </span>
+              ) : (
+                <span className="text-text-secondary/80">No phone on listing</span>
+              )}
+              {business.googleMapsUri ? (
+                <a
+                  href={business.googleMapsUri}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-semibold text-accent hover:underline"
+                >
+                  Open in Google Maps
+                </a>
+              ) : null}
+              {business.address?.trim() ? (
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.address)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-semibold text-accent hover:underline"
+                >
+                  Search address
+                </a>
+              ) : null}
+            </div>
+            <ContactChannelStrip
+              websiteUrl={business.website}
+              contactEmail={audit.websiteAudit.contactLinks.email}
+              socialUrls={socialUrls}
+              showFootnote={false}
+              footnote="Icons reflect links found on the business website from this audit. Listing phone and Maps appear above."
+            />
           </div>
         </div>
         <ScoreGauge score={audit.scores.overall} grade={audit.scores.grade} />

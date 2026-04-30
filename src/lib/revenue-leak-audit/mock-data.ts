@@ -222,6 +222,8 @@ export const MOCK_WEBSITE_AUDIT: WebsiteAudit = {
     instagram: "https://instagram.com",
     tiktok: null,
     youtube: null,
+    linkedin: "https://www.linkedin.com/company/example",
+    whatsapp: "https://wa.me/15551234567",
   },
   contactLinks: {
     phone: "+15125550148",

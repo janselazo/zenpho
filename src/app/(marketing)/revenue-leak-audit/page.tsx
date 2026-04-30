@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import RevenueLeakAuditClient from "@/components/revenue-leak-audit/RevenueLeakAuditClient";
+import { resolveGoogleMapsKeyFromEnv } from "@/lib/revenue-leak-audit/resolve-google-maps-key";
 
 export const metadata: Metadata = {
   title: {
@@ -10,6 +11,6 @@ export const metadata: Metadata = {
 };
 
 export default function RevenueLeakAuditPage() {
-  const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim() || null;
+  const { key: googleMapsApiKey } = resolveGoogleMapsKeyFromEnv();
   return <RevenueLeakAuditClient googleMapsApiKey={googleMapsApiKey} />;
 }

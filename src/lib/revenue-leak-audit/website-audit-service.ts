@@ -13,36 +13,14 @@ import {
   detectWebChat,
   extractFirstTagText,
   extractMeta,
+  extractWebsiteSocialLinks,
   hasAny,
   TRUST_TERMS,
 } from "./website-conversion-heuristics";
 import type { ServiceResult, WebsiteAudit } from "./types";
 
-const PAGESPEED_TIMEOUT_MS = 65_000;
-
-function firstSocialLink(html: string, hostPattern: RegExp): string | null {
-  const hrefRe = /href=["']([^"']+)["']/gi;
-  let match: RegExpExecArray | null;
-  while ((match = hrefRe.exec(html)) !== null) {
-    const raw = match[1].trim();
-    if (!hostPattern.test(raw)) continue;
-    try {
-      return new URL(raw).toString();
-    } catch {
-      continue;
-    }
-  }
-  return null;
-}
-
-function extractSocialLinks(html: string): WebsiteAudit["socialLinks"] {
-  return {
-    facebook: firstSocialLink(html, /(?:^|\/\/)(?:www\.)?facebook\.com/i),
-    instagram: firstSocialLink(html, /(?:^|\/\/)(?:www\.)?instagram\.com/i),
-    tiktok: firstSocialLink(html, /(?:^|\/\/)(?:www\.)?tiktok\.com/i),
-    youtube: firstSocialLink(html, /(?:^|\/\/)(?:www\.)?(?:youtube\.com|youtu\.be)/i),
-  };
-}
+/** PSI/Lighthouse runs often exceed 60s on slower sites; aborting too early surfaces as a false failure. */
+const PAGESPEED_TIMEOUT_MS = 100_000;
 
 function extractIdentityAttributes(html: string): WebsiteAudit["identityAttributes"] {
   if (/\blatino[-\s]?owned\b|\blatina[-\s]?owned\b|\blatinx[-\s]?owned\b|\bhispanic[-\s]?owned\b/i.test(html)) {
@@ -235,7 +213,7 @@ export async function auditWebsite(
   const hasGoogleAdsTag = /AW-\d+|googleadservices\.com|conversion_async/i.test(html);
   const hasMetaPixel = /fbq\(|connect\.facebook\.net\/.*fbevents/i.test(html);
   const webChat = detectWebChat(html);
-  const socialLinks = extractSocialLinks(html);
+  const socialLinks = extractWebsiteSocialLinks(html);
   const contactHints = extractPublicContactHints(html);
   const identityAttributes = extractIdentityAttributes(html);
   const mobileFriendly =
