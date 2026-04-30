@@ -20,6 +20,7 @@ import {
   Target,
   Youtube,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import Button from "@/components/ui/Button";
 import type {
   AuditGrade,
@@ -141,6 +142,13 @@ function ScoreGauge({ score, grade, size = 148 }: { score: number; grade: AuditG
       </span>
     </div>
   );
+}
+
+function googleBusinessProfilePhotoUrl(business: BusinessProfile): string | null {
+  const photoName = business.photos.find((photo) => photo.name)?.name;
+  return photoName
+    ? `/api/revenue-leak-audit/place-photo?name=${encodeURIComponent(photoName)}`
+    : null;
 }
 
 function HeroSearch({
@@ -317,14 +325,9 @@ function AnalyzingScreen({ step }: { step: number }) {
 }
 
 function BrandSummary({ audit }: { audit: RevenueLeakAudit }) {
-  const businessProfilePhoto = audit.business.photos.find((photo) => photo.name)?.name;
   const brandImageUrl =
     audit.brandIdentity.logoUrl ||
-    (businessProfilePhoto
-      ? `/api/revenue-leak-audit/place-photo?name=${encodeURIComponent(
-          businessProfilePhoto
-        )}`
-      : null);
+    googleBusinessProfilePhotoUrl(audit.business);
 
   return (
     <section className="rounded-[2rem] border border-border bg-white p-6 shadow-soft sm:p-8">
@@ -385,6 +388,146 @@ function BrandSummary({ audit }: { audit: RevenueLeakAudit }) {
           )}
         </div>
       </div>
+    </section>
+  );
+}
+
+function GoogleBusinessProfileSummary({ audit }: { audit: RevenueLeakAudit }) {
+  const business = audit.business;
+  const profileImageUrl = googleBusinessProfilePhotoUrl(business) || audit.brandIdentity.logoUrl;
+  const contactRows = [
+    business.address
+      ? { label: "Address", value: business.address, icon: MapPin }
+      : null,
+    business.phone
+      ? { label: "Phone", value: business.phone, icon: Phone }
+      : null,
+    business.website
+      ? { label: "Website", value: business.website, icon: Globe2, href: business.website }
+      : null,
+    business.googleMapsUri
+      ? { label: "Google Maps", value: "Open listing", icon: MapPin, href: business.googleMapsUri }
+      : null,
+  ].filter(
+    (
+      row
+    ): row is {
+      label: string;
+      value: string;
+      icon: LucideIcon;
+      href?: string;
+    } => Boolean(row)
+  );
+  const statusLabel = business.businessStatus
+    ? business.businessStatus.replace(/_/g, " ").toLowerCase()
+    : "Status unavailable";
+  const hoursPreview = business.hours.slice(0, 3);
+
+  return (
+    <section className="rounded-[2rem] border border-border bg-white p-6 shadow-soft sm:p-8">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex min-w-0 gap-4">
+          <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-3xl border border-border bg-surface shadow-sm">
+            {profileImageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={profileImageUrl}
+                alt={`${business.name} Google Business Profile logo`}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <Building2 className="h-10 w-10 text-text-secondary" />
+            )}
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">
+              Google Business Profile
+            </p>
+            <h2 className="mt-2 text-3xl font-black tracking-tight text-text-primary">
+              {business.name}
+            </h2>
+            <p className="mt-2 text-sm font-semibold text-text-secondary">
+              {business.category ?? "Local business"} · {statusLabel}
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2 text-xs font-bold">
+              <span className="rounded-full bg-amber-50 px-3 py-1 text-amber-700">
+                {business.rating ?? "N/A"} rating
+              </span>
+              <span className="rounded-full bg-blue-50 px-3 py-1 text-blue-700">
+                {business.reviewCount ?? 0} reviews
+              </span>
+              <span className="rounded-full bg-violet-50 px-3 py-1 text-violet-700">
+                {business.photoCount ?? business.photos.length} photos
+              </span>
+              <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">
+                {business.website ? "Website linked" : "No website linked"}
+              </span>
+            </div>
+          </div>
+        </div>
+        <ScoreGauge
+          score={audit.scores.gbpHealth}
+          grade={
+            audit.scores.gbpHealth < 50
+              ? "Poor"
+              : audit.scores.gbpHealth < 70
+                ? "Average"
+                : audit.scores.gbpHealth < 85
+                  ? "Good"
+                  : "Excellent"
+          }
+          size={104}
+        />
+      </div>
+
+      <div className="mt-6 grid gap-3 md:grid-cols-2">
+        {contactRows.map(({ label, value, icon: Icon, href }) => {
+          const content = (
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent">
+                <Icon className="h-4 w-4" aria-hidden />
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">
+                  {label}
+                </p>
+                <p className="mt-1 truncate text-sm font-semibold text-text-primary">{value}</p>
+              </div>
+            </div>
+          );
+
+          return href ? (
+            <a
+              key={`${label}-${value}`}
+              href={href}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-2xl bg-surface p-4 transition-colors hover:bg-accent/5"
+            >
+              {content}
+            </a>
+          ) : (
+            <div key={`${label}-${value}`} className="rounded-2xl bg-surface p-4">
+              {content}
+            </div>
+          );
+        })}
+      </div>
+
+      {hoursPreview.length > 0 ? (
+        <div className="mt-4 rounded-2xl border border-border bg-white p-4">
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">
+            Hours shown on Google
+          </p>
+          <div className="mt-3 grid gap-2 text-sm font-semibold text-text-primary md:grid-cols-3">
+            {hoursPreview.map((hour) => (
+              <span key={hour} className="rounded-full bg-surface px-3 py-2">
+                {hour}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -907,6 +1050,7 @@ function InteractiveReport({ audit, onRestart }: { audit: RevenueLeakAudit; onRe
           </div>
         </div>
 
+        <GoogleBusinessProfileSummary audit={audit} />
         <BrandSummary audit={audit} />
         <FoundIssuesMoneySummary audit={audit} />
         <SectionProblemAccordion sections={audit.sectionSummaries} />

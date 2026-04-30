@@ -71,6 +71,13 @@ function scoreColor(score: number): RGB {
   return rgb(0.02, 0.6, 0.38);
 }
 
+function gradeFromNumericScore(score: number): AuditGrade {
+  if (score < 50) return "Poor";
+  if (score < 70) return "Average";
+  if (score < 85) return "Good";
+  return "Excellent";
+}
+
 function wrapText(
   text: string,
   font: PDFFont,
@@ -410,8 +417,71 @@ function drawCover(ctx: Ctx, audit: RevenueLeakAudit): void {
   });
 }
 
+function drawGoogleBusinessProfileSummary(ctx: Ctx, audit: RevenueLeakAudit): void {
+  ctx.y = sectionLabel(ctx, "Google Business Profile");
+  const top = ctx.y;
+  card(ctx, MARGIN, top, CONTENT_W, 142, WHITE);
+  ctx.page.drawCircle({
+    x: MARGIN + 42,
+    y: top - 45,
+    size: 28,
+    color: rgb(0.93, 0.96, 1),
+    borderColor: BORDER,
+    borderWidth: 1,
+  });
+  const initial = sanitize(audit.business.name.trim().charAt(0).toUpperCase() || "G");
+  ctx.page.drawText(initial, {
+    x: MARGIN + 42 - ctx.bold.widthOfTextAtSize(initial, 21) / 2,
+    y: top - 52,
+    size: 21,
+    font: ctx.bold,
+    color: BLUE,
+  });
+  text(ctx, audit.business.name, {
+    x: MARGIN + 84,
+    y: top - 28,
+    size: 16,
+    font: ctx.bold,
+    maxWidth: CONTENT_W - 190,
+  });
+  text(ctx, audit.business.category ?? "Local business", {
+    x: MARGIN + 84,
+    y: top - 52,
+    size: 9,
+    color: MUTED,
+    maxWidth: CONTENT_W - 190,
+  });
+  pill(ctx, MARGIN + 84, top - 78, `${audit.business.rating ?? "N/A"} rating`, rgb(0.96, 0.62, 0.04));
+  pill(ctx, MARGIN + 170, top - 78, `${audit.business.reviewCount ?? 0} reviews`, BLUE);
+  pill(ctx, MARGIN + 270, top - 78, `${audit.business.photoCount ?? audit.business.photos.length} photos`, rgb(0.5, 0.2, 0.88));
+  scoreRing(ctx, PAGE_W - MARGIN - 70, top - 22, audit.scores.gbpHealth, gradeFromNumericScore(audit.scores.gbpHealth), 46);
+  text(ctx, audit.business.address ?? "Address unavailable", {
+    x: MARGIN + 18,
+    y: top - 108,
+    size: 8.5,
+    color: MUTED,
+    maxWidth: CONTENT_W / 2 - 28,
+  });
+  text(ctx, audit.business.phone ?? "Phone unavailable", {
+    x: MARGIN + CONTENT_W / 2,
+    y: top - 108,
+    size: 8.5,
+    color: MUTED,
+    maxWidth: CONTENT_W / 2 - 18,
+  });
+  text(ctx, audit.business.website ?? "Website not linked on Google profile", {
+    x: MARGIN + 18,
+    y: top - 126,
+    size: 8.5,
+    color: MUTED,
+    maxWidth: CONTENT_W - 36,
+  });
+  ctx.y = top - 168;
+}
+
 function drawBrandAndScores(ctx: Ctx, audit: RevenueLeakAudit): void {
   addPage(ctx);
+  drawGoogleBusinessProfileSummary(ctx, audit);
   ctx.y = sectionLabel(ctx, "Brand Summary");
   card(ctx, MARGIN, ctx.y, CONTENT_W, 138, WHITE);
   text(ctx, audit.brandIdentity.brandPresenceSummary, {
