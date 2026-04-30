@@ -22,6 +22,7 @@ import {
   Video,
   Workflow,
   X,
+  ShieldAlert,
 } from "lucide-react";
 import {
   composeBeforeAfterImage,
@@ -64,7 +65,7 @@ export type ProspectStitchContext =
 
 type StitchOk = Extract<StitchProspectDesignResult, { ok: true }>;
 type StitchTarget = "website" | "webapp" | "mobile";
-type SelectedOffer = StitchTarget | "automations" | "branding";
+type SelectedOffer = StitchTarget | "automations" | "branding" | "audit";
 
 type OutreachAttachment = {
   id: string;
@@ -268,6 +269,20 @@ function defaultShareTemplatesForOffer(offer: SelectedOffer): ShareTemplates {
         facebookBody:
           "Hi! AI audit draft for {{businessName}} — processes, cost hotspots, recommended tools/workflows, and a prioritized plan (implementation is a separate step). Want the PDF or a quick call?\n\n— {{yourName}}",
       };
+    case "audit":
+      return {
+        smsBody:
+          "Hi {{businessName}} — I ran a Revenue Leak Audit on your Google profile and website. The PDF shows where leads are leaking, what it likely costs you each month, and the fixes ranked by impact. Want me to send it over?",
+        emailSubject: "Revenue Leak Audit for {{businessName}}",
+        emailBody:
+          "Hi {{businessName}},\n\nI ran a Revenue Leak Audit on your Google Business Profile and website. The attached PDF covers:\n\n• Local ranking vs your top Google competitors\n• Review trust + recurring praise themes competitors win on\n• Website conversion (CTAs, forms, click-to-call, web chat, mobile speed)\n• Tracking & ads readiness (GA4 / GTM / Meta Pixel / Ads tag)\n• Photos, schema, and local SEO\n• Estimated monthly $ at risk + the prioritized action plan\n\nHablamos español también — happy to walk through it on a quick call.\n\nBest,\n{{yourName}}",
+        instagramBody:
+          "Hi {{businessName}}! I ran a quick Revenue Leak Audit on your Google profile and website — the PDF lists what's costing you leads each month and the fixes ranked by impact. Want me to send it?\n\n— {{yourName}}",
+        whatsappBody:
+          "Hi {{businessName}}! I ran a Revenue Leak Audit on your Google profile and website — PDF shows where leads are leaking and ~$ at risk per month, with fixes ranked by impact. Want it?\n\n— {{yourName}}",
+        facebookBody:
+          "Hi {{businessName}}! I ran a Revenue Leak Audit on your Google profile and website — PDF shows where leads are leaking and the fixes ranked by impact. Want me to send it?\n\n— {{yourName}}",
+      };
     case "branding":
       return {
         smsBody:
@@ -292,6 +307,7 @@ function createInitialShareTemplates(): Record<SelectedOffer, ShareTemplates> {
     mobile: defaultShareTemplatesForOffer("mobile"),
     automations: defaultShareTemplatesForOffer("automations"),
     branding: defaultShareTemplatesForOffer("branding"),
+    audit: defaultShareTemplatesForOffer("audit"),
   };
 }
 
@@ -872,6 +888,11 @@ export default function ProspectPreviewOutreachBlock({
   const [pdfMsg, setPdfMsg] = useState<string | null>(null);
   const [pdfFilename, setPdfFilename] = useState<string | null>(null);
 
+  const [auditBusy, setAuditBusy] = useState(false);
+  const [auditMsg, setAuditMsg] = useState<string | null>(null);
+  const [auditFilename, setAuditFilename] = useState<string | null>(null);
+  const [auditBlob, setAuditBlob] = useState<Blob | null>(null);
+
   const [brandingBusy, setBrandingBusy] = useState(false);
   const [brandingMsg, setBrandingMsg] = useState<string | null>(null);
   const [brandingFilename, setBrandingFilename] = useState<string | null>(null);
@@ -913,6 +934,9 @@ export default function ProspectPreviewOutreachBlock({
   );
   const hasBrandShareAttachment = outreachAttachments.some(
     (att) => att.id === "brand-share-image",
+  );
+  const hasAuditReportAttachment = outreachAttachments.some(
+    (att) => att.id === "audit-report-pdf",
   );
 
   const activeShareTpl = shareTemplates[selectedOffer];
@@ -1216,12 +1240,20 @@ export default function ProspectPreviewOutreachBlock({
   const canSharePreview =
     selectedOffer === "branding"
       ? Boolean(resolvedBusinessName && hasBrandShareAttachment)
-      : selectedOffer !== "automations" &&
-        Boolean(hostedPreviewIdForSelection && resolvedBusinessName);
+      : selectedOffer === "audit"
+        ? Boolean(resolvedBusinessName && hasAuditReportAttachment)
+        : selectedOffer !== "automations" &&
+          Boolean(hostedPreviewIdForSelection && resolvedBusinessName);
 
   const mergedPreviewUrlForSelection = useMemo(() => {
     const id = hostedPreviewIdForSelection;
-    if (selectedOffer === "automations" || selectedOffer === "branding") return "";
+    if (
+      selectedOffer === "automations" ||
+      selectedOffer === "branding" ||
+      selectedOffer === "audit"
+    ) {
+      return "";
+    }
     return id ? buildClientPreviewLink(id, hostedPreviewSlugForSelection) : "";
   }, [selectedOffer, hostedPreviewIdForSelection, hostedPreviewSlugForSelection]);
 
@@ -1258,6 +1290,7 @@ export default function ProspectPreviewOutreachBlock({
   const canCopyInstagramMessage =
     selectedOffer === "automations" ||
     selectedOffer === "branding" ||
+    selectedOffer === "audit" ||
     (Boolean(hostedPreviewIdForSelection) && Boolean(resolvedBusinessName));
 
   const canSendWhatsappMessage = canCopyInstagramMessage;
@@ -1312,7 +1345,9 @@ export default function ProspectPreviewOutreachBlock({
       setShareMsg(
         selectedOffer === "branding"
           ? "Add a phone number and generate the brand share image first."
-          : "Add a phone number and select a card with a hosted preview.",
+          : selectedOffer === "audit"
+            ? "Add a phone number and generate the Revenue Leak Audit PDF first."
+            : "Add a phone number and select a card with a hosted preview.",
       );
       return;
     }
@@ -1356,7 +1391,9 @@ export default function ProspectPreviewOutreachBlock({
       setShareMsg(
         selectedOffer === "branding"
           ? "Add an email address and generate the brand share image first."
-          : "Add an email address and select a card with a hosted preview.",
+          : selectedOffer === "audit"
+            ? "Add an email address and generate the Revenue Leak Audit PDF first."
+            : "Add an email address and select a card with a hosted preview.",
       );
       return;
     }
@@ -1532,6 +1569,116 @@ export default function ProspectPreviewOutreachBlock({
       setPdfBusy(false);
     }
   }, [marketIntelReport, resolvedBusinessName]);
+
+  const generateAuditReportPdf = useCallback(async () => {
+    if (stitchContext?.kind !== "place") {
+      setAuditMsg("Select a Google Business listing to run the Revenue Leak Audit.");
+      return;
+    }
+    const place = stitchContext.place;
+    setAuditBusy(true);
+    setAuditMsg("Running Revenue Leak Audit…");
+    setAuditBlob(null);
+    setAuditFilename(null);
+    try {
+      const minimalBusiness = {
+        placeId: place.id,
+        name: place.name,
+        address: place.formattedAddress ?? null,
+        phone:
+          place.nationalPhoneNumber?.trim() ||
+          place.internationalPhoneNumber?.trim() ||
+          null,
+        website: place.websiteUri?.trim() || null,
+        category: null,
+        types: place.types ?? [],
+        rating: typeof place.rating === "number" ? place.rating : null,
+        reviewCount:
+          typeof place.userRatingCount === "number"
+            ? Math.round(place.userRatingCount)
+            : null,
+        reviews: [],
+        photos: [],
+        photoCount: null,
+        coordinates: null,
+        hours: [],
+        googleMapsUri: place.googleMapsUri ?? null,
+        businessStatus: place.businessStatus ?? null,
+        identityAttributes: [],
+      };
+
+      const analyzeRes = await fetch("/api/revenue-leak-audit/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ business: minimalBusiness, assumptions: {} }),
+      });
+      const analyzeText = await analyzeRes.text();
+      let analyzeJson: { ok?: boolean; audit?: unknown; error?: string } | null = null;
+      try {
+        analyzeJson = analyzeText ? JSON.parse(analyzeText) : null;
+      } catch {
+        analyzeJson = null;
+      }
+      if (!analyzeRes.ok || !analyzeJson?.ok || !analyzeJson.audit) {
+        setAuditMsg(
+          analyzeJson?.error ||
+            `Audit analysis failed (${analyzeRes.status}). ${analyzeText.slice(0, 200)}`,
+        );
+        return;
+      }
+
+      setAuditMsg("Building PDF report…");
+      const pdfRes = await fetch("/api/revenue-leak-audit/pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ audit: analyzeJson.audit }),
+      });
+      if (!pdfRes.ok) {
+        const errText = await pdfRes.text().catch(() => "");
+        let errJson: { error?: string } | null = null;
+        try {
+          errJson = errText ? JSON.parse(errText) : null;
+        } catch {
+          errJson = null;
+        }
+        setAuditMsg(errJson?.error || `PDF build failed (${pdfRes.status}).`);
+        return;
+      }
+      const blob = await pdfRes.blob();
+      const businessSlug = (place.name || "business")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .slice(0, 60);
+      const filename = `${businessSlug || "business"}-revenue-leak-audit.pdf`;
+      setAuditBlob(blob);
+      setAuditFilename(filename);
+      addOutreachAttachment({
+        id: "audit-report-pdf",
+        name: filename,
+        blob,
+        source: "suggested",
+      });
+      setSelectedOffer("audit");
+      try {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch {
+        // Download fallback - the blob is still attached for outreach.
+      }
+      setAuditMsg("Audit report ready and attached for outreach.");
+    } catch (e) {
+      setAuditMsg(e instanceof Error ? e.message : "Audit request failed.");
+    } finally {
+      setAuditBusy(false);
+    }
+  }, [addOutreachAttachment, stitchContext]);
 
   const generateBrandingShareImage = useCallback(async () => {
     setBrandingShareBusy(true);
@@ -2000,6 +2147,65 @@ export default function ProspectPreviewOutreachBlock({
             ) : null}
           </div>
 
+          {/* Audit Report (Revenue Leak) */}
+          <div
+            className={`cursor-pointer rounded-lg border border-border/70 bg-white/50 p-3 text-left dark:border-zinc-700/80 dark:bg-zinc-900/50 ${cardRing("audit")}`}
+            onClick={() => setSelectedOffer("audit")}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <h4 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500">
+                Audit Report
+              </h4>
+              <ShieldAlert className="h-4 w-4 shrink-0 text-text-secondary opacity-70 dark:text-zinc-500" aria-hidden />
+            </div>
+            <p className="mt-2 text-[11px] leading-snug text-text-secondary dark:text-zinc-400">
+              Full Revenue Leak Audit PDF for the selected Google listing: ranking vs competitors, GBP health, review
+              trust + competitor praise themes, website conversion (CTAs, forms, click-to-call, web chat, mobile speed),
+              tracking & ads readiness, photos, schema, local SEO, and money-loss estimates with a prioritized fix
+              plan. Same report as the Revenue Leak Audit tool.
+            </p>
+            <p className="mt-2 text-[10px] text-text-secondary/90 dark:text-zinc-500">
+              Generation can take 30–90 seconds (Google Places + PageSpeed + competitor reviews). Auto-attaches the PDF
+              for SMS / email / WhatsApp.
+            </p>
+            <button
+              type="button"
+              disabled={stitchContext?.kind !== "place" || auditBusy}
+              onClick={(e) => {
+                e.stopPropagation();
+                void generateAuditReportPdf();
+              }}
+              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 hover:bg-blue-500/[0.14] disabled:opacity-50 dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200 dark:hover:bg-blue-500/20"
+            >
+              {auditBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <FileDown className="h-3.5 w-3.5" aria-hidden />}
+              {auditBusy ? "Building report…" : "Generate report (PDF)"}
+            </button>
+            {stitchContext?.kind !== "place" ? (
+              <p className="mt-2 text-[11px] text-text-secondary/90 dark:text-zinc-500">
+                Pick a Google Business listing in the prospect intel step to enable this report.
+              </p>
+            ) : null}
+            {auditMsg ? (
+              <p className="mt-2 text-[11px] text-text-secondary dark:text-zinc-400" role="status">
+                {auditMsg}
+                {auditFilename ? <span className="ml-1 font-mono text-[10px]">{auditFilename}</span> : null}
+              </p>
+            ) : null}
+            {auditBlob && auditFilename ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  downloadBlob(auditBlob, auditFilename);
+                }}
+                className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-500/[0.14] dark:border-emerald-400/35 dark:bg-emerald-500/15 dark:text-emerald-200 dark:hover:bg-emerald-500/20"
+              >
+                <FileDown className="h-3.5 w-3.5" aria-hidden />
+                Download PDF
+              </button>
+            ) : null}
+          </div>
+
           {/* Brand kit + sales funnel (PDF) */}
           <div
             className={`cursor-pointer rounded-lg border border-border/70 bg-white/50 p-3 text-left dark:border-zinc-700/80 dark:bg-zinc-900/50 ${cardRing("branding")}`}
@@ -2108,6 +2314,13 @@ export default function ProspectPreviewOutreachBlock({
                 {" "}
                 · templates for <span className="text-text-primary dark:text-zinc-200">AI audit</span> (hosted link send
                 requires Website, Web app, or Mobile)
+              </>
+            ) : selectedOffer === "audit" ? (
+              <>
+                {" "}
+                · templates for{" "}
+                <span className="text-text-primary dark:text-zinc-200">Revenue Leak Audit</span> (generate the PDF first
+                to attach it)
               </>
             ) : (
               <>
@@ -2219,8 +2432,8 @@ export default function ProspectPreviewOutreachBlock({
               <p className="mt-2 text-[10px] leading-snug text-text-secondary dark:text-zinc-500">
                 Merge tags: <span className="font-mono">{"{{previewUrl}}"}</span>,{" "}
                 <span className="font-mono">{"{{businessName}}"}</span>
-                {selectedOffer === "automations" || selectedOffer === "branding" ? (
-                  <> — <span className="font-mono">{"{{previewUrl}}"}</span> usually omitted for image-first outreach.</>
+                {selectedOffer === "automations" || selectedOffer === "branding" || selectedOffer === "audit" ? (
+                  <> — <span className="font-mono">{"{{previewUrl}}"}</span> usually omitted for attachment-first outreach.</>
                 ) : (
                   <> — optional <span className="font-mono">{"{{yourName}}"}</span> (typical in email sign-off).</>
                 )}
