@@ -660,16 +660,47 @@ function SectionProblemAccordion({ sections }: { sections: SectionProblemSummary
                     <p className="text-sm text-text-secondary">No major issues found in this section.</p>
                   ) : (
                     <div className="space-y-3">
-                      {section.findings.map((finding) => (
-                        <div key={finding.id} className="rounded-2xl border border-border bg-white p-4">
-                          <div className="flex flex-wrap items-center justify-between gap-3">
-                            <h4 className="font-black text-text-primary">{finding.title}</h4>
-                            <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-red-700">{finding.severity}</span>
+                      {section.findings.map((finding) => {
+                        const sevColor =
+                          finding.severity === "Critical"
+                            ? "bg-red-100 text-red-800"
+                            : finding.severity === "High"
+                              ? "bg-red-50 text-red-700"
+                              : finding.severity === "Medium"
+                                ? "bg-amber-50 text-amber-700"
+                                : "bg-slate-100 text-slate-700";
+                        const impactLow = Math.round(finding.estimatedRevenueImpactLow);
+                        const impactHigh = Math.round(finding.estimatedRevenueImpactHigh);
+                        const impactRange =
+                          impactLow > 0 || impactHigh > 0
+                            ? `~$${impactLow.toLocaleString()}–$${impactHigh.toLocaleString()}/mo at risk`
+                            : null;
+                        return (
+                          <div key={finding.id} className="rounded-2xl border border-border bg-white p-4">
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                              <h4 className="font-black text-text-primary">{finding.title}</h4>
+                              <span className={`rounded-full px-3 py-1 text-xs font-bold ${sevColor}`}>{finding.severity}</span>
+                            </div>
+                            <p className="mt-2 text-sm leading-6 text-text-secondary">
+                              <span className="font-semibold text-text-primary">What we found: </span>
+                              {finding.whatWeFound}
+                            </p>
+                            <p className="mt-2 text-sm leading-6 text-text-secondary">
+                              <span className="font-semibold text-text-primary">Why it matters: </span>
+                              {finding.whyItMatters}
+                            </p>
+                            <p className="mt-2 text-sm leading-6 text-text-secondary">
+                              <span className="font-semibold text-text-primary">Recommended fix: </span>
+                              {finding.recommendedFix}
+                            </p>
+                            {impactRange ? (
+                              <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-accent">
+                                {impactRange}
+                              </p>
+                            ) : null}
                           </div>
-                          <p className="mt-2 text-sm leading-6 text-text-secondary">{finding.whatWeFound}</p>
-                          <p className="mt-2 text-sm leading-6 text-text-secondary">Fix: {finding.recommendedFix}</p>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

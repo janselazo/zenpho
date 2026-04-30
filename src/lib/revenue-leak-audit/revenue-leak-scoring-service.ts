@@ -92,6 +92,36 @@ function competitorAverages(competitors: Competitor[]) {
   };
 }
 
+function daysSince(iso: string | null | undefined): number | null {
+  if (!iso) return null;
+  const time = Date.parse(iso);
+  if (!Number.isFinite(time)) return null;
+  return Math.max(0, Math.floor((Date.now() - time) / (24 * 60 * 60 * 1000)));
+}
+
+function newestReviewDays(business: BusinessProfile): number | null {
+  const days = business.reviews
+    .map((r) => daysSince(r.publishTime))
+    .filter((d): d is number => typeof d === "number");
+  if (days.length === 0) return null;
+  return Math.min(...days);
+}
+
+function titleMentionsLocale(title: string | null, business: BusinessProfile): boolean {
+  if (!title) return false;
+  const lower = title.toLowerCase();
+  const tokens: string[] = [];
+  if (business.address) {
+    business.address
+      .split(/[,\s]+/)
+      .map((part) => part.trim().toLowerCase())
+      .filter((part) => part.length >= 4)
+      .forEach((part) => tokens.push(part));
+  }
+  if (tokens.length === 0) return false;
+  return tokens.some((token) => lower.includes(token));
+}
+
 function buildFindings(input: BuildInput): AuditFinding[] {
   const {
     business,
@@ -156,6 +186,56 @@ function buildFindings(input: BuildInput): AuditFinding[] {
     );
   }
 
+  if (comp.rating > 0 && (business.rating ?? 0) > 0 && comp.rating - (business.rating ?? 0) >= 0.2) {
+    const impact = moneyImpact(assumptions, 0.03, 0.1);
+    findings.push(
+      finding(
+        {
+          category: "Business vs Google Competitors",
+          severity: comp.rating - (business.rating ?? 0) >= 0.5 ? "High" : "Medium",
+          title: "Star Rating Is Lower Than Top Competitors",
+          whatWeFound: `${business.name} averages ${(business.rating ?? 0).toFixed(1)} stars while top competitors average ${comp.rating.toFixed(1)}.`,
+          whyItMatters:
+            "Buyers often shortlist the highest rating from the local pack. Even a 0.2 star gap can move clicks and calls to competitors.",
+          evidence: `Selected rating: ${(business.rating ?? 0).toFixed(1)}. Competitor average: ${comp.rating.toFixed(1)}.`,
+          estimatedRevenueImpactLow: impact.low,
+          estimatedRevenueImpactHigh: impact.high,
+          recommendedFix:
+            "Run a structured review-recovery sequence: fix top complaints, follow up after every job, and ask satisfied customers for fresh reviews.",
+          priorityScore: 80,
+        },
+        i++
+      )
+    );
+  }
+
+  if (
+    comp.photos > 0 &&
+    (business.photoCount ?? 0) > 0 &&
+    comp.photos > (business.photoCount ?? 0) * 1.8
+  ) {
+    const impact = moneyImpact(assumptions, 0.02, 0.07);
+    findings.push(
+      finding(
+        {
+          category: "Business vs Google Competitors",
+          severity: "Medium",
+          title: "Competitors Have a Stronger Photo Footprint on Google",
+          whatWeFound: `${business.name} has ~${business.photoCount ?? 0} Google photos. Top competitors average ~${comp.photos}.`,
+          whyItMatters:
+            "Photo-rich listings tend to earn more profile views and direction requests in the local pack.",
+          evidence: `Selected photo count: ${business.photoCount ?? 0}. Competitor average: ${comp.photos}.`,
+          estimatedRevenueImpactLow: impact.low,
+          estimatedRevenueImpactHigh: impact.high,
+          recommendedFix:
+            "Upload fresh team, truck, project, and before/after photos to Google Business Profile every month.",
+          priorityScore: 64,
+        },
+        i++
+      )
+    );
+  }
+
   if (!business.website) {
     const impact = moneyImpact(assumptions, 0.06, 0.18);
     findings.push(
@@ -201,6 +281,121 @@ function buildFindings(input: BuildInput): AuditFinding[] {
     );
   }
 
+  if (business.hours.length === 0) {
+    const impact = moneyImpact(assumptions, 0.02, 0.07);
+    findings.push(
+      finding(
+        {
+          category: "Google Business Profile",
+          severity: "Medium",
+          title: "Google Profile Is Missing Business Hours",
+          whatWeFound: "No business hours were available on the selected Google profile.",
+          whyItMatters:
+            "Buyers compare “open now” providers in the local pack. Missing hours can drop ranking and lose evening/weekend leads.",
+          evidence: "regularOpeningHours not populated in Google Places data.",
+          estimatedRevenueImpactLow: impact.low,
+          estimatedRevenueImpactHigh: impact.high,
+          recommendedFix:
+            "Add accurate weekday + weekend hours, plus holiday/special hours when relevant.",
+          priorityScore: 76,
+        },
+        i++
+      )
+    );
+  }
+
+  if (!business.category) {
+    const impact = moneyImpact(assumptions, 0.03, 0.09);
+    findings.push(
+      finding(
+        {
+          category: "Google Business Profile",
+          severity: "Medium",
+          title: "Primary Google Category Is Missing or Generic",
+          whatWeFound: "The selected business does not have a clear primary Google category.",
+          whyItMatters:
+            "Google relies on the primary category to decide which searches you appear in. A weak category means lost relevance and ranking.",
+          evidence: "primaryType / category not present in Google Places data.",
+          estimatedRevenueImpactLow: impact.low,
+          estimatedRevenueImpactHigh: impact.high,
+          recommendedFix:
+            "Set the most specific primary category that matches the highest-value service, and add 2–4 supporting categories.",
+          priorityScore: 78,
+        },
+        i++
+      )
+    );
+  }
+
+  if ((business.photoCount ?? 0) < 10) {
+    const impact = moneyImpact(assumptions, 0.02, 0.06);
+    findings.push(
+      finding(
+        {
+          category: "Google Business Profile",
+          severity: "Medium",
+          title: "Google Profile Has Very Few Photos",
+          whatWeFound: `Only ${business.photoCount ?? 0} photo${(business.photoCount ?? 0) === 1 ? "" : "s"} are visible on the Google profile.`,
+          whyItMatters:
+            "Profiles with at least 10–20 quality photos tend to earn materially more profile views, calls, and direction requests.",
+          evidence: `photoCount: ${business.photoCount ?? 0}.`,
+          estimatedRevenueImpactLow: impact.low,
+          estimatedRevenueImpactHigh: impact.high,
+          recommendedFix:
+            "Upload 10+ recent photos: storefront/truck, team, finished work, before/after, and customer-facing details.",
+          priorityScore: 62,
+        },
+        i++
+      )
+    );
+  }
+
+  if ((business.reviewCount ?? 0) < 25) {
+    const impact = moneyImpact(assumptions, 0.03, 0.1);
+    findings.push(
+      finding(
+        {
+          category: "Google Business Profile",
+          severity: (business.reviewCount ?? 0) < 10 ? "High" : "Medium",
+          title: "Review Count Is Below the Local Trust Threshold",
+          whatWeFound: `${business.name} has ${business.reviewCount ?? 0} Google review${(business.reviewCount ?? 0) === 1 ? "" : "s"}.`,
+          whyItMatters:
+            "Most buyers expect 25–50+ reviews to consider a local provider. Below that threshold, calls and form fills drop sharply.",
+          evidence: `userRatingCount: ${business.reviewCount ?? 0}.`,
+          estimatedRevenueImpactLow: impact.low,
+          estimatedRevenueImpactHigh: impact.high,
+          recommendedFix:
+            "Install an automated review request flow that fires after every completed job (SMS + email).",
+          priorityScore: 82,
+        },
+        i++
+      )
+    );
+  }
+
+  if (business.businessStatus && /CLOSED|SUSPEND/i.test(business.businessStatus)) {
+    const impact = moneyImpact(assumptions, 0.05, 0.15);
+    findings.push(
+      finding(
+        {
+          category: "Google Business Profile",
+          severity: "Critical",
+          title: "Google Lists This Business as Not Fully Operational",
+          whatWeFound: `Google reports a non-operational status: ${business.businessStatus}.`,
+          whyItMatters:
+            "A closed or suspended status removes the business from most local searches and stops the lead flow entirely.",
+          evidence: `businessStatus: ${business.businessStatus}.`,
+          estimatedRevenueImpactLow: impact.low,
+          estimatedRevenueImpactHigh: impact.high,
+          recommendedFix:
+            "Reclaim/verify the listing, correct status, and re-publish key info (hours, photos, services).",
+          priorityScore: 97,
+        },
+        i++
+      )
+    );
+  }
+
   if ((business.rating ?? 5) < 4.5 || reviewSentiment.negativeThemes.length > 0) {
     const impact = moneyImpact(assumptions, 0.04, 0.12);
     findings.push(
@@ -220,6 +415,80 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           recommendedFix:
             "Request fresh positive reviews, respond to unhappy customers, and fix recurring complaint patterns.",
           priorityScore: 86,
+        },
+        i++
+      )
+    );
+  }
+
+  if (reviewSentiment.negativeThemes.length >= 2) {
+    const impact = moneyImpact(assumptions, 0.02, 0.08);
+    findings.push(
+      finding(
+        {
+          category: "Reviews & Reputation",
+          severity: "Medium",
+          title: "Recurring Complaint Themes in Recent Reviews",
+          whatWeFound: `Reviewers repeatedly mention: ${reviewSentiment.negativeThemes.join(", ")}.`,
+          whyItMatters:
+            "Repeated complaint patterns become a public objection in the buyer's research and depress the conversion rate from calls to booked jobs.",
+          evidence: `Negative themes detected from a ${reviewSentiment.sampleSize}-review sample.`,
+          estimatedRevenueImpactLow: impact.low,
+          estimatedRevenueImpactHigh: impact.high,
+          recommendedFix:
+            "Pick the top two complaint themes and create a written process change. Reply to each negative review with the fix.",
+          priorityScore: 75,
+        },
+        i++
+      )
+    );
+  }
+
+  {
+    const newest = newestReviewDays(business);
+    if (newest !== null && newest > 90 && (business.reviewCount ?? 0) > 0) {
+      const impact = moneyImpact(assumptions, 0.02, 0.07);
+      findings.push(
+        finding(
+          {
+            category: "Reviews & Reputation",
+            severity: newest > 180 ? "High" : "Medium",
+            title: "Review Velocity Has Stalled",
+            whatWeFound: `The most recent visible review is about ${newest} days old.`,
+            whyItMatters:
+              "Google rewards recency. Long gaps between reviews signal a stale business and reduce local pack rankings.",
+            evidence: `Most recent review publishTime ≈ ${newest} days ago across ${business.reviews.length} sampled reviews.`,
+            estimatedRevenueImpactLow: impact.low,
+            estimatedRevenueImpactHigh: impact.high,
+            recommendedFix:
+              "Trigger a review request after every completed job and aim for 4–8 fresh reviews per month.",
+            priorityScore: 73,
+          },
+          i++
+        )
+      );
+    }
+  }
+
+  if (reviewSentiment.sentimentScore < 60) {
+    const impact = moneyImpact(assumptions, 0.03, 0.09);
+    findings.push(
+      finding(
+        {
+          category: "Reviews & Reputation",
+          severity: reviewSentiment.sentimentScore < 45 ? "High" : "Medium",
+          title: "Public Sentiment Score Is Below the Local Trust Bar",
+          whatWeFound: `Sentiment score: ${reviewSentiment.sentimentScore}/100 from ${reviewSentiment.sampleSize} sampled reviews.`,
+          whyItMatters:
+            "Even when the star rating looks fine, weak sentiment in the review text turns shoppers toward higher-trust competitors.",
+          evidence: `Positive themes: ${reviewSentiment.positiveThemes.join(", ") || "limited"}. Negative themes: ${
+            reviewSentiment.negativeThemes.join(", ") || "none"
+          }.`,
+          estimatedRevenueImpactLow: impact.low,
+          estimatedRevenueImpactHigh: impact.high,
+          recommendedFix:
+            "Coach the team to ask for reviews that name the result (“finished on time”, “fair price”, “clean job site”) so positive themes show up in the public review text.",
+          priorityScore: 68,
         },
         i++
       )
@@ -296,6 +565,80 @@ function buildFindings(input: BuildInput): AuditFinding[] {
     );
   }
 
+  if (websiteAudit.available && !websiteAudit.https) {
+    const impact = moneyImpact(assumptions, 0.02, 0.06);
+    findings.push(
+      finding(
+        {
+          category: "Website Conversion",
+          severity: "High",
+          title: "Website Is Not Served Over HTTPS",
+          whatWeFound: "The homepage URL did not resolve to an HTTPS-secured connection.",
+          whyItMatters:
+            "Modern browsers warn visitors before they submit forms or call. Insecure pages drop conversion and hurt SEO.",
+          evidence: `normalizedUrl: ${websiteAudit.normalizedUrl ?? websiteAudit.url ?? "n/a"}.`,
+          estimatedRevenueImpactLow: impact.low,
+          estimatedRevenueImpactHigh: impact.high,
+          recommendedFix:
+            "Force HTTPS at the host/CDN, install a valid certificate, and 301 redirect every HTTP URL.",
+          priorityScore: 85,
+        },
+        i++
+      )
+    );
+  }
+
+  if (websiteAudit.available && !websiteAudit.hasViewport) {
+    const impact = moneyImpact(assumptions, 0.02, 0.06);
+    findings.push(
+      finding(
+        {
+          category: "Website Conversion",
+          severity: "Medium",
+          title: "Mobile Viewport Tag Is Missing",
+          whatWeFound: "The page does not declare a mobile viewport meta tag.",
+          whyItMatters:
+            "Without a viewport, mobile visitors see desktop-sized layouts and bounce before calling. Most local search traffic is mobile.",
+          evidence: "<meta name=\"viewport\"> not detected.",
+          estimatedRevenueImpactLow: impact.low,
+          estimatedRevenueImpactHigh: impact.high,
+          recommendedFix:
+            "Add `<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">` and re-test on mobile.",
+          priorityScore: 70,
+        },
+        i++
+      )
+    );
+  }
+
+  if (
+    websiteAudit.available &&
+    websiteAudit.mobileFriendly === false
+  ) {
+    const impact = moneyImpact(assumptions, 0.03, 0.1);
+    findings.push(
+      finding(
+        {
+          category: "Website Conversion",
+          severity: "High",
+          title: "Website Is Not Considered Mobile-Friendly",
+          whatWeFound: "Mobile usability signals (viewport + mobile speed) suggest a poor mobile experience.",
+          whyItMatters:
+            "Most local-pack traffic is on a phone. Bad mobile UX kills calls and form fills before the lead is captured.",
+          evidence: `Viewport: ${websiteAudit.hasViewport ? "yes" : "no"}. Mobile PageSpeed: ${
+            websiteAudit.pageSpeedMobileScore ?? "n/a"
+          }.`,
+          estimatedRevenueImpactLow: impact.low,
+          estimatedRevenueImpactHigh: impact.high,
+          recommendedFix:
+            "Switch to a responsive theme, fix tap targets, and run a real device test on a mid-range Android phone.",
+          priorityScore: 83,
+        },
+        i++
+      )
+    );
+  }
+
   if (
     websiteAudit.pageSpeedMobileScore !== null &&
     websiteAudit.pageSpeedMobileScore < 55
@@ -340,6 +683,52 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           recommendedFix:
             "Add testimonials, Google review highlights, client/project photos, team photos, and before/after examples.",
           priorityScore: 89,
+        },
+        i++
+      )
+    );
+  }
+
+  if (websiteAudit.available && !websiteAudit.hasClientPhotos) {
+    const impact = moneyImpact(assumptions, 0.02, 0.07);
+    findings.push(
+      finding(
+        {
+          category: "Website Trust & Visual Proof",
+          severity: "Medium",
+          title: "No Client / Team Photos Detected on the Website",
+          whatWeFound: "The homepage HTML did not include image alt or filenames signaling client, team, owner, or staff photos.",
+          whyItMatters:
+            "Local service buyers want to see the people behind the work. Stock-only imagery weakens trust and conversion.",
+          evidence: "No <img> tags matched client/team/owner/staff/customer signals.",
+          estimatedRevenueImpactLow: impact.low,
+          estimatedRevenueImpactHigh: impact.high,
+          recommendedFix:
+            "Add 4–8 candid team and customer photos in the hero, about, and trust sections. Use descriptive alt text.",
+          priorityScore: 67,
+        },
+        i++
+      )
+    );
+  }
+
+  if (websiteAudit.available && !websiteAudit.hasBeforeAfter) {
+    const impact = moneyImpact(assumptions, 0.02, 0.06);
+    findings.push(
+      finding(
+        {
+          category: "Website Trust & Visual Proof",
+          severity: "Medium",
+          title: "No Before / After Visual Proof Detected",
+          whatWeFound: "The homepage does not appear to include before/after visuals.",
+          whyItMatters:
+            "Before/after photos collapse the buyer's risk. Without them the lead has to imagine the result, which lowers form fills.",
+          evidence: "No image src/alt matched before/after patterns.",
+          estimatedRevenueImpactLow: impact.low,
+          estimatedRevenueImpactHigh: impact.high,
+          recommendedFix:
+            "Build a small before/after gallery on the homepage and the most-visited service pages.",
+          priorityScore: 64,
         },
         i++
       )
@@ -392,6 +781,56 @@ function buildFindings(input: BuildInput): AuditFinding[] {
     );
   }
 
+  if (
+    websiteAudit.available &&
+    websiteAudit.hasGoogleTagManager &&
+    !websiteAudit.hasGoogleAnalytics
+  ) {
+    const impact = moneyImpact(assumptions, 0.01, 0.05);
+    findings.push(
+      finding(
+        {
+          category: "Tracking & Ads Readiness",
+          severity: "Medium",
+          title: "Tag Manager Detected But Analytics Not Firing",
+          whatWeFound: "Google Tag Manager is on the site, but no GA4/Universal Analytics signal was detected.",
+          whyItMatters:
+            "GTM without GA leaves the business blind to which channels actually produce the calls and forms it pays for.",
+          evidence: `GTM detected: yes. GA detected: no.`,
+          estimatedRevenueImpactLow: impact.low,
+          estimatedRevenueImpactHigh: impact.high,
+          recommendedFix:
+            "Publish a GA4 tag in GTM and verify pageview + key conversion events in real-time.",
+          priorityScore: 71,
+        },
+        i++
+      )
+    );
+  }
+
+  if (websiteAudit.available && !websiteAudit.hasMetaPixel) {
+    const impact = moneyImpact(assumptions, 0.01, 0.04);
+    findings.push(
+      finding(
+        {
+          category: "Tracking & Ads Readiness",
+          severity: "Low",
+          title: "No Meta (Facebook/Instagram) Pixel Detected",
+          whatWeFound: "The Meta Pixel was not detected on the homepage.",
+          whyItMatters:
+            "Without the Pixel, Meta cannot retarget visitors who didn't call, which leaves a cheap remarketing channel unused.",
+          evidence: "fbq()/connect.facebook.net pixel signature not present.",
+          estimatedRevenueImpactLow: impact.low,
+          estimatedRevenueImpactHigh: impact.high,
+          recommendedFix:
+            "Install Meta Pixel via GTM and configure Lead/Contact custom events.",
+          priorityScore: 50,
+        },
+        i++
+      )
+    );
+  }
+
   if (!websiteAudit.hasGoogleAdsTag && (assumptions.monthlyAdSpend ?? 0) > 0) {
     const impact = moneyImpact(assumptions, 0.03, 0.1);
     findings.push(
@@ -409,6 +848,29 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           recommendedFix:
             "Connect Google Ads conversion tracking, call tracking, and landing page events through GTM.",
           priorityScore: 84,
+        },
+        i++
+      )
+    );
+  }
+
+  if (photoAnalysis.hasLowResolutionSignals) {
+    const impact = moneyImpact(assumptions, 0.01, 0.05);
+    findings.push(
+      finding(
+        {
+          category: "Photo Quality & Quantity",
+          severity: "Medium",
+          title: "Some Google Photos Look Low Resolution",
+          whatWeFound: "At least one published Google photo was below 500×350 pixels.",
+          whyItMatters:
+            "Low-resolution profile photos make the business look amateur and reduce trust before the click.",
+          evidence: photoAnalysis.notes.join(" "),
+          estimatedRevenueImpactLow: impact.low,
+          estimatedRevenueImpactHigh: impact.high,
+          recommendedFix:
+            "Replace small/blurry photos with high-resolution shots taken on a recent phone (≥ 1920×1080) and re-upload.",
+          priorityScore: 56,
         },
         i++
       )
@@ -456,6 +918,103 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           recommendedFix:
             "Create service pages and location/service-area pages tied to the highest-value jobs.",
           priorityScore: 74,
+        },
+        i++
+      )
+    );
+  }
+
+  if (websiteAudit.available && !websiteAudit.hasLocalBusinessSchema) {
+    const impact = moneyImpact(assumptions, 0.02, 0.06);
+    findings.push(
+      finding(
+        {
+          category: "Local SEO & Market Positioning",
+          severity: "Medium",
+          title: "Missing LocalBusiness Schema",
+          whatWeFound: "The page does not appear to include LocalBusiness / Service structured data.",
+          whyItMatters:
+            "Schema helps Google connect the website to the Google profile and unlocks rich results that earn clicks.",
+          evidence: "No application/ld+json LocalBusiness/Organization/Service block detected.",
+          estimatedRevenueImpactLow: impact.low,
+          estimatedRevenueImpactHigh: impact.high,
+          recommendedFix:
+            "Add LocalBusiness JSON-LD with name, address, phone, hours, areaServed, sameAs (social/Google), and main services.",
+          priorityScore: 69,
+        },
+        i++
+      )
+    );
+  }
+
+  if (websiteAudit.available && !websiteAudit.title) {
+    const impact = moneyImpact(assumptions, 0.01, 0.05);
+    findings.push(
+      finding(
+        {
+          category: "Local SEO & Market Positioning",
+          severity: "Medium",
+          title: "Homepage Title Tag Is Missing",
+          whatWeFound: "No <title> or og:title was found on the homepage.",
+          whyItMatters:
+            "The title tag is the most important on-page SEO signal and the headline shown in search results.",
+          evidence: "title / og:title not detected.",
+          estimatedRevenueImpactLow: impact.low,
+          estimatedRevenueImpactHigh: impact.high,
+          recommendedFix:
+            "Set a title in the format `Primary Service in City | Brand Name`. Keep it under 60 characters.",
+          priorityScore: 72,
+        },
+        i++
+      )
+    );
+  }
+
+  if (websiteAudit.available && !websiteAudit.metaDescription) {
+    const impact = moneyImpact(assumptions, 0.01, 0.04);
+    findings.push(
+      finding(
+        {
+          category: "Local SEO & Market Positioning",
+          severity: "Low",
+          title: "Meta Description Is Missing",
+          whatWeFound: "No meta description / og:description was found on the homepage.",
+          whyItMatters:
+            "The meta description is the snippet under the title in Google. A weak/missing snippet earns fewer clicks.",
+          evidence: "meta name=description / og:description not detected.",
+          estimatedRevenueImpactLow: impact.low,
+          estimatedRevenueImpactHigh: impact.high,
+          recommendedFix:
+            "Write a 140–160 character description that names the service, the city, the differentiator, and a CTA.",
+          priorityScore: 55,
+        },
+        i++
+      )
+    );
+  }
+
+  if (
+    websiteAudit.available &&
+    websiteAudit.title &&
+    business.address &&
+    !titleMentionsLocale(websiteAudit.title, business)
+  ) {
+    const impact = moneyImpact(assumptions, 0.01, 0.04);
+    findings.push(
+      finding(
+        {
+          category: "Local SEO & Market Positioning",
+          severity: "Low",
+          title: "Homepage Title Does Not Mention the Service Area",
+          whatWeFound: `Title: "${websiteAudit.title}". The business is based in ${business.address}.`,
+          whyItMatters:
+            "Local intent searches reward titles that name the city. Missing geography costs ranking for the highest-value queries.",
+          evidence: "Title contains no token from the business address.",
+          estimatedRevenueImpactLow: impact.low,
+          estimatedRevenueImpactHigh: impact.high,
+          recommendedFix:
+            "Update the homepage title to include the primary service + city (e.g., `Roofing in Houston | Brand`).",
+          priorityScore: 58,
         },
         i++
       )
@@ -598,10 +1157,20 @@ function scoreForCategory(scores: AuditScores, category: AuditCategory): number 
   }
 }
 
-function sectionSummaryText(category: AuditCategory, findings: AuditFinding[]): string {
+function sectionSummaryText(_category: AuditCategory, findings: AuditFinding[]): string {
   if (findings.length === 0) return "No major issues found in this section.";
   const highest = findings[0];
-  return `${findings.length} issue${findings.length === 1 ? "" : "s"} found. Highest priority: ${highest.title}.`;
+  const severityCounts: Record<string, number> = {};
+  for (const f of findings) {
+    severityCounts[f.severity] = (severityCounts[f.severity] ?? 0) + 1;
+  }
+  const order = ["Critical", "High", "Medium", "Low"] as const;
+  const breakdown = order
+    .filter((sev) => severityCounts[sev])
+    .map((sev) => `${severityCounts[sev]} ${sev.toLowerCase()}`)
+    .join(", ");
+  const issueLine = `${findings.length} issue${findings.length === 1 ? "" : "s"} found${breakdown ? ` (${breakdown})` : ""}.`;
+  return `${issueLine} Highest priority: ${highest.title}.`;
 }
 
 function buildSectionSummaries(
