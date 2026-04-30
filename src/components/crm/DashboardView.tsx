@@ -944,6 +944,52 @@ export default function DashboardView({
         </div>
       </section>
 
+      {/* Sales Funnel — column metrics + single area chart (reference layout) */}
+      <div className={`${dashCard} p-5`}>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-base font-bold tracking-tight text-text-primary dark:text-zinc-100">
+            Sales Funnel
+          </h2>
+          <div className="flex items-center gap-2">
+            <span className="hidden text-xs text-text-secondary dark:text-zinc-500 sm:inline">
+              {rangeLabel}
+            </span>
+            <button
+              type="button"
+              className="rounded-lg p-1.5 text-text-secondary transition-colors hover:bg-zinc-100 hover:text-text-primary dark:text-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+              aria-label="More options"
+            >
+              <MoreHorizontal className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-5 overflow-hidden rounded-xl border border-border/70 bg-white dark:border-zinc-700/70 dark:bg-zinc-950/40">
+          <div className="grid grid-cols-4 divide-x divide-border/70 dark:divide-zinc-700/80">
+            {funnel.map((stage) => (
+              <div
+                key={stage.label}
+                className="min-w-0 px-2 py-4 sm:px-3 sm:py-5"
+              >
+                <p className="text-xs font-medium text-text-secondary dark:text-zinc-500">
+                  {stage.label}
+                </p>
+                <p className="mt-1.5 text-xl font-bold tabular-nums leading-none text-text-primary dark:text-zinc-50 sm:text-2xl">
+                  {funnelMetricDisplayValue(stage)}
+                </p>
+              </div>
+            ))}
+          </div>
+          <div className="relative border-t border-border/70 dark:border-zinc-700/80">
+            <SalesFunnelAreaSvg funnel={funnel} maxCount={funnelMaxCount} />
+            <div
+              className="pointer-events-none absolute inset-0 grid grid-cols-4 divide-x divide-border/50 dark:divide-zinc-700/70"
+              aria-hidden
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Business snapshot — Finance (line) + Volume (bars) */}
       <div className={`${dashCard} p-5`}>
         <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
@@ -1104,52 +1150,6 @@ export default function DashboardView({
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Sales Funnel — column metrics + single area chart (reference layout) */}
-      <div className={`${dashCard} p-5`}>
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-base font-bold tracking-tight text-text-primary dark:text-zinc-100">
-            Sales Funnel
-          </h2>
-          <div className="flex items-center gap-2">
-            <span className="hidden text-xs text-text-secondary dark:text-zinc-500 sm:inline">
-              {rangeLabel}
-            </span>
-            <button
-              type="button"
-              className="rounded-lg p-1.5 text-text-secondary transition-colors hover:bg-zinc-100 hover:text-text-primary dark:text-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
-              aria-label="More options"
-            >
-              <MoreHorizontal className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-5 overflow-hidden rounded-xl border border-border/70 bg-white dark:border-zinc-700/70 dark:bg-zinc-950/40">
-          <div className="grid grid-cols-4 divide-x divide-border/70 dark:divide-zinc-700/80">
-            {funnel.map((stage) => (
-              <div
-                key={stage.label}
-                className="min-w-0 px-2 py-4 sm:px-3 sm:py-5"
-              >
-                <p className="text-xs font-medium text-text-secondary dark:text-zinc-500">
-                  {stage.label}
-                </p>
-                <p className="mt-1.5 text-xl font-bold tabular-nums leading-none text-text-primary dark:text-zinc-50 sm:text-2xl">
-                  {funnelMetricDisplayValue(stage)}
-                </p>
-              </div>
-            ))}
-          </div>
-          <div className="relative border-t border-border/70 dark:border-zinc-700/80">
-            <SalesFunnelAreaSvg funnel={funnel} maxCount={funnelMaxCount} />
-            <div
-              className="pointer-events-none absolute inset-0 grid grid-cols-4 divide-x divide-border/50 dark:divide-zinc-700/70"
-              aria-hidden
-            />
           </div>
         </div>
       </div>
