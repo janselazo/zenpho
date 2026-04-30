@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo, useState, type UIEvent } from "react";
 import type {
   AuditCategory,
   AuditFinding,
@@ -173,9 +173,11 @@ export function RevenueLeakTopLeaksSection({
 
 function SnapshotWarningIcon() {
   return (
-    <span className="relative flex h-9 w-9 shrink-0 items-center justify-center" aria-hidden>
-      <span className="absolute inset-[-2px] rounded-lg bg-red-500/30 blur-[7px]" />
-      <svg viewBox="0 0 24 24" className="relative h-7 w-7 drop-shadow-md" aria-hidden>
+    <span
+      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm bg-white"
+      aria-hidden
+    >
+      <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" aria-hidden>
         <path fill="#dc2626" d="M12 2.5L22.5 21H1.5L12 2.5z" />
         <path
           fill="#ffffff"
@@ -186,7 +188,92 @@ function SnapshotWarningIcon() {
   );
 }
 
-const SNAPSHOT_TOP_ISSUES = 5;
+const WHEEL_ROW_HEIGHT_PX = 52;
+const WHEEL_VISIBLE_ROWS = 5;
+const WHEEL_EDGE_PAD_ROWS = 2;
+
+function clamp(n: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, n));
+}
+
+function SnapshotIssuesWheelPicker({ findings }: { findings: AuditFinding[] }) {
+  const [scrollTop, setScrollTop] = useState(0);
+
+  const { rowH, viewH, padPx } = useMemo(() => {
+    const rowH = WHEEL_ROW_HEIGHT_PX;
+    const viewH = rowH * WHEEL_VISIBLE_ROWS;
+    const padPx = rowH * WHEEL_EDGE_PAD_ROWS;
+    return { rowH, viewH, padPx };
+  }, []);
+
+  const onScroll = useCallback((e: UIEvent<HTMLDivElement>) => {
+    setScrollTop(e.currentTarget.scrollTop);
+  }, []);
+
+  const viewportCenterInContent = scrollTop + viewH / 2;
+
+  return (
+    <div className="mt-8">
+      <p className="mb-2 text-center text-[11px] font-medium text-text-secondary sm:text-xs">
+        Scroll to browse — top items are highest impact.
+      </p>
+      <div
+        className="relative overflow-hidden rounded-2xl border border-border [perspective:900px] [perspective-origin:center_center]"
+        style={{
+          maskImage: "linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%)",
+          WebkitMaskImage:
+            "linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%)",
+        }}
+      >
+        <div
+          onScroll={onScroll}
+          className="max-h-[260px] overflow-y-auto overflow-x-hidden overscroll-y-contain [touch-action:pan-y] [scrollbar-width:thin]"
+          style={{ height: `${viewH}px` }}
+          role="region"
+          aria-label="Revenue leak issues, scrollable list"
+          tabIndex={0}
+        >
+          <ul
+            className="relative m-0 list-none p-0 [transform-style:preserve-3d]"
+            style={{
+              paddingTop: padPx,
+              paddingBottom: padPx,
+            }}
+          >
+            {findings.map((finding, index) => {
+              const itemCenterY = padPx + index * rowH + rowH / 2;
+              const delta = itemCenterY - viewportCenterInContent;
+              const abs = Math.abs(delta);
+              const rotateX = clamp(delta * -0.11, -52, 52);
+              const scale = clamp(1 - abs / (rowH * 4.8) * 0.22, 0.78, 1);
+              const opacity = clamp(1 - abs / (rowH * 4.2) * 0.72, 0.3, 1);
+
+              return (
+                <li
+                  key={finding.id}
+                  className="flex items-center gap-3.5"
+                  style={{
+                    height: rowH,
+                    transform: `rotateX(${rotateX}deg) scale(${scale})`,
+                    transformOrigin: "center center",
+                    opacity,
+                    transition: "transform 0.08s ease-out, opacity 0.08s ease-out",
+                    willChange: "transform, opacity",
+                  }}
+                >
+                  <SnapshotWarningIcon />
+                  <span className="min-w-0 flex-1 text-[15px] font-semibold leading-snug text-text-primary sm:text-base">
+                    {finding.title}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export type RevenueLeakSnapshotProps = {
   audit: RevenueLeakAudit;
@@ -209,11 +296,11 @@ export default function RevenueLeakSnapshot({
     return s.slice(0, 3);
   }, [findingsWithMoney]);
 
-  const topIssueRows = useMemo(() => {
+  const wheelFindings = useMemo(() => {
     const s = [...findingsWithMoney].sort(
       (a, b) => b.estimatedRevenueImpactHigh - a.estimatedRevenueImpactHigh
     );
-    return s.slice(0, SNAPSHOT_TOP_ISSUES);
+    return s;
   }, [findingsWithMoney]);
 
   const issueCount = moneySummary.totalIssues;
@@ -236,22 +323,7 @@ export default function RevenueLeakSnapshot({
         </h2>
       </div>
 
-      {topIssueRows.length > 0 ? (
-        <ul className="mt-8 space-y-4">
-          {topIssueRows.map((finding, index) => (
-            <li key={finding.id} className="flex gap-3.5">
-              <SnapshotWarningIcon />
-              <span
-                className={`min-w-0 pt-0.5 text-[15px] font-semibold leading-snug sm:text-base ${
-                  index >= 3 ? "text-text-secondary" : "text-text-primary"
-                }`}
-              >
-                {finding.title}
-              </span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      {wheelFindings.length > 0 ? <SnapshotIssuesWheelPicker findings={wheelFindings} /> : null}
 
       {!hideTopLeaks ? (
         <div className="mt-10">

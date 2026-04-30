@@ -1,7 +1,4 @@
-import {
-  fetchPageHtml,
-  brandHomepageForFetch,
-} from "@/lib/crm/brand-color-extract";
+import { fetchPageHtml } from "@/lib/crm/brand-color-extract";
 import { resolveProspectBrandAssets } from "@/lib/crm/prospect-branding-asset-resolve";
 import { normalizeUrlForFetch } from "@/lib/crm/safe-url-fetch";
 import { MOCK_BRAND_IDENTITY } from "./mock-data";
@@ -88,10 +85,9 @@ export async function analyzeBrandIdentity(
   }
 
   try {
-    const homeUrl = brandHomepageForFetch(normalized);
     const [assets, html] = await Promise.all([
       resolveProspectBrandAssets({ websiteUrl: normalized, businessName }),
-      fetchPageHtml(homeUrl, 8000),
+      fetchPageHtml(normalized, 8000),
     ]);
     const palette = assets.palette;
     const summary: BrandIdentitySummary = {

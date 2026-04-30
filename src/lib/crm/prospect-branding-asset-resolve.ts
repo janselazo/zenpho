@@ -340,6 +340,37 @@ function isUsefulLogoPalette(palette: string[]): boolean {
   });
 }
 
+/** Hero shots / stock photos often appear as JPEG; do not treat as wordmark. */
+function isLikelyHeroOrStockPhotoUrl(resolvedUrl: string): boolean {
+  let path = resolvedUrl.toLowerCase();
+  try {
+    path = new URL(resolvedUrl).pathname.toLowerCase();
+  } catch {
+    /* use full string */
+  }
+  return /-pic\.|_pic\.|\/pic-|hero|banner|slider|gallery|background|headshot|team-|\/team\/|staff|photo-|\/photos?\/|stock|essential-pic|why-impact|untitled-design|slider-|blog-|news-|project-/i.test(
+    path,
+  );
+}
+
+/**
+ * JPEG logos exist, but generic JPEGs are usually hero/section photos. Only promote JPEG
+ * when the path hints at a brand mark (or @2x / division assets from builders).
+ */
+function looksLikeRasterLogoFilename(resolvedUrl: string): boolean {
+  if (isLikelyHeroOrStockPhotoUrl(resolvedUrl)) return false;
+  let path = resolvedUrl.toLowerCase();
+  try {
+    path = new URL(resolvedUrl).pathname.toLowerCase();
+  } catch {
+    return false;
+  }
+  if (/\/icon[_-]|feature[_-]icon|sprite/i.test(path)) return false;
+  return /logo|wordmark|brand|division|mark\.|@2x|scaled\.png|site-logo|ehe-|elite-impact|glass-website|organization|favicon|apple-touch/i.test(
+    path,
+  );
+}
+
 function logoPaletteQuality(palette: string[]): number {
   let score = 0;
   palette.slice(0, 5).forEach((hex, index) => {
@@ -412,12 +443,35 @@ export async function resolveProspectBrandAssets(input: {
         quality: number;
       }
     | null = null;
+  let firstRankedRaster:
+    | {
+        buffer: Buffer | null;
+        svg: string | null;
+        sourceUrl: string;
+        palette: string[];
+      }
+    | null = null;
+
   for (const logoUrl of candidateLogoUrls.slice(0, 8)) {
     const fetched = await safeFetchLogoAsset(logoUrl);
     if (!fetched) continue;
     if (isDecorativeContactIconUrl(fetched.sourceUrl)) continue;
     const candidatePalette = logoPaletteFromFetch(fetched);
     const rasterFmt = fetched.buffer ? sniffRasterFormat(fetched.buffer) : null;
+
+    if (
+      !firstRankedRaster &&
+      (fetched.buffer || fetched.svg) &&
+      !isLikelyHeroOrStockPhotoUrl(fetched.sourceUrl)
+    ) {
+      firstRankedRaster = {
+        buffer: fetched.buffer,
+        svg: fetched.svg,
+        sourceUrl: fetched.sourceUrl,
+        palette: candidatePalette,
+      };
+    }
+
     if (isUsefulLogoPalette(candidatePalette)) {
       const quality = logoPaletteQuality(candidatePalette);
       if (!bestLogo || quality > bestLogo.quality) {
@@ -429,9 +483,13 @@ export async function resolveProspectBrandAssets(input: {
           quality,
         };
       }
-    } else if (rasterFmt === "jpeg" && fetched.buffer) {
-      /** Header wordmarks are often JPEG; PNG sampling fails so use a moderate fixed quality. */
-      const quality = 36;
+    } else if (
+      rasterFmt === "jpeg" &&
+      fetched.buffer &&
+      looksLikeRasterLogoFilename(fetched.sourceUrl)
+    ) {
+      /** Real wordmarks are sometimes JPEG-only; ignore hero photography. */
+      const quality = 34;
       if (!bestLogo || quality > bestLogo.quality) {
         bestLogo = {
           buffer: fetched.buffer,
@@ -448,11 +506,17 @@ export async function resolveProspectBrandAssets(input: {
       logoSourceUrl = fetched.sourceUrl;
     }
   }
+
   if (bestLogo) {
     logoPng = bestLogo.buffer;
     logoSvg = bestLogo.svg;
     logoSourceUrl = bestLogo.sourceUrl;
     logoPalette = bestLogo.palette;
+  } else if (firstRankedRaster) {
+    logoPng = firstRankedRaster.buffer;
+    logoSvg = firstRankedRaster.svg;
+    logoSourceUrl = firstRankedRaster.sourceUrl;
+    logoPalette = firstRankedRaster.palette;
   }
 
   const finalPalette = logoPalette.length ? logoPalette : palette;

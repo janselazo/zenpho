@@ -643,8 +643,14 @@ function collectLogoUrlsFromLdObject(node: unknown, acc: string[], visited: Set<
   if (typeof logo === "string" && logo.trim()) {
     acc.push(logo.trim());
   } else if (logo && typeof logo === "object") {
-    const url = (logo as { url?: unknown }).url;
-    if (typeof url === "string" && url.trim()) acc.push(url.trim());
+    const lo = logo as { url?: unknown; contentUrl?: unknown };
+    const url =
+      typeof lo.url === "string" && lo.url.trim()
+        ? lo.url.trim()
+        : typeof lo.contentUrl === "string" && lo.contentUrl.trim()
+          ? lo.contentUrl.trim()
+          : null;
+    if (url) acc.push(url);
   }
   for (const key of ["publisher", "brand", "parentOrganization", "subOrganization", "mainEntity"]) {
     const child = o[key];
@@ -908,10 +914,20 @@ export async function fetchBrandAssetsFromUrl(
   timeoutMs = 8000,
   options: LogoExtractionOptions = {},
 ): Promise<BrandAssets> {
-  const fetchUrl = brandHomepageForFetch(url);
-  const html = await fetchPageHtml(fetchUrl, timeoutMs);
+  const pageUrl = normalizeUrl(url.trim());
+  let html = await fetchPageHtml(pageUrl, timeoutMs);
+  let resolvedBase = pageUrl;
+
+  if (!html) {
+    const originFallback = brandHomepageForFetch(url);
+    if (originFallback !== pageUrl) {
+      html = await fetchPageHtml(originFallback, timeoutMs);
+      resolvedBase = originFallback;
+    }
+  }
+
   if (!html) return { colors: null, logoUrl: null, logoUrls: [], sourceFacts: null };
-  const normalized = fetchUrl;
+  const normalized = resolvedBase;
 
   const cssUrls = extractLinkedStylesheetUrls(html, normalized);
   let combined = html;

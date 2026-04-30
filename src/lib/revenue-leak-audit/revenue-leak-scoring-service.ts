@@ -193,6 +193,39 @@ function competitorAverages(competitors: Competitor[]) {
   };
 }
 
+/** Maps-style ranking: lowest `rank` first (ties keep input order). Uses top 5 for a local pack benchmark. */
+function topFiveCompetitorBenchmark(competitors: Competitor[]): {
+  avgRating: number | null;
+  avgReviews: number | null;
+  ratedCount: number;
+  reviewFieldCount: number;
+} {
+  const sorted = [...competitors].sort((a, b) => {
+    const ra = a.rank == null ? 999 : a.rank;
+    const rb = b.rank == null ? 999 : b.rank;
+    return ra - rb;
+  });
+  const top5 = sorted.slice(0, 5);
+  const rated = top5.filter(
+    (c) => c.rating != null && Number.isFinite(c.rating)
+  );
+  const withReviews = top5.filter(
+    (c) => c.reviewCount != null && Number.isFinite(c.reviewCount)
+  );
+  const avgRating =
+    rated.length >= 2 ? avg(rated.map((c) => c.rating!)) : null;
+  const avgReviewsRaw =
+    withReviews.length >= 2
+      ? avg(withReviews.map((c) => c.reviewCount!))
+      : null;
+  return {
+    avgRating,
+    avgReviews: avgReviewsRaw != null ? Math.round(avgReviewsRaw) : null,
+    ratedCount: rated.length,
+    reviewFieldCount: withReviews.length,
+  };
+}
+
 function daysSince(iso: string | null | undefined): number | null {
   if (!iso) return null;
   const time = Date.parse(iso);
@@ -235,6 +268,7 @@ function buildFindings(input: BuildInput): AuditFinding[] {
     competitorStrengths,
   } = input;
   const comp = competitorAverages(competitors);
+  const top5Bench = topFiveCompetitorBenchmark(competitors);
   const findings: AuditFinding[] = [];
   let i = 1;
 
@@ -552,31 +586,59 @@ function buildFindings(input: BuildInput): AuditFinding[] {
     );
   }
 
-  if ((business.rating ?? 5) < 4.5 || reviewSentiment.negativeThemes.length > 0) {
-    const impact = moneyImpact(assumptions, 0.04, 0.12);
-    findings.push(
-      finding(
-        {
-          category: "Reviews & Reputation",
-          severity: (business.rating ?? 5) < 4.0 ? "Critical" : "High",
-          title: "Review Trust Is Below a Strong Local Standard",
-          whatWeFound: `Rating: ${business.rating ?? "not available"}. Negative themes: ${
-            reviewSentiment.negativeThemes.join(", ") || "limited sample"
-          }.`,
-          whyItMatters:
-            "Lower rating or repeated complaints can reduce calls from buyers comparing multiple providers.",
-          evidence: `Sentiment score: ${reviewSentiment.sentimentScore}/100 from ${reviewSentiment.sampleSize} review samples.`,
-          estimatedRevenueImpactLow: impact.low,
-          estimatedRevenueImpactHigh: impact.high,
-          leakRateLow: impact.leakRateLow,
-          leakRateHigh: impact.leakRateHigh,
-          recommendedFix:
-            "Request fresh positive reviews, respond to unhappy customers, and fix recurring complaint patterns.",
-          priorityScore: 86,
-        },
-        i++
-      )
-    );
+  {
+    const hasThemes = reviewSentiment.negativeThemes.length > 0;
+    const ur = business.rating;
+    const reliableTop5 =
+      top5Bench.avgRating != null && top5Bench.ratedCount >= 2;
+    const STAR_GAP = 0.12;
+    const belowTop5Avg =
+      reliableTop5 &&
+      ur != null &&
+      ur + STAR_GAP < top5Bench.avgRating!;
+    const belowFallbackStars = !reliableTop5 && (ur ?? 5) < 4.5;
+    const belowStars = belowTop5Avg || belowFallbackStars;
+    if (belowStars || hasThemes) {
+      const impact = moneyImpact(assumptions, 0.04, 0.12);
+      const packSize = Math.min(5, Math.max(0, competitors.length));
+      const benchLine = reliableTop5 && packSize > 0
+        ? `Top ${packSize} Google Maps result${packSize === 1 ? "" : "s"} in this search average ${top5Bench.avgRating!.toFixed(1)} stars${
+            top5Bench.avgReviews != null
+              ? ` and ~${top5Bench.avgReviews} reviews each`
+              : ""
+          }. Your rating: ${ur?.toFixed(1) ?? "not available"}.`
+        : `Strong local pack benchmark unavailable (${top5Bench.ratedCount} rated competitor${top5Bench.ratedCount === 1 ? "" : "s"} in top 5); comparing to a 4.5+ star convention. Your rating: ${ur?.toFixed(1) ?? "not available"}.`;
+      const themesLine = `Negative themes: ${
+        reviewSentiment.negativeThemes.join(", ") || "none in sample"
+      }.`;
+      const criticalStarGap =
+        reliableTop5 &&
+        ur != null &&
+        top5Bench.avgRating! - ur >= 0.35;
+      const severity =
+        (ur != null && ur < 4.0) || criticalStarGap ? "Critical" : "High";
+      findings.push(
+        finding(
+          {
+            category: "Reviews & Reputation",
+            severity,
+            title: "Review Trust Is Below a Strong Local Standard",
+            whatWeFound: `${benchLine} ${themesLine}`,
+            whyItMatters:
+              "Compared with the businesses Google surfaces beside you, a weaker rating or repeated complaints can reduce calls from buyers shortlisting providers.",
+            evidence: `${reliableTop5 ? `Local top-5 avg rating ${top5Bench.avgRating!.toFixed(1)} (n=${top5Bench.ratedCount}). ` : ""}Sentiment score: ${reviewSentiment.sentimentScore}/100 from ${reviewSentiment.sampleSize} review samples.`,
+            estimatedRevenueImpactLow: impact.low,
+            estimatedRevenueImpactHigh: impact.high,
+            leakRateLow: impact.leakRateLow,
+            leakRateHigh: impact.leakRateHigh,
+            recommendedFix:
+              "Request fresh positive reviews, respond to unhappy customers, and fix recurring complaint patterns.",
+            priorityScore: 86,
+          },
+          i++
+        )
+      );
+    }
   }
 
   if (reviewSentiment.negativeThemes.length >= 2) {

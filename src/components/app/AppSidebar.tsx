@@ -43,12 +43,12 @@ const opportunitiesNav: Array<{
   { href: "/leads", label: "Leads", icon: UsersRound },
   { href: "/calendar", label: "Appointments", icon: Calendar },
   { href: "/conversations", label: "Conversations", icon: MessageSquare },
-  { href: "/proposals", label: "Proposals", icon: FileText },
 ];
 
 const workNav = [
   { href: "/products", label: "Products", icon: FolderKanban },
   { href: "/time-tracking", label: "Time Tracking", icon: Timer },
+  { href: "/proposals", label: "Proposals", icon: FileText },
 ];
 
 const agencyNav = [
