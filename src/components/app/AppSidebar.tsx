@@ -21,6 +21,7 @@ import {
   MessageSquare,
   SearchCheck,
   Settings,
+  Store as StoreIcon,
   Timer,
   Users,
   UsersRound,
@@ -254,6 +255,11 @@ export default function AppSidebar() {
 
       {/* Bottom */}
       <div className="flex flex-col gap-0.5 border-t border-border p-2 dark:border-zinc-800/80">
+        <NavLink href="/store" active={isActive(pathname, "/store")}>
+          <StoreIcon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+          <span className="min-w-0 flex-1 truncate">Store</span>
+          <SoonBadge className="ml-auto" />
+        </NavLink>
         <NavLink href="/settings" active={isActive(pathname, "/settings")}>
           <Settings className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
           Settings
