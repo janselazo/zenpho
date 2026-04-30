@@ -163,6 +163,12 @@ export type WebsiteAudit = {
   hasGoogleTagManager: boolean;
   hasGoogleAdsTag: boolean;
   hasMetaPixel: boolean;
+  socialLinks: {
+    facebook: string | null;
+    instagram: string | null;
+    tiktok: string | null;
+    youtube: string | null;
+  };
   imageCount: number;
   blurryImageSignals: number;
   warnings: string[];

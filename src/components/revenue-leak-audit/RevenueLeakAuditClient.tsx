@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   ChevronDown,
   Download,
+  ExternalLink,
   Loader2,
   MapPin,
   RotateCcw,
@@ -101,10 +102,18 @@ function ScoreGauge({ score, grade, size = 148 }: { score: number; grade: AuditG
   const radius = 52;
   const circumference = 2 * Math.PI * radius;
   const dash = (score / 100) * circumference;
+  const compact = size < 110;
   return (
     <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
       <svg viewBox="0 0 140 140" className="h-full w-full -rotate-90">
-        <circle cx="70" cy="70" r={radius} fill="none" stroke="#e8ecf1" strokeWidth="13" />
+        <circle
+          cx="70"
+          cy="70"
+          r={radius}
+          fill="none"
+          stroke="#e8ecf1"
+          strokeWidth={compact ? "11" : "13"}
+        />
         <circle
           cx="70"
           cy="70"
@@ -112,13 +121,23 @@ function ScoreGauge({ score, grade, size = 148 }: { score: number; grade: AuditG
           fill="none"
           stroke={scoreColor(score)}
           strokeLinecap="round"
-          strokeWidth="13"
+          strokeWidth={compact ? "11" : "13"}
           strokeDasharray={`${dash} ${circumference}`}
         />
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-4xl font-black tracking-tight text-text-primary">{score}</span>
-        <span className={`mt-1 rounded-full border px-2.5 py-1 text-xs font-bold ${gradeClasses(grade)}`}>
+      <div className="absolute inset-0 flex flex-col items-center justify-center pt-1">
+        <span
+          className={`font-black leading-none tracking-tight text-text-primary ${
+            compact ? "text-2xl" : "text-4xl"
+          }`}
+        >
+          {score}
+        </span>
+        <span
+          className={`mt-1 rounded-full border font-bold leading-none ${
+            compact ? "px-2 py-1 text-[10px]" : "px-2.5 py-1 text-xs"
+          } ${gradeClasses(grade)}`}
+        >
           {grade}
         </span>
       </div>
@@ -128,13 +147,58 @@ function ScoreGauge({ score, grade, size = 148 }: { score: number; grade: AuditG
 
 function HeroSearch({
   onSearch,
+  onSelectBusiness,
   searching,
 }: {
-  onSearch: (businessName: string, city: string) => void;
+  onSearch: (businessName: string) => void;
+  onSelectBusiness: (result: BusinessSearchResult) => void;
   searching: boolean;
 }) {
   const [businessName, setBusinessName] = useState("");
-  const [city, setCity] = useState("");
+  const [suggestions, setSuggestions] = useState<BusinessSearchResult[]>([]);
+  const [suggesting, setSuggesting] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [hint, setHint] = useState<string | null>(null);
+  const autocompleteSeqRef = useRef(0);
+
+  useEffect(() => {
+    const q = businessName.trim();
+    const seq = ++autocompleteSeqRef.current;
+    setHint(null);
+    if (q.length < 2) {
+      setSuggestions([]);
+      setSuggesting(false);
+      return;
+    }
+    setSuggesting(true);
+    const id = window.setTimeout(() => {
+      void fetch("/api/revenue-leak-audit/business-search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ businessName: q }),
+      })
+        .then(async (res) => {
+          const data = (await res.json()) as SearchResponse;
+          if (!res.ok || !data.ok) {
+            throw new Error(data.error ?? "Could not load business matches.");
+          }
+          if (seq !== autocompleteSeqRef.current) return;
+          setSuggestions(data.businesses ?? []);
+          setHint(data.warnings?.[0] ?? null);
+          setOpen(true);
+        })
+        .catch((e) => {
+          if (seq !== autocompleteSeqRef.current) return;
+          setSuggestions([]);
+          setHint(e instanceof Error ? e.message : "Could not load business matches.");
+        })
+        .finally(() => {
+          if (seq === autocompleteSeqRef.current) setSuggesting(false);
+        });
+    }, 300);
+    return () => window.clearTimeout(id);
+  }, [businessName]);
+
   return (
     <section className="hero-sky px-4 pb-16 pt-32 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
@@ -152,10 +216,11 @@ function HeroSearch({
         </div>
 
         <form
-          className="mx-auto mt-10 grid max-w-5xl gap-3 rounded-[2rem] border border-white/80 bg-white/90 p-3 shadow-soft-lg backdrop-blur md:grid-cols-[1.2fr_0.8fr_auto]"
+          className="mx-auto mt-10 grid max-w-4xl gap-3 rounded-[2rem] border border-white/80 bg-white/90 p-3 shadow-soft-lg backdrop-blur md:grid-cols-[1fr_auto]"
           onSubmit={(e) => {
             e.preventDefault();
-            onSearch(businessName, city);
+            setOpen(false);
+            onSearch(businessName);
           }}
         >
           <label className="relative block">
@@ -163,20 +228,50 @@ function HeroSearch({
             <Building2 className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" />
             <input
               value={businessName}
-              onChange={(e) => setBusinessName(e.target.value)}
+              onChange={(e) => {
+                setBusinessName(e.target.value);
+                setOpen(true);
+              }}
+              onFocus={() => setOpen(true)}
               className={`${inputClass} pl-11`}
               placeholder="Business name"
+              autoComplete="off"
             />
-          </label>
-          <label className="relative block">
-            <span className="sr-only">City or service area</span>
-            <MapPin className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" />
-            <input
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              className={`${inputClass} pl-11`}
-              placeholder="City / service area"
-            />
+            {open && (suggestions.length > 0 || suggesting || hint) ? (
+              <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-2xl border border-border bg-white text-left shadow-soft-lg">
+                {suggesting ? (
+                  <div className="flex items-center gap-2 px-4 py-3 text-sm text-text-secondary">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Searching Google Business matches...
+                  </div>
+                ) : null}
+                {suggestions.map((result) => (
+                  <button
+                    key={result.placeId}
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      setBusinessName(result.name);
+                      setOpen(false);
+                      onSelectBusiness(result);
+                    }}
+                    className="block w-full border-t border-border/60 px-4 py-3 text-left transition-colors first:border-t-0 hover:bg-surface"
+                  >
+                    <span className="block text-sm font-bold text-text-primary">
+                      {result.name}
+                    </span>
+                    <span className="mt-1 block text-xs text-text-secondary">
+                      {result.address ?? "Address unavailable"} · {result.rating ?? "N/A"} rating · {result.reviewCount ?? 0} reviews
+                    </span>
+                  </button>
+                ))}
+                {hint ? (
+                  <p className="border-t border-border/60 px-4 py-3 text-xs text-text-secondary">
+                    {hint}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
           </label>
           <Button type="submit" size="lg" disabled={searching} className="h-full whitespace-nowrap">
             {searching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
@@ -393,11 +488,19 @@ function BrandSummary({ audit }: { audit: RevenueLeakAudit }) {
       <div className="mt-6 grid gap-3 md:grid-cols-3">
         <div className="rounded-2xl bg-surface p-4">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-text-secondary">Primary</p>
-          <p className="mt-2 font-black text-text-primary">{audit.brandIdentity.primaryColor ?? "Not found"}</p>
+          {audit.brandIdentity.primaryColor ? (
+            <div className="mt-3 h-10 rounded-xl border border-black/10 shadow-sm" style={{ backgroundColor: audit.brandIdentity.primaryColor }} />
+          ) : (
+            <p className="mt-2 font-black text-text-primary">Not found</p>
+          )}
         </div>
         <div className="rounded-2xl bg-surface p-4">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-text-secondary">Accent</p>
-          <p className="mt-2 font-black text-text-primary">{audit.brandIdentity.accentColor ?? "Not found"}</p>
+          {audit.brandIdentity.accentColor ? (
+            <div className="mt-3 h-10 rounded-xl border border-black/10 shadow-sm" style={{ backgroundColor: audit.brandIdentity.accentColor }} />
+          ) : (
+            <p className="mt-2 font-black text-text-primary">Not found</p>
+          )}
         </div>
         <div className="rounded-2xl bg-surface p-4">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-text-secondary">Typography</p>
@@ -447,7 +550,6 @@ function SectionProblemAccordion({ sections }: { sections: SectionProblemSummary
     <section className="rounded-[2rem] border border-border bg-white p-6 shadow-soft sm:p-8">
       <div className="mb-6">
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Problems found by section</p>
-        <h2 className="mt-2 text-3xl font-black tracking-tight text-text-primary">FAQ-style issue breakdown</h2>
       </div>
       <div className="space-y-3">
         {sections.map((section) => {
@@ -459,8 +561,10 @@ function SectionProblemAccordion({ sections }: { sections: SectionProblemSummary
                   <h3 className="font-black text-text-primary">{section.category}</h3>
                   <p className="mt-1 text-sm text-text-secondary">{section.summary}</p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <ScoreGauge score={section.score} grade={section.grade} size={84} />
+                <div className="flex shrink-0 items-center gap-3">
+                  <div className="rounded-2xl bg-surface/80 p-2">
+                    <ScoreGauge score={section.score} grade={section.grade} size={78} />
+                  </div>
                   <ChevronDown className={`h-5 w-5 text-text-secondary transition-transform ${isOpen ? "rotate-180" : ""}`} />
                 </div>
               </button>
@@ -477,9 +581,6 @@ function SectionProblemAccordion({ sections }: { sections: SectionProblemSummary
                             <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-red-700">{finding.severity}</span>
                           </div>
                           <p className="mt-2 text-sm leading-6 text-text-secondary">{finding.whatWeFound}</p>
-                          <p className="mt-2 text-sm font-semibold text-text-primary">
-                            Cost: {formatMoney(finding.estimatedRevenueImpactLow)}-{formatMoney(finding.estimatedRevenueImpactHigh)}/mo
-                          </p>
                           <p className="mt-2 text-sm leading-6 text-text-secondary">Fix: {finding.recommendedFix}</p>
                         </div>
                       ))}
@@ -739,6 +840,24 @@ function DownloadPdfBanner({ audit }: { audit: RevenueLeakAudit }) {
 }
 
 function InteractiveReport({ audit, onRestart }: { audit: RevenueLeakAudit; onRestart: () => void }) {
+  const reportLinks = [
+    audit.business.website
+      ? { label: "Website", href: audit.business.website }
+      : null,
+    audit.websiteAudit.socialLinks.facebook
+      ? { label: "Facebook", href: audit.websiteAudit.socialLinks.facebook }
+      : null,
+    audit.websiteAudit.socialLinks.instagram
+      ? { label: "Instagram", href: audit.websiteAudit.socialLinks.instagram }
+      : null,
+    audit.websiteAudit.socialLinks.tiktok
+      ? { label: "TikTok", href: audit.websiteAudit.socialLinks.tiktok }
+      : null,
+    audit.websiteAudit.socialLinks.youtube
+      ? { label: "YouTube", href: audit.websiteAudit.socialLinks.youtube }
+      : null,
+  ].filter((link): link is { label: string; href: string } => Boolean(link));
+
   return (
     <section className="px-4 py-12 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-6">
@@ -753,6 +872,22 @@ function InteractiveReport({ audit, onRestart }: { audit: RevenueLeakAudit; onRe
                 <span className="rounded-full bg-blue-50 px-3 py-1 text-blue-700">{audit.business.reviewCount ?? 0} reviews</span>
                 <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">{audit.business.website ? "Website linked" : "No website"}</span>
               </div>
+              {reportLinks.length > 0 ? (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {reportLinks.map((link) => (
+                    <a
+                      key={`${link.label}-${link.href}`}
+                      href={link.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-3 py-1.5 text-xs font-bold text-text-secondary transition-colors hover:border-accent/30 hover:text-accent"
+                    >
+                      {link.label}
+                      <ExternalLink className="h-3 w-3" aria-hidden />
+                    </a>
+                  ))}
+                </div>
+              ) : null}
             </div>
             <ScoreGauge score={audit.scores.overall} grade={audit.scores.grade} />
           </div>
@@ -769,12 +904,31 @@ function InteractiveReport({ audit, onRestart }: { audit: RevenueLeakAudit; onRe
         <section className="rounded-[2rem] border border-border bg-white p-6 shadow-soft sm:p-8">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Action plan</p>
           <h2 className="mt-2 text-3xl font-black tracking-tight text-text-primary">What to fix first</h2>
-          <div className="mt-6 grid gap-3 md:grid-cols-2">
+          <div className="mt-6 divide-y divide-border overflow-hidden rounded-3xl border border-border">
             {audit.actionPlan.map((item, index) => (
-              <div key={`${item.fix}-${index}`} className="rounded-2xl border border-border bg-surface/60 p-4">
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">{item.timeline}</p>
-                <h3 className="mt-2 font-black text-text-primary">{item.fix}</h3>
-                <p className="mt-2 text-sm text-text-secondary">Impact: {item.impact} · Difficulty: {item.difficulty}</p>
+              <div
+                key={`${item.fix}-${index}`}
+                className="flex gap-4 bg-white p-5 transition-colors hover:bg-surface/60"
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-sm font-black text-accent">
+                  {index + 1}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">
+                      {item.timeline}
+                    </p>
+                    <span className="rounded-full bg-surface px-2 py-0.5 text-[11px] font-bold text-text-secondary">
+                      Impact: {item.impact}
+                    </span>
+                    <span className="rounded-full bg-surface px-2 py-0.5 text-[11px] font-bold text-text-secondary">
+                      Difficulty: {item.difficulty}
+                    </span>
+                  </div>
+                  <h3 className="mt-2 font-black leading-snug text-text-primary">
+                    {item.fix}
+                  </h3>
+                </div>
               </div>
             ))}
           </div>
@@ -804,7 +958,7 @@ export default function RevenueLeakAuditClient() {
 
   const warningList = useMemo(() => [...new Set(warnings)], [warnings]);
 
-  async function runSearch(businessName: string, city: string) {
+  async function runSearch(businessName: string) {
     if (businessName.trim().length < 2) {
       setError("Enter a business name.");
       return;
@@ -816,7 +970,7 @@ export default function RevenueLeakAuditClient() {
       const res = await fetch("/api/revenue-leak-audit/business-search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ businessName, city }),
+        body: JSON.stringify({ businessName }),
       });
       const data = (await res.json()) as SearchResponse;
       if (!res.ok || !data.ok) throw new Error(data.error ?? "Search failed.");
@@ -893,7 +1047,11 @@ export default function RevenueLeakAuditClient() {
     <>
       {stage === "search" ? (
         <>
-          <HeroSearch onSearch={runSearch} searching={searching} />
+          <HeroSearch
+            onSearch={runSearch}
+            onSelectBusiness={selectBusiness}
+            searching={searching}
+          />
           {error ? <InlineAlert message={error} tone="error" /> : null}
           <SearchResults results={searchResults} onSelect={selectBusiness} loadingId={loadingBusinessId} />
         </>

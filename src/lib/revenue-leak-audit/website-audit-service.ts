@@ -16,6 +16,30 @@ import {
 } from "./website-conversion-heuristics";
 import type { ServiceResult, WebsiteAudit } from "./types";
 
+function firstSocialLink(html: string, hostPattern: RegExp): string | null {
+  const hrefRe = /href=["']([^"']+)["']/gi;
+  let match: RegExpExecArray | null;
+  while ((match = hrefRe.exec(html)) !== null) {
+    const raw = match[1].trim();
+    if (!hostPattern.test(raw)) continue;
+    try {
+      return new URL(raw).toString();
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+function extractSocialLinks(html: string): WebsiteAudit["socialLinks"] {
+  return {
+    facebook: firstSocialLink(html, /(?:^|\/\/)(?:www\.)?facebook\.com/i),
+    instagram: firstSocialLink(html, /(?:^|\/\/)(?:www\.)?instagram\.com/i),
+    tiktok: firstSocialLink(html, /(?:^|\/\/)(?:www\.)?tiktok\.com/i),
+    youtube: firstSocialLink(html, /(?:^|\/\/)(?:www\.)?(?:youtube\.com|youtu\.be)/i),
+  };
+}
+
 async function fetchHtml(url: string): Promise<{
   html: string | null;
   status: string;
@@ -155,6 +179,7 @@ export async function auditWebsite(
   const hasGoogleAnalytics = /gtag\(|google-analytics\.com|G-[A-Z0-9]+/i.test(html);
   const hasGoogleAdsTag = /AW-\d+|googleadservices\.com|conversion_async/i.test(html);
   const hasMetaPixel = /fbq\(|connect\.facebook\.net\/.*fbevents/i.test(html);
+  const socialLinks = extractSocialLinks(html);
   const mobileFriendly =
     hasViewport && (pageSpeed.score === null || pageSpeed.score >= 50) ? true : false;
 
@@ -194,6 +219,7 @@ export async function auditWebsite(
       hasGoogleTagManager,
       hasGoogleAdsTag,
       hasMetaPixel,
+      socialLinks,
       imageCount: imageSignals.imageCount,
       blurryImageSignals: imageSignals.blurryImageSignals,
       warnings: auditWarnings,

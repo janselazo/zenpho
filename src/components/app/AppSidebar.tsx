@@ -39,7 +39,6 @@ const opportunitiesNav: Array<{
   label: string;
   icon: LucideIcon;
 }> = [
-  { href: "/audit", label: "Audit", icon: SearchCheck },
   { href: "/leads", label: "Leads", icon: UsersRound },
   { href: "/calendar", label: "Appointments", icon: Calendar },
   { href: "/conversations", label: "Conversations", icon: MessageSquare },
@@ -158,6 +157,10 @@ export default function AppSidebar() {
           open={opportunitiesOpen}
           onToggle={toggleOpportunities}
         >
+          <NavLink href="/audit" active={isActive(pathname, "/audit")}>
+            <SearchCheck className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+            <span className="min-w-0 flex-1 truncate">Audit</span>
+          </NavLink>
           {prospectsSection && ProspectsNavIcon ? (
             <NavLink
               href={prospectsSection.href}

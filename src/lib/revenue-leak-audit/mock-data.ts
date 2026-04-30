@@ -179,6 +179,12 @@ export const MOCK_WEBSITE_AUDIT: WebsiteAudit = {
   hasGoogleTagManager: false,
   hasGoogleAdsTag: false,
   hasMetaPixel: false,
+  socialLinks: {
+    facebook: "https://facebook.com",
+    instagram: "https://instagram.com",
+    tiktok: null,
+    youtube: null,
+  },
   imageCount: 4,
   blurryImageSignals: 2,
   warnings: ["Mock website audit shown for local development."],

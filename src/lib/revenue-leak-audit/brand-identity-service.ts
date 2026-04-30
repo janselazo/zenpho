@@ -39,10 +39,10 @@ function typographyNotesFromHtml(html: string | null): string[] {
 
   const notes: string[] = [];
   if (googleFonts.size > 0) {
-    notes.push(`Google Fonts detected: ${[...googleFonts].join(", ")}`);
+    notes.push([...googleFonts].join(", "));
   }
   if (families.size > 0) {
-    notes.push(`Website font styles include: ${[...families].join(", ")}`);
+    notes.push([...families].join(", "));
   }
   if (notes.length === 0) {
     notes.push("No distinctive website typography was detected from the homepage HTML.");
