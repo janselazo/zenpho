@@ -1,4 +1,4 @@
-import Hero from "@/components/home/Hero";
+import RevenueLeakHomeHero from "@/components/home/RevenueLeakHomeHero";
 import ProblemSection from "@/components/home/ProblemSection";
 import FoundersStuckSection from "@/components/home/FoundersStuckSection";
 import SolutionSection from "@/components/home/SolutionSection";
@@ -13,7 +13,7 @@ import HomeFinalCTA from "@/components/home/HomeFinalCTA";
 export default function HomePageContent() {
   return (
     <>
-      <Hero />
+      <RevenueLeakHomeHero />
       <ProblemSection />
       <FoundersStuckSection />
       <SolutionSection />
