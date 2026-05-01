@@ -290,6 +290,55 @@ export function countImageTags(html: string): {
 }
 
 /**
+ * Detects lead / contact / booking capture in raw homepage HTML (not only literal `<form>` tags).
+ * Large pages may be head+tail merged without the middle; plugin markers in head or footer still count.
+ */
+export function detectLeadCaptureForm(html: string): boolean {
+  if (!html || html.length < 120) return false;
+  const lower = html.toLowerCase();
+
+  if (/<form\b/i.test(html)) return true;
+
+  if (
+    /\bwpcf7-form\b|class=["'][^"']*\bwpcf7\b|contact-form-7|\/wp-content\/plugins\/contact-form-7/i.test(html)
+  ) {
+    return true;
+  }
+
+  if (/\belementor-form\b|elementor-field-type-(?:email|tel|textarea|text)/i.test(html)) {
+    return true;
+  }
+
+  if (/\bgform_wrapper\b|gravity_form|gravityform/i.test(lower)) return true;
+  if (/\bwpforms-container\b|\bwpforms-form\b/i.test(lower)) return true;
+  if (/\bhs-form\b|hbspt\.forms\.create|js\.hsforms\.net/i.test(lower)) return true;
+  if (/\bfrm-show-form\b|\bfrm_forms\b|formidablepro-js|formidable/i.test(lower)) return true;
+  if (/\bnf-form-(?:layout|cont)\b|\bninja[-_]form/i.test(lower)) return true;
+  if (/\bmktoform\b|munchkin\.marketo\.net/i.test(lower)) return true;
+  if (/\bjs\.jotform\.com\b|form\.jotform/i.test(lower)) return true;
+  if (/typeform\.com\/to\/|embed\.typeform\.com/i.test(lower)) return true;
+
+  if (
+    /method=["']post["']/i.test(html) &&
+    /(?:\btype=["']email["']|\[email\*?|\bname=["'][^"']*email|aria-label=["'][^"']*\bemail\b)/i.test(
+      html,
+    )
+  ) {
+    return true;
+  }
+
+  if (
+    /\b(id|class)=["'][^"']*(?:book(?:ing)?|contact|lead|request)[_-]?(?:now|form|widget)[^"']*["']/i.test(
+      html,
+    )
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Heuristic: homepage HTML appears to showcase customer/Google reviews or ratings (conversion social proof).
  */
 export function detectHomepageReviewShowcase(html: string): boolean {

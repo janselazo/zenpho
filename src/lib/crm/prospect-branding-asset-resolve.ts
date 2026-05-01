@@ -20,6 +20,7 @@ import {
   fetchBrandAssetsFromUrl,
   isDecorativeContactIconUrl,
   isLanguageSwitcherOrFlagAssetUrl,
+  isPartnerFinancingLogoBlob,
   type BrandColorResult,
 } from "@/lib/crm/brand-color-extract";
 import { normalizeUrlForFetch } from "@/lib/crm/safe-url-fetch";
@@ -38,6 +39,8 @@ export type ResolvedBrandAssets = {
   logoSvg: string | null;
   /** The URL the logo was fetched from, for debugging / logs. */
   logoSourceUrl: string | null;
+  /** Homepage HTML plus linked CSS (bounded) for font-family extraction. */
+  markupForTypography: string | null;
 };
 
 const EMPTY: ResolvedBrandAssets = {
@@ -47,6 +50,7 @@ const EMPTY: ResolvedBrandAssets = {
   logoPng: null,
   logoSvg: null,
   logoSourceUrl: null,
+  markupForTypography: null,
 };
 
 const PNG_SIGNATURE = Buffer.from([
@@ -474,6 +478,8 @@ export async function resolveProspectBrandAssets(input: {
     | null = null;
 
   for (const logoUrl of candidateLogoUrls.slice(0, 8)) {
+    const resolvedCand = normalizeUrlForFetch(unwrapLeadConnectorImageUrl(logoUrl));
+    if (resolvedCand && isPartnerFinancingLogoBlob(resolvedCand, logoUrl)) continue;
     const fetched = await safeFetchLogoAsset(logoUrl);
     if (!fetched) continue;
     if (isDecorativeContactIconUrl(fetched.sourceUrl)) continue;
@@ -552,5 +558,6 @@ export async function resolveProspectBrandAssets(input: {
     logoPng,
     logoSvg,
     logoSourceUrl,
+    markupForTypography: assets.markupForTypography,
   };
 }

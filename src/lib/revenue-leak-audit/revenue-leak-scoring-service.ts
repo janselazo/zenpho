@@ -796,10 +796,12 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           category: "Website Conversion",
           severity: "High",
           title: "No Lead Capture Form Detected",
-          whatWeFound: "The homepage HTML did not include a contact or quote form.",
+          whatWeFound:
+            "The homepage HTML did not include a contact, quote, or booking form (or known form-builder markup).",
           whyItMatters:
             "Some buyers prefer submitting details instead of calling. No form can leak after-hours and comparison-shopping leads.",
-          evidence: "No <form> element detected.",
+          evidence:
+            "No <form> tag and no recognizable lead-form signals (e.g. Contact Form 7, Elementor Forms, Gravity, HubSpot) in the fetched HTML.",
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
           leakRateLow: impact.leakRateLow,

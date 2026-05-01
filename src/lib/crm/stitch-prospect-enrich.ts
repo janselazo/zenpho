@@ -29,7 +29,13 @@ export async function enrichStitchProspectPayloadWithBrandAssets(
       `${logPrefix} brand asset fetch failed:`,
       e instanceof Error ? e.message : e
     );
-    return { colors: null, logoUrl: null, sourceFacts: null };
+    return {
+      colors: null,
+      logoUrl: null,
+      logoUrls: [],
+      sourceFacts: null,
+      markupForTypography: null,
+    };
   });
 
   console.info(

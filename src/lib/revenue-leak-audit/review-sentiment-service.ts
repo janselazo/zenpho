@@ -62,6 +62,109 @@ function themeHits(text: string, terms: string[]): string[] {
     .slice(0, 5);
 }
 
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+export type ReviewThemeSegment = { type: "plain" | "pos" | "neg"; value: string };
+
+function mergeAdjacentPlainSegments(segments: ReviewThemeSegment[]): ReviewThemeSegment[] {
+  const merged: ReviewThemeSegment[] = [];
+  for (const seg of segments) {
+    const prev = merged[merged.length - 1];
+    if (prev && prev.type === "plain" && seg.type === "plain") {
+      prev.value += seg.value;
+    } else {
+      merged.push({ ...seg });
+    }
+  }
+  return merged;
+}
+
+/**
+ * Split review text into plain / positive / negative spans using the same theme labels
+ * shown in the audit (matched case-insensitively). Multi-word and punctuation terms use
+ * substring search; single alphabetic words use whole-word matching with light inflection
+ * (recommended, recommending, etc.).
+ */
+export function segmentReviewTextForThemes(
+  text: string,
+  positiveThemes: readonly string[],
+  negativeThemes: readonly string[]
+): ReviewThemeSegment[] {
+  const specs: { needle: string; kind: "pos" | "neg" }[] = [
+    ...positiveThemes.map((label) => ({ needle: label.toLowerCase(), kind: "pos" as const })),
+    ...negativeThemes.map((label) => ({ needle: label.toLowerCase(), kind: "neg" as const })),
+  ].filter((s) => s.needle.length > 0);
+
+  if (!text || specs.length === 0) {
+    return [{ type: "plain", value: text }];
+  }
+
+  const byNeedle = new Map<string, "pos" | "neg">();
+  for (const s of specs) {
+    if (!byNeedle.has(s.needle)) byNeedle.set(s.needle, s.kind);
+  }
+  const entries = [...byNeedle.entries()].map(([needle, kind]) => ({ needle, kind }));
+  const exactEntries = entries.filter(
+    (e) => e.needle.includes(" ") || /[^a-z0-9]/.test(e.needle)
+  );
+  const wordEntries = entries
+    .filter((e) => !e.needle.includes(" ") && /^[a-z0-9]+$/.test(e.needle))
+    .sort((a, b) => b.needle.length - a.needle.length);
+
+  const lower = text.toLowerCase();
+  const out: ReviewThemeSegment[] = [];
+  let cursor = 0;
+
+  while (cursor < text.length) {
+    let best: { start: number; end: number; kind: "pos" | "neg" } | null = null;
+
+    for (const { needle, kind } of exactEntries) {
+      const idx = lower.indexOf(needle, cursor);
+      if (idx === -1) continue;
+      const end = idx + needle.length;
+      if (
+        best === null ||
+        idx < best.start ||
+        (idx === best.start && end - idx > best.end - best.start)
+      ) {
+        best = { start: idx, end, kind };
+      }
+    }
+
+    for (const { needle, kind } of wordEntries) {
+      const core = escapeRegExp(needle);
+      const re = new RegExp(`\\b${core}(?:ed|ing|s|es|d)?\\b`, "gi");
+      re.lastIndex = cursor;
+      const m = re.exec(text);
+      if (!m || m.index < cursor) continue;
+      const start = m.index;
+      const end = start + m[0].length;
+      if (
+        best === null ||
+        start < best.start ||
+        (start === best.start && end - start > best.end - best.start)
+      ) {
+        best = { start, end, kind };
+      }
+    }
+
+    if (best === null) {
+      out.push({ type: "plain", value: text.slice(cursor) });
+      break;
+    }
+
+    if (best.start > cursor) {
+      out.push({ type: "plain", value: text.slice(cursor, best.start) });
+    }
+    out.push({ type: best.kind, value: text.slice(best.start, best.end) });
+    cursor = best.end;
+  }
+
+  return mergeAdjacentPlainSegments(out);
+}
+
 export function analyzeReviewSentiment(
   business: BusinessProfile
 ): ReviewSentimentSummary {

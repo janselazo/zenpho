@@ -11,6 +11,7 @@ import {
   countImageTags,
   CTA_TERMS,
   detectHomepageReviewShowcase,
+  detectLeadCaptureForm,
   detectTextEnabledPhone,
   detectWebChat,
   detectWebsiteCms,
@@ -420,7 +421,7 @@ export async function auditWebsite(
   const hasPhoneText = /\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/.test(html);
   const hasTextEnabledPhone = detectTextEnabledPhone(html);
   const hasPrimaryCta = hasAny(html, CTA_TERMS);
-  const hasContactForm = /<form[\s>]/i.test(html);
+  const hasContactForm = detectLeadCaptureForm(html);
   const hasQuoteCta = /quote|estimate|pricing|consultation/i.test(lower);
   const hasTestimonials = hasAny(html, TRUST_TERMS);
   const homepageFeaturesReviews = detectHomepageReviewShowcase(html);

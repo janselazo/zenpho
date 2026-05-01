@@ -32,6 +32,7 @@ import type {
 } from "@/lib/revenue-leak-audit/types";
 import {
   buildLastReviewsSentimentBlock,
+  segmentReviewTextForThemes,
 } from "@/lib/revenue-leak-audit/review-sentiment-service";
 import {
   formatReviewStarLabel,
@@ -1080,9 +1081,9 @@ function CompetitorMap({
         <p className="text-sm text-text-secondary">
           {businessPosition != null ? (
             <>
-              Among listings in this sample for the search below, your profile ranks{" "}
-              <span className="font-black tabular-nums text-text-primary">#{businessPosition}</span> by rating, review
-              volume, and distance.
+              Your Google Business ranks{" "}
+              <span className="font-black tabular-nums text-text-primary">#{businessPosition}</span>
+              .
             </>
           ) : (
             <>Your business&apos;s ranking position for this search isn&apos;t available.</>
@@ -1152,6 +1153,42 @@ function LocalRankingSnapshotAside({ audit }: { audit: RevenueLeakAudit }) {
   );
 }
 
+function ReviewTextWithThemeHighlights({
+  text,
+  positiveThemes,
+  negativeThemes,
+}: {
+  text: string | null | undefined;
+  positiveThemes: readonly string[];
+  negativeThemes: readonly string[];
+}) {
+  const raw = text ?? "";
+  if (!raw) {
+    return <>No written review text available.</>;
+  }
+  const segments = segmentReviewTextForThemes(raw, positiveThemes, negativeThemes);
+  return (
+    <>
+      {segments.map((seg, i) =>
+        seg.type === "plain" ? (
+          <span key={i}>{seg.value}</span>
+        ) : (
+          <mark
+            key={i}
+            className={
+              seg.type === "pos"
+                ? "rounded-sm bg-emerald-100 px-0.5 font-semibold text-emerald-800"
+                : "rounded-sm bg-red-100 px-0.5 font-semibold text-red-700"
+            }
+          >
+            {seg.value}
+          </mark>
+        )
+      )}
+    </>
+  );
+}
+
 function RecentReviewSentimentSection({ audit }: { audit: RevenueLeakAudit }) {
   const { recent, sentiment, recommendations } = useMemo(
     () => buildLastReviewsSentimentBlock(audit.business.reviews, 5),
@@ -1218,7 +1255,11 @@ function RecentReviewSentimentSection({ audit }: { audit: RevenueLeakAudit }) {
                 </span>
               </div>
               <p className="mt-3 text-sm leading-6 text-text-secondary">
-                {review.text ?? "No written review text available."}
+                <ReviewTextWithThemeHighlights
+                  text={review.text}
+                  positiveThemes={sentiment.positiveThemes}
+                  negativeThemes={sentiment.negativeThemes}
+                />
               </p>
             </div>
           ))}

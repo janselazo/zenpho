@@ -494,6 +494,34 @@ export async function fetchPageHtml(
   }
 }
 
+/** Theme / builder stylesheets carry real brand colors; WP core/plugin bundles are often generic. */
+function scoreStylesheetForBrandExtraction(url: string): number {
+  const u = url.toLowerCase();
+  let s = 0;
+  if (
+    /style_dynamic|style-dynamic|custom\.css|elementor-post-\d+|elementor-kit|\/themes\/[^/]+\/(?:style|main)\.css|\/child-theme|modules\.min\.css|\/assets\/css\/theme/i.test(
+      u,
+    )
+  ) {
+    s += 26;
+  }
+  if (/\/uploads\/elementor\/(?:css|google-fonts)\//i.test(u)) s += 18;
+  if (/fonts\.googleapis\.com\/css2?/i.test(u)) s += 14;
+  if (/js_composer|js-composer|wpb_/i.test(u)) s += 8;
+  if (
+    /wp-block-library|dist\/block-library|dashicons\.min|admin-bar\.min|prettyphoto|magnific-popup|swiper\.min|sp-wpsp|font-awesome\/css|feeds-for-youtube|g-business-reviews|popup-maker\/dist/i.test(
+      u,
+    )
+  ) {
+    s -= 18;
+  }
+  return s;
+}
+
+function prioritizeStylesheetUrls(urls: string[]): string[] {
+  return [...urls].sort((a, b) => scoreStylesheetForBrandExtraction(b) - scoreStylesheetForBrandExtraction(a));
+}
+
 /** Extract stylesheet URLs from <link rel="stylesheet"> tags in raw HTML. */
 function extractLinkedStylesheetUrls(html: string, baseUrl: string): string[] {
   const urls: string[] = [];
@@ -661,6 +689,36 @@ export function isDecorativeContactIconUrl(resolvedUrl: string): boolean {
   );
 }
 
+/**
+ * BNPL / healthcare-financing partner marks often appear in header, footer, or JSON-LD
+ * and were mistaken for the business wordmark (e.g. CareCredit on med-spa sites).
+ */
+export function isPartnerFinancingLogoBlob(resolvedUrl: string, rawHint = ""): boolean {
+  const blob = `${resolvedUrl}\n${rawHint}`.toLowerCase();
+  if (!blob.trim()) return false;
+
+  if (
+    /care[-_\s]?credit|carecredit|\/ccc\/|ccc[-_]?logo/i.test(blob) ||
+    /getcherry|cherrytechnologies|paywithcherry|cherry[-_]?pay/i.test(blob) ||
+    /\baffirm\.com\b|\/affirm\//i.test(blob) ||
+    /klarna\.com|\/klarna\//i.test(blob) ||
+    /afterpay\.com|\/afterpay\//i.test(blob) ||
+    /synchrony\.com|\/synchrony\//i.test(blob) ||
+    /sunbit\.com|\/sunbit\//i.test(blob) ||
+    /lendingclub|lending[-_]?club/i.test(blob) ||
+    /breadfinancial|bread[-_]?pay/i.test(blob) ||
+    /greensky|green[-_]?sky/i.test(blob) ||
+    /quadpay|zip\.co|sezzle\.com|\/sezzle\//i.test(blob)
+  ) {
+    return true;
+  }
+
+  if (/\balt=["'][^"']*care\s*credit/i.test(blob)) return true;
+  if (/\balt=["'][^"']*cherry[^"']*financ/i.test(blob)) return true;
+
+  return false;
+}
+
 function pushLogoCandidate(
   candidates: LogoCandidate[],
   seen: Set<string>,
@@ -675,12 +733,13 @@ function pushLogoCandidate(
   if (!url || seen.has(url)) return;
   if (isDecorativeContactIconUrl(url)) return;
   if (isLanguageSwitcherOrFlagAssetUrl(url)) return;
+  if (isPartnerFinancingLogoBlob(url, rawUrl)) return;
   seen.add(url);
   candidates.push({ url, score, index });
 }
 
 const LD_ORG_TYPE_RE =
-  /Organization|LocalBusiness|Brand|Corporation|HomeAndConstructionBusiness|ProfessionalService|RoofingContractor|WebSite/i;
+  /Organization|LocalBusiness|Brand|Corporation|HomeAndConstructionBusiness|ProfessionalService|RoofingContractor|WebSite|MedicalClinic|MedicalOrganization|MedicalBusiness|HealthAndBeautyBusiness|Dentist|Physician|VeterinaryCare|DaySpa|BeautySalon/i;
 
 function pushLdVisualUrls(
   field: unknown,
@@ -845,7 +904,9 @@ export function extractLogoUrls(
   const tokens = brandTokens(options.businessName ?? extractTitle(html));
 
   for (const { url: logoRef, index } of extractJsonLdLogoRefs(html)) {
-    pushLogoCandidate(candidates, seen, logoRef, baseUrl, 94, index);
+    const resolvedLd = resolveUrl(logoRef, baseUrl);
+    if (resolvedLd && isPartnerFinancingLogoBlob(resolvedLd, logoRef)) continue;
+    pushLogoCandidate(candidates, seen, logoRef, baseUrl, 118, index);
   }
 
   let m: RegExpExecArray | null;
@@ -866,6 +927,7 @@ export function extractLogoUrls(
     const earlyResolved = srcEarly ? resolveUrl(srcEarly, baseUrl) : null;
     if (earlyResolved && isDecorativeContactIconUrl(earlyResolved)) continue;
     if (earlyResolved && isLanguageSwitcherOrFlagAssetUrl(earlyResolved)) continue;
+    if (earlyResolved && isPartnerFinancingLogoBlob(earlyResolved, `${srcEarly} ${tag}`)) continue;
     const context = html.slice(Math.max(0, m.index - 3200), Math.min(html.length, m.index + tag.length + 3200));
     let score = 0;
     if (/logo|brand/i.test(tag)) score += 36;
@@ -909,6 +971,32 @@ export function extractLogoUrls(
     if (isLikelyTrustBadgeOrSeal(tag, context)) {
       score -= 55;
     }
+    const altText = altMatch?.[1] ?? "";
+    const looksLikeLogoFilename =
+      /(?:logo|brand|wordmark|site-logo)(?:[._\-/]|$)|\/(?:site-)?logos?\/|eltd-(?:normal|dark|light)-logo/i.test(
+        `${srcEarly ?? ""} ${tag}`,
+      );
+    if (
+      /\bwp-post-image\b|wp-image-\d+/i.test(tag) &&
+      !looksLikeLogoFilename &&
+      (tokens.length === 0 || businessMatchScore(altText, tokens) === 0)
+    ) {
+      score -= 62;
+    }
+    if (
+      /case\s+study|fat\s+reduction|\bbefore\s*(?:\/|&|\band\b)|after\s*photo|wp-post-image/i.test(
+        `${tag} ${altText}`,
+      ) &&
+      !looksLikeLogoFilename
+    ) {
+      score -= 48;
+    }
+    if (
+      /popmake-|pum-overlay|pum-container|elementor-location-popup|class=["'][^"']*pum-/i.test(context) &&
+      !looksLikeLogoFilename
+    ) {
+      score -= 55;
+    }
     if (score < 24) continue;
     pushLogoCandidate(candidates, seen, imageSrcFromTag(tag), baseUrl, score, m.index);
   }
@@ -924,6 +1012,8 @@ export function extractLogoUrls(
     const candidate = (
       srcsetMatch?.[1] ?? imgSrcMatch?.[1] ?? plainSrcMatch?.[1] ?? ""
     ).trim();
+    const resA = resolveUrl(candidate, baseUrl);
+    if (resA && isPartnerFinancingLogoBlob(resA, `${candidate} ${block}`)) continue;
     pushLogoCandidate(candidates, seen, candidate, baseUrl, 72, m.index);
   }
 
@@ -932,7 +1022,10 @@ export function extractLogoUrls(
   while ((m = wixImgRe.exec(html)) !== null) {
     const ctx = html.slice(Math.max(0, m.index - 200), m.index + m[0].length + 200);
     if (!/logo/i.test(ctx)) continue;
-    pushLogoCandidate(candidates, seen, m[1].trim(), baseUrl, 58, m.index);
+    const trimmed = m[1].trim();
+    const resW = resolveUrl(trimmed, baseUrl);
+    if (resW && isPartnerFinancingLogoBlob(resW, trimmed + ctx)) continue;
+    pushLogoCandidate(candidates, seen, trimmed, baseUrl, 58, m.index);
   }
 
   // ── 4. apple-touch-icon ────────────────────────────────────────────────
@@ -1004,11 +1097,13 @@ export type BrandAssets = {
   logoUrl: string | null;
   logoUrls: string[];
   sourceFacts: WebsiteBrandFacts | null;
+  /** HTML plus fetched link stylesheets (same bundle used for color extraction) for font scanning. */
+  markupForTypography: string | null;
 };
 
 /**
  * Fetches a URL once and extracts both brand colors and logo URL.
- * Always merges external stylesheets (up to 5) because many WordPress/YooTheme/Elementor
+ * Always merges external stylesheets (up to 8, priority-sorted) because many WordPress themes
  * sites deliver the real brand colors only in external CSS bundles, while the inline HTML
  * contains generic platform defaults.
  */
@@ -1029,13 +1124,21 @@ export async function fetchBrandAssetsFromUrl(
     }
   }
 
-  if (!html) return { colors: null, logoUrl: null, logoUrls: [], sourceFacts: null };
+  if (!html) {
+    return {
+      colors: null,
+      logoUrl: null,
+      logoUrls: [],
+      sourceFacts: null,
+      markupForTypography: null,
+    };
+  }
   const normalized = resolvedBase;
 
-  const cssUrls = extractLinkedStylesheetUrls(html, normalized);
+  const cssUrls = prioritizeStylesheetUrls(extractLinkedStylesheetUrls(html, normalized));
   let combined = html;
   if (cssUrls.length > 0) {
-    const cssText = await fetchExternalCss(cssUrls, Math.min(timeoutMs, 4000), 5);
+    const cssText = await fetchExternalCss(cssUrls, Math.min(timeoutMs, 4000), 8);
     if (cssText) combined = html + "\n" + cssText;
   }
 
@@ -1048,5 +1151,6 @@ export async function fetchBrandAssetsFromUrl(
     logoUrl: logoUrls[0] ?? null,
     logoUrls,
     sourceFacts: extractWebsiteBrandFacts(html, normalized),
+    markupForTypography: combined,
   };
 }
