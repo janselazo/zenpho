@@ -45,7 +45,7 @@ export default function MoreRotatingHeadline() {
             </AnimatePresence>
           </span>
         </span>
-        <span className="shrink-0 text-accent">Clear ROI.</span>
+        <span className="shrink-0 text-accent">Clear ROI</span>
       </span>
     </h2>
   );

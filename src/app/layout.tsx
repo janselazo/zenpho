@@ -32,7 +32,7 @@ const pricingSerif = Lora({
 export const metadata: Metadata = {
   title: "Zenpho · Growth for local service businesses",
   description:
-    "Zenpho helps local service businesses generate qualified leads, book more appointments, collect Google reviews, grow referrals, and track which marketing produces revenue—with our web app and expert support.",
+    "Zenpho helps local service businesses generate qualified leads, book more appointments, collect Google reviews, grow referrals, and track which marketing channel produces revenue—with our web app and expert support.",
   openGraph: {
     title: "Zenpho · Growth for local service businesses",
     description:

@@ -9,7 +9,7 @@ export default function MarketingShell({
   return (
     <div className="relative marketing-page-bg min-h-screen">
       <Navbar />
-      <main className="relative isolate overflow-x-hidden">{children}</main>
+      <main className="relative z-10 isolate overflow-x-hidden">{children}</main>
       <Footer />
     </div>
   );

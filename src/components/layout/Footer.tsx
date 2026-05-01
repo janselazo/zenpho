@@ -24,7 +24,7 @@ export default function Footer() {
               Growth for local service businesses
             </p>
             <p className="mt-3 max-w-sm text-sm leading-relaxed text-text-secondary">
-              We help local owners generate qualified leads, book more appointments, collect Google reviews, grow referrals, and see exactly which marketing produces revenue.
+              We help local owners generate qualified leads, book more appointments, collect Google reviews, grow referrals, and see exactly which marketing channel produces revenue.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Button href="/booking" variant="primary" size="md">

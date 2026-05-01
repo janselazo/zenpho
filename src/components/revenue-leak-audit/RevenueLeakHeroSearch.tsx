@@ -96,7 +96,7 @@ export default function RevenueLeakHeroSearch({
           </h1>
           <p className="mx-auto mt-6 max-w-3xl text-lg leading-8 text-text-secondary sm:text-xl">
             Analyze your Google profile, reviews, competitors, website, ads, and local positioning to uncover missed
-            revenue opportunities.
+            revenue opportunities
           </p>
         </div>
 
