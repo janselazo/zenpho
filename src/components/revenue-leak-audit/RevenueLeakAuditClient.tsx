@@ -60,8 +60,8 @@ const progressSteps = [
 /** Do not auto-advance past this index while waiting on `/analyze` (canceled at ANALYSIS_COUNTDOWN_SECONDS). */
 const PROGRESS_AUTOSTEP_CAP = Math.max(0, progressSteps.length - 2);
 
-/** Ring + countdown; must stay above server PageSpeed budget + parallel Places work (see `website-audit-service.ts`). */
-const ANALYSIS_COUNTDOWN_SECONDS = 95;
+/** Ring + countdown use this duration; progress caps at 92% until the API returns. */
+const ANALYSIS_COUNTDOWN_SECONDS = 60;
 const ESTIMATED_ANALYSIS_MS = ANALYSIS_COUNTDOWN_SECONDS * 1_000;
 /** Collapsed "Things to Improve" rows before "+ N more". */
 const THINGS_TO_IMPROVE_INITIAL = 6;

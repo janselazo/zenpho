@@ -3,9 +3,6 @@
   "functions": {
     "src/app/api/prospecting/branding-pdf/*": {
       "maxDuration": 800
-    },
-    "src/app/api/revenue-leak-audit/analyze/route.ts": {
-      "maxDuration": 120
     }
   }
 }

@@ -7,8 +7,8 @@ import type {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-/** Audit runs PageSpeed + Places + fetches in parallel; allow headroom for slow Lighthouse/API responses. */
-export const maxDuration = 120;
+/** Interactive audit targets ~60s; keep in sync with client `AbortSignal.timeout` (PageSpeed uses lab + CrUX fallback). */
+export const maxDuration = 60;
 
 type Body = {
   business?: unknown;

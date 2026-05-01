@@ -22,8 +22,11 @@ import {
 } from "./website-conversion-heuristics";
 import type { ServiceResult, WebsiteAudit } from "./types";
 
-/** PageSpeed Insights often needs 45–90s for heavy homepages; keep under route `maxDuration` + client abort. */
-const PAGESPEED_TIMEOUT_MS = 58_000;
+/** Lab Lighthouse via PageSpeed Insights; keep tight so the full `/analyze` request fits ~60s with Places + fetches. */
+const PAGESPEED_LAB_TIMEOUT_MS = 34_000;
+
+/** Chrome UX Report API (field / real-user metrics); fast fallback when lab run times out. */
+const CRUX_QUERY_TIMEOUT_MS = 8_000;
 
 const AUDIT_FETCH_HEADERS = {
   "User-Agent": "Mozilla/5.0 (compatible; ZenphoRevenueLeakAudit/1.0; +https://zenpho.com)",
@@ -177,13 +180,103 @@ function extractImageWasteBytesFromLighthouseJson(json: unknown): number | null 
   return total > 0 ? Math.round(total) : null;
 }
 
+function originForCrux(pageUrl: string): string | null {
+  try {
+    return new URL(pageUrl).origin;
+  } catch {
+    return null;
+  }
+}
+
+function readMetricP75Number(metric: unknown): number | null {
+  if (!metric || typeof metric !== "object") return null;
+  const p75 = (metric as { percentiles?: { p75?: unknown } }).percentiles?.p75;
+  if (typeof p75 === "number" && Number.isFinite(p75)) return p75;
+  if (typeof p75 === "string" && /^-?\d+(\.\d+)?$/.test(p75.trim())) return Number(p75);
+  return null;
+}
+
+function readMetricP75Cls(metric: unknown): number | null {
+  if (!metric || typeof metric !== "object") return null;
+  const p75 = (metric as { percentiles?: { p75?: unknown } }).percentiles?.p75;
+  if (typeof p75 === "number" && Number.isFinite(p75)) return p75;
+  if (typeof p75 === "string") {
+    const v = Number.parseFloat(p75);
+    return Number.isFinite(v) ? v : null;
+  }
+  return null;
+}
+
+/** Rough 0–100 “performance-like” score from CrUX phone metrics (not identical to Lighthouse). */
+function approximateLabLikeScoreFromCrux(
+  lcpMs: number | null,
+  inpMs: number | null,
+  cls: number | null
+): number | null {
+  if (lcpMs == null || !Number.isFinite(lcpMs)) return null;
+  let score = 100;
+  if (lcpMs <= 2000) score = 94;
+  else if (lcpMs <= 2500) score = 86;
+  else if (lcpMs <= 3000) score = 77;
+  else if (lcpMs <= 3500) score = 68;
+  else if (lcpMs <= 4000) score = 59;
+  else if (lcpMs <= 5000) score = 50;
+  else if (lcpMs <= 6500) score = 40;
+  else score = 30;
+
+  if (inpMs != null && Number.isFinite(inpMs)) {
+    if (inpMs > 500) score -= 16;
+    else if (inpMs > 300) score -= 11;
+    else if (inpMs > 200) score -= 6;
+  }
+  if (cls != null && Number.isFinite(cls)) {
+    if (cls > 0.25) score -= 14;
+    else if (cls > 0.1) score -= 8;
+  }
+  return Math.max(22, Math.min(97, Math.round(score)));
+}
+
+async function cruxApproximateMobileScore(
+  pageUrl: string,
+  apiKey: string
+): Promise<{ score: number | null }> {
+  const origin = originForCrux(pageUrl);
+  if (!origin) return { score: null };
+  try {
+    const res = await fetch(
+      `https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=${encodeURIComponent(apiKey)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ origin, formFactor: "PHONE" }),
+        signal: AbortSignal.timeout(CRUX_QUERY_TIMEOUT_MS),
+      }
+    );
+    if (!res.ok) return { score: null };
+    const json = (await res.json()) as {
+      record?: { metrics?: Record<string, unknown> };
+    };
+    const metrics = json.record?.metrics;
+    if (!metrics || typeof metrics !== "object") return { score: null };
+    const lcp = readMetricP75Number(metrics.largest_contentful_paint);
+    const inp = readMetricP75Number(
+      metrics.interaction_to_next_paint ?? metrics.first_input_delay
+    );
+    const cls = readMetricP75Cls(metrics.cumulative_layout_shift);
+    const score = approximateLabLikeScoreFromCrux(lcp, inp, cls);
+    return { score };
+  } catch {
+    return { score: null };
+  }
+}
+
 type PageSpeedAttempt = {
   score: number | null;
   warning: string | null;
   imageWasteBytes: number | null;
 };
 
-async function pageSpeedAttempt(url: string, key: string, timeoutMs = PAGESPEED_TIMEOUT_MS): Promise<PageSpeedAttempt> {
+async function pageSpeedAttempt(url: string, key: string, timeoutMs = PAGESPEED_LAB_TIMEOUT_MS): Promise<PageSpeedAttempt> {
   try {
     const qs = new URLSearchParams({
       url,
@@ -226,7 +319,7 @@ async function pageSpeedAttempt(url: string, key: string, timeoutMs = PAGESPEED_
       score: null,
       imageWasteBytes: null,
       warning: isTimeout
-        ? `PageSpeed timed out after ${Math.round(timeoutMs / 1000)}s (slow or heavy site). Re-run the audit to try again.`
+        ? `Lighthouse lab run aborted after ${Math.round(timeoutMs / 1000)}s (time budget).`
         : "PageSpeed unavailable.",
     };
   }
@@ -241,11 +334,33 @@ async function fetchPageSpeedScore(url: string): Promise<{
   if (!key) {
     return { score: null, warning: "PageSpeed API key is missing.", imageWasteBytes: null };
   }
-  const attempt = await pageSpeedAttempt(url, key, PAGESPEED_TIMEOUT_MS);
+  const lab = await pageSpeedAttempt(url, key, PAGESPEED_LAB_TIMEOUT_MS);
+  if (lab.score != null) {
+    return {
+      score: lab.score,
+      warning: lab.warning,
+      imageWasteBytes: lab.imageWasteBytes,
+    };
+  }
+
+  const crux = await cruxApproximateMobileScore(url, key);
+  if (crux.score != null) {
+    const fallback =
+      "Using Chrome UX Report field data (real users on phones) as a stand-in for the mobile score—the Lighthouse lab run did not finish within the time budget.";
+    const labNote = lab.warning?.trim();
+    return {
+      score: crux.score,
+      warning: labNote ? `${labNote} ${fallback}` : fallback,
+      imageWasteBytes: lab.imageWasteBytes,
+    };
+  }
+
   return {
-    score: attempt.score,
-    warning: attempt.warning,
-    imageWasteBytes: attempt.imageWasteBytes,
+    score: null,
+    imageWasteBytes: lab.imageWasteBytes,
+    warning:
+      lab.warning?.trim() ||
+      "No mobile performance score (lab run incomplete and no CrUX phone data for this origin—try again later or confirm the Chrome UX Report API is enabled for this key).",
   };
 }
 
