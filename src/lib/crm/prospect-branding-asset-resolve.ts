@@ -53,9 +53,20 @@ const PNG_SIGNATURE = Buffer.from([
 ]);
 const JPEG_SIGNATURE = Buffer.from([0xff, 0xd8, 0xff]);
 
-function sniffRasterFormat(buf: Buffer): "png" | "jpeg" | null {
+function sniffRasterFormat(buf: Buffer): "png" | "jpeg" | "webp" | "avif" | null {
   if (buf.length >= 8 && buf.subarray(0, 8).equals(PNG_SIGNATURE)) return "png";
   if (buf.length >= 3 && buf.subarray(0, 3).equals(JPEG_SIGNATURE)) return "jpeg";
+  if (
+    buf.length >= 12 &&
+    buf.subarray(0, 4).toString("ascii") === "RIFF" &&
+    buf.subarray(8, 12).toString("ascii") === "WEBP"
+  ) {
+    return "webp";
+  }
+  if (buf.length >= 12 && buf.subarray(4, 8).toString("ascii") === "ftyp") {
+    const brand = buf.subarray(8, 12).toString("ascii");
+    if (brand === "avif" || brand === "avis" || brand === "mif1") return "avif";
+  }
   return null;
 }
 
@@ -100,7 +111,7 @@ async function safeFetchLogoAsset(rawUrl: string): Promise<{
       headers: {
         "User-Agent":
           "Mozilla/5.0 (compatible; ZenphoBot/1.0; +https://zenpho.com)",
-        Accept: "image/png,image/jpeg,image/*",
+        Accept: "image/png,image/jpeg,image/webp,image/avif,image/*",
       },
     });
   } catch {
@@ -130,6 +141,15 @@ async function safeFetchLogoAsset(rawUrl: string): Promise<{
   if (fmt) return { buffer: buf, svg: null, sourceUrl: normalized };
 
   const contentType = res.headers.get("content-type")?.toLowerCase() ?? "";
+  if (
+    buf.length >= 80 &&
+    (contentType.includes("image/webp") ||
+      contentType.includes("image/avif") ||
+      contentType.includes("image/heif"))
+  ) {
+    return { buffer: buf, svg: null, sourceUrl: normalized };
+  }
+
   const looksSvg =
     contentType.includes("svg") ||
     /\.svg(?:[?#].*)?$/i.test(normalized) ||
@@ -484,11 +504,11 @@ export async function resolveProspectBrandAssets(input: {
         };
       }
     } else if (
-      rasterFmt === "jpeg" &&
       fetched.buffer &&
-      looksLikeRasterLogoFilename(fetched.sourceUrl)
+      looksLikeRasterLogoFilename(fetched.sourceUrl) &&
+      (rasterFmt === "jpeg" || rasterFmt === "webp" || rasterFmt === "avif")
     ) {
-      /** Real wordmarks are sometimes JPEG-only; ignore hero photography. */
+      /** Real wordmarks are sometimes JPEG/WebP/AVIF (e.g. Wix); ignore hero photography. */
       const quality = 34;
       if (!bestLogo || quality > bestLogo.quality) {
         bestLogo = {

@@ -568,6 +568,8 @@ function GoogleBusinessProfileSummary({ audit }: { audit: RevenueLeakAudit }) {
   const business = audit.business;
   const profilePhotoUrl = googleBusinessProfilePhotoUrl(business);
   const logoUrl = audit.brandIdentity.logoUrl?.trim() || null;
+  const headerImageUrl = logoUrl ?? profilePhotoUrl;
+  const headerImageIsLogo = Boolean(logoUrl);
   const identityAttributes = business.identityAttributes.filter((attribute) => attribute.detected);
   const statusLabel = business.businessStatus
     ? business.businessStatus.replace(/_/g, " ").toLowerCase()
@@ -588,32 +590,31 @@ function GoogleBusinessProfileSummary({ audit }: { audit: RevenueLeakAudit }) {
     <section className="rounded-[2rem] border border-border bg-white p-6 shadow-soft sm:p-8">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex min-w-0 gap-4">
-          <div className="flex shrink-0 gap-3">
-            {profilePhotoUrl ? (
-              <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-3xl border border-border bg-surface shadow-sm">
+          <div
+            className={`flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-3xl border border-border shadow-sm ${
+              headerImageIsLogo ? "bg-white" : "bg-surface"
+            }`}
+          >
+            {headerImageUrl ? (
+              <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={profilePhotoUrl}
-                  alt={`${business.name} Google Business Profile photo`}
-                  className="h-full w-full object-cover"
+                  src={headerImageUrl}
+                  alt={
+                    headerImageIsLogo
+                      ? `${business.name} logo`
+                      : `${business.name} Google Business Profile photo`
+                  }
+                  className={
+                    headerImageIsLogo
+                      ? "max-h-full max-w-full object-contain p-2"
+                      : "h-full w-full object-cover"
+                  }
                 />
-              </div>
-            ) : null}
-            {logoUrl ? (
-              <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-3xl border border-border bg-white shadow-sm">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={logoUrl}
-                  alt={`${business.name} logo`}
-                  className="max-h-full max-w-full object-contain p-2"
-                />
-              </div>
-            ) : null}
-            {!profilePhotoUrl && !logoUrl ? (
-              <div className="flex h-24 w-24 items-center justify-center rounded-3xl border border-border bg-surface shadow-sm">
-                <Building2 className="h-10 w-10 text-text-secondary" />
-              </div>
-            ) : null}
+              </>
+            ) : (
+              <Building2 className="h-10 w-10 text-text-secondary" />
+            )}
           </div>
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">

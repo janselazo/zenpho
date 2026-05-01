@@ -783,12 +783,21 @@ export function extractLogoUrls(
     const srcEarly = imageSrcFromTag(tag);
     const earlyResolved = srcEarly ? resolveUrl(srcEarly, baseUrl) : null;
     if (earlyResolved && isDecorativeContactIconUrl(earlyResolved)) continue;
-    const context = html.slice(Math.max(0, m.index - 420), Math.min(html.length, m.index + tag.length + 420));
+    const context = html.slice(Math.max(0, m.index - 3200), Math.min(html.length, m.index + tag.length + 3200));
     let score = 0;
     if (/logo|brand/i.test(tag)) score += 36;
     if (/logo|brand/i.test(context)) score += 18;
-    if (/header|nav|navbar|menu|masthead/i.test(context)) score += 18;
+    if (/header|nav|navbar|menu|masthead|wixui-header/i.test(context)) score += 18;
     if (/wsite-logo|id=["']sitename["']/i.test(context)) score += 48;
+    if (/wixui-image|wow-image|data-testid=["']imageX["']/i.test(context)) score += 34;
+    const srcBlob = imageSrcFromTag(tag);
+    if (
+      srcBlob &&
+      /static\.wixstatic\.com/i.test(srcBlob) &&
+      /logo|wordmark|brand-mark|site-logo/i.test(srcBlob)
+    ) {
+      score += 44;
+    }
     if (/<a\b[^>]*>[\s\S]{0,650}$/i.test(context.slice(0, 650))) score += 10;
     score += businessMatchScore(`${tag} ${context}`, tokens);
     const altMatch = tag.match(/\balt=["']([^"']+)["']/i);
