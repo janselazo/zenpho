@@ -28,11 +28,6 @@ export interface Venture {
   ctaExternal?: boolean;
 }
 
-export interface TechItem {
-  name: string;
-  category: string;
-}
-
 export type ProjectCategory =
   | "mobile-app"
   | "web-app"
@@ -288,27 +283,6 @@ export const ventures: Venture[] = [
     ctaHref: "https://app.soldtools.com/login",
     ctaExternal: true,
   },
-];
-
-export const techStack: TechItem[] = [
-  { name: "Next.js", category: "Frontend" },
-  { name: "React", category: "Frontend" },
-  { name: "React Native", category: "Mobile" },
-  { name: "TypeScript", category: "Language" },
-  { name: "Python", category: "Language" },
-  { name: "Node.js", category: "Backend" },
-  { name: "PostgreSQL", category: "Database" },
-  { name: "OpenAI", category: "AI" },
-  { name: "LangChain", category: "AI" },
-  { name: "AWS", category: "Cloud" },
-  { name: "Docker", category: "DevOps" },
-  { name: "Kubernetes", category: "DevOps" },
-  { name: "TensorFlow", category: "AI" },
-  { name: "Prisma", category: "ORM" },
-  { name: "Redis", category: "Database" },
-  { name: "Vercel", category: "Cloud" },
-  { name: "GraphQL", category: "API" },
-  { name: "Supabase", category: "Backend" },
 ];
 
 export const portfolioProjects: PortfolioProject[] = [
@@ -735,13 +709,6 @@ export const resourceItems: ResourceItem[] = [
       "MVP Development from $3k and MVP Growth from $2.5k — clear starting points, scoped on a call.",
     href: "/pricing",
     tag: "Engagement",
-  },
-  {
-    title: "Studio",
-    description:
-      "In-house products like SoldTools — experiments we ship on our own roadmap alongside client work.",
-    href: "/studio",
-    tag: "Studio",
   },
   {
     title: "Newsletter",

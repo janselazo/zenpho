@@ -24,6 +24,7 @@ const nextConfig = {
   },
   async redirects() {
     return [
+      { source: "/studio", destination: "/", permanent: true },
       { source: "/portfolio", destination: "/case-studies", permanent: true },
       { source: "/agency", destination: "/services", permanent: true },
       { source: "/methodology", destination: "/about", permanent: true },

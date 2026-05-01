@@ -1,26 +1,26 @@
 import type { Metadata } from "next";
 import PricingHero from "./PricingHero";
-import PricingGrid from "@/components/services/PricingGrid";
-import FoundingClientSection from "@/components/pricing/FoundingClientSection";
-import FAQ from "@/components/services/FAQ";
-import CTASection from "@/components/home/CTASection";
+import LocalServicePricingPlans from "@/components/pricing/LocalServicePricingPlans";
+import PricingAuditCtaSection from "@/components/pricing/PricingAuditCtaSection";
+import PricingFAQ from "@/components/pricing/PricingFAQ";
+import PricingPageClosingCta from "@/components/pricing/PricingPageClosingCta";
 
 export const metadata: Metadata = {
   title: {
     absolute: "Pricing | Zenpho",
   },
   description:
-    "Transparent starting points for product and growth work with Zenpho—scoped on a call for local service businesses.",
+    "Growth plans for local service businesses: Lead-to-Revenue Setup, Growth Engine Management, and Full Growth Partner. Track ROI, fix leaks, and scale what works.",
 };
 
 export default function PricingPage() {
   return (
     <>
       <PricingHero />
-      <PricingGrid />
-      <FoundingClientSection />
-      <FAQ />
-      <CTASection />
+      <LocalServicePricingPlans />
+      <PricingAuditCtaSection />
+      <PricingFAQ />
+      <PricingPageClosingCta />
     </>
   );
 }

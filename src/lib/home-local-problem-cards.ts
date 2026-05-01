@@ -92,6 +92,6 @@ export const homeLocalProblemCards: HomeLocalProblemCard[] = [
   },
   {
     iconKey: "dashboard",
-    text: "No dashboard showing leads, appointments, clients, revenue, reviews, and referrals",
+    text: "No dashboard showing the real business numbers",
   },
 ];

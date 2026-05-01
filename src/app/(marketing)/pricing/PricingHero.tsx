@@ -43,17 +43,17 @@ export default function PricingHero() {
           transition={{ duration: 0.45, delay: 0.05 }}
           className="text-balance text-3xl font-bold leading-[1.15] tracking-tight text-text-primary sm:text-4xl sm:leading-[1.12] lg:text-[2.65rem] lg:leading-[1.1]"
         >
-          Simple pricing for building and launching your MVP
+          Growth plans for local service businesses
         </motion.h1>
 
         <motion.p
           initial={{ opacity: 1, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
-          className="mx-auto mt-5 max-w-xl text-pretty text-base leading-relaxed text-text-secondary sm:text-lg"
+          className="mx-auto mt-5 max-w-2xl text-pretty text-base leading-relaxed text-text-secondary sm:text-lg"
         >
-          Zenpho offers two focused services for founders: build the product,
-          then launch and grow it.
+          Choose the level of support you need to generate more leads, book more appointments, close more clients,
+          collect more reviews, increase referrals, and track real ROI.
         </motion.p>
       </div>
     </section>

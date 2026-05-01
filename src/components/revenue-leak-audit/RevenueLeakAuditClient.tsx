@@ -319,7 +319,7 @@ function AnalyzingScreen({
 }) {
   const headlineIndex = Math.min(step, progressSteps.length - 1);
   return (
-    <section className="px-4 py-20 sm:px-6 lg:px-8">
+    <section className="px-4 pb-20 pt-32 sm:px-6 sm:pb-24 sm:pt-36 lg:px-8 lg:pt-40">
       <div className="mx-auto max-w-3xl rounded-[2rem] border border-border bg-white p-8 shadow-soft-lg">
         <div className="flex items-center gap-4">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-accent text-white">

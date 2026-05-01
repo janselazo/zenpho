@@ -151,7 +151,6 @@ export const marketingFooterColumns: MarketingFooterColumn[] = [
       { label: "Contact", href: "/contact" },
       { label: "Pricing", href: "/pricing" },
       { label: "Case studies", href: "/case-studies" },
-      { label: "Studio", href: "/studio" },
       { label: "Book a call", href: "/booking" },
     ],
   },

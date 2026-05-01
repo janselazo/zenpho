@@ -40,7 +40,7 @@ export default function RevenueLeakHeroSearch({
   const sectionClass =
     variant === "homepage"
       ? "hero-sky relative overflow-hidden px-4 pb-16 pt-20 sm:px-6 sm:pt-24 lg:px-8 lg:pt-28"
-      : "hero-sky px-4 pb-16 pt-32 sm:px-6 lg:px-8";
+      : "hero-sky px-4 pb-16 pt-36 sm:px-6 sm:pt-40 lg:px-8 lg:pt-44";
 
   useEffect(() => {
     const q = businessName.trim();

@@ -34,23 +34,13 @@ const cards = [
     cta: "Explore MVP Growth",
     initial: "G",
   },
-  {
-    label: "Studio",
-    badgeClass: "bg-accent-warm text-white",
-    title: "We ship our own products",
-    titleAccent: "Same standards",
-    body: "Products we operate on our own roadmap — the same accountability we promise on founder engagements.",
-    href: "/studio",
-    cta: "Open Studio",
-    initial: "S",
-  },
 ] as const;
 
-/** Service offering cards (MVP Development, Growth, Studio) — reusable inside a parent section. */
+/** Service offering cards (MVP Development, Growth) — reusable inside a parent section. */
 export function SplitIntroCards({ className = "" }: { className?: string }) {
   return (
     <div className={`mx-auto max-w-7xl px-6 lg:px-8 ${className}`}>
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-2">
         {cards.map((card, i) => (
           <motion.div
             key={card.label}

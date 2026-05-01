@@ -16,7 +16,7 @@ export default function HomeLocalProblemSection() {
           <div className="grid gap-12 lg:grid-cols-2 lg:gap-14 xl:gap-16">
             <div className="flex flex-col lg:max-w-xl">
               <div className="mb-5 flex justify-start">
-                <span className="inline-flex rounded-full border border-accent-green/35 bg-white px-4 py-1.5 text-xs font-bold uppercase tracking-[0.2em] text-accent-green shadow-sm dark:bg-zinc-900/80">
+                <span className="inline-flex rounded-full border border-red-200 bg-white px-4 py-1.5 text-xs font-bold uppercase tracking-[0.2em] text-red-700 shadow-sm dark:border-red-500/35 dark:bg-zinc-900/80 dark:text-red-400">
                   The Problem
                 </span>
               </div>
@@ -24,7 +24,7 @@ export default function HomeLocalProblemSection() {
                 id={HEADLINE_ID}
                 className="heading-display text-balance text-3xl font-bold leading-[1.12] tracking-tight text-text-primary sm:text-4xl lg:text-[2.35rem] lg:leading-[1.1]"
               >
-                Most Local Service Businesses Don’t Just Need More Leads. They Need to Stop Losing Revenue.
+                most local service businesses don’t just need more leads. they need to stop losing revenue.
               </h2>
               <p className="mt-5 max-w-prose text-base leading-relaxed text-text-secondary sm:text-lg">
                 Many local businesses are already getting calls, website visits, quote requests, and referrals. But if
@@ -61,9 +61,9 @@ export default function HomeLocalProblemSection() {
             </div>
           </div>
 
-          <div className="mt-10 rounded-2xl bg-accent-green px-6 py-6 text-white shadow-soft-lg sm:px-8 sm:py-8 dark:bg-emerald-600 dark:ring-1 dark:ring-white/10">
-            <p className="text-base font-semibold leading-snug sm:text-lg">Our job is simple:</p>
-            <p className="mt-3 text-sm leading-relaxed text-white/95 sm:text-base">
+          <div className="mt-10 rounded-2xl border border-border/80 bg-white px-6 py-6 shadow-soft sm:px-8 sm:py-8 dark:border-zinc-700/80 dark:bg-zinc-900/85">
+            <p className="text-base font-semibold leading-snug text-text-primary sm:text-lg">Our job is simple:</p>
+            <p className="mt-3 text-sm leading-relaxed text-text-secondary sm:text-base">
               We help local businesses find the leaks, fix them, and build a system that turns more opportunities into
               revenue.
             </p>
