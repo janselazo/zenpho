@@ -84,8 +84,8 @@ export default function RevenueLeakHeroSearch({
     <section className={sectionClass}>
       <div className="mx-auto max-w-6xl">
         <div className="mx-auto max-w-4xl text-center">
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-accent/15 bg-white/80 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-accent shadow-sm">
-            <Target className="h-3.5 w-3.5" />
+          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-white/80 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-emerald-700 shadow-sm dark:border-emerald-400/35 dark:text-emerald-400">
+            <Target className="h-3.5 w-3.5 shrink-0" />
             Revenue Leak Audit
           </div>
           <h1 className="heading-display text-5xl font-black tracking-tight text-text-primary sm:text-6xl lg:text-7xl">

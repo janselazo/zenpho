@@ -38,7 +38,7 @@ function MegaPanel({ eyebrow, items }: { eyebrow: string; items: MarketingMegaIt
         role="region"
         aria-label={eyebrow}
       >
-        <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-700/85">
+        <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-text-secondary/80">
           {eyebrow}
         </p>
         <ul className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-x-6 md:gap-y-3">
@@ -58,16 +58,16 @@ function MegaCell({ item }: { item: MarketingMegaItem }) {
   return (
     <Link
       href={item.href}
-      className="flex gap-4 rounded-xl p-2.5 transition-colors hover:bg-emerald-50/90 md:p-3"
+      className="flex gap-4 rounded-xl p-2.5 transition-colors hover:bg-surface md:p-3"
     >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 md:h-11 md:w-11 dark:bg-emerald-500/20 dark:text-emerald-400">
+      <div
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl md:h-11 md:w-11 ${item.iconClassName}`}
+      >
         <Icon className="h-5 w-5" aria-hidden />
       </div>
       <div className="min-w-0 pt-0.5">
-        <span className="block text-sm font-bold text-emerald-800 dark:text-emerald-200">
-          {item.title}
-        </span>
-        <span className="mt-0.5 block text-sm leading-snug text-emerald-700/90 dark:text-emerald-300/90">
+        <span className="block text-sm font-bold text-text-primary">{item.title}</span>
+        <span className="mt-0.5 block text-sm leading-snug text-text-secondary">
           {item.description}
         </span>
       </div>
@@ -105,7 +105,7 @@ function MobileAccordion({
       </button>
       {open ? (
         <div className="border-t border-border/40 bg-surface/40 px-3 pb-3 pt-1">
-          <p className="px-3 py-2 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-emerald-700/90">
+          <p className="px-3 py-2 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-text-secondary/85">
             {eyebrow}
           </p>
           <ul className="flex flex-col gap-0.5">
@@ -119,18 +119,18 @@ function MobileAccordion({
                     href={item.href}
                     className={`flex gap-3 rounded-xl px-3 py-2.5 text-sm ${
                       active
-                        ? "bg-emerald-600/12 font-semibold text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200"
-                        : "text-emerald-800 hover:bg-emerald-50/90 dark:text-emerald-200 dark:hover:bg-emerald-950/40"
+                        ? "bg-accent/10 font-semibold text-accent"
+                        : "text-text-secondary hover:bg-white/80"
                     }`}
                   >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
+                    <span
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${item.iconClassName}`}
+                    >
                       <Icon className="h-4 w-4" aria-hidden />
                     </span>
                     <span className="min-w-0">
-                      <span className="block font-semibold text-emerald-800 dark:text-emerald-200">
-                        {item.title}
-                      </span>
-                      <span className="mt-0.5 block text-xs leading-snug text-emerald-700/90 dark:text-emerald-300/90">
+                      <span className="block font-semibold text-text-primary">{item.title}</span>
+                      <span className="mt-0.5 block text-xs leading-snug text-text-secondary">
                         {item.description}
                       </span>
                     </span>
