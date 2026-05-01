@@ -24,7 +24,7 @@ import {
 } from "@/lib/crm/agency-docs";
 
 function basePath(docType: AgencyDocType): string {
-  return docType === "industry" ? "/industries" : "/docs";
+  return docType === "industry" ? "/agency/industries" : "/docs";
 }
 
 async function isAllowedWorkspaceDocSlug(slug: string): Promise<boolean> {

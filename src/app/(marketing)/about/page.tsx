@@ -11,10 +11,10 @@ import Button from "@/components/ui/Button";
 
 export const metadata: Metadata = {
   title: {
-    absolute: "About Zenpho · AI MVP Development Agency",
+    absolute: "About Zenpho · Local business growth",
   },
   description:
-    "Learn about Zenpho, an AI MVP development studio helping startup founders build, launch, and grow technology products faster.",
+    "Zenpho builds software and services for local service businesses—more qualified leads, booked jobs, Google reviews, referrals, and clear marketing ROI.",
 };
 
 export default function AboutPage() {

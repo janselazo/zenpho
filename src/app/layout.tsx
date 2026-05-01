@@ -30,13 +30,13 @@ const pricingSerif = Lora({
 });
 
 export const metadata: Metadata = {
-  title: "Zenpho · AI MVP Development Agency",
+  title: "Zenpho · Growth for local service businesses",
   description:
-    "Zenpho helps founders build and launch AI-powered MVPs in 2 weeks with product strategy, UX/UI, web app development, AI integrations, analytics, and growth support.",
+    "Zenpho helps local service businesses generate qualified leads, book more appointments, collect Google reviews, grow referrals, and track which marketing produces revenue—with our web app and expert support.",
   openGraph: {
-    title: "Zenpho · AI MVP Development Agency",
+    title: "Zenpho · Growth for local service businesses",
     description:
-      "Zenpho helps founders build and launch AI-powered MVPs in 2 weeks with product strategy, UX/UI, web app development, AI integrations, analytics, and growth support.",
+      "Qualified leads, appointments, reviews, referrals, and revenue clarity for local service businesses—product plus solutions from Zenpho.",
     type: "website",
     locale: "en_US",
   },

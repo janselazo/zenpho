@@ -58,7 +58,7 @@ const agencyNav = [
   { href: "/automations", label: "Automations", icon: Workflow },
   { href: "/reports", label: "Reports", icon: FileBarChart },
   { href: "/docs", label: "Documents", icon: BookOpen },
-  { href: "/industries", label: "Industries", icon: Building2 },
+  { href: "/agency/industries", label: "Industries", icon: Building2 },
 ];
 
 const playbookSection = PROSPECTING_SECTIONS.find((s) => s.slug === "playbook");

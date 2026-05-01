@@ -8,7 +8,7 @@ export default async function IndustriesHubPage() {
       docType="industry"
       heading="Industries"
       subtitle="Research, playbooks, and notes organized by industry vertical."
-      basePath="/industries"
+      basePath="/agency/industries"
     />
   );
 }

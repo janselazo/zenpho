@@ -7,10 +7,10 @@ import CTASection from "@/components/home/CTASection";
 
 export const metadata: Metadata = {
   title: {
-    absolute: "MVP Development Pricing | Zenpho",
+    absolute: "Pricing | Zenpho",
   },
   description:
-    "Simple pricing for MVP Development and MVP Growth. Build your AI-powered MVP, launch faster, attract early users, and validate demand.",
+    "Transparent starting points for product and growth work with Zenpho—scoped on a call for local service businesses.",
 };
 
 export default function PricingPage() {

@@ -31,7 +31,7 @@ export default async function IndustryDocPage({ params }: PageProps) {
   return (
     <div className="mx-auto w-full max-w-3xl px-6 py-8 sm:px-8">
       <Link
-        href="/industries"
+        href="/agency/industries"
         className="inline-flex items-center gap-1 text-sm font-medium text-text-secondary transition-colors hover:text-accent dark:text-zinc-400 dark:hover:text-blue-400"
       >
         <ChevronLeft className="h-4 w-4" aria-hidden />

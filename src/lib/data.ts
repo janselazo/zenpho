@@ -759,30 +759,3 @@ export const resourceItems: ResourceItem[] = [
     external: true,
   },
 ];
-
-export interface NavLinkItem {
-  label: string;
-  href: string;
-  /** Nested items shown under this link (e.g. Resources mega-menu). */
-  children?: NavLinkItem[];
-}
-
-/** Primary header: About → Work → Services → Pricing → Studio. */
-export const headerNavLinks: NavLinkItem[] = [
-  { label: "About", href: "/about" },
-  { label: "Work", href: "/case-studies" },
-  { label: "Services", href: "/services" },
-  { label: "Pricing", href: "/pricing" },
-  { label: "Studio", href: "/studio" },
-];
-
-/** Footer: same primary links as header. */
-export const footerNavLinks: NavLinkItem[] = [
-  { label: "About", href: "/about" },
-  { label: "Work", href: "/case-studies" },
-  { label: "Services", href: "/services" },
-  { label: "Pricing", href: "/pricing" },
-  { label: "Studio", href: "/studio" },
-  { label: "Blog", href: "/blog" },
-  { label: "Contact", href: "/contact" },
-];
