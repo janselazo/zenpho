@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Building2, Loader2, Search, Target } from "lucide-react";
 import type { BusinessSearchResult } from "@/lib/revenue-leak-audit/types";
 import Button from "@/components/ui/Button";
+import TrustedByLocalBusinesses from "@/components/home/TrustedByLocalBusinesses";
 
 export const revenueLeakAuditInputClass =
   "w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm text-text-primary placeholder:text-text-secondary/45 outline-none shadow-sm transition-all focus:border-accent focus:ring-2 focus:ring-accent/15";
@@ -159,7 +160,12 @@ export default function RevenueLeakHeroSearch({
             Find Revenue Leaks
           </Button>
         </form>
-        <p className="mt-4 text-center text-sm text-text-secondary">Search your Google Business Profile to start your audit.</p>
+        {variant === "homepage" ? <TrustedByLocalBusinesses /> : null}
+        {variant !== "homepage" ? (
+          <p className="mt-4 text-center text-sm text-text-secondary">
+            Search your Google Business Profile to start your audit.
+          </p>
+        ) : null}
       </div>
     </section>
   );
