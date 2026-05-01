@@ -21,7 +21,6 @@ import Button from "@/components/ui/Button";
 import { EMPTY_PROSPECT_SOCIAL_URLS } from "@/lib/crm/prospect-enrichment-types";
 import {
   applyAssumptionsToFindings,
-  COMPETITOR_MAP_LOCAL_RADIUS_MILES,
 } from "@/lib/revenue-leak-audit/revenue-leak-scoring-service";
 import type {
   AuditGrade,
@@ -1077,23 +1076,13 @@ function CompetitorMap({
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Google competitors</p>
           <h2 className="mt-2 text-3xl font-black tracking-tight text-text-primary">Competitor Map</h2>
-          <p className="mt-2 max-w-xl text-xs leading-relaxed text-text-secondary">
-            Pins are limited to businesses within about {COMPETITOR_MAP_LOCAL_RADIUS_MILES} miles of your listing when
-            distance data is available (wider if needed so the map stays useful).
-          </p>
         </div>
         <p className="text-sm text-text-secondary">
           {businessPosition != null ? (
             <>
               Among listings in this sample for the search below, your profile ranks{" "}
               <span className="font-black tabular-nums text-text-primary">#{businessPosition}</span> by rating, review
-              volume, and distance{audit.rankingSnapshot.googleTextSearchPosition != null ? (
-                <>
-                  {" "}
-                  (Google&apos;s text result order was about #
-                  {audit.rankingSnapshot.googleTextSearchPosition} in the pages we pulled).
-                </>
-              ) : null}
+              volume, and distance.
             </>
           ) : (
             <>Your business&apos;s ranking position for this search isn&apos;t available.</>
