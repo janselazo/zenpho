@@ -19,7 +19,7 @@ export type RevenueLeakHeroSearchProps = {
   onSearch: (businessName: string) => void | Promise<void>;
   onSelectBusiness: (result: BusinessSearchResult) => void | Promise<void>;
   searching: boolean;
-  /** Use tighter top padding when embedded under the marketing homepage hero band. */
+  /** Homepage: extra top padding below MarketingShell navbar; standalone matches full /revenue tool page. */
   variant?: "standalone" | "homepage";
 };
 
@@ -38,7 +38,7 @@ export default function RevenueLeakHeroSearch({
 
   const sectionClass =
     variant === "homepage"
-      ? "hero-sky relative overflow-hidden px-4 pb-16 pt-10 sm:px-6 sm:pt-14 lg:px-8 lg:pt-16"
+      ? "hero-sky relative overflow-hidden px-4 pb-16 pt-20 sm:px-6 sm:pt-24 lg:px-8 lg:pt-28"
       : "hero-sky px-4 pb-16 pt-32 sm:px-6 lg:px-8";
 
   useEffect(() => {
