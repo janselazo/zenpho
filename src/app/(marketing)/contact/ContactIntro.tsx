@@ -6,12 +6,11 @@ export default function ContactIntro() {
       <SectionHeading
         align="left"
         label="Start here"
-        title="Start with an MVP Strategy Call"
+        title="Tell us about your business"
         description={
           <p>
-            Use the form below to share your idea, product stage, timeline, and goals.
-            If your project is a good fit, we&apos;ll schedule a strategy call to discuss
-            scope, timeline, and next steps.
+            Use the form below to share your services, geography, marketing today, and what you want to fix first. If
+            we&apos;re a fit, we&apos;ll follow up to schedule a call and outline scope, timeline, and pricing.
           </p>
         }
       />

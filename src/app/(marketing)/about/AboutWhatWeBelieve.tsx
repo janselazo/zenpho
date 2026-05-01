@@ -3,24 +3,24 @@ import Card from "@/components/ui/Card";
 
 const beliefs = [
   {
-    title: "Build less, learn faster",
-    body: "The best MVPs are not smaller versions of big products. They are focused tools designed to validate one important assumption.",
+    title: "Revenue clarity first",
+    body: "If you cannot see leaks, sources, and outcomes, you cannot fix them. We prioritize tracking, reporting, and honest baselines before pouring more budget into channels.",
   },
   {
-    title: "Strategy comes before code",
-    body: "Before building, we clarify the user, problem, workflow, features, and success metrics.",
+    title: "The full journey matters",
+    body: "Local growth is not only SEO or only ads. Visibility, conversion, follow-up, reviews, referrals, and reactivation all affect whether opportunities become booked work.",
   },
   {
-    title: "Launch matters",
-    body: "A product sitting in a private demo environment does not create traction. Founders need users, feedback, analytics, and growth experiments.",
+    title: "Systems beat one-off tactics",
+    body: "Campaigns work better when dashboards, CRM, automations, and landing pages are aligned so nothing falls through the cracks.",
   },
   {
-    title: "AI should solve real problems",
-    body: "AI is powerful, but it should not be added just for hype. We use AI where it improves workflows, automates tasks, generates insights, or creates a better product experience.",
+    title: "Execution, not just recommendations",
+    body: "We install tools, improve pages, run ads where appropriate, and stay accountable for monthly outcomes—not PDFs that sit in your inbox.",
   },
   {
-    title: "Every MVP should create momentum",
-    body: "A good MVP should help you get users, learn from the market, show progress, and make smarter decisions for the next version.",
+    title: "Your stack should flex with you",
+    body: "We work with what you already run when it makes sense—whether that is a CRM, a field-service platform, or a reviews tool—and focus on wiring insight and follow-through.",
   },
 ] as const;
 
@@ -31,19 +31,17 @@ export default function AboutWhatWeBelieve() {
         <SectionHeading
           align="left"
           label="Philosophy"
-          title="Our product philosophy"
+          title="How we think about"
+          titleAccent="local growth"
+          titleAccentInline
         />
 
         <ul className="mt-12 space-y-5">
           {beliefs.map((item) => (
             <li key={item.title}>
               <Card className="border-border/80 bg-white p-8 shadow-soft sm:p-9">
-                <p className="heading-display text-lg font-bold leading-snug text-text-primary">
-                  {item.title}
-                </p>
-                <p className="mt-3 text-base leading-relaxed text-text-secondary">
-                  {item.body}
-                </p>
+                <p className="heading-display text-lg font-bold leading-snug text-text-primary">{item.title}</p>
+                <p className="mt-3 text-base leading-relaxed text-text-secondary">{item.body}</p>
               </Card>
             </li>
           ))}

@@ -23,15 +23,18 @@ export default function AboutCTASection() {
 
         <div className="relative z-10">
           <h2 className="heading-display text-balance text-3xl font-bold tracking-tight text-text-primary sm:text-4xl">
-            Ready to build your MVP?
+            See where revenue is leaking
           </h2>
           <p className="mx-auto mt-4 max-w-lg text-base leading-relaxed text-text-secondary sm:mt-5">
-            Let&apos;s define what your first version should include and how to launch
-            it fast.
+            Run a Revenue Leak Audit on your business, or book a call and we&apos;ll align on the right plan—setup,
+            monthly growth, or full partnership.
           </p>
-          <div className="mt-9 flex justify-center">
-            <Button href="/booking" variant="primary" size="lg">
-              Book an MVP Strategy Call
+          <div className="mx-auto mt-9 flex max-w-md flex-col items-stretch justify-center gap-3 sm:mx-auto sm:max-w-none sm:flex-row sm:gap-4">
+            <Button href="/revenue" variant="primary" size="lg" className="sm:min-w-[200px]">
+              Run Revenue Leak Audit
+            </Button>
+            <Button href="/booking" variant="dark" size="lg" showLiveDot className="sm:min-w-[200px]">
+              Book a growth call
             </Button>
           </div>
         </div>

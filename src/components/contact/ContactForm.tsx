@@ -9,36 +9,35 @@ const inputClass =
   "w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-text-primary placeholder:text-text-secondary/40 outline-none shadow-sm transition-all focus:border-accent focus:ring-2 focus:ring-accent/15";
 
 const HELP_OPTIONS = [
-  "MVP Development",
-  "MVP Growth",
-  "Both",
+  "Lead-to-Revenue Setup (one-time)",
+  "Growth Engine Management (monthly)",
+  "Full Growth Partner (monthly)",
+  "Revenue Leak Audit / exploration call",
   "Not sure yet",
 ] as const;
 
 const PRODUCT_TYPES = [
-  "AI SaaS",
-  "Web app",
-  "Mobile-first app",
-  "Marketplace",
-  "Internal tool",
-  "Client portal",
-  "Other",
+  "Home services (HVAC, plumbing, roofing, etc.)",
+  "Professional / trades (remodeling, cleaning, etc.)",
+  "Health & wellness (med spa, dental, etc.)",
+  "Legal or other professional office",
+  "Auto / fleet service",
+  "Other local service business",
 ] as const;
 
 const TIMELINES = [
   "ASAP",
-  "2 weeks",
-  "30 days",
+  "This month",
   "1–3 months",
-  "Not sure",
+  "Exploring / not sure",
 ] as const;
 
 const BUDGETS = [
-  "Under $5k",
-  "$5k–$10k",
-  "$10k–$25k",
-  "$25k–$50k",
-  "$50k+",
+  "Lead-to-Revenue Setup range (~$2,500)",
+  "~$1,500/mo + ad spend (Growth Engine)",
+  "~$4,500/mo + ad spend (Full Partner)",
+  "Smaller / phased start",
+  "Need recommendation",
 ] as const;
 
 function FormSurface({
@@ -228,25 +227,25 @@ export default function ContactForm() {
             htmlFor="contact-web"
             className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
           >
-            Website or LinkedIn
+            Website or profile link
           </label>
           <input
             id="contact-web"
             name="website_linkedin"
             type="text"
             className={inputClass}
-            placeholder="https:// or linkedin.com/in/…"
+            placeholder="Your website or Google Business Profile URL"
           />
         </div>
       </FormSurface>
 
-      <FormSurface label="The product">
+      <FormSurface label="Your business">
         <div>
           <label
             htmlFor="contact-what"
             className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
           >
-            What are you building?
+            What do you do, and what do you want to improve?
           </label>
           <textarea
             id="contact-what"
@@ -254,6 +253,7 @@ export default function ContactForm() {
             rows={4}
             required
             className={`${inputClass} resize-none`}
+            placeholder="e.g. HVAC in Palm Beach — more booked jobs, better Google presence, clearer ROI"
           />
         </div>
         <div>
@@ -261,7 +261,7 @@ export default function ContactForm() {
             htmlFor="contact-for"
             className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
           >
-            Who is the product for?
+            Primary service area & ideal customer
           </label>
           <textarea
             id="contact-for"
@@ -269,6 +269,7 @@ export default function ContactForm() {
             rows={3}
             required
             className={`${inputClass} resize-none`}
+            placeholder="Cities or radius you serve, residential vs commercial, typical job size"
           />
         </div>
         <div>
@@ -276,13 +277,14 @@ export default function ContactForm() {
             htmlFor="contact-validation"
             className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
           >
-            Do you already have users, a waitlist, or validation?
+            Current marketing, CRM, or tracking (optional)
           </label>
           <textarea
             id="contact-validation"
             name="validation_notes"
             rows={3}
             className={`${inputClass} resize-none`}
+            placeholder="e.g. Google Ads, Jobber, website host, call tracking, nothing formal yet"
           />
         </div>
       </FormSurface>
@@ -290,13 +292,13 @@ export default function ContactForm() {
       <FormSurface label="Fit & scope">
         <div>
           <p className="mb-3 text-xs font-medium uppercase tracking-wide text-text-secondary">
-            What do you need help with?
+            What are you interested in?
           </p>
           <RadioList name="help_needed" options={HELP_OPTIONS} required />
         </div>
         <div>
           <p className="mb-3 text-xs font-medium uppercase tracking-wide text-text-secondary">
-            What type of product are you building?
+            Which best describes your business?
           </p>
           <RadioList name="product_type" options={PRODUCT_TYPES} required />
         </div>
@@ -327,7 +329,7 @@ export default function ContactForm() {
               htmlFor="contact-budget"
               className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
             >
-              Estimated budget
+              Investment range
             </label>
             <select
               id="contact-budget"
@@ -394,8 +396,8 @@ export default function ContactForm() {
           >
             By checking this box, I agree to receive SMS text messages from{" "}
             <span className="font-medium text-text-primary">Zenpho</span> at the phone
-            number I provided above, including links to design previews and project
-            updates. Message frequency is low — typically 1–5 messages per engagement.
+            number I provided above, including links and updates about your inquiry or engagement.
+            Message frequency is low — typically a few messages per engagement.
             Message and data rates may apply. Reply{" "}
             <span className="font-medium text-text-primary">STOP</span> to unsubscribe.
             Reply{" "}
@@ -429,7 +431,7 @@ export default function ContactForm() {
         className="w-full"
         disabled={submitting}
       >
-        {submitting ? "Sending…" : "Submit Project Request"}
+        {submitting ? "Sending…" : "Submit request"}
       </Button>
     </motion.form>
   );

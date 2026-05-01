@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { SECTION_EYEBROW_CLASSNAME } from "@/components/ui/SectionHeading";
 
 export default function BlogHero() {
   return (
@@ -22,18 +21,18 @@ export default function BlogHero() {
           transition={{ duration: 0.5, delay: 0.06 }}
           className="heading-display text-4xl font-bold leading-tight tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
         >
-          <span className="block">Notes on</span>
-          <span className="mt-1 block text-accent">building software</span>
+          <span className="block">Local growth &</span>
+          <span className="mt-1 block text-accent">revenue clarity</span>
         </motion.h1>
 
         <motion.p
           initial={{ opacity: 1, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, delay: 0.14 }}
-          className="mx-auto mt-4 max-w-xl text-base text-text-secondary"
+          className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-text-secondary"
         >
-          Engineering, product craft, and lessons from nine years of shipping
-          custom software for startups and growing teams.
+          Practical notes on leaks, tracking, reviews, referrals, ads, and how to connect marketing to booked jobs and
+          real ROI.
         </motion.p>
       </div>
     </section>

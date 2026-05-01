@@ -23,14 +23,18 @@ export default function ContactPageCTA() {
             <span className={SECTION_EYEBROW_CLASSNAME}>Next step</span>
           </div>
           <h2 className="heading-display text-balance text-3xl font-bold tracking-tight text-text-primary sm:text-4xl lg:text-5xl">
-            Ready to move from idea to MVP?
+            Prefer to start with an audit?
           </h2>
           <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-text-secondary sm:text-base">
-            Let&apos;s build the first version, launch it, and learn from real users.
+            Run a Revenue Leak Audit on your Google Business Profile and local presence—or book a growth call and we&apos;ll
+            map priorities together.
           </p>
-          <div className="mx-auto mt-8 flex justify-center">
-            <Button href="/booking" variant="primary" size="lg">
-              Book an MVP Strategy Call
+          <div className="mx-auto mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:gap-4">
+            <Button href="/revenue" variant="primary" size="lg" className="sm:min-w-[200px]">
+              Run Revenue Leak Audit
+            </Button>
+            <Button href="/booking" variant="dark" size="lg" showLiveDot className="sm:min-w-[200px]">
+              Book a growth call
             </Button>
           </div>
         </div>

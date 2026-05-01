@@ -8,10 +8,10 @@ import ContactAside from "@/components/contact/ContactAside";
 
 export const metadata: Metadata = {
   title: {
-    absolute: "Contact Zenpho | Build Your MVP",
+    absolute: "Contact Zenpho | Local growth & revenue clarity",
   },
   description:
-    "Contact Zenpho to discuss your MVP, AI product, web app, mobile-first app, or launch strategy. Book an MVP Strategy Call today.",
+    "Contact Zenpho about Revenue Leak Audits, lead-to-revenue setup, and growth programs for local service businesses.",
 };
 
 export default function ContactPage() {

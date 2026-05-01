@@ -1,21 +1,21 @@
 import Card from "@/components/ui/Card";
 
 const goodFit = [
-  "You are a founder building a technology product",
-  "You want to launch quickly",
-  "You have a clear problem or target user",
-  "You need product strategy and development",
-  "You are open to starting with a focused MVP",
-  "You want help with launch and early growth",
+  "Local service businesses that rely on calls, forms, and appointments",
+  "Owners who want clearer tracking from lead to booked job",
+  "Teams spending on marketing without confident ROI reporting",
+  "Operators ready to improve Google presence, landing pages, reviews, or referrals",
+  "Businesses open to setup work before scaling ad spend",
+  "Anyone who wants execution—not just a slide deck of recommendations",
 ] as const;
 
 const notFit = [
-  "You want to build a large platform in 2 weeks",
-  "You need a complex enterprise system immediately",
-  "You do not have a clear target user",
-  "You want every feature in version one",
-  "You are looking for equity-only development",
-  "You need advanced compliance-heavy infrastructure from day one",
+  "National e-commerce brands with no local intake or service area",
+  "Projects seeking only a one-time SEO report with no follow-through",
+  "Teams that cannot implement basic call or form routing improvements",
+  "Expectations of guaranteed rankings or overnight lead volume",
+  "No budget or authority to act on prioritized fixes",
+  "Pure software product builds unrelated to local lead generation",
 ] as const;
 
 export default function ContactFitSection() {

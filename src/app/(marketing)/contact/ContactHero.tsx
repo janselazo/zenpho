@@ -22,18 +22,18 @@ export default function ContactHero() {
           transition={{ duration: 0.5, delay: 0.06 }}
           className="heading-display text-balance text-4xl font-bold leading-tight tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
         >
-          Let&apos;s build{" "}
-          <span className="text-accent">your MVP</span>
+          Let&apos;s fix leaks and{" "}
+          <span className="text-accent">grow with clarity</span>
         </motion.h1>
 
         <motion.p
           initial={{ opacity: 1, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, delay: 0.14 }}
-          className="mx-auto mt-4 max-w-xl text-base text-text-secondary"
+          className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-text-secondary"
         >
-          Tell us what you are building, and we&apos;ll help you map out what a focused
-          version one could look like.
+          Tell us about your market, leads, and what you want to improve—we&apos;ll help you choose the right next step,
+          whether that is an audit, setup, or ongoing growth work.
         </motion.p>
       </div>
     </section>

@@ -85,18 +85,25 @@ export default async function BlogPostPage({ params }: Props) {
 
         <div className="mt-16 rounded-2xl border border-border bg-surface p-8 text-center">
           <p className="text-lg font-semibold text-text-primary">
-            Want to discuss this topic?
+            Want to see where revenue is leaking?
           </p>
           <p className="mt-2 text-sm text-text-secondary">
-            I love talking shop. Reach out and let&apos;s explore how these
-            ideas apply to your project.
+            Run a Revenue Leak Audit or book a call—we&apos;ll map the highest-impact fixes for your market.
           </p>
-          <Link
-            href="/contact"
-            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-accent/90"
-          >
-            Get in Touch
-          </Link>
+          <div className="mt-4 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Link
+              href="/revenue"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-accent/90"
+            >
+              Run Revenue Leak Audit
+            </Link>
+            <Link
+              href="/booking"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-white px-6 py-3 text-sm font-medium text-text-primary transition-colors hover:bg-surface"
+            >
+              Book a growth call
+            </Link>
+          </div>
         </div>
       </div>
     </article>

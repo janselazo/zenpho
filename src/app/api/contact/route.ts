@@ -20,15 +20,15 @@ function buildLeadNotes(payload: Record<string, unknown>): string {
   const web = str(payload.website_linkedin);
 
   const parts: string[] = [];
-  if (what) parts.push(`What you're building:\n${what}`);
-  if (whom) parts.push(`Who the product is for:\n${whom}`);
+  if (what) parts.push(`Business goals / what to improve:\n${what}`);
+  if (whom) parts.push(`Service area & ideal customer:\n${whom}`);
   if (validation)
-    parts.push(`Users / waitlist / validation:\n${validation}`);
+    parts.push(`Current marketing, CRM, or tracking:\n${validation}`);
   if (help)
-    parts.push(`Help needed:\n${help}`);
-  if (timeline) parts.push(`Desired timeline:\n${timeline}`);
-  if (budget) parts.push(`Estimated budget:\n${budget}`);
-  if (web) parts.push(`Website or LinkedIn:\n${web}`);
+    parts.push(`Interest:\n${help}`);
+  if (timeline) parts.push(`Timeline:\n${timeline}`);
+  if (budget) parts.push(`Budget / investment range:\n${budget}`);
+  if (web) parts.push(`Website or social:\n${web}`);
   if (extra) parts.push(`Additional notes:\n${extra}`);
   return parts.join("\n\n—\n\n");
 }
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
       email,
       phone: phone || null,
       company: company || null,
-      source: "Website Contact",
+      source: "Website Contact (local growth)",
       stage: "new",
       notes: message || null,
       project_type: projectType || null,

@@ -7,8 +7,8 @@ export default function ContactAside() {
         </p>
         <h3 className="mt-2 text-lg font-bold text-text-primary">Get in touch</h3>
         <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-          Prefer email? We read every message. Strategy calls are usually the
-          fastest path to a scoped quote.
+          Prefer email? We read every message. A short call is often the fastest way to align on your market, tracking,
+          and which plan fits.
         </p>
 
         <div className="mt-6 space-y-6 border-t border-border/60 pt-6">

@@ -25,6 +25,31 @@ const nextConfig = {
   async redirects() {
     return [
       { source: "/studio", destination: "/", permanent: true },
+      {
+        source: "/blog/nine-years-shipping-custom-software",
+        destination: "/blog",
+        permanent: true,
+      },
+      {
+        source: "/blog/adding-ai-to-my-toolkit-honestly",
+        destination: "/blog",
+        permanent: true,
+      },
+      {
+        source: "/blog/lessons-from-taptok-growth",
+        destination: "/blog",
+        permanent: true,
+      },
+      {
+        source: "/blog/building-soldtools-alongside-client-work",
+        destination: "/blog",
+        permanent: true,
+      },
+      {
+        source: "/blog/how-i-scope-projects-to-ship",
+        destination: "/blog",
+        permanent: true,
+      },
       { source: "/portfolio", destination: "/case-studies", permanent: true },
       { source: "/agency", destination: "/services", permanent: true },
       { source: "/methodology", destination: "/about", permanent: true },

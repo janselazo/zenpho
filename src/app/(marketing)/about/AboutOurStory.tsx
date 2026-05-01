@@ -7,29 +7,28 @@ export default function AboutOurStory() {
       <SectionHeading
         align="left"
         label="Our story"
-        title="Zenpho was built for founders"
-        titleAccent="who move fast"
+        title="Zenpho was built for operators"
+        titleAccent="who need answers"
       />
       <Card className="border-border/80 bg-white p-8 shadow-soft sm:p-10">
         <p className="text-base leading-relaxed text-text-secondary">
-          Zenpho was created with one clear belief: founders should not need to spend
-          months and tens of thousands of dollars before they can test an idea
-          with real users.
+          Most local service businesses are already getting calls, searches, form fills, and referrals—but when those
+          moments are not captured, tracked, and followed up, revenue leaks out quietly.
         </p>
         <p className="mt-6 text-base leading-relaxed text-text-secondary">
-          The way technology products are built is changing. AI-assisted development,
-          modern frameworks, and lean product strategy make it possible to move from
-          idea to MVP faster than ever before.
+          Zenpho exists to close that gap: not another generic agency ticket, and not software alone, but a{" "}
+          <span className="font-medium text-text-primary">lead-to-revenue system</span> you can actually read—where leads
+          came from, what converted, what stalled, and what to fix next.
         </p>
-        <p className="mt-6 font-medium text-text-primary">But speed alone is not enough.</p>
+        <p className="mt-6 font-medium text-text-primary">Activity without visibility is expensive.</p>
         <p className="mt-6 text-base leading-relaxed text-text-secondary">
-          A successful MVP still needs the right scope, the right user journey,
-          the right product experience, and a clear launch plan.
+          We started by applying the same discipline we use in product and growth: instrument the funnel, prioritize what
+          moves revenue, ship improvements fast, and report in terms owners care about—appointments, jobs won, reviews,
+          referrals, and ROI.
         </p>
         <p className="mt-6 text-base leading-relaxed text-text-secondary">
-          That is why Zenpho combines development with product thinking and growth
-          support. We help founders build products that are not just functional,
-          but ready to be launched, tested, and improved.
+          Today that shows up as Revenue Leak Audits, setup and tracking foundations, ongoing growth management, and
+          partnerships for operators who are ready to scale with a clear scoreboard.
         </p>
       </Card>
     </section>

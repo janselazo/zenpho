@@ -26,7 +26,7 @@ export default function AboutHero() {
           transition={{ duration: 0.5, delay: 0.06 }}
           className="heading-display max-w-[22rem] text-2xl font-bold leading-snug tracking-tight text-text-primary min-[460px]:max-w-none sm:text-4xl sm:leading-tight lg:text-[2.5rem] lg:leading-[1.15]"
         >
-          We help founders build and launch technology products faster
+          We help local service businesses find leaks, fix them, and grow with clarity
         </motion.h1>
         <motion.p
           initial={{ opacity: 1, y: 16 }}
@@ -34,9 +34,8 @@ export default function AboutHero() {
           transition={{ duration: 0.45, delay: 0.12 }}
           className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-text-secondary sm:text-lg"
         >
-          Zenpho is an AI MVP development studio helping startup founders turn
-          ideas into working products through product strategy, design,
-          development, AI integrations, and launch support.
+          Zenpho combines audits, tracking, campaigns, automation, and done-for-you execution so you can see which channels
+          produce leads, appointments, clients, reviews, referrals—and real revenue—not just clicks.
         </motion.p>
       </div>
     </section>
