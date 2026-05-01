@@ -1,9 +1,7 @@
 import RevenueLeakHomeHero from "@/components/home/RevenueLeakHomeHero";
 import ProblemSection from "@/components/home/ProblemSection";
-import FoundersStuckSection from "@/components/home/FoundersStuckSection";
-import SolutionSection from "@/components/home/SolutionSection";
-import ScopeNoteSection from "@/components/home/ScopeNoteSection";
-import FeaturedWork from "@/components/home/FeaturedWork";
+import HomeLocalProblemSection from "@/components/home/HomeLocalProblemSection";
+import HomeGrowthAchieveSection from "@/components/home/HomeGrowthAchieveSection";
 import Testimonials from "@/components/home/Testimonials";
 import TechStrip from "@/components/home/TechStrip";
 import HomeFAQ from "@/components/home/HomeFAQ";
@@ -15,10 +13,8 @@ export default function HomePageContent() {
     <>
       <RevenueLeakHomeHero />
       <ProblemSection />
-      <FoundersStuckSection />
-      <SolutionSection />
-      <ScopeNoteSection />
-      <FeaturedWork />
+      <HomeLocalProblemSection />
+      <HomeGrowthAchieveSection />
       <Testimonials />
       <TechStrip />
       <HomeFAQ />

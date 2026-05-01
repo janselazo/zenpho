@@ -5,7 +5,7 @@ export default function TrustedByLocalBusinesses() {
   return (
     <div className="mx-auto mt-14 w-full max-w-6xl">
       <p className="text-center text-sm font-medium tracking-wide text-zinc-500 dark:text-zinc-400">
-        Trusted by Top Local Businesses
+        Trusted by 50+ Local Businesses
       </p>
       <div className="mt-8 flex flex-wrap items-center justify-center gap-x-10 gap-y-8 sm:gap-x-12 md:gap-x-14 lg:gap-x-16">
         {trustedLocalBusinesses.map((b) => (
