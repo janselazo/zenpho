@@ -365,6 +365,38 @@ async function fetchPageSpeedScore(url: string): Promise<{
   };
 }
 
+/** Resolve a meta or JSON image string to an absolute public URL with the same SSRF checks as page fetch. */
+function resolvePublicImageUrl(raw: string, basePageUrl: string): string | null {
+  const t = raw.trim();
+  if (!t || /^data:/i.test(t)) return null;
+  let absolute: string;
+  try {
+    absolute = new URL(t, basePageUrl).href;
+  } catch {
+    return null;
+  }
+  return normalizeUrlForFetch(absolute);
+}
+
+/**
+ * When Microlink fails (rate limits, no API key, or timeout), use the homepage
+ * social preview image so the audit still has a visual and we avoid a warning.
+ */
+function socialPreviewImageFromHtml(html: string, basePageUrl: string): string | null {
+  const candidates = [
+    extractMeta(html, "og:image"),
+    extractMeta(html, "og:image:url"),
+    extractMeta(html, "twitter:image"),
+    extractMeta(html, "twitter:image:src"),
+  ];
+  for (const c of candidates) {
+    if (!c) continue;
+    const u = resolvePublicImageUrl(c, basePageUrl);
+    if (u) return u;
+  }
+  return null;
+}
+
 export async function auditWebsite(
   websiteUrl: string | null
 ): Promise<ServiceResult<WebsiteAudit>> {
@@ -385,10 +417,10 @@ export async function auditWebsite(
     };
   }
 
-  const [{ html, status, warnings }, pageSpeed, screenshotUrl] = await Promise.all([
+  const [{ html, status, warnings }, pageSpeed, microlinkScreenshot] = await Promise.all([
     fetchHtml(normalized),
     fetchPageSpeedScore(normalized),
-    fetchMicrolinkScreenshotUrl(normalized, 14_000),
+    fetchMicrolinkScreenshotUrl(normalized, 22_000),
   ]);
 
   if (!html) {
@@ -401,13 +433,18 @@ export async function auditWebsite(
         cmsPlatformId: null,
         cmsPlatformLabel: null,
         status,
-        screenshotUrl,
+        screenshotUrl: microlinkScreenshot,
         pageSpeedImageWasteBytes: pageSpeed.imageWasteBytes,
         imageSeo: null,
         warnings: [...warnings, pageSpeed.warning].filter((x): x is string => Boolean(x)),
       },
       warnings: [...warnings, pageSpeed.warning].filter((x): x is string => Boolean(x)),
     };
+  }
+
+  let screenshotUrl = microlinkScreenshot;
+  if (!screenshotUrl) {
+    screenshotUrl = socialPreviewImageFromHtml(html, normalized);
   }
 
   const lower = html.toLowerCase();
@@ -470,7 +507,9 @@ export async function auditWebsite(
   const auditWarnings = [
     ...warnings,
     pageSpeed.warning,
-    screenshotUrl ? null : "Screenshot unavailable.",
+    screenshotUrl
+      ? null
+      : "No homepage screenshot or social preview image found. Add MICROLINK_API_KEY for full-page captures.",
   ].filter((x): x is string => Boolean(x));
 
   return {
