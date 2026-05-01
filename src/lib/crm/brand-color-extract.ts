@@ -800,7 +800,7 @@ function pushLogoCandidate(
 }
 
 const LD_ORG_TYPE_RE =
-  /Organization|LocalBusiness|Brand|Corporation|HomeAndConstructionBusiness|ProfessionalService|RoofingContractor|WebSite|MedicalClinic|MedicalOrganization|MedicalBusiness|HealthAndBeautyBusiness|Dentist|Physician|VeterinaryCare|DaySpa|BeautySalon/i;
+  /Organization|LocalBusiness|AutomotiveBusiness|AutoDealer|MotorcycleDealer|AutoRepair|AutoPartsStore|Brand|Corporation|HomeAndConstructionBusiness|ProfessionalService|RoofingContractor|WebSite|MedicalClinic|MedicalOrganization|MedicalBusiness|HealthAndBeautyBusiness|Dentist|Physician|VeterinaryCare|DaySpa|BeautySalon/i;
 
 function pushLdVisualUrls(
   field: unknown,
@@ -1048,6 +1048,22 @@ export function extractLogoUrls(
     if (isLikelyTrustBadgeOrSeal(tag, context)) {
       score -= 55;
     }
+
+    // DealerOn / multi-brand OEM strips: prefer `/static/dealer-{id}/logo.*` over rotating OEM badges.
+    const srcBlobLower = (srcEarly ?? "").trim().toLowerCase();
+    let resolvedForLogoPath = "";
+    try {
+      resolvedForLogoPath = (resolveUrl(srcEarly ?? "", baseUrl) ?? "").toLowerCase();
+    } catch {
+      resolvedForLogoPath = "";
+    }
+    if (/\/static\/dealer-\d+\/logo\.(png|webp|jpe?g|svg)(\?|$)/i.test(srcBlobLower + resolvedForLogoPath)) {
+      score += 68;
+    }
+    if (/\/assets\/logos\/transparent\/[^"'?\s]+\.(png|webp|svg)(\?|$)/i.test(srcBlobLower)) {
+      score -= 92;
+    }
+
     const altText = altMatch?.[1] ?? "";
     const looksLikeLogoFilename =
       /(?:logo|brand|wordmark|site-logo)(?:[._\-/]|$)|\/(?:site-)?logos?\/|eltd-(?:normal|dark|light)-logo/i.test(
