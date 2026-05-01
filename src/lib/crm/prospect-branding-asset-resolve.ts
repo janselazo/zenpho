@@ -20,7 +20,9 @@ import {
   fetchBrandAssetsFromUrl,
   isDecorativeContactIconUrl,
   isLanguageSwitcherOrFlagAssetUrl,
+  isLikelyOpenGraphOrSocialBannerImageUrl,
   isPartnerFinancingLogoBlob,
+  isProfessionalAssociationOrCertificationLogoBlob,
   type BrandColorResult,
 } from "@/lib/crm/brand-color-extract";
 import { normalizeUrlForFetch } from "@/lib/crm/safe-url-fetch";
@@ -378,6 +380,15 @@ function isLikelyHeroOrStockPhotoUrl(resolvedUrl: string): boolean {
   );
 }
 
+/** Never use palette heuristics to prefer these over a ranked header / JSON-LD logo. */
+function isExcludedFromPaletteBestLogoUrl(resolvedUrl: string, rawCandidateUrl: string): boolean {
+  return (
+    isLikelyHeroOrStockPhotoUrl(resolvedUrl) ||
+    isLikelyOpenGraphOrSocialBannerImageUrl(resolvedUrl, rawCandidateUrl) ||
+    isProfessionalAssociationOrCertificationLogoBlob(resolvedUrl, rawCandidateUrl)
+  );
+}
+
 /**
  * JPEG logos exist, but generic JPEGs are usually hero/section photos. Only promote JPEG
  * when the path hints at a brand mark (or @2x / division assets from builders).
@@ -490,7 +501,7 @@ export async function resolveProspectBrandAssets(input: {
     if (
       !firstRankedRaster &&
       (fetched.buffer || fetched.svg) &&
-      !isLikelyHeroOrStockPhotoUrl(fetched.sourceUrl)
+      !isExcludedFromPaletteBestLogoUrl(fetched.sourceUrl, logoUrl)
     ) {
       firstRankedRaster = {
         buffer: fetched.buffer,
@@ -500,7 +511,9 @@ export async function resolveProspectBrandAssets(input: {
       };
     }
 
-    if (isUsefulLogoPalette(candidatePalette)) {
+    const excludeFromBest = isExcludedFromPaletteBestLogoUrl(fetched.sourceUrl, logoUrl);
+
+    if (isUsefulLogoPalette(candidatePalette) && !excludeFromBest) {
       const quality = logoPaletteQuality(candidatePalette);
       if (!bestLogo || quality > bestLogo.quality) {
         bestLogo = {
@@ -512,6 +525,7 @@ export async function resolveProspectBrandAssets(input: {
         };
       }
     } else if (
+      !excludeFromBest &&
       fetched.buffer &&
       looksLikeRasterLogoFilename(fetched.sourceUrl) &&
       (rasterFmt === "jpeg" || rasterFmt === "webp" || rasterFmt === "avif")

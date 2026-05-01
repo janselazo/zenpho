@@ -719,6 +719,63 @@ export function isPartnerFinancingLogoBlob(resolvedUrl: string, rawHint = ""): b
   return false;
 }
 
+/**
+ * Social preview / hero composites — not the business wordmark. Schema.org often
+ * duplicates og:image on LocalBusiness/Dentist `image`, at the same priority as
+ * `logo`; those must not win palette-based "best logo" heuristics.
+ */
+export function isLikelyOpenGraphOrSocialBannerImageUrl(resolvedUrl: string, rawHint = ""): boolean {
+  if (!resolvedUrl.trim()) return false;
+  let path = resolvedUrl.toLowerCase();
+  try {
+    path = new URL(resolvedUrl).pathname.toLowerCase();
+  } catch {
+    /* use full string */
+  }
+  const hint = rawHint.toLowerCase();
+  const blob = `${path}\n${hint}`;
+  return /\bopengraph\b|[_/-]og[._-]image|\/og[_-]?image|og-image|social[-_]?share|share[-_]?image|twitter[-_]?card|linkedin[-_]?(?:post|share|banner)|fb[-_]?share|facebook[-_]?cover|meta[-_]?image/i.test(
+    blob,
+  );
+}
+
+/**
+ * Professional associations, regulator marks, and certification badges often sit in
+ * headers or JSON-adjacent markup and outscore the real wordmark on palette richness.
+ */
+export function isProfessionalAssociationOrCertificationLogoBlob(
+  resolvedUrl: string,
+  rawHint = "",
+): boolean {
+  const blob = `${resolvedUrl}\n${rawHint}`.toLowerCase();
+  if (!blob.trim()) return false;
+  if (/ada-accessibility|\/ada-accessibility|ada\s*compliance|wcag|section[-_]?508/i.test(blob)) {
+    return false;
+  }
+
+  if (
+    /american\s+academy\s+of\s+facial|aafe\b|aaofe\b/i.test(blob) ||
+    /american\s+dental\s+association|\bada\s+logo\b|ada[_-]?(?:member|logo|seal|badge|icon)/i.test(blob) ||
+    (/\bada\b/i.test(blob) && /(dental|association|american)/i.test(blob))
+  ) {
+    return true;
+  }
+
+  if (/platinum\+?\s*invisalign|invisalign[\w\s-]{0,22}(?:platinum|provider|logo|badge|seal)/i.test(blob)) {
+    return true;
+  }
+
+  if (/fda(?:\s|[-_.])?(?:food|safety)|food\s+safety\s+plan\s+builder/i.test(blob)) {
+    return true;
+  }
+
+  if (/dental\s+society|state\s+dental|academy\s+of\s+general\s+dentistry/i.test(blob)) {
+    return true;
+  }
+
+  return false;
+}
+
 function pushLogoCandidate(
   candidates: LogoCandidate[],
   seen: Set<string>,
@@ -726,14 +783,18 @@ function pushLogoCandidate(
   baseUrl: string,
   score: number,
   index: number,
+  classifyHint = "",
 ): void {
   if (!rawUrl || /^data:/i.test(rawUrl)) return;
   if (/\/funnel\/icons\/|social-media-icon|facebook|instagram|youtube|tiktok/i.test(rawUrl)) return;
   const url = resolveUrl(rawUrl, baseUrl);
   if (!url || seen.has(url)) return;
+  const hintBlob = `${rawUrl}\n${classifyHint}`;
   if (isDecorativeContactIconUrl(url)) return;
   if (isLanguageSwitcherOrFlagAssetUrl(url)) return;
-  if (isPartnerFinancingLogoBlob(url, rawUrl)) return;
+  if (isPartnerFinancingLogoBlob(url, hintBlob)) return;
+  if (isProfessionalAssociationOrCertificationLogoBlob(url, hintBlob)) return;
+  if (isLikelyOpenGraphOrSocialBannerImageUrl(url, hintBlob)) return;
   seen.add(url);
   candidates.push({ url, score, index });
 }
@@ -811,9 +872,9 @@ function flattenLdJsonNodes(raw: unknown): unknown[] {
   return [raw];
 }
 
-/** High-priority logo URLs from JSON-LD (Organization / LocalBusiness / WebSite publisher, etc.). */
-function extractJsonLdLogoRefs(html: string): { url: string; index: number }[] {
-  const out: { url: string; index: number }[] = [];
+/** JSON-LD `logo` (and nested org logos) vs `image` (often og/social — lower priority). */
+function extractJsonLdLogoRefs(html: string): { url: string; index: number; score: number }[] {
+  const out: { url: string; index: number; score: number }[] = [];
   const scriptRe = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
   let m: RegExpExecArray | null;
   while ((m = scriptRe.exec(html)) !== null) {
@@ -828,12 +889,21 @@ function extractJsonLdLogoRefs(html: string): { url: string; index: number }[] {
     const visited = new Set<unknown>();
     for (const node of nodes) {
       if (!shouldScanLdNode(node)) continue;
-      const urls: string[] = [];
-      collectLogoUrlsFromLdObject(node, urls, visited);
+      const fromLogos: string[] = [];
+      collectLogoUrlsFromLdObject(node, fromLogos, visited);
       const primary = node as Record<string, unknown>;
-      pushLdVisualUrls(primary.image, urls);
-      for (const u of urls) {
-        out.push({ url: u, index });
+      const imageOnly: string[] = [];
+      pushLdVisualUrls(primary.image, imageOnly);
+      const logoSet = new Set(fromLogos.map((u) => u.trim()).filter(Boolean));
+      for (const u of fromLogos) {
+        const t = u.trim();
+        if (t) out.push({ url: t, index, score: 118 });
+      }
+      for (const u of imageOnly) {
+        const t = u.trim();
+        if (t && !logoSet.has(t)) {
+          out.push({ url: t, index, score: 48 });
+        }
       }
     }
   }
@@ -854,6 +924,13 @@ function isLikelyTrustBadgeOrSeal(tag: string, context: string): boolean {
     return true;
   }
   if (/class=["'][^"']*(trust-seal|trust-badge|shield-icon|badge-icon|verified-badge)[^"']*["']/i.test(tag)) {
+    return true;
+  }
+  if (
+    /american\s+dental\s+association|american\s+academy\s+of\s+facial|platinum\+?\s*invisalign|invisalign®?\s*(?:platinum|provider)|\bada\b.*(?:dental|association|logo|member)/i.test(
+      blob,
+    )
+  ) {
     return true;
   }
   return false;
@@ -903,10 +980,10 @@ export function extractLogoUrls(
   const seen = new Set<string>();
   const tokens = brandTokens(options.businessName ?? extractTitle(html));
 
-  for (const { url: logoRef, index } of extractJsonLdLogoRefs(html)) {
+  for (const { url: logoRef, index, score: ldScore } of extractJsonLdLogoRefs(html)) {
     const resolvedLd = resolveUrl(logoRef, baseUrl);
     if (resolvedLd && isPartnerFinancingLogoBlob(resolvedLd, logoRef)) continue;
-    pushLogoCandidate(candidates, seen, logoRef, baseUrl, 118, index);
+    pushLogoCandidate(candidates, seen, logoRef, baseUrl, ldScore, index);
   }
 
   let m: RegExpExecArray | null;
@@ -998,7 +1075,7 @@ export function extractLogoUrls(
       score -= 55;
     }
     if (score < 24) continue;
-    pushLogoCandidate(candidates, seen, imageSrcFromTag(tag), baseUrl, score, m.index);
+    pushLogoCandidate(candidates, seen, imageSrcFromTag(tag), baseUrl, score, m.index, tag);
   }
 
   // ── 2. <a> with "logo" class/id wrapping an <img> or <source> ──────────
@@ -1014,7 +1091,7 @@ export function extractLogoUrls(
     ).trim();
     const resA = resolveUrl(candidate, baseUrl);
     if (resA && isPartnerFinancingLogoBlob(resA, `${candidate} ${block}`)) continue;
-    pushLogoCandidate(candidates, seen, candidate, baseUrl, 72, m.index);
+    pushLogoCandidate(candidates, seen, candidate, baseUrl, 72, m.index, block);
   }
 
   // ── 3. Wix: wix:image or data-pin-media with "logo" nearby ────────────
@@ -1025,7 +1102,7 @@ export function extractLogoUrls(
     const trimmed = m[1].trim();
     const resW = resolveUrl(trimmed, baseUrl);
     if (resW && isPartnerFinancingLogoBlob(resW, trimmed + ctx)) continue;
-    pushLogoCandidate(candidates, seen, trimmed, baseUrl, 58, m.index);
+    pushLogoCandidate(candidates, seen, trimmed, baseUrl, 58, m.index, ctx);
   }
 
   // ── 4. apple-touch-icon ────────────────────────────────────────────────
