@@ -88,7 +88,10 @@ export default function RevenueLeakHeroSearch({
             Revenue Leak Audit
           </div>
           <h1 className="heading-display text-5xl font-black tracking-tight text-text-primary sm:text-6xl lg:text-7xl">
-            Find Where Your Business Is Leaking Revenue
+            <span className="block text-pretty leading-[1.02]">Find Where Your Business</span>
+            <span className="mt-0.5 block text-pretty leading-[1.02] sm:mt-1">
+              Is Leaking <span className="text-accent">Revenue</span>
+            </span>
           </h1>
           <p className="mx-auto mt-6 max-w-3xl text-lg leading-8 text-text-secondary sm:text-xl">
             Analyze your Google profile, reviews, competitors, website, ads, and local positioning to uncover missed
