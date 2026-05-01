@@ -1177,8 +1177,8 @@ function ReviewTextWithThemeHighlights({
             key={i}
             className={
               seg.type === "pos"
-                ? "rounded-sm bg-emerald-100 px-0.5 font-semibold text-emerald-800"
-                : "rounded-sm bg-red-100 px-0.5 font-semibold text-red-700"
+                ? "bg-transparent font-semibold text-emerald-800"
+                : "bg-transparent font-semibold text-red-700"
             }
           >
             {seg.value}
