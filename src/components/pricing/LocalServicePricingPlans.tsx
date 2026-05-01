@@ -22,9 +22,6 @@ export default function LocalServicePricingPlans() {
           >
             {localServicePricingIntro.headline}
           </h2>
-          <p className="mx-auto mt-5 max-w-2xl text-pretty text-base leading-relaxed text-text-secondary sm:text-lg">
-            {localServicePricingIntro.description}
-          </p>
         </div>
 
         <div className="mt-14 grid gap-8 lg:grid-cols-3 lg:gap-6 xl:gap-8">

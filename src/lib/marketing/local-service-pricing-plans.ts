@@ -15,8 +15,6 @@ export type LocalServicePricingPlan = {
 export const localServicePricingIntro = {
   eyebrow: "Pricing",
   headline: "Growth Plans for Local Service Businesses",
-  description:
-    "Choose the level of support you need to generate more leads, book more appointments, close more clients, collect more reviews, increase referrals, and track real ROI.",
 };
 
 export const localServicePricingPlans: LocalServicePricingPlan[] = [

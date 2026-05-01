@@ -45,16 +45,6 @@ export default function PricingHero() {
         >
           Growth plans for local service businesses
         </motion.h1>
-
-        <motion.p
-          initial={{ opacity: 1, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.1 }}
-          className="mx-auto mt-5 max-w-2xl text-pretty text-base leading-relaxed text-text-secondary sm:text-lg"
-        >
-          Choose the level of support you need to generate more leads, book more appointments, close more clients,
-          collect more reviews, increase referrals, and track real ROI.
-        </motion.p>
       </div>
     </section>
   );
