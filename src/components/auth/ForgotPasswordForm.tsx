@@ -46,8 +46,8 @@ export default function ForgotPasswordForm({
   }
 
   return (
-    <>
-      <h1 className="heading-display text-2xl font-bold text-text-primary">
+    <div className="w-full">
+      <h1 className="heading-display text-2xl font-bold text-text-primary sm:text-3xl">
         Reset password
       </h1>
       <p className="mt-1 text-sm text-text-secondary">
@@ -91,11 +91,11 @@ export default function ForgotPasswordForm({
         </button>
       </form>
 
-      <p className="mt-6 text-center text-sm">
+      <p className="mt-8 text-center text-sm">
         <Link href="/login" className="text-accent hover:underline">
           ← Back to sign in
         </Link>
       </p>
-    </>
+    </div>
   );
 }

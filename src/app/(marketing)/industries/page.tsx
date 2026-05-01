@@ -7,7 +7,7 @@ import { marketingIndustryPages } from "@/lib/marketing-industries-pages";
 export const metadata: Metadata = {
   title: "Industries | Zenpho",
   description:
-    "Growth playbooks for home services, health & wellness, professional services, and automotive—qualified leads, bookings, reviews, and revenue clarity.",
+    "Growth playbooks for home services, health & wellness, professional services, automotive, real estate, and wedding venues—qualified leads, bookings, reviews, and revenue clarity.",
 };
 
 export default function IndustriesHubMarketingPage() {

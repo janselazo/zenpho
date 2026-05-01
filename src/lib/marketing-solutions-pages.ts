@@ -21,68 +21,68 @@ export type MarketingSolutionPage = {
 export const marketingSolutionPages: MarketingSolutionPage[] = [
   {
     slug: "lead-to-revenue-setup",
-    title: "Lead-to-Revenue Setup",
+    title: "Development",
     description:
-      "We configure capture, booking, tracking, and dashboards so your funnel works on day one.",
+      "Website, Google Business Profile, email, foundational SEO, hosting, optional branding—and Zenpho as your operating system.",
     icon: Wrench,
     iconClassName: "bg-indigo-500/15 text-indigo-600",
     metaDescription:
-      "Done-with-you setup of Zenpho for local service businesses—leads, appointments, reviews, and revenue tracking configured end to end.",
+      "Zenpho Development package for local businesses: site and GBP setup, email, SEO foundations, hosting, and the Zenpho platform for leads through referrals.",
     heroLead:
-      "Go live with a complete lead-to-revenue stack—without becoming your own IT department.",
+      "Establish credibility and discoverability before you scale paid media—built on Zenpho from day one.",
     body: [
-      "Most teams don’t need another login; they need the plumbing connected. We implement capture points, source tracking, scheduling, and reporting aligned to how you actually sell.",
-      "You’ll finish setup with documented workflows, naming conventions, and a dashboard your whole team can read.",
+      "Development scopes website work, Google Business Profile and business email setup, foundational SEO with hosting and support, plus optional branding—all alongside full Zenpho platform access.",
+      "You finish with a professional local presence your team can run, with pipelines and reporting ready when you graduate into Growth or Scale.",
     ],
     bullets: [
-      "Audit of current funnel and quick-win prioritization",
-      "Implementation of capture, routing, and booking",
-      "Attribution and review-request wiring",
-      "Owner-friendly training session",
+      "Website development and GBP aligned to how buyers search",
+      "Business email and hosting with ongoing support",
+      "Foundational SEO and optimization during build-out",
+      "Zenpho workspace for lead management through referrals",
     ],
   },
   {
     slug: "growth-engine-management",
-    title: "Growth Engine Management",
+    title: "Growth",
     description:
-      "Ongoing optimization: campaigns, follow-ups, and reporting managed for you.",
+      "Everything in Development, plus Meta ads, Performance Creatives, and ongoing SEO—in one monthly rhythm.",
     icon: Rocket,
     iconClassName: "bg-rose-500/15 text-rose-600",
     metaDescription:
-      "Managed growth for local service businesses—ongoing funnel tuning, follow-up performance, and revenue reporting with Zenpho.",
+      "Zenpho Growth: Meta and Instagram ads, Performance Creatives, ongoing SEO, plus every Development deliverable and the Zenpho platform.",
     heroLead:
-      "Keep the machine running while you run the business—we monitor, test, and tighten the system monthly.",
+      "Predictable demand from Meta and SEO while Development foundations and Zenpho keep follow-up and attribution honest.",
     body: [
-      "Markets shift; creative fatigues; competitors copy. Managed services keep experiments moving: new hooks, landing tweaks, automation tuning, and spend guardrails.",
-      "Reporting becomes a rhythm: what changed, what improved, and what we’re testing next—so you always know why numbers moved.",
+      "Growth inherits your entire Development scope, then layers Meta (Facebook & Instagram) campaigns, Performance Creatives, and an ongoing SEO program—not just the foundational work from setup.",
+      "Monthly cadence focuses on creative iteration, search visibility, and clear reporting on pipeline—not vanity metrics.",
     ],
     bullets: [
-      "Monthly funnel and campaign review",
-      "Automation and messaging iteration",
-      "Review velocity and referral program coaching",
-      "Clear readouts tied to bookings and revenue",
+      "Meta ads management with guardrails and testing",
+      "Performance Creatives tuned to local proof and offers",
+      "Ongoing SEO beyond foundational optimization",
+      "Zenpho dashboards tying spend to leads and bookings",
     ],
   },
   {
     slug: "full-growth-partner",
-    title: "Full Growth Partner",
+    title: "Scale",
     description:
-      "Strategy plus execution across acquisition, conversion, reputation, and retention.",
+      "Everything in Growth—plus Google Ads for coordinated search and social at higher ambition.",
     icon: Handshake,
     iconClassName: "bg-emerald-500/15 text-emerald-700",
     metaDescription:
-      "A senior growth partner for local service brands—strategy, creative direction, and hands-on execution with Zenpho as the operating system.",
+      "Zenpho Scale: Google Ads plus Meta, creatives, ongoing SEO, Development bundle, and Zenpho—full-funnel management for competitive markets.",
     heroLead:
-      "When you want a fractional growth lead embedded with your team—not a menu of disconnected tactics.",
+      "When search intent and social prospecting both matter, Scale coordinates channels with one operating system.",
     body: [
-      "This tier pairs Zenpho’s product depth with senior oversight: positioning, offer design, channel strategy, and ruthless prioritization of what moves revenue.",
-      "Ideal for owners ready to scale multi-location presence or step out of founder-led sales without losing quality.",
+      "Scale includes Growth (therefore Development): Meta ads, Performance Creatives, ongoing SEO, and your site/GBP foundations.",
+      "We add Google Ads—Search and Performance Max—so budgets, messaging, and landing experiences stay aligned instead of siloed.",
     ],
     bullets: [
-      "Quarterly growth roadmap aligned to revenue targets",
-      "Cross-channel execution with unified reporting",
-      "Priority access for launches and promos",
-      "Executive-level narrative you can take to partners or lenders",
+      "Coordinated Meta + Google Ads strategy and execution",
+      "Shared creative and landing insights across channels",
+      "Reporting that shows channel overlap and true incremental lift",
+      "Room for aggressive expansion without losing operational clarity",
     ],
   },
 ];

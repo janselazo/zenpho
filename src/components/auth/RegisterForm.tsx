@@ -50,8 +50,8 @@ export default function RegisterForm({ configured }: { configured: boolean }) {
   }
 
   return (
-    <>
-      <h1 className="heading-display text-2xl font-bold text-text-primary">
+    <div className="w-full">
+      <h1 className="heading-display text-2xl font-bold text-text-primary sm:text-3xl">
         Create account
       </h1>
       <p className="mt-1 text-sm text-text-secondary">
@@ -135,12 +135,12 @@ export default function RegisterForm({ configured }: { configured: boolean }) {
         </button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-text-secondary">
+      <p className="mt-8 text-center text-sm text-text-secondary">
         Already have an account?{" "}
         <Link href="/login" className="font-medium text-accent hover:underline">
           Sign in
         </Link>
       </p>
-    </>
+    </div>
   );
 }

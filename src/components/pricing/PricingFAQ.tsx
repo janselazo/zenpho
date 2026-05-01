@@ -9,13 +9,13 @@ export default function PricingFAQ() {
         title="Common"
         titleAccent="questions"
         titleAccentInline
-        description="Lead-to-revenue setup, monthly growth plans, ad spend, and how to choose the right level of support."
+        description="Development, Growth, and Scale—pricing, what’s included, ad spend, and how to choose."
       />
 
       <div className="mx-auto max-w-3xl space-y-3">
-        {PRICING_PAGE_FAQS.map((faq, i) => (
+        {PRICING_PAGE_FAQS.map((faq) => (
           <details
-            key={i}
+            key={faq.q}
             name="pricing-faq"
             className="faq-native overflow-hidden rounded-2xl border border-border bg-white/95 shadow-sm transition-shadow hover:shadow-md"
           >

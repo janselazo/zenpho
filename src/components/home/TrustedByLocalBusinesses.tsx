@@ -3,7 +3,7 @@ import { trustedLocalBusinesses } from "@/lib/trusted-local-businesses";
 
 export default function TrustedByLocalBusinesses() {
   return (
-    <div className="mx-auto mt-14 w-full max-w-6xl">
+    <div className="relative z-0 mx-auto mt-14 w-full max-w-6xl">
       <p className="text-center text-sm font-medium tracking-wide text-zinc-500 dark:text-zinc-400">
         Trusted by 50+ Local Businesses
       </p>

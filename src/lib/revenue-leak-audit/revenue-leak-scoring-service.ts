@@ -2033,6 +2033,6 @@ export function scoreAudit(input: BuildInput) {
     sectionSummaries,
     actionPlan,
     recommendedNextStep:
-      "Install a Lead-to-Revenue System to fix these leaks across tracking, follow-up, reviews, referrals, and reporting.",
+      "Use Zenpho Development and Growth programs to fix these leaks across tracking, follow-up, reviews, referrals, and reporting.",
   };
 }

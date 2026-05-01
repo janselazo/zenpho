@@ -101,7 +101,7 @@ export default function RevenueLeakHeroSearch({
         </div>
 
         <form
-          className="mx-auto mt-10 grid max-w-5xl gap-3 rounded-[2rem] border border-white/80 bg-white/90 p-3 shadow-soft-lg backdrop-blur lg:grid-cols-[minmax(0,1fr)_auto]"
+          className="relative z-20 mx-auto mt-10 grid max-w-5xl gap-3 rounded-[2rem] border border-white/80 bg-white/90 p-3 shadow-soft-lg backdrop-blur lg:grid-cols-[minmax(0,1fr)_auto]"
           onSubmit={(e) => {
             e.preventDefault();
             setOpen(false);
@@ -123,7 +123,7 @@ export default function RevenueLeakHeroSearch({
               autoComplete="off"
             />
             {open && (suggestions.length > 0 || suggesting || hint) ? (
-              <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-2xl border border-border bg-white text-left shadow-soft-lg">
+              <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-50 overflow-hidden rounded-2xl border border-border bg-white text-left shadow-soft-lg">
                 {suggesting ? (
                   <div className="flex items-center gap-2 px-4 py-3 text-sm text-text-secondary">
                     <Loader2 className="h-4 w-4 animate-spin" />

@@ -512,7 +512,7 @@ export const resourceItems: ResourceItem[] = [
   {
     title: "Pricing & FAQs",
     description:
-      "Lead-to-Revenue Setup, monthly growth programs, and full partnership—scoped on a call.",
+      "Development, Growth, and Scale programs—scoped on a call.",
     href: "/pricing",
     tag: "Engagement",
   },

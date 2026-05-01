@@ -3,118 +3,87 @@ export type LocalServicePricingPlan = {
   title: string;
   price: string;
   summary: string;
+  /** Legacy field — comparison matrix is primary UI; keep empty or short notes for exports. */
   included: string[];
   bestFor: string[];
   outcome: string;
   ctaLabel: string;
   ctaHref: string;
+  /** Shown under plan title in comparison header (inheritance messaging). */
+  headerNote?: string;
   /** Emphasize as recommended tier */
   featured?: boolean;
 };
 
 export const localServicePricingIntro = {
   eyebrow: "Pricing",
-  headline: "Growth Plans for Local Service Businesses",
+  headline: "Development, Growth & Scale",
+  subtitle:
+    "Growth and Scale are monthly management retainers. Advertising budgets are paid directly to Meta and Google and are billed separately.",
 };
+
+/** Zenpho web app & workflows — same foundation on every plan. */
+export const platformIncludedInAllPlans = [
+  "Lead management — capture, stage, and follow up in one workspace",
+  "Appointments — pipeline visibility and booking tied to your leads",
+  "Reviews — request, monitor, and grow your reputation",
+  "Referrals — track sources and grow referral revenue",
+] as const;
 
 export const localServicePricingPlans: LocalServicePricingPlan[] = [
   {
     id: "setup",
-    title: "Lead-to-Revenue Setup",
-    price: "$2,500 one-time",
+    title: "Development",
+    price: "$1,000 one-time",
+    headerNote: "Zenpho platform included on every plan.",
     summary:
-      "Install the foundation your business needs to capture, track, follow up with, and convert more leads.",
-    included: [
-      "Lead tracking dashboard setup",
-      "CRM pipeline setup",
-      "Call tracking setup",
-      "Form tracking setup",
-      "Lead source tracking",
-      "Google Business Profile optimization",
-      "Website or landing page quick improvements",
-      "Review request system",
-      "Basic follow-up workflow",
-      "First ROI report",
-      "30-day implementation",
-    ],
+      "Credibility and discoverability: website development, Google Business Profile setup, business email, foundational SEO, hosting and support, and optional branding.",
+    included: [],
     bestFor: [
-      "Businesses with no clear lead tracking",
-      "Businesses losing leads from missed calls or poor follow-up",
-      "Businesses that do not know where leads are coming from",
-      "Businesses that want better visibility before spending more on ads",
+      "Businesses establishing or refreshing their digital presence",
+      "Owners who want GBP, email, and hosting handled before scaling paid media",
+      "Teams prioritizing a solid base over multi-channel ads",
     ],
     outcome:
-      "You get a working system to capture every lead, track every opportunity, follow up faster, and understand what is producing revenue.",
-    ctaLabel: "Book Setup Call",
+      "You launch with a professional site and local footprint, email on your domain, foundational SEO, reliable hosting, and the Zenpho workspace for leads through referrals.",
+    ctaLabel: "Book development call",
     ctaHref: "/booking",
   },
   {
     id: "growth-engine",
-    title: "Growth Engine Management",
-    price: "$1,500/month + ad spend",
+    title: "Growth",
+    price: "$2,000/month + ad spend",
+    featured: true,
+    headerNote: "Includes everything in Development.",
     summary:
-      "Ongoing lead generation, Google optimization, landing page improvements, reviews, referrals, and ROI reporting.",
-    included: [
-      "Google Ads management",
-      "Google Business Profile improvements",
-      "Landing page optimization",
-      "Local SEO improvements",
-      "Review generation campaigns",
-      "Referral campaigns",
-      "Follow-up optimization",
-      "Lead quality analysis",
-      "Monthly ROI reporting",
-      "Monthly strategy call",
-      "Ongoing revenue leak monitoring",
-      "Performance recommendations",
-    ],
+      "Everything in Development, plus Meta (Facebook & Instagram) ads, Performance Creatives, and ongoing SEO services—managed with clear attribution in Zenpho.",
+    included: [],
     bestFor: [
-      "Businesses that want more qualified leads",
-      "Businesses already spending on marketing but lacking clear ROI",
-      "Businesses that want consistent monthly optimization",
-      "Businesses that want help improving leads, appointments, reviews, referrals, and revenue",
+      "Businesses ready to invest consistently in Meta and organic visibility",
+      "Teams that want creatives and SEO cadence without Google Search ads yet",
+      "Owners who need predictable pipeline beyond referrals alone",
     ],
     outcome:
-      "We manage and improve your growth system every month so more leads become appointments, clients, reviews, referrals, and revenue.",
-    ctaLabel: "Grow My Business",
+      "You attract qualified demand through Meta and ongoing SEO while your Development foundation and Zenpho platform keep follow-up, reviews, and referrals measurable.",
+    ctaLabel: "Start Growth",
     ctaHref: "/booking",
-    featured: true,
   },
   {
     id: "full-partner",
-    title: "Full Growth Partner",
-    price: "$4,500/month + ad spend",
+    title: "Scale",
+    price: "$3,000/month + ad spend",
+    headerNote: "Includes everything in Growth (and Development).",
     summary:
-      "Complete done-for-you growth system for businesses ready to scale with a dedicated growth partner.",
-    included: [
-      "Full growth strategy",
-      "Website rebuild or major redesign",
-      "Multiple high-converting landing pages",
-      "Google Ads management",
-      "Facebook/Instagram Ads when relevant",
-      "Local SEO strategy and execution",
-      "Google Business Profile optimization",
-      "Advanced lead tracking",
-      "CRM and sales pipeline setup",
-      "Proposal and follow-up workflows",
-      "Review generation system",
-      "Referral campaigns",
-      "Past customer reactivation",
-      "Revenue dashboard",
-      "Weekly or biweekly reporting",
-      "Growth strategy and ongoing optimization",
-      "Sales process improvement recommendations",
-    ],
+      "Everything in Growth, plus Google Ads (Search and Performance Max) for full-funnel demand—ideal when you are ready to compete on search and social together.",
+    included: [],
     bestFor: [
-      "Larger local service businesses",
-      "High-ticket service providers",
-      "Businesses ready to scale aggressively",
-      "Businesses needing a complete marketing, tracking, and conversion system",
-      "Multi-location or expanding businesses",
+      "Businesses scaling spend across Meta and Google with tight coordination",
+      "Competitive markets where search intent and social prospecting both matter",
+      "Teams that want one operating rhythm across channels and reporting",
     ],
     outcome:
-      "We become your growth partner, managing the full system from lead generation to booked jobs, revenue tracking, reviews, referrals, and continuous optimization.",
-    ctaLabel: "Talk to Us",
+      "You run coordinated Meta and Google programs on top of Development deliverables and Growth services, with Zenpho tying spend to pipeline and revenue.",
+    ctaLabel: "Talk to us",
     ctaHref: "/booking",
   },
 ];

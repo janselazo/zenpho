@@ -1,16 +1,20 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Briefcase,
+  Building2,
   Car,
   HeartPulse,
   Home,
+  Sparkles,
 } from "lucide-react";
 
 export type MarketingIndustrySlug =
   | "home-services"
   | "health-wellness"
   | "professional-services"
-  | "automotive-services";
+  | "automotive-services"
+  | "real-estate"
+  | "wedding-venues";
 
 export type MarketingIndustryPage = {
   slug: MarketingIndustrySlug;
@@ -111,6 +115,50 @@ export const marketingIndustryPages: MarketingIndustryPage[] = [
       "Post-visit review asks timed after successful ROs",
       "Referral hooks for sales and service customer bases",
       "Reporting that follows a vehicle or household across touches",
+    ],
+  },
+  {
+    slug: "real-estate",
+    title: "Real Estate",
+    description:
+      "Agents, brokers, teams, property managers—more qualified buyers and sellers, clearer follow-up, and marketing you can trace to closings.",
+    icon: Building2,
+    iconClassName: "bg-amber-500/15 text-amber-800 dark:text-amber-200",
+    metaDescription:
+      "Real estate growth on Zenpho: lead capture, showing and listing workflows, reviews, referrals, and ROI by channel and agent.",
+    heroLead:
+      "Listings move fast and trust is everything—your pipeline should match how buyers and sellers actually search, tour, and decide.",
+    body: [
+      "Real estate leads arrive from portals, search, social, and referrals—often outside business hours. You need capture that routes to the right agent, nurture that respects timelines, and reporting that ties spend to appointments and closings.",
+      "Zenpho helps teams and independents see which listings, neighborhoods, and campaigns produce real conversations—not just clicks.",
+    ],
+    bullets: [
+      "Routing and SLAs for buyer vs seller and by farm area or team member",
+      "Showing and listing journeys with reminders that reduce ghosting",
+      "Review and referral programs tuned for transaction milestones",
+      "Attribution that connects ads and sources to pipeline and outcomes",
+    ],
+  },
+  {
+    slug: "wedding-venues",
+    title: "Wedding Venues",
+    description:
+      "Barns, estates, hotels, gardens—fill your calendar with tours, holds, and signed contracts without losing leads in the inbox.",
+    icon: Sparkles,
+    iconClassName: "bg-rose-500/15 text-rose-700 dark:text-rose-200",
+    metaDescription:
+      "Wedding venue growth on Zenpho: inquiry capture, tour scheduling, vendor and planner referrals, reviews, and marketing ROI tied to booked dates.",
+    heroLead:
+      "Couples compare dozens of venues on short timelines—your follow-up has to feel personal while your team stays organized.",
+    body: [
+      "Inquiries spike from Instagram, Google, The Knot-style directories, and word of mouth—often in bursts around engagement season. You need routing that respects date availability, nurture that answers FAQs without sounding robotic, and clear attribution by package and season.",
+      "Zenpho helps venue teams see which channels, open houses, and planner partnerships actually produce holds and signed agreements.",
+    ],
+    bullets: [
+      "Tour and open-house workflows with reminders that cut no-shows",
+      "Pipeline by date, headcount, and package so sales stays aligned with ops",
+      "Review asks timed after the big day when emotion—and five stars—are highest",
+      "Referral tracking for planners, photographers, and preferred vendor lists",
     ],
   },
 ];

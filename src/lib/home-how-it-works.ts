@@ -12,8 +12,8 @@ export const homeHowItWorksSteps = [
     body: "We prioritize the problems most likely costing you money, such as weak reviews, poor website conversion, missed calls, no tracking, or competitor gaps.",
   },
   {
-    title: "Install Your Lead-to-Revenue System",
-    body: "We set up the tools, pages, tracking, campaigns, automations, and dashboard needed to capture and convert more opportunities.",
+    title: "Install Your Growth Foundation",
+    body: "We deliver Development—website, GBP, email, foundational SEO, hosting—and Zenpho so capture, tracking, and dashboards work before we scale ads.",
   },
   {
     title: "Generate and Optimize Leads",

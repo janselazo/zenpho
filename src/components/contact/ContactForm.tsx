@@ -9,9 +9,9 @@ const inputClass =
   "w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-text-primary placeholder:text-text-secondary/40 outline-none shadow-sm transition-all focus:border-accent focus:ring-2 focus:ring-accent/15";
 
 const HELP_OPTIONS = [
-  "Lead-to-Revenue Setup (one-time)",
-  "Growth Engine Management (monthly)",
-  "Full Growth Partner (monthly)",
+  "Development (one-time)",
+  "Growth (monthly)",
+  "Scale (monthly)",
   "Revenue Leak Audit / exploration call",
   "Not sure yet",
 ] as const;
@@ -33,9 +33,9 @@ const TIMELINES = [
 ] as const;
 
 const BUDGETS = [
-  "Lead-to-Revenue Setup range (~$2,500)",
-  "~$1,500/mo + ad spend (Growth Engine)",
-  "~$4,500/mo + ad spend (Full Partner)",
+  "Development (~$1,000 one-time)",
+  "~$2,000/mo + ad spend (Growth)",
+  "~$3,000/mo + ad spend (Scale)",
   "Smaller / phased start",
   "Need recommendation",
 ] as const;
