@@ -2300,7 +2300,7 @@ export default function ProspectPreviewOutreachBlock({
               money-loss estimates with a prioritized fix plan. Same engine as the Revenue Leak Audit tool.
             </p>
             <p className="mt-2 text-[10px] text-text-secondary/90 dark:text-zinc-500">
-              Analysis can take 30–90 seconds (Google Places + PageSpeed + competitor reviews). Assets auto-attach for
+              Analysis can take 1–2 minutes (Google Places + PageSpeed + competitor reviews). Assets auto-attach for
               SMS / email / WhatsApp.
             </p>
             <button

@@ -9,11 +9,23 @@ export function stripTags(html: string): string {
     .trim();
 }
 
+/** Decode common HTML entities in text extracted from raw HTML (title, meta, headings). */
+export function decodeHtmlEntities(text: string): string {
+  return text
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#0*39;/g, "'")
+    .replace(/&apos;/gi, "'");
+}
+
 export function extractFirstTagText(html: string, tag: string): string | null {
   const re = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i");
   const match = html.match(re);
   if (!match) return null;
-  return stripTags(match[1]).slice(0, 220) || null;
+  const inner = stripTags(match[1]).slice(0, 220) || null;
+  return inner ? decodeHtmlEntities(inner) : null;
 }
 
 export function extractMeta(html: string, name: string): string | null {
@@ -26,11 +38,120 @@ export function extractMeta(html: string, name: string): string | null {
     `<meta[^>]+content=["']([^"']*)["'][^>]+(?:name|property)=["']${escaped}["'][^>]*>`,
     "i"
   );
-  return (
+  const raw =
     byName.exec(html)?.[1]?.trim().replace(/\s+/g, " ") ||
     byContentFirst.exec(html)?.[1]?.trim().replace(/\s+/g, " ") ||
-    null
-  );
+    null;
+  return raw ? decodeHtmlEntities(raw) : null;
+}
+
+function extractGeneratorMeta(html: string): string | null {
+  const byName =
+    /<meta\b[^>]*\bname=["']generator["'][^>]*\bcontent=["']([^"']+)["']/i.exec(html) ??
+    /<meta\b[^>]*\bcontent=["']([^"']+)["'][^>]*\bname=["']generator["']/i.exec(html);
+  const raw = byName?.[1]?.trim().replace(/\s+/g, " ");
+  return raw ? decodeHtmlEntities(raw) : null;
+}
+
+export type WebsiteCmsPlatformId =
+  | "wordpress"
+  | "shopify"
+  | "squarespace"
+  | "weebly"
+  | "wix"
+  | "webflow"
+  | "godaddy"
+  | "hubspot"
+  | "drupal"
+  | "bigcommerce"
+  | "duda"
+  | "framer"
+  | "unknown";
+
+/**
+ * Best-effort CMS / site-builder detection from homepage HTML (bounded scan).
+ * Returns null when nothing can be inferred confidently.
+ */
+export function detectWebsiteCms(
+  html: string
+): { id: WebsiteCmsPlatformId; label: string } | null {
+  const slice = html.length > 600_000 ? html.slice(0, 600_000) : html;
+  const lower = slice.toLowerCase();
+  const gen = extractGeneratorMeta(slice)?.toLowerCase() ?? "";
+
+  const isWp =
+    lower.includes("/wp-content/") ||
+    lower.includes("/wp-includes/") ||
+    lower.includes("/wp-json/") ||
+    /\bwordpress\b/i.test(gen) ||
+    /\bwp\s*\d/i.test(gen);
+  if (isWp) return { id: "wordpress", label: "WordPress" };
+
+  if (
+    lower.includes("cdn.shopify.com") ||
+    lower.includes("shopify.com/s/files") ||
+    gen.includes("shopify")
+  ) {
+    return { id: "shopify", label: "Shopify" };
+  }
+  if (
+    lower.includes("squarespace-cdn.com") ||
+    /\bsquarespace\.com\b/i.test(slice) ||
+    gen.includes("squarespace")
+  ) {
+    return { id: "squarespace", label: "Squarespace" };
+  }
+  if (lower.includes("weebly") || gen.includes("weebly")) {
+    return { id: "weebly", label: "Weebly" };
+  }
+  if (
+    lower.includes("wix.com") ||
+    lower.includes("wixsite.com") ||
+    lower.includes("static.wixstatic.com") ||
+    gen.includes("wix.com")
+  ) {
+    return { id: "wix", label: "Wix" };
+  }
+  if (
+    lower.includes("webflow.io") ||
+    lower.includes("assets.website-files.com") ||
+    gen.includes("webflow")
+  ) {
+    return { id: "webflow", label: "Webflow" };
+  }
+  if (
+    lower.includes("secureserver.net") ||
+    lower.includes("secureservercdn.net") ||
+    lower.includes("img1.wsimg.com") ||
+    gen.includes("godaddy") ||
+    gen.includes("go daddy") ||
+    gen.includes("starfield technologies")
+  ) {
+    return { id: "godaddy", label: "GoDaddy Website Builder" };
+  }
+  if (lower.includes("hs-scripts.com") || gen.includes("hubspot cms")) {
+    return { id: "hubspot", label: "HubSpot CMS" };
+  }
+  if (lower.includes("/sites/default/files") || gen.includes("drupal")) {
+    return { id: "drupal", label: "Drupal" };
+  }
+  if (lower.includes("bigcommerce.com") || gen.includes("bigcommerce")) {
+    return { id: "bigcommerce", label: "BigCommerce" };
+  }
+  if (gen.includes("duda") || /(^|\s)duda(\s|$)/i.test(slice)) {
+    return { id: "duda", label: "Duda" };
+  }
+  if (lower.includes("framerusercontent.com") || gen.includes("framer")) {
+    return { id: "framer", label: "Framer" };
+  }
+
+  if (gen.length >= 3) {
+    const label = gen.replace(/\s+/g, " ").trim();
+    const safeLabel = label.length > 60 ? `${label.slice(0, 60)}…` : label;
+    return { id: "unknown", label: safeLabel };
+  }
+
+  return null;
 }
 
 export function hasAny(html: string, terms: RegExp[]): boolean {

@@ -601,6 +601,53 @@ function businessMatchScore(context: string, tokens: readonly string[]): number 
  * Map pin, phone, email, and similar row icons — not the business wordmark.
  * Matches Weebly-style `/icon-map_3.png`, contact sprites, etc.
  */
+/**
+ * Language switchers (WPML, flags, locale icons) often sit in the header/nav and were
+ * mis-classified as the brand logo (e.g. Spanish flag on bilingual dental sites).
+ */
+export function isLanguageSwitcherOrFlagAssetUrl(resolvedUrl: string): boolean {
+  if (!resolvedUrl.trim()) return false;
+  let full = resolvedUrl.toLowerCase();
+  let path = full;
+  try {
+    const u = new URL(resolvedUrl);
+    path = u.pathname.toLowerCase();
+    const qsL = u.search.toLowerCase();
+    full = `${path}${qsL}`.replace(/\/+$/, "");
+  } catch {
+    /* compare full string */
+  }
+
+  if (
+    /\/flags?\/|country[-_]?flags?|famfamfam|countryflags\.|flag-sprite|locale[-_]?flag|lang[-_]?flag|lang[-_]?switch|language[-_]?switch|wpml|sitepress|weglot|gtranslate|translatepress|polylang|i18n[-_]flags?/i.test(
+      full,
+    )
+  ) {
+    return true;
+  }
+
+  const file = path.split("/").pop() ?? "";
+  const base = file.replace(/\.(png|jpe?g|gif|webp|svg|avif)$/i, "");
+
+  if (
+    /flag[-_]?(es|en|fr|de|pt|us|uk|gb|spa|esp)|^(es|en|fr|de|pt)[-_]flag|^flag[-_]spain|^spain[-_]?flag|^spanish$|^spain$|^espana$|^english[-_]?flag|^usa[-_]?flag|^uk[-_]?flag/i.test(
+      base,
+    )
+  ) {
+    return true;
+  }
+
+  const shortLocaleFile = /^[a-z]{2}(-[a-z]{2})?$/i.test(base);
+  if (
+    shortLocaleFile &&
+    /lang|language|translate|wpml|locale|i18n|switcher|ls-|-ls-|menu-item-object-wpml|multilingual/i.test(full)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 export function isDecorativeContactIconUrl(resolvedUrl: string): boolean {
   if (!resolvedUrl.trim()) return false;
   let path = resolvedUrl.toLowerCase();
@@ -627,12 +674,38 @@ function pushLogoCandidate(
   const url = resolveUrl(rawUrl, baseUrl);
   if (!url || seen.has(url)) return;
   if (isDecorativeContactIconUrl(url)) return;
+  if (isLanguageSwitcherOrFlagAssetUrl(url)) return;
   seen.add(url);
   candidates.push({ url, score, index });
 }
 
 const LD_ORG_TYPE_RE =
   /Organization|LocalBusiness|Brand|Corporation|HomeAndConstructionBusiness|ProfessionalService|RoofingContractor|WebSite/i;
+
+function pushLdVisualUrls(
+  field: unknown,
+  acc: string[],
+): void {
+  if (field == null) return;
+  if (typeof field === "string" && field.trim()) {
+    acc.push(field.trim());
+    return;
+  }
+  if (Array.isArray(field)) {
+    for (const item of field) pushLdVisualUrls(item, acc);
+    return;
+  }
+  if (typeof field === "object") {
+    const im = field as { url?: unknown; contentUrl?: unknown };
+    const u =
+      typeof im.url === "string" && im.url.trim()
+        ? im.url.trim()
+        : typeof im.contentUrl === "string" && im.contentUrl.trim()
+          ? im.contentUrl.trim()
+          : null;
+    if (u) acc.push(u);
+  }
+}
 
 function collectLogoUrlsFromLdObject(node: unknown, acc: string[], visited: Set<unknown>): void {
   if (node == null || typeof node !== "object") return;
@@ -698,6 +771,8 @@ function extractJsonLdLogoRefs(html: string): { url: string; index: number }[] {
       if (!shouldScanLdNode(node)) continue;
       const urls: string[] = [];
       collectLogoUrlsFromLdObject(node, urls, visited);
+      const primary = node as Record<string, unknown>;
+      pushLdVisualUrls(primary.image, urls);
       for (const u of urls) {
         out.push({ url: u, index });
       }
@@ -780,13 +855,24 @@ export function extractLogoUrls(
   while ((m = imgRe.exec(html)) !== null) {
     const tag = m[0];
     if (/social media icon|avatar|testimonial|review/i.test(tag)) continue;
+    if (/\bclass=["'][^"']*wpml-ls-flag[^"']*["']/i.test(tag)) continue;
+    if (
+      /\bclass=["'][^"']*\bflag\b[^"']*["']/i.test(tag) &&
+      !/logo|brand|wordmark|site-title|custom-logo/i.test(tag)
+    ) {
+      continue;
+    }
     const srcEarly = imageSrcFromTag(tag);
     const earlyResolved = srcEarly ? resolveUrl(srcEarly, baseUrl) : null;
     if (earlyResolved && isDecorativeContactIconUrl(earlyResolved)) continue;
+    if (earlyResolved && isLanguageSwitcherOrFlagAssetUrl(earlyResolved)) continue;
     const context = html.slice(Math.max(0, m.index - 3200), Math.min(html.length, m.index + tag.length + 3200));
     let score = 0;
     if (/logo|brand/i.test(tag)) score += 36;
     if (/logo|brand/i.test(context)) score += 18;
+    if (/wpml-ls|language-switcher|lang-switch|translatepress|site-languages|header-lang|menu-item-wpml|glink\s|class=["'][^"']*lang-[^"']*item/i.test(context)) {
+      score -= 95;
+    }
     if (/header|nav|navbar|menu|masthead|wixui-header/i.test(context)) score += 18;
     if (/wsite-logo|id=["']sitename["']/i.test(context)) score += 48;
     if (/wixui-image|wow-image|data-testid=["']imageX["']/i.test(context)) score += 34;
@@ -801,6 +887,14 @@ export function extractLogoUrls(
     if (/<a\b[^>]*>[\s\S]{0,650}$/i.test(context.slice(0, 650))) score += 10;
     score += businessMatchScore(`${tag} ${context}`, tokens);
     const altMatch = tag.match(/\balt=["']([^"']+)["']/i);
+    if (
+      altMatch &&
+      /^(spanish|español|espanol|english|inglés|ingles|\bes\b|\ben\b|français|português|language)$/i.test(
+        altMatch[1].trim(),
+      )
+    ) {
+      score -= 80;
+    }
     if (altMatch && tokens.length > 0 && businessMatchScore(altMatch[1], tokens) > 0) {
       score += 28;
     }

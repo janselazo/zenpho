@@ -19,6 +19,7 @@
 import {
   fetchBrandAssetsFromUrl,
   isDecorativeContactIconUrl,
+  isLanguageSwitcherOrFlagAssetUrl,
   type BrandColorResult,
 } from "@/lib/crm/brand-color-extract";
 import { normalizeUrlForFetch } from "@/lib/crm/safe-url-fetch";
@@ -476,6 +477,7 @@ export async function resolveProspectBrandAssets(input: {
     const fetched = await safeFetchLogoAsset(logoUrl);
     if (!fetched) continue;
     if (isDecorativeContactIconUrl(fetched.sourceUrl)) continue;
+    if (isLanguageSwitcherOrFlagAssetUrl(fetched.sourceUrl)) continue;
     const candidatePalette = logoPaletteFromFetch(fetched);
     const rasterFmt = fetched.buffer ? sniffRasterFormat(fetched.buffer) : null;
 

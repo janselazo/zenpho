@@ -165,8 +165,17 @@ export type GoogleLocalRankingSnapshot = {
   query: string;
   location: string;
   topFive: GoogleLocalRankItem[];
+  /**
+   * Rank within the audited sample by rating, review volume, proximity, and light trust
+   * signals — not Google's live local pack ordering.
+   */
   selectedBusinessPosition: number | null;
   selectedBusinessRankItem: GoogleLocalRankItem | null;
+  /**
+   * 1-based index in Google's text-search result order (paginated), when this listing
+   * appeared in the fetched pages — otherwise null.
+   */
+  googleTextSearchPosition: number | null;
   totalResultsChecked: number;
   warnings: string[];
 };
@@ -245,6 +254,11 @@ export type WebsiteAudit = {
   hasSnapchatPixel: boolean;
   hasWebChat: boolean;
   webChatProvider: string | null;
+  /**
+   * Inferred homepage CMS / builder (HTML heuristics). Null when unknown or site not crawled.
+   */
+  cmsPlatformId: string | null;
+  cmsPlatformLabel: string | null;
   socialLinks: {
     facebook: string | null;
     instagram: string | null;

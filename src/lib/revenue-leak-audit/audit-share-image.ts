@@ -66,7 +66,7 @@ function rankingSummary(audit: RevenueLeakAudit): string {
   const q = clamp(rs.query, 48);
   const pos =
     rs.selectedBusinessRankItem?.position ?? rs.selectedBusinessPosition ?? null;
-  if (pos != null) return `Google local: ${q} · Your listing #${pos}`;
+  if (pos != null) return `Google local: ${q} · Sample merit rank #${pos}`;
   return `Google local: ${q}`;
 }
 

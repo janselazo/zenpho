@@ -1320,7 +1320,7 @@ function drawCompetitorStrengths(ctx: Ctx, audit: RevenueLeakAudit): void {
 function drawLocalRanking(ctx: Ctx, audit: RevenueLeakAudit): void {
   newPage(ctx);
   sectionHeading(ctx, "Google local pack", "Local ranking snapshot", {
-    description: `Query: ${audit.rankingSnapshot.query}  ·  Location: ${audit.rankingSnapshot.location}`,
+    description: `Query: ${audit.rankingSnapshot.query}  ·  Location: ${audit.rankingSnapshot.location}  ·  Rank orders this batch by rating, reviews, and distance (not only Google's API sort).`,
   });
 
   const rows = [...audit.rankingSnapshot.topFive];
@@ -1674,7 +1674,7 @@ function drawActionPlan(ctx: Ctx, audit: RevenueLeakAudit): void {
   ctx.y = sectionLabel(ctx, "Disclaimer");
   flowText(
     ctx,
-    "Revenue estimates are based on available data and conservative assumptions. Multiple leaks are combined with funnel math and capped at 85% of addressable revenue. Results are not guaranteed. Use this report as a directional planning tool.",
+    "Revenue estimates use your inputs and on-site signals. Multiple leaks are combined with funnel math and overlap damping and are capped at roughly half of addressable revenue; headline figures lean toward the lower end of the band. Results are not guaranteed. Use this report as a directional planning tool.",
     {
       size: 9,
       color: MUTED,

@@ -13,14 +13,12 @@ import {
   RotateCcw,
   Search,
   Target,
-  XCircle,
 } from "lucide-react";
 import ContactChannelStrip from "@/components/crm/ContactChannelStrip";
 import RevenueLeakFixLeaksCta from "@/components/revenue-leak-audit/RevenueLeakFixLeaksCta";
 import RevenueLeakSnapshot, { RevenueLeakTopLeaksSection } from "@/components/revenue-leak-audit/RevenueLeakSnapshot";
 import Button from "@/components/ui/Button";
 import { EMPTY_PROSPECT_SOCIAL_URLS } from "@/lib/crm/prospect-enrichment-types";
-import { getGoogleBusinessProfileChecklistIssues } from "@/lib/revenue-leak-audit/gbp-checklist";
 import {
   applyAssumptionsToFindings,
   COMPETITOR_MAP_LOCAL_RADIUS_MILES,
@@ -62,8 +60,8 @@ const progressSteps = [
 /** Do not auto-advance past this index while waiting on `/analyze` (canceled at ANALYSIS_COUNTDOWN_SECONDS). */
 const PROGRESS_AUTOSTEP_CAP = Math.max(0, progressSteps.length - 2);
 
-/** Ring + countdown use this duration; progress caps at 92% until the API returns. */
-const ANALYSIS_COUNTDOWN_SECONDS = 60;
+/** Ring + countdown; must stay above server PageSpeed budget + parallel Places work (see `website-audit-service.ts`). */
+const ANALYSIS_COUNTDOWN_SECONDS = 95;
 const ESTIMATED_ANALYSIS_MS = ANALYSIS_COUNTDOWN_SECONDS * 1_000;
 /** Collapsed "Things to Improve" rows before "+ N more". */
 const THINGS_TO_IMPROVE_INITIAL = 6;
@@ -674,16 +672,6 @@ function GoogleBusinessProfileSummary({ audit }: { audit: RevenueLeakAudit }) {
                   Open in Google Maps
                 </a>
               ) : null}
-              {business.address?.trim() ? (
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.address)}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-semibold text-accent hover:underline"
-                >
-                  Search address
-                </a>
-              ) : null}
             </div>
             <ContactChannelStrip
               websiteUrl={business.website}
@@ -785,33 +773,6 @@ function CompetitorStrengthsPanel({ audit }: { audit: RevenueLeakAudit }) {
   );
 }
 
-function GoogleBusinessProfileChecklist({ business }: { business: BusinessProfile }) {
-  const issueItems = useMemo(() => getGoogleBusinessProfileChecklistIssues(business), [business]);
-  if (issueItems.length === 0) return null;
-  return (
-    <div className="rounded-2xl border border-border bg-white p-4">
-      <p className="text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">Profile gaps</p>
-      <ul className="mt-3 space-y-2.5">
-        {issueItems.map((item) => (
-          <li key={item.id} className="flex gap-3 text-sm">
-            <span className="mt-0.5 shrink-0" aria-hidden>
-              {item.status === "warn" ? (
-                <AlertTriangle className="h-4 w-4 text-amber-600" />
-              ) : (
-                <XCircle className="h-4 w-4 text-red-600" />
-              )}
-            </span>
-            <div className="min-w-0">
-              <p className="font-bold text-text-primary">{item.label}</p>
-              <p className="text-xs leading-relaxed text-text-secondary">{item.hint}</p>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
 function SectionProblemAccordion({
   sections,
   audit,
@@ -847,25 +808,10 @@ function SectionProblemAccordion({
                   {section.category === "My Business vs Google Competitors" ? (
                     <CompetitorStrengthsPanel audit={audit} />
                   ) : null}
-                  {section.category === "Google Business Profile" ? (
-                    <GoogleBusinessProfileChecklist business={audit.business} />
-                  ) : null}
                   {section.findings.length === 0 ? (
-                    section.category === "Google Business Profile" ? (
-                      getGoogleBusinessProfileChecklistIssues(audit.business).length === 0 ? (
-                        <p className="mt-4 text-sm text-text-secondary">
-                          No flagged GBP issues in the priority list above.
-                        </p>
-                      ) : null
-                    ) : (
-                      <p className="text-sm text-text-secondary">No major issues found in this section.</p>
-                    )
+                    <p className="text-sm text-text-secondary">No major issues found in this section.</p>
                   ) : (
-                    <div
-                      className={
-                        section.category === "Google Business Profile" ? "mt-4 space-y-3" : "space-y-3"
-                      }
-                    >
+                    <div className="space-y-3">
                       {section.findings.map((finding) => {
                         const sevColor =
                           finding.severity === "Critical"
@@ -1139,8 +1085,15 @@ function CompetitorMap({
         <p className="text-sm text-text-secondary">
           {businessPosition != null ? (
             <>
-              Your business is located in position{" "}
-              <span className="font-black tabular-nums text-text-primary">#{businessPosition}</span> for this search.
+              Among listings in this sample for the search below, your profile ranks{" "}
+              <span className="font-black tabular-nums text-text-primary">#{businessPosition}</span> by rating, review
+              volume, and distance{audit.rankingSnapshot.googleTextSearchPosition != null ? (
+                <>
+                  {" "}
+                  (Google&apos;s text result order was about #
+                  {audit.rankingSnapshot.googleTextSearchPosition} in the pages we pulled).
+                </>
+              ) : null}
             </>
           ) : (
             <>Your business&apos;s ranking position for this search isn&apos;t available.</>

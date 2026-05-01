@@ -180,6 +180,7 @@ export function mockRankingSnapshot(): GoogleLocalRankingSnapshot {
       website: MOCK_BUSINESS.website,
       isSelectedBusiness: true,
     },
+    googleTextSearchPosition: 12,
     totalResultsChecked: 20,
     warnings: ["Mock ranking data is shown because Google Places is not configured."],
   };
@@ -236,6 +237,8 @@ export const MOCK_WEBSITE_AUDIT: WebsiteAudit = {
   hasSnapchatPixel: false,
   hasWebChat: false,
   webChatProvider: null,
+  cmsPlatformId: "wordpress",
+  cmsPlatformLabel: "WordPress",
   socialLinks: {
     facebook: "https://facebook.com",
     instagram: "https://instagram.com",

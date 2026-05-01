@@ -13,6 +13,7 @@ import {
   detectHomepageReviewShowcase,
   detectTextEnabledPhone,
   detectWebChat,
+  detectWebsiteCms,
   extractFirstTagText,
   extractMeta,
   extractWebsiteSocialLinks,
@@ -21,8 +22,8 @@ import {
 } from "./website-conversion-heuristics";
 import type { ServiceResult, WebsiteAudit } from "./types";
 
-/** One PageSpeed attempt; full revenue-leak audit targets ~60s server wall clock. */
-const PAGESPEED_TIMEOUT_MS = 40_000;
+/** PageSpeed Insights often needs 45–90s for heavy homepages; keep under route `maxDuration` + client abort. */
+const PAGESPEED_TIMEOUT_MS = 58_000;
 
 const AUDIT_FETCH_HEADERS = {
   "User-Agent": "Mozilla/5.0 (compatible; ZenphoRevenueLeakAudit/1.0; +https://zenpho.com)",
@@ -225,7 +226,7 @@ async function pageSpeedAttempt(url: string, key: string, timeoutMs = PAGESPEED_
       score: null,
       imageWasteBytes: null,
       warning: isTimeout
-        ? `PageSpeed timed out after ${Math.round(timeoutMs / 1000)}s.`
+        ? `PageSpeed timed out after ${Math.round(timeoutMs / 1000)}s (slow or heavy site). Re-run the audit to try again.`
         : "PageSpeed unavailable.",
     };
   }
@@ -259,6 +260,8 @@ export async function auditWebsite(
         url: websiteUrl,
         normalizedUrl: null,
         available: false,
+        cmsPlatformId: null,
+        cmsPlatformLabel: null,
         status: "Website missing or blocked.",
         warnings: ["Website unavailable or blocked."],
       },
@@ -279,6 +282,8 @@ export async function auditWebsite(
         url: websiteUrl,
         normalizedUrl: normalized,
         available: false,
+        cmsPlatformId: null,
+        cmsPlatformLabel: null,
         status,
         screenshotUrl,
         pageSpeedImageWasteBytes: pageSpeed.imageWasteBytes,
@@ -339,6 +344,7 @@ export async function auditWebsite(
     /ads-twitter\.com/i.test(html);
   const hasSnapchatPixel = /sc-static\.net\/scevent/i.test(html) || /\bsnaptr\s*\(/i.test(html);
   const webChat = detectWebChat(html);
+  const cms = detectWebsiteCms(html);
   const socialLinks = extractWebsiteSocialLinks(html);
   const contactHints = extractPublicContactHints(html);
   const identityAttributes = extractIdentityAttributes(html);
@@ -391,6 +397,8 @@ export async function auditWebsite(
       hasSnapchatPixel,
       hasWebChat: webChat.detected,
       webChatProvider: webChat.provider,
+      cmsPlatformId: cms?.id ?? null,
+      cmsPlatformLabel: cms?.label ?? null,
       socialLinks,
       contactLinks: {
         phone: contactHints.phones[0] ?? null,

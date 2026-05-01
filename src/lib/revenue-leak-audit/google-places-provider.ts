@@ -12,6 +12,7 @@ import type {
   BusinessReview,
   BusinessSearchResult,
   Competitor,
+  Coordinates,
   GoogleLocalRankItem,
   GoogleLocalRankingSnapshot,
   ServiceResult,
@@ -311,6 +312,51 @@ function haversineMiles(
   return Math.round(3958.8 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h)) * 10) / 10;
 }
 
+/**
+ * Higher = stronger for peer comparison (ratings, reviews, proximity). Used to rank the
+ * audited sample so position reflects reputation signals, not raw API sort order alone.
+ */
+function localPeerMeritScore(
+  b: BusinessProfile,
+  anchor: { lat: number; lng: number } | null
+): number {
+  const rating = b.rating ?? 0;
+  const reviews = Math.max(0, b.reviewCount ?? 0);
+  const dist = haversineMiles(anchor, b.coordinates);
+
+  const starPts = (rating / 5) * 48;
+  const reviewPts = Math.min(42, Math.log10(reviews + 1) * 16);
+
+  let proximityPts = 6;
+  if (dist == null) {
+    proximityPts = 4;
+  } else if (dist <= 3) {
+    proximityPts = 16;
+  } else if (dist <= 15) {
+    proximityPts = 16 - (dist - 3) * 0.55;
+  } else if (dist <= 45) {
+    proximityPts = Math.max(2, 9.4 - (dist - 15) * 0.22);
+  } else {
+    proximityPts = 0;
+  }
+
+  const webPts = b.website ? 4 : 0;
+  return starPts + reviewPts + proximityPts + webPts;
+}
+
+function compareMeritDescending(a: BusinessProfile, b: BusinessProfile, anchor: Coordinates | null): number {
+  const sa = localPeerMeritScore(a, anchor);
+  const sb = localPeerMeritScore(b, anchor);
+  if (sb !== sa) return sb - sa;
+  const ra = a.reviewCount ?? 0;
+  const rb = b.reviewCount ?? 0;
+  if (rb !== ra) return rb - ra;
+  const sta = a.rating ?? 0;
+  const stb = b.rating ?? 0;
+  if (stb !== sta) return stb - sta;
+  return stripPlacesResourcePrefix(a.placeId).localeCompare(stripPlacesResourcePrefix(b.placeId));
+}
+
 function toCompetitor(
   b: BusinessProfile,
   selected: BusinessProfile,
@@ -335,17 +381,28 @@ function toCompetitor(
   };
 }
 
-async function placesTextSearch(
+async function placesTextSearchPage(
   textQuery: string,
-  pageSize = 10
-): Promise<{ places: BusinessProfile[]; warning: string | null }> {
+  pageSize: number,
+  pageToken: string | null
+): Promise<{ places: BusinessProfile[]; nextPageToken: string | null; warning: string | null }> {
   const key = apiKey();
   if (!key) {
     return {
       places: [],
+      nextPageToken: null,
       warning: "Google Places API key is missing. Showing mock data.",
     };
   }
+  const body: Record<string, unknown> = {
+    textQuery,
+    languageCode: "en",
+    regionCode: "US",
+    includePureServiceAreaBusinesses: true,
+    pageSize: Math.min(Math.max(1, pageSize), 20),
+  };
+  if (pageToken) body.pageToken = pageToken;
+
   const res = await fetch("https://places.googleapis.com/v1/places:searchText", {
     method: "POST",
     headers: {
@@ -353,30 +410,74 @@ async function placesTextSearch(
       "X-Goog-Api-Key": key,
       "X-Goog-FieldMask": TEXT_SEARCH_FIELD_MASK,
     },
-    body: JSON.stringify({
-      textQuery,
-      languageCode: "en",
-      regionCode: "US",
-      includePureServiceAreaBusinesses: true,
-      pageSize,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
     const detail = (await res.text()).slice(0, 180);
     return {
       places: [],
+      nextPageToken: null,
       warning: `Places search failed (${res.status}). ${detail}`,
     };
   }
 
-  const data = (await res.json()) as { places?: GooglePlace[] };
+  const data = (await res.json()) as { places?: GooglePlace[]; nextPageToken?: string };
+  const places = (data.places ?? [])
+    .map(normalizeBusiness)
+    .filter((x): x is BusinessProfile => Boolean(x));
+  const next = data.nextPageToken?.trim();
   return {
-    places: (data.places ?? [])
-      .map(normalizeBusiness)
-      .filter((x): x is BusinessProfile => Boolean(x)),
+    places,
+    nextPageToken: next || null,
     warning: null,
   };
+}
+
+async function placesTextSearchAllPages(
+  textQuery: string,
+  options: { maxPages: number; stopWhenFoundPlaceId?: string }
+): Promise<{ orderedPlaces: BusinessProfile[]; warning: string | null }> {
+  const pageSize = 20;
+  const maxPages = Math.max(1, Math.min(options.maxPages, 5));
+  let pageToken: string | null = null;
+  let warning: string | null = null;
+  const seen = new Set<string>();
+  const orderedPlaces: BusinessProfile[] = [];
+
+  for (let page = 0; page < maxPages; page++) {
+    if (page > 0) {
+      if (!pageToken) break;
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+    const batch = await placesTextSearchPage(textQuery, pageSize, page > 0 ? pageToken : null);
+    if (batch.warning) warning = batch.warning;
+    pageToken = batch.nextPageToken;
+
+    for (const p of batch.places) {
+      const id = stripPlacesResourcePrefix(p.placeId);
+      if (seen.has(id)) continue;
+      seen.add(id);
+      orderedPlaces.push(p);
+    }
+
+    if (options.stopWhenFoundPlaceId) {
+      const hit = orderedPlaces.some((p) => samePlaceId(p.placeId, options.stopWhenFoundPlaceId!));
+      if (hit) break;
+    }
+
+    if (!pageToken) break;
+  }
+
+  return { orderedPlaces, warning };
+}
+
+async function placesTextSearch(
+  textQuery: string,
+  pageSize = 10
+): Promise<{ places: BusinessProfile[]; warning: string | null }> {
+  const { places, warning } = await placesTextSearchPage(textQuery, pageSize, null);
+  return { places, warning };
 }
 
 export async function searchBusinesses(input: {
@@ -480,7 +581,10 @@ export async function discoverCompetitors(input: {
     input.business.address?.split(",").slice(-2, -1)[0]?.trim() ||
     "near me";
   const query = `${category} near ${location}`;
-  const { places, warning } = await placesTextSearch(query, 20);
+  const { orderedPlaces: places, warning: searchWarning } = await placesTextSearchAllPages(query, {
+    maxPages: 3,
+    stopWhenFoundPlaceId: input.business.placeId,
+  });
   const selectedIndex = places.findIndex((p) => samePlaceId(p.placeId, input.business.placeId));
   const resolvedBusinessCoordinates =
     input.business.coordinates ??
@@ -489,14 +593,50 @@ export async function discoverCompetitors(input: {
     ...input.business,
     coordinates: resolvedBusinessCoordinates,
   };
+  const googleTextSearchPosition = selectedIndex >= 0 ? selectedIndex + 1 : null;
 
-  const competitors = places
+  let candidates: BusinessProfile[] = places.map((p, i) => {
+    if (i !== selectedIndex) return p;
+    return {
+      ...p,
+      rating: input.business.rating ?? p.rating,
+      reviewCount: input.business.reviewCount ?? p.reviewCount,
+      coordinates: resolvedBusinessCoordinates ?? p.coordinates,
+    };
+  });
+  if (selectedIndex < 0) {
+    candidates = [
+      ...candidates,
+      {
+        ...input.business,
+        coordinates: resolvedBusinessCoordinates,
+      },
+    ];
+  }
+
+  const anchorCoords = anchorProfile.coordinates;
+  const meritOrdered = [...candidates].sort((a, b) => compareMeritDescending(a, b, anchorCoords));
+  const meritRank = new Map<string, number>();
+  meritOrdered.forEach((p, idx) => {
+    meritRank.set(stripPlacesResourcePrefix(p.placeId), idx + 1);
+  });
+  const selectedProfile: BusinessProfile =
+    selectedIndex >= 0 ? candidates[selectedIndex]! : { ...input.business, coordinates: resolvedBusinessCoordinates };
+  const selectedMeritRank =
+    meritRank.get(stripPlacesResourcePrefix(input.business.placeId)) ??
+    meritRank.get(stripPlacesResourcePrefix(selectedProfile.placeId)) ??
+    null;
+
+  const competitors = meritOrdered
     .filter((p) => !samePlaceId(p.placeId, input.business.placeId))
     .slice(0, 12)
-    .map((p) => {
-      const serpPosition = places.findIndex((pl) => samePlaceId(pl.placeId, p.placeId)) + 1;
-      return toCompetitor(p, anchorProfile, serpPosition);
-    });
+    .map((p) =>
+      toCompetitor(
+        p,
+        anchorProfile,
+        meritRank.get(stripPlacesResourcePrefix(p.placeId))!
+      )
+    );
 
   const topForReviews = competitors.slice(0, 3);
   if (topForReviews.length > 0) {
@@ -530,20 +670,19 @@ export async function discoverCompetitors(input: {
     c.distanceMiles = haversineMiles(anchorProfile.coordinates, c.coordinates);
   }
 
-  const topFive = places
+  const topFive = meritOrdered
     .slice(0, 5)
     .map((p, index) => rankItemFromBusiness(p, index + 1, input.business.placeId));
   const selectedBusinessRankItem =
-    selectedIndex >= 0
-      ? rankItemFromBusiness(places[selectedIndex], selectedIndex + 1, input.business.placeId)
-      : rankItemFromBusiness(
-          input.business,
-          Math.max(places.length, topFive.length) + 1,
-          input.business.placeId
-        );
+    selectedMeritRank != null
+      ? rankItemFromBusiness(selectedProfile, selectedMeritRank, input.business.placeId)
+      : rankItemFromBusiness(selectedProfile, meritOrdered.length + 1, input.business.placeId);
 
   const warnings = [
-    ...(warning ? [warning] : []),
+    ...(searchWarning ? [searchWarning] : []),
+    googleTextSearchPosition === null && places.length > 0
+      ? `This listing was not in the first ${places.length} Google text-search results for this query; the rank shown compares reputation signals within this sample plus your profile.`
+      : null,
     competitors.length < 10
       ? `Only ${competitors.length} direct competitors were returned for this market sample.`
       : null,
@@ -556,9 +695,10 @@ export async function discoverCompetitors(input: {
         query,
         location,
         topFive,
-        selectedBusinessPosition: selectedBusinessRankItem.position,
+        selectedBusinessPosition: selectedMeritRank,
         selectedBusinessRankItem,
-        totalResultsChecked: places.length,
+        googleTextSearchPosition,
+        totalResultsChecked: candidates.length,
         warnings,
       },
       resolvedBusinessCoordinates,

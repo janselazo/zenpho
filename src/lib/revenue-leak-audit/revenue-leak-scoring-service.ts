@@ -171,10 +171,17 @@ function finding(
 }
 
 /**
- * Combine independent leak rates with funnel math:
- *   combinedLeak = 1 - product(1 - r_i)
- * Capped at 0.85 so the model never claims the business is losing
- * effectively all of its addressable revenue.
+ * Max share of addressable revenue treated as “at risk” from all checklist gaps combined.
+ * Realistically, losing nearly all pipeline to fixable issues is rare; ~50% is a strong
+ * upper bound for this style of audit.
+ */
+const MAX_COMBINED_LEAK_RATE = 0.52;
+
+/**
+ * Combine leak rates with funnel math: combinedLeak = 1 - product(1 - r_i).
+ * Long issue lists are damped: many items overlap the same funnel friction (SEO + GBP +
+ * reviews), so each additional finding past the first few should not move the total as much
+ * as full independence implies.
  */
 function combineLeakRates(rates: readonly number[]): number {
   if (rates.length === 0) return 0;
@@ -182,7 +189,12 @@ function combineLeakRates(rates: readonly number[]): number {
     (acc, rate) => acc * (1 - clampRate(rate)),
     1
   );
-  return Math.min(0.85, 1 - survival);
+  let combined = 1 - survival;
+  const n = rates.length;
+  if (n > 4) {
+    combined *= 1 / (1 + 0.085 * (n - 4));
+  }
+  return Math.min(MAX_COMBINED_LEAK_RATE, combined);
 }
 
 function competitorAverages(competitors: Competitor[]) {
@@ -302,6 +314,10 @@ function buildFindings(input: BuildInput): AuditFinding[] {
     rankingSnapshot.selectedBusinessPosition > 5
   ) {
     const impact = moneyImpact(assumptions, 0.08, 0.22);
+    const googlePos =
+      rankingSnapshot.googleTextSearchPosition != null
+        ? ` Google's text search ordered this listing around #${rankingSnapshot.googleTextSearchPosition} in the pages we fetched.`
+        : "";
     findings.push(
       finding(
         {
@@ -309,10 +325,10 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           severity:
             rankingSnapshot.selectedBusinessPosition > 15 ? "Critical" : "High",
           title: "Your Business Is Not Showing in the Top Google Positions",
-          whatWeFound: `${business.name} appears around position #${rankingSnapshot.selectedBusinessPosition} for "${rankingSnapshot.query}".`,
+          whatWeFound: `${business.name} ranks #${rankingSnapshot.selectedBusinessPosition} within the audited competitor sample for "${rankingSnapshot.query}" when scored by rating, review volume, and distance.${googlePos}`,
           whyItMatters:
             "Local buyers often choose from the first few Google Map results, so lower visibility can reduce calls and quote requests.",
-          evidence: `Top 5 results are competitors; selected business position: #${rankingSnapshot.selectedBusinessPosition}.`,
+          evidence: `Merit rank in sample: #${rankingSnapshot.selectedBusinessPosition}. Top table shows the strongest listings in this batch by those signals.`,
           estimatedRevenueImpactLow: impact.low,
           estimatedRevenueImpactHigh: impact.high,
           leakRateLow: impact.leakRateLow,
@@ -898,6 +914,36 @@ function buildFindings(input: BuildInput): AuditFinding[] {
           recommendedFix:
             "Add a chat or click-to-text widget routed to a phone (Tidio, Tawk.to, HubSpot Chat, Intercom, or a WhatsApp/SMS button). Reply within 5 minutes during business hours.",
           priorityScore: 74,
+        },
+        i++
+      )
+    );
+  }
+
+  if (
+    websiteAudit.available &&
+    websiteAudit.cmsPlatformId &&
+    websiteAudit.cmsPlatformId !== "wordpress"
+  ) {
+    const label = websiteAudit.cmsPlatformLabel ?? "this platform";
+    const impact = moneyImpact(assumptions, 0.02, 0.06);
+    findings.push(
+      finding(
+        {
+          category: "Website Conversion",
+          severity: "Medium",
+          title: `Website Uses ${label} Instead of WordPress`,
+          whatWeFound: `The homepage appears to run on ${label}, not WordPress.`,
+          whyItMatters:
+            "For local service and lead-generation businesses, WordPress is usually the better long-term fit: stronger SEO control (titles, internal linking, schema), a deep market of form, chat, CRM, and analytics plugins, and far more professionals who can maintain or migrate the site without vendor lock-in. All-in-one builders can launch quickly, but they often cap advanced SEO, integrations, and portability as you grow.",
+          evidence: `Detected platform id: ${websiteAudit.cmsPlatformId}. Label: ${label}.`,
+          estimatedRevenueImpactLow: impact.low,
+          estimatedRevenueImpactHigh: impact.high,
+          leakRateLow: impact.leakRateLow,
+          leakRateHigh: impact.leakRateHigh,
+          recommendedFix:
+            "Plan a WordPress site on solid hosting (or a phased rebuild while keeping this site live). Match URL patterns, implement LocalBusiness schema, speed-focused mobile templates, and reliable lead capture (forms + click-to-call/text). Use an experienced WordPress migration partner so rankings and tracking carry over.",
+          priorityScore: 63,
         },
         i++
       )
@@ -1556,6 +1602,13 @@ function computeScores(input: BuildInput): AuditScores {
   }
   if (!websiteAudit.mobileFriendly) conversionPenalties.push(12);
   if (websiteAudit.available && !websiteAudit.hasWebChat) conversionPenalties.push(8);
+  if (
+    websiteAudit.available &&
+    websiteAudit.cmsPlatformId &&
+    websiteAudit.cmsPlatformId !== "wordpress"
+  ) {
+    conversionPenalties.push(6);
+  }
 
   let websiteConversion = websiteAudit.available
     ? scoreAfterPenalties(100, conversionPenalties, 68)
@@ -1763,8 +1816,10 @@ function aggregateLeak(
   };
 }
 
-function midpointMoney(low: number, high: number): number {
-  return Math.round((low + high) / 2);
+/** Single headline $/mo leans toward the low band — reflects “likely” loss, not the upper model bound. */
+function headlineLeakUsdMonth(low: number, high: number): number {
+  if (high <= low) return Math.round(low);
+  return Math.round(low + (high - low) * 0.38);
 }
 
 function midpointLeadsJobs(low: number, high: number): number {
@@ -1795,7 +1850,7 @@ function buildRevenueEstimate(
         aggregate.addressableMonthlyRevenue
       ).toLocaleString()} (leads × close rate × avg job value)`,
       `Combined leak rate across all detected issues: ~${estLeakPct}% of monthly leads (midpoint of the model band).`,
-      "Multiple leaks are combined with funnel math (1 − product of survival rates) so issues do not double-count and the total is capped at 85% of addressable revenue.",
+      "Multiple leaks are combined with funnel math (1 − product of survival rates) so issues do not double-count; long lists are overlap-damped and the total is capped at about half of addressable revenue.",
     ],
   };
 }
@@ -1822,7 +1877,10 @@ function buildMoneySummary(
   const lostLeadsHighR = Math.round(aggregate.lostLeadsHigh * 10) / 10;
   const lostJobsLowR = Math.round(aggregate.lostJobsLow * 10) / 10;
   const lostJobsHighR = Math.round(aggregate.lostJobsHigh * 10) / 10;
-  const estimatedMonthlyCost = midpointMoney(aggregate.monthlyRevenueLow, aggregate.monthlyRevenueHigh);
+  const estimatedMonthlyCost = headlineLeakUsdMonth(
+    aggregate.monthlyRevenueLow,
+    aggregate.monthlyRevenueHigh
+  );
   const estimatedAnnualCost = estimatedMonthlyCost * 12;
   const estimatedCombinedLeakRate = (aggregate.combinedLeakLow + aggregate.combinedLeakHigh) / 2;
   const estimatedLostLeadsPerMonth = midpointLeadsJobs(aggregate.lostLeadsLow, aggregate.lostLeadsHigh);
@@ -1854,7 +1912,7 @@ function buildMoneySummary(
       aggregate.addressableMonthlyRevenue
     ).toLocaleString()} addressable monthly revenue. With the ${findings.length} detected issue${
       findings.length === 1 ? "" : "s"
-    }, the combined leak is ~${estLeakPct}% of monthly leads (~${estimatedLostLeadsPerMonth} leads / ~${estimatedLostJobsPerMonth} jobs per month, midpoint estimates). Issues are combined with funnel math so they don't double-count, and the total is capped at 85% of addressable revenue.`,
+    }, the combined leak is ~${estLeakPct}% of monthly leads (~${estimatedLostLeadsPerMonth} leads / ~${estimatedLostJobsPerMonth} jobs per month, midpoint estimates). Issues use funnel math with overlap damping; combined leak is capped at about half of addressable revenue. The headline $/mo tilts toward the lower end of the estimate band.`,
     fixFirstRecommendation: fixFirst,
   };
 }
