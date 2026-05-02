@@ -111,12 +111,10 @@ export default function ContactForm() {
           website_linkedin: fd.get("website_linkedin"),
           what_building: fd.get("what_building"),
           product_for: fd.get("product_for"),
-          validation_notes: fd.get("validation_notes"),
           help_needed: fd.get("help_needed"),
           product_type: fd.get("product_type"),
           timeline: fd.get("timeline"),
           budget_range: fd.get("budget_range"),
-          notes_extra: fd.get("notes_extra"),
           sms_consent: fd.get("sms_consent") === "on",
         }),
       });
@@ -237,6 +235,65 @@ export default function ContactForm() {
             placeholder="Your website or Google Business Profile URL"
           />
         </div>
+        <div className="max-w-md">
+          <label
+            htmlFor="contact-phone"
+            className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
+          >
+            Phone{" "}
+            <span className="font-normal normal-case text-text-secondary/70">
+              (optional)
+            </span>
+          </label>
+          <input
+            id="contact-phone"
+            name="phone"
+            type="tel"
+            autoComplete="tel"
+            className={inputClass}
+            placeholder="+1 (555) 000-0000"
+          />
+        </div>
+
+        <div className="flex items-start gap-2.5 rounded-xl border border-border bg-white px-3 py-2.5">
+          <input
+            id="contact-sms-consent"
+            name="sms_consent"
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 rounded border-border text-accent accent-accent focus:ring-accent/30"
+          />
+          <label
+            htmlFor="contact-sms-consent"
+            className="text-xs leading-relaxed text-text-secondary"
+          >
+            By checking this box, I agree to receive SMS text messages from{" "}
+            <span className="font-medium text-text-primary">Zenpho</span> at the phone
+            number I provided above, including links and updates about your inquiry or engagement.
+            Message frequency is low — typically a few messages per engagement.
+            Message and data rates may apply. Reply{" "}
+            <span className="font-medium text-text-primary">STOP</span> to unsubscribe.
+            Reply{" "}
+            <span className="font-medium text-text-primary">HELP</span> for help. See our{" "}
+            <a
+              href="/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-accent"
+            >
+              Privacy Policy
+            </a>{" "}
+            and{" "}
+            <a
+              href="/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-accent"
+            >
+              SMS Terms
+            </a>
+            .
+          </label>
+        </div>
       </FormSurface>
 
       <FormSurface label="Your business">
@@ -270,21 +327,6 @@ export default function ContactForm() {
             required
             className={`${inputClass} resize-none`}
             placeholder="Cities or radius you serve, residential vs commercial, typical job size"
-          />
-        </div>
-        <div>
-          <label
-            htmlFor="contact-validation"
-            className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
-          >
-            Current marketing, CRM, or tracking (optional)
-          </label>
-          <textarea
-            id="contact-validation"
-            name="validation_notes"
-            rows={3}
-            className={`${inputClass} resize-none`}
-            placeholder="e.g. Google Ads, Jobber, website host, call tracking, nothing formal yet"
           />
         </div>
       </FormSurface>
@@ -345,82 +387,6 @@ export default function ContactForm() {
               ))}
             </select>
           </div>
-        </div>
-        <div>
-          <label
-            htmlFor="contact-extra"
-            className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
-          >
-            Anything else we should know?
-          </label>
-          <textarea
-            id="contact-extra"
-            name="notes_extra"
-            rows={4}
-            className={`${inputClass} resize-none`}
-          />
-        </div>
-      </FormSurface>
-
-      <FormSurface label="Optional contact">
-        <div className="max-w-md">
-          <label
-            htmlFor="contact-phone"
-            className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
-          >
-            Phone{" "}
-            <span className="font-normal normal-case text-text-secondary/70">
-              (optional)
-            </span>
-          </label>
-          <input
-            id="contact-phone"
-            name="phone"
-            type="tel"
-            autoComplete="tel"
-            className={inputClass}
-            placeholder="+1 (555) 000-0000"
-          />
-        </div>
-
-        <div className="flex items-start gap-2.5 rounded-xl border border-border bg-white px-3 py-2.5">
-          <input
-            id="contact-sms-consent"
-            name="sms_consent"
-            type="checkbox"
-            className="mt-0.5 h-4 w-4 rounded border-border text-accent accent-accent focus:ring-accent/30"
-          />
-          <label
-            htmlFor="contact-sms-consent"
-            className="text-xs leading-relaxed text-text-secondary"
-          >
-            By checking this box, I agree to receive SMS text messages from{" "}
-            <span className="font-medium text-text-primary">Zenpho</span> at the phone
-            number I provided above, including links and updates about your inquiry or engagement.
-            Message frequency is low — typically a few messages per engagement.
-            Message and data rates may apply. Reply{" "}
-            <span className="font-medium text-text-primary">STOP</span> to unsubscribe.
-            Reply{" "}
-            <span className="font-medium text-text-primary">HELP</span> for help. See our{" "}
-            <a
-              href="/privacy"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline hover:text-accent"
-            >
-              Privacy Policy
-            </a>{" "}
-            and{" "}
-            <a
-              href="/terms"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline hover:text-accent"
-            >
-              SMS Terms
-            </a>
-            .
-          </label>
         </div>
       </FormSurface>
 

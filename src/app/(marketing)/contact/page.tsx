@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import ContactHero from "./ContactHero";
 import ContactIntro from "./ContactIntro";
 import ContactForm from "@/components/contact/ContactForm";
-import ContactFitSection from "./ContactFitSection";
 import ContactPageCTA from "./ContactPageCTA";
 import ContactAside from "@/components/contact/ContactAside";
 
@@ -30,7 +29,6 @@ export default function ContactPage() {
           </div>
         </div>
       </section>
-      <ContactFitSection />
       <ContactPageCTA />
     </>
   );

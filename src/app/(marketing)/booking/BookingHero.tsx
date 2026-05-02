@@ -20,9 +20,9 @@ export default function BookingHero() {
           initial={{ opacity: 1, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.06 }}
-          className="heading-display flex flex-col items-center gap-0 text-4xl font-bold leading-none tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
+          className="heading-display text-balance text-4xl font-bold leading-tight tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
         >
-          <span>Book a</span>
+          <span>Book a </span>
           <span className="text-accent">Growth Call</span>
         </motion.h1>
 
