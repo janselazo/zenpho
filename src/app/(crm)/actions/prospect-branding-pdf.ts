@@ -1,5 +1,4 @@
-"use server";
-
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { PDFDocument, degrees } from "pdf-lib";
 import type { MarketIntelReport } from "@/lib/crm/prospect-intel-report";
 import type { PlacesSearchPlace } from "@/lib/crm/places-types";
@@ -2506,16 +2505,25 @@ async function composeBook(
 }
 
 // ----------------------------------------------------------------------------
-// Public server action
+// Public PDF generation (CRM auth wraps this; marketing route calls core only)
 // ----------------------------------------------------------------------------
 
-export async function generateProspectBrandingPdfAction(input: {
-  businessName: string;
-  place?: PlacesSearchPlace | null;
-  report?: MarketIntelReport | null;
-  /** When set (e.g. lead detail later), uploads the PDF to storage and attaches to the lead. */
-  leadId?: string | null;
-}): Promise<
+export type ProspectBrandingPdfRunOptions = {
+  /** Storage path segment when no leadId: `draft/{storageUserId}`. Omit or null → `draft/unknown`. */
+  storageUserId?: string | null;
+  /** When set with leadId, updates `lead.branding_funnel_pdf_*`. */
+  linkSupabase?: SupabaseClient | null;
+};
+
+export async function runProspectBrandingPdfGeneration(
+  input: {
+    businessName: string;
+    place?: PlacesSearchPlace | null;
+    report?: MarketIntelReport | null;
+    leadId?: string | null;
+  },
+  options?: ProspectBrandingPdfRunOptions | null,
+): Promise<
   | {
       ok: true;
       pdfUrl: string;
@@ -2526,18 +2534,6 @@ export async function generateProspectBrandingPdfAction(input: {
   | { ok: false; error: string }
 > {
   const t0 = Date.now();
-  console.info(
-    `[branding-pdf] action start business="${input.businessName}" hasPlace=${Boolean(
-      input.place,
-    )} hasReport=${Boolean(input.report)}`,
-  );
-
-  const auth = await requireAgencyStaff();
-  if (auth.error) {
-    console.warn(`[branding-pdf] auth failed: ${auth.error}`);
-    return { ok: false, error: auth.error };
-  }
-
   const businessName = input.businessName.trim() || "Business";
 
   // Resolve real brand assets (palette + logo) from the prospect's website
@@ -2661,7 +2657,7 @@ export async function generateProspectBrandingPdfAction(input: {
       bytes: Buffer.from(bytes),
       filename,
       leadId: lid || null,
-      userId: auth.user?.id ?? null,
+      userId: options?.storageUserId ?? null,
     });
     if (!uploaded.ok) {
       return {
@@ -2670,8 +2666,9 @@ export async function generateProspectBrandingPdfAction(input: {
       };
     }
 
-    if (lid && auth.supabase) {
-      const { error: linkErr } = await auth.supabase
+    const linkSb = options?.linkSupabase ?? null;
+    if (lid && linkSb) {
+      const { error: linkErr } = await linkSb
         .from("lead")
         .update({
           branding_funnel_pdf_path: uploaded.path,
@@ -2711,4 +2708,44 @@ export async function generateProspectBrandingPdfAction(input: {
     console.error(`[branding-pdf] fail ${msg} (${Date.now() - t0}ms)`, e);
     return { ok: false, error: msg };
   }
+}
+
+// ----------------------------------------------------------------------------
+// Public server action
+// ----------------------------------------------------------------------------
+
+export async function generateProspectBrandingPdfAction(input: {
+  businessName: string;
+  place?: PlacesSearchPlace | null;
+  report?: MarketIntelReport | null;
+  /** When set (e.g. lead detail later), uploads the PDF to storage and attaches to the lead. */
+  leadId?: string | null;
+}): Promise<
+  | {
+      ok: true;
+      pdfUrl: string;
+      pdfPath: string;
+      filename: string;
+      imageWarnings?: string[];
+    }
+  | { ok: false; error: string }
+> {
+  "use server";
+
+  console.info(
+    `[branding-pdf] action start business="${input.businessName}" hasPlace=${Boolean(
+      input.place,
+    )} hasReport=${Boolean(input.report)}`,
+  );
+
+  const auth = await requireAgencyStaff();
+  if (auth.error) {
+    console.warn(`[branding-pdf] auth failed: ${auth.error}`);
+    return { ok: false, error: auth.error };
+  }
+
+  return runProspectBrandingPdfGeneration(input, {
+    storageUserId: auth.user?.id ?? null,
+    linkSupabase: auth.supabase ?? null,
+  });
 }
