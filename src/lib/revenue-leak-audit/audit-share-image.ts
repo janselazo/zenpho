@@ -1,4 +1,10 @@
-import type { AuditFinding, AuditGrade, AuditSeverity, RevenueLeakAudit } from "./types";
+import type {
+  AuditFinding,
+  AuditGrade,
+  AuditSeverity,
+  GoogleLocalRankItem,
+  RevenueLeakAudit,
+} from "./types";
 
 export type AuditShareImageResult = {
   svg: string;
@@ -7,8 +13,16 @@ export type AuditShareImageResult = {
   filename: string;
 };
 
+export type AuditShareImageOptions = {
+  /**
+   * Data URL (`data:image/png;base64,...` etc.) for the business logo — embed in SVG so
+   * rasterizing to PNG avoids cross-origin `<image>` taint inside the SVG.
+   */
+  logoDataUrl?: string | null;
+};
+
 const WIDTH = 1200;
-const HEIGHT = 1200;
+const HEIGHT_BASE = 1200;
 const MARGIN_X = 32;
 const CARD_W = WIDTH - MARGIN_X * 2;
 const PAGE_BG = "#eceef2";
@@ -17,8 +31,11 @@ const CARD_STROKE = "#e2e4e8";
 const INK = "#111827";
 const MUTED = "#6b7280";
 const ACCENT = "#2563eb";
+const ACCENT_SOFT = "#eff6ff";
 const FOOTER_LINE = "#d1d5db";
 const INNER_PAD = 24;
+const LOGO_BOX = 52;
+const LOGO_GAP = 16;
 
 /** Pill presets: bg, fg */
 const PILL_RATING = { bg: "#fef3c7", fg: "#92400e" };
@@ -33,64 +50,30 @@ const SEVERITY_ORDER: Record<AuditSeverity, number> = {
   Low: 3,
 };
 
-/** Paths in 24×24 box; grouped with nested &lt;svg&gt; so viewBox clips reliably. */
-const CHANNEL_ICONS: Record<string, string> = {
-  website: `<path fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>`,
-  email: `<path fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" d="M4 6h16v12H4V6zm0 0l8 6 8-6"/>`,
-  phone: `<path fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" d="M8 4h4l2 6-3 2a12 12 0 0 0 6 6l2-3 6 2v4c0 1.1-.9 2-2 2-.5 0-9.73-4.73-13-8-3.27-3.27-8-12.5-8-13 0-1.1.9-2 2-2"/>`,
-  facebook: `<path fill="currentColor" d="M14 13.5h2.5L17 11h-3V9.25c0-.66.41-1.25 1.39-1.25H17V6h-2.4c-2 0-2.61 1.22-2.61 3.06V11H10v2.5h2V18h3v-4.5z"/>`,
-  instagram: `<rect x="4" y="4" width="16" height="16" rx="4" fill="none" stroke="currentColor" stroke-width="1.75"/><circle cx="12" cy="12" r="3.25" fill="none" stroke="currentColor" stroke-width="1.75"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor"/>`,
-  tiktok: `<path fill="currentColor" d="M16.65 10.07a5.6 5.6 0 0 1-3.3-1.07V15a5 5 0 11-5.35-8.93v3.15a3 3 0 106.65 1z"/>`,
-  youtube: `<rect x="4" y="7" width="16" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.75"/><path fill="currentColor" d="M10 9.25v5.5L15.75 12 10 9.25z"/>`,
-  linkedin: `<path fill="currentColor" d="M8 17V11H6v6h2zm-1-7.2c.66 0 1.08-.46 1.08-1.05C7.06 8.21 6.63 8 6 8s-1 .21-1.05 1 0 .95 1.05.95zm9.6 7.2v-3.4c0-1.74-.93-2.54-2.17-2.54-1 .02-1.46.73-1.72 1.24V11h-2v6h2v-3c0-.8.54-1.5 1.5-1.5.88 0 1.07.73 1.07 1.65V17h2z"/>`,
-  whatsapp: `<path fill="currentColor" d="M12 4c-4.42 0-8 3.58-8 8 0 1.52.43 3 1.24 4.23L5 21l5-1.62A7.93 7.93 0 0 0 12 20c4.42 0 8-3.58 8-8s-3.58-8-8-8zm4.52 11.06c-.2.54-1.02 1-1.4 1.06-.37.06-.84.07-1.36.08-.39 0-.9-.06-1.38-.62-.52-.61-2.06-2-2.25-2.21-.18-.21-.61-.64-.61-1.22s.2-1 .42-1.24c.09-.09.21-.33.06-.61-.21-.62-.71-2.06-.71-2.54 0-.5.06-.71.54-1 .21-.09.73-.62 2.54-.62 1 0 1.71.06 2.01.51.53.93.53 3.54 1.71 5.71.23.54.71 2.54.41 3.58z"/>`,
-};
-
-type ChannelStripItem = { key: string; label: string; iconSvg: string };
-
-function collectChannelStripItems(audit: RevenueLeakAudit): ChannelStripItem[] {
-  const b = audit.business;
-  const w = audit.websiteAudit;
-  const sl = w.socialLinks;
-  const cl = w.contactLinks;
-  const items: ChannelStripItem[] = [];
-
-  if (b.website?.trim())
-    items.push({ key: "website", label: "Website", iconSvg: CHANNEL_ICONS.website });
-  if (cl.email?.trim()) items.push({ key: "email", label: "Email", iconSvg: CHANNEL_ICONS.email });
-  const phoneLine = cl.phone?.trim() || b.phone?.trim();
-  if (phoneLine) items.push({ key: "phone", label: "Phone", iconSvg: CHANNEL_ICONS.phone });
-  if (sl.facebook?.trim())
-    items.push({ key: "facebook", label: "To", iconSvg: CHANNEL_ICONS.facebook });
-  if (sl.instagram?.trim())
-    items.push({ key: "instagram", label: "To", iconSvg: CHANNEL_ICONS.instagram });
-  if (sl.tiktok?.trim()) items.push({ key: "tiktok", label: "TikTok", iconSvg: CHANNEL_ICONS.tiktok });
-  if (sl.youtube?.trim())
-    items.push({ key: "youtube", label: "YouTube", iconSvg: CHANNEL_ICONS.youtube });
-  if (sl.linkedin?.trim())
-    items.push({ key: "linkedin", label: "LinkedIn", iconSvg: CHANNEL_ICONS.linkedin });
-  if (sl.whatsapp?.trim())
-    items.push({ key: "whatsapp", label: "To", iconSvg: CHANNEL_ICONS.whatsapp });
-
-  return items;
-}
-
-function renderChannelStrip(cx: number, cy: number, items: ChannelStripItem[]): string {
-  if (items.length === 0) {
-    return `<text x="${cx}" y="${cy + 12}" font-size="12" fill="${MUTED}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Channel links not detected from website crawl</text>`;
+/**
+ * Fetch a raster image in the browser and return a data URL for embedding in SVG.
+ * Returns null if CORS blocks the request or the URL is unusable.
+ */
+export async function tryFetchImageAsDataUrl(
+  url: string | null | undefined,
+): Promise<string | null> {
+  const trimmed = typeof url === "string" ? url.trim() : "";
+  if (!trimmed || !/^https?:\/\//i.test(trimmed)) return null;
+  try {
+    const res = await fetch(trimmed, { mode: "cors", credentials: "omit", cache: "force-cache" });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    if (!blob || blob.size === 0) return null;
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () =>
+        resolve(typeof reader.result === "string" ? reader.result : null);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
   }
-  const slot = 54;
-  return items
-    .map((item, i) => {
-      const gx = cx + i * slot;
-      const inner = item.iconSvg.replace(/currentColor/g, "#374151");
-      return `<g transform="translate(${gx},${cy})">
-  <rect x="0" y="0" width="46" height="46" rx="10" fill="#f9fafb" stroke="${CARD_STROKE}" stroke-width="1"/>
-  <svg x="11" y="11" width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">${inner}</svg>
-  <text x="23" y="58" text-anchor="middle" font-size="9" fill="${MUTED}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(item.label)}</text>
-</g>`;
-    })
-    .join("\n");
 }
 
 function esc(value: string | null | undefined): string {
@@ -147,7 +130,10 @@ function pill(
   preset: { bg: string; fg: string },
   fontSize = 13,
 ): { svg: string; width: number } {
-  const w = Math.min(340, Math.max(72, approximateTextWidth(label.length + 2, fontSize) + 26));
+  const w = Math.min(
+    340,
+    Math.max(72, approximateTextWidth(label.length + 2, fontSize) + 26),
+  );
   const h = 30;
   const svg = `<g>
     <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${h / 2}" fill="${preset.bg}"/>
@@ -185,35 +171,205 @@ function renderDonut(cx: number, cy: number, score: number, grade: AuditGrade): 
 }
 
 /**
- * 1200×~1200 SVG share image: GBP + brand + revenue snapshot (converted to PNG client-side).
+ * `#n` prefix plus business name wrapped at word boundaries for two-line SVG rows with stats on the right.
  */
-export function renderAuditShareImage(audit: RevenueLeakAudit): AuditShareImageResult {
+function wrapRankListingTitle(prefix: string, body: string, maxLine1Chars: number, maxLine2Chars: number): {
+  line1: string;
+  line2: string | null;
+} {
+  const name = clamp(body.trim(), 120);
+  const full = `${prefix}${name}`;
+  if (full.length <= maxLine1Chars) return { line1: full, line2: null };
+
+  const words = name.split(/\s+/).filter(Boolean);
+  const line1Words: string[] = [];
+  let i = 0;
+  for (; i < words.length; i++) {
+    const trial = `${prefix}${[...line1Words, words[i]].join(" ")}`;
+    if (trial.length <= maxLine1Chars || line1Words.length === 0) line1Words.push(words[i]);
+    else break;
+  }
+  const line1 = `${prefix}${line1Words.join(" ")}`;
+  if (i >= words.length) return { line1, line2: null };
+
+  const rest = words.slice(i).join(" ");
+  return {
+    line1,
+    line2: clamp(rest, maxLine2Chars),
+  };
+}
+
+const RANK_LINE1_CHARS = 48;
+const RANK_LINE2_CHARS = 56;
+
+function rankRowSvg(
+  innerLeftPad: number,
+  cardTop: number,
+  yFromCardTop: number,
+  rowW: number,
+  item: GoogleLocalRankItem,
+): { svg: string; rowH: number } {
+  const stats = `${item.rating ?? "N/A"} stars · ${item.reviewCount ?? 0} reviews`;
+  const prefix = `#${item.position} `;
+  const rawName = (item.name ?? "").trim();
+  const { line1, line2 } = wrapRankListingTitle(prefix, rawName, RANK_LINE1_CHARS, RANK_LINE2_CHARS);
+
+  const rowH = line2 ? 70 : 54;
+  const rx = innerLeftPad;
+  const ry = cardTop + yFromCardTop;
+  const accentStroke = item.isSelectedBusiness ? ACCENT : CARD_STROKE;
+  const fill = item.isSelectedBusiness ? ACCENT_SOFT : CARD_BG;
+  const statsBaseline = ry + rowH / 2 + 5;
+
+  const nameBlock =
+    line2 ?
+      `<text x="${rx + 14}" y="${ry + 26}" font-size="14" font-weight="700" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(line1)}</text>
+  <text x="${rx + 14}" y="${ry + 48}" font-size="14" font-weight="700" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(line2)}</text>`
+    : `<text x="${rx + 14}" y="${statsBaseline}" font-size="15" font-weight="700" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(line1)}</text>`;
+
+  const svg = `<rect x="${rx}" y="${ry}" width="${rowW}" height="${rowH}" rx="14" fill="${fill}" stroke="${accentStroke}" stroke-width="1.25"/>
+  ${nameBlock}
+  <text x="${rx + rowW - 14}" y="${statsBaseline}" text-anchor="end" font-size="13" font-weight="600" fill="${MUTED}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(stats)}</text>`;
+
+  return { svg, rowH };
+}
+
+function renderRankingSection(
+  cardTop: number,
+  audit: RevenueLeakAudit,
+): { svgParts: string; cardH: number } {
+  const snap = audit.rankingSnapshot;
+  const selectedInTopFive = snap.topFive.some((i) => i.isSelectedBusiness);
+  const rankPos =
+    snap.topFive.find((i) => i.isSelectedBusiness)?.position ??
+    snap.selectedBusinessRankItem?.position ??
+    null;
+
+  const innerPadX = MARGIN_X + INNER_PAD;
+  const rowW = CARD_W - INNER_PAD * 2;
+  const rightEdge = WIDTH - MARGIN_X - INNER_PAD;
+
+  let y = INNER_PAD + 76;
+  const headerParts: string[] = [
+    `<text x="${innerPadX}" y="${cardTop + INNER_PAD + 22}" font-size="11" fill="${ACCENT}" font-weight="700" letter-spacing="0.12em" font-family="system-ui, -apple-system, Segoe UI, sans-serif">WHO'S BEATING YOU ON GOOGLE</text>`,
+    `<text x="${innerPadX}" y="${cardTop + INNER_PAD + 52}" font-size="22" font-weight="800" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Local ranking snapshot</text>`,
+    `<text x="${innerPadX}" y="${cardTop + INNER_PAD + 80}" font-size="13" fill="${MUTED}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Query: ${esc(clamp(snap.query, 72))}</text>`,
+  ];
+
+  if (rankPos != null) {
+    const full = `Your Google Business ranks #${rankPos}.`;
+    headerParts.push(
+      `<text x="${rightEdge}" y="${cardTop + INNER_PAD + 22}" text-anchor="end" font-size="12" fill="${INK}" font-weight="600" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(full)}</text>`,
+    );
+  }
+
+  const rowPieces: string[] = [];
+  for (const item of snap.topFive) {
+    const { svg, rowH } = rankRowSvg(innerPadX, cardTop, y, rowW, item);
+    rowPieces.push(svg);
+    y += rowH + 12;
+  }
+
+  if (!selectedInTopFive && snap.selectedBusinessRankItem) {
+    rowPieces.push(
+      `<text x="${innerPadX + rowW / 2}" y="${cardTop + y + 8}" text-anchor="middle" font-size="13" font-weight="700" fill="${MUTED}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">…</text>`,
+    );
+    y += 24;
+    const { svg: extraSvg, rowH: rh } = rankRowSvg(
+      innerPadX,
+      cardTop,
+      y,
+      rowW,
+      snap.selectedBusinessRankItem,
+    );
+    rowPieces.push(extraSvg);
+    y += rh + 12;
+  }
+
+  if (!snap.selectedBusinessRankItem) {
+    rowPieces.push(`<rect x="${innerPadX}" y="${cardTop + y}" width="${rowW}" height="48" rx="14" fill="#fffbeb" stroke="#fcd34d" stroke-width="1"/>
+  <text x="${innerPadX + rowW / 2}" y="${cardTop + y + 30}" text-anchor="middle" font-size="13" font-weight="600" fill="#92400e" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Not found in the first ${snap.totalResultsChecked} results checked.</text>`);
+    y += 60;
+  }
+
+  const cardH = y + INNER_PAD;
+  const svgParts = `<rect x="${MARGIN_X}" y="${cardTop}" width="${CARD_W}" height="${cardH}" rx="22" fill="${CARD_BG}" stroke="${CARD_STROKE}" stroke-width="1"/>
+  ${headerParts.join("\n  ")}
+  ${rowPieces.join("\n  ")}`;
+
+  return { svgParts, cardH };
+}
+
+function renderCtaCard(ctaTop: number): { svg: string; cardH: number } {
+  const inner = MARGIN_X + INNER_PAD;
+  const pillW = 196;
+  const pillH = 46;
+  const pillX = MARGIN_X + CARD_W - INNER_PAD - pillW;
+  const pillY = ctaTop + INNER_PAD + 36;
+  const cardH = INNER_PAD + 112 + INNER_PAD;
+
+  const svg = `<rect x="${MARGIN_X}" y="${ctaTop}" width="${CARD_W}" height="${cardH}" rx="22" fill="${CARD_BG}" stroke="${CARD_STROKE}" stroke-width="1"/>
+  <text x="${inner}" y="${ctaTop + INNER_PAD + 22}" font-size="11" fill="${ACCENT}" font-weight="700" letter-spacing="0.12em" font-family="system-ui, -apple-system, Segoe UI, sans-serif">NEXT STEP</text>
+  <text x="${inner}" y="${ctaTop + INNER_PAD + 56}" font-size="22" font-weight="800" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Ready to recover lost revenue?</text>
+  <text x="${inner}" y="${ctaTop + INNER_PAD + 84}" font-size="14" fill="${MUTED}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(clamp(
+    "We'll review your audit results with you, highlight the biggest opportunities, and recommend where to start.",
+    88,
+  ))}</text>
+  <rect x="${pillX}" y="${pillY}" width="${pillW}" height="${pillH}" rx="${pillH / 2}" fill="${ACCENT}"/>
+  <text x="${pillX + pillW / 2}" y="${pillY + pillH / 2 + 6}" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Start fixing leaks</text>`;
+
+  return { svg, cardH };
+}
+
+/**
+ * Tall SVG share image: GBP (+ optional logo), brand, revenue snapshot, local ranking,
+ * next-step CTA (converted to PNG client-side).
+ */
+export function renderAuditShareImage(
+  audit: RevenueLeakAudit,
+  options?: AuditShareImageOptions,
+): AuditShareImageResult {
   const b = audit.business;
   const m = audit.moneySummary;
   const bio = audit.brandIdentity;
   const wa = audit.websiteAudit;
   const score = audit.scores.overall;
   const grade = audit.scores.grade;
+  const logoDataUrl = options?.logoDataUrl?.trim();
 
   const photoN = b.photoCount ?? b.photos?.length ?? 0;
-  const ratingLbl =
-    b.rating != null ? `${b.rating.toFixed(1)} rating` : "No rating";
+  const ratingLbl = b.rating != null ? `${b.rating.toFixed(1)} rating` : "No rating";
   const reviewsLbl = `${b.reviewCount ?? 0} reviews`;
   const photosLbl = `${photoN} photos`;
   const siteLbl = b.website?.trim() ? "Website linked" : "No website on listing";
 
   const card1Top = MARGIN_X;
-  const innerLeft = MARGIN_X + INNER_PAD;
+  const innerLeftBase = MARGIN_X + INNER_PAD;
+  const textShift = logoDataUrl ? LOGO_BOX + LOGO_GAP : 0;
+  const innerLeftText = innerLeftBase + textShift;
   const rightTextEdge = WIDTH - MARGIN_X - INNER_PAD;
   /** Keep score gauge in the header band; pills/phone sit below so nothing stacks on the donut. */
   const donutCx = WIDTH - MARGIN_X - INNER_PAD - 66;
   const donutCy = card1Top + INNER_PAD + 58;
   const donutOuterR = 52 + 10;
+  /** Vertical position for logo aligns with GBP title block when present. */
+  const logoTop = card1Top + INNER_PAD + 18;
+
+  let clipDef = "";
+  let logoGfx = "";
+  if (logoDataUrl) {
+    const clipId = "rlaShareLogoClip";
+    clipDef = `<defs><clipPath id="${clipId}"><rect x="${innerLeftBase}" y="${logoTop}" width="${LOGO_BOX}" height="${LOGO_BOX}" rx="12"/></clipPath></defs>`;
+    const safeHref = logoDataUrl.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+    logoGfx = `<rect x="${innerLeftBase}" y="${logoTop}" width="${LOGO_BOX}" height="${LOGO_BOX}" rx="12" fill="#f9fafb" stroke="${CARD_STROKE}" stroke-width="1"/>
+  <image x="${innerLeftBase}" y="${logoTop}" width="${LOGO_BOX}" height="${LOGO_BOX}" href="${safeHref}" preserveAspectRatio="xMidYMid meet" clip-path="url(#${clipId})"/>`;
+  }
+
   const addressBaseline = card1Top + INNER_PAD + 108;
   const pillsY = Math.max(addressBaseline + 24, donutCy + donutOuterR + 12);
   const pillRowH = 32;
 
-  let px = innerLeft;
+  let px = innerLeftText;
   const pills: string[] = [];
   for (const { label, preset } of [
     { label: ratingLbl, preset: PILL_RATING },
@@ -226,24 +382,71 @@ export function renderAuditShareImage(audit: RevenueLeakAudit): AuditShareImageR
     px += pw + 10;
   }
 
-  const categoryLine =
-    [b.category?.trim() || "Business", (b.businessStatus || "Operational").replace(/_/g, " ")].join(
-      " · ",
-    );
-  const address = clamp(b.address, 76);
+  const categoryLine = [
+    b.category?.trim() || "Business",
+    (b.businessStatus || "Operational").replace(/_/g, " "),
+  ].join(" · ");
+  const address = clamp(b.address, logoDataUrl ? 60 : 76);
   const phoneDisplay = clamp(b.phone || wa.contactLinks.phone, 28);
 
-  const channelItems = collectChannelStripItems(audit);
   const pillsBottom = pillsY + pillRowH;
   const phoneLineY = pillsBottom + 18;
-  const channelLabelY = phoneLineY + (phoneDisplay.trim() || b.googleMapsUri ? 24 : 10);
-  const channelStripTop = channelLabelY + 14;
-  const channelStripSvg = renderChannelStrip(innerLeft, channelStripTop, channelItems);
-  const stripBottom = channelStripTop + (channelItems.length === 0 ? 24 : 64);
-  const card1H = stripBottom + INNER_PAD - card1Top;
+  const contentBottom = Math.max(
+    phoneDisplay.trim() || b.googleMapsUri ? phoneLineY + 22 : pillsBottom + 10,
+    donutCy + donutOuterR + INNER_PAD / 2,
+  );
+  const card1H = contentBottom + INNER_PAD - card1Top;
 
   const card2Top = card1Top + card1H + 14;
-  const card2H = INNER_PAD + 220 + INNER_PAD;
+  const paletteContentW = CARD_W - INNER_PAD * 2;
+  const swatchY = card2Top + INNER_PAD + 112;
+  const palette = bio.palette.slice(0, 5);
+  const nDots = palette.length;
+  /** Evenly spaced swatch centers across the inner content width */
+  let paletteDotsSvg = "";
+  if (nDots > 0) {
+    const usable = paletteContentW - 26;
+    const step = nDots <= 1 ? 0 : usable / (nDots - 1 || 1);
+    for (let i = 0; i < nDots; i++) {
+      const cx = innerLeftBase + 13 + i * step;
+      const hex = palette[i];
+      paletteDotsSvg += `<circle cx="${cx}" cy="${swatchY}" r="13" fill="${esc(hex)}"/>`;
+    }
+  }
+
+  const rolesY = swatchY + 40;
+  const halfW = Math.floor(paletteContentW / 2);
+  let primaryAccentRow = "";
+  if (bio.primaryColor) {
+    primaryAccentRow += `<g transform="translate(0,0)">
+      <circle cx="${innerLeftBase + 10}" cy="${rolesY}" r="10" fill="${esc(bio.primaryColor)}"/>
+      <text x="${innerLeftBase + 26}" y="${rolesY + 5}" font-size="13" font-weight="600" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Primary</text>
+    </g>`;
+  }
+  if (bio.accentColor) {
+    const ax = bio.primaryColor ? innerLeftBase + halfW : innerLeftBase;
+    primaryAccentRow += `<g>
+      <circle cx="${ax + 10}" cy="${rolesY}" r="10" fill="${esc(bio.accentColor)}"/>
+      <text x="${ax + 26}" y="${rolesY + 5}" font-size="13" font-weight="600" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Accent</text>
+    </g>`;
+  }
+
+  const typoTitleY = rolesY + 36;
+  const typoLineStart = typoTitleY + 22;
+  const typoLines =
+    bio.typographyNotes.slice(0, 4).map((line, i) => {
+      return `<text x="${innerLeftBase}" y="${typoLineStart + i * 20}" font-size="13" fill="${MUTED}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(`• ${clamp(line, 90)}`)}</text>`;
+    }) ?? [];
+
+  const brandSubtitle = clamp(
+    bio.brandPresenceSummary || "Signals from your homepage.",
+    92,
+  );
+
+  /** Brand card grows with typography lines — height from card top through last bullet (+ padding). */
+  const typographyBottom =
+    typoLines.length > 0 ? typoLineStart + typoLines.length * 20 + 8 : typoTitleY + 16;
+  const card2H = typographyBottom - card2Top + INNER_PAD;
 
   const card3Top = card2Top + card2H + 14;
 
@@ -258,67 +461,58 @@ export function renderAuditShareImage(audit: RevenueLeakAudit): AuditShareImageR
   });
 
   const card3BodyH = INNER_PAD + 96 + findings.length * 40 + INNER_PAD + 8;
-  const card3H = Math.max(card3BodyH, 320);
-  const footerY = card3Top + card3H + 22;
+  const card3H = Math.max(card3BodyH, 280);
+
+  const card4Top = card3Top + card3H + 14;
+  const { svgParts: rankingGfx, cardH: card4H } = renderRankingSection(card4Top, audit);
+
+  const card5Top = card4Top + card4H + 14;
+  const { svg: ctaGfx, cardH: card5H } = renderCtaCard(card5Top);
+
+  const footerY = card5Top + card5H + 22;
 
   const slug = businessSlug(b.name);
   const filename = `${slug}-revenue-leak-audit-summary.png`;
 
-  const paletteDots = bio.palette.slice(0, 5).map((hex, i) => {
-    const dx = MARGIN_X + INNER_PAD + 12 + i * 36;
-    return `<circle cx="${dx}" cy="${card2Top + INNER_PAD + 118}" r="13" fill="${esc(hex)}"/>`;
-  });
-
-  const primaryDot = bio.primaryColor
-    ? `<circle cx="${MARGIN_X + INNER_PAD + 28}" cy="${card2Top + INNER_PAD + 162}" r="10" fill="${esc(bio.primaryColor)}"/><text x="${MARGIN_X + INNER_PAD + 48}" y="${card2Top + INNER_PAD + 166}" font-size="13" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Primary</text>`
-    : "";
-  const accentDot = bio.accentColor
-    ? `<circle cx="${MARGIN_X + INNER_PAD + 148}" cy="${card2Top + INNER_PAD + 162}" r="10" fill="${esc(bio.accentColor)}"/><text x="${MARGIN_X + INNER_PAD + 168}" y="${card2Top + INNER_PAD + 166}" font-size="13" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Accent</text>`
-    : "";
-
-  const typoY0 = card2Top + INNER_PAD + 184;
-  const typoLines = bio.typographyNotes.slice(0, 3).map((line, i) => {
-      return `<text x="${MARGIN_X + INNER_PAD}" y="${typoY0 + i * 20}" font-size="13" fill="${MUTED}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">• ${esc(clamp(line, 72))}</text>`;
-    });
-
-  const brandSubtitle = clamp(bio.brandPresenceSummary || "Signals from your homepage.", 92);
-
-  const effectiveHeight = Math.max(HEIGHT, footerY + 72);
+  const effectiveHeight = Math.max(HEIGHT_BASE, footerY + 72);
 
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${effectiveHeight}" viewBox="0 0 ${WIDTH} ${effectiveHeight}">
+  ${clipDef}
   <rect width="${WIDTH}" height="${effectiveHeight}" fill="${PAGE_BG}"/>
   <rect x="${MARGIN_X}" y="${card1Top}" width="${CARD_W}" height="${card1H}" rx="22" fill="${CARD_BG}" stroke="${CARD_STROKE}" stroke-width="1"/>
-  <text x="${MARGIN_X + INNER_PAD}" y="${card1Top + INNER_PAD + 22}" font-size="12" fill="${ACCENT}" font-weight="700" letter-spacing="0.14em" font-family="system-ui, -apple-system, Segoe UI, sans-serif">GOOGLE BUSINESS PROFILE</text>
-  <text x="${MARGIN_X + INNER_PAD}" y="${card1Top + INNER_PAD + 62}" font-size="26" font-weight="800" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(clamp(b.name, 48))}</text>
-  <text x="${MARGIN_X + INNER_PAD}" y="${card1Top + INNER_PAD + 88}" font-size="14" fill="${MUTED}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(categoryLine)}</text>
-  <text x="${innerLeft}" y="${card1Top + INNER_PAD + 108}" font-size="13" fill="${MUTED}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(address)}</text>
+  ${logoGfx}
+  <text x="${innerLeftText}" y="${card1Top + INNER_PAD + 22}" font-size="12" fill="${ACCENT}" font-weight="700" letter-spacing="0.14em" font-family="system-ui, -apple-system, Segoe UI, sans-serif">GOOGLE BUSINESS PROFILE</text>
+  <text x="${innerLeftText}" y="${card1Top + INNER_PAD + 62}" font-size="26" font-weight="800" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(clamp(b.name, 48))}</text>
+  <text x="${innerLeftText}" y="${card1Top + INNER_PAD + 88}" font-size="14" fill="${MUTED}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(categoryLine)}</text>
+  <text x="${innerLeftText}" y="${card1Top + INNER_PAD + 108}" font-size="13" fill="${MUTED}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(address)}</text>
   ${renderDonut(donutCx, donutCy, score, grade)}
   ${pills.join("\n  ")}
   ${phoneDisplay ?
-    `<text x="${innerLeft}" y="${phoneLineY}" font-size="14" font-weight="600" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(phoneDisplay)}</text>`
+    `<text x="${innerLeftText}" y="${phoneLineY}" font-size="14" font-weight="600" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(phoneDisplay)}</text>`
   : ""}
   ${b.googleMapsUri ?
     `<text x="${rightTextEdge}" y="${phoneLineY}" text-anchor="end" font-size="13" fill="${ACCENT}" font-weight="600" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Open in Google Maps</text>`
   : ""}
-  <text x="${innerLeft}" y="${channelLabelY}" font-size="11" fill="${MUTED}" font-weight="700" letter-spacing="0.1em" font-family="system-ui, -apple-system, Segoe UI, sans-serif">CONTACT CHANNELS</text>
-  ${channelStripSvg}
 
   <rect x="${MARGIN_X}" y="${card2Top}" width="${CARD_W}" height="${card2H}" rx="22" fill="${CARD_BG}" stroke="${CARD_STROKE}" stroke-width="1"/>
-  <text x="${MARGIN_X + INNER_PAD}" y="${card2Top + INNER_PAD + 22}" font-size="12" fill="${ACCENT}" font-weight="700" letter-spacing="0.14em" font-family="system-ui, -apple-system, Segoe UI, sans-serif">BRAND SUMMARY</text>
-  <text x="${MARGIN_X + INNER_PAD}" y="${card2Top + INNER_PAD + 56}" font-size="22" font-weight="800" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Brand palette</text>
-  <text x="${MARGIN_X + INNER_PAD}" y="${card2Top + INNER_PAD + 82}" font-size="13" fill="${MUTED}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(brandSubtitle)}</text>
-  ${paletteDots.join("\n  ")}
-  ${primaryDot}
-  ${accentDot}
+  <text x="${innerLeftBase}" y="${card2Top + INNER_PAD + 22}" font-size="12" fill="${ACCENT}" font-weight="700" letter-spacing="0.14em" font-family="system-ui, -apple-system, Segoe UI, sans-serif">BRAND SUMMARY</text>
+  <text x="${innerLeftBase}" y="${card2Top + INNER_PAD + 56}" font-size="22" font-weight="800" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Brand palette</text>
+  <text x="${innerLeftBase}" y="${card2Top + INNER_PAD + 82}" font-size="13" fill="${MUTED}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(brandSubtitle)}</text>
+  ${paletteDotsSvg}
+  ${primaryAccentRow}
+  <text x="${innerLeftBase}" y="${typoTitleY}" font-size="11" fill="${MUTED}" font-weight="700" letter-spacing="0.1em" font-family="system-ui, -apple-system, Segoe UI, sans-serif">TYPOGRAPHY</text>
   ${typoLines.join("\n  ")}
 
   <rect x="${MARGIN_X}" y="${card3Top}" width="${CARD_W}" height="${card3H}" rx="22" fill="${CARD_BG}" stroke="${CARD_STROKE}" stroke-width="1"/>
-  <text x="${MARGIN_X + INNER_PAD}" y="${card3Top + INNER_PAD + 22}" font-size="12" fill="${ACCENT}" font-weight="700" letter-spacing="0.14em" font-family="system-ui, -apple-system, Segoe UI, sans-serif">REVENUE LEAK SNAPSHOT</text>
-  <text x="${MARGIN_X + INNER_PAD}" y="${card3Top + INNER_PAD + 68}" font-size="22" font-weight="700" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">
+  <text x="${innerLeftBase}" y="${card3Top + INNER_PAD + 22}" font-size="12" fill="${ACCENT}" font-weight="700" letter-spacing="0.14em" font-family="system-ui, -apple-system, Segoe UI, sans-serif">REVENUE LEAK SNAPSHOT</text>
+  <text x="${innerLeftBase}" y="${card3Top + INNER_PAD + 68}" font-size="22" font-weight="700" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">
     <tspan>${esc(String(m.totalIssues))} issues are costing you </tspan><tspan fill="${ACCENT}">${esc(money(m.estimatedMonthlyCost))}</tspan><tspan> average / month</tspan>
   </text>
   ${findingLines.join("\n  ")}
+
+  ${rankingGfx}
+  ${ctaGfx}
 
   <line x1="${MARGIN_X}" y1="${footerY}" x2="${WIDTH - MARGIN_X}" y2="${footerY}" stroke="${FOOTER_LINE}" stroke-width="1"/>
   <text x="${MARGIN_X}" y="${footerY + 36}" font-size="15" fill="${MUTED}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Zenpho · Revenue Leak Audit (share summary) · Full PDF includes all issues &amp; suggested fixes</text>

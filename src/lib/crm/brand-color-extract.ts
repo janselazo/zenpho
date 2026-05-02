@@ -812,7 +812,7 @@ function pushLogoCandidate(
 }
 
 const LD_ORG_TYPE_RE =
-  /Organization|LocalBusiness|AutomotiveBusiness|AutoDealer|MotorcycleDealer|AutoRepair|AutoPartsStore|Brand|Corporation|HomeAndConstructionBusiness|ProfessionalService|RoofingContractor|WebSite|MedicalClinic|MedicalOrganization|MedicalBusiness|HealthAndBeautyBusiness|Dentist|Physician|VeterinaryCare|DaySpa|BeautySalon/i;
+  /Organization|LocalBusiness|AutomotiveBusiness|AutoDealer|MotorcycleDealer|AutoRepair|AutoPartsStore|Brand|Corporation|HomeAndConstructionBusiness|ProfessionalService|RoofingContractor|WebSite|MedicalClinic|MedicalOrganization|MedicalBusiness|HealthAndBeautyBusiness|MedSpa|MedicalSpa|Dentist|Physician|VeterinaryCare|DaySpa|BeautySalon/i;
 
 function pushLdVisualUrls(
   field: unknown,
@@ -884,6 +884,24 @@ function flattenLdJsonNodes(raw: unknown): unknown[] {
   return [raw];
 }
 
+/**
+ * Stronger score when standalone JSON-LD `image` URLs look like a wordmark file
+ * (DaySpa/LocalBusiness often set `image` to the logo, not hero art).
+ */
+function scoreJsonLdStandaloneImage(rawUrl: string): number {
+  const t = rawUrl.trim();
+  if (!t) return 48;
+  let pathname = "";
+  try {
+    pathname = new URL(t).pathname.toLowerCase();
+  } catch {
+    pathname = t.toLowerCase();
+  }
+  if (!/\.(png|jpe?g|webp|svg)(\?|#|$)/i.test(pathname)) return 48;
+  if (/(logo|wordmark|brand(?:-?mark)?|sitename)/i.test(pathname)) return 118;
+  return 48;
+}
+
 /** JSON-LD `logo` (and nested org logos) vs `image` (often og/social — lower priority). */
 function extractJsonLdLogoRefs(html: string): { url: string; index: number; score: number }[] {
   const out: { url: string; index: number; score: number }[] = [];
@@ -914,7 +932,7 @@ function extractJsonLdLogoRefs(html: string): { url: string; index: number; scor
       for (const u of imageOnly) {
         const t = u.trim();
         if (t && !logoSet.has(t)) {
-          out.push({ url: t, index, score: 48 });
+          out.push({ url: t, index, score: scoreJsonLdStandaloneImage(t) });
         }
       }
     }
@@ -1035,6 +1053,8 @@ export function extractLogoUrls(
     if (/header|nav|navbar|menu|masthead|wixui-header/i.test(context)) score += 18;
     if (/wsite-logo|id=["']sitename["']/i.test(context)) score += 48;
     if (/wixui-image|wow-image|data-testid=["']imageX["']/i.test(context)) score += 34;
+    /** Breakdance / BDE builders: masthead bitmap is rarely decorative; logo filename still wins ties. */
+    if (/bde-header-builder|bde-image\b|breakdance-image/i.test(`${tag}\n${context}`)) score += 40;
     const srcBlob = imageSrcFromTag(tag);
     if (
       srcBlob &&

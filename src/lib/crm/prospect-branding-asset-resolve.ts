@@ -458,7 +458,7 @@ export async function resolveProspectBrandAssets(input: {
 
   let assets: Awaited<ReturnType<typeof fetchBrandAssetsFromUrl>>;
   try {
-    assets = await fetchBrandAssetsFromUrl(normalized, 8000, {
+    assets = await fetchBrandAssetsFromUrl(normalized, 12_000, {
       businessName: input.businessName,
     });
   } catch {

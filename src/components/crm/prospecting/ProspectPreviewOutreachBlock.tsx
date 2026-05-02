@@ -27,7 +27,7 @@ import {
 import {
   composeBeforeAfterImage,
 } from "@/lib/crm/prospect-before-after-image";
-import { renderAuditShareImage } from "@/lib/revenue-leak-audit/audit-share-image";
+import { renderAuditShareImage, tryFetchImageAsDataUrl } from "@/lib/revenue-leak-audit/audit-share-image";
 import type { RevenueLeakAudit } from "@/lib/revenue-leak-audit/types";
 import type { PlacesSearchPlace } from "@/lib/crm/places-types";
 import type { MarketIntelReport } from "@/lib/crm/prospect-intel-report";
@@ -1791,7 +1791,12 @@ export default function ProspectPreviewOutreachBlock({
         setAuditShareMsg(payloadResult.error);
         return;
       }
-      const { svg, width, height, filename } = renderAuditShareImage(payloadResult.audit);
+      const logoDataUrl = await tryFetchImageAsDataUrl(
+        payloadResult.audit.brandIdentity.logoUrl,
+      );
+      const { svg, width, height, filename } = renderAuditShareImage(payloadResult.audit, {
+        logoDataUrl,
+      });
       const blob = await convertSvgToPngBlob(svg, width, height);
       setAuditShareBlob(blob);
       setAuditShareFilename(filename);
@@ -2451,36 +2456,30 @@ export default function ProspectPreviewOutreachBlock({
         </div>
 
         <div className="mt-6 border-t border-border/60 pt-4 dark:border-zinc-700/60">
-          <p className="text-[11px] font-medium text-text-secondary dark:text-zinc-400">
-            Share outreach
-            {selectedOffer === "website" ||
-            selectedOffer === "webapp" ||
-            selectedOffer === "mobile" ? (
-              <>
-                {" "}
-                · templates for{" "}
-                <span className="text-text-primary dark:text-zinc-200">
-                  {selectedOffer === "website"
-                    ? "Website design"
-                    : selectedOffer === "webapp"
-                      ? "Web apps"
-                      : "Mobile app design"}
-                </span>
-              </>
-            ) : selectedOffer === "automations" ? (
-              <>
-                {" "}
-                · templates for <span className="text-text-primary dark:text-zinc-200">AI audit</span> (hosted link send
-                requires Website, Web app, or Mobile)
-              </>
-            ) : selectedOffer === "audit" ? null : (
-              <>
-                {" "}
-                · templates for <span className="text-text-primary dark:text-zinc-200">Brand guidelines</span> (generate
-                the share image first to attach it)
-              </>
-            )}
-          </p>
+          {selectedOffer === "website" ||
+          selectedOffer === "webapp" ||
+          selectedOffer === "mobile" ? (
+            <p className="text-[11px] font-medium text-text-secondary dark:text-zinc-400">
+              Templates for{" "}
+              <span className="text-text-primary dark:text-zinc-200">
+                {selectedOffer === "website"
+                  ? "Website design"
+                  : selectedOffer === "webapp"
+                    ? "Web apps"
+                    : "Mobile app design"}
+              </span>
+            </p>
+          ) : selectedOffer === "automations" ? (
+            <p className="text-[11px] font-medium text-text-secondary dark:text-zinc-400">
+              Templates for <span className="text-text-primary dark:text-zinc-200">AI audit</span> (hosted link send
+              requires Website, Web app, or Mobile)
+            </p>
+          ) : selectedOffer === "audit" ? null : (
+            <p className="text-[11px] font-medium text-text-secondary dark:text-zinc-400">
+              Templates for <span className="text-text-primary dark:text-zinc-200">Brand guidelines</span> (generate
+              the share image first to attach it)
+            </p>
+          )}
 
           <input
             ref={fileInputRef}
@@ -2505,7 +2504,7 @@ export default function ProspectPreviewOutreachBlock({
                   Email
                 </h4>
               </div>
-              <label className="mb-1 mt-3 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+              <label className="mb-1 mt-3 block text-[10px] font-medium tracking-wide text-text-secondary dark:text-zinc-500">
                 To
               </label>
               <input
@@ -2575,7 +2574,7 @@ export default function ProspectPreviewOutreachBlock({
                   SMS
                 </h4>
               </div>
-              <label className="mb-1 mt-3 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+              <label className="mb-1 mt-3 block text-[10px] font-medium tracking-wide text-text-secondary dark:text-zinc-500">
                 To
               </label>
               <input

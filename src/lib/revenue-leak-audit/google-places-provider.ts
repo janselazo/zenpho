@@ -213,7 +213,12 @@ function normalizeIconMaskBaseUri(raw: string | undefined): string | null {
 
 /** Google Place resource IDs may be `ChIJ…` or `places/ChIJ…`; compare canonical suffixes. */
 export function samePlaceId(a: string, b: string): boolean {
-  return stripPlacesResourcePrefix(a) === stripPlacesResourcePrefix(b);
+  const sa = stripPlacesResourcePrefix(a);
+  const sb = stripPlacesResourcePrefix(b);
+  if (sa === sb) return true;
+  if (!sa.length || !sb.length) return false;
+  /* Search vs Details payloads occasionally differ only by casing — treat as the same GBP. */
+  return sa.toLowerCase() === sb.toLowerCase();
 }
 
 function stripPlacesResourcePrefix(id: string): string {
@@ -310,6 +315,102 @@ function haversineMiles(
     Math.sin(dLat / 2) ** 2 +
     Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
   return Math.round(3958.8 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h)) * 10) / 10;
+}
+
+const NAME_JOIN_STOP = new Set([
+  "the",
+  "and",
+  "a",
+  "an",
+  "in",
+  "at",
+  "of",
+  "llc",
+  "inc",
+  "corp",
+  "pllc",
+  "ltd",
+  "co",
+]);
+
+function normalizeComparableName(raw: string | null | undefined): string {
+  return (raw ?? "")
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function meaningfulNameTokens(norm: string): string[] {
+  return norm.split(" ").filter((t) => t.length > 1 && !NAME_JOIN_STOP.has(t));
+}
+
+function namesCompatibleForSameListing(nameA: string, nameB: string): boolean {
+  const na = normalizeComparableName(nameA);
+  const nb = normalizeComparableName(nameB);
+  const ta = meaningfulNameTokens(na);
+  const tb = meaningfulNameTokens(nb);
+  if (!ta.length || !tb.length) return false;
+
+  let inter = 0;
+  const sb = new Set(tb);
+  for (const w of ta) if (sb.has(w)) inter++;
+  const union = new Set([...ta, ...tb]).size;
+  if (inter >= 2 && union > 0 && inter / union >= 0.45) return true;
+
+  const compactA = na.replace(/\s+/g, "");
+  const compactB = nb.replace(/\s+/g, "");
+  if (compactA.length >= 10 && compactB.length >= 10) {
+    if (compactA.includes(compactB) || compactB.includes(compactA)) return true;
+  }
+  return inter / Math.max(1, union) >= 0.58;
+}
+
+function digitsLast10Phone(phone: string | null | undefined): string | null {
+  const d = (phone ?? "").replace(/\D/g, "");
+  return d.length >= 10 ? d.slice(-10) : null;
+}
+
+function zipFiveFromAddress(addr: string | null | undefined): string | null {
+  const m = addr?.match(/\b(\d{5})(?:-\d{4})?\b/);
+  return m?.[1] ?? null;
+}
+
+function leadingStreetNumber(addr: string | null | undefined): string | null {
+  const m = addr?.trim().match(/^(\d{2,7})\b/);
+  return m?.[1] ?? null;
+}
+
+/**
+ * Text Search vs Place Details can return different `id` shapes for the same storefront.
+ * When strict `samePlaceId` fails, conservatively match on name + phone or coordinates or
+ * ZIP + street number so `googleTextSearchPosition` matches what the user sees in Maps.
+ */
+function anchorsLikelySameListing(candidate: BusinessProfile, anchor: BusinessProfile): boolean {
+  if (samePlaceId(candidate.placeId, anchor.placeId)) return true;
+  if (!namesCompatibleForSameListing(candidate.name, anchor.name)) return false;
+
+  const pc = digitsLast10Phone(candidate.phone);
+  const pa = digitsLast10Phone(anchor.phone);
+  if (pc && pa && pc === pa) return true;
+
+  const dist = haversineMiles(candidate.coordinates, anchor.coordinates);
+  if (dist != null && dist <= 0.5) return true;
+
+  const zc = zipFiveFromAddress(candidate.address);
+  const za = zipFiveFromAddress(anchor.address);
+  if (zc && za && zc === za) {
+    const nc = leadingStreetNumber(candidate.address);
+    const na = leadingStreetNumber(anchor.address);
+    if (nc && na && nc === na) return true;
+    const dZip = haversineMiles(candidate.coordinates, anchor.coordinates);
+    if (dZip != null && dZip <= 1.2) return true;
+  }
+
+  return false;
 }
 
 /**
@@ -436,7 +537,12 @@ async function placesTextSearchPage(
 
 async function placesTextSearchAllPages(
   textQuery: string,
-  options: { maxPages: number; stopWhenFoundPlaceId?: string }
+  options: {
+    maxPages: number;
+    stopWhenFoundPlaceId?: string;
+    /** When strict Place ID pagination stop misses, stop as soon as listing looks like the anchor. */
+    anchorForHeuristicStop?: BusinessProfile | null;
+  },
 ): Promise<{ orderedPlaces: BusinessProfile[]; warning: string | null }> {
   const pageSize = 20;
   const maxPages = Math.max(1, Math.min(options.maxPages, 5));
@@ -461,8 +567,18 @@ async function placesTextSearchAllPages(
       orderedPlaces.push(p);
     }
 
-    if (options.stopWhenFoundPlaceId) {
-      const hit = orderedPlaces.some((p) => samePlaceId(p.placeId, options.stopWhenFoundPlaceId!));
+    if (options.stopWhenFoundPlaceId || options.anchorForHeuristicStop) {
+      let hit = false;
+      if (options.stopWhenFoundPlaceId) {
+        hit = orderedPlaces.some((p) => samePlaceId(p.placeId, options.stopWhenFoundPlaceId!));
+      }
+      if (
+        !hit &&
+        options.anchorForHeuristicStop &&
+        orderedPlaces.some((p) => anchorsLikelySameListing(p, options.anchorForHeuristicStop!))
+      ) {
+        hit = true;
+      }
       if (hit) break;
     }
 
@@ -584,8 +700,14 @@ export async function discoverCompetitors(input: {
   const { orderedPlaces: places, warning: searchWarning } = await placesTextSearchAllPages(query, {
     maxPages: 3,
     stopWhenFoundPlaceId: input.business.placeId,
+    anchorForHeuristicStop: input.business,
   });
-  const selectedIndex = places.findIndex((p) => samePlaceId(p.placeId, input.business.placeId));
+  const strictIndex = places.findIndex((p) => samePlaceId(p.placeId, input.business.placeId));
+  let selectedIndex = strictIndex;
+  if (selectedIndex < 0) {
+    const fuzzyIndex = places.findIndex((p) => anchorsLikelySameListing(p, input.business));
+    if (fuzzyIndex >= 0) selectedIndex = fuzzyIndex;
+  }
   const resolvedBusinessCoordinates =
     input.business.coordinates ??
     (selectedIndex >= 0 ? (places[selectedIndex]?.coordinates ?? null) : null);
@@ -680,8 +802,8 @@ export async function discoverCompetitors(input: {
 
   const warnings = [
     ...(searchWarning ? [searchWarning] : []),
-    googleTextSearchPosition === null && places.length > 0
-      ? `This listing was not in the first ${places.length} Google text-search results for this query; the rank shown compares reputation signals within this sample plus your profile.`
+    strictIndex < 0 && selectedIndex < 0 && places.length > 0
+      ? `This listing was not in the first ${places.length} Google text-search results for this query (by Place ID or name/address match). The local ranking snapshot compares reputation signals within this sample plus your Google Business Profile — it is not Maps pack order when the listing is missing from the fetched text-search pages.`
       : null,
     competitors.length < 10
       ? `Only ${competitors.length} direct competitors were returned for this market sample.`
