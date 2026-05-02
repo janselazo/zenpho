@@ -11,9 +11,11 @@ import {
   Star,
   Target,
   Users,
+  Workflow,
 } from "lucide-react";
 
 export type HomeLocalProblemIconKey =
+  | "salesPipeline"
   | "mapVisibility"
   | "reviews"
   | "conversion"
@@ -32,6 +34,7 @@ export type HomeLocalProblemCard = {
 };
 
 const iconMap: Record<HomeLocalProblemIconKey, LucideIcon> = {
+  salesPipeline: Workflow,
   mapVisibility: Target,
   reviews: Star,
   conversion: MousePointerClick,
@@ -50,6 +53,10 @@ export function iconForLocalProblemCard(key: HomeLocalProblemIconKey): LucideIco
 }
 
 export const homeLocalProblemCards: HomeLocalProblemCard[] = [
+  {
+    iconKey: "salesPipeline",
+    text: "No predictable sales pipeline",
+  },
   {
     iconKey: "mapVisibility",
     text: "Weak Google Business Profile visibility",

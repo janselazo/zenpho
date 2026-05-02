@@ -33,7 +33,7 @@ export default function LocalServicePricingComparison() {
       aria-labelledby={HEADING_ID}
     >
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        <h2 id={HEADLINE_ID} className="sr-only">
+        <h2 id={HEADING_ID} className="sr-only">
           Compare Zenpho pricing plans
         </h2>
 
