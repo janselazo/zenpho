@@ -2505,11 +2505,6 @@ export default function ProspectPreviewOutreachBlock({
                   Email
                 </h4>
               </div>
-              <p className="mt-2 text-[10px] leading-snug text-text-secondary dark:text-zinc-500">
-                Same merge tags as SMS, plus <span className="font-mono">{"{{yourName}}"}</span> in the default
-                sign-off when your profile supplies it. Subject and body can differ per service type. A Stitch
-                preview image is embedded when available; before/after is the backup, never a Vercel login preview.
-              </p>
               <label className="mb-1 mt-3 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
                 To
               </label>
@@ -2580,15 +2575,6 @@ export default function ProspectPreviewOutreachBlock({
                   SMS
                 </h4>
               </div>
-              <p className="mt-2 text-[10px] leading-snug text-text-secondary dark:text-zinc-500">
-                Merge tags: <span className="font-mono">{"{{previewUrl}}"}</span>,{" "}
-                <span className="font-mono">{"{{businessName}}"}</span>
-                {selectedOffer === "automations" || selectedOffer === "branding" || selectedOffer === "audit" ? (
-                  <> — <span className="font-mono">{"{{previewUrl}}"}</span> usually omitted for attachment-first outreach.</>
-                ) : (
-                  <> — optional <span className="font-mono">{"{{yourName}}"}</span> (typical in email sign-off).</>
-                )}
-              </p>
               <label className="mb-1 mt-3 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
                 To
               </label>
@@ -2664,12 +2650,6 @@ export default function ProspectPreviewOutreachBlock({
                   WhatsApp
                 </h4>
               </div>
-              <p className="mt-2 text-[10px] leading-snug text-text-secondary dark:text-zinc-500">
-                Same merge tags as SMS. Opens the official{" "}
-                <span className="font-mono">wa.me</span> click-to-chat link with the message pre-filled — the
-                user confirms the send in WhatsApp. Use a phone number with country code (no automated send
-                without WhatsApp Business API).
-              </p>
               <label className="mb-1 mt-3 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
                 Phone (with country code) or wa.me URL
               </label>
@@ -2724,11 +2704,6 @@ export default function ProspectPreviewOutreachBlock({
                   Instagram
                 </h4>
               </div>
-              <p className="mt-2 text-[10px] leading-snug text-text-secondary dark:text-zinc-500">
-                Same merge tags as SMS. There is no supported way for this app to send Instagram DMs directly;
-                copy the message, then open their profile and paste in a DM (or use Meta&apos;s Business API with
-                your own app if you need automation).
-              </p>
               <label className="mb-1 mt-3 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
                 Profile URL or @handle
               </label>
@@ -2783,12 +2758,6 @@ export default function ProspectPreviewOutreachBlock({
                   Facebook
                 </h4>
               </div>
-              <p className="mt-2 text-[10px] leading-snug text-text-secondary dark:text-zinc-500">
-                Same merge tags as SMS. There is no supported way for this app to send Facebook DMs directly;
-                copy the message, then open Messenger (<span className="font-mono">m.me/&lt;page&gt;</span>) or
-                their Facebook profile and paste in a DM (or wire up Meta&apos;s Business API with your own
-                app for automation).
-              </p>
               <label className="mb-1 mt-3 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
                 Page URL or m.me/&lt;handle&gt;
               </label>

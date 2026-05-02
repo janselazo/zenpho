@@ -45,10 +45,10 @@ export default function LocalServicePricingComparison() {
               <tr className="border-b border-border/70 bg-white">
                 <th
                   scope="col"
-                  className="sticky left-0 z-20 w-[min(36vw,280px)] min-w-[180px] bg-white px-4 py-5 align-top text-xs font-bold uppercase tracking-[0.14em] text-text-secondary sm:px-5"
+                  aria-label="Feature"
+                  className="sticky left-0 z-20 w-[min(36vw,280px)] min-w-[180px] bg-white px-4 py-5 align-top sm:px-5"
                 >
                   <div className="flex min-h-[30px] items-end pb-2 sm:min-h-[32px]" aria-hidden />
-                  Compare
                 </th>
                 {localServicePricingPlans.map((plan) => (
                   <th

@@ -3,16 +3,20 @@ import {
   StandardFonts,
   rgb,
   type PDFFont,
+  type PDFImage,
   type PDFPage,
   type RGB,
 } from "pdf-lib";
-import { formatReviewStarLabel, selectLowestRatedReviews } from "./review-selection";
+import { formatReviewStarLabel } from "./review-selection";
 import { buildGoogleBusinessProfileChecklist } from "./gbp-checklist";
+import { applyAssumptionsToFindings } from "./revenue-leak-scoring-service";
+import { buildLastReviewsSentimentBlock } from "./review-sentiment-service";
 import type {
   AuditFinding,
   AuditGrade,
   AuditSeverity,
   BusinessProfile,
+  GoogleLocalRankItem,
   RevenueLeakAudit,
 } from "./types";
 
@@ -38,6 +42,18 @@ const SURFACE_LIGHT = rgb(0.974, 0.98, 0.989);
 const BORDER = rgb(0.88, 0.91, 0.95);
 const BORDER_SOFT = rgb(0.93, 0.95, 0.97);
 const WHITE = rgb(1, 1, 1);
+
+/** Soft filled pills (Tailwind amber/blue/violet/emerald approximations). */
+const PILL_AMBER_BG = rgb(1, 0.98, 0.902);
+const PILL_AMBER_FG = rgb(0.69, 0.25, 0.09);
+const PILL_BLUE_BG = rgb(0.929, 0.953, 0.996);
+const PILL_BLUE_FG = rgb(0.12, 0.31, 0.82);
+const PILL_VIOLET_BG = rgb(0.965, 0.949, 0.996);
+const PILL_VIOLET_FG = rgb(0.37, 0.15, 0.65);
+const PILL_EMERALD_BG = rgb(0.93, 0.99, 0.96);
+const PILL_EMERALD_FG = rgb(0.02, 0.45, 0.34);
+const PILL_RED_SOFT_BG = rgb(0.99, 0.945, 0.945);
+const PILL_RED_SOFT_FG = rgb(0.69, 0.1, 0.1);
 
 const SEVERITY_FG: Record<AuditSeverity, RGB> = {
   Critical: rgb(0.62, 0.08, 0.08),
@@ -67,6 +83,76 @@ type Ctx = {
 // ─── Utilities ───────────────────────────────────────────────────────────────
 function money(value: number): string {
   return `$${Math.round(value).toLocaleString()}`;
+}
+
+/** Same coarse rounding as RevenueLeakSnapshot (web). */
+function roundMoneyDisplay(n: number): number {
+  const step = Math.max(Math.abs(n), 0) >= 5000 ? 100 : 10;
+  return Math.round(n / step) * step;
+}
+
+function formatSnapshotUsd(n: number): string {
+  const rounded = roundMoneyDisplay(n);
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(rounded);
+}
+
+function absoluteAppOrigin(): string {
+  const explicit = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "");
+  if (explicit) return explicit;
+  const vercel = process.env.VERCEL_URL?.trim();
+  if (vercel)
+    return vercel.startsWith("http") ? vercel.replace(/\/$/, "") : `https://${vercel}`;
+  return "";
+}
+
+function marketingSiteOrigin(): string {
+  const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "");
+  if (explicit) return explicit;
+  const fallback = absoluteAppOrigin();
+  if (fallback) return fallback;
+  return "https://zenpho.com";
+}
+
+async function tryEmbedAuditHeaderImage(
+  pdf: PDFDocument,
+  audit: RevenueLeakAudit,
+): Promise<PDFImage | null> {
+  const urls: string[] = [];
+  const logo = audit.brandIdentity.logoUrl?.trim();
+  if (logo && /^https?:\/\//i.test(logo)) urls.push(logo);
+  const base = absoluteAppOrigin();
+  const photoName = audit.business.photos.find((p) => p.name)?.name;
+  if (base && photoName) {
+    urls.push(
+      `${base}/api/revenue-leak-audit/place-photo?name=${encodeURIComponent(photoName)}`,
+    );
+  }
+  for (const url of urls) {
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 6000);
+      const res = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(timer);
+      if (!res.ok) continue;
+      const buf = new Uint8Array(await res.arrayBuffer());
+      try {
+        return await pdf.embedPng(buf);
+      } catch {
+        try {
+          return await pdf.embedJpg(buf);
+        } catch {
+          continue;
+        }
+      }
+    } catch {
+      continue;
+    }
+  }
+  return null;
 }
 
 function sanitize(text: string): string {
@@ -144,15 +230,8 @@ function wrapText(
   return lines.length ? lines : [""];
 }
 
-function lerp(a: number, b: number, t: number): number {
-  return a + (b - a) * t;
-}
 
-function lerpRgb(a: RGB, b: RGB, t: number): RGB {
-  return rgb(lerp(a.red, b.red, t), lerp(a.green, b.green, t), lerp(a.blue, b.blue, t));
-}
 
-// ─── Drawing primitives ──────────────────────────────────────────────────────
 function paintBackground(ctx: Ctx): void {
   ctx.page.drawRectangle({ x: 0, y: 0, width: PAGE_W, height: PAGE_H, color: PAGE_BG });
 }
@@ -297,43 +376,6 @@ function card(
   });
 }
 
-function drawVerticalGradient(
-  ctx: Ctx,
-  x: number,
-  topY: number,
-  w: number,
-  h: number,
-  topColor: RGB,
-  bottomColor: RGB,
-  steps = 28,
-): void {
-  const stripeH = h / steps;
-  for (let i = 0; i < steps; i++) {
-    const t = i / Math.max(1, steps - 1);
-    ctx.page.drawRectangle({
-      x,
-      y: topY - stripeH * (i + 1),
-      width: w,
-      height: stripeH + 0.6, // slight overlap to avoid hairlines
-      color: lerpRgb(topColor, bottomColor, t),
-    });
-  }
-}
-
-function drawDiagonalGradient(
-  ctx: Ctx,
-  x: number,
-  topY: number,
-  w: number,
-  h: number,
-  startColor: RGB,
-  endColor: RGB,
-  steps = 36,
-): void {
-  // Approximate a diagonal gradient with tilted thin bands. Cheap but pleasant.
-  drawVerticalGradient(ctx, x, topY, w, h, startColor, endColor, steps);
-}
-
 function pill(
   ctx: Ctx,
   x: number,
@@ -455,330 +497,687 @@ function scoreRing(
   }
 }
 
-// ─── Cover page ──────────────────────────────────────────────────────────────
-function drawCover(ctx: Ctx, audit: RevenueLeakAudit): void {
+// ─── Google Business Profile opener (parity with InteractiveReport) ──────────
+function layoutSoftFilledPillsRowWrap(
+  ctx: Ctx,
+  startX: number,
+  firstRowBaselineY: number,
+  maxRight: number,
+  items: readonly { label: string; fg: RGB; bg: RGB }[],
+  size = 7.5,
+): number {
+  const padX = 10;
+  const pillH = size + 9;
+  const gap = 6;
+  let px = startX;
+  let baseline = firstRowBaselineY;
+  let minBottom = baseline - pillH;
+
+  for (const item of items) {
+    const safe = sanitize(item.label);
+    const w = ctx.bold.widthOfTextAtSize(safe, size) + padX * 2;
+    if (px > startX && px + w > maxRight) {
+      px = startX;
+      baseline -= pillH + gap;
+    }
+    ctx.page.drawRectangle({
+      x: px,
+      y: baseline - size - 6,
+      width: w,
+      height: pillH,
+      color: item.bg,
+      borderWidth: 0,
+    });
+    ctx.page.drawText(safe, {
+      x: px + padX,
+      y: baseline - size - 2,
+      size,
+      font: ctx.bold,
+      color: item.fg,
+    });
+    px += w + gap;
+    minBottom = Math.min(minBottom, baseline - pillH);
+  }
+  return minBottom - 8;
+}
+
+function channelLabelsFromAudit(audit: RevenueLeakAudit): string[] {
+  const labels: string[] = [];
+  const b = audit.business;
+  const s = audit.websiteAudit.socialLinks;
+  if (b.website?.trim()) labels.push("Website");
+  if (audit.websiteAudit.contactLinks.email?.trim()) labels.push("Email");
+  if (s.instagram?.trim()) labels.push("Instagram");
+  if (s.facebook?.trim()) labels.push("Facebook");
+  if (s.tiktok?.trim()) labels.push("TikTok");
+  if (s.youtube?.trim()) labels.push("YouTube");
+  if (s.linkedin?.trim()) labels.push("LinkedIn");
+  if (s.whatsapp?.trim()) labels.push("WhatsApp");
+  return labels.slice(0, 7);
+}
+
+function drawGoogleBusinessProfileCard(
+  ctx: Ctx,
+  audit: RevenueLeakAudit,
+  headerImage: PDFImage | null,
+): void {
   paintBackground(ctx);
 
-  // Gradient hero band
-  const heroH = 240;
-  const heroTop = PAGE_H;
-  drawDiagonalGradient(ctx, 0, heroTop, PAGE_W, heroH, ACCENT, ACCENT_HOVER);
-
-  // Top bar — small product label
-  ctx.page.drawText("REVENUE LEAK AUDIT", {
+  const topBannerY = PAGE_H - MARGIN;
+  const headerSans = sanitize("Revenue Leak Audit  ·  Zenpho");
+  ctx.page.drawText(headerSans, {
     x: MARGIN,
-    y: heroTop - 38,
+    y: topBannerY,
     size: 8,
-    font: ctx.bold,
-    color: rgb(1, 1, 1),
-  });
-
-  // Right-aligned "By Zenpho"
-  const byZ = "By Zenpho";
-  ctx.page.drawText(byZ, {
-    x: PAGE_W - MARGIN - ctx.font.widthOfTextAtSize(byZ, 8.5),
-    y: heroTop - 38,
-    size: 8.5,
     font: ctx.font,
-    color: WHITE,
+    color: MUTED,
   });
-
   if (audit.createdAt?.trim()) {
     const lu = new Date(audit.createdAt);
     if (!Number.isNaN(lu.getTime())) {
-      const luText = `Last updated ${lu.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}`;
-      const luSan = sanitize(luText);
+      const luSan = sanitize(
+        `Last updated ${lu.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}`,
+      );
       ctx.page.drawText(luSan, {
         x: PAGE_W - MARGIN - ctx.font.widthOfTextAtSize(luSan, 7.5),
-        y: heroTop - 52,
+        y: topBannerY,
         size: 7.5,
         font: ctx.font,
-        color: rgb(0.88, 0.92, 0.98),
+        color: MUTED,
       });
     }
   }
 
-  // Business name — wrap to two lines if needed
-  const nameLines = wrapText(audit.business.name, ctx.bold, 26, CONTENT_W - 200);
-  let ny = heroTop - 70;
-  for (const line of nameLines.slice(0, 2)) {
-    ctx.page.drawText(line, {
-      x: MARGIN,
-      y: ny,
-      size: 26,
-      font: ctx.bold,
-      color: WHITE,
+  ctx.y = topBannerY - 28;
+
+  const business = audit.business;
+  const primaryPhone =
+    business.phone ?? audit.websiteAudit.contactLinks.phone ?? null;
+  const statusLabel = business.businessStatus
+    ? business.businessStatus.replace(/_/g, " ").toLowerCase()
+    : "Status unavailable";
+  const identityAttributes = business.identityAttributes.filter((a) => a.detected);
+
+  const pad = 24;
+  const imgBox = 82;
+  const ringCx = PAGE_W - MARGIN - pad - 44;
+  const gaugePlateLeft = ringCx - 58;
+  const textLeft = MARGIN + pad + imgBox + 18;
+  /** Stop all left-column copy before the score gauge plate — prevents pills/phone colliding into the gauge. */
+  const textMax = Math.max(136, gaugePlateLeft - 14 - textLeft);
+
+  const nameLines = wrapText(business.name, ctx.bold, 21, textMax);
+  const catLine = sanitize(
+    [business.category ?? "Local business", statusLabel].filter(Boolean).join(" · "),
+  );
+  const addrLines = business.address?.trim()
+    ? wrapText(sanitize(business.address), ctx.font, 9, textMax)
+    : [];
+
+  const pills: Array<{ label: string; fg: RGB; bg: RGB }> = [
+    {
+      label: `${business.rating ?? "N/A"} rating`,
+      fg: PILL_AMBER_FG,
+      bg: PILL_AMBER_BG,
+    },
+    {
+      label: `${business.reviewCount ?? 0} reviews`,
+      fg: PILL_BLUE_FG,
+      bg: PILL_BLUE_BG,
+    },
+    {
+      label: `${business.photoCount ?? business.photos.length} photos`,
+      fg: PILL_VIOLET_FG,
+      bg: PILL_VIOLET_BG,
+    },
+    {
+      label: business.website ? "Website linked" : "No website linked",
+      fg: PILL_EMERALD_FG,
+      bg: PILL_EMERALD_BG,
+    },
+  ];
+  for (const attr of identityAttributes.slice(0, 5)) {
+    pills.push({
+      label: sanitize(attr.label),
+      fg: PILL_VIOLET_FG,
+      bg: PILL_VIOLET_BG,
     });
-    ny -= 30;
   }
 
-  const cat = audit.business.category ?? "Local business";
-  const status = audit.business.businessStatus
-    ? audit.business.businessStatus.replace(/_/g, " ").toLowerCase()
-    : null;
-  const subtitle = sanitize([cat, status].filter(Boolean).join(" · "));
-  ctx.page.drawText(subtitle, {
-    x: MARGIN,
-    y: ny - 4,
-    size: 11,
-    font: ctx.font,
-    color: rgb(0.86, 0.91, 0.99),
-  });
-  ny -= 20;
-  const addressLine = sanitize(audit.business.address ?? "Address unavailable");
-  const addrLines = wrapText(addressLine, ctx.font, 9.5, CONTENT_W - 200);
-  let ay = ny;
-  for (const line of addrLines.slice(0, 2)) {
-    ctx.page.drawText(line, {
-      x: MARGIN,
-      y: ay,
-      size: 9.5,
-      font: ctx.font,
-      color: rgb(0.86, 0.91, 0.99),
-    });
-    ay -= 12;
+
+  /** Count wrapped pill rows (no drawing — layout only). */
+  const pillSz = 7.5;
+  const pillRowH = pillSz + 9 + 6;
+  let pX = textLeft;
+  let pillLines = 1;
+  const rightEdge = textLeft + textMax;
+  for (const p of pills) {
+    const w = ctx.bold.widthOfTextAtSize(sanitize(p.label), pillSz) + 20;
+    if (pX > textLeft && pX + w > rightEdge) {
+      pillLines++;
+      pX = textLeft;
+    }
+    pX += w + 6;
   }
 
-  // Right-side overall score card on the hero
-  const scoreCardW = 140;
-  const scoreCardH = 132;
-  const scoreCardX = PAGE_W - MARGIN - scoreCardW;
-  const scoreCardTop = heroTop - 60;
-  card(ctx, scoreCardX, scoreCardTop, scoreCardW, scoreCardH, WHITE, BORDER);
-  ctx.page.drawText("OVERALL SCORE", {
-    x: scoreCardX + (scoreCardW - ctx.bold.widthOfTextAtSize("OVERALL SCORE", 7)) / 2,
-    y: scoreCardTop - 18,
-    size: 7,
-    font: ctx.bold,
-    color: MUTED,
+  const nameLinesDrawn = Math.min(nameLines.length, 3);
+  let textStackH =
+    16 +
+    nameLinesDrawn * 26 +
+    12 +
+    (catLine.trim() ? 12 : 0) +
+    (addrLines.length ? Math.min(addrLines.length, 3) * 11 + 8 : 0) +
+    14 +
+    pillLines * pillRowH +
+    54;
+
+  const cardH = Math.max(imgBox + pad * 2, textStackH + pad * 2);
+
+  ensure(ctx, cardH + 28);
+  const cardTop = ctx.y;
+  card(ctx, MARGIN, cardTop, CONTENT_W, cardH, WHITE, BORDER);
+
+  const imgLeft = MARGIN + pad;
+  const imgTop = cardTop - pad;
+  ctx.page.drawRectangle({
+    x: imgLeft,
+    y: imgTop - imgBox,
+    width: imgBox,
+    height: imgBox,
+    color: WHITE,
+    borderColor: BORDER,
+    borderWidth: 0.6,
   });
-  scoreRing(ctx, scoreCardX + scoreCardW / 2, scoreCardTop - 60, audit.scores.overall, audit.scores.grade, {
-    radius: 30,
-    thickness: 8,
-    numberSize: 22,
+
+  if (headerImage) {
+    const iw = headerImage.width;
+    const ih = headerImage.height;
+    const scale = Math.min(imgBox / iw, imgBox / ih);
+    const dw = iw * scale;
+    const dh = ih * scale;
+    const ix = imgLeft + (imgBox - dw) / 2;
+    const iy = imgTop - imgBox + (imgBox - dh) / 2;
+    ctx.page.drawImage(headerImage, {
+      x: ix,
+      y: iy,
+      width: dw,
+      height: dh,
+    });
+  }
+
+  const ringCy = cardTop - pad - imgBox / 2 - 4;
+  const gaugePlate = SURFACE_LIGHT;
+  ctx.page.drawRectangle({
+    x: ringCx - 58,
+    y: ringCy - 62,
+    width: 116,
+    height: 124,
+    color: gaugePlate,
+    borderColor: BORDER_SOFT,
+    borderWidth: 0.55,
+  });
+  scoreRing(ctx, ringCx, ringCy, audit.scores.overall, audit.scores.grade, {
+    radius: 44,
+    thickness: 10,
+    numberSize: 19,
     showGrade: true,
   });
 
-  // Below hero: estimated cost + leaks side-by-side
-  ctx.y = heroTop - heroH - 24;
-  const metricCardH = 86;
-  const metricCardW = (CONTENT_W - 16) / 2;
-  const m = audit.moneySummary;
-
-  // Card 1 — Monthly cost
-  card(ctx, MARGIN, ctx.y, metricCardW, metricCardH, WHITE, BORDER);
-  ctx.page.drawRectangle({
-    x: MARGIN,
-    y: ctx.y - 4,
-    width: metricCardW,
-    height: 4,
+  let ty = cardTop - pad - 14;
+  ctx.page.drawText("GOOGLE BUSINESS PROFILE", {
+    x: textLeft,
+    y: ty,
+    size: 8,
+    font: ctx.bold,
     color: ACCENT,
   });
-  ctx.page.drawText("ESTIMATED MONTHLY COST", {
-    x: MARGIN + 14,
-    y: ctx.y - 22,
-    size: 7,
+  ty -= 22;
+  for (const line of nameLines.slice(0, 3)) {
+    ctx.page.drawText(line, {
+      x: textLeft,
+      y: ty,
+      size: 20,
+      font: ctx.bold,
+      color: INK,
+    });
+    ty -= 24;
+  }
+  ty -= 4;
+  ctx.page.drawText(catLine, {
+    x: textLeft,
+    y: ty,
+    size: 9.5,
     font: ctx.bold,
-    color: MUTED,
+    color: INK_SOFT,
   });
-  const costStr = `${money(m.estimatedMonthlyCostLow)}–${money(m.estimatedMonthlyCostHigh)}`;
-  ctx.page.drawText(costStr, {
-    x: MARGIN + 14,
-    y: ctx.y - 50,
-    size: 18,
-    font: ctx.bold,
-    color: INK,
-  });
-  const leakLow = Math.round(m.combinedLeakRateLow * 100);
-  const leakHigh = Math.round(m.combinedLeakRateHigh * 100);
+  ty -= 12;
+  if (addrLines.length) {
+    ty -= 2;
+    for (const line of addrLines.slice(0, 4)) {
+      ctx.page.drawText(line, {
+        x: textLeft,
+        y: ty,
+        size: 9,
+        font: ctx.font,
+        color: MUTED,
+      });
+      ty -= 11;
+    }
+  }
+  ty -= 8;
+  const pillsBottom = layoutSoftFilledPillsRowWrap(ctx, textLeft, ty, rightEdge, pills, pillSz);
+
+  ty = pillsBottom - 10;
+
   ctx.page.drawText(
-    `~${leakLow}%–${leakHigh}% of ${money(m.addressableMonthlyRevenue)} addressable / mo`,
+    sanitize(
+      primaryPhone ? `Phone:  ${primaryPhone}` : "No phone number on Google listing.",
+    ),
     {
-      x: MARGIN + 14,
-      y: ctx.y - 68,
+      x: textLeft,
+      y: ty,
+      size: 9,
+      font: ctx.bold,
+      color: primaryPhone ? ACCENT : MUTED,
+    },
+  );
+  ty -= 16;
+  if (business.googleMapsUri?.trim()) {
+    ty = drawText(ctx, `Open in Maps: ${sanitize(business.googleMapsUri)}`, {
+      x: textLeft,
+      y: ty,
+      size: 8.5,
+      font: ctx.font,
+      color: ACCENT_HOVER,
+      maxWidth: textMax,
+      lineGap: 2,
+    });
+    ty -= 4;
+  }
+  const ch = channelLabelsFromAudit(audit);
+  if (ch.length > 0) {
+    ty -= 2;
+    ty = drawText(ctx, `Channels: ${ch.join("  ·  ")}`, {
+      x: textLeft,
+      y: ty,
       size: 8,
       font: ctx.font,
       color: MUTED,
-    },
-  );
+      maxWidth: textMax,
+      lineGap: 2,
+    });
+  }
 
-  // Card 2 — Found issues
-  const c2x = MARGIN + metricCardW + 16;
-  card(ctx, c2x, ctx.y, metricCardW, metricCardH, WHITE, BORDER);
-  ctx.page.drawRectangle({
-    x: c2x,
-    y: ctx.y - 4,
-    width: metricCardW,
-    height: 4,
-    color: rgb(0.86, 0.15, 0.15),
-  });
-  ctx.page.drawText("FOUND ISSUES", {
-    x: c2x + 14,
-    y: ctx.y - 22,
-    size: 7,
-    font: ctx.bold,
-    color: MUTED,
-  });
-  ctx.page.drawText(`${m.totalIssues} revenue leaks`, {
-    x: c2x + 14,
-    y: ctx.y - 50,
-    size: 18,
-    font: ctx.bold,
-    color: INK,
-  });
-  const sevParts = (["Critical", "High", "Medium", "Low"] as const)
-    .map((s) => (m.severityCounts[s] ? `${m.severityCounts[s]} ${s.toLowerCase()}` : null))
-    .filter((x): x is string => Boolean(x));
-  ctx.page.drawText(sevParts.join("  ·  ") || "No issues detected", {
-    x: c2x + 14,
-    y: ctx.y - 68,
-    size: 8,
-    font: ctx.font,
-    color: MUTED,
-  });
+  ctx.y = cardTop - cardH - 18;
+}
 
-  ctx.y -= metricCardH + 22;
-
-  // Recommended next step
-  ensure(ctx, 90);
+function drawRecommendedNextStep(ctx: Ctx, audit: RevenueLeakAudit): void {
+  ensure(ctx, 72);
   ctx.y = sectionLabel(ctx, "Recommended next step");
   flowText(ctx, audit.recommendedNextStep, {
     size: 11,
     font: ctx.bold,
     color: INK,
     maxWidth: CONTENT_W,
-    gapAfter: 12,
+    gapAfter: 14,
   });
-
-  // Quick contact strip
-  const stripTop = ctx.y;
-  card(ctx, MARGIN, stripTop, CONTENT_W, 50, SURFACE_LIGHT, BORDER_SOFT);
-  const fields: Array<[string, string]> = [
-    ["WEBSITE", audit.business.website ?? "Not linked on Google"],
-    ["PHONE", audit.business.phone ?? "Phone unavailable"],
-    [
-      "REVIEWS",
-      `${audit.business.rating ?? "N/A"} stars  ·  ${audit.business.reviewCount ?? 0} reviews`,
-    ],
-  ];
-  const colW = (CONTENT_W - 28) / fields.length;
-  fields.forEach(([label, value], i) => {
-    const cx = MARGIN + 14 + colW * i;
-    ctx.page.drawText(label, {
-      x: cx,
-      y: stripTop - 18,
-      size: 7,
-      font: ctx.bold,
-      color: MUTED,
-    });
-    drawText(ctx, value, {
-      x: cx,
-      y: stripTop - 32,
-      size: 9,
-      font: ctx.font,
-      color: INK_SOFT,
-      maxWidth: colW - 6,
-    });
-  });
-  ctx.y = stripTop - 50 - 14;
 }
 
-// ─── Brand Summary ───────────────────────────────────────────────────────────
-function drawBrandSummary(ctx: Ctx, audit: RevenueLeakAudit): void {
+function drawBrandSummary(ctx: Ctx, audit: RevenueLeakAudit, headerImage: PDFImage | null): void {
   newPage(ctx);
-  sectionHeading(ctx, "Brand identity", "Brand summary", {
-    description: audit.brandIdentity.brandPresenceSummary,
+
+  const pad = 26;
+  const innerW = CONTENT_W - pad * 2;
+  const summaryLines = wrapText(
+    audit.brandIdentity.brandPresenceSummary,
+    ctx.font,
+    10,
+    innerW - 4,
+  );
+  const palette = audit.brandIdentity.palette.slice(0, 5);
+  const thumb = 56;
+  const circleR = 14;
+  const paletteGap = 10;
+  const paletteRow = Math.max(thumb, circleR * 2 + 8);
+  const paletteToGridGap = 26;
+  const colGap = 10;
+  const colW = (innerW - colGap * 2) / 3;
+
+  const typographyNotes = audit.brandIdentity.typographyNotes.slice(0, 5);
+  const typoMaxW = colW - 28;
+  let typoLineCount = 0;
+  for (const note of typographyNotes) {
+    typoLineCount += Math.max(1, wrapText(sanitize(note), ctx.bold, 9, typoMaxW).length);
+  }
+  const gridH =
+    typographyNotes.length === 0
+      ? 102
+      : Math.max(102, 32 + typoLineCount * 12 + 20);
+
+  const cardH =
+    pad +
+    22 +
+    28 +
+    Math.min(summaryLines.length, 5) * 13 +
+    18 +
+    paletteRow +
+    paletteToGridGap +
+    gridH +
+    pad;
+
+  ensure(ctx, cardH + 20);
+  const top = ctx.y;
+  card(ctx, MARGIN, top, CONTENT_W, cardH, WHITE, BORDER);
+
+  let y = top - pad;
+  ctx.page.drawText("BRAND SUMMARY", {
+    x: MARGIN + pad,
+    y,
+    size: 8,
+    font: ctx.bold,
+    color: ACCENT,
   });
+  y -= 22;
+  ctx.page.drawText("Brand palette", {
+    x: MARGIN + pad,
+    y,
+    size: 19,
+    font: ctx.bold,
+    color: INK,
+  });
+  y -= 28;
 
-  const swatches = [
-    audit.brandIdentity.primaryColor,
-    audit.brandIdentity.accentColor,
-    ...audit.brandIdentity.palette,
-  ].filter((c, i, all): c is string => Boolean(c) && all.indexOf(c) === i);
-
-  if (swatches.length > 0) {
-    const circleR = 11;
-    const fontSize = 7.5;
-    const circleLabelGap = 6;
-    const itemHGap = 14;
-    const rowHeight = 26;
-    const innerLeft = MARGIN + 14;
-    const innerRight = PAGE_W - MARGIN - 14;
-
-    type Placed = { row: number; x: number; label: string; rawHex: string };
-    const placed: Placed[] = [];
-    let row = 0;
-    let x = innerLeft;
-    for (const raw of swatches.slice(0, 8)) {
-      const label = raw.toUpperCase();
-      const tw = ctx.bold.widthOfTextAtSize(label, fontSize);
-      const itemW = circleR * 2 + circleLabelGap + tw;
-      if (x > innerLeft && x + itemW > innerRight) {
-        row += 1;
-        x = innerLeft;
-      }
-      placed.push({ row, x, label, rawHex: raw });
-      x += itemW + itemHGap;
-    }
-    const rowCount = row + 1;
-    const cardH = 24 + rowCount * rowHeight + 12;
-
-    ensure(ctx, cardH + 10);
-    const top = ctx.y;
-    card(ctx, MARGIN, top, CONTENT_W, cardH, WHITE, BORDER);
-    ctx.page.drawText("BRAND PALETTE", {
-      x: MARGIN + 14,
-      y: top - 18,
-      size: 7,
-      font: ctx.bold,
+  for (const line of summaryLines.slice(0, 5)) {
+    ctx.page.drawText(line, {
+      x: MARGIN + pad,
+      y,
+      size: 10,
+      font: ctx.font,
       color: MUTED,
     });
-
-    const baseY = top - 40;
-    for (const p of placed) {
-      const sy = baseY - p.row * rowHeight;
-      ctx.page.drawCircle({
-        x: p.x + circleR,
-        y: sy,
-        size: circleR,
-        color: hexToRgb(p.rawHex, ACCENT),
-        borderColor: BORDER,
-        borderWidth: 0.6,
-      });
-      ctx.page.drawText(p.label, {
-        x: p.x + circleR * 2 + circleLabelGap,
-        y: sy - 3,
-        size: fontSize,
-        font: ctx.bold,
-        color: INK_SOFT,
-      });
-    }
-    ctx.y = top - cardH - 16;
+    y -= 13;
   }
 
-  if (audit.brandIdentity.typographyNotes.length > 0) {
-    ensure(ctx, 80);
-    const top = ctx.y;
-    const cardH = Math.max(60, 28 + audit.brandIdentity.typographyNotes.length * 14);
-    card(ctx, MARGIN, top, CONTENT_W, cardH, WHITE, BORDER);
-    ctx.page.drawText("TYPOGRAPHY SIGNALS", {
-      x: MARGIN + 14,
-      y: top - 18,
+  y -= 14;
+  const rowTop = y;
+  ctx.page.drawRectangle({
+    x: MARGIN + pad,
+    y: rowTop - thumb,
+    width: thumb,
+    height: thumb,
+    color: SURFACE_LIGHT,
+    borderColor: BORDER,
+    borderWidth: 0.55,
+  });
+
+  if (headerImage) {
+    const iw = headerImage.width;
+    const ih = headerImage.height;
+    const scale = Math.min(thumb / iw, thumb / ih);
+    const dw = iw * scale;
+    const dh = ih * scale;
+    ctx.page.drawImage(headerImage, {
+      x: MARGIN + pad + (thumb - dw) / 2,
+      y: rowTop - thumb + (thumb - dh) / 2,
+      width: dw,
+      height: dh,
+    });
+  }
+
+  let cxColor = MARGIN + pad + thumb + 14;
+  const circleY = rowTop - thumb / 2;
+  for (const hex of palette) {
+    ctx.page.drawCircle({
+      x: cxColor + circleR,
+      y: circleY,
+      size: circleR,
+      color: hexToRgb(hex, ACCENT),
+      borderColor: BORDER,
+      borderWidth: 0.55,
+    });
+    cxColor += circleR * 2 + paletteGap;
+  }
+
+  const gridTop = rowTop - thumb - paletteToGridGap;
+  const colSpecs: Array<[number, string]> = [
+    [0, "PRIMARY"],
+    [1, "ACCENT"],
+    [2, "TYPOGRAPHY"],
+  ];
+
+  for (const [idx, eyebrow] of colSpecs) {
+    const gx = MARGIN + pad + idx * (colW + colGap);
+    ctx.page.drawRectangle({
+      x: gx,
+      y: gridTop - gridH,
+      width: colW,
+      height: gridH,
+      color: SURFACE,
+      borderColor: BORDER_SOFT,
+      borderWidth: 0.55,
+    });
+    ctx.page.drawText(eyebrow, {
+      x: gx + 12,
+      y: gridTop - 18,
       size: 7,
       font: ctx.bold,
       color: MUTED,
     });
-    audit.brandIdentity.typographyNotes.slice(0, 6).forEach((note, i) => {
-      ctx.page.drawText(`•  ${sanitize(note)}`, {
-        x: MARGIN + 14,
-        y: top - 38 - i * 14,
+
+    if (idx === 0) {
+      const hc = audit.brandIdentity.primaryColor;
+      if (hc) {
+        ctx.page.drawCircle({
+          x: gx + colW / 2,
+          y: gridTop - 56,
+          size: 16,
+          color: hexToRgb(hc, ACCENT),
+          borderColor: BORDER,
+          borderWidth: 0.55,
+        });
+      } else {
+        ctx.page.drawText("Not found", {
+          x: gx + 12,
+          y: gridTop - 48,
+          size: 11,
+          font: ctx.bold,
+          color: INK,
+        });
+      }
+      continue;
+    }
+
+    if (idx === 1) {
+      const hc = audit.brandIdentity.accentColor;
+      if (hc) {
+        ctx.page.drawCircle({
+          x: gx + colW / 2,
+          y: gridTop - 56,
+          size: 16,
+          color: hexToRgb(hc, ACCENT),
+          borderColor: BORDER,
+          borderWidth: 0.55,
+        });
+      } else {
+        ctx.page.drawText("Not found", {
+          x: gx + 12,
+          y: gridTop - 48,
+          size: 11,
+          font: ctx.bold,
+          color: INK,
+        });
+      }
+      continue;
+    }
+
+    if (typographyNotes.length > 0) {
+      let tyNote = gridTop - 38;
+      for (const note of typographyNotes) {
+        const lines = wrapText(sanitize(note), ctx.bold, 9, typoMaxW);
+        for (let li = 0; li < lines.length; li++) {
+          const line = lines[li]!;
+          if (li === 0) {
+            ctx.page.drawCircle({
+              x: gx + 14,
+              y: tyNote,
+              size: 2.5,
+              color: ACCENT,
+              borderWidth: 0,
+            });
+            ctx.page.drawText(line, {
+              x: gx + 24,
+              y: tyNote - 2,
+              size: 9,
+              font: ctx.bold,
+              color: INK,
+            });
+          } else {
+            ctx.page.drawText(line, {
+              x: gx + 24,
+              y: tyNote - 2,
+              size: 9,
+              font: ctx.bold,
+              color: INK,
+            });
+          }
+          tyNote -= 12;
+        }
+        tyNote -= 4;
+      }
+    } else {
+      ctx.page.drawText("No typography signal found", {
+        x: gx + 12,
+        y: gridTop - 44,
         size: 9,
         font: ctx.font,
         color: INK_SOFT,
       });
-    });
-    ctx.y = top - cardH - 16;
+    }
   }
+
+  ctx.y = top - cardH - 18;
+}
+
+function drawRevenueLeakSnapshot(ctx: Ctx, audit: RevenueLeakAudit): void {
+  newPage(ctx);
+  const findingsWithMoney = applyAssumptionsToFindings(audit.assumptions, audit.findings);
+  const ranked = [...findingsWithMoney].sort(
+    (a, b) => b.estimatedRevenueImpactHigh - a.estimatedRevenueImpactHigh,
+  );
+
+  const m = audit.moneySummary;
+  const issueCount = m.totalIssues;
+  const avgMonthly = formatSnapshotUsd(m.estimatedMonthlyCost);
+
+  const pad = 26;
+  const innerW = CONTENT_W - pad * 2;
+  const listLimit = 15;
+  const listRows = ranked.slice(0, listLimit).map((f) => ({
+    line: sanitize(`${f.severity}: ${f.title}`),
+  }));
+  let wrappedTitleRows = 0;
+  if (issueCount > 0 && listRows.length > 0) {
+    for (const row of listRows) {
+      wrappedTitleRows += wrapText(row.line, ctx.bold, 10.5, innerW - 18).length;
+    }
+  }
+  const listBlockH =
+    issueCount === 0 ? 0 : listRows.length > 0 ? 16 + wrappedTitleRows * 14 : 0;
+
+  const cardH = pad + 20 + (issueCount === 0 ? 28 : 46) + 12 + listBlockH + 24 + pad;
+
+  ensure(ctx, cardH + 20);
+  const top = ctx.y;
+  card(ctx, MARGIN, top, CONTENT_W, cardH, WHITE, BORDER);
+
+  let y = top - pad;
+  ctx.page.drawText("REVENUE LEAK SNAPSHOT", {
+    x: MARGIN + pad,
+    y,
+    size: 8,
+    font: ctx.bold,
+    color: ACCENT,
+  });
+  y -= 28;
+
+  if (issueCount === 0) {
+    ctx.page.drawText("No major revenue leaks were flagged in this snapshot.", {
+      x: MARGIN + pad,
+      y,
+      size: 16,
+      font: ctx.bold,
+      color: INK,
+    });
+  } else {
+    const mid = `${issueCount} ${issueCount === 1 ? "issue" : "issues"} are costing you `;
+    const tail = " average / month";
+    ctx.page.drawText(mid, {
+      x: MARGIN + pad,
+      y,
+      size: 16,
+      font: ctx.bold,
+      color: INK,
+    });
+    const midW = ctx.bold.widthOfTextAtSize(mid, 16);
+    ctx.page.drawText(avgMonthly, {
+      x: MARGIN + pad + midW,
+      y,
+      size: 16,
+      font: ctx.bold,
+      color: ACCENT,
+    });
+    const moneyW = ctx.bold.widthOfTextAtSize(avgMonthly, 16);
+    ctx.page.drawText(tail, {
+      x: MARGIN + pad + midW + moneyW,
+      y,
+      size: 16,
+      font: ctx.bold,
+      color: INK,
+    });
+
+    y -= 22;
+    if (listRows.length > 0) {
+      ctx.page.drawText("Issues by estimated impact (condensed list):", {
+        x: MARGIN + pad,
+        y,
+        size: 9,
+        font: ctx.bold,
+        color: MUTED,
+      });
+      y -= 16;
+      for (const row of listRows) {
+        const wrapped = wrapText(row.line, ctx.bold, 10.5, innerW - 18);
+        const first = wrapped[0] ?? "";
+        ctx.page.drawText("-", {
+          x: MARGIN + pad,
+          y,
+          size: 11,
+          font: ctx.bold,
+          color: ACCENT,
+        });
+        ctx.page.drawText(first, {
+          x: MARGIN + pad + 14,
+          y,
+          size: 10.5,
+          font: ctx.bold,
+          color: INK,
+        });
+        y -= 14;
+        for (const extra of wrapped.slice(1)) {
+          ctx.page.drawText(extra, {
+            x: MARGIN + pad + 14,
+            y,
+            size: 10.5,
+            font: ctx.bold,
+            color: INK,
+          });
+          y -= 13;
+        }
+      }
+    }
+  }
+
+  ctx.y = top - cardH - 18;
 }
 
 // ─── Money summary page ──────────────────────────────────────────────────────
@@ -788,63 +1187,71 @@ function drawMoneySummary(ctx: Ctx, audit: RevenueLeakAudit): void {
 
   const m = audit.moneySummary;
   const heroTop = ctx.y;
-  const heroH = 220;
-  // Gradient panel
-  drawDiagonalGradient(ctx, MARGIN, heroTop, CONTENT_W, heroH, ACCENT, ACCENT_HOVER);
-  // Headline
-  ctx.page.drawText(`We found ${m.totalIssues} revenue leaks`, {
-    x: MARGIN + 22,
-    y: heroTop - 36,
-    size: 22,
-    font: ctx.bold,
-    color: WHITE,
+  const heroH = 208;
+
+  card(ctx, MARGIN, heroTop, CONTENT_W, heroH, WHITE, BORDER);
+  ctx.page.drawRectangle({
+    x: MARGIN,
+    y: heroTop - 5,
+    width: CONTENT_W,
+    height: 4,
+    color: ACCENT,
   });
-  // Description
-  const descLines = wrapText(m.assumptionsExplanation, ctx.font, 9, CONTENT_W * 0.55);
-  let dy = heroTop - 60;
-  for (const line of descLines.slice(0, 6)) {
+
+  const leftPad = MARGIN + 22;
+  const leftMax = CONTENT_W * 0.52;
+
+  ctx.page.drawText(`We found ${m.totalIssues} revenue leaks`, {
+    x: leftPad,
+    y: heroTop - 32,
+    size: 19,
+    font: ctx.bold,
+    color: INK,
+  });
+
+  const descLines = wrapText(m.assumptionsExplanation, ctx.font, 9.5, leftMax);
+  let dy = heroTop - 58;
+  for (const line of descLines.slice(0, 7)) {
     ctx.page.drawText(line, {
-      x: MARGIN + 22,
+      x: leftPad,
       y: dy,
-      size: 9,
+      size: 9.5,
       font: ctx.font,
-      color: rgb(0.92, 0.95, 1),
+      color: MUTED,
     });
-    dy -= 12;
+    dy -= 11.5;
   }
-  // Severity chips on the panel
-  let chipX = MARGIN + 22;
-  const chipY = heroTop - heroH + 32;
+
+  let chipX = leftPad;
+  const chipY = heroTop - heroH + 36;
   (["Critical", "High", "Medium", "Low"] as const).forEach((sev) => {
     const n = m.severityCounts[sev];
     if (!n) return;
     const label = `${sev}: ${n}`;
-    const w = ctx.bold.widthOfTextAtSize(label, 8.5) + 18;
+    const w = ctx.bold.widthOfTextAtSize(label, 8) + 14;
     ctx.page.drawRectangle({
       x: chipX,
       y: chipY,
       width: w,
-      height: 18,
-      color: rgb(1, 1, 1),
-      borderColor: rgb(1, 1, 1),
+      height: 16,
+      color: SEVERITY_BG[sev],
       borderWidth: 0,
     });
     ctx.page.drawText(label, {
-      x: chipX + 9,
+      x: chipX + 7,
       y: chipY + 5,
-      size: 8.5,
+      size: 8,
       font: ctx.bold,
-      color: ACCENT,
+      color: SEVERITY_FG[sev],
     });
-    chipX += w + 6;
+    chipX += w + 5;
   });
 
-  // Right-side white metric panel
-  const panelW = 200;
-  const panelH = heroH - 28;
+  const panelW = 198;
+  const panelH = heroH - 26;
   const panelX = MARGIN + CONTENT_W - panelW - 14;
-  const panelTop = heroTop - 14;
-  card(ctx, panelX, panelTop, panelW, panelH, WHITE, BORDER);
+  const panelTop = heroTop - 12;
+  card(ctx, panelX, panelTop, panelW, panelH, SURFACE_LIGHT, BORDER_SOFT);
   ctx.page.drawText("ESTIMATED MONTHLY COST", {
     x: panelX + 16,
     y: panelTop - 20,
@@ -1090,22 +1497,31 @@ function drawGbpChecklistPdf(ctx: Ctx, business: BusinessProfile): void {
 // ─── Problems by section ─────────────────────────────────────────────────────
 function drawProblemsBySection(ctx: Ctx, audit: RevenueLeakAudit): void {
   newPage(ctx);
-  sectionHeading(ctx, "Section breakdown", "Problems found by section", {
+  sectionHeading(ctx, "Problems found by section", "Prioritized breakdown", {
     description:
-      "Each section is graded against the strongest local-pack competitors. Below the score is the priority issue list with What we found, Why it matters, and the recommended fix.",
+      "Each section mirrors the accordion in the interactive report — graded versus local-pack competitors — with What we found, Why it matters, and the recommended fix for each flagged item.",
   });
 
   for (const section of audit.sectionSummaries) {
-    // Header card
     const headerH = 96;
     ensure(ctx, headerH + 24);
     const top = ctx.y;
     card(ctx, MARGIN, top, CONTENT_W, headerH, WHITE, BORDER);
-    // Score ring on the right (with grade pill underneath)
-    scoreRing(ctx, PAGE_W - MARGIN - 40, top - 38, section.score, section.grade, {
-      radius: 18,
-      thickness: 5,
-      numberSize: 12,
+    const ringCx = PAGE_W - MARGIN - 44;
+    const ringCy = top - 41;
+    ctx.page.drawRectangle({
+      x: ringCx - 44,
+      y: ringCy - 44,
+      width: 88,
+      height: 88,
+      color: SURFACE_LIGHT,
+      borderColor: BORDER_SOFT,
+      borderWidth: 0.55,
+    });
+    scoreRing(ctx, ringCx, ringCy, section.score, section.grade, {
+      radius: 24,
+      thickness: 5.5,
+      numberSize: 13,
       showGrade: true,
     });
     // Title + summary
@@ -1320,101 +1736,170 @@ function drawCompetitorStrengths(ctx: Ctx, audit: RevenueLeakAudit): void {
   ctx.y = top - sugCardH - 12;
 }
 
-// ─── Local ranking snapshot ──────────────────────────────────────────────────
-function drawLocalRanking(ctx: Ctx, audit: RevenueLeakAudit): void {
-  newPage(ctx);
-  sectionHeading(ctx, "Google local pack", "Local ranking snapshot", {
-    description: `Query: ${audit.rankingSnapshot.query}  ·  Location: ${audit.rankingSnapshot.location}  ·  Rank orders this batch by rating, reviews, and distance (not only Google's API sort).`,
+// ─── Who's beating you on Google (matches LocalRankingSnapshotAside) ───────────
+function drawLocalRankingRow(ctx: Ctx, item: GoogleLocalRankItem): void {
+  const title = `#${item.position} ${sanitize(item.name)}`;
+  const statsStr = `${item.rating ?? "N/A"} stars  ·  ${item.reviewCount ?? 0} reviews`;
+  const statsSize = 9;
+  const statsW = ctx.font.widthOfTextAtSize(statsStr, statsSize);
+  const nameLeft = MARGIN + 18;
+  const nameMax = Math.max(140, PAGE_W - MARGIN - 14 - statsW - 10 - nameLeft);
+  const nameLines = wrapText(title, ctx.bold, 10, Math.max(160, nameMax));
+  const rowH = Math.max(46, 24 + nameLines.length * 12 + 14);
+  ensure(ctx, rowH + 10);
+  const top = ctx.y;
+  card(
+    ctx,
+    MARGIN,
+    top,
+    CONTENT_W,
+    rowH,
+    item.isSelectedBusiness ? ACCENT_SOFT : SURFACE_LIGHT,
+    item.isSelectedBusiness ? ACCENT : BORDER_SOFT,
+  );
+
+  const lineY = top - 22;
+  ctx.page.drawText(nameLines[0] ?? "", {
+    x: MARGIN + 18,
+    y: lineY,
+    size: 10,
+    font: ctx.bold,
+    color: INK,
+  });
+  ctx.page.drawText(statsStr, {
+    x: PAGE_W - MARGIN - 14 - statsW,
+    y: lineY,
+    size: statsSize,
+    font: ctx.font,
+    color: MUTED,
   });
 
-  const rows = [...audit.rankingSnapshot.topFive];
-  if (
-    audit.rankingSnapshot.selectedBusinessRankItem &&
-    !rows.some((row) => row.isSelectedBusiness)
-  ) {
-    rows.push(audit.rankingSnapshot.selectedBusinessRankItem);
+  let ny = lineY - 12;
+  for (const line of nameLines.slice(1)) {
+    ctx.page.drawText(line, {
+      x: MARGIN + 18,
+      y: ny,
+      size: 10,
+      font: ctx.bold,
+      color: INK,
+    });
+    ny -= 12;
   }
 
-  for (const item of rows) {
-    const nameLines = wrapText(item.name, ctx.bold, 10, CONTENT_W - 220);
-    const rowH = Math.max(46, 30 + nameLines.length * 12);
-    ensure(ctx, rowH + 10);
-    const top = ctx.y;
-    card(
-      ctx,
-      MARGIN,
-      top,
-      CONTENT_W,
-      rowH,
-      item.isSelectedBusiness ? ACCENT_SOFT : WHITE,
-      item.isSelectedBusiness ? ACCENT : BORDER,
-    );
-
-    // Position
-    const posStr = `#${item.position}`;
-    ctx.page.drawText(posStr, {
-      x: MARGIN + 14,
-      y: top - 24,
-      size: 14,
-      font: ctx.bold,
-      color: item.isSelectedBusiness ? ACCENT : INK_SOFT,
-    });
-
-    // Name + (you) tag
-    let ny = top - 20;
-    for (const line of nameLines) {
-      ctx.page.drawText(line, {
-        x: MARGIN + 56,
-        y: ny,
-        size: 10,
-        font: ctx.bold,
-        color: INK,
-      });
-      ny -= 12;
-    }
-    if (item.isSelectedBusiness) {
-      pill(ctx, MARGIN + 56, top - 36 - nameLines.length * 6, "You", ACCENT_HOVER, WHITE, 7);
-    }
-
-    // Stats on the right (measure both; layout from right edge so rating + reviews never overlap)
-    const ratingStr = `${item.rating ?? "N/A"} stars`;
-    const reviewsStr = `${item.reviewCount ?? 0} reviews`;
-    const ratingSize = 10;
-    const reviewsSize = 9;
-    const statsRightPad = 14;
-    const statsGap = 8;
-    const ratingW = ctx.bold.widthOfTextAtSize(ratingStr, ratingSize);
-    const reviewsW = ctx.font.widthOfTextAtSize(reviewsStr, reviewsSize);
-    const statsRightEdge = PAGE_W - MARGIN - statsRightPad;
-    const reviewsX = statsRightEdge - reviewsW;
-    const ratingX = reviewsX - statsGap - ratingW;
-
-    ctx.page.drawText(ratingStr, {
-      x: ratingX,
-      y: top - 22,
-      size: ratingSize,
-      font: ctx.bold,
-      color: rgb(0.96, 0.62, 0.04),
-    });
-    ctx.page.drawText(reviewsStr, {
-      x: reviewsX,
-      y: top - 22,
-      size: reviewsSize,
+  if (item.category) {
+    ctx.page.drawText(sanitize(item.category), {
+      x: MARGIN + 18,
+      y: top - rowH + 12,
+      size: 8,
       font: ctx.font,
       color: MUTED,
     });
+  }
 
-    if (item.category) {
-      ctx.page.drawText(sanitize(item.category), {
-        x: MARGIN + 56,
-        y: top - rowH + 14,
-        size: 8,
-        font: ctx.font,
-        color: MUTED,
-      });
-    }
+  ctx.y = top - rowH - 8;
+}
 
-    ctx.y = top - rowH - 8;
+function drawLocalRanking(ctx: Ctx, audit: RevenueLeakAudit): void {
+  newPage(ctx);
+  const snap = audit.rankingSnapshot;
+  const selectedInTopFive = snap.topFive.some((i) => i.isSelectedBusiness);
+  const rankPos =
+    snap.topFive.find((i) => i.isSelectedBusiness)?.position ??
+    snap.selectedBusinessRankItem?.position ??
+    null;
+
+  ensure(ctx, 130);
+  const eyebrowY = ctx.y;
+  ctx.page.drawText("WHO'S BEATING YOU ON GOOGLE", {
+    x: MARGIN,
+    y: eyebrowY,
+    size: 8,
+    font: ctx.bold,
+    color: ACCENT,
+  });
+
+  if (rankPos != null) {
+    const prefix = "Your Google Business ranks ";
+    const mid = `#${rankPos}`;
+    const suffix = ".";
+    const pW = ctx.font.widthOfTextAtSize(prefix, 9);
+    const mW = ctx.bold.widthOfTextAtSize(mid, 9);
+    const sW = ctx.font.widthOfTextAtSize(suffix, 9);
+    const rx = PAGE_W - MARGIN - (pW + mW + sW);
+    ctx.page.drawText(prefix, { x: rx, y: eyebrowY - 1, size: 9, font: ctx.font, color: MUTED });
+    ctx.page.drawText(mid, {
+      x: rx + pW,
+      y: eyebrowY - 1,
+      size: 9,
+      font: ctx.bold,
+      color: INK,
+    });
+    ctx.page.drawText(suffix, {
+      x: rx + pW + mW,
+      y: eyebrowY - 1,
+      size: 9,
+      font: ctx.font,
+      color: MUTED,
+    });
+  }
+
+  ctx.y = eyebrowY - 26;
+  ctx.page.drawText("Local ranking snapshot", {
+    x: MARGIN,
+    y: ctx.y,
+    size: 18,
+    font: ctx.bold,
+    color: INK,
+  });
+  ctx.y -= 28;
+  ctx.page.drawText(sanitize(`Query: ${snap.query}`), {
+    x: MARGIN,
+    y: ctx.y,
+    size: 9.5,
+    font: ctx.font,
+    color: MUTED,
+  });
+  ctx.y -= 13;
+  flowText(
+    ctx,
+    `${sanitize(snap.location)} · Ranks reflect this audited batch (ratings, reviews, distance — not necessarily Google's live order).`,
+    { size: 8.5, color: MUTED, maxWidth: CONTENT_W, gapAfter: 16 },
+  );
+
+  for (const item of snap.topFive) {
+    drawLocalRankingRow(ctx, item);
+  }
+
+  if (!selectedInTopFive && snap.selectedBusinessRankItem) {
+    ensure(ctx, 36);
+    const dots = "...";
+    const dw = ctx.bold.widthOfTextAtSize(dots, 10);
+    ctx.page.drawText(dots, {
+      x: (PAGE_W - dw) / 2,
+      y: ctx.y - 10,
+      size: 10,
+      font: ctx.bold,
+      color: MUTED,
+    });
+    ctx.y -= 28;
+    drawLocalRankingRow(ctx, snap.selectedBusinessRankItem);
+  }
+
+  if (!snap.selectedBusinessRankItem) {
+    ensure(ctx, 52);
+    const warnTop = ctx.y;
+    card(ctx, MARGIN, warnTop, CONTENT_W, 42, rgb(1, 0.98, 0.918), BORDER);
+    const msg = sanitize(
+      `Not found in the first ${snap.totalResultsChecked} results checked.`,
+    );
+    ctx.page.drawText(msg, {
+      x: MARGIN + 14,
+      y: warnTop - 24,
+      size: 9,
+      font: ctx.bold,
+      color: rgb(0.62, 0.28, 0.02),
+    });
+    ctx.y = warnTop - 54;
   }
 
   const mapped = audit.competitorMapPoints.filter((p) => !p.isSelectedBusiness).length;
@@ -1431,111 +1916,176 @@ function drawLocalRanking(ctx: Ctx, audit: RevenueLeakAudit): void {
   );
 }
 
-// ─── Lowest review analysis ──────────────────────────────────────────────────
-function drawLowestReviews(ctx: Ctx, audit: RevenueLeakAudit): void {
+// ─── Recent review sentiment (RecentReviewSentimentSection parity) ─────────
+function drawRecentReviewSentiment(ctx: Ctx, audit: RevenueLeakAudit): void {
   newPage(ctx);
-  sectionHeading(ctx, "Reviews & reputation", "Lowest review analysis", {
+  const { recent, sentiment, recommendations } = buildLastReviewsSentimentBlock(
+    audit.business.reviews,
+    5,
+  );
+
+  sectionHeading(ctx, "Review sentiment", "Last 5 reviews", {
     description:
-      "Reviews ordered by lowest star rating in the public Google sample (max 5). Use these to spot recurring objections and coach the team toward fixes.",
+      "Most recent rows from the Google review sample — same slice and theme tags as the interactive report.",
   });
 
-  const business = audit.business;
-  if (business.website?.trim()) {
-    ensure(ctx, 80);
-    flowText(ctx, "Not featuring or responding to reviews hurts sales.", {
-      size: 10,
+  ensure(ctx, 48);
+  const scoreLabel = `Score ${sentiment.sentimentScore}/100`;
+  ctx.page.drawText(scoreLabel, {
+    x: MARGIN,
+    y: ctx.y,
+    size: 11,
+    font: ctx.bold,
+    color: ACCENT,
+  });
+  const sliceInfo = `${sentiment.sampleSize} row${sentiment.sampleSize === 1 ? "" : "s"} in slice`;
+  ctx.page.drawText(sliceInfo, {
+    x: MARGIN + ctx.bold.widthOfTextAtSize(scoreLabel, 11) + 14,
+    y: ctx.y,
+    size: 8.5,
+    font: ctx.font,
+    color: MUTED,
+  });
+  ctx.y -= 18;
+
+  const themeSpecs: Array<{ label: string; fg: RGB; bg: RGB }> = [
+    ...sentiment.positiveThemes.map((t) => ({
+      label: sanitize(t),
+      fg: PILL_EMERALD_FG,
+      bg: PILL_EMERALD_BG,
+    })),
+    ...sentiment.negativeThemes.map((t) => ({
+      label: sanitize(t),
+      fg: PILL_RED_SOFT_FG,
+      bg: PILL_RED_SOFT_BG,
+    })),
+  ];
+  if (themeSpecs.length > 0) {
+    const bottomThemes = layoutSoftFilledPillsRowWrap(
+      ctx,
+      MARGIN,
+      ctx.y,
+      PAGE_W - MARGIN,
+      themeSpecs,
+      7.5,
+    );
+    ctx.y = bottomThemes - 10;
+  }
+
+  if (recent.length === 0) {
+    ensure(ctx, 52);
+    card(ctx, MARGIN, ctx.y, CONTENT_W, 42, rgb(1, 0.98, 0.92), BORDER);
+    ctx.page.drawText("No review rows were returned in the current Google sample.", {
+      x: MARGIN + 14,
+      y: ctx.y - 24,
+      size: 9.5,
       font: ctx.bold,
-      color: INK_SOFT,
-      maxWidth: CONTENT_W,
-      gapAfter: 8,
+      color: rgb(0.62, 0.28, 0.02),
     });
-    const wa = audit.websiteAudit;
-    if (wa.available) {
-      if (!wa.homepageFeaturesReviews) {
-        flowText(ctx, "Reviews are not featured on your homepage.", {
-          size: 9.5,
-          color: INK_SOFT,
-          maxWidth: CONTENT_W,
-          gapAfter: 6,
-        });
-        flowText(ctx, "Customer reviews are not visible on your homepage, which hurts conversion rate.", {
-          size: 9.5,
-          color: MUTED,
-          maxWidth: CONTENT_W,
-          gapAfter: 14,
-        });
-      }
-    } else {
-      flowText(ctx, "Homepage could not be analyzed for this report, so on-site review visibility was not verified.", {
-        size: 9,
-        color: MUTED,
-        maxWidth: CONTENT_W,
-        gapAfter: 14,
+    ctx.y -= 62;
+  } else {
+    for (const [index, review] of recent.entries()) {
+      const bodyText = sanitize(review.text ?? "No written review text available.");
+      const bodyLines = wrapText(bodyText, ctx.font, 9.5, CONTENT_W - 112);
+      const cardH = Math.max(64, 40 + bodyLines.length * 12 + 22);
+      ensure(ctx, cardH + 14);
+      const rcTop = ctx.y;
+      card(ctx, MARGIN, rcTop, CONTENT_W, cardH, WHITE, BORDER);
+
+      ctx.page.drawCircle({
+        x: MARGIN + 28,
+        y: rcTop - 29,
+        size: 15,
+        color: ACCENT_SOFT,
+        borderWidth: 0,
       });
-    }
-  }
+      const nStr = String(index + 1);
+      ctx.page.drawText(nStr, {
+        x: MARGIN + 28 - ctx.bold.widthOfTextAtSize(nStr, 11) / 2,
+        y: rcTop - 34,
+        size: 11,
+        font: ctx.bold,
+        color: ACCENT,
+      });
 
-  const reviews = selectLowestRatedReviews(audit.business.reviews, 5);
-  if (reviews.length === 0) {
-    ensure(ctx, 60);
-    card(ctx, MARGIN, ctx.y, CONTENT_W, 50, SURFACE_LIGHT, BORDER_SOFT);
-    ctx.page.drawText("No public review text was available for this business.", {
-      x: MARGIN + 16,
-      y: ctx.y - 26,
-      size: 10,
-      font: ctx.font,
-      color: MUTED,
-    });
-    ctx.y -= 70;
-    return;
-  }
+      const author = sanitize(review.authorName ?? "Google reviewer");
+      ctx.page.drawText(author, {
+        x: MARGIN + 56,
+        y: rcTop - 24,
+        size: 10.5,
+        font: ctx.bold,
+        color: INK,
+      });
+      const when = sanitize(review.relativePublishTime ?? review.publishTime ?? "Date unavailable");
+      ctx.page.drawText(when, {
+        x: MARGIN + 56,
+        y: rcTop - 38,
+        size: 8,
+        font: ctx.font,
+        color: MUTED,
+      });
 
-  for (const review of reviews) {
-    const bodyText = sanitize(review.text ?? "No written review text available.");
-    const bodyLines = wrapText(bodyText, ctx.font, 9, CONTENT_W - 100);
-    const cardH = Math.max(60, 42 + bodyLines.length * 12);
-    ensure(ctx, cardH + 12);
-    const top = ctx.y;
-    card(ctx, MARGIN, top, CONTENT_W, cardH, WHITE, BORDER);
-
-    ctx.page.drawText(formatReviewStarLabel(review.rating), {
-      x: MARGIN + 16,
-      y: top - 24,
-      size: 12,
-      font: ctx.bold,
-      color: rgb(0.96, 0.62, 0.04),
-    });
-    const author = sanitize(review.authorName ?? "Google reviewer");
-    ctx.page.drawText(author, {
-      x: MARGIN + 70,
-      y: top - 24,
-      size: 10,
-      font: ctx.bold,
-      color: INK,
-    });
-    if (review.relativePublishTime) {
-      const t = sanitize(review.relativePublishTime);
-      ctx.page.drawText(t, {
-        x: PAGE_W - MARGIN - ctx.font.widthOfTextAtSize(t, 8.5) - 14,
-        y: top - 24,
+      const starStr = formatReviewStarLabel(review.rating);
+      ctx.page.drawText(starStr, {
+        x: PAGE_W - MARGIN - ctx.bold.widthOfTextAtSize(starStr, 8.5) - 14,
+        y: rcTop - 26,
         size: 8.5,
-        font: ctx.font,
-        color: MUTED,
+        font: ctx.bold,
+        color: PILL_AMBER_FG,
       });
+
+      let by = rcTop - 54;
+      for (const line of bodyLines) {
+        ctx.page.drawText(line, {
+          x: MARGIN + 56,
+          y: by,
+          size: 9.5,
+          font: ctx.font,
+          color: MUTED,
+        });
+        by -= 12;
+      }
+      ctx.y = rcTop - cardH - 10;
     }
-    let by = top - 42;
-    for (const line of bodyLines) {
-      ctx.page.drawText(line, {
-        x: MARGIN + 70,
-        y: by,
+  }
+
+  let recLines = 0;
+  const bulletMax = CONTENT_W - 44;
+  const wrappedBullets = recommendations.map((rec) =>
+    wrapText(sanitize(rec), ctx.font, 9, bulletMax),
+  );
+  for (const ws of wrappedBullets) recLines += Math.max(1, ws.length);
+
+  const recCardH = Math.max(58, 40 + recLines * 13 + 22);
+
+  ensure(ctx, recCardH + 24);
+  const recTop = ctx.y;
+  card(ctx, MARGIN, recTop, CONTENT_W, recCardH, SURFACE_LIGHT, BORDER_SOFT);
+  ctx.page.drawText("RECOMMENDATIONS", {
+    x: MARGIN + 14,
+    y: recTop - 18,
+    size: 8,
+    font: ctx.bold,
+    color: ACCENT,
+  });
+  let ry = recTop - 38;
+  for (const ws of wrappedBullets) {
+    for (const [i, line] of ws.entries()) {
+      const text = i === 0 ? `\u2022  ${line}` : line;
+      const x = i === 0 ? MARGIN + 18 : MARGIN + 26;
+      ry = drawText(ctx, sanitize(text), {
+        x,
+        y: ry,
         size: 9,
         font: ctx.font,
-        color: MUTED,
+        color: INK,
+        maxWidth: bulletMax,
+        lineGap: 2,
       });
-      by -= 12;
     }
-    ctx.y = top - cardH - 10;
+    ry -= 6;
   }
+  ctx.y = recTop - recCardH - 14;
 }
 
 // ─── Action plan ─────────────────────────────────────────────────────────────
@@ -1558,8 +2108,9 @@ function drawActionPlan(ctx: Ctx, audit: RevenueLeakAudit): void {
     ctx.page.drawCircle({
       x: MARGIN + 24,
       y: top - 26,
-      size: 14,
+      size: 15,
       color: ACCENT_SOFT,
+      borderWidth: 0,
     });
     const idxStr = String(index + 1);
     ctx.page.drawText(idxStr, {
@@ -1636,6 +2187,81 @@ function drawActionPlan(ctx: Ctx, audit: RevenueLeakAudit): void {
   );
 }
 
+
+
+// ─── Closing CTA (RevenueLeakFixLeaksCta parity) ─────────────────────────────
+function drawClosingCta(ctx: Ctx): void {
+  ensure(ctx, 128);
+  const cardTop = ctx.y;
+  const cardPad = 24;
+  const cardH = 112;
+  card(ctx, MARGIN, cardTop, CONTENT_W, cardH, WHITE, BORDER);
+
+  const btnLabel = sanitize("Start fixing leaks");
+  const btnH = 30;
+  const btnW = ctx.bold.widthOfTextAtSize(btnLabel, 11) + 40;
+  const btnX = PAGE_W - MARGIN - cardPad - btnW;
+  const btnTopY = cardTop - 62;
+
+  ctx.page.drawText("NEXT STEP", {
+    x: MARGIN + cardPad,
+    y: cardTop - cardPad - 12,
+    size: 8,
+    font: ctx.bold,
+    color: ACCENT,
+  });
+
+  ctx.page.drawText(sanitize("Ready to recover lost revenue?"), {
+    x: MARGIN + cardPad,
+    y: cardTop - cardPad - 34,
+    size: 14,
+    font: ctx.bold,
+    color: INK,
+  });
+
+  const bodyLeftW = Math.max(200, btnX - (MARGIN + cardPad) - 22);
+  const body = sanitize(
+    "We'll review your audit results with you, highlight the biggest opportunities, and recommend where to start.",
+  );
+  drawText(ctx, body, {
+    x: MARGIN + cardPad,
+    y: cardTop - cardPad - 52,
+    size: 9.5,
+    font: ctx.font,
+    color: MUTED,
+    maxWidth: bodyLeftW,
+    lineGap: 3,
+  });
+
+  ctx.page.drawRectangle({
+    x: btnX,
+    y: btnTopY - btnH,
+    width: btnW,
+    height: btnH,
+    color: ACCENT,
+    borderWidth: 0,
+  });
+  const twBtn = ctx.bold.widthOfTextAtSize(btnLabel, 11);
+  ctx.page.drawText(btnLabel, {
+    x: btnX + (btnW - twBtn) / 2,
+    y: btnTopY - btnH + 10,
+    size: 11,
+    font: ctx.bold,
+    color: WHITE,
+  });
+
+  const hint = sanitize(`${marketingSiteOrigin()}/contact`);
+  ctx.page.drawText(`Visit ${hint}`, {
+    x: MARGIN + cardPad,
+    y: cardTop - cardH + cardPad + 6,
+    size: 7.5,
+    font: ctx.font,
+    color: MUTED,
+  });
+
+  ctx.y = cardTop - cardH - 18;
+}
+
 // ─── Public entry point ──────────────────────────────────────────────────────
 export async function generateRevenueLeakAuditPdf(
   audit: RevenueLeakAudit,
@@ -1654,14 +2280,18 @@ export async function generateRevenueLeakAuditPdf(
     pageNo: 1,
   };
 
-  drawCover(ctx, audit);
-  drawBrandSummary(ctx, audit);
+  const headerImage = await tryEmbedAuditHeaderImage(pdf, audit);
+  drawGoogleBusinessProfileCard(ctx, audit, headerImage);
+  drawBrandSummary(ctx, audit, headerImage);
+  drawRevenueLeakSnapshot(ctx, audit);
+  drawRecommendedNextStep(ctx, audit);
   drawMoneySummary(ctx, audit);
   drawProblemsBySection(ctx, audit);
   drawCompetitorStrengths(ctx, audit);
   drawLocalRanking(ctx, audit);
-  drawLowestReviews(ctx, audit);
+  drawRecentReviewSentiment(ctx, audit);
   drawActionPlan(ctx, audit);
+  drawClosingCta(ctx);
   drawFooter(ctx);
 
   return pdf.save();
