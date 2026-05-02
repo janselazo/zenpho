@@ -22,26 +22,30 @@ export type AuditShareImageOptions = {
 };
 
 const WIDTH = 1200;
-const HEIGHT_BASE = 1200;
-const MARGIN_X = 32;
+const HEIGHT_BASE = 1100;
+const MARGIN_X = 40;
 const CARD_W = WIDTH - MARGIN_X * 2;
-const PAGE_BG = "#eceef2";
-const CARD_BG = "#ffffff";
-const CARD_STROKE = "#e2e4e8";
-const INK = "#111827";
-const MUTED = "#6b7280";
+/** Clean dashboard aesthetic (reference: growth cards + progress UI) */
+const PAGE_BG = "#f1f5f9";
+const SURFACE = "#ffffff";
+const BORDER = "#e2e8f0";
+const INK = "#0f172a";
+const INK_MUTED = "#64748b";
 const ACCENT = "#2563eb";
 const ACCENT_SOFT = "#eff6ff";
-const FOOTER_LINE = "#d1d5db";
-const INNER_PAD = 24;
-const LOGO_BOX = 52;
-const LOGO_GAP = 16;
-
-/** Pill presets: bg, fg */
-const PILL_RATING = { bg: "#fef3c7", fg: "#92400e" };
-const PILL_REVIEWS = { bg: "#dbeafe", fg: "#1e40af" };
-const PILL_PHOTOS = { bg: "#ede9fe", fg: "#5b21b6" };
-const PILL_WEBSITE = { bg: "#d1fae5", fg: "#065f46" };
+const ACCENT_MUTED = "#3b82f6";
+const SUCCESS = "#059669";
+const LEAK = "#dc2626";
+const FOOTER_LINE = "#e2e8f0";
+const INNER_PAD = 28;
+const RADIUS = 22;
+const RADIUS_SM = 14;
+const RADIUS_TILE = 16;
+const GAP = 16;
+const FONT =
+  "Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Helvetica Neue, sans-serif";
+const LOGO_BOX = 56;
+const LOGO_GAP = 18;
 
 const SEVERITY_ORDER: Record<AuditSeverity, number> = {
   Critical: 0,
@@ -49,6 +53,16 @@ const SEVERITY_ORDER: Record<AuditSeverity, number> = {
   Medium: 2,
   Low: 3,
 };
+
+/** Simple line icons in 20×20 viewBox for metric tiles */
+const ICONS = {
+  star: `<path fill="currentColor" d="M10 1.5l2.6 5.3 5.8.9-4.2 4.1 1 5.8L10 14.9 4.8 17.6l1-5.8L1.6 7.7l5.8-.9L10 1.5z"/>`,
+  chat: `<path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M4 5h12v8H9l-3 3v-3H4V5z"/>`,
+  dollar: `<path fill="none" stroke="currentColor" stroke-width="1.6" d="M10 3v14M7 6c0-1.7 1.3-3 3-3s3 1.3 3 3-1.3 3-3 3-3 1.3-3 3 1.3 3 3 3"/>`,
+  alert: `<path fill="none" stroke="currentColor" stroke-width="1.6" d="M10 4l6 10H4L10 4zM10 9v3M10 14h.01"/>`,
+  image: `<rect x="3" y="5" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="7" cy="9" r="1.2" fill="currentColor"/><path fill="none" stroke="currentColor" stroke-width="1.6" d="M3 13l4-4 3 3 3-3 4 4"/>`,
+  pin: `<path fill="none" stroke="currentColor" stroke-width="1.6" d="M10 3a4 4 0 0 1 4 4c0 3-4 8-4 8S6 10 6 7a4 4 0 0 1 4-4z"/><circle cx="10" cy="7" r="1.2" fill="currentColor"/>`,
+} as const;
 
 /**
  * Fetch a raster image in the browser and return a data URL for embedding in SVG.
@@ -111,39 +125,34 @@ function businessSlug(name: string): string {
 function donutStrokeForGrade(grade: AuditGrade): string {
   switch (grade) {
     case "Excellent":
-      return "#16a34a";
+      return SUCCESS;
     case "Good":
       return "#22c55e";
     case "Average":
       return "#ca8a04";
     case "Poor":
     default:
-      return "#dc2626";
+      return LEAK;
   }
 }
 
-/** Wider than real width avoids pill rects clipping label text (fonts vary by renderer). */
-function approximateTextWidth(chars: number, px = 13): number {
-  return Math.round(chars * px * 0.62 + 10);
-}
+function renderDonutCompact(cx: number, cy: number, score: number, grade: AuditGrade): string {
+  const r = 42;
+  const stroke = 8;
+  const c = 2 * Math.PI * r;
+  const pct = Math.max(0, Math.min(1, score / 100));
+  const dash = pct * c;
+  const gap = c - dash;
+  const arcColor = donutStrokeForGrade(grade);
+  const track = "#e2e8f0";
 
-function pill(
-  x: number,
-  y: number,
-  label: string,
-  preset: { bg: string; fg: string },
-  fontSize = 13,
-): { svg: string; width: number } {
-  const w = Math.min(
-    340,
-    Math.max(72, approximateTextWidth(label.length + 2, fontSize) + 26),
-  );
-  const h = 30;
-  const svg = `<g>
-    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${h / 2}" fill="${preset.bg}"/>
-    <text x="${x + w / 2}" y="${y + h / 2 + fontSize / 3}" text-anchor="middle" font-size="${fontSize}" font-weight="600" fill="${preset.fg}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(label)}</text>
-  </g>`;
-  return { svg, width: w };
+  return `<g transform="translate(${cx},${cy})">
+  <circle cx="0" cy="0" r="${r}" fill="none" stroke="${track}" stroke-width="${stroke}"/>
+  <circle cx="0" cy="0" r="${r}" fill="none" stroke="${arcColor}" stroke-width="${stroke}" stroke-linecap="round"
+    stroke-dasharray="${dash.toFixed(2)} ${gap.toFixed(2)}" transform="rotate(-90)"/>
+  <text x="0" y="4" text-anchor="middle" font-size="22" font-weight="800" fill="${INK}" font-family="${FONT}">${score}</text>
+  <text x="0" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="${INK_MUTED}" font-family="${FONT}">${esc(grade)}</text>
+</g>`;
 }
 
 function pickTopFindings(findings: AuditFinding[], limit: number): AuditFinding[] {
@@ -156,31 +165,39 @@ function pickTopFindings(findings: AuditFinding[], limit: number): AuditFinding[
     .slice(0, limit);
 }
 
-function renderDonut(cx: number, cy: number, score: number, grade: AuditGrade): string {
-  const r = 52;
-  const stroke = 10;
-  const c = 2 * Math.PI * r;
-  const pct = Math.max(0, Math.min(1, score / 100));
-  const dash = pct * c;
-  const gap = c - dash;
-  const arcColor = donutStrokeForGrade(grade);
-
-  return `<g transform="translate(${cx},${cy})">
-  <circle cx="0" cy="0" r="${r}" fill="none" stroke="#eceef2" stroke-width="${stroke}"/>
-  <circle cx="0" cy="0" r="${r}" fill="none" stroke="${arcColor}" stroke-width="${stroke}" stroke-linecap="round"
-    stroke-dasharray="${dash.toFixed(2)} ${gap.toFixed(2)}" transform="rotate(-90)"/>
-  <text x="0" y="5" text-anchor="middle" font-size="28" font-weight="800" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${score}</text>
-  <text x="0" y="26" text-anchor="middle" font-size="12" font-weight="600" fill="${MUTED}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(grade)}</text>
+function metricTile(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  iconBg: string,
+  iconFg: string,
+  iconInner: string,
+  value: string,
+  label: string,
+  valueColor = INK,
+): string {
+  const iconSvg = iconInner.replace(/currentColor/g, iconFg);
+  return `<g>
+  <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${RADIUS_TILE}" fill="${SURFACE}" stroke="${BORDER}" stroke-width="1"/>
+  <circle cx="${x + 28}" cy="${y + 32}" r="18" fill="${iconBg}"/>
+  <g transform="translate(${x + 18},${y + 22})">
+  <svg width="20" height="20" viewBox="0 0 20 20">${iconSvg}</svg>
+  </g>
+  <text x="${x + 22}" y="${y + h - 24}" font-size="26" font-weight="800" fill="${valueColor}" font-family="${FONT}">${esc(value)}</text>
+  <text x="${x + 22}" y="${y + h - 6}" font-size="11" font-weight="600" fill="${INK_MUTED}" font-family="${FONT}" letter-spacing="0.02em">${esc(label)}</text>
 </g>`;
 }
 
 /**
- * `#n` prefix plus business name wrapped at word boundaries for two-line SVG rows with stats on the right.
+ * `#n` prefix plus business name wrapped at word boundaries for two-line SVG rows.
  */
-function wrapRankListingTitle(prefix: string, body: string, maxLine1Chars: number, maxLine2Chars: number): {
-  line1: string;
-  line2: string | null;
-} {
+function wrapRankListingTitle(
+  prefix: string,
+  body: string,
+  maxLine1Chars: number,
+  maxLine2Chars: number,
+): { line1: string; line2: string | null } {
   const name = clamp(body.trim(), 120);
   const full = `${prefix}${name}`;
   if (full.length <= maxLine1Chars) return { line1: full, line2: null };
@@ -203,7 +220,7 @@ function wrapRankListingTitle(prefix: string, body: string, maxLine1Chars: numbe
   };
 }
 
-const RANK_LINE1_CHARS = 48;
+const RANK_LINE1_CHARS = 52;
 const RANK_LINE2_CHARS = 56;
 
 function rankRowSvg(
@@ -213,32 +230,32 @@ function rankRowSvg(
   rowW: number,
   item: GoogleLocalRankItem,
 ): { svg: string; rowH: number } {
-  const stats = `${item.rating ?? "N/A"} stars · ${item.reviewCount ?? 0} reviews`;
+  const stats = `${item.rating ?? "—"}★  ·  ${item.reviewCount ?? 0} reviews`;
   const prefix = `#${item.position} `;
   const rawName = (item.name ?? "").trim();
   const { line1, line2 } = wrapRankListingTitle(prefix, rawName, RANK_LINE1_CHARS, RANK_LINE2_CHARS);
 
-  const rowH = line2 ? 70 : 54;
+  const rowH = line2 ? 64 : 50;
   const rx = innerLeftPad;
   const ry = cardTop + yFromCardTop;
-  const accentStroke = item.isSelectedBusiness ? ACCENT : CARD_STROKE;
-  const fill = item.isSelectedBusiness ? ACCENT_SOFT : CARD_BG;
+  const accentStroke = item.isSelectedBusiness ? ACCENT : BORDER;
+  const fill = item.isSelectedBusiness ? ACCENT_SOFT : "#fafbfc";
   const statsBaseline = ry + rowH / 2 + 5;
 
   const nameBlock =
     line2 ?
-      `<text x="${rx + 14}" y="${ry + 26}" font-size="14" font-weight="700" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(line1)}</text>
-  <text x="${rx + 14}" y="${ry + 48}" font-size="14" font-weight="700" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(line2)}</text>`
-    : `<text x="${rx + 14}" y="${statsBaseline}" font-size="15" font-weight="700" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(line1)}</text>`;
+      `<text x="${rx + 14}" y="${ry + 24}" font-size="13" font-weight="700" fill="${INK}" font-family="${FONT}">${esc(line1)}</text>
+  <text x="${rx + 14}" y="${ry + 44}" font-size="13" font-weight="700" fill="${INK}" font-family="${FONT}">${esc(line2)}</text>`
+    : `<text x="${rx + 14}" y="${statsBaseline}" font-size="14" font-weight="700" fill="${INK}" font-family="${FONT}">${esc(line1)}</text>`;
 
-  const svg = `<rect x="${rx}" y="${ry}" width="${rowW}" height="${rowH}" rx="14" fill="${fill}" stroke="${accentStroke}" stroke-width="1.25"/>
+  return {
+    svg: `<rect x="${rx}" y="${ry}" width="${rowW}" height="${rowH}" rx="${RADIUS_SM}" fill="${fill}" stroke="${accentStroke}" stroke-width="${item.isSelectedBusiness ? 1.5 : 1}"/>
   ${nameBlock}
-  <text x="${rx + rowW - 14}" y="${statsBaseline}" text-anchor="end" font-size="13" font-weight="600" fill="${MUTED}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(stats)}</text>`;
-
-  return { svg, rowH };
+  <text x="${rx + rowW - 14}" y="${statsBaseline}" text-anchor="end" font-size="12" font-weight="600" fill="${INK_MUTED}" font-family="${FONT}">${esc(stats)}</text>`,
+    rowH,
+  };
 }
 
-/** First font/stack name from brand typography notes (share image shows one line only). */
 function pickFirstTypographyFace(notes: readonly string[]): string {
   for (const raw of notes) {
     const t = raw.replace(/^[\s•*-]+/u, "").trim().split(/[,:;\n]/)[0]?.trim();
@@ -262,31 +279,30 @@ function renderRankingSection(
   const rowW = CARD_W - INNER_PAD * 2;
   const rightEdge = WIDTH - MARGIN_X - INNER_PAD;
 
-  /** Eyebrow + optional rank text only (no subtitle / query in share image). */
-  let y = INNER_PAD + 44;
   const headerParts: string[] = [
-    `<text x="${innerPadX}" y="${cardTop + INNER_PAD + 22}" font-size="11" fill="${ACCENT}" font-weight="700" letter-spacing="0.12em" font-family="system-ui, -apple-system, Segoe UI, sans-serif">WHO'S BEATING YOU ON GOOGLE</text>`,
+    `<text x="${innerPadX}" y="${cardTop + INNER_PAD + 24}" font-size="10" fill="${ACCENT}" font-weight="700" letter-spacing="0.16em" font-family="${FONT}">MARKET POSITION</text>`,
+    `<text x="${innerPadX}" y="${cardTop + INNER_PAD + 50}" font-size="20" font-weight="800" fill="${INK}" font-family="${FONT}">Who's ahead on Google</text>`,
   ];
 
   if (rankPos != null) {
-    const full = `Your Google Business ranks #${rankPos}.`;
     headerParts.push(
-      `<text x="${rightEdge}" y="${cardTop + INNER_PAD + 22}" text-anchor="end" font-size="12" fill="${INK}" font-weight="600" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(full)}</text>`,
+      `<text x="${rightEdge}" y="${cardTop + INNER_PAD + 50}" text-anchor="end" font-size="13" font-weight="600" fill="${INK_MUTED}" font-family="${FONT}">You are <tspan fill="${ACCENT}" font-weight="800">#${rankPos}</tspan> in this sample</text>`,
     );
   }
 
   const rowPieces: string[] = [];
+  let y = INNER_PAD + 78;
   for (const item of snap.topFive) {
     const { svg, rowH } = rankRowSvg(innerPadX, cardTop, y, rowW, item);
     rowPieces.push(svg);
-    y += rowH + 12;
+    y += rowH + 10;
   }
 
   if (!selectedInTopFive && snap.selectedBusinessRankItem) {
     rowPieces.push(
-      `<text x="${innerPadX + rowW / 2}" y="${cardTop + y + 8}" text-anchor="middle" font-size="13" font-weight="700" fill="${MUTED}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">…</text>`,
+      `<text x="${innerPadX + rowW / 2}" y="${cardTop + y + 6}" text-anchor="middle" font-size="12" font-weight="700" fill="${INK_MUTED}" font-family="${FONT}">…</text>`,
     );
-    y += 24;
+    y += 20;
     const { svg: extraSvg, rowH: rh } = rankRowSvg(
       innerPadX,
       cardTop,
@@ -295,47 +311,25 @@ function renderRankingSection(
       snap.selectedBusinessRankItem,
     );
     rowPieces.push(extraSvg);
-    y += rh + 12;
+    y += rh + 10;
   }
 
   if (!snap.selectedBusinessRankItem) {
-    rowPieces.push(`<rect x="${innerPadX}" y="${cardTop + y}" width="${rowW}" height="48" rx="14" fill="#fffbeb" stroke="#fcd34d" stroke-width="1"/>
-  <text x="${innerPadX + rowW / 2}" y="${cardTop + y + 30}" text-anchor="middle" font-size="13" font-weight="600" fill="#92400e" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Not found in the first ${snap.totalResultsChecked} results checked.</text>`);
-    y += 60;
+    rowPieces.push(`<rect x="${innerPadX}" y="${cardTop + y}" width="${rowW}" height="44" rx="${RADIUS_SM}" fill="#fffbeb" stroke="#fde68a" stroke-width="1"/>
+  <text x="${innerPadX + rowW / 2}" y="${cardTop + y + 28}" text-anchor="middle" font-size="12" font-weight="600" fill="#b45309" font-family="${FONT}">Not found in the first ${snap.totalResultsChecked} results checked.</text>`);
+    y += 54;
   }
 
   const cardH = y + INNER_PAD;
-  const svgParts = `<rect x="${MARGIN_X}" y="${cardTop}" width="${CARD_W}" height="${cardH}" rx="22" fill="${CARD_BG}" stroke="${CARD_STROKE}" stroke-width="1"/>
+  const svgParts = `<rect x="${MARGIN_X}" y="${cardTop}" width="${CARD_W}" height="${cardH}" rx="${RADIUS}" fill="${SURFACE}" stroke="${BORDER}" stroke-width="1" filter="url(#rlaCardLift)"/>
   ${headerParts.join("\n  ")}
   ${rowPieces.join("\n  ")}`;
 
   return { svgParts, cardH };
 }
 
-function renderCtaCard(ctaTop: number): { svg: string; cardH: number } {
-  const inner = MARGIN_X + INNER_PAD;
-  const pillW = 196;
-  const pillH = 46;
-  const pillX = MARGIN_X + CARD_W - INNER_PAD - pillW;
-  const pillY = ctaTop + INNER_PAD + 36;
-  const cardH = INNER_PAD + 112 + INNER_PAD;
-
-  const svg = `<rect x="${MARGIN_X}" y="${ctaTop}" width="${CARD_W}" height="${cardH}" rx="22" fill="${CARD_BG}" stroke="${CARD_STROKE}" stroke-width="1"/>
-  <text x="${inner}" y="${ctaTop + INNER_PAD + 22}" font-size="11" fill="${ACCENT}" font-weight="700" letter-spacing="0.12em" font-family="system-ui, -apple-system, Segoe UI, sans-serif">NEXT STEP</text>
-  <text x="${inner}" y="${ctaTop + INNER_PAD + 56}" font-size="22" font-weight="800" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Ready to recover lost revenue?</text>
-  <text x="${inner}" y="${ctaTop + INNER_PAD + 84}" font-size="14" fill="${MUTED}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(clamp(
-    "We'll review your audit results with you, highlight the biggest opportunities, and recommend where to start.",
-    88,
-  ))}</text>
-  <rect x="${pillX}" y="${pillY}" width="${pillW}" height="${pillH}" rx="${pillH / 2}" fill="${ACCENT}"/>
-  <text x="${pillX + pillW / 2}" y="${pillY + pillH / 2 + 6}" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Start fixing leaks</text>`;
-
-  return { svg, cardH };
-}
-
 /**
- * Tall SVG share image: GBP (+ optional logo), brand, revenue snapshot, local ranking,
- * next-step CTA (converted to PNG client-side).
+ * Dashboard-style share image: hero + metric grid + insights + brand + market list + CTA.
  */
 export function renderAuditShareImage(
   audit: RevenueLeakAudit,
@@ -350,184 +344,251 @@ export function renderAuditShareImage(
   const logoDataUrl = options?.logoDataUrl?.trim();
 
   const photoN = b.photoCount ?? b.photos?.length ?? 0;
-  const ratingLbl = b.rating != null ? `${b.rating.toFixed(1)} rating` : "No rating";
-  const reviewsLbl = `${b.reviewCount ?? 0} reviews`;
-  const photosLbl = `${photoN} photos`;
-  const siteLbl = b.website?.trim() ? "Website linked" : "No website on listing";
+  const ratingStr = b.rating != null ? b.rating.toFixed(1) : "—";
+  const rankPos =
+    audit.rankingSnapshot.topFive.find((i) => i.isSelectedBusiness)?.position ??
+    audit.rankingSnapshot.selectedBusinessRankItem?.position ??
+    null;
+  const rankStr = rankPos != null ? `#${rankPos}` : "—";
 
-  const card1Top = MARGIN_X;
-  const innerLeftBase = MARGIN_X + INNER_PAD;
-  const textShift = logoDataUrl ? LOGO_BOX + LOGO_GAP : 0;
-  const innerLeftText = innerLeftBase + textShift;
-  /** GBP card: pills only (no standalone Maps link text in share image). */
-  /** Keep score gauge in the header band; pills/phone sit below so nothing stacks on the donut. */
-  const donutCx = WIDTH - MARGIN_X - INNER_PAD - 66;
-  const donutCy = card1Top + INNER_PAD + 58;
-  const donutOuterR = 52 + 10;
-  /** Vertical position for logo aligns with GBP title block when present. */
-  const logoTop = card1Top + INNER_PAD + 18;
+  const topFinding = pickTopFindings(audit.findings, 1)[0];
+  const topLeakLabel = topFinding ? clamp(topFinding.title, 52) : "Run a full audit for priorities";
 
-  let clipDef = "";
-  let logoGfx = "";
-  if (logoDataUrl) {
-    const clipId = "rlaShareLogoClip";
-    clipDef = `<defs><clipPath id="${clipId}"><rect x="${innerLeftBase}" y="${logoTop}" width="${LOGO_BOX}" height="${LOGO_BOX}" rx="12"/></clipPath></defs>`;
-    const safeHref = logoDataUrl.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
-    logoGfx = `<rect x="${innerLeftBase}" y="${logoTop}" width="${LOGO_BOX}" height="${LOGO_BOX}" rx="12" fill="#f9fafb" stroke="${CARD_STROKE}" stroke-width="1"/>
-  <image x="${innerLeftBase}" y="${logoTop}" width="${LOGO_BOX}" height="${LOGO_BOX}" href="${safeHref}" preserveAspectRatio="xMidYMid meet" clip-path="url(#${clipId})"/>`;
-  }
-
-  const categoryLine = [
-    b.category?.trim() || "Business",
-    (b.businessStatus || "Operational").replace(/_/g, " "),
-  ].join(" · ");
-  const address = clamp(b.address, logoDataUrl ? 60 : 76);
-  const phoneRaw = (b.phone ?? wa.contactLinks.phone ?? "").trim();
-  const phoneDisplay = clamp(phoneRaw || undefined, 28);
-
-  const addressY = card1Top + INNER_PAD + 108;
-  /** Phone sits directly beneath the street address within the GBP card. */
-  const phoneLineY = phoneDisplay ? addressY + 20 : addressY;
-  const pillsY = Math.max(
-    phoneDisplay ? phoneLineY + 22 : addressY + 24,
-    donutCy + donutOuterR + 12,
-  );
-  const pillRowH = 32;
-
-  let px = innerLeftText;
-  const pills: string[] = [];
-  for (const { label, preset } of [
-    { label: ratingLbl, preset: PILL_RATING },
-    { label: reviewsLbl, preset: PILL_REVIEWS },
-    { label: photosLbl, preset: PILL_PHOTOS },
-    { label: siteLbl, preset: PILL_WEBSITE },
-  ] as const) {
-    const { svg: ps, width: pw } = pill(px, pillsY, label, preset);
-    pills.push(ps);
-    px += pw + 10;
-  }
-
-  const pillsBottom = pillsY + pillRowH;
-  const contentBottom = Math.max(pillsBottom + 14, donutCy + donutOuterR + INNER_PAD / 2);
-  const card1H = contentBottom + INNER_PAD - card1Top;
-
-  const card2Top = card1Top + card1H + 14;
-
-  const paletteFallback = [...bio.palette].filter(Boolean);
-  const mainHexRaw = bio.primaryColor ?? paletteFallback[0] ?? null;
-  let secondaryHexRaw = bio.accentColor ?? paletteFallback[1] ?? null;
+  const paletteFallback = [...bio.palette].filter(Boolean) as string[];
+  const mainHexRaw: string | null = bio.primaryColor ?? paletteFallback[0] ?? null;
+  let secondaryHexRaw: string | null =
+    bio.accentColor ?? paletteFallback[1] ?? null;
   if (
     secondaryHexRaw &&
     mainHexRaw &&
     normalizeCssHexToken(secondaryHexRaw) === normalizeCssHexToken(mainHexRaw)
   ) {
-    secondaryHexRaw = paletteFallback.find(
-      (c) => normalizeCssHexToken(c) !== normalizeCssHexToken(mainHexRaw),
-    )
-      ?? null;
+    secondaryHexRaw =
+      paletteFallback.find((c) => normalizeCssHexToken(c) !== normalizeCssHexToken(mainHexRaw)) ??
+      null;
   }
-
-  const brandSubtitle = clamp(
-    bio.brandPresenceSummary || "Signals from your homepage.",
-    92,
-  );
-
-  let mainUse = mainHexRaw;
-  let secondaryUse = secondaryHexRaw;
+  let mainUse: string | null = mainHexRaw;
+  let secondaryUse: string | null = secondaryHexRaw;
   if (!mainUse && secondaryUse) {
     mainUse = secondaryUse;
     secondaryUse = null;
   }
+  const primaryTypoFace = pickFirstTypographyFace(bio.typographyNotes);
 
-  /** One row: Main + Secondary swatches aligned to labels (share image — not full crawl palette). */
-  const swatchCenterY = card2Top + INNER_PAD + 110;
-  const mainCx = innerLeftBase + 28;
-  const secondaryCx = secondaryUse ? innerLeftBase + 320 : mainCx;
+  const card1Top = MARGIN_X;
+  const innerLeft = MARGIN_X + INNER_PAD;
+  const panelTop = card1Top + INNER_PAD;
+  const contentW = CARD_W - INNER_PAD * 2;
+  const textShift = logoDataUrl ? LOGO_BOX + LOGO_GAP : 0;
+  const titleX = innerLeft + textShift;
+  const logoTop = panelTop + 8;
 
-  let brandSwatchesSvg = "";
+  let logoGfx = "";
+  if (logoDataUrl) {
+    const clipId = "rlaShareLogoClip";
+    const safeHref = logoDataUrl.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+    logoGfx = `<rect x="${innerLeft}" y="${logoTop}" width="${LOGO_BOX}" height="${LOGO_BOX}" rx="14" fill="#f8fafc" stroke="${BORDER}" stroke-width="1"/>
+  <image x="${innerLeft}" y="${logoTop}" width="${LOGO_BOX}" height="${LOGO_BOX}" href="${safeHref}" preserveAspectRatio="xMidYMid meet" clip-path="url(#${clipId})"/>`;
+  }
+
+  const svgDefsFull = `<defs>
+  <filter id="rlaCardLift" x="-8%" y="-8%" width="116%" height="116%" color-interpolation-filters="sRGB">
+    <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#0f172a" flood-opacity="0.06"/>
+  </filter>
+  ${logoDataUrl ?
+    `<clipPath id="rlaShareLogoClip"><rect x="${innerLeft}" y="${logoTop}" width="${LOGO_BOX}" height="${LOGO_BOX}" rx="14"/></clipPath>`
+  : ""}
+</defs>`;
+
+  const categoryLine = [
+    b.category?.trim() || "Business",
+    (b.businessStatus || "Operational").replace(/_/g, " "),
+  ].join(" · ");
+  const address = clamp(b.address, 72);
+  const phoneRaw = (b.phone ?? wa.contactLinks.phone ?? "").trim();
+  const phoneDisplay = clamp(phoneRaw || undefined, 32);
+
+  /** Hero + grid + insight + brand inside first panel */
+  const eyebrowY = panelTop + 14;
+  const nameY = eyebrowY + 26;
+  const metaY = nameY + 36;
+  const addrY = metaY + 18;
+  const phoneY = phoneDisplay ? addrY + 18 : addrY;
+
+  const donutCx = MARGIN_X + CARD_W - INNER_PAD - 52;
+  const donutCy = panelTop + 74;
+
+  const gridTop = Math.max(
+    (phoneDisplay ? phoneY + 28 : addrY + 26),
+    donutCy + 50,
+  );
+  const cols = 3;
+  const tileGap = GAP;
+  const tileW = (contentW - (cols - 1) * tileGap) / cols;
+  const tileH = 108;
+  const row2Y = gridTop + tileH + tileGap;
+
+  const tiles: string[] = [];
+  tiles.push(
+    metricTile(
+      innerLeft,
+      gridTop,
+      tileW,
+      tileH,
+      "#fff7ed",
+      "#ea580c",
+      ICONS.star,
+      ratingStr,
+      "Google rating",
+    ),
+  );
+  tiles.push(
+    metricTile(
+      innerLeft + tileW + tileGap,
+      gridTop,
+      tileW,
+      tileH,
+      ACCENT_SOFT,
+      ACCENT_MUTED,
+      ICONS.chat,
+      String(b.reviewCount ?? 0),
+      "Reviews",
+    ),
+  );
+  tiles.push(
+    metricTile(
+      innerLeft + (tileW + tileGap) * 2,
+      gridTop,
+      tileW,
+      tileH,
+      "#fef2f2",
+      LEAK,
+      ICONS.dollar,
+      money(m.estimatedMonthlyCost),
+      "Est. monthly leak",
+      LEAK,
+    ),
+  );
+  tiles.push(
+    metricTile(
+      innerLeft,
+      row2Y,
+      tileW,
+      tileH,
+      "#faf5ff",
+      "#9333ea",
+      ICONS.alert,
+      String(m.totalIssues),
+      "Open issues",
+    ),
+  );
+  tiles.push(
+    metricTile(
+      innerLeft + tileW + tileGap,
+      row2Y,
+      tileW,
+      tileH,
+      "#f5f3ff",
+      "#6366f1",
+      ICONS.image,
+      String(photoN),
+      "Profile photos",
+    ),
+  );
+  tiles.push(
+    metricTile(
+      innerLeft + (tileW + tileGap) * 2,
+      row2Y,
+      tileW,
+      tileH,
+      "#ecfeff",
+      "#0891b2",
+      ICONS.pin,
+      rankStr,
+      "Sample local rank",
+      ACCENT,
+    ),
+  );
+
+  const insightsTop = row2Y + tileH + 22;
+  const insightsH = 76;
+  const insightsMid = innerLeft + contentW / 2;
+  const insightsBar = `<rect x="${innerLeft}" y="${insightsTop}" width="${contentW}" height="${insightsH}" rx="${RADIUS_SM}" fill="${ACCENT_SOFT}" stroke="${BORDER}" stroke-width="1"/>
+  <text x="${innerLeft + 20}" y="${insightsTop + 22}" font-size="9" font-weight="700" fill="${ACCENT}" letter-spacing="0.12em" font-family="${FONT}">PRIORITY FIX</text>
+  <text x="${innerLeft + 20}" y="${insightsTop + 48}" font-size="14" font-weight="700" fill="${INK}" font-family="${FONT}">${esc(topLeakLabel)}</text>
+  <line x1="${insightsMid}" y1="${insightsTop + 16}" x2="${insightsMid}" y2="${insightsTop + insightsH - 16}" stroke="${BORDER}" stroke-width="1"/>
+  <text x="${insightsMid + 16}" y="${insightsTop + 22}" font-size="9" font-weight="700" fill="${ACCENT}" letter-spacing="0.12em" font-family="${FONT}">PROFILE</text>
+  <text x="${insightsMid + 16}" y="${insightsTop + 44}" font-size="12" font-weight="600" fill="${INK_MUTED}" font-family="${FONT}">${esc(clamp(categoryLine, 48))}</text>
+  <text x="${insightsMid + 16}" y="${insightsTop + 62}" font-size="12" font-weight="500" fill="${INK_MUTED}" font-family="${FONT}">${esc(clamp(address, 56))}</text>`;
+
+  const brandTop = insightsTop + insightsH + 20;
+  let brandChips = `<text x="${innerLeft}" y="${brandTop}" font-size="9" font-weight="700" fill="${INK_MUTED}" letter-spacing="0.12em" font-family="${FONT}">BRAND FROM SITE</text>`;
+  const chipY = brandTop + 18;
   if (mainUse) {
-    brandSwatchesSvg += `<circle cx="${mainCx}" cy="${swatchCenterY}" r="20" fill="${esc(mainUse)}"/>
-    <text x="${mainCx}" y="${swatchCenterY + 38}" text-anchor="middle" font-size="13" font-weight="600" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Main</text>`;
+    brandChips += `<circle cx="${innerLeft + 10}" cy="${chipY + 6}" r="8" fill="${esc(mainUse)}"/>
+  <text x="${innerLeft + 26}" y="${chipY + 10}" font-size="12" font-weight="600" fill="${INK}" font-family="${FONT}">Main</text>`;
   }
   if (secondaryUse) {
-    brandSwatchesSvg += `<circle cx="${secondaryCx}" cy="${swatchCenterY}" r="20" fill="${esc(secondaryUse)}"/>
-    <text x="${secondaryCx}" y="${swatchCenterY + 38}" text-anchor="middle" font-size="13" font-weight="600" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Secondary</text>`;
+    const bx = mainUse ? innerLeft + 92 : innerLeft;
+    brandChips += `<circle cx="${bx + 10}" cy="${chipY + 6}" r="8" fill="${esc(secondaryUse)}"/>
+  <text x="${bx + 26}" y="${chipY + 10}" font-size="12" font-weight="600" fill="${INK}" font-family="${FONT}">Secondary</text>`;
   }
+  const typeX = innerLeft + Math.floor(contentW * 0.58);
+  brandChips += `
+  <text x="${typeX}" y="${brandTop}" font-size="9" font-weight="700" fill="${INK_MUTED}" letter-spacing="0.12em" font-family="${FONT}">TYPOGRAPHY</text>
+  <text x="${typeX}" y="${chipY + 10}" font-size="12" font-weight="600" fill="${INK}" font-family="${FONT}">${esc(primaryTypoFace || "—")}</text>`;
 
-  const primaryTypoFace = pickFirstTypographyFace(bio.typographyNotes);
-  const typoLabelY = swatchCenterY + 68;
-  const typoValueY = typoLabelY + 22;
-  const typoLineSvg =
-    primaryTypoFace ?
-      `<text x="${innerLeftBase}" y="${typoLabelY}" font-size="11" fill="${MUTED}" font-weight="700" letter-spacing="0.1em" font-family="system-ui, -apple-system, Segoe UI, sans-serif">TYPOGRAPHY</text>
-  <text x="${innerLeftBase}" y="${typoValueY}" font-size="15" font-weight="600" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(primaryTypoFace)}</text>`
-    : `<text x="${innerLeftBase}" y="${typoLabelY}" font-size="11" fill="${MUTED}" font-weight="700" letter-spacing="0.1em" font-family="system-ui, -apple-system, Segoe UI, sans-serif">TYPOGRAPHY</text>
-  <text x="${innerLeftBase}" y="${typoValueY}" font-size="13" fill="${MUTED}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Not detected</text>`;
+  const card1H = chipY + 28 + INNER_PAD - card1Top;
 
-  const card2H = typoValueY + 16 - card2Top + INNER_PAD;
-  const card3Top = card2Top + card2H + 14;
+  const card2Top = card1Top + card1H + GAP;
+  const { svgParts: rankingGfx, cardH: card2H } = renderRankingSection(card2Top, audit);
 
-  const findings = pickTopFindings(audit.findings, 4);
-  const findingStartY = card3Top + INNER_PAD + 112;
-  const findingLines = findings.map((f, i) => {
-    const lx = MARGIN_X + INNER_PAD + 12 + i * 16;
-    const ly = findingStartY + i * 40;
-    const fill = i === findings.length - 1 ? MUTED : INK;
-    const txt = clamp(`${f.severity}: ${f.title}`, 64);
-    return `<text x="${lx}" y="${ly}" font-size="17" font-weight="600" fill="${fill}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(txt)}</text>`;
-  });
+  const card3Top = card2Top + card2H + GAP;
+  const ctaPad = INNER_PAD;
+  const ctaCardH = ctaPad + 128 + ctaPad;
+  const ctaInnerW = CARD_W - ctaPad * 2;
+  const btnH = 52;
+  const btnY = card3Top + ctaPad + 72;
 
-  const card3BodyH = INNER_PAD + 96 + findings.length * 40 + INNER_PAD + 8;
-  const card3H = Math.max(card3BodyH, 280);
+  const ctaGfx = `<rect x="${MARGIN_X}" y="${card3Top}" width="${CARD_W}" height="${ctaCardH}" rx="${RADIUS}" fill="${SURFACE}" stroke="${BORDER}" stroke-width="1" filter="url(#rlaCardLift)"/>
+  <text x="${MARGIN_X + CARD_W / 2}" y="${card3Top + ctaPad + 28}" text-anchor="middle" font-size="10" font-weight="700" fill="${ACCENT}" letter-spacing="0.16em" font-family="${FONT}">NEXT STEP</text>
+  <text x="${MARGIN_X + CARD_W / 2}" y="${card3Top + ctaPad + 58}" text-anchor="middle" font-size="22" font-weight="800" fill="${INK}" font-family="${FONT}">Ready to recover lost revenue?</text>
+  <text x="${MARGIN_X + CARD_W / 2}" y="${card3Top + ctaPad + 82}" text-anchor="middle" font-size="13" fill="${INK_MUTED}" font-family="${FONT}">${esc(
+    clamp("We'll review your audit together and show you where to start for the fastest ROI.", 76),
+  )}</text>
+  <rect x="${MARGIN_X + ctaPad}" y="${btnY}" width="${ctaInnerW}" height="${btnH}" rx="${btnH / 2}" fill="${ACCENT}"/>
+  <text x="${MARGIN_X + CARD_W / 2}" y="${btnY + btnH / 2 + 5}" text-anchor="middle" font-size="15" font-weight="700" fill="#ffffff" font-family="${FONT}">Start fixing leaks</text>`;
 
-  const card4Top = card3Top + card3H + 14;
-  const { svgParts: rankingGfx, cardH: card4H } = renderRankingSection(card4Top, audit);
-
-  const card5Top = card4Top + card4H + 14;
-  const { svg: ctaGfx, cardH: card5H } = renderCtaCard(card5Top);
-
-  const footerY = card5Top + card5H + 22;
+  const footerY = card3Top + ctaCardH + 20;
 
   const slug = businessSlug(b.name);
   const filename = `${slug}-revenue-leak-audit-summary.png`;
 
-  const effectiveHeight = Math.max(HEIGHT_BASE, footerY + 72);
+  const effectiveHeight = Math.max(HEIGHT_BASE, footerY + 56);
 
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${effectiveHeight}" viewBox="0 0 ${WIDTH} ${effectiveHeight}">
-  ${clipDef}
+  ${svgDefsFull}
   <rect width="${WIDTH}" height="${effectiveHeight}" fill="${PAGE_BG}"/>
-  <rect x="${MARGIN_X}" y="${card1Top}" width="${CARD_W}" height="${card1H}" rx="22" fill="${CARD_BG}" stroke="${CARD_STROKE}" stroke-width="1"/>
+  <rect x="${MARGIN_X}" y="${card1Top}" width="${CARD_W}" height="${card1H}" rx="${RADIUS}" fill="${SURFACE}" stroke="${BORDER}" stroke-width="1" filter="url(#rlaCardLift)"/>
   ${logoGfx}
-  <text x="${innerLeftText}" y="${card1Top + INNER_PAD + 22}" font-size="12" fill="${ACCENT}" font-weight="700" letter-spacing="0.14em" font-family="system-ui, -apple-system, Segoe UI, sans-serif">GOOGLE BUSINESS PROFILE</text>
-  <text x="${innerLeftText}" y="${card1Top + INNER_PAD + 62}" font-size="26" font-weight="800" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(clamp(b.name, 48))}</text>
-  <text x="${innerLeftText}" y="${card1Top + INNER_PAD + 88}" font-size="14" fill="${MUTED}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(categoryLine)}</text>
-  <text x="${innerLeftText}" y="${card1Top + INNER_PAD + 108}" font-size="13" fill="${MUTED}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(address)}</text>
+  <text x="${titleX}" y="${eyebrowY}" font-size="10" fill="${ACCENT}" font-weight="700" letter-spacing="0.16em" font-family="${FONT}">REVENUE LEAK AUDIT</text>
+  <text x="${titleX}" y="${nameY}" font-size="30" font-weight="800" fill="${INK}" font-family="${FONT}">${esc(clamp(b.name, 44))}</text>
+  <text x="${titleX}" y="${metaY}" font-size="13" fill="${INK_MUTED}" font-family="${FONT}">${esc(clamp(categoryLine, 72))}</text>
+  <text x="${titleX}" y="${addrY}" font-size="12" font-weight="500" fill="${INK_MUTED}" font-family="${FONT}">${esc(address)}</text>
   ${phoneDisplay ?
-    `<text x="${innerLeftText}" y="${phoneLineY}" font-size="14" font-weight="600" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(phoneDisplay)}</text>`
+    `<text x="${titleX}" y="${phoneY}" font-size="13" font-weight="600" fill="${INK}" font-family="${FONT}">${esc(phoneDisplay)}</text>`
   : ""}
-  ${renderDonut(donutCx, donutCy, score, grade)}
-  ${pills.join("\n  ")}
-
-  <rect x="${MARGIN_X}" y="${card2Top}" width="${CARD_W}" height="${card2H}" rx="22" fill="${CARD_BG}" stroke="${CARD_STROKE}" stroke-width="1"/>
-  <text x="${innerLeftBase}" y="${card2Top + INNER_PAD + 22}" font-size="12" fill="${ACCENT}" font-weight="700" letter-spacing="0.14em" font-family="system-ui, -apple-system, Segoe UI, sans-serif">BRAND SUMMARY</text>
-  <text x="${innerLeftBase}" y="${card2Top + INNER_PAD + 56}" font-size="22" font-weight="800" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Brand palette</text>
-  <text x="${innerLeftBase}" y="${card2Top + INNER_PAD + 82}" font-size="13" fill="${MUTED}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(brandSubtitle)}</text>
-  ${brandSwatchesSvg}
-  ${typoLineSvg}
-
-  <rect x="${MARGIN_X}" y="${card3Top}" width="${CARD_W}" height="${card3H}" rx="22" fill="${CARD_BG}" stroke="${CARD_STROKE}" stroke-width="1"/>
-  <text x="${innerLeftBase}" y="${card3Top + INNER_PAD + 22}" font-size="12" fill="${ACCENT}" font-weight="700" letter-spacing="0.14em" font-family="system-ui, -apple-system, Segoe UI, sans-serif">REVENUE LEAK SNAPSHOT</text>
-  <text x="${innerLeftBase}" y="${card3Top + INNER_PAD + 68}" font-size="22" font-weight="700" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">
-    <tspan>${esc(String(m.totalIssues))} issues are costing you </tspan><tspan fill="${ACCENT}">${esc(money(m.estimatedMonthlyCost))}</tspan><tspan> average / month</tspan>
-  </text>
-  ${findingLines.join("\n  ")}
+  ${renderDonutCompact(donutCx, donutCy, score, grade)}
+  ${tiles.join("\n  ")}
+  ${insightsBar}
+  ${brandChips}
 
   ${rankingGfx}
   ${ctaGfx}
 
   <line x1="${MARGIN_X}" y1="${footerY}" x2="${WIDTH - MARGIN_X}" y2="${footerY}" stroke="${FOOTER_LINE}" stroke-width="1"/>
-  <text x="${MARGIN_X}" y="${footerY + 36}" font-size="15" fill="${MUTED}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Zenpho · Revenue Leak Audit (share summary) · Full PDF includes all issues &amp; suggested fixes</text>
+  <text x="${MARGIN_X}" y="${footerY + 28}" font-size="13" fill="${INK_MUTED}" font-family="${FONT}">Zenpho · Revenue Leak Audit summary · Full report includes issues &amp; fixes</text>
 </svg>`;
 
   return { svg, width: WIDTH, height: effectiveHeight, filename };
