@@ -1975,26 +1975,6 @@ export default function ProspectPreviewOutreachBlock({
   const outreachIconBadgeAudit =
     "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-600/10 text-emerald-800 dark:bg-emerald-400/15 dark:text-emerald-300";
 
-  const placeVsUrlIntro =
-    stitchContext?.kind === "place" ? (
-      <>
-        Uses your{" "}
-        <span className="font-medium text-text-primary dark:text-zinc-200">Google Business Profile</span> (name,
-        address, categories, rating, listing website) as branding context.
-      </>
-    ) : stitchContext ? (
-      <>
-        URL research only — brand context from page title and meta. Open a{" "}
-        <span className="font-medium text-text-primary dark:text-zinc-200">Local Business</span> listing for full
-        profile fields.
-      </>
-    ) : (
-      <>
-        Open a <span className="font-medium text-text-primary dark:text-zinc-200">Local Business</span> listing or run{" "}
-        <span className="font-medium text-text-primary dark:text-zinc-200">URL research</span> above.
-      </>
-    );
-
   return (
     <div className="space-y-4">
       {copyMsg ? (
@@ -2075,16 +2055,7 @@ export default function ProspectPreviewOutreachBlock({
                 <Monitor className="h-4 w-4 shrink-0" />
               </span>
             </div>
-            <p className="mt-2 text-[11px] leading-snug text-text-secondary dark:text-zinc-400">
-              Five-page premium website concept in one design (home, services, about, social proof, book/contact) with
-              real blocks for booking, reviews, services, and contact — uses your Google Business Profile for branding
-              context.{" "}
-              {placeVsUrlIntro}
-            </p>
-            <p className="mt-2 text-[10px] text-text-secondary/90 dark:text-zinc-500">
-              Generation can take a few minutes — do not double-click.
-            </p>
-            <div className="mt-2 flex flex-col gap-2">
+            <div className="mt-3 flex flex-col gap-2">
               <button
                 type="button"
                 disabled={!stitchContext || stitchWebBusy}
@@ -2152,14 +2123,7 @@ export default function ProspectPreviewOutreachBlock({
                 <LayoutDashboard className="h-4 w-4 shrink-0" />
               </span>
             </div>
-            <p className="mt-2 text-[11px] leading-snug text-text-secondary dark:text-zinc-400">
-              Premium desktop operator dashboard with pipeline, clients, inbox, schedule, and reviews.{" "}
-              {placeVsUrlIntro}
-            </p>
-            <p className="mt-2 text-[10px] text-text-secondary/90 dark:text-zinc-500">
-              Generation can take a few minutes — do not double-click.
-            </p>
-            <div className="mt-2 flex flex-col gap-2">
+            <div className="mt-3 flex flex-col gap-2">
               <button
                 type="button"
                 disabled={!stitchContext || stitchWebAppBusy}
@@ -2220,14 +2184,7 @@ export default function ProspectPreviewOutreachBlock({
                 <Smartphone className="h-4 w-4 shrink-0" />
               </span>
             </div>
-            <p className="mt-2 text-[11px] leading-snug text-text-secondary dark:text-zinc-400">
-              Premium phone-sized owner app with bookings, clients, inbox, schedule snapshots, and review growth.{" "}
-              {placeVsUrlIntro}
-            </p>
-            <p className="mt-2 text-[10px] text-text-secondary/90 dark:text-zinc-500">
-              Generation can take a few minutes — do not double-click.
-            </p>
-            <div className="mt-2 flex flex-col gap-2">
+            <div className="mt-3 flex flex-col gap-2">
               <button
                 type="button"
                 disabled={!stitchContext || stitchMobileBusy}
@@ -2306,13 +2263,6 @@ export default function ProspectPreviewOutreachBlock({
                 <Workflow className="h-4 w-4 shrink-0" />
               </span>
             </div>
-            <p className="mt-2 text-[11px] leading-snug text-text-secondary dark:text-zinc-400">
-              Structured assessment: map repeatable processes, identify the biggest time or money costs, recommend AI
-              tools and workflows, and deliver a prioritized action plan. This PDF is not a build — implementation and
-              rollout are quoted separately. When Anthropic or OpenAI is configured (same as prospect preview), the
-              narrative is AI-written from your Highlights intel; otherwise the PDF stays research-only. Not a Stitch
-              screen.
-            </p>
             <button
               type="button"
               disabled={!marketIntelReport || pdfBusy}
@@ -2346,18 +2296,6 @@ export default function ProspectPreviewOutreachBlock({
                 <ShieldAlert className="h-4 w-4 shrink-0" />
               </span>
             </div>
-            <p className="mt-2 text-[11px] leading-snug text-text-secondary dark:text-zinc-400">
-              Start with a tall share image (1200px wide) for SMS, email, or DMs: Google Business Profile snapshot with
-              colored metrics, contact/social channel icons from your site crawl when available, audit score dial, brand
-              palette + typography notes, and revenue-at-risk headline with top issues. Generate the full Revenue Leak Audit
-              PDF as the follow-up: ranking vs competitors, GBP health, review trust + competitor themes, website conversion,
-              tracking &amp; ads readiness, photos, schema, local SEO, and money-loss estimates with a prioritized fix
-              plan. Same engine as the Revenue Leak Audit tool.
-            </p>
-            <p className="mt-2 text-[10px] text-text-secondary/90 dark:text-zinc-500">
-              Analysis can take 30–90 seconds (Google Places + PageSpeed + competitor reviews). Assets auto-attach for
-              SMS / email / WhatsApp.
-            </p>
             <button
               type="button"
               disabled={stitchContext?.kind !== "place" || auditBusy || auditShareBusy}
@@ -2440,11 +2378,6 @@ export default function ProspectPreviewOutreachBlock({
                 <Palette className="h-4 w-4 shrink-0" />
               </span>
             </div>
-            <p className="mt-2 text-[11px] leading-snug text-text-secondary dark:text-zinc-400">
-              Start with a 1200×900 share image for SMS, email, or manual outreach. It summarizes the prospect&apos;s
-              palette, typography, website direction, and campaign assets. Then generate the detailed PDF as the
-              follow-up brand book and sales-funnel strategy.
-            </p>
             <button
               type="button"
               disabled={brandingShareBusy}
@@ -2540,14 +2473,7 @@ export default function ProspectPreviewOutreachBlock({
                 · templates for <span className="text-text-primary dark:text-zinc-200">AI audit</span> (hosted link send
                 requires Website, Web app, or Mobile)
               </>
-            ) : selectedOffer === "audit" ? (
-              <>
-                {" "}
-                · templates for{" "}
-                <span className="text-text-primary dark:text-zinc-200">Revenue Leak Audit</span> (generate the summary
-                image or PDF first to attach it)
-              </>
-            ) : (
+            ) : selectedOffer === "audit" ? null : (
               <>
                 {" "}
                 · templates for <span className="text-text-primary dark:text-zinc-200">Brand guidelines</span> (generate

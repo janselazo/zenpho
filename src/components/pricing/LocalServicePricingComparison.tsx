@@ -45,26 +45,29 @@ export default function LocalServicePricingComparison() {
               <tr className="border-b border-border/70 bg-white">
                 <th
                   scope="col"
-                  className="sticky left-0 z-20 w-[min(36vw,280px)] min-w-[180px] bg-white px-4 py-5 align-bottom text-xs font-bold uppercase tracking-[0.14em] text-text-secondary sm:px-5"
+                  className="sticky left-0 z-20 w-[min(36vw,280px)] min-w-[180px] bg-white px-4 py-5 align-top text-xs font-bold uppercase tracking-[0.14em] text-text-secondary sm:px-5"
                 >
+                  <div className="flex min-h-[30px] items-end pb-2 sm:min-h-[32px]" aria-hidden />
                   Compare
                 </th>
                 {localServicePricingPlans.map((plan) => (
                   <th
                     key={plan.id}
                     scope="col"
-                    className={`relative w-[min(22vw,220px)] min-w-[160px] border-border/60 px-3 py-5 align-bottom sm:px-4 ${
+                    className={`w-[min(22vw,220px)] min-w-[160px] border-border/60 px-3 py-5 align-top sm:px-4 ${
                       plan.featured
                         ? "border-x border-accent/25 bg-accent/[0.04] shadow-[inset_0_1px_0_0_rgba(37,99,235,0.12)]"
                         : "border-l border-border/40 bg-white"
                     }`}
                   >
-                    {plan.featured ? (
-                      <span className="absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
-                        Best value
-                      </span>
-                    ) : null}
-                    <div className={`flex flex-col gap-2 pt-1 ${plan.featured ? "mt-2" : ""}`}>
+                    <div className="flex min-h-[30px] items-end justify-center pb-2 sm:min-h-[32px]">
+                      {plan.featured ? (
+                        <span className="rounded-full bg-accent px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
+                          Best value
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-col gap-2">
                       <span className="text-lg font-bold leading-snug text-text-primary sm:text-xl">{plan.title}</span>
                       {plan.headerNote ? (
                         <span className="text-[13px] font-medium leading-snug text-text-secondary sm:text-sm">
@@ -78,9 +81,15 @@ export default function LocalServicePricingComparison() {
                         <p className="text-xl font-black tabular-nums tracking-tight text-text-primary sm:text-2xl">
                           {plan.priceLead}
                         </p>
-                        {plan.priceNote ? (
-                          <p className="text-xs leading-snug text-text-secondary sm:text-sm">{plan.priceNote}</p>
-                        ) : null}
+                        <p className="text-xs leading-snug text-text-secondary sm:text-sm">
+                          {plan.priceNote ? (
+                            plan.priceNote
+                          ) : (
+                            <span className="invisible select-none" aria-hidden>
+                              Plus ad spend
+                            </span>
+                          )}
+                        </p>
                       </div>
                       <Button
                         href={plan.ctaHref}
