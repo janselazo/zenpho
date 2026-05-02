@@ -54,15 +54,22 @@ const SEVERITY_ORDER: Record<AuditSeverity, number> = {
   Low: 3,
 };
 
-/** Simple line icons in 20×20 viewBox for metric tiles */
+/** Metric tile icons (viewBox 20×20 unless noted). Dollar is text for readability. */
 const ICONS = {
   star: `<path fill="currentColor" d="M10 1.5l2.6 5.3 5.8.9-4.2 4.1 1 5.8L10 14.9 4.8 17.6l1-5.8L1.6 7.7l5.8-.9L10 1.5z"/>`,
-  chat: `<path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M4 5h12v8H9l-3 3v-3H4V5z"/>`,
-  dollar: `<path fill="none" stroke="currentColor" stroke-width="1.6" d="M10 3v14M7 6c0-1.7 1.3-3 3-3s3 1.3 3 3-1.3 3-3 3-3 1.3-3 3 1.3 3 3 3"/>`,
-  alert: `<path fill="none" stroke="currentColor" stroke-width="1.6" d="M10 4l6 10H4L10 4zM10 9v3M10 14h.01"/>`,
-  image: `<rect x="3" y="5" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="7" cy="9" r="1.2" fill="currentColor"/><path fill="none" stroke="currentColor" stroke-width="1.6" d="M3 13l4-4 3 3 3-3 4 4"/>`,
-  pin: `<path fill="none" stroke="currentColor" stroke-width="1.6" d="M10 3a4 4 0 0 1 4 4c0 3-4 8-4 8S6 10 6 7a4 4 0 0 1 4-4z"/><circle cx="10" cy="7" r="1.2" fill="currentColor"/>`,
+  chat: `<path fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" d="M4 5h12v8H9l-3 3v-3H4V5z"/>`,
+  dollar: `<text x="10" y="13" text-anchor="middle" fill="currentColor" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="800">$</text>`,
+  alert: `<path fill="none" stroke="currentColor" stroke-width="1.45" d="M10 4l6 10H4L10 4zM10 9v3M10 14h.01"/>`,
+  image: `<rect x="3" y="5" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.45"/><circle cx="7" cy="9" r="1.1" fill="currentColor"/><path fill="none" stroke="currentColor" stroke-width="1.45" d="M3 13l4-4 3 3 3-3 4 4"/>`,
+  pin: `<path fill="none" stroke="currentColor" stroke-width="1.45" d="M10 3a4 4 0 0 1 4 4c0 3-4 8-4 8S6 10 6 7a4 4 0 0 1 4-4z"/><circle cx="10" cy="7" r="1.1" fill="currentColor"/>`,
 } as const;
+
+const TILE_ICON_VIEW = 20;
+const TILE_ICON_PX = 14;
+const TILE_CIRCLE_R = 13;
+const TILE_H = 84;
+const TILE_VALUE_SIZE = 21;
+const TILE_LABEL_SIZE = 10;
 
 /**
  * Fetch a raster image in the browser and return a data URL for embedding in SVG.
@@ -178,15 +185,83 @@ function metricTile(
   valueColor = INK,
 ): string {
   const iconSvg = iconInner.replace(/currentColor/g, iconFg);
+  const iconCx = x + 15 + TILE_ICON_PX / 2;
+  const iconCy = y + 14 + TILE_ICON_PX / 2;
   return `<g>
   <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${RADIUS_TILE}" fill="${SURFACE}" stroke="${BORDER}" stroke-width="1"/>
-  <circle cx="${x + 28}" cy="${y + 32}" r="18" fill="${iconBg}"/>
-  <g transform="translate(${x + 18},${y + 22})">
-  <svg width="20" height="20" viewBox="0 0 20 20">${iconSvg}</svg>
+  <circle cx="${iconCx}" cy="${iconCy}" r="${TILE_CIRCLE_R}" fill="${iconBg}"/>
+  <g transform="translate(${x + 15},${y + 14})">
+  <svg width="${TILE_ICON_PX}" height="${TILE_ICON_PX}" viewBox="0 0 ${TILE_ICON_VIEW} ${TILE_ICON_VIEW}">${iconSvg}</svg>
   </g>
-  <text x="${x + 22}" y="${y + h - 24}" font-size="26" font-weight="800" fill="${valueColor}" font-family="${FONT}">${esc(value)}</text>
-  <text x="${x + 22}" y="${y + h - 6}" font-size="11" font-weight="600" fill="${INK_MUTED}" font-family="${FONT}" letter-spacing="0.02em">${esc(label)}</text>
+  <text x="${x + 18}" y="${y + h - 20}" font-size="${TILE_VALUE_SIZE}" font-weight="800" fill="${valueColor}" font-family="${FONT}">${esc(value)}</text>
+  <text x="${x + 18}" y="${y + h - 5}" font-size="${TILE_LABEL_SIZE}" font-weight="600" fill="${INK_MUTED}" font-family="${FONT}" letter-spacing="0.02em">${esc(label)}</text>
 </g>`;
+}
+
+/** Red warning triangle + “!” for issue list rows. */
+function problemIconMark(ix: number, iy: number): string {
+  return `<g transform="translate(${ix},${iy})">
+  <path d="M6 1.2L10.8 9.4H1.2L6 1.2z" fill="#ef4444" stroke="#b91c1c" stroke-width="0.35"/>
+  <text x="6" y="7.5" text-anchor="middle" font-size="6" font-weight="900" fill="#ffffff" font-family="Arial, Helvetica, sans-serif">!</text>
+</g>`;
+}
+
+function renderTopIssuesCard(
+  cardTop: number,
+  innerPadX: number,
+  totalIssues: number,
+  avgMonthlyLeakMid: number,
+  findingsAll: AuditFinding[],
+): { svgParts: string; cardH: number } {
+  const five = pickTopFindings(findingsAll, 5);
+  const issuePhrase =
+    totalIssues > 5 ? "5+ issues" : `${totalIssues} issue${totalIssues === 1 ? "" : "s"}`;
+  const est = money(avgMonthlyLeakMid);
+
+  let y = INNER_PAD + 20;
+  const pieces: string[] = [];
+
+  pieces.push(
+    `<text x="${innerPadX}" y="${cardTop + y}" font-size="10" fill="${ACCENT}" font-weight="700" letter-spacing="0.16em" font-family="${FONT}">TOP ISSUES</text>`,
+  );
+  y += 26;
+  pieces.push(
+    `<text x="${innerPadX}" y="${cardTop + y}" font-size="20" font-weight="800" fill="${INK}" font-family="${FONT}">Revenue leaks we found</text>`,
+  );
+  y += 30;
+  pieces.push(
+    `<text x="${innerPadX}" y="${cardTop + y}" font-size="14" font-weight="600" fill="${INK_MUTED}" font-family="${FONT}">${esc(issuePhrase)} are costing you <tspan fill="${ACCENT}" font-weight="800">${esc(est)}</tspan> average / month</text>`,
+  );
+  y += 34;
+
+  if (five.length === 0) {
+    pieces.push(
+      `<text x="${innerPadX}" y="${cardTop + y}" font-size="13" fill="${INK_MUTED}" font-family="${FONT}">No issues were ranked for this snapshot.</text>`,
+    );
+    y += 24;
+  } else {
+    for (let i = 0; i < five.length; i++) {
+    const f = five[i];
+    const title = clamp(f.title, 76);
+    const fs = Math.max(11.5, 14.8 - i * 0.65);
+    const fill = i === 0 ? INK : i === 1 ? "#1e293b" : i === 2 ? "#334155" : "#64748b";
+    const indent = i * 8;
+    const iconX = innerPadX + indent;
+    const textX = innerPadX + indent + 20;
+    const rowY = cardTop + y;
+    pieces.push(problemIconMark(iconX, rowY - 11));
+    pieces.push(
+      `<text x="${textX}" y="${rowY}" font-size="${fs.toFixed(1)}" font-weight="700" fill="${fill}" font-family="${FONT}">${esc(title)}</text>`,
+    );
+    y += 26;
+    }
+  }
+
+  const cardH = y + INNER_PAD;
+  const svgParts = `<rect x="${MARGIN_X}" y="${cardTop}" width="${CARD_W}" height="${cardH}" rx="${RADIUS}" fill="${SURFACE}" stroke="${BORDER}" stroke-width="1" filter="url(#rlaCardLift)"/>
+  ${pieces.join("\n  ")}`;
+
+  return { svgParts, cardH };
 }
 
 /**
@@ -425,7 +500,7 @@ export function renderAuditShareImage(
   const cols = 3;
   const tileGap = GAP;
   const tileW = (contentW - (cols - 1) * tileGap) / cols;
-  const tileH = 108;
+  const tileH = TILE_H;
   const row2Y = gridTop + tileH + tileGap;
 
   const tiles: string[] = [];
@@ -540,10 +615,19 @@ export function renderAuditShareImage(
 
   const card1H = chipY + 28 + INNER_PAD - card1Top;
 
-  const card2Top = card1Top + card1H + GAP;
-  const { svgParts: rankingGfx, cardH: card2H } = renderRankingSection(card2Top, audit);
+  const issuesTop = card1Top + card1H + GAP;
+  const { svgParts: issuesGfx, cardH: issuesH } = renderTopIssuesCard(
+    issuesTop,
+    innerLeft,
+    m.totalIssues,
+    m.estimatedMonthlyCost,
+    audit.findings,
+  );
 
-  const card3Top = card2Top + card2H + GAP;
+  const rankingTop = issuesTop + issuesH + GAP;
+  const { svgParts: rankingGfx, cardH: rankingH } = renderRankingSection(rankingTop, audit);
+
+  const card3Top = rankingTop + rankingH + GAP;
   const ctaPad = INNER_PAD;
   const ctaCardH = ctaPad + 128 + ctaPad;
   const ctaInnerW = CARD_W - ctaPad * 2;
@@ -584,6 +668,7 @@ export function renderAuditShareImage(
   ${insightsBar}
   ${brandChips}
 
+  ${issuesGfx}
   ${rankingGfx}
   ${ctaGfx}
 
