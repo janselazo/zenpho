@@ -19,7 +19,11 @@ import type {
   GoogleLocalRankItem,
   RevenueLeakAudit,
 } from "./types";
-
+import {
+  channelKindsFromAudit,
+  drawPdfChannelIconRow,
+  estimatePdfChannelIconBlockHeight,
+} from "./pdf-contact-channel-icons";
 // ─── Layout constants ────────────────────────────────────────────────────────
 const PAGE_W = 612;
 const PAGE_H = 792;
@@ -562,21 +566,6 @@ function drawImageContainedInSquare(
   page.drawImage(image, { x: bx, y: by, width: dw, height: dh });
 }
 
-function channelLabelsFromAudit(audit: RevenueLeakAudit): string[] {
-  const labels: string[] = [];
-  const b = audit.business;
-  const s = audit.websiteAudit.socialLinks;
-  if (b.website?.trim()) labels.push("Website");
-  if (audit.websiteAudit.contactLinks.email?.trim()) labels.push("Email");
-  if (s.instagram?.trim()) labels.push("Instagram");
-  if (s.facebook?.trim()) labels.push("Facebook");
-  if (s.tiktok?.trim()) labels.push("TikTok");
-  if (s.youtube?.trim()) labels.push("YouTube");
-  if (s.linkedin?.trim()) labels.push("LinkedIn");
-  if (s.whatsapp?.trim()) labels.push("WhatsApp");
-  return labels.slice(0, 7);
-}
-
 function drawGoogleBusinessProfileCard(
   ctx: Ctx,
   audit: RevenueLeakAudit,
@@ -684,6 +673,7 @@ function drawGoogleBusinessProfileCard(
 
   const nameLinesDrawn = Math.min(nameLines.length, 3);
   const catLinesDrawn = Math.min(catLines.length, 3);
+  const pdfChannels = channelKindsFromAudit(audit);
   let textStackH =
     16 +
     nameLinesDrawn * 26 +
@@ -692,7 +682,8 @@ function drawGoogleBusinessProfileCard(
     (addrLines.length ? Math.min(addrLines.length, 3) * 11 + 8 : 0) +
     14 +
     pillLines * pillRowH +
-    54;
+    54 +
+    (pdfChannels.length ? estimatePdfChannelIconBlockHeight(pdfChannels, textLeft, rightEdge, ctx.bold) - 12 : 0);
 
   const cardH = Math.max(imgBox + pad * 2, textStackH + pad * 2);
 
@@ -808,17 +799,13 @@ function drawGoogleBusinessProfileCard(
     });
     ty -= 4;
   }
-  const ch = channelLabelsFromAudit(audit);
-  if (ch.length > 0) {
-    ty -= 2;
-    ty = drawText(ctx, `Channels: ${ch.join("  ·  ")}`, {
-      x: textLeft,
-      y: ty,
-      size: 8,
-      font: ctx.font,
-      color: MUTED,
-      maxWidth: textMax,
-      lineGap: 2,
+  if (pdfChannels.length > 0) {
+    ty -= 3;
+    drawPdfChannelIconRow(ctx.page, pdfChannels, {
+      textLeft,
+      baselineY: ty,
+      maxRight: rightEdge,
+      labelFont: ctx.bold,
     });
   }
 

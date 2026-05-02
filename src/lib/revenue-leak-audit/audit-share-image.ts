@@ -456,7 +456,10 @@ export function renderAuditShareImage(
   const contentW = CARD_W - INNER_PAD * 2;
   const textShift = logoDataUrl ? LOGO_BOX + LOGO_GAP : 0;
   const titleX = innerLeft + textShift;
-  const logoTop = panelTop + 8;
+  /** Extra air under the card’s top padding before eyebrow + business name */
+  const headerHeroTopPad = 14;
+  const eyebrowToNameGap = 32;
+  const logoTop = panelTop + headerHeroTopPad + 4;
 
   let logoGfx = "";
   if (logoDataUrl) {
@@ -484,8 +487,8 @@ export function renderAuditShareImage(
   const phoneDisplay = clamp(phoneRaw || undefined, 32);
 
   /** Hero + grid + insight + brand inside first panel */
-  const eyebrowY = panelTop + 14;
-  const nameY = eyebrowY + 26;
+  const eyebrowY = panelTop + headerHeroTopPad + 14;
+  const nameY = eyebrowY + eyebrowToNameGap;
   const metaY = nameY + 36;
   const addrY = metaY + 18;
   const phoneY = phoneDisplay ? addrY + 18 : addrY;
@@ -580,7 +583,7 @@ export function renderAuditShareImage(
       "#0891b2",
       ICONS.pin,
       rankStr,
-      "Sample local rank",
+      "Google Business Rank",
       ACCENT,
     ),
   );
