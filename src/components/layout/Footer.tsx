@@ -86,7 +86,11 @@ export default function Footer() {
               >
                 <Linkedin className="h-4 w-4" strokeWidth={2} aria-hidden />
               </SocialIconLink>
-              <SocialIconLink href="https://github.com/zenpho" ariaLabel="Zenpho on GitHub" external>
+              <SocialIconLink
+                href="https://github.com/janselazo"
+                ariaLabel="Janse Lazo on GitHub"
+                external
+              >
                 <Github className="h-4 w-4" strokeWidth={2} aria-hidden />
               </SocialIconLink>
             </div>

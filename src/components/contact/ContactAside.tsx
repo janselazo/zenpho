@@ -38,7 +38,7 @@ export default function ContactAside() {
                 X / Twitter
               </a>
               <a
-                href="https://github.com/zenpho"
+                href="https://github.com/janselazo"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm text-text-primary transition-colors hover:text-accent"

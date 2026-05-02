@@ -1,18 +1,4 @@
-import type { LucideIcon } from "lucide-react";
-import {
-  AlertTriangle,
-  BarChart3,
-  Calendar,
-  DollarSign,
-  FileText,
-  Handshake,
-  Phone,
-  Send,
-  Star,
-  Target,
-  UserPlus,
-  Users,
-} from "lucide-react";
+import Image from "next/image";
 import {
   homeClearGrowthClosingAccent,
   homeClearGrowthClosingLead,
@@ -21,67 +7,13 @@ import {
   homeClearGrowthMetricCards,
   homeClearGrowthSubheadParts,
   homeClearGrowthSummaryItems,
-  type ClearGrowthMetricIcon,
-  type ClearGrowthMetricTone,
 } from "@/lib/home-clear-growth";
 
-const METRIC_TONE_STYLES: Record<ClearGrowthMetricTone, { icon: string; value: string }> = {
-  sky: {
-    icon: "text-sky-600 dark:text-sky-400",
-    value: "text-sky-700 dark:text-sky-300",
-  },
-  teal: {
-    icon: "text-teal-600 dark:text-teal-400",
-    value: "text-teal-700 dark:text-teal-300",
-  },
-  indigo: {
-    icon: "text-indigo-600 dark:text-indigo-400",
-    value: "text-indigo-700 dark:text-indigo-300",
-  },
-  violet: {
-    icon: "text-violet-600 dark:text-violet-400",
-    value: "text-violet-700 dark:text-violet-300",
-  },
-  cyan: {
-    icon: "text-cyan-600 dark:text-cyan-400",
-    value: "text-cyan-700 dark:text-cyan-300",
-  },
-  emerald: {
-    icon: "text-emerald-600 dark:text-emerald-400",
-    value: "text-emerald-700 dark:text-emerald-300",
-  },
-  amber: {
-    icon: "text-amber-700 dark:text-amber-400",
-    value: "text-amber-800 dark:text-amber-300",
-  },
-  blue: {
-    icon: "text-blue-600 dark:text-blue-400",
-    value: "text-blue-700 dark:text-blue-300",
-  },
-  orange: {
-    icon: "text-orange-600 dark:text-orange-400",
-    value: "text-orange-700 dark:text-orange-300",
-  },
-  rose: {
-    icon: "text-rose-600 dark:text-rose-400",
-    value: "text-rose-700 dark:text-rose-300",
-  },
-};
-
-const METRIC_ICONS: Record<ClearGrowthMetricIcon, LucideIcon> = {
-  users: Users,
-  phone: Phone,
-  fileText: FileText,
-  calendar: Calendar,
-  send: Send,
-  dollarSign: DollarSign,
-  star: Star,
-  handshake: Handshake,
-  userPlus: UserPlus,
-  target: Target,
-};
-
 const MAIN_ID = "home-clear-growth-heading";
+const CLEAR_GROWTH_LONG_DESC_ID = "clear-growth-infographic-desc";
+
+const METRIC_IMAGE_W = 1024;
+const METRIC_IMAGE_H = 576;
 
 export default function HomeClearGrowthSection() {
   return (
@@ -109,62 +41,40 @@ export default function HomeClearGrowthSection() {
             </p>
           </div>
 
-          <div className="mx-auto mt-10 grid max-w-6xl grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:mt-14 lg:grid-cols-5 lg:gap-5 xl:max-w-none">
-            {homeClearGrowthMetricCards.map((card) => {
-              const Icon = METRIC_ICONS[card.icon];
-              const tone = METRIC_TONE_STYLES[card.tone];
-
-              return (
-                <div
-                  key={card.id}
-                  className="flex h-full min-h-[8.75rem] flex-col rounded-xl border border-slate-200/85 bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] sm:p-[1.125rem] dark:border-zinc-700/85 dark:bg-zinc-900/50"
-                >
-                  <Icon
-                    className={`h-4 w-4 shrink-0 ${tone.icon}`}
-                    strokeWidth={1.5}
-                    aria-hidden
-                  />
-                  <p
-                    className={`mt-4 text-[1.7rem] font-bold tabular-nums leading-none tracking-tight sm:text-[1.875rem] lg:text-[2rem] ${tone.value}`}
-                  >
-                    {card.value}
-                  </p>
-                  <p className="mt-auto pt-3 text-sm font-semibold leading-snug text-text-primary">
-                    {card.label}
-                  </p>
-                </div>
-              );
-            })}
+          <div id={CLEAR_GROWTH_LONG_DESC_ID} className="sr-only">
+            <p>Sample results shown in the infographic:</p>
+            <ul>
+              {homeClearGrowthMetricCards.map((c) => (
+                <li key={c.id}>
+                  {c.value} {c.label}
+                </li>
+              ))}
+            </ul>
+            <p>Highlights:</p>
+            <ul>
+              {homeClearGrowthSummaryItems.map((s) => (
+                <li key={s.id}>
+                  {s.eyebrow}: {s.value}
+                </li>
+              ))}
+            </ul>
+            <p>
+              {homeClearGrowthClosingLead}
+              <span className="font-bold">{homeClearGrowthClosingAccent}</span>
+            </p>
           </div>
 
-          <div className="mx-auto mt-11 max-w-5xl rounded-2xl border border-slate-200/75 bg-zinc-50/70 px-5 py-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)] sm:mt-12 sm:px-8 lg:py-7 dark:border-zinc-700/80 dark:bg-zinc-900/40">
-            <div className="grid gap-8 sm:grid-cols-2 sm:gap-0 sm:divide-x sm:divide-slate-200/90 dark:sm:divide-zinc-600/70">
-              {homeClearGrowthSummaryItems.map((item, i) => {
-                const SummaryIcon = item.icon === "barChart3" ? BarChart3 : AlertTriangle;
-                return (
-                  <div
-                    key={item.id}
-                    className={`flex items-start gap-3.5 sm:gap-4 ${i === 1 ? "sm:pl-8" : "sm:pr-8"}`}
-                  >
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sky-600 dark:bg-sky-950/80 dark:text-sky-400">
-                      <SummaryIcon className="h-4 w-4" strokeWidth={1.5} aria-hidden />
-                    </span>
-                    <div className="min-w-0 pt-0.5">
-                      <p className="text-xs font-semibold tracking-wide text-accent">{item.eyebrow}</p>
-                      <p className="mt-1 text-lg font-bold leading-snug text-text-primary sm:text-xl">
-                        {item.value}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <p className="mx-auto mt-10 max-w-2xl text-center text-base leading-relaxed text-text-primary sm:mt-12 sm:text-lg">
-            {homeClearGrowthClosingLead}
-            <span className="font-bold text-accent">{homeClearGrowthClosingAccent}</span>
-          </p>
+          <figure className="mx-auto mt-10 max-w-5xl lg:mt-14">
+            <Image
+              src="/marketing/what-clear-growth-looks-like.jpg"
+              alt="What Clear Growth Looks Like — infographic with key business metrics, channel highlight, and takeaway about measurable growth."
+              width={METRIC_IMAGE_W}
+              height={METRIC_IMAGE_H}
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1024px"
+              className="h-auto w-full rounded-2xl border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:border-zinc-700/80"
+              aria-describedby={CLEAR_GROWTH_LONG_DESC_ID}
+            />
+          </figure>
         </div>
       </div>
     </section>
