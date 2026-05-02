@@ -65,7 +65,7 @@ export async function createProposal(clientId: string) {
       status: "draft",
       billing_snapshot: billing,
       agency_snapshot: {
-        name: "AI Product Studio",
+        name: "Zenpho · Local Growth Platform",
       },
       created_by: user.id,
     })

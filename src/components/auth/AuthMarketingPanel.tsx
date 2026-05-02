@@ -5,7 +5,6 @@ import {
   CalendarClock,
   Inbox,
   ShoppingBag,
-  Star,
   TrendingUp,
 } from "lucide-react";
 import { experienceStats } from "@/lib/data";
@@ -14,31 +13,25 @@ const FEATURES = [
   {
     id: "leads",
     title: "Smart lead capture",
-    body: "Capture and track leads from web, phone, forms, and referrals in one workspace.",
+    body: "Web, phone, forms, and referrals in one inbox.",
     Icon: Inbox,
   },
   {
     id: "appointments",
     title: "Appointments & pipeline",
-    body: "See every opportunity from inquiry to booked job—without losing follow-ups.",
+    body: "Inquiry through booked job with fewer dropped follow-ups.",
     Icon: CalendarClock,
   },
   {
-    id: "reviews",
-    title: "Reviews & referrals",
-    body: "Grow reputation and word-of-mouth with structured review and referral workflows.",
-    Icon: Star,
-  },
-  {
-    id: "roi",
-    title: "Channel ROI",
-    body: "Know which marketing drives revenue—not just clicks.",
+    id: "reviews-roi",
+    title: "Reviews, referrals & ROI",
+    body: "Grow word-of-mouth and see what marketing earns revenue.",
     Icon: TrendingUp,
   },
   {
     id: "store",
     title: "Zenpho Store",
-    body: "Order business cards, T-shirts, marketing materials, and more for your business.",
+    body: "Cards, apparel, print, and marketing materials on demand.",
     Icon: ShoppingBag,
     footerLink: { href: "/store", label: "Visit Store" },
   },
@@ -48,6 +41,10 @@ const FEATURES = [
 export default function AuthMarketingPanel() {
   const year = new Date().getFullYear();
   const statRow = experienceStats.slice(0, 3);
+
+  const trustLine = statRow
+    .map((s) => `${s.value} ${s.label.toLowerCase()}`)
+    .join(" · ");
 
   return (
     <div className="relative flex min-h-[min(100vh,900px)] flex-1 flex-col justify-between overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 px-8 py-10 lg:min-h-screen lg:px-12 lg:py-14">
@@ -71,52 +68,39 @@ export default function AuthMarketingPanel() {
           />
         </Link>
 
-        <div className="mt-12 max-w-xl">
+        <div className="mt-14 max-w-xl lg:mt-16">
           <h2 className="text-3xl font-black leading-tight tracking-tight text-white sm:text-4xl lg:text-[2.35rem] lg:leading-[1.12]">
-            The #1 sales toolkits for local businesses
+            The #1 sales toolkit for local businesses
           </h2>
-          <p className="mt-4 text-xl font-bold leading-snug text-white sm:text-2xl">
-            Grow local revenue.
-            <span className="text-accent"> See what works.</span>
-          </p>
-          <p className="mt-5 text-base leading-relaxed text-slate-300 lg:text-lg">
-            Everything you need to generate leads, book appointments, earn reviews, grow referrals,
-            and see which marketing channel produces revenue—in one platform built for local owners.
+          <p className="mt-5 text-lg font-medium leading-snug text-slate-300 sm:text-xl">
+            One workspace for leads, bookings, referrals, and marketing ROI—built for local owners.
           </p>
         </div>
 
-        <div className="mt-10 grid grid-cols-3 gap-3 sm:gap-4">
-          {statRow.map((s) => (
-            <div
-              key={s.label}
-              className="rounded-2xl border border-white/10 bg-white/[0.06] px-3 py-4 text-center backdrop-blur-sm sm:px-4"
-            >
-              <p className="text-2xl font-black tabular-nums text-white sm:text-3xl">{s.value}</p>
-              <p className="mt-1 text-[11px] font-medium leading-snug text-slate-400 sm:text-xs">{s.label}</p>
-            </div>
-          ))}
-        </div>
+        <p className="mt-7 text-xs font-medium leading-relaxed tracking-wide text-slate-400 sm:text-sm">
+          {trustLine}
+        </p>
 
-        <div className="mt-10 grid gap-3 sm:grid-cols-2">
+        <div className="mt-12 grid gap-3 sm:grid-cols-2 sm:gap-3.5">
           {FEATURES.map(({ id, title, body, Icon, footerLink }) => (
             <div
               key={id}
-              className="rounded-2xl border border-white/10 bg-white/[0.06] p-4 backdrop-blur-sm"
+              className="rounded-2xl border border-white/10 bg-white/[0.06] p-3.5 backdrop-blur-sm sm:p-3"
             >
               <div className="flex gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/20 text-accent">
-                  <Icon className="h-5 w-5" strokeWidth={2} aria-hidden />
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/20 text-accent">
+                  <Icon className="h-4.5 w-4.5" strokeWidth={2} aria-hidden />
                 </span>
                 <div className="min-w-0">
-                  <p className="font-semibold text-white">{title}</p>
-                  <p className="mt-1 text-sm leading-relaxed text-slate-400">{body}</p>
+                  <p className="text-sm font-semibold text-white">{title}</p>
+                  <p className="mt-0.5 text-xs leading-snug text-slate-400">{body}</p>
                   {footerLink ? (
                     <Link
                       href={footerLink.href}
-                      className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-accent hover:underline"
+                      className="mt-2 inline-flex min-h-9 items-center gap-1 py-1 text-sm font-semibold text-accent hover:underline"
                     >
                       {footerLink.label}
-                      <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                      <ArrowRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
                     </Link>
                   ) : null}
                 </div>
@@ -126,7 +110,7 @@ export default function AuthMarketingPanel() {
         </div>
       </div>
 
-      <p className="relative z-10 mt-12 text-xs text-slate-500">
+      <p className="relative z-10 mt-14 text-xs text-slate-500 lg:mt-16">
         © {year} Zenpho. All rights reserved.
       </p>
     </div>

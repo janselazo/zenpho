@@ -70,7 +70,7 @@ export default function ProspectingPendingContent({
         Notify me when it&apos;s ready
       </button>
       <p className="mt-6 text-xs text-text-secondary/70 dark:text-zinc-500">
-        Part of AI Product Studio · Coming soon
+        Zenpho · Local Growth Platform · Coming soon
       </p>
     </div>
   );

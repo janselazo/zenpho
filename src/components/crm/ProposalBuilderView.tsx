@@ -834,7 +834,7 @@ function ProposalPreview({
         <div className="flex items-start justify-between gap-4 border-b border-border pb-4 dark:border-zinc-800">
           <div>
             <p className="text-lg font-bold text-text-primary dark:text-zinc-100">
-              AI Product Studio
+              Zenpho · Local Growth Platform
             </p>
             <p className="text-xs text-text-secondary dark:text-zinc-500">
               Proposal

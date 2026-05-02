@@ -67,12 +67,21 @@ export default function LocalServicePricingComparison() {
                     <div className={`flex flex-col gap-2 pt-1 ${plan.featured ? "mt-2" : ""}`}>
                       <span className="text-lg font-bold leading-snug text-text-primary sm:text-xl">{plan.title}</span>
                       {plan.headerNote ? (
-                        <span className="text-xs font-medium leading-snug text-accent">{plan.headerNote}</span>
+                        <span className="text-[13px] font-medium leading-snug text-text-secondary sm:text-sm">
+                          {plan.headerNote}
+                        </span>
                       ) : null}
                       {plan.summary.trim() ? (
                         <p className="text-xs leading-relaxed text-text-secondary sm:text-[13px]">{plan.summary}</p>
                       ) : null}
-                      <p className="text-xl font-black tracking-tight text-text-primary sm:text-2xl">{plan.price}</p>
+                      <div className="mt-3 flex flex-col gap-0.5">
+                        <p className="text-xl font-black tabular-nums tracking-tight text-text-primary sm:text-2xl">
+                          {plan.priceLead}
+                        </p>
+                        {plan.priceNote ? (
+                          <p className="text-xs leading-snug text-text-secondary sm:text-sm">{plan.priceNote}</p>
+                        ) : null}
+                      </div>
                       <Button
                         href={plan.ctaHref}
                         variant={plan.featured ? "primary" : "dark"}

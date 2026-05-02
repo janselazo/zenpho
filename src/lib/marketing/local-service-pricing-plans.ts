@@ -1,7 +1,10 @@
 export type LocalServicePricingPlan = {
   id: string;
   title: string;
-  price: string;
+  /** Bold price line shown in comparison header */
+  priceLead: string;
+  /** Optional subdued second line (e.g. ad spend note) */
+  priceNote?: string;
   summary: string;
   /** Legacy field — comparison matrix is primary UI; keep empty or short notes for exports. */
   included: string[];
@@ -43,8 +46,8 @@ export const localServicePricingPlans: LocalServicePricingPlan[] = [
   {
     id: "setup",
     title: "Development",
-    price: "$1,000 one-time",
-    headerNote: "Zenpho platform included on every plan.",
+    priceLead: "$1,000 one-time",
+    headerNote: "Zenpho platform on every plan.",
     summary: "",
     included: [],
     bestFor: [
@@ -60,9 +63,10 @@ export const localServicePricingPlans: LocalServicePricingPlan[] = [
   {
     id: "growth-engine",
     title: "Growth",
-    price: "$2,000/month + ad spend",
+    priceLead: "$2,000/month",
+    priceNote: "Plus ad spend",
     featured: true,
-    headerNote: "Includes everything in Development.",
+    headerNote: "Includes Development.",
     summary: "",
     included: [],
     bestFor: [
@@ -78,8 +82,9 @@ export const localServicePricingPlans: LocalServicePricingPlan[] = [
   {
     id: "full-partner",
     title: "Scale",
-    price: "$3,000/month + ad spend",
-    headerNote: "Includes everything in Growth (and Development).",
+    priceLead: "$3,000/month",
+    priceNote: "Plus ad spend",
+    headerNote: "Everything in Growth.",
     summary: "",
     included: [],
     bestFor: [

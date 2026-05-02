@@ -25,7 +25,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 export const metadata = {
-  title: "AI Product Studio",
+  title: "Zenpho · Local Growth Platform",
   robots: { index: false, follow: false },
 };
 

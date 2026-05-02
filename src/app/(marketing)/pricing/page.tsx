@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     absolute: "Pricing | Zenpho",
   },
   description:
-    "Zenpho pricing: Development ($1,000 one-time), Growth ($2,000/month + ad spend), and Scale ($3,000/month + ad spend). Compare platform, website and GBP, Meta ads, SEO, and Google Ads.",
+    "Zenpho pricing: Development ($1,000 one-time), Growth and Scale (monthly fee plus separate ad spend). Compare platform, website and GBP, Meta ads, SEO, and Google Ads.",
 };
 
 export default function PricingPage() {
