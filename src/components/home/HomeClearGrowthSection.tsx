@@ -149,8 +149,8 @@ export default function HomeClearGrowthSection() {
                     key={item.id}
                     className={`flex gap-4 ${i === 1 ? "sm:pl-8" : "sm:pr-8"}`}
                   >
-                    <span className="inline-flex shrink-0 text-accent pt-0.5">
-                      <SummaryIcon className="h-6 w-6" strokeWidth={2} aria-hidden />
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent dark:bg-accent/20">
+                      <SummaryIcon className="h-5 w-5" strokeWidth={2} aria-hidden />
                     </span>
                     <div className="min-w-0">
                       <p className="text-xs font-semibold tracking-wide text-accent">{item.eyebrow}</p>

@@ -1,8 +1,16 @@
+import { Caveat } from "next/font/google";
 import AppSidebar from "@/components/app/AppSidebar";
 import CrmTopBar from "@/components/app/CrmTopBar";
 import SupabaseSetupBanner from "@/components/app/SupabaseSetupBanner";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
+
+/** Handwritten accents in prospecting (e.g. Cold Outreach) — not loaded on public marketing pages. */
+const caveat = Caveat({
+  variable: "--font-caveat",
+  subsets: ["latin"],
+  display: "swap",
+});
 
 /** Avoid static prerender: server pages call Supabase; build env may omit public keys. */
 export const dynamic = "force-dynamic";
@@ -73,7 +81,7 @@ export default async function CrmLayout({
   }
 
   return (
-    <div className="crm-dark-bg flex min-h-screen bg-surface">
+    <div className={`crm-dark-bg flex min-h-screen bg-surface ${caveat.variable}`}>
       <AppSidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <CrmTopBar initialUser={topBarUser} />
