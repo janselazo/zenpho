@@ -1,5 +1,6 @@
 import { Fragment } from "react";
 import Button from "@/components/ui/Button";
+import PricingComparisonFeatureLabel from "@/components/pricing/PricingComparisonFeatureLabel";
 import { Check, X } from "lucide-react";
 import { localServicePricingPlans } from "@/lib/marketing/local-service-pricing-plans";
 import {
@@ -106,12 +107,13 @@ export default function LocalServicePricingComparison() {
                       >
                         <th
                           scope="row"
-                          title={row.tooltip}
                           className={`sticky left-0 z-10 ${stickyBg} border-r border-border/50 px-4 py-3 pr-3 font-normal leading-snug text-text-primary sm:px-5 sm:py-3.5`}
                         >
-                          <span className={row.tooltip ? "border-b border-dotted border-text-secondary/40" : undefined}>
-                            {row.label}
-                          </span>
+                          <PricingComparisonFeatureLabel
+                            rowId={row.id}
+                            label={row.label}
+                            tooltip={row.tooltip}
+                          />
                         </th>
                         {COLUMN_IDS.map((colId) => (
                           <InclusionCell key={colId} included={row.cells[colId]} />

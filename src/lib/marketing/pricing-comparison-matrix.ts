@@ -7,7 +7,7 @@ export type PricingComparisonCells = Record<PricingComparisonPlanId, boolean>;
 export type PricingComparisonFeatureRow = {
   id: string;
   label: string;
-  /** Optional longer explanation for `title` on label cell */
+  /** Short explanation shown in the comparison tooltip */
   tooltip?: string;
   cells: PricingComparisonCells;
 };
@@ -37,9 +37,10 @@ const scaleOnly: PricingComparisonCells = {
 };
 
 function platformRows(): PricingComparisonFeatureRow[] {
-  return platformIncludedInAllPlans.map((label, i) => ({
+  return platformIncludedInAllPlans.map((item, i) => ({
     id: `platform-${i}`,
-    label,
+    label: item.label,
+    tooltip: item.tooltip,
     cells: { ...allTrue },
   }));
 }
@@ -63,11 +64,15 @@ export const pricingComparisonSections: PricingComparisonSection[] = [
       {
         id: "dev-gbp",
         label: "Google Business Profile setup",
+        tooltip:
+          "Claim, verify, and tune your profile—categories, services, photos, and posts aligned to how you win locally.",
         cells: { ...allTrue },
       },
       {
         id: "dev-email",
         label: "Business email setup",
+        tooltip:
+          "Professional email on your domain with DNS basics and deliverability setup so you look credible in the inbox.",
         cells: { ...allTrue },
       },
       {
@@ -79,11 +84,15 @@ export const pricingComparisonSections: PricingComparisonSection[] = [
       {
         id: "dev-hosting",
         label: "Hosting and support",
+        tooltip:
+          "Managed hosting with backups and monitoring plus technical support when your site needs attention.",
         cells: { ...allTrue },
       },
       {
         id: "dev-branding",
         label: "Branding (optional)",
+        tooltip:
+          "Logo, palette, and voice guidelines when you want a cohesive refresh—not required for every engagement.",
         cells: { ...allTrue },
       },
     ],
@@ -95,11 +104,15 @@ export const pricingComparisonSections: PricingComparisonSection[] = [
       {
         id: "gr-meta",
         label: "Meta (Facebook & Instagram) ads management",
+        tooltip:
+          "Campaign structure, targeting, budgets, and iteration across Meta placements with testing baked into the rhythm.",
         cells: { ...growthAndScale },
       },
       {
         id: "gr-creative",
         label: "Performance Creatives",
+        tooltip:
+          "Static and motion creative built to test hooks, offers, and angles—then double down on what wins.",
         cells: { ...growthAndScale },
       },
       {
@@ -117,6 +130,8 @@ export const pricingComparisonSections: PricingComparisonSection[] = [
       {
         id: "sc-google",
         label: "Google Ads (Search & Performance Max)",
+        tooltip:
+          "Search and Performance Max programs with conversion signals tied back to leads, appointments, and revenue.",
         cells: { ...scaleOnly },
       },
     ],

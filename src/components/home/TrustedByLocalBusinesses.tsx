@@ -4,7 +4,7 @@ import { trustedLocalBusinesses } from "@/lib/trusted-local-businesses";
 export default function TrustedByLocalBusinesses() {
   return (
     <div className="relative z-0 mx-auto mt-14 w-full max-w-6xl">
-      <p className="text-center text-sm font-medium tracking-wide text-zinc-500 dark:text-zinc-400">
+      <p className="text-center text-sm font-bold tracking-wide text-zinc-500 dark:text-zinc-400">
         Trusted by 50+ Local Businesses
       </p>
       <div className="mt-8 grid grid-cols-2 justify-items-center gap-x-4 gap-y-7 px-1 sm:gap-x-6 sm:gap-y-8 md:flex md:flex-wrap md:items-center md:justify-center md:gap-x-12 md:gap-y-8 lg:gap-x-16">

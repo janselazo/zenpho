@@ -17,10 +17,26 @@ export type LocalServicePricingPlan = {
 
 /** Zenpho web app & workflows — same foundation on every plan. */
 export const platformIncludedInAllPlans = [
-  "Lead management — capture, stage, and follow up in one workspace",
-  "Appointments — pipeline visibility and booking tied to your leads",
-  "Reviews — request, monitor, and grow your reputation",
-  "Referrals — track sources and grow referral revenue",
+  {
+    label: "Lead management — capture, stage, and follow up in one workspace",
+    tooltip:
+      "One workspace for inbound leads: stages, owners, tasks, and follow-up cadences so opportunities don't stall.",
+  },
+  {
+    label: "Appointments — pipeline visibility and booking tied to your leads",
+    tooltip:
+      "See what's booked, tie appointments back to leads, and keep your pipeline visible end to end.",
+  },
+  {
+    label: "Reviews — request, monitor, and grow your reputation",
+    tooltip:
+      "Request reviews on a steady rhythm, monitor new feedback, and use workflows to grow rating and volume.",
+  },
+  {
+    label: "Referrals — track sources and grow referral revenue",
+    tooltip:
+      "Know who refers work, measure referral revenue, and nurture relationships that compound over time.",
+  },
 ] as const;
 
 export const localServicePricingPlans: LocalServicePricingPlan[] = [

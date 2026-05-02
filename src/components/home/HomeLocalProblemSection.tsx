@@ -24,7 +24,7 @@ export default function HomeLocalProblemSection() {
                 id={HEADLINE_ID}
                 className="heading-display text-balance text-3xl font-bold leading-[1.12] tracking-tight text-text-primary sm:text-4xl lg:text-[2.35rem] lg:leading-[1.1]"
               >
-                Local service businesses often lose revenue because of:
+                Where Local Service Businesses Lose Revenue
               </h2>
               <p className="mt-5 max-w-prose text-base leading-relaxed text-text-secondary sm:text-lg">
                 Many local businesses are already getting calls, website visits, quote requests, and referrals. But if

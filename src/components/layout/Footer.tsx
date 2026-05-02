@@ -19,7 +19,7 @@ function SocialIconLink({
   children: ReactNode;
 }) {
   const cls =
-    "inline-flex h-10 w-10 items-center justify-center rounded-full border border-border/70 bg-white/90 text-text-secondary shadow-sm transition-colors hover:border-accent/35 hover:text-accent";
+    "inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/70 bg-white/90 text-text-secondary shadow-sm transition-colors hover:border-accent/35 hover:text-accent";
   if (external) {
     return (
       <a href={href} target="_blank" rel="noopener noreferrer" aria-label={ariaLabel} className={cls}>
@@ -74,20 +74,20 @@ export default function Footer() {
             </div>
             <div className="mt-5 flex flex-wrap items-center gap-2">
               <SocialIconLink href="mailto:hello@zenpho.com" ariaLabel="Email hello@zenpho.com">
-                <Mail className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
+                <Mail className="h-4 w-4" strokeWidth={2} aria-hidden />
               </SocialIconLink>
               <SocialIconLink href="https://x.com/zenpho" ariaLabel="Zenpho on X" external>
-                <IconX className="h-[17px] w-[17px]" />
+                <IconX className="h-[15px] w-[15px]" />
               </SocialIconLink>
               <SocialIconLink
                 href="https://www.linkedin.com/company/zenpho"
                 ariaLabel="Zenpho on LinkedIn"
                 external
               >
-                <Linkedin className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
+                <Linkedin className="h-4 w-4" strokeWidth={2} aria-hidden />
               </SocialIconLink>
               <SocialIconLink href="https://github.com/zenpho" ariaLabel="Zenpho on GitHub" external>
-                <Github className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
+                <Github className="h-4 w-4" strokeWidth={2} aria-hidden />
               </SocialIconLink>
             </div>
           </div>
