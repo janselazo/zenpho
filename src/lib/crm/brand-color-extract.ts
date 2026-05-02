@@ -739,6 +739,17 @@ export function isLikelyOpenGraphOrSocialBannerImageUrl(resolvedUrl: string, raw
   );
 }
 
+/** BrandPush / review widgets vendors — often wrongly tagged `alt="logo"` but not the SMB wordmark. */
+export function isLikelyThirdPartyTrustOrReviewMarketingBadgeUrl(
+  resolvedUrl: string,
+  rawHint = "",
+): boolean {
+  const blob = `${resolvedUrl}\n${rawHint}`.toLowerCase();
+  return /brandpush|trustbadge|trust-badge|reviews-badge|\b(ti_|trustindex)\b|\bbirdeye[-_]badge\b|\bstamped[-_]io\b|\bfeefo[-_]badge\b|\byotpo[-_]badge\b|\bsitejabber\b|\bguaranteed[-_]reviews\b/i.test(
+    blob,
+  );
+}
+
 /**
  * Professional associations, regulator marks, and certification badges often sit in
  * headers or JSON-adjacent markup and outscore the real wordmark on palette richness.
@@ -795,6 +806,7 @@ function pushLogoCandidate(
   if (isPartnerFinancingLogoBlob(url, hintBlob)) return;
   if (isProfessionalAssociationOrCertificationLogoBlob(url, hintBlob)) return;
   if (isLikelyOpenGraphOrSocialBannerImageUrl(url, hintBlob)) return;
+  if (isLikelyThirdPartyTrustOrReviewMarketingBadgeUrl(url, hintBlob)) return;
   seen.add(url);
   candidates.push({ url, score, index });
 }
@@ -897,7 +909,7 @@ function extractJsonLdLogoRefs(html: string): { url: string; index: number; scor
       const logoSet = new Set(fromLogos.map((u) => u.trim()).filter(Boolean));
       for (const u of fromLogos) {
         const t = u.trim();
-        if (t) out.push({ url: t, index, score: 118 });
+        if (t) out.push({ url: t, index, score: 132 });
       }
       for (const u of imageOnly) {
         const t = u.trim();
@@ -911,6 +923,14 @@ function extractJsonLdLogoRefs(html: string): { url: string; index: number; scor
 }
 
 /** Images that look like trust seals / badges, not the business wordmark. */
+/** HTML near an <img> that looks like CookieYes / OneTrust / Elementor newsletter modals etc. — not the masthead logo. */
+const POPUP_OR_CONSENT_LOGO_CONTEXT_RE =
+  /\b(cookie[-_]?(consent|banner|notice)|cookiebot|cookieyes|cybotcookiebotdialog|cky-overlay|cky-modal|cky-consent-bar|cky-banner|onetrust|ot-sdk|privacy[-_]?wall|gdpr-|axeptio|cmplz-|cli-modal-banner|cli-bar-popup|elementor-popup-modal|elementor-location-popup|popmake-|pum-overlay|pum-container|class=["'][^"']*pum-|poptin-|sumome-|sleeknote|klaviyo|privy-|newsletter[-_]?popup|exit[-_]?intent|signup[-_]?modal|lead[-_]?magnet|mc-modal-overlay|hubspot-feedback|wpforms-overlay-overlay)\b/i;
+
+function logoContextLikelyPromotionOrConsentOverlay(tag: string, context: string): boolean {
+  return POPUP_OR_CONSENT_LOGO_CONTEXT_RE.test(`${tag}\n${context}`);
+}
+
 function isLikelyTrustBadgeOrSeal(tag: string, context: string): boolean {
   const blob = `${tag} ${context}`.toLowerCase();
   if (
@@ -1084,11 +1104,8 @@ export function extractLogoUrls(
     ) {
       score -= 48;
     }
-    if (
-      /popmake-|pum-overlay|pum-container|elementor-location-popup|class=["'][^"']*pum-/i.test(context) &&
-      !looksLikeLogoFilename
-    ) {
-      score -= 55;
+    if (logoContextLikelyPromotionOrConsentOverlay(tag, context) && !looksLikeLogoFilename) {
+      score -= 62;
     }
     if (score < 24) continue;
     pushLogoCandidate(candidates, seen, imageSrcFromTag(tag), baseUrl, score, m.index, tag);
@@ -1206,15 +1223,14 @@ export async function fetchBrandAssetsFromUrl(
   options: LogoExtractionOptions = {},
 ): Promise<BrandAssets> {
   const pageUrl = normalizeUrl(url.trim());
-  let html = await fetchPageHtml(pageUrl, timeoutMs);
-  let resolvedBase = pageUrl;
+  const homepageUrl = brandHomepageForFetch(pageUrl);
+  // Prefer site root: GBP and ads often append UTMs or deep paths; header/logo/CSS still live on `/`.
+  let html = await fetchPageHtml(homepageUrl, timeoutMs);
+  let resolvedBase = homepageUrl;
 
-  if (!html) {
-    const originFallback = brandHomepageForFetch(url);
-    if (originFallback !== pageUrl) {
-      html = await fetchPageHtml(originFallback, timeoutMs);
-      resolvedBase = originFallback;
-    }
+  if (!html && homepageUrl !== pageUrl) {
+    html = await fetchPageHtml(pageUrl, timeoutMs);
+    resolvedBase = pageUrl;
   }
 
   if (!html) {

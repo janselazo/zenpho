@@ -511,7 +511,7 @@ function layoutSoftFilledPillsRowWrap(
   const gap = 6;
   let px = startX;
   let baseline = firstRowBaselineY;
-  let minBottom = baseline - pillH;
+  let lowestPillBottom = Infinity;
 
   for (const item of items) {
     const safe = sanitize(item.label);
@@ -520,9 +520,11 @@ function layoutSoftFilledPillsRowWrap(
       px = startX;
       baseline -= pillH + gap;
     }
+    const rectBottom = baseline - size - 6;
+    lowestPillBottom = Math.min(lowestPillBottom, rectBottom);
     ctx.page.drawRectangle({
       x: px,
-      y: baseline - size - 6,
+      y: rectBottom,
       width: w,
       height: pillH,
       color: item.bg,
@@ -536,9 +538,28 @@ function layoutSoftFilledPillsRowWrap(
       color: item.fg,
     });
     px += w + gap;
-    minBottom = Math.min(minBottom, baseline - pillH);
   }
-  return minBottom - 8;
+  if (!Number.isFinite(lowestPillBottom)) return firstRowBaselineY - size - 6 - 12;
+  return lowestPillBottom - 12;
+}
+
+/** Draw raster/SVG-derived image centered in a square without stretching (aspect preserved). */
+function drawImageContainedInSquare(
+  page: PDFPage,
+  image: PDFImage,
+  squareLeft: number,
+  squareTop: number,
+  squareSize: number,
+): void {
+  const iw = image.width;
+  const ih = image.height;
+  if (iw <= 0 || ih <= 0) return;
+  const scale = Math.min(squareSize / iw, squareSize / ih);
+  const dw = iw * scale;
+  const dh = ih * scale;
+  const bx = squareLeft + (squareSize - dw) / 2;
+  const by = squareTop - squareSize + (squareSize - dh) / 2;
+  page.drawImage(image, { x: bx, y: by, width: dw, height: dh });
 }
 
 function channelLabelsFromAudit(audit: RevenueLeakAudit): string[] {
@@ -610,6 +631,7 @@ function drawGoogleBusinessProfileCard(
   const catLine = sanitize(
     [business.category ?? "Local business", statusLabel].filter(Boolean).join(" · "),
   );
+  const catLines = wrapText(catLine, ctx.bold, 9.5, textMax);
   const addrLines = business.address?.trim()
     ? wrapText(sanitize(business.address), ctx.font, 9, textMax)
     : [];
@@ -661,11 +683,12 @@ function drawGoogleBusinessProfileCard(
   }
 
   const nameLinesDrawn = Math.min(nameLines.length, 3);
+  const catLinesDrawn = Math.min(catLines.length, 3);
   let textStackH =
     16 +
     nameLinesDrawn * 26 +
     12 +
-    (catLine.trim() ? 12 : 0) +
+    (catLine.trim() ? Math.max(catLinesDrawn * 13, 12) : 0) +
     (addrLines.length ? Math.min(addrLines.length, 3) * 11 + 8 : 0) +
     14 +
     pillLines * pillRowH +
@@ -690,19 +713,7 @@ function drawGoogleBusinessProfileCard(
   });
 
   if (headerImage) {
-    const iw = headerImage.width;
-    const ih = headerImage.height;
-    const scale = Math.min(imgBox / iw, imgBox / ih);
-    const dw = iw * scale;
-    const dh = ih * scale;
-    const ix = imgLeft + (imgBox - dw) / 2;
-    const iy = imgTop - imgBox + (imgBox - dh) / 2;
-    ctx.page.drawImage(headerImage, {
-      x: ix,
-      y: iy,
-      width: dw,
-      height: dh,
-    });
+    drawImageContainedInSquare(ctx.page, headerImage, imgLeft, imgTop, imgBox);
   }
 
   const ringCy = cardTop - pad - imgBox / 2 - 4;
@@ -743,14 +754,16 @@ function drawGoogleBusinessProfileCard(
     ty -= 24;
   }
   ty -= 4;
-  ctx.page.drawText(catLine, {
-    x: textLeft,
-    y: ty,
-    size: 9.5,
-    font: ctx.bold,
-    color: INK_SOFT,
-  });
-  ty -= 12;
+  for (const line of catLines.slice(0, 3)) {
+    ctx.page.drawText(line, {
+      x: textLeft,
+      y: ty,
+      size: 9.5,
+      font: ctx.bold,
+      color: INK_SOFT,
+    });
+    ty -= 13;
+  }
   if (addrLines.length) {
     ty -= 2;
     for (const line of addrLines.slice(0, 4)) {
@@ -767,21 +780,22 @@ function drawGoogleBusinessProfileCard(
   ty -= 8;
   const pillsBottom = layoutSoftFilledPillsRowWrap(ctx, textLeft, ty, rightEdge, pills, pillSz);
 
-  ty = pillsBottom - 10;
+  ty = pillsBottom - 6;
 
-  ctx.page.drawText(
-    sanitize(
-      primaryPhone ? `Phone:  ${primaryPhone}` : "No phone number on Google listing.",
-    ),
+  ty = drawText(
+    ctx,
+    sanitize(primaryPhone ? `Phone: ${primaryPhone}` : "No phone number on Google listing."),
     {
       x: textLeft,
       y: ty,
       size: 9,
       font: ctx.bold,
       color: primaryPhone ? ACCENT : MUTED,
+      maxWidth: textMax,
+      lineGap: 2,
     },
   );
-  ty -= 16;
+  ty -= 10;
   if (business.googleMapsUri?.trim()) {
     ty = drawText(ctx, `Open in Maps: ${sanitize(business.googleMapsUri)}`, {
       x: textLeft,
@@ -911,17 +925,7 @@ function drawBrandSummary(ctx: Ctx, audit: RevenueLeakAudit, headerImage: PDFIma
   });
 
   if (headerImage) {
-    const iw = headerImage.width;
-    const ih = headerImage.height;
-    const scale = Math.min(thumb / iw, thumb / ih);
-    const dw = iw * scale;
-    const dh = ih * scale;
-    ctx.page.drawImage(headerImage, {
-      x: MARGIN + pad + (thumb - dw) / 2,
-      y: rowTop - thumb + (thumb - dh) / 2,
-      width: dw,
-      height: dh,
-    });
+    drawImageContainedInSquare(ctx.page, headerImage, MARGIN + pad, rowTop, thumb);
   }
 
   let cxColor = MARGIN + pad + thumb + 14;
@@ -1084,7 +1088,26 @@ function drawRevenueLeakSnapshot(ctx: Ctx, audit: RevenueLeakAudit): void {
   const listBlockH =
     issueCount === 0 ? 0 : listRows.length > 0 ? 16 + wrappedTitleRows * 14 : 0;
 
-  const cardH = pad + 20 + (issueCount === 0 ? 28 : 46) + 12 + listBlockH + 24 + pad;
+  const headlineFull = sanitize(
+    `${issueCount} ${issueCount === 1 ? "issue" : "issues"} are costing you ${avgMonthly} average / month`,
+  );
+  const headlineLns =
+    issueCount === 0
+      ? 0
+      : ctx.bold.widthOfTextAtSize(headlineFull, 16) <= innerW
+        ? 1
+        : wrapText(headlineFull, ctx.bold, 16, innerW).length;
+  const headlineBlockH =
+    issueCount === 0 ? 0 : headlineLns <= 1 ? 22 : headlineLns * 20 + 6;
+
+  const cardH =
+    pad +
+    20 +
+    (issueCount === 0 ? 28 : headlineBlockH) +
+    12 +
+    listBlockH +
+    24 +
+    pad;
 
   ensure(ctx, cardH + 20);
   const top = ctx.y;
@@ -1110,32 +1133,55 @@ function drawRevenueLeakSnapshot(ctx: Ctx, audit: RevenueLeakAudit): void {
     });
   } else {
     const mid = `${issueCount} ${issueCount === 1 ? "issue" : "issues"} are costing you `;
-    const tail = " average / month";
-    ctx.page.drawText(mid, {
-      x: MARGIN + pad,
-      y,
-      size: 16,
-      font: ctx.bold,
-      color: INK,
-    });
-    const midW = ctx.bold.widthOfTextAtSize(mid, 16);
-    ctx.page.drawText(avgMonthly, {
-      x: MARGIN + pad + midW,
-      y,
-      size: 16,
-      font: ctx.bold,
-      color: ACCENT,
-    });
-    const moneyW = ctx.bold.widthOfTextAtSize(avgMonthly, 16);
-    ctx.page.drawText(tail, {
-      x: MARGIN + pad + midW + moneyW,
-      y,
-      size: 16,
-      font: ctx.bold,
-      color: INK,
-    });
+    const tail = ` average / month`;
+    const fullSans = sanitize(`${mid}${avgMonthly}${tail}`);
+    const headlineFitsSingleLine =
+      ctx.bold.widthOfTextAtSize(fullSans, 16) <= innerW;
 
-    y -= 22;
+    const headlineTop = y;
+    const headlineWrapped = headlineFitsSingleLine ? [] : wrapText(fullSans, ctx.bold, 16, innerW);
+
+    if (headlineFitsSingleLine) {
+      ctx.page.drawText(sanitize(mid), {
+        x: MARGIN + pad,
+        y,
+        size: 16,
+        font: ctx.bold,
+        color: INK,
+      });
+      const midW = ctx.bold.widthOfTextAtSize(sanitize(mid), 16);
+      ctx.page.drawText(avgMonthly, {
+        x: MARGIN + pad + midW,
+        y,
+        size: 16,
+        font: ctx.bold,
+        color: ACCENT,
+      });
+      const moneyW = ctx.bold.widthOfTextAtSize(avgMonthly, 16);
+      ctx.page.drawText(sanitize(tail), {
+        x: MARGIN + pad + midW + moneyW,
+        y,
+        size: 16,
+        font: ctx.bold,
+        color: INK,
+      });
+    } else {
+      let hy = headlineTop;
+      for (const ln of headlineWrapped) {
+        ctx.page.drawText(ln, {
+          x: MARGIN + pad,
+          y: hy,
+          size: 16,
+          font: ctx.bold,
+          color: INK,
+        });
+        hy -= 20;
+      }
+    }
+
+    const headlineDepth = headlineFitsSingleLine ? 22 : headlineWrapped.length * 20 + 6;
+    y = headlineTop - headlineDepth;
+
     if (listRows.length > 0) {
       ctx.page.drawText("Issues by estimated impact (condensed list):", {
         x: MARGIN + pad,
@@ -1331,6 +1377,41 @@ function drawMoneySummary(ctx: Ctx, audit: RevenueLeakAudit): void {
   }
 }
 
+/** Hang body text under bold label (label + body share first baseline; continuation aligns with body column). */
+function drawHangingLabelBlock(
+  ctx: Ctx,
+  prefix: string,
+  lines: readonly string[],
+  startY: number,
+  opts: { color?: RGB } = {},
+): number {
+  const color = opts.color ?? MUTED;
+  const indent = MARGIN + 14;
+  const hangX = indent + ctx.bold.widthOfTextAtSize(prefix, 8.5) + 4;
+  let y = startY;
+  const body = lines.length ? lines : [""];
+  for (let i = 0; i < body.length; i++) {
+    if (i === 0) {
+      ctx.page.drawText(prefix, {
+        x: indent,
+        y,
+        size: 8.5,
+        font: ctx.bold,
+        color: INK,
+      });
+    }
+    ctx.page.drawText(body[i]!, {
+      x: hangX,
+      y,
+      size: 8.5,
+      font: ctx.font,
+      color,
+    });
+    y -= 11;
+  }
+  return y;
+}
+
 // ─── Finding card (reused in multiple places) ────────────────────────────────
 function drawFindingCard(ctx: Ctx, finding: AuditFinding, index: number): void {
   const sev = finding.severity;
@@ -1338,20 +1419,36 @@ function drawFindingCard(ctx: Ctx, finding: AuditFinding, index: number): void {
   const innerLeft = MARGIN + 38;
   const innerRight = PAGE_W - MARGIN - severityW - 14;
   const titleMax = innerRight - innerLeft - 4;
-  const bodyMax = CONTENT_W - 56;
+
+  const textRight = PAGE_W - MARGIN - 14;
+  const hangIndentBase = MARGIN + 14;
+  const availForHang = (p: string) =>
+    Math.max(
+      80,
+      textRight - hangIndentBase - ctx.bold.widthOfTextAtSize(p, 8.5) - 4,
+    );
 
   const titleLines = wrapText(finding.title, ctx.bold, 11, titleMax);
-  const what = wrapText(`What we found: ${finding.whatWeFound}`, ctx.font, 8.5, bodyMax);
-  const why = wrapText(`Why it matters: ${finding.whyItMatters}`, ctx.font, 8.5, bodyMax);
-  const fix = wrapText(`Recommended fix: ${finding.recommendedFix}`, ctx.font, 8.5, bodyMax);
+  const whatLines = wrapText(sanitize(finding.whatWeFound), ctx.font, 8.5, availForHang("What we found:"));
+  const whyLines = wrapText(sanitize(finding.whyItMatters), ctx.font, 8.5, availForHang("Why it matters:"));
+  const fixLines = wrapText(sanitize(finding.recommendedFix), ctx.font, 8.5, availForHang("Recommended fix:"));
 
   const titleBlockH = titleLines.length * 14;
   const sectionGap = 6;
   const bodyLineH = 11;
-  const blockH = (lines: string[]) => 4 + lines.length * bodyLineH;
+  const blockH = (lines: readonly string[]) => 4 + Math.max(1, lines.length) * bodyLineH;
   const impactRow = finding.estimatedRevenueImpactHigh > 0 ? 16 : 0;
   const cardH =
-    20 + titleBlockH + sectionGap + blockH(what) + sectionGap + blockH(why) + sectionGap + blockH(fix) + impactRow + 14;
+    20 +
+    titleBlockH +
+    sectionGap +
+    blockH(whatLines) +
+    sectionGap +
+    blockH(whyLines) +
+    sectionGap +
+    blockH(fixLines) +
+    impactRow +
+    14;
 
   ensure(ctx, cardH + 12);
   const top = ctx.y;
@@ -1391,16 +1488,15 @@ function drawFindingCard(ctx: Ctx, finding: AuditFinding, index: number): void {
 
   // What we found
   lineY -= 6;
-  drawLabelledLines(ctx, what, lineY, "What we found:");
-  lineY -= blockH(what) + 0;
+  lineY = drawHangingLabelBlock(ctx, "What we found:", whatLines, lineY);
+  lineY -= sectionGap;
 
   // Why it matters
-  drawLabelledLines(ctx, why, lineY, "Why it matters:");
-  lineY -= blockH(why);
+  lineY = drawHangingLabelBlock(ctx, "Why it matters:", whyLines, lineY);
+  lineY -= sectionGap;
 
   // Fix
-  drawLabelledLines(ctx, fix, lineY, "Recommended fix:", { color: INK });
-  lineY -= blockH(fix);
+  lineY = drawHangingLabelBlock(ctx, "Recommended fix:", fixLines, lineY, { color: INK });
 
   if (impactRow) {
     const impactMid = Math.round((finding.estimatedRevenueImpactLow + finding.estimatedRevenueImpactHigh) / 2);
@@ -1415,47 +1511,6 @@ function drawFindingCard(ctx: Ctx, finding: AuditFinding, index: number): void {
   }
 
   ctx.y = top - cardH - 10;
-}
-
-function drawLabelledLines(
-  ctx: Ctx,
-  lines: string[],
-  startY: number,
-  prefix: string,
-  opts: { color?: RGB } = {},
-): void {
-  // The first line carries the bold label inline; subsequent lines are flowing body.
-  const color = opts.color ?? MUTED;
-  let y = startY;
-  for (const [i, raw] of lines.entries()) {
-    const text = raw.startsWith(prefix) ? raw.slice(prefix.length).trim() : raw;
-    if (i === 0) {
-      ctx.page.drawText(prefix, {
-        x: MARGIN + 14,
-        y,
-        size: 8.5,
-        font: ctx.bold,
-        color: INK,
-      });
-      const labelW = ctx.bold.widthOfTextAtSize(prefix, 8.5);
-      ctx.page.drawText(text, {
-        x: MARGIN + 14 + labelW + 4,
-        y,
-        size: 8.5,
-        font: ctx.font,
-        color,
-      });
-    } else {
-      ctx.page.drawText(raw, {
-        x: MARGIN + 14,
-        y,
-        size: 8.5,
-        font: ctx.font,
-        color,
-      });
-    }
-    y -= 11;
-  }
 }
 
 function drawGbpChecklistPdf(ctx: Ctx, business: BusinessProfile): void {
@@ -1503,12 +1558,28 @@ function drawProblemsBySection(ctx: Ctx, audit: RevenueLeakAudit): void {
   });
 
   for (const section of audit.sectionSummaries) {
-    const headerH = 96;
+    const textMax = CONTENT_W - 120;
+    const catLines = wrapText(sanitize(section.category), ctx.bold, 13, textMax);
+    const sumLines = wrapText(sanitize(section.summary), ctx.font, 9, textMax);
+    const topPad = 22;
+    const catLineH = 15;
+    const sumLineH = 12;
+    const gapAfterCat = 6;
+    const chipReserve = 34;
+    const bottomPad = 12;
+    const headerH =
+      topPad +
+      catLines.length * catLineH +
+      gapAfterCat +
+      sumLines.length * sumLineH +
+      bottomPad +
+      chipReserve;
+
     ensure(ctx, headerH + 24);
     const top = ctx.y;
     card(ctx, MARGIN, top, CONTENT_W, headerH, WHITE, BORDER);
     const ringCx = PAGE_W - MARGIN - 44;
-    const ringCy = top - 41;
+    const ringCy = top - headerH / 2;
     ctx.page.drawRectangle({
       x: ringCx - 44,
       y: ringCy - 44,
@@ -1524,24 +1595,28 @@ function drawProblemsBySection(ctx: Ctx, audit: RevenueLeakAudit): void {
       numberSize: 13,
       showGrade: true,
     });
-    // Title + summary
-    drawText(ctx, section.category, {
-      x: MARGIN + 18,
-      y: top - 24,
-      size: 13,
-      font: ctx.bold,
-      color: INK,
-      maxWidth: CONTENT_W - 120,
-    });
-    drawText(ctx, section.summary, {
-      x: MARGIN + 18,
-      y: top - 44,
-      size: 9,
-      font: ctx.font,
-      color: MUTED,
-      maxWidth: CONTENT_W - 120,
-      lineGap: 3,
-    });
+    let hy = top - topPad;
+    for (const line of catLines) {
+      ctx.page.drawText(line, {
+        x: MARGIN + 18,
+        y: hy,
+        size: 13,
+        font: ctx.bold,
+        color: INK,
+      });
+      hy -= catLineH;
+    }
+    hy -= gapAfterCat;
+    for (const line of sumLines) {
+      ctx.page.drawText(line, {
+        x: MARGIN + 18,
+        y: hy,
+        size: 9,
+        font: ctx.font,
+        color: MUTED,
+      });
+      hy -= sumLineH;
+    }
     // Issue count chip
     if (section.issueCount > 0) {
       pill(
@@ -1624,7 +1699,10 @@ function drawCompetitorStrengths(ctx: Ctx, audit: RevenueLeakAudit): void {
 
   for (const theme of themes) {
     const isGap = insight.topGap?.theme === theme.theme;
-    const labelLines = wrapText(theme.label, ctx.bold, 10.5, CONTENT_W - 200);
+    const countsStr = `competitors ${theme.competitorMentions}x  ·  you ${theme.ownMentions}x`;
+    const countsW = ctx.font.widthOfTextAtSize(countsStr, 8.5) + 8;
+    const titleMax = Math.min(CONTENT_W - 40, CONTENT_W - 24 - countsW);
+    const labelLines = wrapText(theme.label, ctx.bold, 10.5, titleMax);
     const quoteLines = theme.exampleQuote
       ? wrapText(`"${theme.exampleQuote}"`, ctx.italic, 8.5, CONTENT_W - 32)
       : [];
@@ -1664,11 +1742,10 @@ function drawCompetitorStrengths(ctx: Ctx, audit: RevenueLeakAudit): void {
       yy -= 13;
     }
 
-    // Counts on the right
-    const countsStr = `competitors ${theme.competitorMentions}x  ·  you ${theme.ownMentions}x`;
+    // Counts on the right (countsStr computed above so title wraps clear of it)
     ctx.page.drawText(countsStr, {
       x: PAGE_W - MARGIN - 14 - ctx.font.widthOfTextAtSize(countsStr, 8.5),
-      y: top - 20,
+      y: top - 21,
       size: 8.5,
       font: ctx.font,
       color: MUTED,
@@ -2191,21 +2268,40 @@ function drawActionPlan(ctx: Ctx, audit: RevenueLeakAudit): void {
 
 // ─── Closing CTA (RevenueLeakFixLeaksCta parity) ─────────────────────────────
 function drawClosingCta(ctx: Ctx): void {
-  ensure(ctx, 128);
-  const cardTop = ctx.y;
   const cardPad = 24;
-  const cardH = 112;
-  card(ctx, MARGIN, cardTop, CONTENT_W, cardH, WHITE, BORDER);
-
   const btnLabel = sanitize("Start fixing leaks");
   const btnH = 30;
   const btnW = ctx.bold.widthOfTextAtSize(btnLabel, 11) + 40;
   const btnX = PAGE_W - MARGIN - cardPad - btnW;
-  const btnTopY = cardTop - 62;
+  const bodyLeftW = Math.max(176, btnX - (MARGIN + cardPad) - 28);
+  const body = sanitize(
+    "We'll review your audit results with you, highlight the biggest opportunities, and recommend where to start.",
+  );
+  const bodyWrapped = wrapText(body, ctx.font, 9.5, bodyLeftW);
+  const lineStep = 9.5 + 3;
+  const bodyH =
+    Math.max(bodyWrapped.length, 1) * lineStep + 12;
+
+  const headCluster = cardPad + 36;
+  const btnOverlapTop = cardPad + 2;
+  const btnBodyGap = 22;
+  const footerBand = cardPad + 22;
+  const cardH =
+    headCluster +
+    btnH +
+    btnBodyGap +
+    bodyH +
+    footerBand;
+
+  ensure(ctx, cardH + 24);
+  const cardTop = ctx.y;
+  card(ctx, MARGIN, cardTop, CONTENT_W, cardH, WHITE, BORDER);
+
+  const iy = cardTop - cardPad;
 
   ctx.page.drawText("NEXT STEP", {
     x: MARGIN + cardPad,
-    y: cardTop - cardPad - 12,
+    y: iy - 8,
     size: 8,
     font: ctx.bold,
     color: ACCENT,
@@ -2213,25 +2309,13 @@ function drawClosingCta(ctx: Ctx): void {
 
   ctx.page.drawText(sanitize("Ready to recover lost revenue?"), {
     x: MARGIN + cardPad,
-    y: cardTop - cardPad - 34,
+    y: iy - 28,
     size: 14,
     font: ctx.bold,
     color: INK,
   });
 
-  const bodyLeftW = Math.max(200, btnX - (MARGIN + cardPad) - 22);
-  const body = sanitize(
-    "We'll review your audit results with you, highlight the biggest opportunities, and recommend where to start.",
-  );
-  drawText(ctx, body, {
-    x: MARGIN + cardPad,
-    y: cardTop - cardPad - 52,
-    size: 9.5,
-    font: ctx.font,
-    color: MUTED,
-    maxWidth: bodyLeftW,
-    lineGap: 3,
-  });
+  const btnTopY = iy - btnOverlapTop;
 
   ctx.page.drawRectangle({
     x: btnX,
@@ -2250,10 +2334,21 @@ function drawClosingCta(ctx: Ctx): void {
     color: WHITE,
   });
 
+  const bodyBaselineStart = iy - headCluster - btnH - btnBodyGap;
+  drawText(ctx, body, {
+    x: MARGIN + cardPad,
+    y: bodyBaselineStart,
+    size: 9.5,
+    font: ctx.font,
+    color: MUTED,
+    maxWidth: bodyLeftW,
+    lineGap: 3,
+  });
+
   const hint = sanitize(`${marketingSiteOrigin()}/contact`);
   ctx.page.drawText(`Visit ${hint}`, {
     x: MARGIN + cardPad,
-    y: cardTop - cardH + cardPad + 6,
+    y: cardTop - cardH + cardPad + 10,
     size: 7.5,
     font: ctx.font,
     color: MUTED,

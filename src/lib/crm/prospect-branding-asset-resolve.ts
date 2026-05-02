@@ -21,6 +21,7 @@ import {
   isDecorativeContactIconUrl,
   isLanguageSwitcherOrFlagAssetUrl,
   isLikelyOpenGraphOrSocialBannerImageUrl,
+  isLikelyThirdPartyTrustOrReviewMarketingBadgeUrl,
   isPartnerFinancingLogoBlob,
   isProfessionalAssociationOrCertificationLogoBlob,
   type BrandColorResult,
@@ -385,6 +386,7 @@ function isExcludedFromPaletteBestLogoUrl(resolvedUrl: string, rawCandidateUrl: 
   return (
     isLikelyHeroOrStockPhotoUrl(resolvedUrl) ||
     isLikelyOpenGraphOrSocialBannerImageUrl(resolvedUrl, rawCandidateUrl) ||
+    isLikelyThirdPartyTrustOrReviewMarketingBadgeUrl(resolvedUrl, rawCandidateUrl) ||
     isProfessionalAssociationOrCertificationLogoBlob(resolvedUrl, rawCandidateUrl)
   );
 }

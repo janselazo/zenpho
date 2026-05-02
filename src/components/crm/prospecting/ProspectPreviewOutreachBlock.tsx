@@ -2650,8 +2650,8 @@ export default function ProspectPreviewOutreachBlock({
                   WhatsApp
                 </h4>
               </div>
-              <label className="mb-1 mt-3 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
-                Phone (with country code) or wa.me URL
+              <label className="mb-1 mt-3 block text-[10px] font-medium tracking-wide text-text-secondary dark:text-zinc-500">
+                To
               </label>
               <input
                 type="text"
@@ -2704,8 +2704,8 @@ export default function ProspectPreviewOutreachBlock({
                   Instagram
                 </h4>
               </div>
-              <label className="mb-1 mt-3 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
-                Profile URL or @handle
+              <label className="mb-1 mt-3 block text-[10px] font-medium tracking-wide text-text-secondary dark:text-zinc-500">
+                To
               </label>
               <input
                 type="text"
@@ -2758,8 +2758,8 @@ export default function ProspectPreviewOutreachBlock({
                   Facebook
                 </h4>
               </div>
-              <label className="mb-1 mt-3 block text-[10px] font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
-                Page URL or m.me/&lt;handle&gt;
+              <label className="mb-1 mt-3 block text-[10px] font-medium tracking-wide text-text-secondary dark:text-zinc-500">
+                To
               </label>
               <input
                 type="text"

@@ -41,8 +41,31 @@ function humanizeFontName(value: string): string | null {
     .replace(/^var\(|\)$/g, "")
     .replace(/^--wp--preset--font-family--/i, "")
     .replace(/[-_]+/g, " ")
+    .replace(/^[(]+|[)]+$/g, "")
     .trim();
   if (!cleaned || /inherit|initial|unset|system-ui|-apple-system/i.test(cleaned)) {
+    return null;
+  }
+  const lower = cleaned.toLowerCase().replace(/\s+/g, " ");
+  if (/^sans serif$|^serif$|^monospace$|^cursive$|^fantasy$|^ui sans serif$/.test(lower)) {
+    return null;
+  }
+  if (/^theme\s+font/i.test(lower)) {
+    return null;
+  }
+  if (/^(star|dashicons|fontawesome|fa-solid|eicons|icomoon)$/i.test(lower)) {
+    return null;
+  }
+  if (/e global typography|typography text font family|^e typography\b|font family$/i.test(lower)) {
+    return null;
+  }
+  if (/^[0-9a-f]{6,}\s*font family$/i.test(lower) || /^font family\s*[0-9a-f]{6,}$/i.test(lower)) {
+    return null;
+  }
+  if (/\b[0-9a-f]{7,}\b.*font family/i.test(lower) || /font family.*\b[0-9a-f]{7,}\b/i.test(lower)) {
+    return null;
+  }
+  if (/\bdemo\b/i.test(lower)) {
     return null;
   }
   return cleaned.replace(/\b\w/g, (char) => char.toUpperCase());
@@ -80,11 +103,25 @@ function typographyNotesFromHtml(html: string | null): string[] {
   }
 
   const notes: string[] = [];
+  const seenNote = new Set<string>();
+  const pushUnique = (label: string) => {
+    const k = label.toLowerCase();
+    if (seenNote.has(k)) return;
+    seenNote.add(k);
+    notes.push(label);
+    if (notes.length >= 8) return;
+  };
   if (googleFonts.size > 0) {
-    notes.push(...Array.from(googleFonts).slice(0, 5));
+    for (const g of googleFonts) {
+      pushUnique(g);
+      if (notes.length >= 8) break;
+    }
   }
   if (families.size > 0) {
-    notes.push(...Array.from(families).slice(0, 6));
+    for (const f of families) {
+      pushUnique(f);
+      if (notes.length >= 8) break;
+    }
   }
   if (notes.length === 0) {
     notes.push("No distinctive website typography was detected from the homepage HTML.");

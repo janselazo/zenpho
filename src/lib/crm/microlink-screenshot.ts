@@ -2,13 +2,53 @@
  * Microlink screenshot URL for a public page (used by prospect preview + website snapshot API).
  */
 
+/**
+ * Hide common CMP + promo shells before capture (see Microlink `styles`:
+ * https://microlink.io/docs/guides/screenshot/page-interaction#injecting-custom-css ).
+ * Set MICROLINK_SCREENSHOT_HIDE_OVERLAYS=false to disable.
+ */
+const MICROLINK_OVERLAY_HIDE_CSS = [
+  "#onetrust-consent-sdk",
+  ".onetrust-pc-dark-filter",
+  "#CybotCookiebotDialog",
+  "#CybotCookiebotDialogBodyUnderlay",
+  ".cky-overlay",
+  ".cky-consent-container",
+  ".cookieyes-cc-wrapper",
+  ".cmplz-cookiebanner",
+  ".cli-modal-overlay",
+  "div[id^='pum_popup']",
+  ".pum-overlay",
+  ".popmake-overlay",
+  ".elementor-popup-modal",
+  "[class*='poptin-']",
+  ".privy-widget",
+  ".sleeknote-modal",
+  ".sumome-smcbasket",
+].join(",");
+
 export async function fetchMicrolinkScreenshotUrl(
   pageUrl: string,
   timeoutMs = 60_000
 ): Promise<string | null> {
   const apiKey = process.env.MICROLINK_API_KEY?.trim();
   const micBase = apiKey ? "https://pro.microlink.io" : "https://api.microlink.io";
-  const micUrl = `${micBase}/?url=${encodeURIComponent(pageUrl)}&screenshot=true&meta=false`;
+
+  const params = new URLSearchParams({
+    url: pageUrl,
+    screenshot: "true",
+    meta: "false",
+  });
+  const hideOverlays =
+    process.env.MICROLINK_SCREENSHOT_HIDE_OVERLAYS?.trim().toLowerCase() !== "false";
+  if (hideOverlays) {
+    params.set(
+      "styles",
+      `${MICROLINK_OVERLAY_HIDE_CSS}{display:none!important;visibility:hidden!important;pointer-events:none!important}`,
+    );
+  }
+
+  const micUrl = `${micBase}/?${params.toString()}`;
 
   const headers: HeadersInit = {};
   if (apiKey) {

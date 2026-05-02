@@ -36,6 +36,33 @@ function isPrivateOrReservedIpv4(host: string): boolean {
   return PRIVATE_IPV4_RANGES.some((r) => n >= r.start && n <= r.end);
 }
 
+/** Remove common ad/attribution query keys so GBP "website" links with UTMs match the canonical page. */
+function stripTrackingSearchParams(url: URL): void {
+  const keys = [...url.searchParams.keys()];
+  for (const key of keys) {
+    const k = key.toLowerCase();
+    if (
+      k.startsWith("utm_") ||
+      k === "gclid" ||
+      k === "gbraid" ||
+      k === "wbraid" ||
+      k === "gad_source" ||
+      k === "gad_campaignid" ||
+      k === "fbclid" ||
+      k === "msclkid" ||
+      k === "mc_cid" ||
+      k === "mc_eid" ||
+      k === "igshid" ||
+      k === "yclid" ||
+      k === "ttclid" ||
+      k === "_ga" ||
+      k === "_gl"
+    ) {
+      url.searchParams.delete(key);
+    }
+  }
+}
+
 export function normalizeUrlForFetch(raw: string): string | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
@@ -52,6 +79,7 @@ export function normalizeUrlForFetch(raw: string): string | null {
   if (host.endsWith(".local") || host.endsWith(".localhost")) return null;
   if (isPrivateOrReservedIpv4(host)) return null;
   if (host === "[::1]" || host.startsWith("fc") || host.startsWith("fd")) return null;
+  stripTrackingSearchParams(url);
   return url.toString();
 }
 

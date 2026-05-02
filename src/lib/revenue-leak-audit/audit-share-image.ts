@@ -61,16 +61,16 @@ function collectChannelStripItems(audit: RevenueLeakAudit): ChannelStripItem[] {
   const phoneLine = cl.phone?.trim() || b.phone?.trim();
   if (phoneLine) items.push({ key: "phone", label: "Phone", iconSvg: CHANNEL_ICONS.phone });
   if (sl.facebook?.trim())
-    items.push({ key: "facebook", label: "Facebook", iconSvg: CHANNEL_ICONS.facebook });
+    items.push({ key: "facebook", label: "To", iconSvg: CHANNEL_ICONS.facebook });
   if (sl.instagram?.trim())
-    items.push({ key: "instagram", label: "Instagram", iconSvg: CHANNEL_ICONS.instagram });
+    items.push({ key: "instagram", label: "To", iconSvg: CHANNEL_ICONS.instagram });
   if (sl.tiktok?.trim()) items.push({ key: "tiktok", label: "TikTok", iconSvg: CHANNEL_ICONS.tiktok });
   if (sl.youtube?.trim())
     items.push({ key: "youtube", label: "YouTube", iconSvg: CHANNEL_ICONS.youtube });
   if (sl.linkedin?.trim())
     items.push({ key: "linkedin", label: "LinkedIn", iconSvg: CHANNEL_ICONS.linkedin });
   if (sl.whatsapp?.trim())
-    items.push({ key: "whatsapp", label: "WhatsApp", iconSvg: CHANNEL_ICONS.whatsapp });
+    items.push({ key: "whatsapp", label: "To", iconSvg: CHANNEL_ICONS.whatsapp });
 
   return items;
 }
@@ -135,8 +135,9 @@ function donutStrokeForGrade(grade: AuditGrade): string {
   }
 }
 
+/** Wider than real width avoids pill rects clipping label text (fonts vary by renderer). */
 function approximateTextWidth(chars: number, px = 13): number {
-  return Math.round(chars * px * 0.56);
+  return Math.round(chars * px * 0.62 + 10);
 }
 
 function pill(
@@ -202,8 +203,17 @@ export function renderAuditShareImage(audit: RevenueLeakAudit): AuditShareImageR
   const siteLbl = b.website?.trim() ? "Website linked" : "No website on listing";
 
   const card1Top = MARGIN_X;
-  let px = MARGIN_X + INNER_PAD;
-  const pillsY = card1Top + INNER_PAD + 120;
+  const innerLeft = MARGIN_X + INNER_PAD;
+  const rightTextEdge = WIDTH - MARGIN_X - INNER_PAD;
+  /** Keep score gauge in the header band; pills/phone sit below so nothing stacks on the donut. */
+  const donutCx = WIDTH - MARGIN_X - INNER_PAD - 66;
+  const donutCy = card1Top + INNER_PAD + 58;
+  const donutOuterR = 52 + 10;
+  const addressBaseline = card1Top + INNER_PAD + 108;
+  const pillsY = Math.max(addressBaseline + 24, donutCy + donutOuterR + 12);
+  const pillRowH = 32;
+
+  let px = innerLeft;
   const pills: string[] = [];
   for (const { label, preset } of [
     { label: ratingLbl, preset: PILL_RATING },
@@ -223,14 +233,12 @@ export function renderAuditShareImage(audit: RevenueLeakAudit): AuditShareImageR
   const address = clamp(b.address, 76);
   const phoneDisplay = clamp(b.phone || wa.contactLinks.phone, 28);
 
-  const donutCx = WIDTH - MARGIN_X - INNER_PAD - 66;
-  const donutCy = card1Top + INNER_PAD + 124;
-
   const channelItems = collectChannelStripItems(audit);
-  const channelStripTop = pillsY + 44;
-  const phoneLineY = channelStripTop - 28;
-  const channelLabelY = channelStripTop - 12;
-  const channelStripSvg = renderChannelStrip(MARGIN_X + INNER_PAD, channelStripTop, channelItems);
+  const pillsBottom = pillsY + pillRowH;
+  const phoneLineY = pillsBottom + 18;
+  const channelLabelY = phoneLineY + (phoneDisplay.trim() || b.googleMapsUri ? 24 : 10);
+  const channelStripTop = channelLabelY + 14;
+  const channelStripSvg = renderChannelStrip(innerLeft, channelStripTop, channelItems);
   const stripBottom = channelStripTop + (channelItems.length === 0 ? 24 : 64);
   const card1H = stripBottom + INNER_PAD - card1Top;
 
@@ -284,17 +292,17 @@ export function renderAuditShareImage(audit: RevenueLeakAudit): AuditShareImageR
   <text x="${MARGIN_X + INNER_PAD}" y="${card1Top + INNER_PAD + 22}" font-size="12" fill="${ACCENT}" font-weight="700" letter-spacing="0.14em" font-family="system-ui, -apple-system, Segoe UI, sans-serif">GOOGLE BUSINESS PROFILE</text>
   <text x="${MARGIN_X + INNER_PAD}" y="${card1Top + INNER_PAD + 62}" font-size="26" font-weight="800" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(clamp(b.name, 48))}</text>
   <text x="${MARGIN_X + INNER_PAD}" y="${card1Top + INNER_PAD + 88}" font-size="14" fill="${MUTED}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(categoryLine)}</text>
-  <text x="${MARGIN_X + INNER_PAD}" y="${card1Top + INNER_PAD + 108}" font-size="13" fill="${MUTED}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(address)}</text>
+  <text x="${innerLeft}" y="${card1Top + INNER_PAD + 108}" font-size="13" fill="${MUTED}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(address)}</text>
+  ${renderDonut(donutCx, donutCy, score, grade)}
   ${pills.join("\n  ")}
   ${phoneDisplay ?
-    `<text x="${MARGIN_X + INNER_PAD}" y="${phoneLineY}" font-size="14" font-weight="600" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(phoneDisplay)}</text>`
+    `<text x="${innerLeft}" y="${phoneLineY}" font-size="14" font-weight="600" fill="${INK}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${esc(phoneDisplay)}</text>`
   : ""}
   ${b.googleMapsUri ?
-    `<text x="${MARGIN_X + INNER_PAD + 292}" y="${phoneLineY}" font-size="13" fill="${ACCENT}" font-weight="600" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Open in Google Maps</text>`
+    `<text x="${rightTextEdge}" y="${phoneLineY}" text-anchor="end" font-size="13" fill="${ACCENT}" font-weight="600" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Open in Google Maps</text>`
   : ""}
-  <text x="${MARGIN_X + INNER_PAD}" y="${channelLabelY}" font-size="11" fill="${MUTED}" font-weight="700" letter-spacing="0.1em" font-family="system-ui, -apple-system, Segoe UI, sans-serif">CONTACT CHANNELS</text>
+  <text x="${innerLeft}" y="${channelLabelY}" font-size="11" fill="${MUTED}" font-weight="700" letter-spacing="0.1em" font-family="system-ui, -apple-system, Segoe UI, sans-serif">CONTACT CHANNELS</text>
   ${channelStripSvg}
-  ${renderDonut(donutCx, donutCy, score, grade)}
 
   <rect x="${MARGIN_X}" y="${card2Top}" width="${CARD_W}" height="${card2H}" rx="22" fill="${CARD_BG}" stroke="${CARD_STROKE}" stroke-width="1"/>
   <text x="${MARGIN_X + INNER_PAD}" y="${card2Top + INNER_PAD + 22}" font-size="12" fill="${ACCENT}" font-weight="700" letter-spacing="0.14em" font-family="system-ui, -apple-system, Segoe UI, sans-serif">BRAND SUMMARY</text>
