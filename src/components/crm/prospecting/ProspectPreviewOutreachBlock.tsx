@@ -274,16 +274,16 @@ function defaultShareTemplatesForOffer(offer: SelectedOffer): ShareTemplates {
     case "audit":
       return {
         smsBody:
-          "Hi {{businessName}} — I put together a quick Revenue Leak Audit summary image (score, $ at risk, top findings). If useful, I can send the full PDF with every issue and suggested fixes. Want the PDF?",
+          "Hi {{businessName}} — I put together a Revenue Leak Audit share image: your Google Business Profile snapshot (score + key metrics), brand cues from your site, detected contact/social channels when we can see them, monthly $ at risk + top issues. Want the full PDF with every issue and fixes?",
         emailSubject: "Revenue Leak Audit snapshot for {{businessName}}",
         emailBody:
-          "Hi {{businessName}},\n\nI ran a Revenue Leak Audit on your Google Business Profile and website. Attached is a one-page summary (score, estimated monthly $ at risk, and top findings).\n\nIf you’d like the full report, I can send the PDF next — it walks through local ranking vs competitors, reviews, website conversion, tracking/ads readiness, photos/schema/local SEO, and a prioritized action plan with suggested fixes.\n\nHablamos español también.\n\nBest,\n{{yourName}}",
+          "Hi {{businessName}},\n\nI ran a Revenue Leak Audit on your Google Business Profile and website. Attached is a sharable summary image: GBP snapshot + brand palette/typography cues, contact/social channel icons from the crawl when available, audit score, estimated monthly $ at risk, and a few top issues.\n\nIf you’d like the full report, I can send the PDF next — local ranking vs competitors, reviews, website conversion, tracking/ads readiness, photos/schema/local SEO, and a prioritized action plan with suggested fixes.\n\nHablamos español también.\n\nBest,\n{{yourName}}",
         instagramBody:
-          "Hi {{businessName}}! Quick Revenue Leak Audit summary image attached (score + top findings). Want the full PDF with all issues & fixes?\n\n— {{yourName}}",
+          "Hi {{businessName}}! Revenue Leak Audit summary image attached — GBP + brand + $ at risk snapshot. Want the full PDF with all issues & fixes?\n\n— {{yourName}}",
         whatsappBody:
-          "Hi {{businessName}}! Sending a one-page Revenue Leak Audit summary — score, $ at risk, top findings. Want the full PDF with all issues & suggested fixes?\n\n— {{yourName}}",
+          "Hi {{businessName}}! Revenue Leak Audit share image — GBP snapshot, brand cues, channels we detected, $ at risk + top issues. Want the full PDF with fixes?\n\n— {{yourName}}",
         facebookBody:
-          "Hi {{businessName}}! Quick Revenue Leak Audit summary — score, money at risk, top findings. I can send the full PDF with every issue & suggested fixes if you want it.\n\n— {{yourName}}",
+          "Hi {{businessName}}! Revenue Leak Audit share image — GBP + brand + revenue snapshot. I can send the full PDF with every issue & suggested fixes if you want.\n\n— {{yourName}}",
       };
     case "branding":
       return {
@@ -1966,6 +1966,15 @@ export default function ProspectPreviewOutreachBlock({
       ? "ring-2 ring-inset ring-blue-500/50 dark:ring-blue-400/40"
       : "";
 
+  const outreachOfferCard =
+    "cursor-pointer rounded-xl border border-border/70 bg-white/50 p-4 text-left shadow-sm transition-all hover:border-accent/25 hover:shadow-md dark:border-zinc-700/80 dark:bg-zinc-900/50 dark:hover:border-accent/35";
+
+  const outreachIconBadgeDesign =
+    "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:bg-blue-400/15 dark:text-blue-300";
+
+  const outreachIconBadgeAudit =
+    "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-600/10 text-emerald-800 dark:bg-emerald-400/15 dark:text-emerald-300";
+
   const placeVsUrlIntro =
     stitchContext?.kind === "place" ? (
       <>
@@ -2028,7 +2037,7 @@ export default function ProspectPreviewOutreachBlock({
           <span className="font-mono">{"{{previewUrl}}"}</span> and{" "}
           <span className="font-mono">{"{{businessName}}"}</span> for Website, Web app, and Mobile; email defaults
           also use <span className="font-mono">{"{{yourName}}"}</span> (from your CRM context when provided).
-          Revenue Leak Audit templates default to a summary image first and the full PDF as follow-up.
+          Revenue Leak Audit templates default to a share image summary (GBP + brand + revenue snapshot) first and the full PDF as follow-up.
         </p>
         {stitchContext ? (
           <p className="mt-3 rounded-lg border border-border/60 bg-white/40 px-2.5 py-2 text-[11px] text-text-secondary dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
@@ -2036,17 +2045,35 @@ export default function ProspectPreviewOutreachBlock({
           </p>
         ) : null}
 
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-4 space-y-8">
+          <section
+            aria-labelledby="prospect-outreach-design-heading"
+            className="rounded-2xl border border-border/70 bg-white/55 p-4 shadow-sm dark:border-zinc-700/80 dark:bg-zinc-950/35"
+          >
+            <header className="border-l-2 border-blue-500 pl-3 dark:border-blue-400">
+              <h4
+                id="prospect-outreach-design-heading"
+                className="text-sm font-semibold text-text-primary dark:text-zinc-100"
+              >
+                Design
+              </h4>
+              <p className="mt-0.5 text-[11px] text-text-secondary dark:text-zinc-400">
+                Stitch concepts — website, dashboard, and mobile previews for outreach.
+              </p>
+            </header>
+            <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {/* Website */}
           <div
-            className={`cursor-pointer rounded-lg border border-border/70 bg-white/50 p-3 text-left transition-shadow dark:border-zinc-700/80 dark:bg-zinc-900/50 ${cardRing("website")}`}
+            className={`${outreachOfferCard} ${cardRing("website")}`}
             onClick={() => setSelectedOffer("website")}
           >
             <div className="flex items-center justify-between gap-2">
-              <h4 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500">
+              <h5 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500">
                 Website design
-              </h4>
-              <Monitor className="h-4 w-4 shrink-0 text-text-secondary opacity-70 dark:text-zinc-500" aria-hidden />
+              </h5>
+              <span className={outreachIconBadgeDesign} aria-hidden>
+                <Monitor className="h-4 w-4 shrink-0" />
+              </span>
             </div>
             <p className="mt-2 text-[11px] leading-snug text-text-secondary dark:text-zinc-400">
               Five-page premium website concept in one design (home, services, about, social proof, book/contact) with
@@ -2065,7 +2092,7 @@ export default function ProspectPreviewOutreachBlock({
                   e.stopPropagation();
                   void runStitchDesign("website");
                 }}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 disabled:opacity-50 dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 disabled:opacity-50 dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200"
               >
                 {stitchWebBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
                 {stitchWebBusy ? "Generating…" : "Generate website"}
@@ -2114,14 +2141,16 @@ export default function ProspectPreviewOutreachBlock({
 
           {/* Web app */}
           <div
-            className={`cursor-pointer rounded-lg border border-border/70 bg-white/50 p-3 text-left dark:border-zinc-700/80 dark:bg-zinc-900/50 ${cardRing("webapp")}`}
+            className={`${outreachOfferCard} ${cardRing("webapp")}`}
             onClick={() => setSelectedOffer("webapp")}
           >
             <div className="flex items-center justify-between gap-2">
-              <h4 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500">
+              <h5 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500">
                 Web apps
-              </h4>
-              <LayoutDashboard className="h-4 w-4 shrink-0 text-text-secondary opacity-70 dark:text-zinc-500" aria-hidden />
+              </h5>
+              <span className={outreachIconBadgeDesign} aria-hidden>
+                <LayoutDashboard className="h-4 w-4 shrink-0" />
+              </span>
             </div>
             <p className="mt-2 text-[11px] leading-snug text-text-secondary dark:text-zinc-400">
               Premium desktop operator dashboard with pipeline, clients, inbox, schedule, and reviews.{" "}
@@ -2138,7 +2167,7 @@ export default function ProspectPreviewOutreachBlock({
                   e.stopPropagation();
                   void runStitchDesign("webapp");
                 }}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 disabled:opacity-50 dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 disabled:opacity-50 dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200"
               >
                 {stitchWebAppBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
                 {stitchWebAppBusy ? "Generating…" : "Generate web app"}
@@ -2180,14 +2209,16 @@ export default function ProspectPreviewOutreachBlock({
 
           {/* Mobile */}
           <div
-            className={`cursor-pointer rounded-lg border border-border/70 bg-white/50 p-3 text-left dark:border-zinc-700/80 dark:bg-zinc-900/50 ${cardRing("mobile")}`}
+            className={`${outreachOfferCard} ${cardRing("mobile")}`}
             onClick={() => setSelectedOffer("mobile")}
           >
             <div className="flex items-center justify-between gap-2">
-              <h4 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500">
+              <h5 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500">
                 Mobile app design
-              </h4>
-              <Smartphone className="h-4 w-4 shrink-0 text-text-secondary opacity-70 dark:text-zinc-500" aria-hidden />
+              </h5>
+              <span className={outreachIconBadgeDesign} aria-hidden>
+                <Smartphone className="h-4 w-4 shrink-0" />
+              </span>
             </div>
             <p className="mt-2 text-[11px] leading-snug text-text-secondary dark:text-zinc-400">
               Premium phone-sized owner app with bookings, clients, inbox, schedule snapshots, and review growth.{" "}
@@ -2204,7 +2235,7 @@ export default function ProspectPreviewOutreachBlock({
                   e.stopPropagation();
                   void runStitchDesign("mobile");
                 }}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 disabled:opacity-50 dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 disabled:opacity-50 dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200"
               >
                 {stitchMobileBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
                 {stitchMobileBusy ? "Generating…" : "Generate mobile app"}
@@ -2243,17 +2274,37 @@ export default function ProspectPreviewOutreachBlock({
               </div>
             ) : null}
           </div>
+            </div>
+          </section>
 
+          <section
+            aria-labelledby="prospect-outreach-audit-heading"
+            className="rounded-2xl border border-border/70 bg-white/55 p-4 shadow-sm dark:border-zinc-700/80 dark:bg-zinc-950/35"
+          >
+            <header className="border-l-2 border-emerald-600 pl-3 dark:border-emerald-400">
+              <h4
+                id="prospect-outreach-audit-heading"
+                className="text-sm font-semibold text-text-primary dark:text-zinc-100"
+              >
+                Audit
+              </h4>
+              <p className="mt-0.5 text-[11px] text-text-secondary dark:text-zinc-400">
+                PDFs and share images — AI workflow assessment, Revenue Leak snapshots, and brand kit summaries.
+              </p>
+            </header>
+            <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {/* AI audit (PDF) */}
           <div
-            className={`cursor-pointer rounded-lg border border-border/70 bg-white/50 p-3 text-left dark:border-zinc-700/80 dark:bg-zinc-900/50 ${cardRing("automations")}`}
+            className={`${outreachOfferCard} ${cardRing("automations")}`}
             onClick={() => setSelectedOffer("automations")}
           >
             <div className="flex items-center justify-between gap-2">
-              <h4 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500">
+              <h5 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500">
                 AI audit
-              </h4>
-              <Workflow className="h-4 w-4 shrink-0 text-text-secondary opacity-70 dark:text-zinc-500" aria-hidden />
+              </h5>
+              <span className={outreachIconBadgeAudit} aria-hidden>
+                <Workflow className="h-4 w-4 shrink-0" />
+              </span>
             </div>
             <p className="mt-2 text-[11px] leading-snug text-text-secondary dark:text-zinc-400">
               Structured assessment: map repeatable processes, identify the biggest time or money costs, recommend AI
@@ -2269,7 +2320,7 @@ export default function ProspectPreviewOutreachBlock({
                 e.stopPropagation();
                 void generatePdf();
               }}
-              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 hover:bg-blue-500/[0.14] disabled:opacity-50 dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200 dark:hover:bg-blue-500/20"
+              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 hover:bg-blue-500/[0.14] disabled:opacity-50 dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200 dark:hover:bg-blue-500/20"
             >
               {pdfBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <FileDown className="h-3.5 w-3.5" aria-hidden />}
               {pdfBusy ? "Building PDF…" : "Generate report (PDF)"}
@@ -2284,20 +2335,24 @@ export default function ProspectPreviewOutreachBlock({
 
           {/* Audit Report (Revenue Leak) */}
           <div
-            className={`cursor-pointer rounded-lg border border-border/70 bg-white/50 p-3 text-left dark:border-zinc-700/80 dark:bg-zinc-900/50 ${cardRing("audit")}`}
+            className={`${outreachOfferCard} ${cardRing("audit")}`}
             onClick={() => setSelectedOffer("audit")}
           >
             <div className="flex items-center justify-between gap-2">
-              <h4 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500">
+              <h5 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500">
                 Audit Report
-              </h4>
-              <ShieldAlert className="h-4 w-4 shrink-0 text-text-secondary opacity-70 dark:text-zinc-500" aria-hidden />
+              </h5>
+              <span className={outreachIconBadgeAudit} aria-hidden>
+                <ShieldAlert className="h-4 w-4 shrink-0" />
+              </span>
             </div>
             <p className="mt-2 text-[11px] leading-snug text-text-secondary dark:text-zinc-400">
-              Start with a 1200×900 summary image for SMS, email, or DMs (score, money at risk, top findings). Generate
-              the full Revenue Leak Audit PDF as the follow-up: ranking vs competitors, GBP health, review trust +
-              competitor themes, website conversion, tracking &amp; ads readiness, photos, schema, local SEO, and
-              money-loss estimates with a prioritized fix plan. Same engine as the Revenue Leak Audit tool.
+              Start with a tall share image (1200px wide) for SMS, email, or DMs: Google Business Profile snapshot with
+              colored metrics, contact/social channel icons from your site crawl when available, audit score dial, brand
+              palette + typography notes, and revenue-at-risk headline with top issues. Generate the full Revenue Leak Audit
+              PDF as the follow-up: ranking vs competitors, GBP health, review trust + competitor themes, website conversion,
+              tracking &amp; ads readiness, photos, schema, local SEO, and money-loss estimates with a prioritized fix
+              plan. Same engine as the Revenue Leak Audit tool.
             </p>
             <p className="mt-2 text-[10px] text-text-secondary/90 dark:text-zinc-500">
               Analysis can take 30–90 seconds (Google Places + PageSpeed + competitor reviews). Assets auto-attach for
@@ -2310,7 +2365,7 @@ export default function ProspectPreviewOutreachBlock({
                 e.stopPropagation();
                 void generateAuditShareImage();
               }}
-              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-500/[0.14] disabled:opacity-50 dark:border-emerald-400/35 dark:bg-emerald-500/15 dark:text-emerald-200 dark:hover:bg-emerald-500/20"
+              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-500/[0.14] disabled:opacity-50 dark:border-emerald-400/35 dark:bg-emerald-500/15 dark:text-emerald-200 dark:hover:bg-emerald-500/20"
             >
               {auditShareBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <ImageDown className="h-3.5 w-3.5" aria-hidden />}
               {auditShareBusy ? "Composing summary…" : "Generate summary image"}
@@ -2341,7 +2396,7 @@ export default function ProspectPreviewOutreachBlock({
                 e.stopPropagation();
                 void generateAuditReportPdf();
               }}
-              className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 hover:bg-blue-500/[0.14] disabled:opacity-50 dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200 dark:hover:bg-blue-500/20"
+              className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 hover:bg-blue-500/[0.14] disabled:opacity-50 dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200 dark:hover:bg-blue-500/20"
             >
               {auditBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <FileDown className="h-3.5 w-3.5" aria-hidden />}
               {auditBusy ? "Building report…" : "Generate report (PDF)"}
@@ -2374,14 +2429,16 @@ export default function ProspectPreviewOutreachBlock({
 
           {/* Brand kit + sales funnel (PDF) */}
           <div
-            className={`cursor-pointer rounded-lg border border-border/70 bg-white/50 p-3 text-left dark:border-zinc-700/80 dark:bg-zinc-900/50 ${cardRing("branding")}`}
+            className={`${outreachOfferCard} ${cardRing("branding")}`}
             onClick={() => setSelectedOffer("branding")}
           >
             <div className="flex items-center justify-between gap-2">
-              <h4 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500">
+              <h5 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500">
                 Brand kit + sales funnel
-              </h4>
-              <Palette className="h-4 w-4 shrink-0 text-text-secondary opacity-70 dark:text-zinc-500" aria-hidden />
+              </h5>
+              <span className={outreachIconBadgeAudit} aria-hidden>
+                <Palette className="h-4 w-4 shrink-0" />
+              </span>
             </div>
             <p className="mt-2 text-[11px] leading-snug text-text-secondary dark:text-zinc-400">
               Start with a 1200×900 share image for SMS, email, or manual outreach. It summarizes the prospect&apos;s
@@ -2395,7 +2452,7 @@ export default function ProspectPreviewOutreachBlock({
                 e.stopPropagation();
                 void generateBrandingShareImage();
               }}
-              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-500/[0.14] disabled:opacity-50 dark:border-emerald-400/35 dark:bg-emerald-500/15 dark:text-emerald-200 dark:hover:bg-emerald-500/20"
+              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-500/[0.14] disabled:opacity-50 dark:border-emerald-400/35 dark:bg-emerald-500/15 dark:text-emerald-200 dark:hover:bg-emerald-500/20"
             >
               {brandingShareBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <ImageDown className="h-3.5 w-3.5" aria-hidden />}
               {brandingShareBusy ? "Composing image…" : "Generate Image"}
@@ -2426,7 +2483,7 @@ export default function ProspectPreviewOutreachBlock({
                 e.stopPropagation();
                 void generateBrandingPdf();
               }}
-              className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 hover:bg-blue-500/[0.14] disabled:opacity-50 dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200 dark:hover:bg-blue-500/20"
+              className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 hover:bg-blue-500/[0.14] disabled:opacity-50 dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200 dark:hover:bg-blue-500/20"
             >
               {brandingBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Palette className="h-3.5 w-3.5" aria-hidden />}
               {brandingBusy ? "Composing brand kit + funnel…" : "Generate brand kit & funnel (PDF)"}
@@ -2456,6 +2513,8 @@ export default function ProspectPreviewOutreachBlock({
               </a>
             ) : null}
           </div>
+            </div>
+          </section>
         </div>
 
         <div className="mt-6 border-t border-border/60 pt-4 dark:border-zinc-700/60">
