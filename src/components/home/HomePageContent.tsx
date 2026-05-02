@@ -17,9 +17,9 @@ export default function HomePageContent() {
       <HomeGrowthAchieveSection />
       <HomeWhatMakesUsDifferentSection />
       <HomeHowItWorksSection />
+      <HomeClearGrowthSection />
       <Testimonials />
       <HomeFAQ />
-      <HomeClearGrowthSection />
     </>
   );
 }

@@ -31,57 +31,44 @@ import {
   type ClearGrowthMetricTone,
 } from "@/lib/home-clear-growth";
 
-const METRIC_TONE_STYLES: Record<
-  ClearGrowthMetricTone,
-  { chip: string; icon: string; value: string }
-> = {
+const METRIC_TONE_STYLES: Record<ClearGrowthMetricTone, { icon: string; value: string }> = {
   sky: {
-    chip: "bg-sky-500/15 dark:bg-sky-400/12",
     icon: "text-sky-600 dark:text-sky-400",
     value: "text-sky-700 dark:text-sky-300",
   },
   teal: {
-    chip: "bg-teal-500/15 dark:bg-teal-400/12",
     icon: "text-teal-600 dark:text-teal-400",
     value: "text-teal-700 dark:text-teal-300",
   },
   indigo: {
-    chip: "bg-indigo-500/15 dark:bg-indigo-400/12",
     icon: "text-indigo-600 dark:text-indigo-400",
     value: "text-indigo-700 dark:text-indigo-300",
   },
   violet: {
-    chip: "bg-violet-500/15 dark:bg-violet-400/12",
     icon: "text-violet-600 dark:text-violet-400",
     value: "text-violet-700 dark:text-violet-300",
   },
   cyan: {
-    chip: "bg-cyan-500/15 dark:bg-cyan-400/12",
     icon: "text-cyan-600 dark:text-cyan-400",
     value: "text-cyan-700 dark:text-cyan-300",
   },
   emerald: {
-    chip: "bg-emerald-500/15 dark:bg-emerald-400/12",
     icon: "text-emerald-600 dark:text-emerald-400",
     value: "text-emerald-700 dark:text-emerald-300",
   },
   amber: {
-    chip: "bg-amber-500/18 dark:bg-amber-400/14",
     icon: "text-amber-700 dark:text-amber-400",
     value: "text-amber-800 dark:text-amber-300",
   },
   blue: {
-    chip: "bg-blue-500/15 dark:bg-blue-400/12",
     icon: "text-blue-600 dark:text-blue-400",
     value: "text-blue-700 dark:text-blue-300",
   },
   orange: {
-    chip: "bg-orange-500/15 dark:bg-orange-400/12",
     icon: "text-orange-600 dark:text-orange-400",
     value: "text-orange-700 dark:text-orange-300",
   },
   rose: {
-    chip: "bg-rose-500/15 dark:bg-rose-400/12",
     icon: "text-rose-600 dark:text-rose-400",
     value: "text-rose-700 dark:text-rose-300",
   },
@@ -139,11 +126,11 @@ export default function HomeClearGrowthSection() {
                   key={card.id}
                   className="flex h-full flex-col rounded-2xl border border-border/70 bg-white p-5 shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/50"
                 >
-                  <span
-                    className={`inline-flex h-11 w-11 items-center justify-center rounded-xl ${tone.chip} ${tone.icon}`}
-                  >
-                    <Icon className="h-5 w-5" strokeWidth={2} aria-hidden />
-                  </span>
+                  <Icon
+                    className={`h-5 w-5 ${tone.icon}`}
+                    strokeWidth={2}
+                    aria-hidden
+                  />
                   <p className={`mt-4 text-3xl font-black tabular-nums tracking-tight ${tone.value}`}>
                     {card.value}
                   </p>
@@ -162,8 +149,8 @@ export default function HomeClearGrowthSection() {
                     key={item.id}
                     className={`flex gap-4 ${i === 1 ? "sm:pl-8" : "sm:pr-8"}`}
                   >
-                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent dark:bg-accent/20">
-                      <SummaryIcon className="h-5 w-5" strokeWidth={2} aria-hidden />
+                    <span className="inline-flex shrink-0 text-accent pt-0.5">
+                      <SummaryIcon className="h-6 w-6" strokeWidth={2} aria-hidden />
                     </span>
                     <div className="min-w-0">
                       <p className="text-xs font-semibold tracking-wide text-accent">{item.eyebrow}</p>
