@@ -140,12 +140,7 @@ export const marketingProductPages: MarketingProductPage[] = [
     ],
   },
   {
-    slug: "growth-intelligence",
-    title: "Growth Intelligence",
-    description:
-      "Spot opportunities, risks, and next best actions across your funnel.",
-    icon: Lightbulb,
-    iconClassName: "bg-orange-500/15 text-orange-600",
+    iconClassName: "bg-sky-500/15 text-sky-700 dark:bg-sky-500/12 dark:text-sky-400",
     metaDescription:
       "Get clarity on funnel bottlenecks, competitor gaps, and where to invest next—tailored to local service growth.",
     heroLead:

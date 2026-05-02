@@ -35,7 +35,7 @@ export const marketingIndustryPages: MarketingIndustryPage[] = [
     description:
       "HVAC, plumbing, electrical, cleaning, landscaping—win the neighborhoods you serve.",
     icon: Home,
-    iconClassName: "bg-slate-500/15 text-slate-700",
+    iconClassName: "bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/12 dark:text-emerald-400",
     metaDescription:
       "Growth software and services for home service businesses: more leads, booked jobs, reviews, and clear marketing ROI.",
     heroLead:
