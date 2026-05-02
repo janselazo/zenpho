@@ -66,11 +66,15 @@ export default function ContactChannelStrip({
     label: string,
     active: boolean,
     node: ReactNode,
-    title: string
+    title: string,
+    /** Sentence-case caption (e.g. "To"); default row uses uppercase chip style. */
+    labelNormalCase = false,
   ) => (
     <div key={key} className="flex flex-col items-center gap-1">
       {active ? node : <span className={channelDisabledClass} title={title}>{node}</span>}
-      <span className="max-w-[4.5rem] truncate text-center text-[9px] font-medium uppercase tracking-wide text-text-secondary/70 dark:text-zinc-500">
+      <span
+        className={`max-w-[4.5rem] truncate text-center text-[9px] font-medium tracking-wide text-text-secondary/70 dark:text-zinc-500 ${labelNormalCase ? "" : "uppercase"}`}
+      >
         {label}
       </span>
     </div>
@@ -143,7 +147,7 @@ export default function ContactChannelStrip({
         )}
         {item(
           "instagram",
-          "Instagram",
+          "To",
           Boolean(s?.instagram?.trim()),
           s?.instagram ? (
             <a
@@ -159,11 +163,12 @@ export default function ContactChannelStrip({
           ) : (
             <Instagram className="h-4 w-4" aria-hidden />
           ),
-          "Not linked from scanned pages"
+          "Not linked from scanned pages",
+          true,
         )}
         {item(
           "facebook",
-          "Facebook",
+          "To",
           Boolean(s?.facebook?.trim()),
           s?.facebook ? (
             <a
@@ -179,7 +184,8 @@ export default function ContactChannelStrip({
           ) : (
             <Facebook className="h-4 w-4" aria-hidden />
           ),
-          "Not linked from scanned pages"
+          "Not linked from scanned pages",
+          true,
         )}
         {item(
           "tiktok",
@@ -223,7 +229,7 @@ export default function ContactChannelStrip({
         )}
         {item(
           "whatsapp",
-          "WhatsApp",
+          "To",
           Boolean(s?.whatsapp?.trim()),
           s?.whatsapp ? (
             <a
@@ -239,7 +245,8 @@ export default function ContactChannelStrip({
           ) : (
             <WhatsAppGlyph className="h-4 w-4" />
           ),
-          "Not linked from scanned pages"
+          "Not linked from scanned pages",
+          true,
         )}
         {trailingItem}
       </div>

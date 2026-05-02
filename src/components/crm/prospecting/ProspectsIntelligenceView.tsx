@@ -1527,27 +1527,34 @@ function ProspectsIntelligenceViewInner({
     [projectType, router]
   );
 
+  const scrollToMarketIntelReport = useCallback(() => {
+    queueMicrotask(() => {
+      requestAnimationFrame(() => {
+        document
+          .getElementById("prospect-market-intel-report")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+  }, []);
+
   const viewPlaceReport = useCallback(
     (place: PlacesSearchPlace) => {
+      // Always apply locally so switching listings works even when Next.js does not
+      // re-navigate (same `?report=place` URL) or skip re-running hydration effects.
+      applyPlaceReport(place);
+      scrollToMarketIntelReport();
+
       try {
-        sessionStorage.setItem(SESSION_PLACE_REPORT_KEY, JSON.stringify(place));
         sessionStorage.setItem(SESSION_SCROLL_TO_REPORT_KEY, "1");
+        sessionStorage.setItem(SESSION_PLACE_REPORT_KEY, JSON.stringify(place));
       } catch {
-        applyPlaceReport(place);
-        queueMicrotask(() => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              document
-                .getElementById("prospect-market-intel-report")
-                ?.scrollIntoView({ behavior: "smooth", block: "start" });
-            });
-          });
-        });
         return;
       }
-      router.push("/prospecting/prospects?report=place");
+      if (searchParams.get("report") !== "place") {
+        router.push("/prospecting/prospects?report=place");
+      }
     },
-    [router, applyPlaceReport]
+    [router, applyPlaceReport, scrollToMarketIntelReport, searchParams],
   );
 
   async function submitLead() {
@@ -2055,11 +2062,12 @@ function ProspectsIntelligenceViewInner({
                         </div>
                         <div>
                           <label className="mb-1 block text-xs font-medium text-text-secondary">
-                            Facebook (optional)
+                            To
                           </label>
                           <input
                             type="url"
                             inputMode="url"
+                            aria-label="Facebook URL (optional)"
                             placeholder="https://facebook.com/…"
                             value={leadFacebook}
                             onChange={(e) => {
@@ -2071,11 +2079,12 @@ function ProspectsIntelligenceViewInner({
                         </div>
                         <div>
                           <label className="mb-1 block text-xs font-medium text-text-secondary">
-                            Instagram (optional)
+                            To
                           </label>
                           <input
                             type="url"
                             inputMode="url"
+                            aria-label="Instagram URL (optional)"
                             placeholder="https://instagram.com/…"
                             value={leadInstagram}
                             onChange={(e) => {
