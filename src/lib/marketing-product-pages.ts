@@ -140,6 +140,11 @@ export const marketingProductPages: MarketingProductPage[] = [
     ],
   },
   {
+    slug: "growth-intelligence",
+    title: "Growth Intelligence",
+    description:
+      "See where leads stall, what converts, and where to invest—with priorities grounded in your funnel, not generic dashboards.",
+    icon: Lightbulb,
     iconClassName: "bg-sky-500/15 text-sky-700 dark:bg-sky-500/12 dark:text-sky-400",
     metaDescription:
       "Get clarity on funnel bottlenecks, competitor gaps, and where to invest next—tailored to local service growth.",
