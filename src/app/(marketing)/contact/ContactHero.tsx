@@ -20,10 +20,10 @@ export default function ContactHero() {
           initial={{ opacity: 1, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.06 }}
-          className="heading-display text-balance text-4xl font-bold leading-tight tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
+          className="heading-display flex flex-col items-center gap-0 text-4xl font-bold leading-none tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
         >
-          Let&apos;s fix leaks and{" "}
-          <span className="text-accent">grow with clarity</span>
+          <span>Book a</span>
+          <span className="text-accent">Growth Call</span>
         </motion.h1>
 
         <motion.p
@@ -32,8 +32,8 @@ export default function ContactHero() {
           transition={{ duration: 0.45, delay: 0.14 }}
           className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-text-secondary"
         >
-          Tell us about your market, leads, and what you want to improve—we&apos;ll help you choose the right next step,
-          whether that is an audit, setup, or ongoing growth work.
+          We&apos;ll help you understand how to attract better leads, turn more inquiries into booked appointments, grow
+          your business reputation, and track which marketing efforts are making you money.
         </motion.p>
       </div>
     </section>

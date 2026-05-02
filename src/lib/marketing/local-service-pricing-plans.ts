@@ -15,13 +15,6 @@ export type LocalServicePricingPlan = {
   featured?: boolean;
 };
 
-export const localServicePricingIntro = {
-  eyebrow: "Pricing",
-  headline: "Development, Growth & Scale",
-  subtitle:
-    "Growth and Scale are monthly management retainers. Advertising budgets are paid directly to Meta and Google and are billed separately.",
-};
-
 /** Zenpho web app & workflows — same foundation on every plan. */
 export const platformIncludedInAllPlans = [
   "Lead management — capture, stage, and follow up in one workspace",
@@ -36,8 +29,7 @@ export const localServicePricingPlans: LocalServicePricingPlan[] = [
     title: "Development",
     price: "$1,000 one-time",
     headerNote: "Zenpho platform included on every plan.",
-    summary:
-      "Credibility and discoverability: website development, Google Business Profile setup, business email, foundational SEO, hosting and support, and optional branding.",
+    summary: "",
     included: [],
     bestFor: [
       "Businesses establishing or refreshing their digital presence",
@@ -46,7 +38,7 @@ export const localServicePricingPlans: LocalServicePricingPlan[] = [
     ],
     outcome:
       "You launch with a professional site and local footprint, email on your domain, foundational SEO, reliable hosting, and the Zenpho workspace for leads through referrals.",
-    ctaLabel: "Book development call",
+    ctaLabel: "Book Call",
     ctaHref: "/booking",
   },
   {
@@ -55,8 +47,7 @@ export const localServicePricingPlans: LocalServicePricingPlan[] = [
     price: "$2,000/month + ad spend",
     featured: true,
     headerNote: "Includes everything in Development.",
-    summary:
-      "Everything in Development, plus Meta (Facebook & Instagram) ads, Performance Creatives, and ongoing SEO services—managed with clear attribution in Zenpho.",
+    summary: "",
     included: [],
     bestFor: [
       "Businesses ready to invest consistently in Meta and organic visibility",
@@ -73,8 +64,7 @@ export const localServicePricingPlans: LocalServicePricingPlan[] = [
     title: "Scale",
     price: "$3,000/month + ad spend",
     headerNote: "Includes everything in Growth (and Development).",
-    summary:
-      "Everything in Growth, plus Google Ads (Search and Performance Max) for full-funnel demand—ideal when you are ready to compete on search and social together.",
+    summary: "",
     included: [],
     bestFor: [
       "Businesses scaling spend across Meta and Google with tight coordination",

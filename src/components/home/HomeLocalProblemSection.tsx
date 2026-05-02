@@ -24,7 +24,7 @@ export default function HomeLocalProblemSection() {
                 id={HEADLINE_ID}
                 className="heading-display text-balance text-3xl font-bold leading-[1.12] tracking-tight text-text-primary sm:text-4xl lg:text-[2.35rem] lg:leading-[1.1]"
               >
-                Most local service businesses don’t just need more leads, they need to stop losing revenue.
+                Local service businesses often lose revenue because of:
               </h2>
               <p className="mt-5 max-w-prose text-base leading-relaxed text-text-secondary sm:text-lg">
                 Many local businesses are already getting calls, website visits, quote requests, and referrals. But if
@@ -34,9 +34,6 @@ export default function HomeLocalProblemSection() {
             </div>
 
             <div className="min-w-0">
-              <p className="mb-5 text-center text-sm font-semibold leading-snug text-text-primary sm:text-left sm:text-base">
-                Local service businesses often lose revenue because of:
-              </p>
               <ul className="grid grid-cols-1 list-none gap-3 sm:grid-cols-2 sm:gap-4">
                 {homeLocalProblemCards.map((card, i) => {
                   const Icon = iconForLocalProblemCard(card.iconKey);

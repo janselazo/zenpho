@@ -11,7 +11,7 @@ const activities = [
   "Google Ads and paid social when the foundation is ready",
   "Local SEO and content that supports real appointments",
   "Review request systems and referral campaigns",
-  "Follow-up automation and proposal workflows",
+  "Proposal workflows",
   "Monthly ROI reporting and revenue-leak monitoring",
   "Growth recommendations with done-for-you execution",
 ] as const;

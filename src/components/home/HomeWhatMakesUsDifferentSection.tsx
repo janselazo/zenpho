@@ -44,7 +44,7 @@ export default function HomeWhatMakesUsDifferentSection() {
             <ul className="mt-5 grid list-none gap-3 sm:gap-3.5">
               {homeUnderstandingPoints.map((item) => (
                 <li key={item} className="flex gap-3 text-left">
-                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent dark:bg-accent/20">
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 dark:bg-emerald-400/15 dark:text-emerald-400">
                     <Check className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
                   </span>
                   <span className="text-base leading-relaxed text-text-secondary sm:text-[1.0625rem]">{item}</span>

@@ -134,20 +134,16 @@ export const marketingFooterColumns: MarketingFooterColumn[] = [
   },
   {
     heading: "Industries",
-    links: [
-      { label: "Overview", href: "/industries" },
-      ...marketingIndustryPages.map((i) => ({
-        label: i.title,
-        href: `/industries/${i.slug}`,
-      })),
-    ],
+    links: marketingIndustryPages.map((i) => ({
+      label: i.title,
+      href: `/industries/${i.slug}`,
+    })),
   },
   {
     heading: "Resources",
     links: [
       { label: "About", href: "/about" },
       { label: "Blog", href: "/blog" },
-      { label: "Resources hub", href: "/resources" },
       { label: "Contact", href: "/contact" },
       { label: "Pricing", href: "/pricing" },
       { label: "Case studies", href: "/case-studies" },

@@ -81,7 +81,7 @@ UTM parameters, call-tracking numbers, and CRM picklists only help when people u
 
 ## Close the loop weekly
 
-Pick one rhythm—weekly or biweekly—and ask: which sources produced booked appointments, which stalled at estimate, and which produced nothing but noise? That meeting should be short, blunt, and tied to **one or two fixes** (page speed, script, offer, follow-up automation), not a twelve-initiative wish list.
+Pick one rhythm—weekly or biweekly—and ask: which sources produced booked appointments, which stalled at estimate, and which produced nothing but noise? That meeting should be short, blunt, and tied to **one or two fixes** (page speed, script, offer, tighter follow-up), not a twelve-initiative wish list.
 
 ## Prove ROI without fantasy math
 

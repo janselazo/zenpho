@@ -1,9 +1,47 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { Github, Linkedin, Mail } from "lucide-react";
 import { marketingFooterColumns } from "@/lib/marketing-nav";
 import Button from "@/components/ui/Button";
+
+function SocialIconLink({
+  href,
+  ariaLabel,
+  external,
+  children,
+}: {
+  href: string;
+  ariaLabel: string;
+  external?: boolean;
+  children: ReactNode;
+}) {
+  const cls =
+    "inline-flex h-10 w-10 items-center justify-center rounded-full border border-border/70 bg-white/90 text-text-secondary shadow-sm transition-colors hover:border-accent/35 hover:text-accent";
+  if (external) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" aria-label={ariaLabel} className={cls}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <a href={href} aria-label={ariaLabel} className={cls}>
+      {children}
+    </a>
+  );
+}
+
+/** X (Twitter) mark — Lucide does not ship the current X glyph. */
+function IconX({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  );
+}
 
 export default function Footer() {
   return (
@@ -34,6 +72,24 @@ export default function Footer() {
                 Free revenue check
               </Button>
             </div>
+            <div className="mt-5 flex flex-wrap items-center gap-2">
+              <SocialIconLink href="mailto:hello@zenpho.com" ariaLabel="Email hello@zenpho.com">
+                <Mail className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
+              </SocialIconLink>
+              <SocialIconLink href="https://x.com/zenpho" ariaLabel="Zenpho on X" external>
+                <IconX className="h-[17px] w-[17px]" />
+              </SocialIconLink>
+              <SocialIconLink
+                href="https://www.linkedin.com/company/zenpho"
+                ariaLabel="Zenpho on LinkedIn"
+                external
+              >
+                <Linkedin className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
+              </SocialIconLink>
+              <SocialIconLink href="https://github.com/zenpho" ariaLabel="Zenpho on GitHub" external>
+                <Github className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
+              </SocialIconLink>
+            </div>
           </div>
 
           <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
@@ -59,62 +115,23 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-14 flex flex-col items-center gap-6 border-t border-border/70 pt-8 lg:flex-row lg:justify-between">
-          <div className="w-full rounded-2xl border border-border/60 bg-white/80 px-5 py-5 shadow-sm lg:max-w-md">
-            <h4 className="border-b border-border/70 pb-2 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-text-secondary">
-              Connect
-            </h4>
-            <div className="mt-4 flex flex-col gap-3">
-              <a
-                href="mailto:hello@zenpho.com"
-                className="text-sm font-semibold text-text-primary transition-colors hover:text-accent"
-              >
-                hello@zenpho.com
-              </a>
-              <a
-                href="https://x.com/zenpho"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-text-secondary transition-colors hover:text-accent"
-              >
-                X / Twitter
-              </a>
-              <a
-                href="https://www.linkedin.com/company/zenpho"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-text-secondary transition-colors hover:text-accent"
-              >
-                LinkedIn
-              </a>
-              <a
-                href="https://github.com/zenpho"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-text-secondary transition-colors hover:text-accent"
-              >
-                GitHub
-              </a>
-            </div>
-          </div>
-          <div className="flex flex-col items-center gap-4 sm:flex-row sm:gap-8">
-            <p className="text-xs text-text-secondary/80">
-              &copy; {new Date().getFullYear()} Zenpho. All rights reserved.
-            </p>
-            <div className="flex gap-6">
-              <Link
-                href="/privacy"
-                className="text-xs font-medium text-text-secondary/80 transition-colors hover:text-accent"
-              >
-                Privacy
-              </Link>
-              <Link
-                href="/terms"
-                className="text-xs font-medium text-text-secondary/80 transition-colors hover:text-accent"
-              >
-                Terms
-              </Link>
-            </div>
+        <div className="mt-14 flex flex-col items-center gap-4 border-t border-border/70 pt-8 sm:flex-row sm:justify-between sm:gap-8">
+          <p className="text-xs text-text-secondary/80">
+            &copy; {new Date().getFullYear()} Zenpho. All rights reserved.
+          </p>
+          <div className="flex gap-6">
+            <Link
+              href="/privacy"
+              className="text-xs font-medium text-text-secondary/80 transition-colors hover:text-accent"
+            >
+              Privacy
+            </Link>
+            <Link
+              href="/terms"
+              className="text-xs font-medium text-text-secondary/80 transition-colors hover:text-accent"
+            >
+              Terms
+            </Link>
           </div>
         </div>
       </div>

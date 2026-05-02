@@ -22,18 +22,18 @@ export default function BookingHero() {
           transition={{ duration: 0.5, delay: 0.06 }}
           className="heading-display flex flex-col items-center gap-0 text-4xl font-bold leading-none tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
         >
-          <span>Book a Call</span>
-          <span className="text-accent">with our team</span>
+          <span>Book a</span>
+          <span className="text-accent">Growth Call</span>
         </motion.h1>
 
         <motion.p
           initial={{ opacity: 1, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, delay: 0.14 }}
-          className="mx-auto mt-4 max-w-xl text-base text-text-secondary"
+          className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-text-secondary"
         >
-          Pick a slot — we come ready to pressure-test scope, AI fit, and
-          whether MVP Development or Growth is the right next move.
+          We&apos;ll help you understand how to attract better leads, turn more inquiries into booked appointments, grow
+          your business reputation, and track which marketing efforts are making you money.
         </motion.p>
       </div>
     </section>

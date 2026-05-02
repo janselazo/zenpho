@@ -1,10 +1,7 @@
 import { Fragment } from "react";
 import Button from "@/components/ui/Button";
 import { Check, X } from "lucide-react";
-import {
-  localServicePricingIntro,
-  localServicePricingPlans,
-} from "@/lib/marketing/local-service-pricing-plans";
+import { localServicePricingPlans } from "@/lib/marketing/local-service-pricing-plans";
 import {
   pricingComparisonSections,
   type PricingComparisonPlanId,
@@ -36,26 +33,11 @@ export default function LocalServicePricingComparison() {
       aria-labelledby={HEADING_ID}
     >
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        <div className="mx-auto max-w-3xl text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">
-            {localServicePricingIntro.eyebrow}
-          </p>
-          <h2
-            id={HEADING_ID}
-            className="mt-3 text-balance text-3xl font-bold tracking-tight text-text-primary sm:text-4xl lg:text-[2.35rem] lg:leading-[1.1]"
-          >
-            {localServicePricingIntro.headline}
-          </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-pretty text-base leading-relaxed text-text-secondary sm:text-lg">
-            {localServicePricingIntro.subtitle}
-          </p>
-        </div>
+        <h2 id={HEADLINE_ID} className="sr-only">
+          Compare Zenpho pricing plans
+        </h2>
 
-        <p className="mx-auto mt-3 max-w-2xl text-center text-sm text-text-secondary/90">
-          Growth includes all Development services. Scale includes all Growth services (and Development).
-        </p>
-
-        <div className="mt-10 overflow-x-auto rounded-2xl border border-border/70 bg-white shadow-soft [-webkit-overflow-scrolling:touch]">
+        <div className="overflow-x-auto rounded-2xl border border-border/70 bg-white pt-6 shadow-soft [-webkit-overflow-scrolling:touch] sm:pt-7">
           <p className="sr-only">Scroll horizontally to compare plans on small screens.</p>
           <table className="w-full min-w-[760px] border-collapse text-left text-sm">
             <thead>
@@ -86,7 +68,9 @@ export default function LocalServicePricingComparison() {
                       {plan.headerNote ? (
                         <span className="text-xs font-medium leading-snug text-accent">{plan.headerNote}</span>
                       ) : null}
-                      <p className="text-xs leading-relaxed text-text-secondary sm:text-[13px]">{plan.summary}</p>
+                      {plan.summary.trim() ? (
+                        <p className="text-xs leading-relaxed text-text-secondary sm:text-[13px]">{plan.summary}</p>
+                      ) : null}
                       <p className="text-xl font-black tracking-tight text-text-primary sm:text-2xl">{plan.price}</p>
                       <Button
                         href={plan.ctaHref}
@@ -139,28 +123,6 @@ export default function LocalServicePricingComparison() {
               ))}
             </tbody>
           </table>
-        </div>
-
-        <div className="mx-auto mt-12 grid max-w-5xl gap-8 lg:grid-cols-3 lg:gap-6">
-          {localServicePricingPlans.map((plan) => (
-            <div
-              key={`footer-${plan.id}`}
-              className={`rounded-2xl border bg-white p-6 shadow-sm sm:p-7 ${
-                plan.featured ? "border-accent/30 ring-2 ring-accent/15" : "border-border/70"
-              }`}
-            >
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-text-secondary">Best for</p>
-              <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed text-text-secondary">
-                {plan.bestFor.map((line) => (
-                  <li key={line}>{line}</li>
-                ))}
-              </ul>
-              <p className="mt-6 border-t border-border/60 pt-5 text-xs font-bold uppercase tracking-[0.18em] text-text-secondary">
-                Outcome
-              </p>
-              <p className="mt-2 text-sm leading-relaxed text-text-secondary">{plan.outcome}</p>
-            </div>
-          ))}
         </div>
       </div>
     </section>

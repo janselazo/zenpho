@@ -47,12 +47,12 @@ function platformRows(): PricingComparisonFeatureRow[] {
 export const pricingComparisonSections: PricingComparisonSection[] = [
   {
     id: "platform",
-    heading: "Zenpho platform (every plan)",
+    heading: "Zenpho platform",
     rows: platformRows(),
   },
   {
     id: "development",
-    heading: "Development bundle (included in all tiers)",
+    heading: "Development",
     rows: [
       {
         id: "dev-site",
@@ -90,7 +90,7 @@ export const pricingComparisonSections: PricingComparisonSection[] = [
   },
   {
     id: "growth_services",
-    heading: "Growth services (Growth & Scale)",
+    heading: "Growth",
     rows: [
       {
         id: "gr-meta",
@@ -112,7 +112,7 @@ export const pricingComparisonSections: PricingComparisonSection[] = [
   },
   {
     id: "scale_only",
-    heading: "Scale channel add-on",
+    heading: "Scale",
     rows: [
       {
         id: "sc-google",

@@ -24,6 +24,21 @@ const nextConfig = {
   },
   async redirects() {
     return [
+      {
+        source: "/product/lead-capture-tracking",
+        destination: "/product/lead-management",
+        permanent: true,
+      },
+      {
+        source: "/product/follow-up-automation",
+        destination: "/product/lead-management",
+        permanent: true,
+      },
+      {
+        source: "/product/revenue-dashboard",
+        destination: "/product/growth-intelligence",
+        permanent: true,
+      },
       { source: "/studio", destination: "/", permanent: true },
       {
         source: "/blog/nine-years-shipping-custom-software",

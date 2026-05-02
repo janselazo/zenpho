@@ -20,19 +20,3 @@ export const homeUnderstandingPoints = [
   "Whether reviews and referrals are being captured",
   "What actions will improve revenue next",
 ] as const;
-
-export const homeOurDifferenceHeadline = "Our Difference";
-
-export const homeOurDifferenceLeadIn = "We combine:";
-
-export const homeOurDifferencePoints = [
-  "Revenue leak diagnosis",
-  "Multi-channel lead generation",
-  "Lead tracking",
-  "Follow-up systems",
-  "Reviews",
-  "Referrals",
-  "Revenue reporting",
-  "Growth recommendations",
-  "Done-for-you execution",
-] as const;

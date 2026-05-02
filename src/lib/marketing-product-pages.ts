@@ -1,25 +1,19 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  BarChart3,
   CalendarClock,
   Lightbulb,
-  MousePointerClick,
   Share2,
   Star,
   Target,
   Users,
-  Workflow,
 } from "lucide-react";
 
 export type MarketingProductSlug =
   | "lead-generation"
-  | "lead-capture-tracking"
   | "lead-management"
   | "appointments"
-  | "follow-up-automation"
   | "reviews"
   | "referrals"
-  | "revenue-dashboard"
   | "growth-intelligence";
 
 export type MarketingProductPage = {
@@ -58,42 +52,26 @@ export const marketingProductPages: MarketingProductPage[] = [
     ],
   },
   {
-    slug: "lead-capture-tracking",
-    title: "Lead Capture & Tracking",
+    slug: "lead-management",
+    title: "Lead Management",
     description:
-      "Never miss a lead. Capture every call, form, and message with full source attribution.",
-    icon: MousePointerClick,
-    iconClassName: "bg-sky-500/15 text-sky-600",
+      "Capture every call, form, and message with full attribution—then organize, prioritize, and follow up so nothing slips through the cracks.",
+    icon: Users,
+    iconClassName: "bg-emerald-500/15 text-emerald-600",
     metaDescription:
-      "Capture every lead from calls, forms, and messages with source tracking so you know what marketing drives appointments.",
+      "Capture leads from calls, forms, and messages with source tracking; prioritize and follow up with CRM-style workflows built for local service businesses.",
     heroLead:
-      "One system of record for every inbound touchpoint—so nothing falls through the cracks.",
+      "One system of record from first touch to booked job—capture, attribute, and prioritize without enterprise CRM complexity.",
     body: [
       "Missed calls and orphaned form fills quietly drain revenue. Lead capture connects your website, ads, and phone into a single timeline with source and campaign metadata.",
       "Tracking ties each lead back to the creative, keyword, or referral that created it—so you can double down on what works.",
+      "Spreadsheets and generic CRMs weren’t built for booked estimates and recurring service routes. Lead management keeps status, notes, and next steps visible for the whole team.",
+      "Prioritization helps you focus on high-value jobs, urgent follow-ups, and opportunities most likely to close this week.",
     ],
     bullets: [
       "Normalize leads from web, phone, and third-party sources",
       "Attribute leads to campaigns and landing pages automatically",
       "Alert your team when high-intent leads arrive",
-    ],
-  },
-  {
-    slug: "lead-management",
-    title: "Lead Management",
-    description:
-      "Organize, prioritize, and follow up so nothing slips through the cracks.",
-    icon: Users,
-    iconClassName: "bg-emerald-500/15 text-emerald-600",
-    metaDescription:
-      "Prioritize and follow up with local leads using simple CRM-style workflows built for service businesses.",
-    heroLead:
-      "A lightweight command center for who to call next—without enterprise CRM complexity.",
-    body: [
-      "Spreadsheets and generic CRMs weren’t built for booked estimates and recurring service routes. Lead management keeps status, notes, and next steps visible for the whole team.",
-      "Prioritization helps you focus on high-value jobs, urgent follow-ups, and opportunities most likely to close this week.",
-    ],
-    bullets: [
       "Stages tailored to quotes, appointments, and won jobs",
       "Team visibility into history and commitments",
       "Less admin time, more time on-site with customers",
@@ -118,27 +96,6 @@ export const marketingProductPages: MarketingProductPage[] = [
       "Self-serve booking aligned to your real availability",
       "Automatic reminders that cut no-shows",
       "Handoff notes so technicians arrive informed",
-    ],
-  },
-  {
-    slug: "follow-up-automation",
-    title: "Follow-Up Automation",
-    description:
-      "Stay top-of-mind with prospects and clients—without living in your inbox.",
-    icon: Workflow,
-    iconClassName: "bg-fuchsia-500/15 text-fuchsia-600",
-    metaDescription:
-      "Automate follow-ups after quotes, missed calls, and jobs so leads and clients hear from you at the right time.",
-    heroLead:
-      "The fortune is in the follow-up—especially for high-consideration local purchases.",
-    body: [
-      "Manual follow-up doesn’t scale. Automation sequences re-engage estimates sitting open, nurture long-cycle buyers, and check in after service—on your brand voice.",
-      "Triggers are tied to real events: form submitted, call missed, appointment completed—so messages feel relevant, not spammy.",
-    ],
-    bullets: [
-      "Recover revenue from stale estimates and ghosted calls",
-      "Post-job touchpoints that drive reviews and repeats",
-      "Save hours each week on manual texting and email",
     ],
   },
   {
@@ -167,7 +124,7 @@ export const marketingProductPages: MarketingProductPage[] = [
     title: "Referrals",
     description: "Turn happy clients into a repeatable referral engine.",
     icon: Share2,
-    iconClassName: "bg-teal-500/15 text-teal-600",
+    iconClassName: "bg-orange-500/15 text-orange-600",
     metaDescription:
       "Encourage referrals and track word-of-mouth alongside paid channels—built for local service businesses.",
     heroLead:
@@ -180,27 +137,6 @@ export const marketingProductPages: MarketingProductPage[] = [
       "Shareable referral links tied to customers or campaigns",
       "Track referred leads through booking and payment",
       "Messaging that reinforces trust—not gimmicks",
-    ],
-  },
-  {
-    slug: "revenue-dashboard",
-    title: "Revenue Dashboard",
-    description:
-      "See which marketing actually produces booked jobs and revenue.",
-    icon: BarChart3,
-    iconClassName: "bg-blue-500/15 text-blue-600",
-    metaDescription:
-      "Attribute revenue to campaigns, sources, and referrals with a dashboard built for owners—not data scientists.",
-    heroLead:
-      "Stop guessing. Connect spend, leads, appointments, and invoices in one place.",
-    body: [
-      "Analytics tools show clicks; owners need jobs and dollars. The revenue dashboard maps pipeline stages to outcomes you care about: booked work, average ticket, and ROI.",
-      "Compare periods, drill into sources, and coach your team with numbers everyone understands.",
-    ],
-    bullets: [
-      "Source-level ROI—not just ad platform metrics",
-      "Roll-ups by service line, location, or campaign",
-      "Export-friendly summaries for bookkeepers and partners",
     ],
   },
   {

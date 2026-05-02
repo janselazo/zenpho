@@ -8,7 +8,8 @@ export default function ProblemSection() {
           <MoreRotatingHeadline />
           <div className="mx-auto mt-3 max-w-2xl space-y-3 text-pretty sm:mt-3.5 [&_p]:text-base [&_p]:leading-relaxed [&_p]:text-text-secondary [&_p]:sm:text-lg">
             <p>
-              We help local service businesses generate, track, and convert more opportunities into revenue.
+              <span className="block">We help local service businesses generate, track, and convert</span>
+              <span className="mt-1 block">more opportunities into revenue.</span>
             </p>
           </div>
         </div>
