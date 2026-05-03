@@ -1,16 +1,15 @@
 import Button from "@/components/ui/Button";
 import SectionHeading from "@/components/ui/SectionHeading";
 import {
+  PricingNarrativeCollapsibleGroups,
+  PricingNarrativeCollapsiblePlatform,
+} from "@/components/pricing/PricingNarrativeCollapsibleGroups";
+import { PricingPlanTierHeaderBlock, pricingPlanColumnSurfaceClass } from "@/components/pricing/PricingPlanTierHeader";
+import {
   crossTierDevelopmentAddOns,
   localServicePackageNarratives,
 } from "@/lib/marketing/local-service-package-narratives";
 import { localServicePricingPlans } from "@/lib/marketing/local-service-pricing-plans";
-
-function planCardClass(featured?: boolean) {
-  return featured
-    ? "rounded-2xl border-2 border-accent/35 bg-accent/[0.03] p-6 shadow-soft sm:p-7"
-    : "rounded-2xl border border-border/70 bg-white p-6 shadow-sm sm:p-7";
-}
 
 export default function PricingPackageNarratives() {
   return (
@@ -27,86 +26,76 @@ export default function PricingPackageNarratives() {
           description="Launch establishes your foundation; Grow adds paid acquisition and funnel rigor; Scale layers advanced acquisition, SEO, CRO, and sales orchestration—all in Zenpho."
         />
 
-        <div className="mt-12 grid gap-6 lg:grid-cols-3">
-          {localServicePackageNarratives.map((n) => {
-            const plan = localServicePricingPlans.find((p) => p.id === n.id);
-            const featured = plan?.featured;
-
-            return (
-              <article key={n.id} className={planCardClass(featured)}>
-                <header className="border-b border-border/50 pb-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">{n.tagline}</p>
-                  <h3 className="mt-2 text-xl font-bold tracking-tight text-text-primary sm:text-2xl">
-                    {plan?.title ?? n.id}
-                  </h3>
-                  <p className="mt-3 text-sm leading-relaxed text-text-secondary">
-                    <span className="font-medium text-text-primary">Best for: </span>
-                    {n.bestFor}
-                  </p>
-                  <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-                    <span className="font-medium text-text-primary">Goal: </span>
-                    {n.mainGoal}
-                  </p>
-                </header>
-
-                <div className="mt-4 space-y-1">
-                  <p className="text-lg font-black tabular-nums text-text-primary sm:text-xl">{n.priceSummary}</p>
-                  {n.priceFootnote ? (
-                    <p className="text-xs text-text-secondary">{n.priceFootnote}</p>
-                  ) : null}
-                  {n.priceAlternative ? (
-                    <p className="text-xs leading-snug text-text-secondary">{n.priceAlternative}</p>
-                  ) : null}
-                  {n.adSpendNote ? (
-                    <p className="text-xs leading-relaxed text-text-secondary">{n.adSpendNote}</p>
-                  ) : null}
-                </div>
-
-                <div className="mt-6 space-y-6">
-                  {n.includeGroups.map((g) => (
-                    <div key={g.heading}>
-                      <h4 className="text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">
-                        {g.heading}
-                      </h4>
-                      <ul className="mt-2 list-disc space-y-1.5 pl-4 text-sm leading-relaxed text-text-secondary marker:text-accent/80">
-                        {g.items.map((item) => (
-                          <li key={item}>{item}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-
-                {n.platformAndMonthly?.length ? (
-                  <div className="mt-6 rounded-xl border border-border/60 bg-surface/40 p-4">
-                    <h4 className="text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">
-                      Platform & monthly rhythm
-                    </h4>
-                    <ul className="mt-2 list-disc space-y-2 pl-4 text-xs leading-relaxed text-text-secondary marker:text-text-secondary/50">
-                      {n.platformAndMonthly.map((line) => (
-                        <li key={line}>{line}</li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-
-                <p className="mt-6 border-t border-border/50 pt-4 text-sm italic leading-relaxed text-text-primary/90">
-                  {n.positioning}
-                </p>
-
-                <div className="mt-6">
-                  <Button
-                    href={plan?.ctaHref ?? "/booking"}
-                    variant={featured ? "primary" : "dark"}
-                    size="lg"
-                    className="w-full justify-center"
+        <div className="mt-12 overflow-x-auto rounded-2xl border border-border/70 bg-white pt-6 shadow-soft [-webkit-overflow-scrolling:touch] sm:pt-7">
+          <p className="sr-only">Scroll horizontally to compare plan details on small screens.</p>
+          <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+            <thead>
+              <tr className="border-b border-border/70 bg-white">
+                <th
+                  scope="col"
+                  aria-label="Context for each tier"
+                  className="sticky left-0 z-20 w-[min(36vw,280px)] min-w-[180px] bg-white px-4 py-5 align-top sm:px-5"
+                >
+                  <div className="flex min-h-[30px] items-end pb-2 sm:min-h-[32px]" aria-hidden />
+                </th>
+                {localServicePricingPlans.map((plan) => (
+                  <th
+                    key={plan.id}
+                    scope="col"
+                    className={`w-[min(22vw,220px)] min-w-[160px] border-border/60 px-3 py-5 align-top sm:px-4 ${pricingPlanColumnSurfaceClass(plan.featured)}`}
                   >
-                    {plan?.ctaLabel ?? "Book a call"}
-                  </Button>
-                </div>
-              </article>
-            );
-          })}
+                    <PricingPlanTierHeaderBlock plan={plan} />
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="align-top">
+                <th
+                  scope="row"
+                  className="sticky left-0 z-10 max-w-[280px] min-w-[180px] border-r border-border/70 bg-white px-4 py-6 align-top text-left font-normal sm:px-5"
+                >
+                  <span className="text-xs font-bold uppercase tracking-[0.18em] text-text-secondary">Details</span>
+                  <p className="mt-2 text-[13px] leading-relaxed text-text-secondary">
+                    Narratives, best-fit context, and what&apos;s bundled into each tier.
+                  </p>
+                </th>
+                {localServicePricingPlans.map((plan) => {
+                  const narrative = localServicePackageNarratives.find((n) => n.id === plan.id);
+                  if (!narrative) return null;
+
+                  return (
+                    <td
+                      key={plan.id}
+                      className={`border-border/60 px-3 py-6 align-top sm:px-4 ${pricingPlanColumnSurfaceClass(plan.featured)}`}
+                    >
+                      <div className="space-y-3 border-b border-border/50 pb-4 text-sm leading-relaxed text-text-secondary dark:border-zinc-700/60">
+                        <p>
+                          <span className="font-medium text-text-primary">Best for: </span>
+                          {narrative.bestFor}
+                        </p>
+                        <p>
+                          <span className="font-medium text-text-primary">Goal: </span>
+                          {narrative.mainGoal}
+                        </p>
+                      </div>
+                      <PricingNarrativeCollapsibleGroups groups={narrative.includeGroups} className="mt-4" />
+                      {narrative.platformAndMonthly?.length ? (
+                        <PricingNarrativeCollapsiblePlatform
+                          title="Platform & monthly rhythm"
+                          lines={narrative.platformAndMonthly}
+                          className="mt-4"
+                        />
+                      ) : null}
+                      <p className="mt-6 border-t border-border/50 pt-4 text-sm italic leading-relaxed text-text-primary dark:border-zinc-700/60">
+                        {narrative.positioning}
+                      </p>
+                    </td>
+                  );
+                })}
+              </tr>
+            </tbody>
+          </table>
         </div>
 
         <div className="mt-14 rounded-2xl border border-border/70 bg-white p-6 shadow-sm sm:p-8">

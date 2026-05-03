@@ -1,7 +1,12 @@
-import { Fragment } from "react";
-import Button from "@/components/ui/Button";
+"use client";
+
+import { Fragment, useCallback, useMemo, useState } from "react";
 import PricingComparisonFeatureLabel from "@/components/pricing/PricingComparisonFeatureLabel";
-import { Check, X } from "lucide-react";
+import {
+  PricingPlanTierHeaderBlock,
+  pricingPlanColumnSurfaceClass,
+} from "@/components/pricing/PricingPlanTierHeader";
+import { Check, ChevronDown, X } from "lucide-react";
 import { localServicePricingPlans } from "@/lib/marketing/local-service-pricing-plans";
 import {
   pricingComparisonSections,
@@ -28,6 +33,20 @@ function InclusionCell({ included }: { included: boolean }) {
 }
 
 export default function LocalServicePricingComparison() {
+  const initialSectionOpen = useMemo(() => {
+    const o: Record<string, boolean> = {};
+    for (const s of pricingComparisonSections) {
+      o[s.id] = true;
+    }
+    return o;
+  }, []);
+
+  const [sectionOpen, setSectionOpen] = useState<Record<string, boolean>>(initialSectionOpen);
+
+  const toggleSection = useCallback((id: string) => {
+    setSectionOpen((prev) => ({ ...prev, [id]: !prev[id] }));
+  }, []);
+
   return (
     <section
       className="border-t border-border/50 bg-[#f4f5f7] py-16 lg:py-24"
@@ -54,101 +73,63 @@ export default function LocalServicePricingComparison() {
                   <th
                     key={plan.id}
                     scope="col"
-                    className={`w-[min(22vw,220px)] min-w-[160px] border-border/60 px-3 py-5 align-top sm:px-4 ${
-                      plan.featured
-                        ? "border-x border-accent/25 bg-accent/[0.04] shadow-[inset_0_1px_0_0_rgba(37,99,235,0.12)]"
-                        : "border-l border-border/40 bg-white"
-                    }`}
+                    className={`w-[min(22vw,220px)] min-w-[160px] border-border/60 px-3 py-5 align-top sm:px-4 ${pricingPlanColumnSurfaceClass(plan.featured)}`}
                   >
-                    <div className="flex min-h-[30px] items-end justify-center pb-2 sm:min-h-[32px]">
-                      {plan.featured ? (
-                        <span className="rounded-full bg-accent px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
-                          Most booked
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <span className="text-lg font-bold leading-snug text-text-primary sm:text-xl">{plan.title}</span>
-                      {plan.planTagline ? (
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent sm:text-xs">
-                          {plan.planTagline}
-                        </span>
-                      ) : null}
-                      {plan.headerNote ? (
-                        <span className="text-[13px] font-medium leading-snug text-text-secondary sm:text-sm">
-                          {plan.headerNote}
-                        </span>
-                      ) : null}
-                      {plan.summary.trim() ? (
-                        <p className="text-xs leading-relaxed text-text-secondary sm:text-[13px]">{plan.summary}</p>
-                      ) : null}
-                      <div className="mt-3 flex flex-col gap-0.5">
-                        <p className="text-xl font-black tabular-nums tracking-tight text-text-primary sm:text-2xl">
-                          {plan.priceLead}
-                        </p>
-                        <p className="text-xs leading-snug text-text-secondary sm:text-sm">
-                          {plan.priceNote ? (
-                            plan.priceNote
-                          ) : (
-                            <span className="invisible select-none" aria-hidden>
-                              Plus ad spend
-                            </span>
-                          )}
-                        </p>
-                        {plan.priceAlt ? (
-                          <p className="text-[11px] leading-snug text-text-secondary/90 sm:text-xs">{plan.priceAlt}</p>
-                        ) : null}
-                      </div>
-                      <Button
-                        href={plan.ctaHref}
-                        variant={plan.featured ? "primary" : "dark"}
-                        size="lg"
-                        className="mt-1 w-full justify-center"
-                      >
-                        {plan.ctaLabel}
-                      </Button>
-                    </div>
+                    <PricingPlanTierHeaderBlock plan={plan} />
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {pricingComparisonSections.map((section) => (
-                <Fragment key={section.id}>
-                  <tr className="bg-surface/65">
-                    <td
-                      colSpan={4}
-                      className="border-y border-border/60 px-4 py-2.5 text-xs font-bold uppercase tracking-[0.18em] text-text-secondary sm:px-5"
-                    >
-                      {section.heading}
-                    </td>
-                  </tr>
-                  {section.rows.map((row, ri) => {
-                    const stripe = ri % 2 === 1;
-                    const stickyBg = stripe ? "bg-surface/25" : "bg-white";
-                    return (
-                      <tr
-                        key={row.id}
-                        className={`border-b border-border/50 ${stripe ? "bg-surface/25" : "bg-white"}`}
-                      >
-                        <th
-                          scope="row"
-                          className={`sticky left-0 z-10 ${stickyBg} border-r border-border/50 px-4 py-3 pr-3 font-normal leading-snug text-text-primary sm:px-5 sm:py-3.5`}
+              {pricingComparisonSections.map((section) => {
+                const open = sectionOpen[section.id] ?? true;
+                return (
+                  <Fragment key={section.id}>
+                    <tr className="bg-surface/65">
+                      <td colSpan={4} className="border-y border-border/60 p-0">
+                        <button
+                          type="button"
+                          onClick={() => toggleSection(section.id)}
+                          aria-expanded={open}
+                          className="flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left text-xs font-bold uppercase tracking-[0.18em] text-text-secondary transition-colors hover:bg-surface/80 sm:px-5 dark:hover:bg-zinc-800/40"
                         >
-                          <PricingComparisonFeatureLabel
-                            rowId={row.id}
-                            label={row.label}
-                            tooltip={row.tooltip}
+                          <span className="leading-snug">{section.heading}</span>
+                          <ChevronDown
+                            className={`h-4 w-4 shrink-0 text-text-secondary transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+                            aria-hidden
                           />
-                        </th>
-                        {COLUMN_IDS.map((colId) => (
-                          <InclusionCell key={colId} included={row.cells[colId]} />
-                        ))}
-                      </tr>
-                    );
-                  })}
-                </Fragment>
-              ))}
+                        </button>
+                      </td>
+                    </tr>
+                    {open
+                      ? section.rows.map((row, ri) => {
+                          const stripe = ri % 2 === 1;
+                          const stickyBg = stripe ? "bg-surface/25" : "bg-white";
+                          return (
+                            <tr
+                              key={row.id}
+                              className={`border-b border-border/50 ${stripe ? "bg-surface/25" : "bg-white"}`}
+                            >
+                              <th
+                                scope="row"
+                                className={`sticky left-0 z-10 ${stickyBg} border-r border-border/50 px-4 py-3 pr-3 font-normal leading-snug text-text-primary sm:px-5 sm:py-3.5`}
+                              >
+                                <PricingComparisonFeatureLabel
+                                  rowId={row.id}
+                                  label={row.label}
+                                  tooltip={row.tooltip}
+                                />
+                              </th>
+                              {COLUMN_IDS.map((colId) => (
+                                <InclusionCell key={colId} included={row.cells[colId]} />
+                              ))}
+                            </tr>
+                          );
+                        })
+                      : null}
+                  </Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
