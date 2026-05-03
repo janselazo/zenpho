@@ -1,73 +1,21 @@
 "use client";
 
-import Image from "next/image";
+import type { ReactNode } from "react";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import type { LucideIcon } from "lucide-react";
-import {
-  BookOpen,
-  Building2,
-  Calendar,
-  ChevronDown,
-  Compass,
-  DollarSign,
-  FileBarChart,
-  FileText,
-  FolderKanban,
-  Layers,
-  LayoutDashboard,
-  LogOut,
-  MessageSquare,
-  SearchCheck,
-  Settings,
-  Store as StoreIcon,
-  Timer,
-  Users,
-  UsersRound,
-  Workflow,
-} from "lucide-react";
+import { ChevronDown, LogOut, Settings, Store as StoreIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { PROSPECTING_SECTIONS } from "@/lib/crm/prospecting-nav";
+import {
+  SIDEBAR_COLLAPSIBLE_SECTIONS,
+  SIDEBAR_DASHBOARD_ITEM,
+} from "@/lib/crm/app-sidebar-nav";
 import {
   formatUnreadBadgeCount,
   useConversationUnreadCount,
 } from "@/lib/crm/use-conversation-unread-count";
 import SoonBadge from "@/components/crm/prospecting/SoonBadge";
-
-const opportunitiesNav: Array<{
-  href: string;
-  label: string;
-  icon: LucideIcon;
-}> = [
-  { href: "/leads", label: "Leads", icon: UsersRound },
-  { href: "/calendar", label: "Appointments", icon: Calendar },
-  { href: "/conversations", label: "Conversations", icon: MessageSquare },
-];
-
-const workNav = [
-  { href: "/products", label: "Products", icon: FolderKanban },
-  { href: "/time-tracking", label: "Time Tracking", icon: Timer },
-  { href: "/proposals", label: "Proposals", icon: FileText },
-];
-
-const agencyNav = [
-  { href: "/my-life", label: "My Life", icon: Compass },
-  { href: "/finances", label: "Finances", icon: DollarSign },
-  { href: "/team", label: "Team", icon: Users },
-  { href: "/automations", label: "Automations", icon: Workflow },
-  { href: "/reports", label: "Reports", icon: FileBarChart },
-  { href: "/docs", label: "Documents", icon: BookOpen },
-  { href: "/agency/industries", label: "Industries", icon: Building2 },
-];
-
-const playbookSection = PROSPECTING_SECTIONS.find((s) => s.slug === "playbook");
-const prospectsSection = PROSPECTING_SECTIONS.find((s) => s.slug === "prospects");
-const prospectingSectionsWithoutPlaybook = PROSPECTING_SECTIONS.filter(
-  (s) => s.slug !== "playbook" && s.slug !== "prospects"
-);
-const PlaybookNavIcon = playbookSection?.icon;
-const ProspectsNavIcon = prospectsSection?.icon;
 
 const SIDEBAR_SECTION_STORAGE_PREFIX = "zenpho-sidebar-section-";
 
@@ -100,16 +48,54 @@ function useSidebarSectionOpen(sectionKey: string, defaultOpen = true) {
   return [open, toggle] as const;
 }
 
+function navItemActive(pathname: string, href: string): boolean {
+  if (href === "/dashboard") {
+    return pathname === "/dashboard" || pathname === "/dashboard/";
+  }
+  if (href === "/products") {
+    return pathname === "/products" || pathname.startsWith("/products/");
+  }
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 export default function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const conversationUnreadCount = useConversationUnreadCount();
-  const [opportunitiesOpen, toggleOpportunities] =
-    useSidebarSectionOpen("opportunities");
+
+  const [marketingOpen, toggleMarketing] = useSidebarSectionOpen("marketing");
+  const [creativeOpen, toggleCreative] = useSidebarSectionOpen("creative-studio");
+  const [crmOpen, toggleCrm] = useSidebarSectionOpen("crm");
+  const [salesOpen, toggleSales] = useSidebarSectionOpen("sales");
+  const [reviewsOpen, toggleReviews] = useSidebarSectionOpen("reviews");
+  const [referralsOpen, toggleReferrals] = useSidebarSectionOpen("referrals");
+  const [reportingOpen, toggleReporting] = useSidebarSectionOpen("reporting");
   const [workOpen, toggleWork] = useSidebarSectionOpen("work");
-  const [prospectingOpen, toggleProspecting] =
-    useSidebarSectionOpen("prospecting");
   const [agencyOpen, toggleAgency] = useSidebarSectionOpen("agency");
+
+  const sectionToggleByKey: Record<string, () => void> = {
+    marketing: toggleMarketing,
+    "creative-studio": toggleCreative,
+    crm: toggleCrm,
+    sales: toggleSales,
+    reviews: toggleReviews,
+    referrals: toggleReferrals,
+    reporting: toggleReporting,
+    work: toggleWork,
+    agency: toggleAgency,
+  };
+
+  const sectionOpenByKey: Record<string, boolean> = {
+    marketing: marketingOpen,
+    "creative-studio": creativeOpen,
+    crm: crmOpen,
+    sales: salesOpen,
+    reviews: reviewsOpen,
+    referrals: referralsOpen,
+    reporting: reportingOpen,
+    work: workOpen,
+    agency: agencyOpen,
+  };
 
   async function signOut() {
     try {
@@ -122,10 +108,11 @@ export default function AppSidebar() {
     router.refresh();
   }
 
+  const DashIcon = SIDEBAR_DASHBOARD_ITEM.icon;
+
   return (
-    <aside className="flex w-56 shrink-0 flex-col border-r border-border bg-white dark:border-zinc-800/90 dark:bg-zinc-900 dark:shadow-[inset_-1px_0_0_0_rgba(255,255,255,0.04)]">
-      <div className="flex-1 overflow-y-auto">
-        {/* Brand */}
+    <aside className="flex w-[15rem] shrink-0 flex-col border-r border-border bg-white dark:border-zinc-800/90 dark:bg-zinc-900 dark:shadow-[inset_-1px_0_0_0_rgba(255,255,255,0.04)]">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
         <Link
           href="/dashboard"
           className="flex items-center gap-2.5 border-b border-border px-4 py-3.5 dark:border-zinc-800/80"
@@ -142,125 +129,50 @@ export default function AppSidebar() {
           </span>
         </Link>
 
-        {/* Dashboard */}
         <div className="px-2 pt-4">
           <nav className="flex flex-col gap-0.5">
-            <NavLink href="/dashboard" active={isActive(pathname, "/dashboard")}>
-              <LayoutDashboard className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-              Dashboard
+            <NavLink
+              href={SIDEBAR_DASHBOARD_ITEM.href}
+              active={navItemActive(pathname, SIDEBAR_DASHBOARD_ITEM.href)}
+            >
+              <DashIcon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+              {SIDEBAR_DASHBOARD_ITEM.label}
             </NavLink>
-            {playbookSection && PlaybookNavIcon ? (
-              <NavLink
-                href={playbookSection.href}
-                active={
-                  pathname === playbookSection.href ||
-                  pathname.startsWith(`${playbookSection.href}/`)
-                }
-              >
-                <PlaybookNavIcon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-                {playbookSection.label}
-              </NavLink>
-            ) : null}
           </nav>
         </div>
 
-        {/* Opportunities */}
-        <SidebarSection
-          label="Opportunities"
-          open={opportunitiesOpen}
-          onToggle={toggleOpportunities}
-        >
-          {opportunitiesNav.map(({ href, label, icon: Icon }) => (
-            <NavLink key={href} href={href} active={isActive(pathname, href)}>
-              <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-              <span className="min-w-0 flex-1 truncate">{label}</span>
-              {href === "/conversations" && conversationUnreadCount > 0 ? (
-                <UnreadBadge count={conversationUnreadCount} />
-              ) : null}
-            </NavLink>
-          ))}
-        </SidebarSection>
-
-        {/* Work */}
-        <SidebarSection
-          label="Work"
-          open={workOpen}
-          onToggle={toggleWork}
-        >
-          {workNav.map(({ href, label, icon: Icon }) => (
-            <NavLink key={href} href={href} active={isActive(pathname, href)}>
-              <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-              {label}
-            </NavLink>
-          ))}
-        </SidebarSection>
-
-        {/* Prospecting */}
-        <SidebarSection
-          label="Prospecting"
-          open={prospectingOpen}
-          onToggle={toggleProspecting}
-        >
-          <NavLink href="/audit" active={isActive(pathname, "/audit")}>
-            <SearchCheck className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-            <span className="min-w-0 flex-1 truncate">Audit</span>
-          </NavLink>
-          {prospectsSection && ProspectsNavIcon ? (
-            <NavLink
-              href={prospectsSection.href}
-              active={
-                pathname === prospectsSection.href ||
-                pathname.startsWith(`${prospectsSection.href}/`)
-              }
-            >
-              <ProspectsNavIcon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-              {prospectsSection.label}
-            </NavLink>
-          ) : null}
-          <NavLink
-            href="/prospecting/product-led"
-            active={
-              pathname === "/prospecting/product-led" ||
-              pathname.startsWith("/prospecting/product-led/")
-            }
+        {SIDEBAR_COLLAPSIBLE_SECTIONS.map((section) => (
+          <SidebarSection
+            key={section.storageKey}
+            label={section.label}
+            open={sectionOpenByKey[section.storageKey] ?? true}
+            onToggle={sectionToggleByKey[section.storageKey] ?? (() => {})}
           >
-            <Layers className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-            <span className="min-w-0 flex-1 truncate">Product-Led</span>
-            <SoonBadge className="ml-auto" />
-          </NavLink>
-          {prospectingSectionsWithoutPlaybook.map(({ href, label, icon: Icon, soon }) => (
-            <NavLink
-              key={href}
-              href={href}
-              active={pathname === href || pathname.startsWith(`${href}/`)}
-            >
-              <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-              <span className="min-w-0 flex-1 truncate">{label}</span>
-              {soon ? <SoonBadge className="ml-auto" /> : null}
-            </NavLink>
-          ))}
-        </SidebarSection>
-
-        {/* Agency */}
-        <SidebarSection label="Agency" open={agencyOpen} onToggle={toggleAgency}>
-          {agencyNav.map(({ href, label, icon: Icon }) => (
-            <NavLink key={href} href={href} active={isActive(pathname, href)}>
-              <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-              {label}
-            </NavLink>
-          ))}
-        </SidebarSection>
-
+            {section.items.map((item) => {
+              const Icon = item.icon;
+              const active = navItemActive(pathname, item.href);
+              const showUnread =
+                item.badge === "conversations" && conversationUnreadCount > 0;
+              return (
+                <NavLink key={item.href} href={item.href} active={active}>
+                  <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                  {showUnread ? <UnreadBadge count={conversationUnreadCount} /> : null}
+                  {item.soon ? <SoonBadge className="ml-auto shrink-0" /> : null}
+                </NavLink>
+              );
+            })}
+          </SidebarSection>
+        ))}
       </div>
 
-      {/* Bottom */}
       <div className="flex flex-col gap-0.5 border-t border-border p-2 dark:border-zinc-800/80">
-        <NavLink href="/store" active={isActive(pathname, "/store")}>
+        <NavLink href="/store" active={navItemActive(pathname, "/store")}>
           <StoreIcon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
           <span className="min-w-0 flex-1 truncate">Store</span>
           <SoonBadge className="ml-auto" />
         </NavLink>
-        <NavLink href="/settings" active={isActive(pathname, "/settings")}>
+        <NavLink href="/settings" active={navItemActive(pathname, "/settings")}>
           <Settings className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
           Settings
         </NavLink>
@@ -280,18 +192,12 @@ export default function AppSidebar() {
 function UnreadBadge({ count }: { count: number }) {
   return (
     <span
-      className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow-sm ring-1 ring-white/70 dark:bg-blue-500 dark:ring-zinc-900"
+      className="ml-auto inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow-sm ring-1 ring-white/70 dark:bg-blue-500 dark:ring-zinc-900"
       aria-label={`${count} unread conversation${count === 1 ? "" : "s"}`}
     >
       {formatUnreadBadgeCount(count)}
     </span>
   );
-}
-
-function isActive(pathname: string, href: string) {
-  if (href === "/products")
-    return pathname === "/products" || pathname.startsWith("/products/");
-  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 function SidebarSection({
@@ -303,7 +209,7 @@ function SidebarSection({
   label: string;
   open: boolean;
   onToggle: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   const sectionId = `sidebar-section-${label.toLowerCase().replace(/\s+/g, "-")}`;
   return (
@@ -342,7 +248,7 @@ function NavLink({
 }: {
   href: string;
   active: boolean;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <Link

@@ -29,7 +29,7 @@ export default function ProductLedShell({
       <div
         className="flex flex-wrap gap-1 border-b border-border dark:border-zinc-800/80"
         role="tablist"
-        aria-label="Product-Led sections"
+        aria-label="Lead magnets and tools"
       >
         {TABS.map((tab) => {
           const active =

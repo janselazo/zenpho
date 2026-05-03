@@ -51,7 +51,7 @@ export const PROSPECTING_SECTIONS: ProspectingSection[] = [
   },
   {
     slug: "prospects",
-    label: "Prospects",
+    label: "Google Opportunities",
     href: "/prospecting/prospects",
     icon: UserSearch,
     description:
@@ -104,7 +104,7 @@ export const PROSPECTING_SECTIONS: ProspectingSection[] = [
   },
   {
     slug: "campaigns",
-    label: "Cold outreach",
+    label: "Email Marketing",
     href: "/prospecting/campaigns",
     icon: Mails,
     description:
@@ -134,7 +134,7 @@ export const PROSPECTING_SECTIONS: ProspectingSection[] = [
   },
   {
     slug: "seo",
-    label: "SEO",
+    label: "SEO Optimizations",
     href: "/prospecting/seo",
     icon: Search,
     description:
