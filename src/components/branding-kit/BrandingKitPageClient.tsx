@@ -26,7 +26,7 @@ const progressSteps = [
 
 const PROGRESS_AUTOSTEP_CAP = Math.max(0, progressSteps.length - 2);
 /** Ring pacing while the server runs LLM/image steps (often several minutes). */
-const BRANDING_COUNTDOWN_SECONDS = 240;
+const BRANDING_COUNTDOWN_SECONDS = 180;
 const ESTIMATED_BRANDING_MS = BRANDING_COUNTDOWN_SECONDS * 1_000;
 const ANALYSIS_RING_INDETERMINATE_CAP = 0.92;
 const CLIENT_FETCH_MS = 14 * 60 * 1000;
@@ -100,7 +100,7 @@ function GeneratingScreen({
 }) {
   const headlineIndex = Math.min(step, progressSteps.length - 1);
   return (
-    <section className="px-4 pb-20 pt-24 sm:px-6 sm:pb-24 sm:pt-28 lg:px-8 lg:pt-32">
+    <section className="px-4 pt-6 pb-16 sm:px-6 sm:pt-8 sm:pb-20 lg:px-8">
       <div className="mx-auto max-w-3xl rounded-[2rem] border border-border bg-white p-8 shadow-soft-lg dark:border-zinc-700 dark:bg-zinc-900">
         <div className="flex items-center gap-4">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-accent text-white">
@@ -114,20 +114,37 @@ function GeneratingScreen({
           </div>
         </div>
         <div className="mt-8 space-y-3">
-          {progressSteps.map((label, index) => (
-            <div key={label} className="flex items-center gap-3">
-              <span
-                className={`flex h-7 w-7 items-center justify-center rounded-full border text-xs font-bold ${
-                  index <= step ? "border-accent bg-accent text-white" : "border-border bg-surface text-text-secondary"
-                }`}
-              >
-                {index < step ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
-              </span>
-              <span className={index <= step ? "font-semibold text-text-primary dark:text-white" : "text-text-secondary"}>
-                {label}
-              </span>
-            </div>
-          ))}
+          {progressSteps.map((label, index) => {
+            const isDone = index < step;
+            const isActive = index === step;
+            const indicatorClass = isDone
+              ? "border-emerald-600 bg-emerald-600 dark:border-emerald-500 dark:bg-emerald-600"
+              : isActive
+                ? "border-accent bg-accent text-white"
+                : "border-border bg-surface text-text-secondary";
+            return (
+              <div key={label} className="flex items-center gap-3">
+                <span
+                  className={`flex h-7 w-7 items-center justify-center rounded-full border text-xs font-bold ${indicatorClass}`}
+                >
+                  {isDone ? (
+                    <CheckCircle2 className="h-4 w-4 shrink-0 stroke-[2.5] text-white" aria-hidden />
+                  ) : (
+                    index + 1
+                  )}
+                </span>
+                <span
+                  className={
+                    isDone || isActive
+                      ? "font-semibold text-text-primary dark:text-white"
+                      : "text-text-secondary"
+                  }
+                >
+                  {label}
+                </span>
+              </div>
+            );
+          })}
         </div>
         <p className="mt-6 text-sm text-text-secondary">
           This can take a few minutes—we&apos;re generating visuals and copy. Leave this tab open.
@@ -349,9 +366,9 @@ export default function BrandingKitPageClient() {
         />
       ) : (
         <>
-          <div className="hero-sky px-4 pt-28 pb-10 sm:px-6 lg:px-8">
+          <div className="hero-sky px-4 pt-24 pb-4 sm:px-6 sm:pb-5 lg:px-8">
             <div className="mx-auto max-w-3xl text-center">
-              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-white/80 px-4 py-2 text-xs font-bold tracking-wide text-emerald-700 shadow-sm dark:border-emerald-400/35 dark:text-emerald-400">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-white/80 px-4 py-2 text-xs font-bold tracking-wide text-emerald-700 shadow-sm dark:border-emerald-400/35 dark:text-emerald-400">
                 <Palette className="h-3.5 w-3.5 shrink-0" />
                 Brand &amp; funnel
               </div>

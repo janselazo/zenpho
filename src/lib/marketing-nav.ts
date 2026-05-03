@@ -3,6 +3,7 @@ import {
   FileText,
   Mail,
   Newspaper,
+  Palette,
   User,
 } from "lucide-react";
 import { marketingIndustryPages } from "./marketing-industries-pages";
@@ -76,6 +77,13 @@ const resourcesMegaItems: MarketingMegaItem[] = [
     iconClassName: "bg-emerald-500/15 text-emerald-600",
   },
   {
+    title: "Brand kit + funnel",
+    description: "Generate a brand guidelines PDF and sales funnel playbook from your Google listing.",
+    href: "/branding",
+    icon: Palette,
+    iconClassName: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+  },
+  {
     title: "Contact",
     description: "Reach the team for questions or partnerships.",
     href: "/contact",
@@ -144,6 +152,7 @@ export const marketingFooterColumns: MarketingFooterColumn[] = [
     links: [
       { label: "About", href: "/about" },
       { label: "Blog", href: "/blog" },
+      { label: "Brand kit", href: "/branding" },
       { label: "Contact", href: "/contact" },
       { label: "Pricing", href: "/pricing" },
       { label: "Case studies", href: "/case-studies" },
