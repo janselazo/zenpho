@@ -1,10 +1,14 @@
 export type LocalServicePricingPlan = {
   id: string;
   title: string;
+  /** Short subtitle under the title in the comparison header */
+  planTagline?: string;
   /** Bold price line shown in comparison header */
   priceLead: string;
-  /** Optional subdued second line (e.g. ad spend note) */
+  /** Optional subdued second line (e.g. recurring + ad spend note) */
   priceNote?: string;
+  /** Optional tertiary line (e.g. alternative Launch pricing) */
+  priceAlt?: string;
   summary: string;
   /** Legacy field — comparison matrix is primary UI; keep empty or short notes for exports. */
   included: string[];
@@ -18,83 +22,91 @@ export type LocalServicePricingPlan = {
   featured?: boolean;
 };
 
-/** Zenpho web app & workflows — same foundation on every plan. */
+/** Core Zenpho workspace capabilities included with Launch (and inherited by Grow/Scale). */
 export const platformIncludedInAllPlans = [
   {
-    label: "Lead management — capture, stage, and follow up in one workspace",
+    label: "CRM & contact management — capture, stage owners, and notes in one place",
     tooltip:
-      "One workspace for inbound leads: stages, owners, tasks, and follow-up cadences so opportunities don't stall.",
+      "Every plan includes the Zenpho CRM so web forms, ads, and referrals land in a single pipeline—not scattered inboxes.",
   },
   {
-    label: "Appointments — pipeline visibility and booking tied to your leads",
+    label: "Lead pipeline, conversations inbox, and logged sales activity",
     tooltip:
-      "See what's booked, tie appointments back to leads, and keep your pipeline visible end to end.",
+      "Move deals through stages, collaborate in the shared inbox, and keep a paper trail of outreach without extra tools.",
   },
   {
-    label: "Reviews — request, monitor, and grow your reputation",
+    label: "Appointment booking & calendar tied back to leads",
     tooltip:
-      "Request reviews on a steady rhythm, monitor new feedback, and use workflows to grow rating and volume.",
+      "Let prospects self-book and automatically attach those meetings to the right contact record.",
   },
   {
-    label: "Referrals — track sources and grow referral revenue",
+    label: "Website form capture, proposals, and automated review requests",
     tooltip:
-      "Know who refers work, measure referral revenue, and nurture relationships that compound over time.",
+      "Native form routing, proposal templates, and review-request workflows reduce manual follow-up from day one.",
+  },
+  {
+    label: "Social scheduling, basic automations, monthly performance reporting",
+    tooltip:
+      "Queue social content, trigger simple automations, and review a monthly dashboard summarizing performance.",
   },
 ] as const;
 
 export const localServicePricingPlans: LocalServicePricingPlan[] = [
   {
     id: "setup",
-    title: "Development",
-    priceLead: "$1,000 one-time",
-    headerNote: "Zenpho platform on every plan.",
+    title: "Launch",
+    planTagline: "Start & Establish",
+    priceLead: "$2,500 setup + $497/mo",
+    priceNote: "Hosting, platform access, and Launch deliverables included.",
+    priceAlt:
+      "Alternate entry: $997 setup + $697/mo on a 6-month agreement (for more price-sensitive markets).",
+    headerNote: "Zenpho platform included on every tier.",
     summary: "",
     included: [],
     bestFor: [
-      "Businesses establishing or refreshing their digital presence",
-      "Owners who want GBP, email, and hosting handled before scaling paid media",
-      "Teams prioritizing a solid base over multi-channel ads",
+      "Owners launching or refreshing their digital presence from zero",
+      "Teams that need GBP, site, and CRM working together before heavy ad spend",
     ],
     outcome:
-      "You launch with a professional site and local footprint, email on your domain, foundational SEO, reliable hosting, and the Zenpho workspace for leads through referrals.",
-    ctaLabel: "Book Call",
+      "You look credible online, collect leads in Zenpho, automate reviews, and operate from one workspace with hosting and monthly support.",
+    ctaLabel: "Book a call",
     ctaHref: "/booking",
   },
   {
     id: "growth-engine",
-    title: "Growth",
-    priceLead: "$2,000/month",
-    priceNote: "Plus ad spend",
-    featured: true,
-    headerNote: "Includes Development.",
+    title: "Grow",
+    planTagline: "Lead generation",
+    priceLead: "$1,500 setup + $1,997/mo",
+    priceNote: "Ad spend is separate (we recommend minimums by market).",
+    headerNote: "Includes everything in Launch.",
     summary: "",
     included: [],
     bestFor: [
-      "Businesses ready to invest consistently in Meta and organic visibility",
-      "Teams that want creatives and SEO cadence without Google Search ads yet",
-      "Owners who need predictable pipeline beyond referrals alone",
+      "Businesses with a site that need predictable paid lead flow",
+      "Teams ready for Google + Meta ads, landing pages, and tight tracking",
     ],
     outcome:
-      "You attract qualified demand through Meta and ongoing SEO while your Development foundation and Zenpho platform keep follow-up, reviews, and referrals measurable.",
-    ctaLabel: "Start Growth",
+      "You run coordinated paid media with dedicated landing pages, full-funnel tracking, and automated follow-up on top of Launch deliverables.",
+    ctaLabel: "Start Grow",
     ctaHref: "/booking",
+    featured: true,
   },
   {
     id: "full-partner",
     title: "Scale",
-    priceLead: "$3,000/month",
-    priceNote: "Plus ad spend",
-    headerNote: "Everything in Growth.",
+    planTagline: "Full growth system",
+    priceLead: "$5,000 setup + $4,997/mo+",
+    priceNote: "Ad spend is separate.",
+    headerNote: "Includes Launch + Grow foundations.",
     summary: "",
     included: [],
     bestFor: [
-      "Businesses scaling spend across Meta and Google with tight coordination",
-      "Competitive markets where search intent and social prospecting both matter",
-      "Teams that want one operating rhythm across channels and reporting",
+      "Operators with proven demand optimizing CAC, conversion, and ops",
+      "Brands investing heavily across search, social, content, and automation",
     ],
     outcome:
-      "You run coordinated Meta and Google programs on top of Development deliverables and Growth services, with Zenpho tying spend to pipeline and revenue.",
-    ctaLabel: "Talk to us",
+      "You orchestrate advanced acquisition, SEO, CRO, sales automation, reputation, and quarterly planning with priority support and deeper analytics.",
+    ctaLabel: "Talk with us",
     ctaHref: "/booking",
   },
 ];

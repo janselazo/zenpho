@@ -7,7 +7,6 @@ export type PricingComparisonCells = Record<PricingComparisonPlanId, boolean>;
 export type PricingComparisonFeatureRow = {
   id: string;
   label: string;
-  /** Short explanation shown in the comparison tooltip */
   tooltip?: string;
   cells: PricingComparisonCells;
 };
@@ -18,121 +17,200 @@ export type PricingComparisonSection = {
   rows: PricingComparisonFeatureRow[];
 };
 
-const allTrue: PricingComparisonCells = {
+const allPlans: PricingComparisonCells = {
   setup: true,
   "growth-engine": true,
   "full-partner": true,
 };
 
-const growthAndScale: PricingComparisonCells = {
+const growScale: PricingComparisonCells = {
   setup: false,
   "growth-engine": true,
   "full-partner": true,
 };
 
-const scaleOnly: PricingComparisonCells = {
+const scaleOnlyCells: PricingComparisonCells = {
   setup: false,
   "growth-engine": false,
   "full-partner": true,
 };
 
-function platformRows(): PricingComparisonFeatureRow[] {
+const launchOnlyCells: PricingComparisonCells = {
+  setup: true,
+  "growth-engine": false,
+  "full-partner": false,
+};
+
+function platformFoundationRows(): PricingComparisonFeatureRow[] {
   return platformIncludedInAllPlans.map((item, i) => ({
     id: `platform-${i}`,
     label: item.label,
     tooltip: item.tooltip,
-    cells: { ...allTrue },
+    cells: { ...allPlans },
   }));
 }
 
 export const pricingComparisonSections: PricingComparisonSection[] = [
   {
-    id: "platform",
-    heading: "Zenpho platform",
-    rows: platformRows(),
-  },
-  {
-    id: "development",
-    heading: "Development",
+    id: "platform_core",
+    heading: "Zenpho platform (every plan)",
     rows: [
+      ...platformFoundationRows(),
       {
-        id: "dev-site",
-        label: "Website development",
-        tooltip: "Stack-agnostic site build or refresh scoped to your brand.",
-        cells: { ...allTrue },
-      },
-      {
-        id: "dev-gbp",
-        label: "Google Business Profile setup",
+        id: "plat-paid-pipeline",
+        label: "Paid-lead pipeline & advertising dashboards",
         tooltip:
-          "Claim, verify, and tune your profile—categories, services, photos, and posts aligned to how you win locally.",
-        cells: { ...allTrue },
+          "Unified views that tie ad spend to captured leads and booked appointments—introduced once Grow is active.",
+        cells: { ...growScale },
       },
       {
-        id: "dev-email",
-        label: "Business email setup",
+        id: "plat-deep-automation",
+        label: "Advanced workflows, multi-pipelines, proposal automation",
         tooltip:
-          "Professional email on your domain with DNS basics and deliverability setup so you look credible in the inbox.",
-        cells: { ...allTrue },
+          "Complex automation paths, extra pipelines, and deeper proposal tooling for mature sales teams on Scale.",
+        cells: { ...scaleOnlyCells },
       },
       {
-        id: "dev-seo-foundational",
-        label: "SEO and optimization (foundational)",
-        tooltip: "On-site and local foundations laid during Development—not the same as ongoing SEO services in Growth.",
-        cells: { ...allTrue },
-      },
-      {
-        id: "dev-hosting",
-        label: "Hosting and support",
-        tooltip:
-          "Managed hosting with backups and monitoring plus technical support when your site needs attention.",
-        cells: { ...allTrue },
-      },
-      {
-        id: "dev-branding",
-        label: "Branding (optional)",
-        tooltip:
-          "Logo, palette, and voice guidelines when you want a cohesive refresh—not required for every engagement.",
-        cells: { ...allTrue },
+        id: "plat-team-priority",
+        label: "Team seats & priority support",
+        tooltip: "Additional operator seats plus faster response windows for Scale clients.",
+        cells: { ...scaleOnlyCells },
       },
     ],
   },
   {
-    id: "growth_services",
-    heading: "Growth",
+    id: "launch_deliverables",
+    heading: "Launch deliverables",
     rows: [
       {
-        id: "gr-meta",
-        label: "Meta (Facebook & Instagram) ads management",
+        id: "ln-strategy-brand",
+        label: "Strategy onboarding, brand direction, email guidance, site messaging",
         tooltip:
-          "Campaign structure, targeting, budgets, and iteration across Meta placements with testing baked into the rhythm.",
-        cells: { ...growthAndScale },
+          "Kickoff working session, starter palette/type/messaging, domain/email guidance, and service-page storylines.",
+        cells: { ...launchOnlyCells },
       },
       {
-        id: "gr-creative",
-        label: "Performance Creatives",
+        id: "ln-website",
+        label: "3–5 page website with booking/lead capture + analytics",
         tooltip:
-          "Static and motion creative built to test hooks, offers, and angles—then double down on what wins.",
-        cells: { ...growthAndScale },
+          "Mobile-friendly build with homepage, services, about, contact, and dedicated booking/lead page wired into Zenpho.",
+        cells: { ...launchOnlyCells },
       },
       {
-        id: "gr-seo-ongoing",
-        label: "SEO services (ongoing)",
-        tooltip: "Continuous SEO program beyond foundational optimization from Development.",
-        cells: { ...growthAndScale },
+        id: "ln-gbp",
+        label: "Google Business Profile setup or optimization",
+        tooltip: "Categories, services, hours, creative assets, service areas, and Maps fundamentals.",
+        cells: { ...launchOnlyCells },
+      },
+      {
+        id: "ln-local-seo",
+        label: "Local SEO foundation, schema, Search Console, citations",
+        tooltip:
+          "Keyword discovery, on-page fundamentals, metadata, structured data where possible, analytics + GSC wiring, starter directories.",
+        cells: { ...launchOnlyCells },
+      },
+      {
+        id: "ln-social-foundation",
+        label: "Social foundation + starter content library",
+        tooltip:
+          "FB/IG optimization, branded cover/profile art, and 8–12 launch posts/templates scheduled through Zenpho.",
+        cells: { ...launchOnlyCells },
+      },
+      {
+        id: "ln-monthly-rhythm",
+        label: "Monthly site care, social/GBP posts, review monitoring, performance report",
+        tooltip:
+          "Hosting/maintenance, light content updates, four social posts, two GBP updates, review monitoring, and reporting.",
+        cells: { ...launchOnlyCells },
       },
     ],
   },
   {
-    id: "scale_only",
-    heading: "Scale",
+    id: "grow_leadgen",
+    heading: "Grow — lead generation",
     rows: [
       {
-        id: "sc-google",
-        label: "Google Ads (Search & Performance Max)",
+        id: "gr-ads",
+        label: "Google & Meta ads management + retargeting",
         tooltip:
-          "Search and Performance Max programs with conversion signals tied back to leads, appointments, and revenue.",
-        cells: { ...scaleOnly },
+          "Always-on campaign builds, testing, and budget stewardship across Search/Social placements with retargeting layers.",
+        cells: { ...growScale },
+      },
+      {
+        id: "gr-landing",
+        label: "Dedicated landing page + offer & CTA strategy",
+        tooltip:
+          "Conversion-focused page for paid traffic with forms routed into Zenpho, click-to-call, and booking embeds.",
+        cells: { ...growScale },
+      },
+      {
+        id: "gr-tracking",
+        label: "Tag Manager, analytics, call/form/conversion tracking",
+        tooltip:
+          "Full instrumentation for CPL math, including call and form events feeding reporting inside Zenpho.",
+        cells: { ...growScale },
+      },
+      {
+        id: "gr-automation",
+        label: "Lead follow-up automations & nurture sequences",
+        tooltip:
+          "Missed-call SMS, new-lead outreach, reminders, no-show reduction, and pipeline-aware sequences.",
+        cells: { ...growScale },
+      },
+      {
+        id: "gr-ops",
+        label: "Weekly optimizations + monthly strategy & performance review",
+        tooltip:
+          "Hands-on budget/creative iteration weekly with a standing monthly call to review pipeline quality.",
+        cells: { ...growScale },
+      },
+    ],
+  },
+  {
+    id: "scale_growth",
+    heading: "Scale — growth system",
+    rows: [
+      {
+        id: "sc-paid-advanced",
+        label: "Advanced paid acquisition (LSA, YouTube/video, multi-offer testing)",
+        tooltip:
+          "Layered programs across additional networks with structured testing matrices for offers and audiences.",
+        cells: { ...scaleOnlyCells },
+      },
+      {
+        id: "sc-seo-growth",
+        label: "Local SEO growth, content, citations, competitor intelligence",
+        tooltip:
+          "Ongoing local authority work, page expansion, competitive benchmarking, and review growth initiatives.",
+        cells: { ...scaleOnlyCells },
+      },
+      {
+        id: "sc-cro",
+        label: "Conversion optimization & experimentation",
+        tooltip:
+          "Landing and site experiments (A/B tests, CTA/form tuning) plus tooling recommendations like heatmaps when useful.",
+        cells: { ...scaleOnlyCells },
+      },
+      {
+        id: "sc-sales",
+        label: "Sales process design, scoring, reactivation, proposal ops",
+        tooltip:
+          "Pipeline tuning, lead scoring, win-back plays, proposal automation guidance, and script coaching.",
+        cells: { ...scaleOnlyCells },
+      },
+      {
+        id: "sc-reputation",
+        label: "Reputation, referral, and customer monetization programs",
+        tooltip:
+          "Always-on review generation, escalation playbooks, referral campaigns, and past-customer promotions.",
+        cells: { ...scaleOnlyCells },
+      },
+      {
+        id: "sc-reporting",
+        label: "Advanced reporting, attribution, quarterly planning",
+        tooltip:
+          "Executive-ready dashboards, booked-appointment economics, and quarterly roadmap sessions beyond monthly calls.",
+        cells: { ...scaleOnlyCells },
       },
     ],
   },

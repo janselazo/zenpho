@@ -63,12 +63,17 @@ export default function LocalServicePricingComparison() {
                     <div className="flex min-h-[30px] items-end justify-center pb-2 sm:min-h-[32px]">
                       {plan.featured ? (
                         <span className="rounded-full bg-accent px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
-                          Best value
+                          Most booked
                         </span>
                       ) : null}
                     </div>
                     <div className="flex flex-col gap-2">
                       <span className="text-lg font-bold leading-snug text-text-primary sm:text-xl">{plan.title}</span>
+                      {plan.planTagline ? (
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent sm:text-xs">
+                          {plan.planTagline}
+                        </span>
+                      ) : null}
                       {plan.headerNote ? (
                         <span className="text-[13px] font-medium leading-snug text-text-secondary sm:text-sm">
                           {plan.headerNote}
@@ -90,6 +95,9 @@ export default function LocalServicePricingComparison() {
                             </span>
                           )}
                         </p>
+                        {plan.priceAlt ? (
+                          <p className="text-[11px] leading-snug text-text-secondary/90 sm:text-xs">{plan.priceAlt}</p>
+                        ) : null}
                       </div>
                       <Button
                         href={plan.ctaHref}

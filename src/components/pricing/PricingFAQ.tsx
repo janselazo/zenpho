@@ -9,7 +9,7 @@ export default function PricingFAQ() {
         title="Common"
         titleAccent="questions"
         titleAccentInline
-        description="Development, Growth, and Scale—pricing, what’s included, ad spend, and how to choose."
+        description="Launch, Grow, and Scale—what’s included, ad spend minimums, the alternate Launch tier, cross-tier ecommerce and app builds, and how to choose."
       />
 
       <div className="mx-auto max-w-3xl space-y-3">

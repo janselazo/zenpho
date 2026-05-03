@@ -43,7 +43,7 @@ export default function PricingHero() {
           transition={{ duration: 0.45, delay: 0.05 }}
           className="text-balance text-3xl font-bold leading-[1.15] tracking-tight text-text-primary sm:text-4xl sm:leading-[1.12] lg:text-[2.65rem] lg:leading-[1.1]"
         >
-          Development, Growth & Scale for local service businesses
+          Launch, Grow & Scale for local service businesses
         </motion.h1>
       </div>
     </section>

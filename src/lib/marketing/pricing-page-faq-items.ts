@@ -1,37 +1,37 @@
 import type { SiteFaqItem } from "@/lib/marketing/site-faq-items";
 
-/** FAQs shown only on /pricing (local service growth plans). */
+/** FAQs shown only on /pricing (Launch, Grow, Scale). */
 export const PRICING_PAGE_FAQS: SiteFaqItem[] = [
   {
-    q: "What does Development include?",
-    a: "Development is $1,000 one-time: website development, Google Business Profile setup, business email, foundational SEO and optimization, hosting and support, optional branding, plus full access to the Zenpho platform (lead management, appointments, reviews, referrals) included on every plan.",
+    q: "What is Launch?",
+    a: "Launch is $2,500 setup plus $497/month. It establishes your Zenpho CRM workspace, professional 3–5 page website, Google Business Profile, local SEO foundation, starter social assets, hosting, monthly social and GBP posts, review monitoring, and reporting—so you look credible and capture leads in one system.",
   },
   {
-    q: "Does Growth include Development?",
-    a: "Yes. Growth ($2,000/month plus ad spend) includes everything in Development—website and GBP scope, foundational SEO setup, hosting and email—as well as Meta (Facebook & Instagram) ads management, Performance Creatives, and ongoing SEO services.",
+    q: "Is there an alternate Launch price?",
+    a: "Yes. In more price-sensitive markets we can start at $997 setup plus $697/month on a six-month agreement. You get the same Launch deliverables; the payment structure is adjusted for cash flow.",
   },
   {
-    q: "Does Scale include Growth?",
-    a: "Yes. Scale ($3,000/month plus ad spend) includes everything in Growth, which already includes Development. Scale adds Google Ads management (Search and Performance Max) on top of Meta ads, creatives, and ongoing SEO.",
+    q: "What is Grow, and does it include Launch?",
+    a: "Grow is $1,500 setup plus $1,997/month (ad spend is separate). It includes everything in Launch—your site, GBP, baseline SEO, platform, and monthly rhythm—plus Google and Meta ads management, a dedicated landing page, Tag Manager and conversion tracking, and lead follow-up automations with weekly optimizations.",
   },
   {
-    q: "Is ad spend included in Growth or Scale?",
-    a: "No—the monthly fees cover management and execution in Zenpho. Your advertising budgets are paid directly to Meta and Google and are separate; we recommend spend levels based on your market and goals.",
+    q: "What is Scale, and how is it different from Grow?",
+    a: "Scale starts at $5,000 setup plus $4,997/month and up (ad spend separate). It includes Launch and Grow foundations, then adds advanced paid programs (e.g. YouTube/video, multi-offer testing), deeper local SEO and competitor work, CRO experiments, sales scoring and reactivation, reputation and referral programs, team seats, priority support, and quarterly planning with richer attribution reporting.",
   },
   {
-    q: "How do I choose between Growth and Scale?",
-    a: "Choose Growth when you are ready for Meta ads plus ongoing SEO but do not need Google Search campaigns yet. Choose Scale when you want coordinated Meta and Google Ads for full-funnel demand in competitive markets.",
+    q: "Is ad spend included in Grow or Scale?",
+    a: "No. Your monthly fee covers strategy, management, and execution inside Zenpho. Budgets are paid directly to ad platforms. We recommend minimums based on your market—often around $1,500–$3,000/month for Grow (higher in competitive verticals) and typically $5,000/month and up for Scale, with aggressive targets sometimes in the $10,000–$25,000+/month range.",
   },
   {
-    q: "What is the difference between foundational SEO and SEO services?",
-    a: "Development installs foundational SEO and optimization while we build your site and GBP. Growth adds ongoing SEO services—a continuing program beyond that baseline—to earn visibility over time.",
+    q: "Can you build ecommerce, a web app, or a mobile app?",
+    a: "Yes, as separate scoped projects—not bundled into Launch–Scale retainers. Ecommerce storefronts, customer portals/SaaS-style web apps, and mobile apps are quoted with their own timelines and pricing. Mention it on the contact form or in a discovery call.",
   },
   {
-    q: "Can I start with Development and move up later?",
-    a: "Yes. Many teams begin with Development, then add Growth or Scale once tracking and creative are ready for sustained paid media.",
+    q: "Can I start on Launch and move to Grow later?",
+    a: "Yes. Many operators validate their foundation first, then add paid acquisition once forms, tracking, and creative are ready. We map the migration so you don't rebuild work twice.",
   },
   {
-    q: "How do I know what to fix first?",
-    a: "Run the Revenue Leak Audit on your business. It surfaces where you may be losing leads, reviews, referrals, and revenue so we can prioritize the highest-impact work.",
+    q: "How do I know what to prioritize first?",
+    a: "Run the Revenue Leak Audit. It highlights where leads, reviews, referrals, or revenue slip through so we can tackle the biggest gaps before scaling spend.",
   },
 ];
