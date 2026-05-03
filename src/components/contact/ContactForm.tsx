@@ -8,40 +8,6 @@ import Button from "@/components/ui/Button";
 const inputClass =
   "w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-text-primary placeholder:text-text-secondary/40 outline-none shadow-sm transition-all focus:border-accent focus:ring-2 focus:ring-accent/15";
 
-const HELP_OPTIONS = [
-  "Launch (monthly)",
-  "Grow (monthly + ads)",
-  "Scale (monthly + ads)",
-  "Custom ecommerce, web app, or mobile build",
-  "Revenue Leak Audit / exploration call",
-  "Not sure yet",
-] as const;
-
-const PRODUCT_TYPES = [
-  "Home services (HVAC, plumbing, roofing, etc.)",
-  "Professional / trades (remodeling, cleaning, etc.)",
-  "Health & wellness (med spa, dental, etc.)",
-  "Legal or other professional office",
-  "Auto / fleet service",
-  "Other local service business",
-] as const;
-
-const TIMELINES = [
-  "ASAP",
-  "This month",
-  "1–3 months",
-  "Exploring / not sure",
-] as const;
-
-const BUDGETS = [
-  "Launch (~$1,500/mo)",
-  "Launch alternate (~$997 setup + ~$697/mo)",
-  "Grow (~$2k/mo + ad spend)",
-  "Scale (~$3k/mo + ad spend)",
-  "Smaller / phased start",
-  "Need recommendation",
-] as const;
-
 function FormSurface({
   label,
   children,
@@ -55,36 +21,6 @@ function FormSurface({
         {label}
       </p>
       <div className="space-y-5">{children}</div>
-    </div>
-  );
-}
-
-function RadioList({
-  name,
-  options,
-  required,
-}: {
-  name: string;
-  options: readonly string[];
-  required?: boolean;
-}) {
-  return (
-    <div className="grid gap-2 sm:grid-cols-2">
-      {options.map((opt) => (
-        <label
-          key={opt}
-          className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-white px-4 py-3 text-sm leading-snug text-text-primary shadow-sm transition-all hover:border-accent/35 has-[:checked]:border-accent has-[:checked]:bg-accent/[0.06] has-[:checked]:ring-1 has-[:checked]:ring-accent/20"
-        >
-          <input
-            type="radio"
-            name={name}
-            value={opt}
-            required={required}
-            className="mt-1 h-4 w-4 shrink-0 accent-accent"
-          />
-          <span className="leading-relaxed">{opt}</span>
-        </label>
-      ))}
     </div>
   );
 }
@@ -111,12 +47,6 @@ export default function ContactForm() {
           phone: fd.get("phone"),
           company: fd.get("company"),
           website_linkedin: fd.get("website_linkedin"),
-          what_building: fd.get("what_building"),
-          product_for: fd.get("product_for"),
-          help_needed: fd.get("help_needed"),
-          product_type: fd.get("product_type"),
-          timeline: fd.get("timeline"),
-          budget_range: fd.get("budget_range"),
           sms_consent: fd.get("sms_consent") === "on",
         }),
       });
@@ -295,100 +225,6 @@ export default function ContactForm() {
             </a>
             .
           </label>
-        </div>
-      </FormSurface>
-
-      <FormSurface label="Your business">
-        <div>
-          <label
-            htmlFor="contact-what"
-            className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
-          >
-            What do you do, and what do you want to improve?
-          </label>
-          <textarea
-            id="contact-what"
-            name="what_building"
-            rows={4}
-            required
-            className={`${inputClass} resize-none`}
-            placeholder="e.g. HVAC in Palm Beach — more booked jobs, better Google presence, clearer ROI"
-          />
-        </div>
-        <div>
-          <label
-            htmlFor="contact-for"
-            className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
-          >
-            Primary service area & ideal customer
-          </label>
-          <textarea
-            id="contact-for"
-            name="product_for"
-            rows={3}
-            required
-            className={`${inputClass} resize-none`}
-            placeholder="Cities or radius you serve, residential vs commercial, typical job size"
-          />
-        </div>
-      </FormSurface>
-
-      <FormSurface label="Fit & scope">
-        <div>
-          <p className="mb-3 text-xs font-medium uppercase tracking-wide text-text-secondary">
-            What are you interested in?
-          </p>
-          <RadioList name="help_needed" options={HELP_OPTIONS} required />
-        </div>
-        <div>
-          <p className="mb-3 text-xs font-medium uppercase tracking-wide text-text-secondary">
-            Which best describes your business?
-          </p>
-          <RadioList name="product_type" options={PRODUCT_TYPES} required />
-        </div>
-        <div className="grid gap-5 sm:grid-cols-2">
-          <div>
-            <label
-              htmlFor="contact-timeline"
-              className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
-            >
-              Desired timeline
-            </label>
-            <select
-              id="contact-timeline"
-              name="timeline"
-              className={inputClass}
-              defaultValue=""
-            >
-              <option value="">Select…</option>
-              {TIMELINES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label
-              htmlFor="contact-budget"
-              className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
-            >
-              Investment range
-            </label>
-            <select
-              id="contact-budget"
-              name="budget_range"
-              className={inputClass}
-              defaultValue=""
-            >
-              <option value="">Select…</option>
-              {BUDGETS.map((b) => (
-                <option key={b} value={b}>
-                  {b}
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
       </FormSurface>
 
