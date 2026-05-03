@@ -7,7 +7,6 @@ import {
 } from "@/lib/crm/agency-docs-hub";
 import {
   customDocSlugExists,
-  fetchAllCustomSlugs,
   fetchCustomDocBySlug,
 } from "@/lib/crm/agency-custom-doc-server";
 import {
@@ -18,13 +17,24 @@ import {
 import { pickAgencyDocIconKey } from "@/lib/crm/agency-doc-icon-pick";
 import {
   getAgencyDocBySlug,
-  getAllAgencyDocs,
   isAgencyDocSlug,
   RESERVED_REGISTRY_SLUGS,
 } from "@/lib/crm/agency-docs";
 
-function basePath(docType: AgencyDocType): string {
-  return docType === "industry" ? "/agency/industries" : "/docs";
+const DOCS_HUB = "/docs";
+
+function revalidateWorkspaceDocs(slug?: string) {
+  revalidatePath(DOCS_HUB);
+  if (slug) revalidatePath(`${DOCS_HUB}/${slug}`);
+}
+
+async function hubSlugAllowedForReorder(
+  slug: string,
+  hubDocType: AgencyDocType
+): Promise<boolean> {
+  if (hubDocType === "doc" && isAgencyDocSlug(slug)) return true;
+  const row = await fetchCustomDocBySlug(slug);
+  return row?.doc_type === hubDocType;
 }
 
 async function isAllowedWorkspaceDocSlug(slug: string): Promise<boolean> {
@@ -59,9 +69,7 @@ export async function saveAgencyWorkspaceDoc(
   );
 
   if (error) return { error: error.message };
-  const bp = basePath(docType);
-  revalidatePath(`${bp}/${slug}`);
-  revalidatePath(bp);
+  revalidateWorkspaceDocs(slug);
   return { ok: true as const };
 }
 
@@ -109,7 +117,7 @@ export async function updateAgencyDocHubCard(
   );
 
   if (error) return { error: error.message };
-  revalidatePath(basePath(docType));
+  revalidatePath(DOCS_HUB);
   return { ok: true as const };
 }
 
@@ -125,8 +133,6 @@ export async function hideAgencyDocHubCard(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized" as const };
-
-  const bp = basePath(docType);
 
   if (!isAgencyDocSlug(slug)) {
     const { error: workspaceErr } = await supabase
@@ -147,8 +153,7 @@ export async function hideAgencyDocHubCard(
       .eq("slug", slug);
     if (hubErr) return { error: hubErr.message };
 
-    revalidatePath(bp);
-    revalidatePath(`${bp}/${slug}`);
+    revalidateWorkspaceDocs(slug);
     return { ok: true as const };
   }
 
@@ -180,36 +185,24 @@ export async function hideAgencyDocHubCard(
     if (error) return { error: error.message };
   }
 
-  revalidatePath(bp);
+  revalidatePath(DOCS_HUB);
   return { ok: true as const };
 }
 
-async function allowedHubSlugSet(
-  docType: AgencyDocType = "doc"
-): Promise<Set<string>> {
-  const custom = await fetchAllCustomSlugs(docType);
-  return new Set([
-    ...(docType === "doc" ? getAllAgencyDocs().map((d) => d.slug as string) : []),
-    ...custom,
-  ]);
-}
-
 export async function reorderAgencyDocHubCards(
-  orderedSlugs: string[],
-  docType: AgencyDocType = "doc"
+  ordered: { slug: string; hubDocType: AgencyDocType }[]
 ) {
-  if (!orderedSlugs.length) {
+  if (!ordered.length) {
     return { error: "Nothing to reorder." as const };
   }
 
-  const allowed = await allowedHubSlugSet(docType);
   const seen = new Set<string>();
-  for (const s of orderedSlugs) {
-    if (!allowed.has(s)) {
+  for (const { slug, hubDocType } of ordered) {
+    if (seen.has(slug)) return { error: "Invalid document order." as const };
+    seen.add(slug);
+    if (!(await hubSlugAllowedForReorder(slug, hubDocType))) {
       return { error: "Invalid document order." as const };
     }
-    if (seen.has(s)) return { error: "Invalid document order." as const };
-    seen.add(s);
   }
 
   const supabase = await createClient();
@@ -220,8 +213,8 @@ export async function reorderAgencyDocHubCards(
 
   const now = new Date().toISOString();
 
-  for (let i = 0; i < orderedSlugs.length; i++) {
-    const slug = orderedSlugs[i];
+  for (let i = 0; i < ordered.length; i++) {
+    const { slug, hubDocType } = ordered[i];
     const sort_order = i * 10;
     const { data: row } = await supabase
       .from("agency_doc_hub_card")
@@ -244,7 +237,7 @@ export async function reorderAgencyDocHubCards(
         slug,
         sort_order,
         hidden: false,
-        doc_type: docType,
+        doc_type: hubDocType,
         updated_by: user.id,
         updated_at: now,
       });
@@ -252,7 +245,7 @@ export async function reorderAgencyDocHubCards(
     }
   }
 
-  revalidatePath(basePath(docType));
+  revalidatePath(DOCS_HUB);
   return { ok: true as const };
 }
 
@@ -382,7 +375,6 @@ export async function createAgencyCustomDoc(form: {
     return { error: hubErr.message };
   }
 
-  const bp = basePath(docType);
-  revalidatePath(bp);
+  revalidatePath(DOCS_HUB);
   return { ok: true as const, slug: candidate };
 }

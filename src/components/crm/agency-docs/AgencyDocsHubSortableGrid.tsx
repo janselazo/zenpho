@@ -23,26 +23,23 @@ import { reorderAgencyDocHubCards } from "@/app/(crm)/actions/agency-docs";
 import { hubDocIcon } from "@/lib/crm/agency-doc-icons";
 import { getAgencyDocBySlug } from "@/lib/crm/agency-docs";
 import type { AgencyHubDocItem } from "@/lib/crm/agency-docs-hub";
-import type { AgencyDocType } from "@/lib/crm/agency-custom-doc";
 import AgencyDocHubCardToolbar from "@/components/crm/agency-docs/AgencyDocHubCardToolbar";
 
 type Props = {
   items: AgencyHubDocItem[];
   canPersist: boolean;
-  docType?: AgencyDocType;
   basePath?: string;
 };
 
 function serverItemsKey(items: AgencyHubDocItem[]) {
   return items
-    .map((i) => `${i.slug}\x1f${i.title}\x1f${i.description}`)
+    .map((i) => `${i.slug}\x1f${i.title}\x1f${i.description}\x1f${i.hubDocType}`)
     .join("\x1e");
 }
 
 export default function AgencyDocsHubSortableGrid({
   items,
   canPersist,
-  docType = "doc",
   basePath = "/docs",
 }: Props) {
   const router = useRouter();
@@ -71,7 +68,9 @@ export default function AgencyDocsHubSortableGrid({
     const next = arrayMove(ordered, oldIndex, newIndex);
     setOrdered(next);
     startTransition(async () => {
-      const res = await reorderAgencyDocHubCards(next.map((i) => i.slug), docType);
+      const res = await reorderAgencyDocHubCards(
+        next.map((i) => ({ slug: i.slug, hubDocType: i.hubDocType }))
+      );
       if ("error" in res && res.error) {
         setOrdered(previous);
         window.alert(res.error);
@@ -88,7 +87,7 @@ export default function AgencyDocsHubSortableGrid({
     return (
       <ul className={gridClass}>
         {items.map((item) => (
-          <HubDocCardStatic key={item.slug} item={item} basePath={basePath} docType={docType} />
+          <HubDocCardStatic key={item.slug} item={item} basePath={basePath} />
         ))}
       </ul>
     );
@@ -112,7 +111,6 @@ export default function AgencyDocsHubSortableGrid({
               item={item}
               persistPending={pending}
               basePath={basePath}
-              docType={docType}
             />
           ))}
         </ul>
@@ -124,11 +122,9 @@ export default function AgencyDocsHubSortableGrid({
 function HubDocCardStatic({
   item,
   basePath = "/docs",
-  docType = "doc",
 }: {
   item: AgencyHubDocItem;
   basePath?: string;
-  docType?: AgencyDocType;
 }) {
   const reg = getAgencyDocBySlug(item.slug);
   const Icon = reg?.icon ?? hubDocIcon(item.iconKey);
@@ -139,7 +135,7 @@ function HubDocCardStatic({
         title={item.title}
         description={item.description}
         canPersist={false}
-        docType={docType}
+        docType={item.hubDocType}
       />
       <Link
         href={`${basePath}/${item.slug}`}
@@ -163,12 +159,10 @@ function HubDocCardSortable({
   item,
   persistPending,
   basePath = "/docs",
-  docType = "doc",
 }: {
   item: AgencyHubDocItem;
   persistPending: boolean;
   basePath?: string;
-  docType?: AgencyDocType;
 }) {
   const {
     attributes,
@@ -205,7 +199,7 @@ function HubDocCardSortable({
         title={item.title}
         description={item.description}
         canPersist
-        docType={docType}
+        docType={item.hubDocType}
       />
       <Link
         href={`${basePath}/${item.slug}`}

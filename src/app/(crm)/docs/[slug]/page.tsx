@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import AgencyDocEditor from "@/components/crm/agency-docs/AgencyDocEditor";
-import { DEFAULT_CUSTOM_DOC_BODY } from "@/lib/crm/agency-custom-doc";
+import {
+  DEFAULT_CUSTOM_DOC_BODY,
+  type AgencyDocType,
+} from "@/lib/crm/agency-custom-doc";
 import {
   defaultBodyFromDefinition,
   getAgencyDocBySlug,
@@ -36,6 +39,7 @@ export default async function AgencyDocPage({ params }: PageProps) {
 
   const initialBody = await loadAgencyWorkspaceDocBody(slug, fallback);
   const canPersist = isSupabaseConfigured();
+  const editorDocType: AgencyDocType = builtIn ? "doc" : custom!.doc_type;
 
   return (
     <div className="mx-auto w-full max-w-3xl px-6 py-8 sm:px-8">
@@ -62,6 +66,7 @@ export default async function AgencyDocPage({ params }: PageProps) {
           slug={slug}
           initialBody={initialBody}
           canPersist={canPersist}
+          docType={editorDocType}
         />
       </div>
     </div>

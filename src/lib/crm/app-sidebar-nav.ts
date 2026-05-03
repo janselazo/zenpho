@@ -1,6 +1,5 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  Building2,
   BookOpen,
   Calculator,
   Calendar,
@@ -114,6 +113,7 @@ export const SIDEBAR_MARKETING: AppSidebarItem[] = [
 ];
 
 export const SIDEBAR_CREATIVE_STUDIO: AppSidebarItem[] = [
+  { href: "/docs", label: "Documents", icon: BookOpen },
   {
     href: creatives.href,
     label: "Images & Videos",
@@ -147,6 +147,7 @@ export const SIDEBAR_CRM: AppSidebarItem[] = [
     icon: MessageSquare,
     badge: "conversations",
   },
+  { href: "/products", label: "Projects", icon: FolderKanban },
 ];
 
 export const SIDEBAR_SALES: AppSidebarItem[] = [
@@ -194,6 +195,7 @@ export const SIDEBAR_REFERRALS: AppSidebarItem[] = [
 ];
 
 export const SIDEBAR_REPORTING: AppSidebarItem[] = [
+  { href: "/finances", label: "Finances", icon: DollarSign },
   {
     href: "/reports",
     label: "Marketing Performance",
@@ -219,18 +221,11 @@ export const SIDEBAR_REPORTING: AppSidebarItem[] = [
   },
 ];
 
-export const SIDEBAR_WORK: AppSidebarItem[] = [
-  { href: "/products", label: "Products", icon: FolderKanban },
-  { href: "/time-tracking", label: "Time Tracking", icon: Timer },
-];
-
 export const SIDEBAR_AGENCY: AppSidebarItem[] = [
   { href: "/my-life", label: "My Life", icon: Compass },
-  { href: "/finances", label: "Finances", icon: DollarSign },
   { href: "/team", label: "Team", icon: Users },
   { href: "/automations", label: "Automations", icon: Workflow },
-  { href: "/docs", label: "Documents", icon: BookOpen },
-  { href: "/agency/industries", label: "Industries", icon: Building2 },
+  { href: "/time-tracking", label: "Time Tracking", icon: Timer },
 ];
 
 export const SIDEBAR_COLLAPSIBLE_SECTIONS: AppSidebarCollapsibleSection[] = [
@@ -245,8 +240,7 @@ export const SIDEBAR_COLLAPSIBLE_SECTIONS: AppSidebarCollapsibleSection[] = [
   { storageKey: "reviews", label: "Reviews", items: SIDEBAR_REVIEWS },
   { storageKey: "referrals", label: "Referrals", items: SIDEBAR_REFERRALS },
   { storageKey: "reports", label: "Reports", items: SIDEBAR_REPORTING },
-  { storageKey: "work", label: "Work", items: SIDEBAR_WORK },
-  { storageKey: "agency", label: "Agency", items: SIDEBAR_AGENCY },
+  { storageKey: "agency", label: "Company", items: SIDEBAR_AGENCY },
 ];
 
 export const SIDEBAR_DASHBOARD_ITEM: AppSidebarItem = {

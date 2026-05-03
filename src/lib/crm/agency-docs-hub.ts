@@ -14,6 +14,8 @@ export type AgencyHubDocItem = {
   description: string;
   /** Lucide icon key for custom docs; built-ins ignore and use registry icon. */
   iconKey?: string | null;
+  /** Row type for hub cards, reorder, and toolbar actions. */
+  hubDocType: AgencyDocType;
 };
 
 type HubCardRow = {
@@ -30,7 +32,15 @@ type HubCandidate = {
   description: string;
   iconKey?: string | null;
   sortFallback: number;
+  hubDocType: AgencyDocType;
 };
+
+function normalizeHubDocTypes(
+  docTypes: AgencyDocType | AgencyDocType[]
+): AgencyDocType[] {
+  const list = Array.isArray(docTypes) ? docTypes : [docTypes];
+  return Array.from(new Set(list));
+}
 
 /**
  * Applies `agency_doc_hub_card` title/description overrides to a baseline.
@@ -84,9 +94,10 @@ export function getRegistryDefaults(slug: AgencyDocSlug) {
 
 /** Visible hub cards: built-in registry + custom docs, merged with hub_card overrides and sort. */
 export async function getAgencyHubDocItems(
-  docType: AgencyDocType = "doc"
+  docTypes: AgencyDocType | AgencyDocType[] = ["doc", "industry"]
 ): Promise<AgencyHubDocItem[]> {
-  const includeRegistry = docType === "doc";
+  const types = normalizeHubDocTypes(docTypes);
+  const includeRegistry = types.includes("doc");
   const registry = includeRegistry ? getAllAgencyDocs() : [];
 
   if (!isSupabaseConfigured()) {
@@ -94,6 +105,7 @@ export async function getAgencyHubDocItems(
       slug: d.slug,
       title: d.title,
       description: d.description,
+      hubDocType: "doc" as const,
     }));
   }
 
@@ -102,13 +114,14 @@ export async function getAgencyHubDocItems(
     const { data: rows, error } = await supabase
       .from("agency_doc_hub_card")
       .select("slug, hidden, title_override, description_override, sort_order")
-      .eq("doc_type", docType);
+      .in("doc_type", types);
 
     if (error || !rows) {
       return registry.map((d) => ({
         slug: d.slug,
         title: d.title,
         description: d.description,
+        hubDocType: "doc" as const,
       }));
     }
 
@@ -136,20 +149,21 @@ export async function getAgencyHubDocItems(
         title,
         description,
         sortFallback: (registryIndex.get(d.slug) ?? 0) * 10,
+        hubDocType: "doc",
       });
     }
 
     const { data: customRows, error: customError } = await supabase
       .from("agency_custom_doc")
-      .select("slug, title, description, icon_key, created_at")
-      .eq("doc_type", docType)
+      .select("slug, title, description, icon_key, doc_type, created_at")
+      .in("doc_type", types)
       .order("created_at", { ascending: true });
 
     if (!customError && customRows?.length) {
       let customIdx = 0;
       for (const c of customRows as Pick<
         AgencyCustomDocRow,
-        "slug" | "title" | "description" | "icon_key" | "created_at"
+        "slug" | "title" | "description" | "icon_key" | "doc_type" | "created_at"
       >[]) {
         const row = map.get(c.slug);
         if (row?.hidden) continue;
@@ -165,6 +179,7 @@ export async function getAgencyHubDocItems(
           description,
           iconKey: c.icon_key,
           sortFallback: 100_000 + customIdx * 10,
+          hubDocType: c.doc_type,
         });
         customIdx += 1;
       }
@@ -179,17 +194,21 @@ export async function getAgencyHubDocItems(
       return a.slug.localeCompare(b.slug);
     });
 
-    return candidates.map(({ slug, title, description, iconKey }) => ({
-      slug,
-      title,
-      description,
-      iconKey,
-    }));
+    return candidates.map(
+      ({ slug, title, description, iconKey, hubDocType }) => ({
+        slug,
+        title,
+        description,
+        iconKey,
+        hubDocType,
+      })
+    );
   } catch {
     return registry.map((d) => ({
       slug: d.slug,
       title: d.title,
       description: d.description,
+      hubDocType: "doc" as const,
     }));
   }
 }

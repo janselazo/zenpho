@@ -70,7 +70,6 @@ export default function AppSidebar() {
   const [reviewsOpen, toggleReviews] = useSidebarSectionOpen("reviews");
   const [referralsOpen, toggleReferrals] = useSidebarSectionOpen("referrals");
   const [reportsOpen, toggleReports] = useSidebarSectionOpen("reports");
-  const [workOpen, toggleWork] = useSidebarSectionOpen("work");
   const [agencyOpen, toggleAgency] = useSidebarSectionOpen("agency");
 
   const sectionToggleByKey: Record<string, () => void> = {
@@ -81,7 +80,6 @@ export default function AppSidebar() {
     reviews: toggleReviews,
     referrals: toggleReferrals,
     reports: toggleReports,
-    work: toggleWork,
     agency: toggleAgency,
   };
 
@@ -93,7 +91,6 @@ export default function AppSidebar() {
     reviews: reviewsOpen,
     referrals: referralsOpen,
     reports: reportsOpen,
-    work: workOpen,
     agency: agencyOpen,
   };
 

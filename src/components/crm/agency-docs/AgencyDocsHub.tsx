@@ -4,20 +4,21 @@ import type { AgencyDocType } from "@/lib/crm/agency-custom-doc";
 import AgencyNewDocButton from "@/components/crm/agency-docs/AgencyNewDocButton";
 import AgencyDocsHubSortableGrid from "@/components/crm/agency-docs/AgencyDocsHubSortableGrid";
 
+const DOCS_HUB_PATH = "/docs";
+
 type Props = {
-  docType?: AgencyDocType;
   heading?: string;
   subtitle?: string;
-  basePath?: string;
+  /** Which workspace doc kinds appear on this hub (default: agency docs + former “Industries” cards). */
+  docTypes?: AgencyDocType | AgencyDocType[];
 };
 
 export default async function AgencyDocsHub({
-  docType = "doc",
   heading = "Agency docs",
   subtitle = "Strategy, positioning, and operating context for the team \u2014 one place per topic.",
-  basePath = "/docs",
+  docTypes = ["doc", "industry"],
 }: Props) {
-  const items = await getAgencyHubDocItems(docType);
+  const items = await getAgencyHubDocItems(docTypes);
   const canPersist = isSupabaseConfigured();
 
   return (
@@ -41,7 +42,9 @@ export default async function AgencyDocsHub({
             ) : null}
           </p>
         </div>
-        {canPersist ? <AgencyNewDocButton docType={docType} basePath={basePath} /> : null}
+        {canPersist ? (
+          <AgencyNewDocButton docType="doc" basePath={DOCS_HUB_PATH} />
+        ) : null}
       </div>
 
       {items.length === 0 ? (
@@ -52,8 +55,7 @@ export default async function AgencyDocsHub({
         <AgencyDocsHubSortableGrid
           items={items}
           canPersist={canPersist}
-          docType={docType}
-          basePath={basePath}
+          basePath={DOCS_HUB_PATH}
         />
       )}
     </div>
