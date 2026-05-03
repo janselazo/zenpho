@@ -273,27 +273,3 @@ export const localServicePackageNarratives: PackageNarrativeContent[] = [
       "We help established local businesses turn marketing, sales, automation, and operations into one growth system.",
   },
 ];
-
-export type DevelopmentAddOn = {
-  title: string;
-  description: string;
-};
-
-/** Custom builds layered on top of any Launch–Scale engagement (separate scopes & quotes). */
-export const crossTierDevelopmentAddOns: DevelopmentAddOn[] = [
-  {
-    title: "Ecommerce website",
-    description:
-      "Shopping experiences with catalog/checkout flows, payments, and fulfillment-friendly structure—scoped beyond Launch brochure sites.",
-  },
-  {
-    title: "Web app development",
-    description:
-      "Authenticated SaaS-style products, customer portals, and internal tools with ongoing release planning.",
-  },
-  {
-    title: "Mobile app development",
-    description:
-      "iOS and Android experiences or hybrid shells tied to your brand and data model—ideal when the job site needs a dedicated app surface.",
-  },
-];

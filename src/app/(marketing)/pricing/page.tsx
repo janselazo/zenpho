@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import PricingHero from "./PricingHero";
-import PricingPackageNarratives from "@/components/pricing/PricingPackageNarratives";
 import LocalServicePricingComparison from "@/components/pricing/LocalServicePricingComparison";
 import PricingAuditCtaSection from "@/components/pricing/PricingAuditCtaSection";
 import PricingFAQ from "@/components/pricing/PricingFAQ";
@@ -18,7 +17,6 @@ export default function PricingPage() {
   return (
     <>
       <PricingHero />
-      <PricingPackageNarratives />
       <LocalServicePricingComparison />
       <PricingAuditCtaSection />
       <PricingFAQ />
