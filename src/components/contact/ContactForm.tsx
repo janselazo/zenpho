@@ -9,9 +9,9 @@ const inputClass =
   "w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-text-primary placeholder:text-text-secondary/40 outline-none shadow-sm transition-all focus:border-accent focus:ring-2 focus:ring-accent/15";
 
 const HELP_OPTIONS = [
-  "Launch (setup + monthly)",
-  "Grow (setup + monthly + ads)",
-  "Scale (setup + monthly + ads)",
+  "Launch (monthly)",
+  "Grow (monthly + ads)",
+  "Scale (monthly + ads)",
   "Custom ecommerce, web app, or mobile build",
   "Revenue Leak Audit / exploration call",
   "Not sure yet",
@@ -34,10 +34,10 @@ const TIMELINES = [
 ] as const;
 
 const BUDGETS = [
-  "Launch (~$2.5k setup + ~$497/mo)",
+  "Launch (~$1,500/mo)",
   "Launch alternate (~$997 setup + ~$697/mo)",
-  "Grow (~$1.5k setup + ~$2k/mo + ad spend)",
-  "Scale (~$5k setup + ~$5k/mo+ + ad spend)",
+  "Grow (~$2k/mo + ad spend)",
+  "Scale (~$3k/mo + ad spend)",
   "Smaller / phased start",
   "Need recommendation",
 ] as const;

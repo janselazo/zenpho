@@ -33,7 +33,7 @@ export const localServicePackageNarratives: PackageNarrativeContent[] = [
       "Business owners who are just starting out and need their digital foundation built correctly.",
     mainGoal:
       "Help them look professional, get found online, capture leads, and manage contacts from day one.",
-    priceSummary: "$2,500 setup + $497/month",
+    priceSummary: "$1,500/month",
     priceAlternative:
       "Alternative entry-level pricing if your market is more price-sensitive: $997 setup + $697/month with a 6-month agreement.",
     includeGroups: [
@@ -105,7 +105,7 @@ export const localServicePackageNarratives: PackageNarrativeContent[] = [
       "Businesses that already have a website and online presence but need more leads, calls, and appointments.",
     mainGoal:
       "Create a predictable lead generation system using paid ads, landing pages, tracking, and CRM automation.",
-    priceSummary: "$1,500 setup + $1,997/month",
+    priceSummary: "$2,000/month",
     priceFootnote: "Ad spend is separate.",
     adSpendNote:
       "Recommended minimum ad spend: $1,500 to $3,000/month. For competitive industries like roofing, legal, med spa, HVAC, dental, or home remodeling, recommend $3,000 to $10,000/month in ad spend.",
@@ -172,7 +172,7 @@ export const localServicePackageNarratives: PackageNarrativeContent[] = [
       "Established businesses that already have proof of demand and want to grow faster, increase conversion rates, improve operations, and dominate their local market.",
     mainGoal:
       "Build a complete growth system: paid ads, SEO, automation, sales process, conversion optimization, reputation, and expansion strategy.",
-    priceSummary: "$5,000 setup + $4,997/month and up",
+    priceSummary: "$3,000/month",
     priceFootnote: "Ad spend is separate.",
     adSpendNote:
       "Recommended minimum ad spend: $5,000/month and up. For aggressive growth: $10,000 to $25,000+/month in ad spend.",

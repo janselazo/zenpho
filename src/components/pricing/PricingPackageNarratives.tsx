@@ -1,5 +1,4 @@
 import Button from "@/components/ui/Button";
-import SectionHeading from "@/components/ui/SectionHeading";
 import {
   PricingNarrativeCollapsibleGroups,
   PricingNarrativeCollapsiblePlatform,
@@ -18,15 +17,7 @@ export default function PricingPackageNarratives() {
       aria-label="Launch, Grow, and Scale plans and details"
     >
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        <SectionHeading
-          label="Plans"
-          title="What each"
-          titleAccent="tier includes"
-          titleAccentInline
-          description="Launch establishes your foundation; Grow adds paid acquisition and funnel rigor; Scale layers advanced acquisition, SEO, CRO, and sales orchestration—all in Zenpho."
-        />
-
-        <div className="mt-12 overflow-x-auto rounded-2xl border border-border/70 bg-white pt-6 shadow-soft [-webkit-overflow-scrolling:touch] sm:pt-7">
+        <div className="overflow-x-auto rounded-2xl border border-border/70 bg-white pt-6 shadow-soft [-webkit-overflow-scrolling:touch] sm:pt-7">
           <p className="sr-only">Scroll horizontally to compare plan details on small screens.</p>
           <table className="w-full min-w-[760px] border-collapse text-left text-sm">
             <thead>

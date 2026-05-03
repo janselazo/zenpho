@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     absolute: "Pricing | Zenpho",
   },
   description:
-    "Zenpho Launch, Grow, and Scale pricing for local service businesses: setup plus monthly platform and marketing fees, ad spend billed separately, optional Launch alternate tier, and custom ecommerce / app builds quoted on request.",
+    "Zenpho Launch, Grow, and Scale for local service businesses: $1,500 / $2,000 / $3,000 per month (ad spend separate for Grow and Scale), optional Launch alternate tier, and custom ecommerce / app builds quoted on request.",
 };
 
 export default function PricingPage() {
