@@ -228,17 +228,17 @@ export const SIDEBAR_AGENCY: AppSidebarItem[] = [
 ];
 
 export const SIDEBAR_COLLAPSIBLE_SECTIONS: AppSidebarCollapsibleSection[] = [
-  { storageKey: "marketing", label: "Marketing", items: SIDEBAR_MARKETING },
+  { storageKey: "crm", label: "CRM", items: SIDEBAR_CRM },
   {
-    storageKey: "creative-studio",
-    label: "Creative Studio",
+    storageKey: "studio",
+    label: "Studio",
     items: SIDEBAR_CREATIVE_STUDIO,
   },
-  { storageKey: "crm", label: "CRM", items: SIDEBAR_CRM },
+  { storageKey: "marketing", label: "Marketing", items: SIDEBAR_MARKETING },
   { storageKey: "sales", label: "Sales", items: SIDEBAR_SALES },
   { storageKey: "reviews", label: "Reviews", items: SIDEBAR_REVIEWS },
   { storageKey: "referrals", label: "Referrals", items: SIDEBAR_REFERRALS },
-  { storageKey: "reporting", label: "Reporting", items: SIDEBAR_REPORTING },
+  { storageKey: "reports", label: "Reports", items: SIDEBAR_REPORTING },
   { storageKey: "work", label: "Work", items: SIDEBAR_WORK },
   { storageKey: "agency", label: "Agency", items: SIDEBAR_AGENCY },
 ];

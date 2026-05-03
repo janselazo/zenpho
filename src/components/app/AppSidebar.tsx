@@ -63,36 +63,36 @@ export default function AppSidebar() {
   const router = useRouter();
   const conversationUnreadCount = useConversationUnreadCount();
 
-  const [marketingOpen, toggleMarketing] = useSidebarSectionOpen("marketing");
-  const [creativeOpen, toggleCreative] = useSidebarSectionOpen("creative-studio");
   const [crmOpen, toggleCrm] = useSidebarSectionOpen("crm");
+  const [studioOpen, toggleStudio] = useSidebarSectionOpen("studio");
+  const [marketingOpen, toggleMarketing] = useSidebarSectionOpen("marketing");
   const [salesOpen, toggleSales] = useSidebarSectionOpen("sales");
   const [reviewsOpen, toggleReviews] = useSidebarSectionOpen("reviews");
   const [referralsOpen, toggleReferrals] = useSidebarSectionOpen("referrals");
-  const [reportingOpen, toggleReporting] = useSidebarSectionOpen("reporting");
+  const [reportsOpen, toggleReports] = useSidebarSectionOpen("reports");
   const [workOpen, toggleWork] = useSidebarSectionOpen("work");
   const [agencyOpen, toggleAgency] = useSidebarSectionOpen("agency");
 
   const sectionToggleByKey: Record<string, () => void> = {
-    marketing: toggleMarketing,
-    "creative-studio": toggleCreative,
     crm: toggleCrm,
+    studio: toggleStudio,
+    marketing: toggleMarketing,
     sales: toggleSales,
     reviews: toggleReviews,
     referrals: toggleReferrals,
-    reporting: toggleReporting,
+    reports: toggleReports,
     work: toggleWork,
     agency: toggleAgency,
   };
 
   const sectionOpenByKey: Record<string, boolean> = {
-    marketing: marketingOpen,
-    "creative-studio": creativeOpen,
     crm: crmOpen,
+    studio: studioOpen,
+    marketing: marketingOpen,
     sales: salesOpen,
     reviews: reviewsOpen,
     referrals: referralsOpen,
-    reporting: reportingOpen,
+    reports: reportsOpen,
     work: workOpen,
     agency: agencyOpen,
   };
