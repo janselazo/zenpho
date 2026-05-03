@@ -17,6 +17,7 @@ import {
   MailPlus,
   MessageCircle,
   MessageSquare,
+  Package,
   Receipt,
   SearchCheck,
   Star,
@@ -149,7 +150,12 @@ export const SIDEBAR_CRM: AppSidebarItem[] = [
 ];
 
 export const SIDEBAR_SALES: AppSidebarItem[] = [
-  { href: "/products", label: "Products & Services", icon: FolderKanban },
+  {
+    href: "/products-services",
+    label: "Products & Services",
+    icon: Package,
+    soon: true,
+  },
   { href: "/proposals", label: "Proposals", icon: FileText },
   { href: "/estimates", label: "Estimates", icon: Calculator, soon: true },
   { href: "/invoices", label: "Invoices", icon: Receipt, soon: true },

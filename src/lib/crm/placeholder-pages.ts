@@ -3,6 +3,7 @@
  * Icons are resolved by key in CrmComingSoonPage.
  */
 export type PlaceholderPageKey =
+  | "products-services"
   | "estimates"
   | "invoices"
   | "reporting-sales-performance"
@@ -21,6 +22,18 @@ export type PlaceholderPageCopy = {
 };
 
 export const PLACEHOLDER_PAGE_COPY: Record<PlaceholderPageKey, PlaceholderPageCopy> = {
+  "products-services": {
+    iconKey: "package",
+    title: "Products & Services",
+    description:
+      "A sales-ready catalog of offerings, packages, and price books — distinct from the delivery pipeline you manage under Work → Products (List / Pipeline).",
+    features: [
+      "SKUs, service bundles, and default pricing tied to proposals and estimates",
+      "Publish what you sell without mixing it with in-flight client build stages",
+      "One catalog that stays aligned when Work → Products cards move through Backlog → Release",
+      "Hooks into Proposals, Estimates, and Invoices as those modules mature",
+    ],
+  },
   estimates: {
     iconKey: "calculator",
     title: "Estimates",

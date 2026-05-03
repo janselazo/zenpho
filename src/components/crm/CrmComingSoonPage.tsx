@@ -7,6 +7,7 @@ import {
   Handshake,
   MailPlus,
   MessageCircle,
+  Package,
   PieChart,
   Receipt,
   Star,
@@ -16,6 +17,7 @@ import ProspectingPendingContent from "@/components/crm/prospecting/ProspectingP
 import type { PlaceholderPageCopy } from "@/lib/crm/placeholder-pages";
 
 const ICONS: Record<string, LucideIcon> = {
+  package: Package,
   calculator: Calculator,
   receipt: Receipt,
   trendingUp: TrendingUp,
