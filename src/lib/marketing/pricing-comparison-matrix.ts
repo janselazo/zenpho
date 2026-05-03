@@ -53,7 +53,7 @@ function platformFoundationRows(): PricingComparisonFeatureRow[] {
 export const pricingComparisonSections: PricingComparisonSection[] = [
   {
     id: "platform_core",
-    heading: "Zenpho platform (every plan)",
+    heading: "Platform",
     rows: [
       ...platformFoundationRows(),
       {
@@ -80,7 +80,7 @@ export const pricingComparisonSections: PricingComparisonSection[] = [
   },
   {
     id: "launch_deliverables",
-    heading: "Launch deliverables",
+    heading: "Launch",
     rows: [
       {
         id: "ln-strategy-brand",
@@ -128,7 +128,7 @@ export const pricingComparisonSections: PricingComparisonSection[] = [
   },
   {
     id: "grow_leadgen",
-    heading: "Grow — lead generation",
+    heading: "Grow",
     rows: [
       {
         id: "gr-ads",
@@ -169,7 +169,7 @@ export const pricingComparisonSections: PricingComparisonSection[] = [
   },
   {
     id: "scale_growth",
-    heading: "Scale — growth system",
+    heading: "Scale",
     rows: [
       {
         id: "sc-paid-advanced",

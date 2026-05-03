@@ -1,4 +1,4 @@
-import Image from "next/image";
+import HomeClearGrowthDashboardPreview from "@/components/home/HomeClearGrowthDashboardPreview";
 import {
   homeClearGrowthClosingAccent,
   homeClearGrowthClosingLead,
@@ -11,10 +11,6 @@ import {
 
 const MAIN_ID = "home-clear-growth-heading";
 const DASHBOARD_CAPTION_ID = "home-clear-growth-dashboard-caption";
-
-const DASHBOARD_IMAGE_SRC = "/marketing/ok.png";
-const DASHBOARD_IMAGE_W = 1024;
-const DASHBOARD_IMAGE_H = 582;
 
 function dashboardScreenReaderSummary(): string {
   const metricPart = homeClearGrowthMetricCards.map((c) => `${c.label}: ${c.value}`).join("; ");
@@ -51,14 +47,7 @@ export default function HomeClearGrowthSection() {
             aria-labelledby={DASHBOARD_CAPTION_ID}
           >
             <div className="overflow-hidden rounded-2xl border border-slate-200/75 bg-white shadow-[0_2px_24px_rgba(15,23,42,0.08)] ring-1 ring-black/[0.03] dark:border-zinc-600/70 dark:bg-zinc-950/30 dark:ring-white/[0.05]">
-              <Image
-                src={DASHBOARD_IMAGE_SRC}
-                alt=""
-                width={DASHBOARD_IMAGE_W}
-                height={DASHBOARD_IMAGE_H}
-                sizes="(max-width: 1024px) min(100vw - 48px, 896px), 896px"
-                className="h-auto w-full"
-              />
+              <HomeClearGrowthDashboardPreview />
             </div>
             <figcaption id={DASHBOARD_CAPTION_ID} className="sr-only">
               {dashboardScreenReaderSummary()}

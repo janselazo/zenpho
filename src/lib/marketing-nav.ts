@@ -77,7 +77,7 @@ const resourcesMegaItems: MarketingMegaItem[] = [
     iconClassName: "bg-emerald-500/15 text-emerald-600",
   },
   {
-    title: "Brand kit + funnel",
+    title: "Brand Kit",
     description: "Generate a brand guidelines PDF and sales funnel playbook from your Google listing.",
     href: "/branding",
     icon: Palette,
@@ -95,7 +95,7 @@ const resourcesMegaItems: MarketingMegaItem[] = [
 export const marketingTopNav: MarketingTopNavItem[] = [
   {
     type: "mega",
-    label: "Product",
+    label: "Platform",
     sectionEyebrow: "Features",
     items: marketingProductMegaItems,
   },
@@ -127,7 +127,7 @@ export type MarketingFooterColumn = {
 
 export const marketingFooterColumns: MarketingFooterColumn[] = [
   {
-    heading: "Product",
+    heading: "Platform",
     links: marketingProductPages.map((p) => ({
       label: p.title,
       href: `/product/${p.slug}`,
@@ -152,7 +152,7 @@ export const marketingFooterColumns: MarketingFooterColumn[] = [
     links: [
       { label: "About", href: "/about" },
       { label: "Blog", href: "/blog" },
-      { label: "Brand kit", href: "/branding" },
+      { label: "Brand Kit", href: "/branding" },
       { label: "Contact", href: "/contact" },
       { label: "Pricing", href: "/pricing" },
       { label: "Case studies", href: "/case-studies" },
