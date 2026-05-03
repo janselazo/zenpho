@@ -170,22 +170,6 @@ export default function AppSidebar() {
           open={opportunitiesOpen}
           onToggle={toggleOpportunities}
         >
-          <NavLink href="/audit" active={isActive(pathname, "/audit")}>
-            <SearchCheck className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-            <span className="min-w-0 flex-1 truncate">Audit</span>
-          </NavLink>
-          {prospectsSection && ProspectsNavIcon ? (
-            <NavLink
-              href={prospectsSection.href}
-              active={
-                pathname === prospectsSection.href ||
-                pathname.startsWith(`${prospectsSection.href}/`)
-              }
-            >
-              <ProspectsNavIcon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-              {prospectsSection.label}
-            </NavLink>
-          ) : null}
           {opportunitiesNav.map(({ href, label, icon: Icon }) => (
             <NavLink key={href} href={href} active={isActive(pathname, href)}>
               <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
@@ -217,6 +201,22 @@ export default function AppSidebar() {
           open={prospectingOpen}
           onToggle={toggleProspecting}
         >
+          <NavLink href="/audit" active={isActive(pathname, "/audit")}>
+            <SearchCheck className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+            <span className="min-w-0 flex-1 truncate">Audit</span>
+          </NavLink>
+          {prospectsSection && ProspectsNavIcon ? (
+            <NavLink
+              href={prospectsSection.href}
+              active={
+                pathname === prospectsSection.href ||
+                pathname.startsWith(`${prospectsSection.href}/`)
+              }
+            >
+              <ProspectsNavIcon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+              {prospectsSection.label}
+            </NavLink>
+          ) : null}
           <NavLink
             href="/prospecting/product-led"
             active={

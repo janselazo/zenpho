@@ -33,7 +33,7 @@ export const localServicePackageNarratives: PackageNarrativeContent[] = [
       "Business owners who are just starting out and need their digital foundation built correctly.",
     mainGoal:
       "Help them look professional, get found online, capture leads, and manage contacts from day one.",
-    priceSummary: "$1,500/month",
+    priceSummary: "$1,500",
     priceAlternative:
       "Alternative entry-level pricing if your market is more price-sensitive: $997 setup + $697/month with a 6-month agreement.",
     includeGroups: [
