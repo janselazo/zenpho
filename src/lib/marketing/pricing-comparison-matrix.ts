@@ -91,15 +91,16 @@ export const pricingComparisonSections: PricingComparisonSection[] = [
       },
       {
         id: "ln-website",
-        label: "3–5 page website with booking/lead capture + analytics",
+        label: "3 to 5 page website with booking/lead capture + analytics",
         tooltip:
-          "Mobile-friendly build with homepage, services, about, contact, and dedicated booking/lead page wired into Zenpho.",
+          "Mobile-friendly build with homepage, services, about, contact, and a dedicated booking/lead page wired into Zenpho.",
         cells: { ...launchOnlyCells },
       },
       {
         id: "ln-gbp",
         label: "Google Business Profile setup or optimization",
-        tooltip: "Categories, services, hours, creative assets, service areas, and Maps fundamentals.",
+        tooltip:
+          "Categories, services, hours, creative assets, service areas, Maps fundamentals, and review-request workflow setup tied to Zenpho.",
         cells: { ...launchOnlyCells },
       },
       {

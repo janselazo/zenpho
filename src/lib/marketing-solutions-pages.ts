@@ -1,10 +1,21 @@
 import type { LucideIcon } from "lucide-react";
 import { Handshake, Rocket, Wrench } from "lucide-react";
+import type { PricingComparisonPlanId } from "@/lib/marketing/pricing-comparison-matrix";
 
 export type MarketingSolutionSlug =
   | "lead-to-revenue-setup"
   | "growth-engine-management"
   | "full-growth-partner";
+
+/** Maps pillar URLs to Launch / Grow / Scale plan ids (`localServicePricingPlans`). */
+export const marketingSolutionToPlanId: Record<
+  MarketingSolutionSlug,
+  PricingComparisonPlanId
+> = {
+  "lead-to-revenue-setup": "setup",
+  "growth-engine-management": "growth-engine",
+  "full-growth-partner": "full-partner",
+};
 
 export type MarketingSolutionPage = {
   slug: MarketingSolutionSlug;
@@ -21,68 +32,65 @@ export type MarketingSolutionPage = {
 export const marketingSolutionPages: MarketingSolutionPage[] = [
   {
     slug: "lead-to-revenue-setup",
-    title: "Development",
+    title: "Launch",
     description:
-      "Website, Google Business Profile, email, foundational SEO, hosting, optional branding—and Zenpho as your operating system.",
+      "Brand, site, Google Business Profile, SEO foundations, social starter kit, and Zenpho as your operating system before you scale spend.",
     icon: Wrench,
     iconClassName: "bg-indigo-500/15 text-indigo-600",
     metaDescription:
-      "Zenpho Development package for local businesses: site and GBP setup, email, SEO foundations, hosting, and the Zenpho platform for leads through referrals.",
+      "Zenpho Launch for local service businesses: strategy, 3 to 5 page site, GBP, SEO starter work, social foundation, hosting, and full Zenpho CRM access.",
     heroLead:
-      "Establish credibility and discoverability before you scale paid media—built on Zenpho from day one.",
+      "Launch gives new or rebooting operators a trustworthy digital foundation—website, maps presence, SEO basics, and Zenpho CRM—so leads and reviews flow into one workspace.",
     body: [
-      "Development scopes website work, Google Business Profile and business email setup, foundational SEO with hosting and support, plus optional branding—all alongside full Zenpho platform access.",
-      "You finish with a professional local presence your team can run, with pipelines and reporting ready when you graduate into Growth or Scale.",
+      "Launch packages business strategy onboarding, brand direction, copy structure, a mobile-friendly website with booking/lead capture, Google Business Profile configuration, local SEO fundamentals, and a social starter library executed through Zenpho.",
+      "Every client also receives core Zenpho modules—CRM, pipeline, inbox, forms, booking, proposals, social scheduling, automations, review requests, and monthly reporting—plus hosting, cadence posts, and performance reviews so the system stays fresh.",
     ],
     bullets: [
-      "Website development and GBP aligned to how buyers search",
-      "Business email and hosting with ongoing support",
-      "Foundational SEO and optimization during build-out",
-      "Zenpho workspace for lead management through referrals",
+      "Guided setup for site, GBP, citations, and analytics without duct-taped tools",
+      "Monthly content, monitoring, and reporting baked into the retainer",
+      "Optional alternate pricing for price-sensitive markets on a six-month agreement",
     ],
   },
   {
     slug: "growth-engine-management",
-    title: "Growth",
+    title: "Grow",
     description:
-      "Everything in Development, plus Meta ads, Performance Creatives, and ongoing SEO—in one monthly rhythm.",
+      "Everything in Launch plus Google & Meta ads, dedicated landing pages, instrumentation, and automated follow-up for predictable pipeline.",
     icon: Rocket,
     iconClassName: "bg-rose-500/15 text-rose-600",
     metaDescription:
-      "Zenpho Growth: Meta and Instagram ads, Performance Creatives, ongoing SEO, plus every Development deliverable and the Zenpho platform.",
+      "Zenpho Grow: inherits Launch foundations, adds paid search/social, landing pages, conversion tracking, and CRM automations—with ad spend billed separately.",
     heroLead:
-      "Predictable demand from Meta and SEO while Development foundations and Zenpho keep follow-up and attribution honest.",
+      "Grow is for teams already online who need repeatable demand—paid placements, tighter landing experiences, truthful attribution, and automated nurture layered on Launch.",
     body: [
-      "Growth inherits your entire Development scope, then layers Meta (Facebook & Instagram) campaigns, Performance Creatives, and an ongoing SEO program—not just the foundational work from setup.",
-      "Monthly cadence focuses on creative iteration, search visibility, and clear reporting on pipeline—not vanity metrics.",
+      "Grow inherits website, GBP, SEO baseline, Zenpho workflows, hosting, and support from Launch. We activate Google Ads, Meta placements, retargeting, localized service strategies, creative refreshes, and weekly optimizations while media budgets settle directly with the platforms.",
+      "Dedicated landing builds, tagging, call/form conversion tracking, and CPL reporting anchor each sprint. Automated missed-call replies, confirmations, nurturing, and pipeline automations feed every lead straight back into Zenpho.",
     ],
     bullets: [
-      "Meta ads management with guardrails and testing",
-      "Performance Creatives tuned to local proof and offers",
-      "Ongoing SEO beyond foundational optimization",
-      "Zenpho dashboards tying spend to leads and bookings",
+      "Managed Google + Meta programs with ongoing creative and testing",
+      "Landing + tracking stack purpose-built for booked appointments, not vanity clicks",
+      "Monthly strategy + optimization cadence with clear spend-to-lead visibility",
     ],
   },
   {
     slug: "full-growth-partner",
     title: "Scale",
     description:
-      "Everything in Growth—plus Google Ads for coordinated search and social at higher ambition.",
+      "Full-funnel growth system on Zenpho—advanced paid programs, SEO expansion, CRO, sales automation, reputation, referrals, and executive-ready reporting.",
     icon: Handshake,
     iconClassName: "bg-emerald-500/15 text-emerald-700",
     metaDescription:
-      "Zenpho Scale: Google Ads plus Meta, creatives, ongoing SEO, Development bundle, and Zenpho—full-funnel management for competitive markets.",
+      "Zenpho Scale extends Launch + Grow with advanced acquisition, local SEO growth, experimentation, sales operations, reputation programs, multi-seat Zenpho, priority support, and optional add-on services.",
     heroLead:
-      "When search intent and social prospecting both matter, Scale coordinates channels with one operating system.",
+      "Scale is for proven operators ready to optimize every stage—media, SEO, conversion, CRM, reputation, and revenue reporting—without bolting on more vendors.",
     body: [
-      "Scale includes Growth (therefore Development): Meta ads, Performance Creatives, ongoing SEO, and your site/GBP foundations.",
-      "We add Google Ads—Search and Performance Max—so budgets, messaging, and landing experiences stay aligned instead of siloed.",
+      "Scale keeps every Launch and Grow deliverable, then widens paid programs (video, LSAs, multi-offer testing), advances local SEO and review growth, runs structured CRO tests, hardens CRM and sales automation, and layers referral plus reactivation plays inside Zenpho.",
+      "Advanced dashboards surface lead source attribution, CPL, cost per booked appointment, and pipeline revenue when stages stay current. Quarterly planning and priority support keep leadership aligned, with optional add-ons such as appointment setting, call handling, custom integrations, creative production, AI chat, and newsletter management quoted separately.",
     ],
     bullets: [
-      "Coordinated Meta + Google Ads strategy and execution",
-      "Shared creative and landing insights across channels",
-      "Reporting that shows channel overlap and true incremental lift",
-      "Room for aggressive expansion without losing operational clarity",
+      "Coordinated acquisition + SEO + experimentation roadmap",
+      "Sales, reputation, and referral programs automated inside Zenpho",
+      "Executive reporting, multi-seat access, and optional operational add-ons",
     ],
   },
 ];

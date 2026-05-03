@@ -45,9 +45,9 @@ export const platformIncludedInAllPlans = [
       "Native form routing, proposal templates, and review-request workflows reduce manual follow-up from day one.",
   },
   {
-    label: "Social scheduling, basic automations, monthly performance reporting",
+    label: "Social media post scheduling, basic automations, monthly performance reporting",
     tooltip:
-      "Queue social content, trigger simple automations, and review a monthly dashboard summarizing performance.",
+      "Schedule social posts, trigger simple automations, and review a monthly dashboard summarizing performance.",
   },
 ] as const;
 
@@ -59,16 +59,16 @@ export const localServicePricingPlans: LocalServicePricingPlan[] = [
     priceLead: "$2,500 setup + $497/mo",
     priceNote: "Hosting, platform access, and Launch deliverables included.",
     priceAlt:
-      "Alternate entry: $997 setup + $697/mo on a 6-month agreement (for more price-sensitive markets).",
+      "Alternative entry-level: $997 setup + $697/mo on a 6-month agreement (price-sensitive markets).",
     headerNote: "Zenpho platform included on every tier.",
     summary: "",
     included: [],
     bestFor: [
-      "Owners launching or refreshing their digital presence from zero",
-      "Teams that need GBP, site, and CRM working together before heavy ad spend",
+      "Business owners starting out who need a correct digital foundation",
+      "Teams that need site, GBP, and CRM wired together before scaled ad spend",
     ],
     outcome:
-      "You look credible online, collect leads in Zenpho, automate reviews, and operate from one workspace with hosting and monthly support.",
+      "You look professional online, capture leads into Zenpho, and run reviews, bookings, hosting, and monthly support from one system.",
     ctaLabel: "Book a call",
     ctaHref: "/booking",
   },
@@ -77,16 +77,16 @@ export const localServicePricingPlans: LocalServicePricingPlan[] = [
     title: "Grow",
     planTagline: "Lead generation",
     priceLead: "$1,500 setup + $1,997/mo",
-    priceNote: "Ad spend is separate (we recommend minimums by market).",
+    priceNote: "Ad spend is separate.",
     headerNote: "Includes everything in Launch.",
     summary: "",
     included: [],
     bestFor: [
-      "Businesses with a site that need predictable paid lead flow",
-      "Teams ready for Google + Meta ads, landing pages, and tight tracking",
+      "Businesses with a site that need more leads, calls, and appointments",
+      "Teams ready for Google & Meta ads, landing pages, tracking, and automation",
     ],
     outcome:
-      "You run coordinated paid media with dedicated landing pages, full-funnel tracking, and automated follow-up on top of Launch deliverables.",
+      "You gain a predictable acquisition engine: paid campaigns, landing page, tagging and conversion tracking, and lead follow-up on top of everything in Launch.",
     ctaLabel: "Start Grow",
     ctaHref: "/booking",
     featured: true,
@@ -101,11 +101,11 @@ export const localServicePricingPlans: LocalServicePricingPlan[] = [
     summary: "",
     included: [],
     bestFor: [
-      "Operators with proven demand optimizing CAC, conversion, and ops",
-      "Brands investing heavily across search, social, content, and automation",
+      "Established businesses with proven demand accelerating growth and conversion",
+      "Teams ready for coordinated SEO, CRO, sales automation, reputation, and reporting beyond Grow",
     ],
     outcome:
-      "You orchestrate advanced acquisition, SEO, CRO, sales automation, reputation, and quarterly planning with priority support and deeper analytics.",
+      "You unify paid acquisition, local SEO growth, experimentation, CRM and sales workflows, referral and review programs, and strategic reporting—with advanced Zenpho workflows and priority support.",
     ctaLabel: "Talk with us",
     ctaHref: "/booking",
   },
