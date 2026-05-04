@@ -14,7 +14,7 @@ export function pricingPlanColumnSurfaceClass(featured?: boolean) {
  */
 export function PricingPlanTierHeaderBlock({ plan }: { plan: LocalServicePricingPlan }) {
   return (
-    <>
+    <div className="flex h-full min-h-0 flex-col">
       <div className="flex min-h-[30px] items-end justify-center pb-2 sm:min-h-[32px]">
         {plan.featured ? (
           <span className="rounded-full bg-accent px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
@@ -22,7 +22,7 @@ export function PricingPlanTierHeaderBlock({ plan }: { plan: LocalServicePricing
           </span>
         ) : null}
       </div>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-1 flex-col gap-2">
         <span className="text-lg font-bold leading-snug text-text-primary sm:text-xl">{plan.title}</span>
         {plan.planTagline ? (
           <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent sm:text-xs">
@@ -54,15 +54,17 @@ export function PricingPlanTierHeaderBlock({ plan }: { plan: LocalServicePricing
             <p className="text-[11px] leading-snug text-text-secondary/90 sm:text-xs">{plan.priceAlt}</p>
           ) : null}
         </div>
+      </div>
+      <div className="mt-auto pt-3">
         <Button
           href={plan.ctaHref}
           variant={plan.featured ? "primary" : "dark"}
           size="lg"
-          className="mt-1 w-full justify-center"
+          className="w-full justify-center"
         >
           {plan.ctaLabel}
         </Button>
       </div>
-    </>
+    </div>
   );
 }

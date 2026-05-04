@@ -75,9 +75,11 @@ export default function LocalServicePricingComparison() {
                   <th
                     key={plan.id}
                     scope="col"
-                    className={`w-[min(22vw,220px)] min-w-[160px] border-border/60 px-3 py-5 align-top sm:px-4 ${pricingPlanColumnSurfaceClass(plan.featured)}`}
+                    className={`h-full w-[min(22vw,220px)] min-h-0 min-w-[160px] border-border/60 px-3 py-5 align-top sm:px-4 ${pricingPlanColumnSurfaceClass(plan.featured)}`}
                   >
-                    <PricingPlanTierHeaderBlock plan={plan} />
+                    <div className="flex h-full min-h-[1px] flex-col">
+                      <PricingPlanTierHeaderBlock plan={plan} />
+                    </div>
                   </th>
                 ))}
               </tr>
@@ -144,7 +146,7 @@ export default function LocalServicePricingComparison() {
             Add-ons
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-text-secondary sm:text-base">
-            Optional builds alongside your plan; exact quotes follow scope.
+            Optional builds alongside your plan.
           </p>
           <ul className="mt-6 grid list-none gap-4 p-0 sm:grid-cols-2 lg:grid-cols-3">
             {pricingDevelopmentAddOns.map((addOn) => (
