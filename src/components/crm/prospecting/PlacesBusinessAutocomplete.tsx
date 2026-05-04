@@ -15,6 +15,14 @@ type Props = {
   cityHint: string;
   onPlaceResolved: (place: PlacesSearchPlace) => void;
   disabled?: boolean;
+  /** Override default rounded-full input chrome (e.g. lead form uses `rounded-lg`). */
+  inputClassName?: string;
+  /** Omit the leading Building2 icon (e.g. when the parent row already shows one). */
+  hideLeadingIcon?: boolean;
+  listboxId?: string;
+  placeholder?: string;
+  /** Subline under each suggestion; prospecting copy by default. */
+  suggestionSubcopy?: string;
 };
 
 export default function PlacesBusinessAutocomplete({
@@ -23,6 +31,11 @@ export default function PlacesBusinessAutocomplete({
   cityHint,
   onPlaceResolved,
   disabled = false,
+  inputClassName,
+  hideLeadingIcon = false,
+  listboxId = "prospect-business-google-suggestions",
+  placeholder = "Start typing a business name — pick from Google suggestions",
+  suggestionSubcopy = "Select to open the market intelligence report",
 }: Props) {
   const [open, setOpen] = useState(false);
   const [highlighted, setHighlighted] = useState(0);
@@ -172,13 +185,22 @@ export default function PlacesBusinessAutocomplete({
 
   const showList = open && (suggestions.length > 0 || suggestLoading);
 
+  const defaultInputClass =
+    "w-full rounded-full border border-border bg-white py-2.5 pl-10 pr-10 text-sm text-text-primary shadow-sm outline-none transition-[box-shadow,border-color] placeholder:text-text-secondary/50 focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-blue-500 dark:focus:ring-blue-500/20";
+
+  const resolvedInputClass =
+    inputClassName ??
+    defaultInputClass;
+
   return (
     <div ref={wrapRef} className="relative">
       <div className="relative">
-        <Building2
-          className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary/70 dark:text-zinc-500"
-          aria-hidden
-        />
+        {!hideLeadingIcon ? (
+          <Building2
+            className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary/70 dark:text-zinc-500"
+            aria-hidden
+          />
+        ) : null}
         <input
           ref={inputRef}
           type="text"
@@ -186,10 +208,10 @@ export default function PlacesBusinessAutocomplete({
           disabled={disabled || detailsLoading}
           aria-label="Business name"
           aria-expanded={showList}
-          aria-controls="prospect-business-google-suggestions"
+          aria-controls={listboxId}
           aria-autocomplete="list"
           aria-busy={suggestLoading || detailsLoading}
-          placeholder="Start typing a business name — pick from Google suggestions"
+          placeholder={placeholder}
           onChange={(e) => {
             onChange(e.target.value);
             setOpen(true);
@@ -197,7 +219,7 @@ export default function PlacesBusinessAutocomplete({
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          className="w-full rounded-full border border-border bg-white py-2.5 pl-10 pr-10 text-sm text-text-primary shadow-sm outline-none transition-[box-shadow,border-color] placeholder:text-text-secondary/50 focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-blue-500 dark:focus:ring-blue-500/20"
+          className={resolvedInputClass}
         />
         {detailsLoading || suggestLoading ? (
           <Loader2
@@ -237,7 +259,7 @@ export default function PlacesBusinessAutocomplete({
               aria-hidden
             />
             <ul
-              id="prospect-business-google-suggestions"
+              id={listboxId}
               role="listbox"
               className="relative max-h-72 overflow-auto px-1"
             >
@@ -273,7 +295,7 @@ export default function PlacesBusinessAutocomplete({
                         {s.description}
                       </span>
                       <span className="mt-0.5 block text-xs text-text-secondary dark:text-zinc-400">
-                        Select to open the market intelligence report
+                        {suggestionSubcopy}
                       </span>
                     </span>
                   </button>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   Briefcase,
   Building2,
@@ -12,6 +12,7 @@ import {
   ExternalLink,
   Facebook,
   FileDown,
+  FileText,
   FolderKanban,
   Instagram,
   Globe,
@@ -20,7 +21,9 @@ import {
   Loader2,
   Mail,
   Monitor,
+  Pencil,
   Phone,
+  SearchCheck,
   Smartphone,
   Sparkles,
   User,
@@ -33,12 +36,14 @@ import CrmNewProjectFromLeadModal from "@/components/crm/CrmNewProjectFromLeadMo
 import CrmQuickTaskModal from "@/components/crm/CrmQuickTaskModal";
 import LeadAppointmentEditModal from "@/components/crm/LeadAppointmentEditModal";
 import LeadAppointmentsMonthCalendar from "@/components/crm/LeadAppointmentsMonthCalendar";
+import PlacesBusinessAutocomplete from "@/components/crm/prospecting/PlacesBusinessAutocomplete";
 import PlacesCategoryAutocomplete from "@/components/crm/prospecting/PlacesCategoryAutocomplete";
 import AppointmentStatusBadge from "@/components/app/AppointmentStatusBadge";
 import type { LeadFollowUpAppointment } from "@/lib/crm/lead-follow-up-appointment";
 import { parseAppointmentStatus } from "@/lib/crm/appointment-status";
 import { prospectPreviewPageUrl } from "@/lib/crm/prospect-preview-public-url";
 import { PLACES_TEXT_SEARCH_CATEGORY_SUGGESTIONS } from "@/lib/crm/places-text-search-category-suggestions";
+import type { PlacesSearchPlace } from "@/lib/crm/places-types";
 import {
   DEFAULT_LEAD_PIPELINE_COLUMNS,
   leadStageLabelColor,
@@ -74,6 +79,23 @@ function sourceSelectTextClass(source: string) {
 
 const inputClass =
   "w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-900 outline-none transition-colors placeholder:text-zinc-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-blue-400";
+
+/** First business-relevant Google Places type, Title Cased, or null. */
+function pickPrimaryGooglePlaceType(types: string[]): string | null {
+  const skip = new Set([
+    "point_of_interest",
+    "establishment",
+    "geocode",
+    "political",
+  ]);
+  const raw = types.find((t) => t && !skip.has(t));
+  if (!raw) return null;
+  return raw
+    .split("_")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
 
 const LEAD_TABS = [
   { id: "contact", label: "Contact", icon: UserCircle },
@@ -355,6 +377,11 @@ export default function LeadEditForm({
   );
   const [editingFollowUp, setEditingFollowUp] =
     useState<LeadFollowUpAppointment | null>(null);
+  const [companyDraft, setCompanyDraft] = useState(() =>
+    (lead.company ?? "").trim()
+  );
+  const phoneFromGoogleRef = useRef<HTMLInputElement>(null);
+  const websiteFromGoogleRef = useRef<HTMLInputElement>(null);
 
   const defaultStage =
     (lead.stage ?? "").trim() || leadPipelineColumns[0]?.slug || "contacted";
@@ -420,6 +447,10 @@ export default function LeadEditForm({
   useEffect(() => {
     setGoogleBusinessCategory(lead.google_business_category ?? "");
   }, [lead.id, lead.google_business_category]);
+
+  useEffect(() => {
+    setCompanyDraft((lead.company ?? "").trim());
+  }, [lead.id, lead.company]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -569,6 +600,7 @@ export default function LeadEditForm({
                   </FieldRow>
                   <FieldRow icon={Phone} label="Phone">
                     <input
+                      ref={phoneFromGoogleRef}
                       name="phone"
                       type="tel"
                       defaultValue={lead.phone ?? ""}
@@ -578,16 +610,43 @@ export default function LeadEditForm({
                     />
                   </FieldRow>
                   <FieldRow icon={Building2} label="Company">
-                    <input
-                      name="company"
-                      type="text"
-                      defaultValue={lead.company ?? ""}
-                      autoComplete="organization"
-                      className={inputClass}
+                    <input type="hidden" name="company" value={companyDraft} />
+                    <PlacesBusinessAutocomplete
+                      value={companyDraft}
+                      onChange={setCompanyDraft}
+                      cityHint=""
+                      hideLeadingIcon
+                      listboxId="lead-company-google-suggestions"
+                      placeholder="Search Google Business or type a company name"
+                      suggestionSubcopy="Select a listing to pull details from Google."
+                      inputClassName={`${inputClass} pr-10 shadow-sm`}
+                      onPlaceResolved={(p: PlacesSearchPlace) => {
+                        const name = p.name?.trim();
+                        if (name) setCompanyDraft(name);
+                        const phone = (
+                          p.nationalPhoneNumber ??
+                          p.internationalPhoneNumber ??
+                          ""
+                        ).trim();
+                        if (phone && phoneFromGoogleRef.current) {
+                          phoneFromGoogleRef.current.value = phone;
+                        }
+                        const web = p.websiteUri?.trim() ?? "";
+                        if (web && websiteFromGoogleRef.current) {
+                          websiteFromGoogleRef.current.value =
+                            /^https?:\/\//i.test(web) ? web : `https://${web}`;
+                        }
+                        const cat = pickPrimaryGooglePlaceType(p.types);
+                        if (cat) setGoogleBusinessCategory(cat);
+                      }}
                     />
+                    <p className="mt-1.5 text-[11px] text-zinc-400 dark:text-zinc-500">
+                      Requires Places API (`GOOGLE_PLACES_API_KEY`). Type two or more characters to search.
+                    </p>
                   </FieldRow>
                   <FieldRow icon={Globe} label="Website">
                     <input
+                      ref={websiteFromGoogleRef}
                       name="website"
                       type="url"
                       inputMode="url"
@@ -635,6 +694,45 @@ export default function LeadEditForm({
                       placeholder="https://instagram.com/…"
                     />
                   </FieldRow>
+                  <FieldRow icon={SearchCheck} label="Revenue leaks audit">
+                    <Link
+                      href="/audit"
+                      className="inline-flex w-fit items-center rounded-lg border border-blue-500/35 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 hover:bg-blue-500/[0.14] dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200 dark:hover:bg-blue-500/20"
+                    >
+                      Open revenue leak audit
+                    </Link>
+                    <p className="mt-1.5 text-[11px] text-zinc-400 dark:text-zinc-500">
+                      Same experience as Marketing → Audit in the sidebar.
+                    </p>
+                  </FieldRow>
+                  <FieldRow icon={FileText} label="Branding document">
+                    {brandingFunnelPdfUrl ? (
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-sm text-zinc-600 dark:text-zinc-300">
+                          {brandingFunnelPdfCreatedAt
+                            ? `Saved ${new Date(brandingFunnelPdfCreatedAt).toLocaleString("en-US", {
+                                dateStyle: "medium",
+                                timeStyle: "short",
+                              })}`
+                            : "Brand kit + sales funnel PDF"}
+                        </p>
+                        <a
+                          href={brandingFunnelPdfUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          download
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-semibold text-zinc-800 hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700/70"
+                        >
+                          <FileDown className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                          Open PDF
+                        </a>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                        No branding PDF on this lead yet.
+                      </p>
+                    )}
+                  </FieldRow>
                   {hostedPreviewHref ? (
                     <FieldRow icon={HostedPreviewIcon} label="Hosted preview">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -655,30 +753,6 @@ export default function LeadEditForm({
                         Prospect website, web app, or mobile Stitch preview saved when this lead was
                         created from Prospecting.
                       </p>
-                    </FieldRow>
-                  ) : null}
-                  {brandingFunnelPdfUrl ? (
-                    <FieldRow icon={FileDown} label="Brand kit + Sales funnel PDF">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <p className="text-sm text-zinc-600 dark:text-zinc-300">
-                          {brandingFunnelPdfCreatedAt
-                            ? `Saved ${new Date(brandingFunnelPdfCreatedAt).toLocaleString("en-US", {
-                                dateStyle: "medium",
-                                timeStyle: "short",
-                              })}`
-                            : "Generated deliverable"}
-                        </p>
-                        <a
-                          href={brandingFunnelPdfUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          download
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-semibold text-zinc-800 hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700/70"
-                        >
-                          <FileDown className="h-3.5 w-3.5" aria-hidden />
-                          Download PDF
-                        </a>
-                      </div>
                     </FieldRow>
                   ) : null}
                 </div>
@@ -816,18 +890,32 @@ export default function LeadEditForm({
               ) : (
                 <ul className="divide-y divide-zinc-100 rounded-xl border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-700">
                   {followUpAppointments.map((t) => (
-                    <li key={t.id} className="px-4 py-3">
-                      <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                        {t.title}
-                      </p>
-                      <div className="mt-1.5">
-                        <AppointmentStatusBadge
-                          status={parseAppointmentStatus(t.status)}
-                        />
+                    <li
+                      key={t.id}
+                      className="flex items-start justify-between gap-3 px-4 py-3"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                          {t.title}
+                        </p>
+                        <div className="mt-1.5">
+                          <AppointmentStatusBadge
+                            status={parseAppointmentStatus(t.status)}
+                          />
+                        </div>
+                        <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                          {formatAppointmentRange(t.starts_at, t.ends_at)}
+                        </p>
                       </div>
-                      <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-                        {formatAppointmentRange(t.starts_at, t.ends_at)}
-                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setEditingFollowUp(t)}
+                        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/40"
+                        aria-label={`Edit ${t.title || "appointment"}`}
+                      >
+                        <Pencil className="h-3.5 w-3.5" aria-hidden />
+                        Edit
+                      </button>
                     </li>
                   ))}
                 </ul>

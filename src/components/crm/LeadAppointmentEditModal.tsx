@@ -163,6 +163,7 @@ export default function LeadAppointmentEditModal({
                 id="lead-appt-start"
                 value={startsLocal}
                 onChange={setStartsLocal}
+                compact
                 aria-label="Start date and time"
               />
             </div>
@@ -177,6 +178,7 @@ export default function LeadAppointmentEditModal({
                 id="lead-appt-end"
                 value={endsLocal}
                 onChange={setEndsLocal}
+                compact
                 aria-label="End date and time"
               />
             </div>

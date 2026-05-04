@@ -119,6 +119,10 @@ export const crmRdpCssVars = {
 export const crmDateTriggerClassName =
   "relative flex w-full min-w-0 min-h-[2.75rem] items-center gap-0 rounded-xl border border-zinc-200 bg-zinc-50/95 pl-10 pr-3 text-left text-sm font-medium text-text-primary shadow-sm outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-600 dark:bg-zinc-800/60 dark:text-zinc-100 dark:focus:border-blue-500";
 
+/** Narrower trigger row + smaller type (modals, dense forms). */
+export const crmDateTriggerCompactClassName =
+  "relative flex w-full min-w-0 min-h-[2.25rem] items-center gap-0 rounded-xl border border-zinc-200 bg-zinc-50/95 pl-9 pr-3 text-left text-xs font-normal text-text-primary shadow-sm outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-600 dark:bg-zinc-800/60 dark:text-zinc-100 dark:focus:border-blue-500";
+
 /** Range / dual-month day cells: align with same blue as single. */
 export const crmRangeDayClassNames: Partial<ClassNames> = {
   months: "flex flex-col gap-4 sm:flex-row sm:gap-6",

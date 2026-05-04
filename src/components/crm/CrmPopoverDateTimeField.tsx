@@ -14,6 +14,7 @@ import {
 import "react-day-picker/style.css";
 import {
   crmDateTriggerClassName,
+  crmDateTriggerCompactClassName,
   CRM_SINGLE_DATE_PICKER_START_MONTH,
   crmFormatters,
   crmRdpCssVars,
@@ -96,6 +97,8 @@ type Props = {
   onChange: (v: string) => void;
   disabled?: boolean;
   "aria-label"?: string;
+  /** Smaller trigger label (e.g. lead appointment modal). */
+  compact?: boolean;
 };
 
 export default function CrmPopoverDateTimeField({
@@ -104,6 +107,7 @@ export default function CrmPopoverDateTimeField({
   onChange,
   disabled = false,
   "aria-label": ariaLabel = "Date and time",
+  compact = false,
 }: Props) {
   const [open, setOpen] = useState(false);
   const triggerWrapRef = useRef<HTMLDivElement>(null);
@@ -376,14 +380,18 @@ export default function CrmPopoverDateTimeField({
         aria-haspopup="dialog"
         aria-label={ariaLabel}
         onClick={() => !disabled && setOpen((o) => !o)}
-        className={crmDateTriggerClassName}
+        className={compact ? crmDateTriggerCompactClassName : crmDateTriggerClassName}
       >
         <CalendarIcon
-          className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary/55"
+          className={`pointer-events-none absolute top-1/2 -translate-y-1/2 text-text-secondary/55 ${
+            compact ? "left-3 h-3.5 w-3.5" : "left-3.5 h-4 w-4"
+          }`}
           aria-hidden
         />
         <span
-          className={`block w-full pl-10 pr-3 text-left text-sm font-medium tabular-nums ${
+          className={`block w-full pr-3 text-left tabular-nums ${
+            compact ? "pl-9 text-xs font-normal" : "pl-10 text-sm font-medium"
+          } ${
             display ? "text-text-primary" : "text-text-secondary/50"
           }`}
         >
