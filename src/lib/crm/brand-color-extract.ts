@@ -1055,6 +1055,17 @@ export function extractLogoUrls(
     if (/wixui-image|wow-image|data-testid=["']imageX["']/i.test(context)) score += 34;
     /** Breakdance / BDE builders: masthead bitmap is rarely decorative; logo filename still wins ties. */
     if (/bde-header-builder|bde-image\b|breakdance-image/i.test(`${tag}\n${context}`)) score += 40;
+    /** GoHighLevel / LeadConnector funnel pages: real logos ship via image CDN + hl-image wrappers. */
+    if (
+      /images\.leadconnectorhq\.com|cdn\.filesafe\.space|assets\.cdn\.filesafe\.space/i.test(
+        srcEarly ?? "",
+      )
+    ) {
+      score += 24;
+    }
+    if (/hl-image-picture|hl-optimized|c-image\b|cimage-/i.test(`${tag}\n${context}`)) {
+      score += 28;
+    }
     const srcBlob = imageSrcFromTag(tag);
     if (
       srcBlob &&

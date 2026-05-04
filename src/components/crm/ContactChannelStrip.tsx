@@ -67,7 +67,7 @@ export default function ContactChannelStrip({
     active: boolean,
     node: ReactNode,
     title: string,
-    /** Sentence-case caption (e.g. "To"); default row uses uppercase chip style. */
+    /** Optional: underline that caption uses the same uppercase chip style as Website/Email when false. */
     labelNormalCase = false,
   ) => (
     <div key={key} className="flex flex-col items-center gap-1">
@@ -147,7 +147,7 @@ export default function ContactChannelStrip({
         )}
         {item(
           "instagram",
-          "To",
+          "Instagram",
           Boolean(s?.instagram?.trim()),
           s?.instagram ? (
             <a
@@ -164,11 +164,10 @@ export default function ContactChannelStrip({
             <Instagram className="h-4 w-4" aria-hidden />
           ),
           "Not linked from scanned pages",
-          true,
         )}
         {item(
           "facebook",
-          "To",
+          "Facebook",
           Boolean(s?.facebook?.trim()),
           s?.facebook ? (
             <a
@@ -185,7 +184,6 @@ export default function ContactChannelStrip({
             <Facebook className="h-4 w-4" aria-hidden />
           ),
           "Not linked from scanned pages",
-          true,
         )}
         {item(
           "tiktok",
@@ -229,7 +227,7 @@ export default function ContactChannelStrip({
         )}
         {item(
           "whatsapp",
-          "To",
+          "WhatsApp",
           Boolean(s?.whatsapp?.trim()),
           s?.whatsapp ? (
             <a
@@ -246,7 +244,6 @@ export default function ContactChannelStrip({
             <WhatsAppGlyph className="h-4 w-4" />
           ),
           "Not linked from scanned pages",
-          true,
         )}
         {trailingItem}
       </div>

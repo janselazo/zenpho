@@ -8,7 +8,7 @@
  *
  * Slots (size shown is the closest gpt-image-2 supports):
  *   - landingHero        1536x1024  editorial landing-page mockup
- *   - landingSection1–3  1024x1024  below-the-fold section imagery (services, proof, gallery)
+ *   - landingSection1–4  1024x1024  below-the-fold section imagery (benefits, proof, offer, lead capture)
  *   - adFbFeed           1024x1024  Meta feed creative
  *   - adIgFeed           1024x1024  IG feed creative
  *   - adIgStory          1024x1536  IG/FB Story 9:16-ish creative
@@ -42,6 +42,7 @@ export type AdsImageSlot =
   | "landingSection1"
   | "landingSection2"
   | "landingSection3"
+  | "landingSection4"
   | "adFbFeed"
   | "adIgFeed"
   | "adIgStory"
@@ -53,6 +54,7 @@ export type AdsImages = {
   landingSection1: Buffer | null;
   landingSection2: Buffer | null;
   landingSection3: Buffer | null;
+  landingSection4: Buffer | null;
   adFbFeed: Buffer | null;
   adIgFeed: Buffer | null;
   adIgStory: Buffer | null;
@@ -97,24 +99,50 @@ function strictPaletteRule(spec: BrandingSpec): string {
 const NO_TEXT_RULE =
   "Do NOT render any readable text, letters, words, numbers, watermarks, captions, UI labels, or hashtags inside the image. Real copy is overlaid as actual type in the PDF.";
 
-/** Titles for landing section images — skips generic "Hero"; pairs with landingSection1–3. */
-export function pickLandingSectionThemes(funnel: AdsFunnelSpec): [string, string, string] {
-  const fb: [string, string, string] = [
-    "Services & offers",
-    "Reviews & trust",
-    "Gallery & work samples",
-  ];
+/** Default below-the-fold themes (slots 2-5 on the landing page; hero is separate). */
+const LANDING_BELOW_FOLD_DEFAULTS: readonly [string, string, string, string] = [
+  "Benefits / problem-solution",
+  "Social proof",
+  "Offer / how it works",
+  "Lead capture",
+];
+
+/**
+ * Themes for landingSection1–4 image prompts. Funnel `landingPage.sections` fills
+ * slots after skipping generic "Hero" rows; remaining slots use conversion-focused defaults.
+ */
+export function pickLandingBelowFoldThemes(
+  funnel: AdsFunnelSpec,
+): [string, string, string, string] {
   const raw = funnel.landingPage.sections.filter((s) => Boolean(s?.trim()));
-  const base = raw.length > 0 ? raw : ["How it works", "Testimonials", "Gallery"];
   const skipHero = (s: string) => /^(hero|headline|intro)\b/i.test(s.trim());
-  const tail = base.filter((s) => !skipHero(s));
-  const merged = [...tail, ...fb, ...base];
+  const tail = raw.filter((s) => !skipHero(s));
+  const merged = [...tail, ...LANDING_BELOW_FOLD_DEFAULTS, ...raw];
   return [
-    (merged[0] || fb[0]).slice(0, 100),
-    (merged[1] || fb[1]).slice(0, 100),
-    (merged[2] || fb[2]).slice(0, 100),
+    (merged[0] || LANDING_BELOW_FOLD_DEFAULTS[0]).slice(0, 100),
+    (merged[1] || LANDING_BELOW_FOLD_DEFAULTS[1]).slice(0, 100),
+    (merged[2] || LANDING_BELOW_FOLD_DEFAULTS[2]).slice(0, 100),
+    (merged[3] || LANDING_BELOW_FOLD_DEFAULTS[3]).slice(0, 100),
   ];
 }
+
+/** Short labels for PDF tiles (hero + four below-fold visuals). */
+export const LANDING_PAGE_VISUAL_LABELS: readonly [string, string, string, string, string] = [
+  "Hero - clear offer",
+  "Benefits / problem-solution",
+  "Social proof",
+  "Offer / how it works",
+  "Lead capture",
+];
+
+/** One-line reminders for the "structure" block in the Brand Kit PDF. */
+export const LANDING_PAGE_STRUCTURE_SUMMARY = [
+  "1. Hero - headline, benefit subhead, primary CTA, hero visual, core offer/value.",
+  "2. Benefits - the problem, your fix, 3-5 outcome-focused benefits, skimmable.",
+  "3. Social proof - reviews, ratings, before/after, logos/media, UGC when available.",
+  "4. Offer / how it works - what they get, simple steps, incentives, guarantees.",
+  "5. Lead capture - short form, strong CTA, minimal fields, trust + privacy cues.",
+].join("\n");
 
 function landingSectionPrompt(
   spec: BrandingSpec,
@@ -143,7 +171,7 @@ Vertical vibe: ${verticalImageryDirection(vertical)}.
 Direction: ${funnel.landingPage.imageDirection || "soft modern editorial composition with calm geometry"}.
 ${paletteLine(spec)}
 ${strictPaletteRule(spec)}
-Composition leaves the upper-left third uncluttered so headline + CTA can be overlaid on top in the PDF.
+Scene supports a bold service headline, subhead, and CTA overlay: strong focal visual (service outcome, product, or venue) without cluttering the whole frame.
 ${NO_TEXT_RULE}
 Print-quality. No people-with-faces unless central to the brand. No logos. No UI screenshots.`,
   },
@@ -151,7 +179,13 @@ Print-quality. No people-with-faces unless central to the brand. No logos. No UI
     slot: "landingSection1",
     size: "1024x1024",
     prompt: ({ spec, funnel, vertical }) =>
-      landingSectionPrompt(spec, funnel, vertical, pickLandingSectionThemes(funnel)[0], "Emphasize offerings, process, or key benefits."),
+      landingSectionPrompt(
+        spec,
+        funnel,
+        vertical,
+        pickLandingBelowFoldThemes(funnel)[0],
+        "Benefits / problem–solution block: show relief from the customer's pain, transformation, calmer outcome, or organized result; suggest skimmable value without any readable words.",
+      ),
   },
   {
     slot: "landingSection2",
@@ -161,8 +195,8 @@ Print-quality. No people-with-faces unless central to the brand. No logos. No UI
         spec,
         funnel,
         vertical,
-        pickLandingSectionThemes(funnel)[1],
-        "Emphasize credibility: customers, outcomes, ratings, or social proof atmosphere (no readable review text in-image).",
+        pickLandingBelowFoldThemes(funnel)[1],
+        "Social proof block: ratings atmosphere, community trust, testimonial mood, partner/client energy — absolutely no readable review text, stars-as-abstract shapes only if needed.",
       ),
   },
   {
@@ -173,8 +207,20 @@ Print-quality. No people-with-faces unless central to the brand. No logos. No UI
         spec,
         funnel,
         vertical,
-        pickLandingSectionThemes(funnel)[2],
-        "Emphasize results, portfolio, before/after mood, or visual proof of craft — still no readable text.",
+        pickLandingBelowFoldThemes(funnel)[2],
+        "Offer / how-it-works block: simple path, handoff to expert, packaged deliverable, timeline or step-flow feeling — no numbered labels or readable steps in-image.",
+      ),
+  },
+  {
+    slot: "landingSection4",
+    size: "1024x1024",
+    prompt: ({ spec, funnel, vertical }) =>
+      landingSectionPrompt(
+        spec,
+        funnel,
+        vertical,
+        pickLandingBelowFoldThemes(funnel)[3],
+        "Lead capture block: welcoming consultation desk, calendar or appointment vibe, phone in context, minimal abstract form fields as blurred shapes only — no readable inputs or copy.",
       ),
   },
   {
@@ -337,7 +383,7 @@ function maxImagesPerMinute(): number {
 }
 
 /**
- * Generate all ad-funnel + landing-page images (hero + three section frames + five ad slots).
+ * Generate all ad-funnel + landing-page images (hero + four section frames + five ad slots).
  * Fast mode shares the same process-level limiter as brand-book image generation so the full PDF
  * respects OpenAI's gpt-image per-minute cap.
  */
@@ -382,6 +428,7 @@ async function generateAdsFunnelImagesForSlots(
     landingSection1: null,
     landingSection2: null,
     landingSection3: null,
+    landingSection4: null,
     adFbFeed: null,
     adIgFeed: null,
     adIgStory: null,
@@ -478,6 +525,9 @@ async function generateAdsFunnelImagesForSlots(
         break;
       case "landingSection3":
         out.landingSection3 = r.buffer;
+        break;
+      case "landingSection4":
+        out.landingSection4 = r.buffer;
         break;
       case "adFbFeed":
         out.adFbFeed = r.buffer;

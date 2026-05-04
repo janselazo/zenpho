@@ -1,5 +1,6 @@
 import {
   PDFDocument,
+  PDFString,
   StandardFonts,
   rgb,
   type PDFFont,
@@ -165,6 +166,81 @@ function sanitize(text: string): string {
     .replace(/[\u2013\u2014]/g, "-")
     .replace(/[\u201C\u201D]/g, '"')
     .replace(/[\u2018\u2019]/g, "'");
+}
+
+function addUriLinkAnnotation(
+  page: PDFPage,
+  rect: { x: number; y: number; width: number; height: number },
+  uri: string,
+  options?: { contents?: string },
+): void {
+  const { x, y, width, height } = rect;
+  const base = {
+    Type: "Annot",
+    Subtype: "Link",
+    Rect: [x, y, x + width, y + height],
+    Border: [0, 0, 0],
+    A: page.doc.context.obj({
+      Type: "Action",
+      S: "URI",
+      URI: PDFString.of(uri),
+    }),
+  };
+  const linkRef = page.doc.context.register(
+    page.doc.context.obj(
+      options?.contents
+        ? { ...base, Contents: PDFString.of(options.contents) }
+        : base,
+    ),
+  );
+  page.node.addAnnot(linkRef);
+}
+
+/** Lucide map-pin outline + inner disc (24×24 viewBox). */
+const PDF_MAP_PIN_PATH =
+  "M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0";
+const PDF_MAP_PIN_INNER = "M 12 7 A 3 3 0 1 0 12 13 A 3 3 0 1 0 12 7 Z";
+const PDF_MAP_LINK_ICON_BOX = 24;
+const PDF_MAP_LINK_VIEW = 24;
+
+/** Map pin in a small badge; entire badge is a clickable URI. Returns `y` for content below the badge. */
+function drawGoogleMapsIconLink(ctx: Ctx, textLeft: number, ty: number, mapsUrl: string): number {
+  const box = PDF_MAP_LINK_ICON_BOX;
+  const s = (box * 0.64) / PDF_MAP_LINK_VIEW;
+  const boxLlY = ty - box;
+  ctx.page.drawRectangle({
+    x: textLeft,
+    y: boxLlY,
+    width: box,
+    height: box,
+    color: SURFACE_LIGHT,
+    borderColor: BORDER,
+    borderWidth: 0.45,
+  });
+  const cxPdf = textLeft + box / 2;
+  const cyPdf = boxLlY + box / 2;
+  const tx = cxPdf - 12 * s;
+  const tySvg = cyPdf + 12 * s;
+  ctx.page.drawSvgPath(PDF_MAP_PIN_PATH, {
+    x: tx,
+    y: tySvg,
+    scale: s,
+    borderColor: ACCENT_HOVER,
+    borderWidth: 1.35,
+  });
+  ctx.page.drawSvgPath(PDF_MAP_PIN_INNER, {
+    x: tx,
+    y: tySvg,
+    scale: s,
+    color: ACCENT_HOVER,
+  });
+  addUriLinkAnnotation(
+    ctx.page,
+    { x: textLeft, y: boxLlY, width: box, height: box },
+    mapsUrl,
+    { contents: "Open in Google Maps" },
+  );
+  return boxLlY - 6;
 }
 
 function hexToRgb(hex: string | null | undefined, fallback: RGB): RGB {
@@ -788,16 +864,7 @@ function drawGoogleBusinessProfileCard(
   );
   ty -= 10;
   if (business.googleMapsUri?.trim()) {
-    ty = drawText(ctx, `Open in Maps: ${sanitize(business.googleMapsUri)}`, {
-      x: textLeft,
-      y: ty,
-      size: 8.5,
-      font: ctx.font,
-      color: ACCENT_HOVER,
-      maxWidth: textMax,
-      lineGap: 2,
-    });
-    ty -= 4;
+    ty = drawGoogleMapsIconLink(ctx, textLeft, ty, sanitize(business.googleMapsUri.trim()));
   }
   if (pdfChannels.length > 0) {
     ty -= 3;

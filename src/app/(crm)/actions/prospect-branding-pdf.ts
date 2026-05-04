@@ -18,7 +18,8 @@ import {
 } from "@/lib/crm/prospect-ads-funnel-spec-llm";
 import {
   generateAdsFunnelImages,
-  pickLandingSectionThemes,
+  LANDING_PAGE_STRUCTURE_SUMMARY,
+  LANDING_PAGE_VISUAL_LABELS,
   type AdsImages,
 } from "@/lib/crm/prospect-ads-image-gen";
 import { resolveProspectBrandAssets } from "@/lib/crm/prospect-branding-asset-resolve";
@@ -46,6 +47,7 @@ import {
   drawColorChipFullPage,
   drawColorRatioBar,
   drawImageFit,
+  drawImageFitClipped,
   drawImagePlaceholder,
   drawPageTitle,
   drawPullQuote,
@@ -745,7 +747,7 @@ async function drawFunnelSection(
       return y + lineGap;
     };
 
-    // Mobile-first mockup: the generated image is contained so it cannot bleed into text.
+    // Mobile-first mockup: clip images so "cover" assets cannot spill past frames.
     const phoneX = SAFE_MARGIN + 18;
     const phoneY = SAFE_MARGIN + 22;
     const phoneW = 302;
@@ -814,7 +816,7 @@ async function drawFunnelSection(
     });
     const heroImg = await embedPngIfAny(ctx.pdf, images.landingHero);
     if (heroImg) {
-      drawImageFit(page, heroImg, heroRect, "contain");
+      drawImageFitClipped(page, heroImg, heroRect, "contain");
     } else {
       drawImagePlaceholder(page, ctx, {
         ...heroRect,
@@ -862,13 +864,20 @@ async function drawFunnelSection(
       label: (f.landingPage.ctaPrimary || "Get started").slice(0, 28),
     });
 
-    // Below-the-fold: proof bullets + generated section imagery inside the device preview.
-    const valueProps = f.landingPage.valueProps.slice(0, 3);
-    const sectionThemes = pickLandingSectionThemes(f);
-    const landingSectionBuffers = [
+    // Below-the-fold: compact benefit chips + four section thumbnails (matches full-page tiles).
+    const valueProps = f.landingPage.valueProps.slice(0, 2);
+    const belowFoldBuffers = [
       images.landingSection1,
       images.landingSection2,
       images.landingSection3,
+      images.landingSection4,
+    ] as const;
+    const landingVisualBuffers = [
+      images.landingHero,
+      images.landingSection1,
+      images.landingSection2,
+      images.landingSection3,
+      images.landingSection4,
     ] as const;
 
     let mobileY = heroY - 18;
@@ -895,10 +904,11 @@ async function drawFunnelSection(
       mobileY -= 38;
     }
 
-    const thumbPad = 6;
-    const thumbH = 46;
-    for (let si = 0; si < 3; si++) {
-      if (mobileY - thumbH < screenY + 14) break;
+    const thumbPad = 5;
+    const thumbH = 34;
+    const thumbGap = 4;
+    for (let si = 0; si < belowFoldBuffers.length; si++) {
+      if (mobileY - thumbH < screenY + 12) break;
       const thumbRect = {
         x: screenX + thumbPad,
         y: mobileY - thumbH,
@@ -920,17 +930,17 @@ async function drawFunnelSection(
         width: thumbRect.width - 2,
         height: thumbRect.height - 2,
       };
-      const buf = landingSectionBuffers[si];
+      const buf = belowFoldBuffers[si];
       const thumbImg = await embedPngIfAny(ctx.pdf, buf);
       if (thumbImg) {
-        drawImageFit(page, thumbImg, inner, "cover");
+        drawImageFitClipped(page, thumbImg, inner, "cover");
       } else {
         drawImagePlaceholder(page, ctx, {
           ...inner,
           label: "Section visual",
         });
       }
-      mobileY -= thumbH + 5;
+      mobileY -= thumbH + thumbGap;
     }
 
     const rightX = phoneX + phoneW + 44;
@@ -942,44 +952,71 @@ async function drawFunnelSection(
       size: 30,
       maxWidth: rightW,
     });
-    drawWrappedText(
+    let rightCursorY = PAGE_H - SAFE_MARGIN - 100;
+    rightCursorY = drawWrappedText(
       page,
-      "Full-fidelity section renders for the page outline below—same scenes power the mobile preview at left. Copy stays live vector in the PDF; photography is generated from your palette and positioning.",
+      "Five-part layout for cold paid-social traffic: hero through conversion. Vector copy on-device; visuals follow your palette.",
       {
         x: rightX,
-        y: PAGE_H - SAFE_MARGIN - 130,
-        size: 10.5,
+        y: rightCursorY,
+        size: 9,
         font: ctx.fonts.body,
         color: ctx.ink,
         maxWidth: rightW,
-        lineGap: 4,
+        lineGap: 3,
       },
     );
-
-    let blueprintY = PAGE_H - SAFE_MARGIN - 200;
+    rightCursorY -= 8;
     drawSectionEyebrow(page, ctx, {
       x: rightX,
-      y: blueprintY,
+      y: rightCursorY,
+      label: "Landing page structure",
+    });
+    rightCursorY -= 22;
+    rightCursorY = drawWrappedText(
+      page,
+      sanitizeForBrandBook(LANDING_PAGE_STRUCTURE_SUMMARY),
+      {
+        x: rightX,
+        y: rightCursorY,
+        size: 7.75,
+        font: ctx.fonts.body,
+        color: ctx.ink,
+        maxWidth: rightW,
+        lineGap: 2.3,
+        opacity: 0.92,
+      },
+    );
+    rightCursorY -= 12;
+    drawSectionEyebrow(page, ctx, {
+      x: rightX,
+      y: rightCursorY,
       label: "Generated section imagery",
     });
-    blueprintY -= 24;
+    rightCursorY -= 22;
 
-    const imgTileH = 102;
-    const imgGap = 16;
-    for (let i = 0; i < 3; i++) {
-      blueprintY = drawLimitedWrappedText(sanitizeForBrandBook(sectionThemes[i]), {
+    const imgTileH = 40;
+    const imgGap = 7;
+    for (let i = 0; i < 5; i++) {
+      const label = sanitizeForBrandBook(LANDING_PAGE_VISUAL_LABELS[i]);
+      rightCursorY = drawLimitedWrappedText(label, {
         x: rightX,
-        y: blueprintY,
-        size: 9,
+        y: rightCursorY,
+        size: 8.25,
         font: ctx.fonts.display,
         color: ctx.ink,
         maxWidth: rightW,
         maxLines: 2,
-        lineGap: 3,
+        lineGap: 2,
       });
-      blueprintY -= 8;
+      rightCursorY -= 6;
 
-      const rect = { x: rightX, y: blueprintY - imgTileH, width: rightW, height: imgTileH };
+      const rect = {
+        x: rightX,
+        y: rightCursorY - imgTileH,
+        width: rightW,
+        height: imgTileH,
+      };
       page.drawRectangle({
         x: rect.x,
         y: rect.y,
@@ -996,37 +1033,17 @@ async function drawFunnelSection(
         width: rect.width - pad * 2,
         height: rect.height - pad * 2,
       };
-      const tileImg = await embedPngIfAny(ctx.pdf, landingSectionBuffers[i]);
+      const tileImg = await embedPngIfAny(ctx.pdf, landingVisualBuffers[i]);
       if (tileImg) {
-        drawImageFit(page, tileImg, innerRect, "cover");
+        drawImageFitClipped(page, tileImg, innerRect, "cover");
       } else {
         drawImagePlaceholder(page, ctx, {
           ...innerRect,
           label: "Section image unavailable",
         });
       }
-      blueprintY = rect.y - imgGap;
+      rightCursorY = rect.y - imgGap;
     }
-
-    drawSectionEyebrow(page, ctx, {
-      x: rightX,
-      y: blueprintY - 6,
-      label: "Primary proof",
-    });
-    let proofY = blueprintY - 32;
-    valueProps.slice(0, 3).forEach((vp) => {
-      proofY =
-        drawLimitedWrappedText(`- ${vp}`, {
-          x: rightX,
-          y: proofY,
-          size: 9,
-          font: ctx.fonts.body,
-          color: ctx.ink,
-          maxWidth: rightW,
-          maxLines: 2,
-          lineGap: 3,
-        }) - 8;
-    });
 
     drawRunningFooter(page, ctx, {
       pageNumber: pageNum,

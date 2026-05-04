@@ -66,58 +66,6 @@ const toneValue: Record<ClearGrowthMetricTone, string> = {
   rose: "text-rose-600 dark:text-rose-400",
 };
 
-/** Rolling hills, bars, and trend — tuned to align with the old composite layout */
-function GrowthSceneIllustration({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 240 128"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden
-    >
-      <circle cx="208" cy="24" r="18" fill="#FEF9C3" opacity={0.95} className="dark:fill-amber-100/20" />
-      {/* distant hill */}
-      <path
-        d="M0 88 C48 52 96 72 140 64 C168 58 208 44 240 52 V128 H0 Z"
-        fill="#DCFCE7"
-        className="dark:fill-emerald-950/45"
-      />
-      {/* near hill */}
-      <path
-        d="M0 96 C56 70 88 84 132 86 C168 78 212 82 240 74 V128 H0 Z"
-        fill="#BBF7D0"
-        fillOpacity={0.94}
-        className="dark:fill-emerald-900/50"
-      />
-      {/* bars — shared baseline y=96 */}
-      <rect x="38" y="78" width="12" height="18" rx="3" fill="#4ADE80" className="dark:fill-emerald-500" />
-      <rect x="56" y="68" width="12" height="28" rx="3" fill="#22C55E" className="dark:fill-emerald-400" />
-      <rect x="74" y="58" width="12" height="38" rx="3" fill="#16A34A" className="dark:fill-emerald-500" />
-      <rect x="92" y="48" width="12" height="48" rx="3" fill="#22C55E" className="dark:fill-emerald-400" />
-      <rect x="110" y="40" width="12" height="56" rx="3" fill="#4ADE80" className="dark:fill-emerald-500" />
-      <path
-        d="M32 92 L58 80 L84 72 L110 60 L144 46"
-        stroke="#15803D"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="dark:stroke-emerald-400"
-        fill="none"
-      />
-      <path
-        d="M132 50 L144 46 L138 58"
-        stroke="#15803D"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="dark:stroke-emerald-400"
-        fill="none"
-      />
-    </svg>
-  );
-}
-
 function PlantGlyph({ className, mirror }: { className?: string; mirror?: boolean }) {
   return (
     <svg
@@ -142,17 +90,7 @@ function PlantGlyph({ className, mirror }: { className?: string; mirror?: boolea
 export default function HomeClearGrowthDashboardPreview() {
   return (
     <div className="relative overflow-hidden bg-gradient-to-b from-[#f8fafc] via-white to-white px-5 pb-7 pt-5 sm:px-8 sm:pb-8 sm:pt-6 dark:from-zinc-900/85 dark:via-zinc-950/50 dark:to-zinc-950/40">
-      {/* Illustration: anchored top-right with reserved width so metrics never overlap */}
-      <div
-        className="pointer-events-none absolute right-0 top-0 w-[min(48%,230px)] max-w-[230px] translate-y-0 opacity-[0.98] sm:right-1 sm:top-1 lg:w-[210px]"
-        aria-hidden
-      >
-        <GrowthSceneIllustration className="h-auto w-full" />
-      </div>
-
-      <ul
-        className="relative z-[1] mx-auto grid max-w-[960px] grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-3.5 lg:grid-cols-5 lg:gap-4 auto-rows-fr pr-0 sm:pr-[min(12%,8rem)] lg:pr-[7.5rem]"
-      >
+      <ul className="relative z-[1] mx-auto grid max-w-[960px] auto-rows-fr grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-3.5 lg:grid-cols-5 lg:gap-4">
         {homeClearGrowthMetricCards.map((m) => {
           const Icon = METRIC_ICONS[m.icon];
           return (

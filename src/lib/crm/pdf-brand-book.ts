@@ -1,11 +1,16 @@
 import path from "node:path";
 import { promises as fs } from "node:fs";
 import {
+  clip,
+  endPath,
   PDFDocument,
   PDFFont,
   PDFImage,
   PDFPage,
   PDFString,
+  popGraphicsState,
+  pushGraphicsState,
+  rectangle,
   StandardFonts,
   rgb,
   type RGB,
@@ -1056,6 +1061,47 @@ export function drawImageFit(
     width: w,
     height: h,
   });
+}
+
+/** Like {@link drawImageFit}, but clips to `rect` so `cover` cannot paint outside the frame. */
+export function drawImageFitClipped(
+  page: PDFPage,
+  img: PDFImage,
+  rect: { x: number; y: number; width: number; height: number },
+  mode: "contain" | "cover" = "contain",
+): void {
+  const ratio = img.width / img.height;
+  const boxRatio = rect.width / rect.height;
+  let w = rect.width;
+  let h = rect.height;
+  if (mode === "contain") {
+    if (ratio > boxRatio) {
+      h = rect.width / ratio;
+    } else {
+      w = rect.height * ratio;
+    }
+  } else {
+    if (ratio > boxRatio) {
+      w = rect.height * ratio;
+    } else {
+      h = rect.width / ratio;
+    }
+  }
+  const drawX = rect.x + (rect.width - w) / 2;
+  const drawY = rect.y + (rect.height - h) / 2;
+  page.pushOperators(
+    pushGraphicsState(),
+    rectangle(rect.x, rect.y, rect.width, rect.height),
+    clip(),
+    endPath(),
+  );
+  page.drawImage(img, {
+    x: drawX,
+    y: drawY,
+    width: w,
+    height: h,
+  });
+  page.pushOperators(popGraphicsState());
 }
 
 /** Draws an "image placeholder" rectangle with a dashed outline and a label — used

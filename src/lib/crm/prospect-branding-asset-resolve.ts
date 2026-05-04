@@ -102,72 +102,87 @@ const LOGO_FETCH_TIMEOUT_MS = 8_000;
 /**
  * Bounded image fetch with SSRF guard. Returns `null` for any non-2xx
  * response, oversized payloads, blocked hosts, or unsupported content.
+ *
+ * LeadConnector / HighLevel image CDNs use paths like
+ * `/image/.../u_https://assets.cdn.filesafe.space/...`. We must try the
+ * **proxy URL first**: direct storage URLs often 403 or fail from server
+ * runtimes even when `images.leadconnectorhq.com` serves the same bytes.
  */
 async function safeFetchLogoAsset(rawUrl: string): Promise<{
   buffer: Buffer | null;
   svg: string | null;
   sourceUrl: string;
 } | null> {
-  const normalized = normalizeUrlForFetch(unwrapLeadConnectorImageUrl(rawUrl));
-  if (!normalized) return null;
-
-  let res: Response;
-  try {
-    res = await fetch(normalized, {
-      redirect: "follow",
-      signal: AbortSignal.timeout(LOGO_FETCH_TIMEOUT_MS),
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (compatible; ZenphoBot/1.0; +https://zenpho.com)",
-        Accept: "image/png,image/jpeg,image/webp,image/avif,image/*",
-      },
-    });
-  } catch {
-    return null;
-  }
-  if (!res.ok) return null;
+  const trimmed = rawUrl.trim();
+  const unwrapped = unwrapLeadConnectorImageUrl(trimmed);
+  const candidateRaw: string[] =
+    unwrapped !== trimmed ? [trimmed, unwrapped] : [trimmed];
 
   const max = logoFetchMaxBytes();
-  const contentLength = Number.parseInt(
-    res.headers.get("content-length") ?? "",
-    10,
-  );
-  if (Number.isFinite(contentLength) && contentLength > max) {
-    return null;
+
+  for (const candidate of candidateRaw) {
+    const normalized = normalizeUrlForFetch(candidate);
+    if (!normalized) continue;
+
+    let res: Response;
+    try {
+      res = await fetch(normalized, {
+        redirect: "follow",
+        signal: AbortSignal.timeout(LOGO_FETCH_TIMEOUT_MS),
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (compatible; ZenphoBot/1.0; +https://zenpho.com)",
+          Accept: "image/png,image/jpeg,image/webp,image/avif,image/*",
+        },
+      });
+    } catch {
+      continue;
+    }
+    if (!res.ok) continue;
+
+    const contentLength = Number.parseInt(
+      res.headers.get("content-length") ?? "",
+      10,
+    );
+    if (Number.isFinite(contentLength) && contentLength > max) {
+      continue;
+    }
+
+    let buf: Buffer;
+    try {
+      const ab = await res.arrayBuffer();
+      if (ab.byteLength > max) continue;
+      buf = Buffer.from(ab);
+    } catch {
+      continue;
+    }
+
+    const fmt = sniffRasterFormat(buf);
+    if (fmt) return { buffer: buf, svg: null, sourceUrl: normalized };
+
+    const contentType = res.headers.get("content-type")?.toLowerCase() ?? "";
+    if (
+      buf.length >= 80 &&
+      (contentType.includes("image/webp") ||
+        contentType.includes("image/avif") ||
+        contentType.includes("image/heif"))
+    ) {
+      return { buffer: buf, svg: null, sourceUrl: normalized };
+    }
+
+    const looksSvg =
+      contentType.includes("svg") ||
+      /\.svg(?:[?#].*)?$/i.test(normalized) ||
+      buf.subarray(0, 256).toString("utf8").includes("<svg");
+    if (!looksSvg) continue;
+
+    const svg = buf.toString("utf8");
+    if (!/<svg[\s>]/i.test(svg)) continue;
+
+    return { buffer: null, svg, sourceUrl: normalized };
   }
 
-  let buf: Buffer;
-  try {
-    const ab = await res.arrayBuffer();
-    if (ab.byteLength > max) return null;
-    buf = Buffer.from(ab);
-  } catch {
-    return null;
-  }
-
-  const fmt = sniffRasterFormat(buf);
-  if (fmt) return { buffer: buf, svg: null, sourceUrl: normalized };
-
-  const contentType = res.headers.get("content-type")?.toLowerCase() ?? "";
-  if (
-    buf.length >= 80 &&
-    (contentType.includes("image/webp") ||
-      contentType.includes("image/avif") ||
-      contentType.includes("image/heif"))
-  ) {
-    return { buffer: buf, svg: null, sourceUrl: normalized };
-  }
-
-  const looksSvg =
-    contentType.includes("svg") ||
-    /\.svg(?:[?#].*)?$/i.test(normalized) ||
-    buf.subarray(0, 256).toString("utf8").includes("<svg");
-  if (!looksSvg) return null;
-
-  const svg = buf.toString("utf8");
-  if (!/<svg[\s>]/i.test(svg)) return null;
-
-  return { buffer: null, svg, sourceUrl: normalized };
+  return null;
 }
 
 function rgbFromHex(hex: string): [number, number, number] | null {

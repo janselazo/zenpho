@@ -382,7 +382,7 @@ Return a single JSON object with EXACTLY these keys:
    - "valueProps": array of EXACTLY 3 short phrases <= 80 chars each.
    - "ctaPrimary": short CTA string (matches Facebook.cta enum vibe).
    - "ctaSecondary": short secondary CTA (e.g. "See how it works", "View pricing", "Watch the demo").
-   - "sections": array of 3-5 short labels for landing page sections (e.g. ["Hero", "Social proof", "How it works", "Pricing", "FAQ"]).
+   - "sections": array of EXACTLY 5 short labels matching a cold paid-social landing page: Hero, Benefits/problem-solution, Social proof, Offer/how it works, Lead capture (adjust wording to the niche; keep Hero first).
    - "imageDirection": <= 240 chars describing a hero illustration / hero photograph for the landing-page top.
 - "budgetGuidance": object {"dailyMin","dailyMax","rationale"} — integer USD daily spend per platform (combined). Realistic for an SMB. Rationale 1-2 sentences.
 - "kpis": array of EXACTLY 4-6 vertical-appropriate metrics; short labels like "ROAS >= 2.5x" or "Cost-per-lead < $15".
