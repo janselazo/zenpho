@@ -298,6 +298,9 @@ export async function updateLeadRow(formData: FormData) {
   const website = String(formData.get("website") ?? "").trim();
   const facebook = String(formData.get("facebook") ?? "").trim();
   const instagram = String(formData.get("instagram") ?? "").trim();
+  const branding_document_url = String(
+    formData.get("branding_document_url") ?? ""
+  ).trim();
   const google_business_category = String(
     formData.get("google_business_category") ?? ""
   ).trim();
@@ -368,6 +371,9 @@ export async function updateLeadRow(formData: FormData) {
   }
   if (formData.has("instagram")) {
     leadUpdate.instagram = instagram || null;
+  }
+  if (formData.has("branding_document_url")) {
+    leadUpdate.branding_document_url = branding_document_url || null;
   }
   if (formData.has("google_business_category")) {
     leadUpdate.google_business_category = google_business_category || null;
@@ -1013,6 +1019,66 @@ export async function resolveOrCreateClientForLead(
     return { error: "Could not create prospect account for project." };
   }
   return { clientId: createdId };
+}
+
+/**
+ * Resolve `client_id` for a new proposal tied to a lead: use an existing
+ * conversion, link a provisional project client, or create a client from the
+ * lead and set `converted_client_id`.
+ */
+export async function ensureClientIdForProposalFromLead(
+  leadId: string
+): Promise<{ clientId: string } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const id = leadId.trim();
+  if (!id) return { error: "Missing lead id" };
+
+  const { data: lead, error: leadErr } = await supabase
+    .from("lead")
+    .select("id, name, email, phone, company, notes, converted_client_id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (leadErr || !lead) return { error: "Lead not found" };
+
+  const existing = (lead.converted_client_id as string | null)?.trim();
+  if (existing) return { clientId: existing };
+
+  const provisional = await findProvisionalClientIdFromLeadProjects(
+    supabase,
+    id
+  );
+  if (provisional?.trim()) {
+    const cid = provisional.trim();
+    const { error: linkErr } = await supabase
+      .from("lead")
+      .update({ converted_client_id: cid })
+      .eq("id", id);
+    if (linkErr) return { error: linkErr.message };
+    return { clientId: cid };
+  }
+
+  const stamp = new Date().toISOString().slice(0, 10);
+  const linked = await insertClientFromLeadAndLink(
+    supabase,
+    lead,
+    `[${stamp}] Client record created for proposal.`
+  );
+  if (!linked) return { error: "Could not create client from lead." };
+
+  const { data: again } = await supabase
+    .from("lead")
+    .select("converted_client_id")
+    .eq("id", id)
+    .maybeSingle();
+  const cid = (again?.converted_client_id as string | null)?.trim();
+  if (!cid) return { error: "Client link failed" };
+  return { clientId: cid };
 }
 
 /**

@@ -2,16 +2,16 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createProposal } from "@/app/(crm)/actions/proposals";
-import type { ProposalClientOption } from "@/lib/crm/fetch-clients-for-proposal-picker";
+import { createProposalFromLead } from "@/app/(crm)/actions/proposals";
+import type { ProposalLeadOption } from "@/lib/crm/fetch-leads-for-proposal-picker";
 
 export default function NewProposalForm({
-  clients,
+  leads,
 }: {
-  clients: ProposalClientOption[];
+  leads: ProposalLeadOption[];
 }) {
   const router = useRouter();
-  const [clientId, setClientId] = useState("");
+  const [leadId, setLeadId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -19,7 +19,7 @@ export default function NewProposalForm({
     e.preventDefault();
     setError(null);
     setPending(true);
-    const res = await createProposal(clientId);
+    const res = await createProposalFromLead(leadId);
     setPending(false);
     if ("error" in res && res.error) {
       setError(res.error);
@@ -40,23 +40,23 @@ export default function NewProposalForm({
       ) : null}
       <div>
         <label
-          htmlFor="client_id"
+          htmlFor="lead_id"
           className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-text-secondary dark:text-zinc-500"
         >
-          Client
+          Lead
         </label>
         <select
-          id="client_id"
-          value={clientId}
-          onChange={(e) => setClientId(e.target.value)}
+          id="lead_id"
+          value={leadId}
+          onChange={(e) => setLeadId(e.target.value)}
           required
           className="w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
         >
-          <option value="">Select client…</option>
-          {clients.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-              {c.company ? ` — ${c.company}` : ""}
+          <option value="">Select lead…</option>
+          {leads.map((l) => (
+            <option key={l.id} value={l.id}>
+              {l.name}
+              {l.company ? ` — ${l.company}` : ""}
             </option>
           ))}
         </select>

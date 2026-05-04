@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { ensureClientIdForProposalFromLead } from "@/app/(crm)/actions/crm";
 import { createClient } from "@/lib/supabase/server";
 import {
   PROPOSAL_STATUSES,
@@ -86,6 +87,13 @@ export async function createProposal(clientId: string) {
 
   revalidatePath("/proposals");
   return { ok: true, id: pid };
+}
+
+/** Start a proposal from a lead (not yet a client). Creates/links client as needed. */
+export async function createProposalFromLead(leadId: string) {
+  const ensured = await ensureClientIdForProposalFromLead(leadId);
+  if ("error" in ensured) return ensured;
+  return createProposal(ensured.clientId);
 }
 
 export type ProposalLineInput = {

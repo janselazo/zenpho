@@ -101,7 +101,6 @@ const LEAD_TABS = [
   { id: "contact", label: "Contact", icon: UserCircle },
   { id: "appointments", label: "Appointments", icon: CalendarPlus },
   { id: "projects", label: "Projects", icon: FolderKanban },
-  { id: "calendar", label: "Calendar", icon: CalendarDays },
 ] as const;
 
 function formatFollowUpWhen(iso: string): string {
@@ -162,6 +161,7 @@ type Lead = {
   prospect_preview_id?: string | null;
   branding_funnel_pdf_path?: string | null;
   branding_funnel_pdf_created_at?: string | null;
+  branding_document_url?: string | null;
 };
 
 export type ClientProjectRow = {
@@ -432,8 +432,7 @@ export default function LeadEditForm({
   useEffect(() => {
     const tab = searchParams.get("tab");
     if (tab === "deal" || tab === "projects") setActiveTab("projects");
-    else if (tab === "appointments" || tab === "tasks") setActiveTab("appointments");
-    else if (tab === "calendar") setActiveTab("calendar");
+    else if (tab === "appointments" || tab === "tasks" || tab === "calendar") setActiveTab("appointments");
   }, [searchParams]);
 
   useEffect(() => {
@@ -640,9 +639,6 @@ export default function LeadEditForm({
                         if (cat) setGoogleBusinessCategory(cat);
                       }}
                     />
-                    <p className="mt-1.5 text-[11px] text-zinc-400 dark:text-zinc-500">
-                      Requires Places API (`GOOGLE_PLACES_API_KEY`). Type two or more characters to search.
-                    </p>
                   </FieldRow>
                   <FieldRow icon={Globe} label="Website">
                     <input
@@ -706,32 +702,63 @@ export default function LeadEditForm({
                     </p>
                   </FieldRow>
                   <FieldRow icon={FileText} label="Branding document">
-                    {brandingFunnelPdfUrl ? (
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <p className="text-sm text-zinc-600 dark:text-zinc-300">
-                          {brandingFunnelPdfCreatedAt
-                            ? `Saved ${new Date(brandingFunnelPdfCreatedAt).toLocaleString("en-US", {
-                                dateStyle: "medium",
-                                timeStyle: "short",
-                              })}`
-                            : "Brand kit + sales funnel PDF"}
+                    <div className="min-w-0 flex-1 space-y-3">
+                      {brandingFunnelPdfUrl ? (
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <p className="text-sm text-zinc-600 dark:text-zinc-300">
+                            {brandingFunnelPdfCreatedAt
+                              ? `Saved ${new Date(brandingFunnelPdfCreatedAt).toLocaleString("en-US", {
+                                  dateStyle: "medium",
+                                  timeStyle: "short",
+                                })}`
+                              : "Brand kit + sales funnel PDF"}
+                          </p>
+                          <a
+                            href={brandingFunnelPdfUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            download
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-semibold text-zinc-800 hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700/70"
+                          >
+                            <FileDown className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                            Open PDF
+                          </a>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                          No in-app generated PDF on this lead yet.
                         </p>
-                        <a
-                          href={brandingFunnelPdfUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          download
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-semibold text-zinc-800 hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700/70"
-                        >
-                          <FileDown className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                          Open PDF
-                        </a>
+                      )}
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                          External document link
+                        </p>
+                        <input
+                          name="branding_document_url"
+                          type="url"
+                          inputMode="url"
+                          defaultValue={lead.branding_document_url?.trim() ?? ""}
+                          className={`${inputClass} mt-1.5`}
+                          placeholder="https://…"
+                          autoComplete="off"
+                        />
+                        <p className="mt-1.5 text-[11px] text-zinc-400 dark:text-zinc-500">
+                          Paste a link to a brand deck or PDF (Google Drive, Dropbox, etc.). Saves with{" "}
+                          <span className="font-medium text-zinc-500 dark:text-zinc-400">Save changes</span>.
+                        </p>
+                        {(lead.branding_document_url ?? "").trim() ? (
+                          <a
+                            href={(lead.branding_document_url ?? "").trim()}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                            Open current link
+                          </a>
+                        ) : null}
                       </div>
-                    ) : (
-                      <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                        No branding PDF on this lead yet.
-                      </p>
-                    )}
+                    </div>
                   </FieldRow>
                   {hostedPreviewHref ? (
                     <FieldRow icon={HostedPreviewIcon} label="Hosted preview">
@@ -860,15 +887,16 @@ export default function LeadEditForm({
                   Appointments
                 </h2>
                 <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-                  Meetings and scheduled blocks for this lead sync to your{" "}
+                  Meetings and scheduled blocks for this lead also appear on the{" "}
                   <Link
                     href="/calendar"
                     className="inline-flex items-center gap-1 font-medium text-blue-600 hover:underline dark:text-blue-400"
                   >
                     <CalendarDays className="h-3.5 w-3.5" aria-hidden />
-                    Calendar
+                    agency calendar
                   </Link>
-                  .
+                  . In the month view below, click a day to schedule, or an event
+                  to edit.
                 </p>
               </div>
               <button
@@ -920,55 +948,24 @@ export default function LeadEditForm({
                   ))}
                 </ul>
               )}
-            </div>
 
-            <div
-              className={activeTab === "calendar" ? "space-y-6" : "hidden"}
-              id="calendar-panel"
-              role="tabpanel"
-              aria-hidden={activeTab !== "calendar"}
-            >
-              <div>
-                <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+              <div className="space-y-3 border-t border-zinc-100 pt-8 dark:border-zinc-800">
+                <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
                   <CalendarDays className="h-3.5 w-3.5" aria-hidden />
-                  Calendar
-                </h2>
-                <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-                  Month view for this lead. Click a day to schedule, or an
-                  event to edit. All appointments also appear on the{" "}
-                  <Link
-                    href="/calendar"
-                    className="font-medium text-blue-600 hover:underline dark:text-blue-400"
-                  >
-                    agency calendar
-                  </Link>
-                  .
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setQuickApptInitialYmd(null);
+                  Month view
+                </h3>
+                <LeadAppointmentsMonthCalendar
+                  appointments={followUpAppointments}
+                  onAddOnDay={(day) => {
+                    const y = day.getFullYear();
+                    const mo = String(day.getMonth() + 1).padStart(2, "0");
+                    const d = String(day.getDate()).padStart(2, "0");
+                    setQuickApptInitialYmd(`${y}-${mo}-${d}`);
                     setQuickAppointmentOpen(true);
                   }}
-                  className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500"
-                >
-                  <CalendarPlus className="h-4 w-4" aria-hidden />
-                  Add appointment
-                </button>
+                  onEditEvent={(a) => setEditingFollowUp(a)}
+                />
               </div>
-              <LeadAppointmentsMonthCalendar
-                appointments={followUpAppointments}
-                onAddOnDay={(day) => {
-                  const y = day.getFullYear();
-                  const mo = String(day.getMonth() + 1).padStart(2, "0");
-                  const d = String(day.getDate()).padStart(2, "0");
-                  setQuickApptInitialYmd(`${y}-${mo}-${d}`);
-                  setQuickAppointmentOpen(true);
-                }}
-                onEditEvent={(a) => setEditingFollowUp(a)}
-              />
             </div>
           </div>
 
