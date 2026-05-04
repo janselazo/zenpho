@@ -2033,6 +2033,6 @@ export function scoreAudit(input: BuildInput) {
     sectionSummaries,
     actionPlan,
     recommendedNextStep:
-      "Use Zenpho Development and Growth programs to fix these leaks across tracking, follow-up, reviews, referrals, and reporting.",
+      "Book a Growth Call with the Zenpho team to fix these revenue leaks.",
   };
 }

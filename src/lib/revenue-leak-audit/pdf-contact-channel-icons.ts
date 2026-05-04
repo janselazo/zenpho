@@ -10,6 +10,13 @@ const VIEW = 24;
 /** Used by pdf layout to reserve GBP card height. */
 export const PDF_CHANNEL_BADGE = 21;
 export const PDF_CHANNEL_GAP = 5;
+/** Vertical alignment band when mixing the Google Maps pin (24) with channel badges (21). */
+export const PDF_CHANNEL_ROW_H = 24;
+const PIN_GAP = 5;
+
+export function pdfChannelRowLeadingWidth(hasMapsPin: boolean): number {
+  return hasMapsPin ? PDF_CHANNEL_ROW_H + PIN_GAP : 0;
+}
 const LABEL_SIZE = 8.5;
 const SURFACE_LIGHT = rgb(0.974, 0.98, 0.989);
 const BORDER = rgb(0.88, 0.91, 0.95);
@@ -49,10 +56,12 @@ export function estimatePdfChannelIconBlockHeight(
   textLeft: number,
   rightEdge: number,
   labelFont: PDFFont,
+  options?: { hasMapsPin?: boolean },
 ): number {
   if (kinds.length === 0) return 0;
+  const leading = pdfChannelRowLeadingWidth(Boolean(options?.hasMapsPin));
   const lw = labelFont.widthOfTextAtSize("Channels:", LABEL_SIZE) + 8;
-  const startIconX = textLeft + lw;
+  const startIconX = textLeft + leading + lw;
   let curX = startIconX;
   let rows = 1;
   for (let i = 0; i < kinds.length; i++) {
@@ -62,7 +71,8 @@ export function estimatePdfChannelIconBlockHeight(
     }
     curX += PDF_CHANNEL_BADGE + PDF_CHANNEL_GAP;
   }
-  return 10 + LABEL_SIZE + rows * PDF_CHANNEL_BADGE + (rows - 1) * PDF_CHANNEL_GAP + 8;
+  const extraRows = Math.max(0, rows - 1);
+  return 6 + PDF_CHANNEL_ROW_H + extraRows * (PDF_CHANNEL_BADGE + PDF_CHANNEL_GAP) + 8;
 }
 
 const FB_PATH =
@@ -194,19 +204,23 @@ function drawKindGlyph(page: PDFPage, kind: PdfChannelKind, boxLeftX: number, bo
 }
 
 /**
- * Draw “Channels:” label + icon badges. `baselineY` matches drawText baseline (PDF y increases upward).
- * Returns lowest y used by the badges (excluding label), minus padding — for diagnostics only.
+ * Draw “Channels:” label + icon badges aligned to a 24px-tall row (`rowTopY` = top edge of row).
+ * Returns a y suitable for stacking content below the row (includes padding).
  */
 export function drawPdfChannelIconRow(
   page: PDFPage,
   kinds: PdfChannelKind[],
-  opts: { textLeft: number; baselineY: number; maxRight: number; labelFont: PDFFont },
+  opts: { textLeft: number; rowTopY: number; maxRight: number; labelFont: PDFFont },
 ): number {
-  if (kinds.length === 0) return opts.baselineY;
+  if (kinds.length === 0) return opts.rowTopY - PDF_CHANNEL_ROW_H;
+
+  const rowLlY = opts.rowTopY - PDF_CHANNEL_ROW_H;
+  /** Visually center label with the 24px row (8.5pt Latin caps). */
+  const labelBaseline = rowLlY + 9;
 
   page.drawText("Channels:", {
     x: opts.textLeft,
-    y: opts.baselineY,
+    y: labelBaseline,
     size: LABEL_SIZE,
     font: opts.labelFont,
     color: MUTED,
@@ -214,18 +228,18 @@ export function drawPdfChannelIconRow(
   const lw = opts.labelFont.widthOfTextAtSize("Channels:", LABEL_SIZE) + 8;
   const startIconX = opts.textLeft + lw;
   let curX = startIconX;
-  let rowLl = opts.baselineY + LABEL_SIZE * 0.38 - PDF_CHANNEL_BADGE / 2;
+  let rowBadgeLl = rowLlY + (PDF_CHANNEL_ROW_H - PDF_CHANNEL_BADGE) / 2;
+  let minLl = rowBadgeLl;
 
-  let minLl = rowLl;
   for (const k of kinds) {
     if (curX + PDF_CHANNEL_BADGE > opts.maxRight) {
       curX = startIconX;
-      rowLl -= PDF_CHANNEL_BADGE + PDF_CHANNEL_GAP;
+      rowBadgeLl -= PDF_CHANNEL_BADGE + PDF_CHANNEL_GAP;
     }
-    drawBadgeFrame(page, curX, rowLl);
-    drawKindGlyph(page, k, curX, rowLl);
+    drawBadgeFrame(page, curX, rowBadgeLl);
+    drawKindGlyph(page, k, curX, rowBadgeLl);
     curX += PDF_CHANNEL_BADGE + PDF_CHANNEL_GAP;
-    minLl = Math.min(minLl, rowLl);
+    minLl = Math.min(minLl, rowBadgeLl);
   }
   return minLl - 10;
 }

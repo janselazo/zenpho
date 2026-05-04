@@ -24,6 +24,8 @@ import {
   channelKindsFromAudit,
   drawPdfChannelIconRow,
   estimatePdfChannelIconBlockHeight,
+  PDF_CHANNEL_ROW_H,
+  pdfChannelRowLeadingWidth,
 } from "./pdf-contact-channel-icons";
 // ─── Layout constants ────────────────────────────────────────────────────────
 const PAGE_W = 612;
@@ -122,6 +124,9 @@ function marketingSiteOrigin(): string {
   return "https://zenpho.com";
 }
 
+/** Closing PDF CTA — always production so preview deployments don’t print vercel.app links. */
+const PDF_CLOSING_CONTACT_URL = "https://zenpho.com/contact";
+
 async function tryEmbedAuditHeaderImage(
   pdf: PDFDocument,
   audit: RevenueLeakAudit,
@@ -203,13 +208,13 @@ const PDF_MAP_PIN_INNER = "M 12 7 A 3 3 0 1 0 12 13 A 3 3 0 1 0 12 7 Z";
 const PDF_MAP_LINK_ICON_BOX = 24;
 const PDF_MAP_LINK_VIEW = 24;
 
-/** Map pin in a small badge; entire badge is a clickable URI. Returns `y` for content below the badge. */
-function drawGoogleMapsIconLink(ctx: Ctx, textLeft: number, ty: number, mapsUrl: string): number {
+/** Map pin in a small badge; entire badge is a clickable URI. `topY` is the top edge of the box (y-up PDF coords). */
+function drawGoogleMapsIconLink(ctx: Ctx, x: number, topY: number, mapsUrl: string): void {
   const box = PDF_MAP_LINK_ICON_BOX;
   const s = (box * 0.64) / PDF_MAP_LINK_VIEW;
-  const boxLlY = ty - box;
+  const boxLlY = topY - box;
   ctx.page.drawRectangle({
-    x: textLeft,
+    x,
     y: boxLlY,
     width: box,
     height: box,
@@ -217,7 +222,7 @@ function drawGoogleMapsIconLink(ctx: Ctx, textLeft: number, ty: number, mapsUrl:
     borderColor: BORDER,
     borderWidth: 0.45,
   });
-  const cxPdf = textLeft + box / 2;
+  const cxPdf = x + box / 2;
   const cyPdf = boxLlY + box / 2;
   const tx = cxPdf - 12 * s;
   const tySvg = cyPdf + 12 * s;
@@ -236,11 +241,10 @@ function drawGoogleMapsIconLink(ctx: Ctx, textLeft: number, ty: number, mapsUrl:
   });
   addUriLinkAnnotation(
     ctx.page,
-    { x: textLeft, y: boxLlY, width: box, height: box },
+    { x, y: boxLlY, width: box, height: box },
     mapsUrl,
     { contents: "Open in Google Maps" },
   );
-  return boxLlY - 6;
 }
 
 function hexToRgb(hex: string | null | undefined, fallback: RGB): RGB {
@@ -750,6 +754,16 @@ function drawGoogleBusinessProfileCard(
   const nameLinesDrawn = Math.min(nameLines.length, 3);
   const catLinesDrawn = Math.min(catLines.length, 3);
   const pdfChannels = channelKindsFromAudit(audit);
+  const googleMapsUri = business.googleMapsUri?.trim() ?? "";
+  const hasMapsUri = Boolean(googleMapsUri);
+  const channelOrMapsBlockH =
+    pdfChannels.length > 0
+      ? estimatePdfChannelIconBlockHeight(pdfChannels, textLeft, rightEdge, ctx.bold, {
+          hasMapsPin: hasMapsUri,
+        }) - 12
+      : hasMapsUri
+        ? 6 + PDF_CHANNEL_ROW_H + 14
+        : 0;
   let textStackH =
     16 +
     nameLinesDrawn * 26 +
@@ -759,7 +773,7 @@ function drawGoogleBusinessProfileCard(
     14 +
     pillLines * pillRowH +
     54 +
-    (pdfChannels.length ? estimatePdfChannelIconBlockHeight(pdfChannels, textLeft, rightEdge, ctx.bold) - 12 : 0);
+    channelOrMapsBlockH;
 
   const cardH = Math.max(imgBox + pad * 2, textStackH + pad * 2);
 
@@ -863,17 +877,21 @@ function drawGoogleBusinessProfileCard(
     },
   );
   ty -= 10;
-  if (business.googleMapsUri?.trim()) {
-    ty = drawGoogleMapsIconLink(ctx, textLeft, ty, sanitize(business.googleMapsUri.trim()));
+  const rowTopY = ty;
+  let curX = textLeft;
+  if (hasMapsUri) {
+    drawGoogleMapsIconLink(ctx, curX, rowTopY, sanitize(googleMapsUri));
+    curX += pdfChannelRowLeadingWidth(true);
   }
   if (pdfChannels.length > 0) {
-    ty -= 3;
-    drawPdfChannelIconRow(ctx.page, pdfChannels, {
-      textLeft,
-      baselineY: ty,
+    ty = drawPdfChannelIconRow(ctx.page, pdfChannels, {
+      textLeft: curX,
+      rowTopY,
       maxRight: rightEdge,
       labelFont: ctx.bold,
     });
+  } else if (hasMapsUri) {
+    ty = rowTopY - PDF_CHANNEL_ROW_H - 8;
   }
 
   ctx.y = cardTop - cardH - 18;
@@ -1131,16 +1149,21 @@ function drawRevenueLeakSnapshot(ctx: Ctx, audit: RevenueLeakAudit): void {
   const innerW = CONTENT_W - pad * 2;
   const listLimit = 15;
   const listRows = ranked.slice(0, listLimit).map((f) => ({
-    line: sanitize(`${f.severity}: ${f.title}`),
+    severity: f.severity,
+    title: sanitize(f.title),
   }));
-  let wrappedTitleRows = 0;
+  const snapshotRowFirstH = 18;
+  const snapshotRowContH = 13;
+  let listContentH = 0;
   if (issueCount > 0 && listRows.length > 0) {
     for (const row of listRows) {
-      wrappedTitleRows += wrapText(row.line, ctx.bold, 10.5, innerW - 18).length;
+      const pillW = ctx.bold.widthOfTextAtSize(row.severity, 8) + 16;
+      const titleMaxW = Math.max(40, innerW - 22 - pillW);
+      const wrapped = wrapText(row.title, ctx.bold, 10.5, titleMaxW);
+      listContentH += snapshotRowFirstH + Math.max(0, wrapped.length - 1) * snapshotRowContH;
     }
   }
-  const listBlockH =
-    issueCount === 0 ? 0 : listRows.length > 0 ? 16 + wrappedTitleRows * 14 : 0;
+  const listBlockH = issueCount === 0 ? 0 : listRows.length > 0 ? 16 + listContentH : 0;
 
   const headlineFull = sanitize(
     `${issueCount} ${issueCount === 1 ? "issue" : "issues"} are costing you ${avgMonthly} average / month`,
@@ -1245,33 +1268,39 @@ function drawRevenueLeakSnapshot(ctx: Ctx, audit: RevenueLeakAudit): void {
         color: MUTED,
       });
       y -= 16;
+      const contentLeft = MARGIN + pad;
+      const dashX = contentLeft;
+      const pillAnchorX = contentLeft + 14;
       for (const row of listRows) {
-        const wrapped = wrapText(row.line, ctx.bold, 10.5, innerW - 18);
-        const first = wrapped[0] ?? "";
         ctx.page.drawText("-", {
-          x: MARGIN + pad,
+          x: dashX,
           y,
           size: 11,
           font: ctx.bold,
           color: ACCENT,
         });
+        const { w: pillW } = severityPill(ctx, pillAnchorX, y, row.severity);
+        const titleX = pillAnchorX + pillW + 8;
+        const titleMaxW = Math.max(40, contentLeft + innerW - titleX);
+        const wrapped = wrapText(row.title, ctx.bold, 10.5, titleMaxW);
+        const first = wrapped[0] ?? "";
         ctx.page.drawText(first, {
-          x: MARGIN + pad + 14,
+          x: titleX,
           y,
           size: 10.5,
           font: ctx.bold,
           color: INK,
         });
-        y -= 14;
+        y -= snapshotRowFirstH;
         for (const extra of wrapped.slice(1)) {
           ctx.page.drawText(extra, {
-            x: MARGIN + pad + 14,
+            x: titleX,
             y,
             size: 10.5,
             font: ctx.bold,
             color: INK,
           });
-          y -= 13;
+          y -= snapshotRowContH;
         }
       }
     }
@@ -2388,6 +2417,13 @@ function drawClosingCta(ctx: Ctx): void {
     color: WHITE,
   });
 
+  addUriLinkAnnotation(
+    ctx.page,
+    { x: btnX, y: btnTopY - btnH, width: btnW, height: btnH },
+    PDF_CLOSING_CONTACT_URL,
+    { contents: "Contact Zenpho" },
+  );
+
   const bodyBaselineStart = iy - headCluster - btnH - btnBodyGap;
   drawText(ctx, body, {
     x: MARGIN + cardPad,
@@ -2399,7 +2435,7 @@ function drawClosingCta(ctx: Ctx): void {
     lineGap: 3,
   });
 
-  const hint = sanitize(`${marketingSiteOrigin()}/contact`);
+  const hint = sanitize(PDF_CLOSING_CONTACT_URL);
   ctx.page.drawText(`Visit ${hint}`, {
     x: MARGIN + cardPad,
     y: cardTop - cardH + cardPad + 10,

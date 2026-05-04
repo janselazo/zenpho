@@ -802,9 +802,6 @@ export async function discoverCompetitors(input: {
 
   const warnings = [
     ...(searchWarning ? [searchWarning] : []),
-    strictIndex < 0 && selectedIndex < 0 && places.length > 0
-      ? `This listing was not in the first ${places.length} Google text-search results for this query (by Place ID or name/address match). The local ranking snapshot compares reputation signals within this sample plus your Google Business Profile — it is not Maps pack order when the listing is missing from the fetched text-search pages.`
-      : null,
     competitors.length < 10
       ? `Only ${competitors.length} direct competitors were returned for this market sample.`
       : null,

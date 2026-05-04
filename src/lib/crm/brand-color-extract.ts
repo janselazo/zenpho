@@ -787,6 +787,46 @@ export function isProfessionalAssociationOrCertificationLogoBlob(
   return false;
 }
 
+/**
+ * Single image containing a row/grid of luxury OEM marks (e.g. Ferrari + Mercedes + BMW)
+ * — common on auto tint / exotic-car pages. Palette extraction loves these; they are not the SMB wordmark.
+ */
+export function isLikelyOemOrMultiBrandStripBlob(resolvedUrl: string, rawHint = ""): boolean {
+  if (!resolvedUrl.trim() && !rawHint.trim()) return false;
+  const blob = `${resolvedUrl}\n${rawHint}`.toLowerCase();
+  let path = blob;
+  try {
+    path = `${new URL(resolvedUrl).pathname.toLowerCase()}\n${blob}`;
+  } catch {
+    /* use blob only */
+  }
+
+  if (
+    /(?:premium|exotic)[-_]?(?:brand|car|auto|vehicle|oem)|[-_/](?:oem|multi)[-_]?brand|multi[-_]brand|brand[-_]?(?:strip|row|grid)|manufacturer[-_]?(?:logo|badge)|(?:car|auto)[-_]?(?:brand|make)[-_]?(?:strip|row|grid|banner)/i.test(
+      path,
+    )
+  ) {
+    return true;
+  }
+
+  const oemRe =
+    /\b(?:ferrari|mercedes(?:-benz)?|porsche|lamborghini|maserati|tesla|bmw|audi|bentley|rolls[-\s]royce|aston[-\s]martin|mclaren|bugatti|lexus|cadillac|jaguar|land[-\s]rover|infiniti|acura)\b/gi;
+  const oemHits = blob.match(oemRe) ?? [];
+  const unique = new Set(oemHits.map((x) => x.toLowerCase().replace(/\s+/g, "")));
+  if (unique.size >= 2) return true;
+
+  if (
+    unique.size >= 1 &&
+    /\b(?:premium\s+brands?|exotic\s+cars?|for\s+premium\s+brands|official\s+vendor|black\s+zero|ultra\s+nano|nano[-\s]?ceramic)\b/i.test(
+      blob,
+    )
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 function pushLogoCandidate(
   candidates: LogoCandidate[],
   seen: Set<string>,
@@ -807,6 +847,7 @@ function pushLogoCandidate(
   if (isProfessionalAssociationOrCertificationLogoBlob(url, hintBlob)) return;
   if (isLikelyOpenGraphOrSocialBannerImageUrl(url, hintBlob)) return;
   if (isLikelyThirdPartyTrustOrReviewMarketingBadgeUrl(url, hintBlob)) return;
+  if (isLikelyOemOrMultiBrandStripBlob(url, hintBlob)) return;
   seen.add(url);
   candidates.push({ url, score, index });
 }
@@ -997,7 +1038,8 @@ function imageDimensionScore(tag: string): number {
   const ratio = width / height;
   let score = 0;
   if (width >= 80 && height >= 30 && width <= 900 && height <= 320) score += 12;
-  if (ratio >= 1.1 && ratio <= 6) score += 8;
+  if (ratio >= 1.1 && ratio <= 3.5) score += 8;
+  else if (ratio > 3.5 && ratio <= 9) score -= 10;
   return score;
 }
 
@@ -1139,7 +1181,15 @@ export function extractLogoUrls(
       score -= 62;
     }
     if (score < 24) continue;
-    pushLogoCandidate(candidates, seen, imageSrcFromTag(tag), baseUrl, score, m.index, tag);
+    pushLogoCandidate(
+      candidates,
+      seen,
+      imageSrcFromTag(tag),
+      baseUrl,
+      score,
+      m.index,
+      `${tag}\n${context}`,
+    );
   }
 
   // ── 2. <a> with "logo" class/id wrapping an <img> or <source> ──────────

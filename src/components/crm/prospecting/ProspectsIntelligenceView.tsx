@@ -2130,7 +2130,7 @@ function ProspectsIntelligenceViewInner({
                         </div>
                         <div>
                           <label className="mb-1 block text-xs font-medium text-text-secondary">
-                            To
+                            Facebook (optional)
                           </label>
                           <input
                             type="url"
@@ -2147,7 +2147,7 @@ function ProspectsIntelligenceViewInner({
                         </div>
                         <div>
                           <label className="mb-1 block text-xs font-medium text-text-secondary">
-                            To
+                            Instagram (optional)
                           </label>
                           <input
                             type="url"

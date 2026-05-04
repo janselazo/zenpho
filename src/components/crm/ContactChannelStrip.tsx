@@ -147,7 +147,7 @@ export default function ContactChannelStrip({
         )}
         {item(
           "instagram",
-          "Instagram",
+          "INSTAGRAM",
           Boolean(s?.instagram?.trim()),
           s?.instagram ? (
             <a
@@ -167,7 +167,7 @@ export default function ContactChannelStrip({
         )}
         {item(
           "facebook",
-          "Facebook",
+          "FACEBOOK",
           Boolean(s?.facebook?.trim()),
           s?.facebook ? (
             <a
@@ -227,7 +227,7 @@ export default function ContactChannelStrip({
         )}
         {item(
           "whatsapp",
-          "WhatsApp",
+          "WHATSAPP",
           Boolean(s?.whatsapp?.trim()),
           s?.whatsapp ? (
             <a

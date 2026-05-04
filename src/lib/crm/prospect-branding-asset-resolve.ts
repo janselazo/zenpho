@@ -22,6 +22,7 @@ import {
   isLanguageSwitcherOrFlagAssetUrl,
   isLikelyOpenGraphOrSocialBannerImageUrl,
   isLikelyThirdPartyTrustOrReviewMarketingBadgeUrl,
+  isLikelyOemOrMultiBrandStripBlob,
   isPartnerFinancingLogoBlob,
   isProfessionalAssociationOrCertificationLogoBlob,
   type BrandColorResult,
@@ -402,8 +403,49 @@ function isExcludedFromPaletteBestLogoUrl(resolvedUrl: string, rawCandidateUrl: 
     isLikelyHeroOrStockPhotoUrl(resolvedUrl) ||
     isLikelyOpenGraphOrSocialBannerImageUrl(resolvedUrl, rawCandidateUrl) ||
     isLikelyThirdPartyTrustOrReviewMarketingBadgeUrl(resolvedUrl, rawCandidateUrl) ||
-    isProfessionalAssociationOrCertificationLogoBlob(resolvedUrl, rawCandidateUrl)
+    isProfessionalAssociationOrCertificationLogoBlob(resolvedUrl, rawCandidateUrl) ||
+    isLikelyOemOrMultiBrandStripBlob(resolvedUrl, rawCandidateUrl)
   );
+}
+
+function readRasterDimensions(buf: Buffer | null): { w: number; h: number } | null {
+  if (!buf || buf.length < 24) return null;
+  if (buf.subarray(0, 8).equals(PNG_SIGNATURE)) {
+    if (buf.toString("ascii", 12, 16) !== "IHDR") return null;
+    return { w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) };
+  }
+  if (buf.subarray(0, 3).equals(JPEG_SIGNATURE)) {
+    let i = 2;
+    while (i + 9 < buf.length && i < 500_000) {
+      if (buf[i] !== 0xff) {
+        i++;
+        continue;
+      }
+      const mk = buf[i + 1];
+      if (mk === 0xd8 || mk === 0xd9) {
+        i += 2;
+        continue;
+      }
+      const len = buf.readUInt16BE(i + 2);
+      if (!Number.isFinite(len) || len < 2) {
+        i += 2;
+        continue;
+      }
+      if (mk >= 0xc0 && mk <= 0xc3) {
+        return { h: buf.readUInt16BE(i + 5), w: buf.readUInt16BE(i + 7) };
+      }
+      i += 2 + len;
+    }
+  }
+  return null;
+}
+
+/** Wide, short rasters (OEM grids, sponsor strips) — not a compact wordmark. */
+function rasterLooksLikeWideBrandMontage(buf: Buffer | null): boolean {
+  const d = readRasterDimensions(buf);
+  if (!d || d.w <= 0 || d.h < 48) return false;
+  const ratio = d.w / d.h;
+  return ratio >= 2.8 && d.h <= 240;
 }
 
 /**
@@ -514,11 +556,13 @@ export async function resolveProspectBrandAssets(input: {
     if (isLanguageSwitcherOrFlagAssetUrl(fetched.sourceUrl)) continue;
     const candidatePalette = logoPaletteFromFetch(fetched);
     const rasterFmt = fetched.buffer ? sniffRasterFormat(fetched.buffer) : null;
+    const wideMontage = rasterLooksLikeWideBrandMontage(fetched.buffer);
 
     if (
       !firstRankedRaster &&
       (fetched.buffer || fetched.svg) &&
-      !isExcludedFromPaletteBestLogoUrl(fetched.sourceUrl, logoUrl)
+      !isExcludedFromPaletteBestLogoUrl(fetched.sourceUrl, logoUrl) &&
+      !wideMontage
     ) {
       firstRankedRaster = {
         buffer: fetched.buffer,
@@ -528,7 +572,8 @@ export async function resolveProspectBrandAssets(input: {
       };
     }
 
-    const excludeFromBest = isExcludedFromPaletteBestLogoUrl(fetched.sourceUrl, logoUrl);
+    const excludeFromBest =
+      isExcludedFromPaletteBestLogoUrl(fetched.sourceUrl, logoUrl) || wideMontage;
 
     if (isUsefulLogoPalette(candidatePalette) && !excludeFromBest) {
       const quality = logoPaletteQuality(candidatePalette);
@@ -559,7 +604,11 @@ export async function resolveProspectBrandAssets(input: {
         };
       }
     }
-    if (!logoSourceUrl) {
+    if (
+      !logoSourceUrl &&
+      !isExcludedFromPaletteBestLogoUrl(fetched.sourceUrl, logoUrl) &&
+      !wideMontage
+    ) {
       logoPng = fetched.buffer;
       logoSvg = fetched.svg;
       logoSourceUrl = fetched.sourceUrl;
