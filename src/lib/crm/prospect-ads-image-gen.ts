@@ -8,6 +8,7 @@
  *
  * Slots (size shown is the closest gpt-image-2 supports):
  *   - landingHero        1536x1024  editorial landing-page mockup
+ *   - landingSection1–3  1024x1024  below-the-fold section imagery (services, proof, gallery)
  *   - adFbFeed           1024x1024  Meta feed creative
  *   - adIgFeed           1024x1024  IG feed creative
  *   - adIgStory          1024x1536  IG/FB Story 9:16-ish creative
@@ -38,6 +39,9 @@ type ImageQuality = "low" | "medium" | "high" | "auto";
 
 export type AdsImageSlot =
   | "landingHero"
+  | "landingSection1"
+  | "landingSection2"
+  | "landingSection3"
   | "adFbFeed"
   | "adIgFeed"
   | "adIgStory"
@@ -46,6 +50,9 @@ export type AdsImageSlot =
 
 export type AdsImages = {
   landingHero: Buffer | null;
+  landingSection1: Buffer | null;
+  landingSection2: Buffer | null;
+  landingSection3: Buffer | null;
   adFbFeed: Buffer | null;
   adIgFeed: Buffer | null;
   adIgStory: Buffer | null;
@@ -90,6 +97,42 @@ function strictPaletteRule(spec: BrandingSpec): string {
 const NO_TEXT_RULE =
   "Do NOT render any readable text, letters, words, numbers, watermarks, captions, UI labels, or hashtags inside the image. Real copy is overlaid as actual type in the PDF.";
 
+/** Titles for landing section images — skips generic "Hero"; pairs with landingSection1–3. */
+export function pickLandingSectionThemes(funnel: AdsFunnelSpec): [string, string, string] {
+  const fb: [string, string, string] = [
+    "Services & offers",
+    "Reviews & trust",
+    "Gallery & work samples",
+  ];
+  const raw = funnel.landingPage.sections.filter((s) => Boolean(s?.trim()));
+  const base = raw.length > 0 ? raw : ["How it works", "Testimonials", "Gallery"];
+  const skipHero = (s: string) => /^(hero|headline|intro)\b/i.test(s.trim());
+  const tail = base.filter((s) => !skipHero(s));
+  const merged = [...tail, ...fb, ...base];
+  return [
+    (merged[0] || fb[0]).slice(0, 100),
+    (merged[1] || fb[1]).slice(0, 100),
+    (merged[2] || fb[2]).slice(0, 100),
+  ];
+}
+
+function landingSectionPrompt(
+  spec: BrandingSpec,
+  funnel: AdsFunnelSpec,
+  vertical: ProspectVertical,
+  theme: string,
+  variantNote: string,
+): string {
+  return `High-quality website section imagery for ${spec.brandName}. Page section theme: ${theme}. ${variantNote}
+Vertical vibe: ${verticalImageryDirection(vertical)}.
+Overall landing direction: ${funnel.landingPage.imageDirection || "modern, trustworthy, conversion-focused pacing"}.
+${paletteLine(spec)}
+${strictPaletteRule(spec)}
+Single cohesive scene suitable as a full-width web section background (no browser chrome, no device frame).
+${NO_TEXT_RULE}
+Print-quality. No people-with-faces unless central to the brand. No logos. No UI screenshots.`;
+}
+
 const SLOTS: SlotPlan[] = [
   {
     slot: "landingHero",
@@ -103,6 +146,36 @@ ${strictPaletteRule(spec)}
 Composition leaves the upper-left third uncluttered so headline + CTA can be overlaid on top in the PDF.
 ${NO_TEXT_RULE}
 Print-quality. No people-with-faces unless central to the brand. No logos. No UI screenshots.`,
+  },
+  {
+    slot: "landingSection1",
+    size: "1024x1024",
+    prompt: ({ spec, funnel, vertical }) =>
+      landingSectionPrompt(spec, funnel, vertical, pickLandingSectionThemes(funnel)[0], "Emphasize offerings, process, or key benefits."),
+  },
+  {
+    slot: "landingSection2",
+    size: "1024x1024",
+    prompt: ({ spec, funnel, vertical }) =>
+      landingSectionPrompt(
+        spec,
+        funnel,
+        vertical,
+        pickLandingSectionThemes(funnel)[1],
+        "Emphasize credibility: customers, outcomes, ratings, or social proof atmosphere (no readable review text in-image).",
+      ),
+  },
+  {
+    slot: "landingSection3",
+    size: "1024x1024",
+    prompt: ({ spec, funnel, vertical }) =>
+      landingSectionPrompt(
+        spec,
+        funnel,
+        vertical,
+        pickLandingSectionThemes(funnel)[2],
+        "Emphasize results, portfolio, before/after mood, or visual proof of craft — still no readable text.",
+      ),
   },
   {
     slot: "adFbFeed",
@@ -264,9 +337,9 @@ function maxImagesPerMinute(): number {
 }
 
 /**
- * Generate all 6 ad-funnel images. Fast mode shares the same process-level
- * limiter as brand-book image generation so the full PDF respects OpenAI's
- * gpt-image per-minute cap.
+ * Generate all ad-funnel + landing-page images (hero + three section frames + five ad slots).
+ * Fast mode shares the same process-level limiter as brand-book image generation so the full PDF
+ * respects OpenAI's gpt-image per-minute cap.
  */
 export async function generateAdsFunnelImages(
   spec: BrandingSpec,
@@ -306,6 +379,9 @@ async function generateAdsFunnelImagesForSlots(
 ): Promise<AdsImages> {
   const empty: AdsImages = {
     landingHero: null,
+    landingSection1: null,
+    landingSection2: null,
+    landingSection3: null,
     adFbFeed: null,
     adIgFeed: null,
     adIgStory: null,
@@ -393,6 +469,15 @@ async function generateAdsFunnelImagesForSlots(
     switch (r.slot) {
       case "landingHero":
         out.landingHero = r.buffer;
+        break;
+      case "landingSection1":
+        out.landingSection1 = r.buffer;
+        break;
+      case "landingSection2":
+        out.landingSection2 = r.buffer;
+        break;
+      case "landingSection3":
+        out.landingSection3 = r.buffer;
         break;
       case "adFbFeed":
         out.adFbFeed = r.buffer;

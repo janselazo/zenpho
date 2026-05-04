@@ -5,6 +5,7 @@ import {
   PDFFont,
   PDFImage,
   PDFPage,
+  PDFString,
   StandardFonts,
   rgb,
   type RGB,
@@ -372,6 +373,29 @@ export function addBlankPage(pdf: PDFDocument, bg: Rgb = [1, 1, 1]): PDFPage {
     borderWidth: 0,
   });
   return page;
+}
+
+/** PDF user-space rect: `y` is the bottom edge; `height` extends upward (pdf-lib coordinates). */
+export function addUriLinkAnnotation(
+  page: PDFPage,
+  rect: { x: number; y: number; width: number; height: number },
+  uri: string,
+): void {
+  const { x, y, width, height } = rect;
+  const linkRef = page.doc.context.register(
+    page.doc.context.obj({
+      Type: "Annot",
+      Subtype: "Link",
+      Rect: [x, y, x + width, y + height],
+      Border: [0, 0, 0],
+      A: page.doc.context.obj({
+        Type: "Action",
+        S: "URI",
+        URI: PDFString.of(uri),
+      }),
+    }),
+  );
+  page.node.addAnnot(linkRef);
 }
 
 export function drawRunningFooter(

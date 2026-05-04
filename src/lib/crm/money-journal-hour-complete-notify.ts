@@ -75,7 +75,7 @@ export function readMoneyJournalHourBellDisplay(): { show: boolean; label: strin
   if (s.dismissed || s.count < 1) return { show: false, label: "" };
   return {
     show: true,
-    label: s.count === 1 ? "1 Hour Completed" : `${s.count} Hours Completed`,
+    label: s.count === 1 ? "1 Hour" : `${s.count} Hours`,
   };
 }
 

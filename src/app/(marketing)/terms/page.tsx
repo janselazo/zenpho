@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Card from "@/components/ui/Card";
 import Link from "next/link";
+import { ZENPHO_PHONE_DISPLAY, ZENPHO_PHONE_TEL_HREF } from "@/lib/zenpho-contact";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
@@ -113,6 +114,13 @@ export default function TermsPage() {
               >
                 hello@zenpho.com
               </a>
+              , or call{" "}
+              <a
+                href={ZENPHO_PHONE_TEL_HREF}
+                className="font-medium text-accent underline-offset-2 hover:underline"
+              >
+                {ZENPHO_PHONE_DISPLAY}
+              </a>
               .
             </p>
 
@@ -208,6 +216,15 @@ export default function TermsPage() {
                 className="font-medium text-accent underline-offset-2 hover:underline"
               >
                 hello@zenpho.com
+              </a>
+            </p>
+            <p>
+              Phone:{" "}
+              <a
+                href={ZENPHO_PHONE_TEL_HREF}
+                className="font-medium text-accent underline-offset-2 hover:underline"
+              >
+                {ZENPHO_PHONE_DISPLAY}
               </a>
             </p>
             <p>

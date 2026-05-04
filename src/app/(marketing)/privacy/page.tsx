@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Card from "@/components/ui/Card";
 import Link from "next/link";
+import { ZENPHO_PHONE_DISPLAY, ZENPHO_PHONE_TEL_HREF } from "@/lib/zenpho-contact";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
@@ -104,12 +105,19 @@ export default function PrivacyPage() {
             <p>
               You can opt out at any time by replying{" "}
               <span className="font-medium text-text-primary">STOP</span> to any message. Reply{" "}
-              <span className="font-medium text-text-primary">HELP</span> for help, or email{" "}
+              <span className="font-medium text-text-primary">HELP</span> for help, email{" "}
               <a
                 href="mailto:hello@zenpho.com"
                 className="font-medium text-accent underline-offset-2 hover:underline"
               >
                 hello@zenpho.com
+              </a>
+              , or call{" "}
+              <a
+                href={ZENPHO_PHONE_TEL_HREF}
+                className="font-medium text-accent underline-offset-2 hover:underline"
+              >
+                {ZENPHO_PHONE_DISPLAY}
               </a>
               . Full SMS program details are in our{" "}
               <Link href="/terms#sms" className="font-medium text-accent underline-offset-2 hover:underline">
@@ -183,6 +191,13 @@ export default function PrivacyPage() {
                 className="font-medium text-accent underline-offset-2 hover:underline"
               >
                 hello@zenpho.com
+              </a>{" "}
+              or{" "}
+              <a
+                href={ZENPHO_PHONE_TEL_HREF}
+                className="font-medium text-accent underline-offset-2 hover:underline"
+              >
+                {ZENPHO_PHONE_DISPLAY}
               </a>
               . We may need to verify your request.
             </p>
@@ -224,6 +239,15 @@ export default function PrivacyPage() {
                 className="font-medium text-accent underline-offset-2 hover:underline"
               >
                 hello@zenpho.com
+              </a>
+            </p>
+            <p>
+              Phone:{" "}
+              <a
+                href={ZENPHO_PHONE_TEL_HREF}
+                className="font-medium text-accent underline-offset-2 hover:underline"
+              >
+                {ZENPHO_PHONE_DISPLAY}
               </a>
             </p>
           </section>

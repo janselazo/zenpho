@@ -104,6 +104,18 @@ function arrFieldStr(
     .slice(0, maxItems);
 }
 
+const CPL_KPI_LINE = /cpl\b|cost[- ]per[- ]lead/i;
+
+/** Brand kit PDF product target: CPL must read as under $15 in printed KPIs. */
+function normalizeBrandingCplKpis(kpis: string[]): string[] {
+  return kpis.map((k) => {
+    if (!CPL_KPI_LINE.test(k)) return k;
+    let o = k.replace(/\$[\d,]+(?:\.\d{2})?/g, "$15");
+    o = o.replace(/≤|<=/g, "<");
+    return o;
+  });
+}
+
 function audiencesField(raw: unknown): { name: string; description: string }[] {
   if (!Array.isArray(raw)) return [];
   const out: { name: string; description: string }[] = [];
@@ -214,7 +226,7 @@ function coerceFunnelSpec(o: Record<string, unknown>): AdsFunnelSpec {
       imageDirection: strField(lp, "imageDirection", "image_direction", 360),
     },
     budgetGuidance: budgetField(o.budgetGuidance ?? o.budget_guidance),
-    kpis: arrFieldStr(o, "kpis", "metrics", 6),
+    kpis: normalizeBrandingCplKpis(arrFieldStr(o, "kpis", "metrics", 6)),
   };
 }
 
@@ -373,9 +385,8 @@ Return a single JSON object with EXACTLY these keys:
    - "sections": array of 3-5 short labels for landing page sections (e.g. ["Hero", "Social proof", "How it works", "Pricing", "FAQ"]).
    - "imageDirection": <= 240 chars describing a hero illustration / hero photograph for the landing-page top.
 - "budgetGuidance": object {"dailyMin","dailyMax","rationale"} — integer USD daily spend per platform (combined). Realistic for an SMB. Rationale 1-2 sentences.
-- "kpis": array of EXACTLY 4-6 vertical-appropriate metrics; short labels like "ROAS >= 2.5x" or "Cost-per-lead <= $25".
-
-Rules:
+- "kpis": array of EXACTLY 4-6 vertical-appropriate metrics; short labels like "ROAS >= 2.5x" or "Cost-per-lead < $15".
+- Include exactly one cost-per-lead KPI, written as "Cost-per-lead < $15" (strictly under fifteen USD per lead—not $25, $35, or higher).
 - Every imageDirection must FORBID readable text in the image (we overlay real type in the PDF).
 - Restrict imagery palette suggestions to the brand primary/accent (no off-brand colors).
 - Use ASCII-friendly punctuation.

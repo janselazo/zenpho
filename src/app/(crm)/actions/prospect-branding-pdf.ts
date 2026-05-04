@@ -18,6 +18,7 @@ import {
 } from "@/lib/crm/prospect-ads-funnel-spec-llm";
 import {
   generateAdsFunnelImages,
+  pickLandingSectionThemes,
   type AdsImages,
 } from "@/lib/crm/prospect-ads-image-gen";
 import { resolveProspectBrandAssets } from "@/lib/crm/prospect-branding-asset-resolve";
@@ -28,11 +29,17 @@ import {
 } from "@/lib/crm/prospect-vertical-classify";
 import { uploadBrandingFunnelPdf } from "@/lib/crm/branding-funnel-pdf-storage";
 import {
+  ZENPHO_CONTACT_EMAIL,
+  ZENPHO_PHONE_DISPLAY,
+  ZENPHO_PHONE_TEL_HREF,
+} from "@/lib/zenpho-contact";
+import {
   PAGE_W,
   PAGE_H,
   SAFE_MARGIN,
   CONTENT_W,
   addBlankPage,
+  addUriLinkAnnotation,
   buildContext,
   drawCoverPage,
   drawCard,
@@ -57,6 +64,8 @@ import {
   type BrandBookContext,
   type Rgb,
 } from "@/lib/crm/pdf-brand-book";
+
+const ZENPHO_BOOKING_URL = "https://zenpho.com/booking";
 
 // NOTE: `export const maxDuration = 300` cannot live in a "use server" file —
 // Next.js only allows async function exports, so we configure the timeout in
@@ -853,236 +862,15 @@ async function drawFunnelSection(
       label: (f.landingPage.ctaPrimary || "Get started").slice(0, 28),
     });
 
-    // Below-the-fold mobile sections, stacked like the prospect would scroll them.
+    // Below-the-fold: proof bullets + generated section imagery inside the device preview.
     const valueProps = f.landingPage.valueProps.slice(0, 3);
-    const sectionFallbacks = ["Services", "Reviews", "Gallery", "Location & contact"];
-    const sections = (f.landingPage.sections.length > 0
-      ? f.landingPage.sections
-      : sectionFallbacks
-    ).slice(0, 5);
-    const drawSectionSnapshot = (
-      section: string,
-      index: number,
-      rect: { x: number; y: number; width: number; height: number },
-    ) => {
-      const lower = section.toLowerCase();
-      const isHero = index === 0 || /hero|headline|intro/.test(lower);
-      const isServices = /service|treatment|offer|package|program|menu/.test(lower);
-      const isProof = /review|testimonial|story|proof|patient/.test(lower);
-      const isLocation = /location|hour|visit|contact|book|appointment|map/.test(lower);
-      const isGallery = /gallery|image|photo|work|case|portfolio/.test(lower);
+    const sectionThemes = pickLandingSectionThemes(f);
+    const landingSectionBuffers = [
+      images.landingSection1,
+      images.landingSection2,
+      images.landingSection3,
+    ] as const;
 
-      page.drawRectangle({
-        x: rect.x,
-        y: rect.y,
-        width: rect.width,
-        height: rect.height,
-        color: rgbColor([0.99, 0.985, 0.97]),
-        borderColor: rgbColor(mixRgb(ctx.primary, [1, 1, 1], 0.65)),
-        borderWidth: index === 0 ? 0.8 : 0.45,
-      });
-
-      const pad = 8;
-      const innerX = rect.x + pad;
-      const innerY = rect.y + pad;
-      const innerW = rect.width - pad * 2;
-      const innerH = rect.height - pad * 2;
-      const tint = mixRgb(ctx.primary, [1, 1, 1], 0.88);
-      const tint2 = mixRgb(ctx.accent, [1, 1, 1], 0.82);
-
-      page.drawRectangle({
-        x: innerX,
-        y: innerY,
-        width: innerW,
-        height: innerH,
-        color: rgbColor([1, 1, 1]),
-      });
-
-      page.drawCircle({
-        x: rect.x + 13,
-        y: rect.y + rect.height - 12,
-        size: 7,
-        color: rgbColor(ctx.primary),
-        opacity: 0.12,
-      });
-      page.drawText(String(index + 1).padStart(2, "0"), {
-        x: rect.x + 9,
-        y: rect.y + rect.height - 15,
-        size: 6,
-        font: ctx.fonts.body,
-        color: rgbColor(ctx.primary),
-      });
-
-      if (isHero) {
-        page.drawRectangle({
-          x: innerX,
-          y: innerY + innerH * 0.32,
-          width: innerW,
-          height: innerH * 0.68,
-          color: rgbColor(tint),
-        });
-        page.drawRectangle({
-          x: innerX + 8,
-          y: innerY + innerH * 0.46,
-          width: innerW * 0.58,
-          height: innerH * 0.34,
-          color: rgbColor([1, 1, 1]),
-          opacity: 0.9,
-        });
-        page.drawRectangle({
-          x: innerX + 16,
-          y: innerY + innerH * 0.67,
-          width: innerW * 0.34,
-          height: 5,
-          color: rgbColor(ctx.ink),
-        });
-        page.drawRectangle({
-          x: innerX + 16,
-          y: innerY + innerH * 0.57,
-          width: innerW * 0.44,
-          height: 4,
-          color: rgbColor(mixRgb(ctx.ink, [1, 1, 1], 0.55)),
-        });
-        page.drawRectangle({
-          x: innerX + 16,
-          y: innerY + innerH * 0.43,
-          width: innerW * 0.24,
-          height: 10,
-          color: rgbColor(ctx.primary),
-        });
-        return;
-      }
-
-      if (isServices) {
-        const cardGap = 5;
-        const cardW = (innerW - cardGap * 2) / 3;
-        for (let i = 0; i < 3; i++) {
-          page.drawRectangle({
-            x: innerX + i * (cardW + cardGap),
-            y: innerY + 6,
-            width: cardW,
-            height: innerH - 12,
-            color: rgbColor(i === 1 ? tint : [1, 1, 1]),
-            borderColor: rgbColor([0.88, 0.87, 0.84]),
-            borderWidth: 0.35,
-          });
-          page.drawCircle({
-            x: innerX + i * (cardW + cardGap) + cardW / 2,
-            y: innerY + innerH - 18,
-            size: 5,
-            color: rgbColor(i === 1 ? ctx.primary : tint2),
-          });
-          page.drawRectangle({
-            x: innerX + i * (cardW + cardGap) + 7,
-            y: innerY + 16,
-            width: cardW - 14,
-            height: 4,
-            color: rgbColor(mixRgb(ctx.ink, [1, 1, 1], 0.55)),
-          });
-        }
-        return;
-      }
-
-      if (isProof) {
-        for (let i = 0; i < 2; i++) {
-          page.drawRectangle({
-            x: innerX + i * (innerW / 2 + 4),
-            y: innerY + 8,
-            width: innerW / 2 - 4,
-            height: innerH - 16,
-            color: rgbColor([1, 1, 1]),
-            borderColor: rgbColor([0.88, 0.87, 0.84]),
-            borderWidth: 0.35,
-          });
-          page.drawRectangle({
-            x: innerX + i * (innerW / 2 + 4) + 8,
-            y: innerY + innerH - 20,
-            width: 38,
-            height: 4,
-            color: rgbColor(ctx.accent),
-          });
-          page.drawRectangle({
-            x: innerX + i * (innerW / 2 + 4) + 8,
-            y: innerY + 20,
-            width: innerW / 2 - 26,
-            height: 4,
-            color: rgbColor(mixRgb(ctx.ink, [1, 1, 1], 0.65)),
-          });
-        }
-        return;
-      }
-
-      if (isLocation) {
-        page.drawRectangle({
-          x: innerX,
-          y: innerY,
-          width: innerW * 0.52,
-          height: innerH,
-          color: rgbColor(tint),
-        });
-        page.drawCircle({
-          x: innerX + innerW * 0.26,
-          y: innerY + innerH * 0.58,
-          size: 8,
-          color: rgbColor(ctx.primary),
-        });
-        for (let i = 0; i < 3; i++) {
-          page.drawRectangle({
-            x: innerX + innerW * 0.6,
-            y: innerY + innerH - 18 - i * 13,
-            width: innerW * (i === 0 ? 0.32 : 0.26),
-            height: 5,
-            color: rgbColor(i === 0 ? ctx.ink : mixRgb(ctx.ink, [1, 1, 1], 0.65)),
-          });
-        }
-        return;
-      }
-
-      if (isGallery) {
-        const tileGap = 4;
-        const tileW = (innerW - tileGap * 2) / 3;
-        const tileH = (innerH - tileGap) / 2;
-        for (let i = 0; i < 6; i++) {
-          page.drawRectangle({
-            x: innerX + (i % 3) * (tileW + tileGap),
-            y: innerY + (i < 3 ? tileH + tileGap : 0),
-            width: tileW,
-            height: tileH,
-            color: rgbColor(i % 2 === 0 ? tint : tint2),
-          });
-        }
-        return;
-      }
-
-      page.drawRectangle({
-        x: innerX,
-        y: innerY + innerH * 0.58,
-        width: innerW,
-        height: innerH * 0.42,
-        color: rgbColor(tint),
-      });
-      page.drawRectangle({
-        x: innerX + 10,
-        y: innerY + innerH * 0.68,
-        width: innerW * 0.52,
-        height: 6,
-        color: rgbColor(ctx.ink),
-      });
-      page.drawRectangle({
-        x: innerX + 10,
-        y: innerY + innerH * 0.43,
-        width: innerW * 0.78,
-        height: 5,
-        color: rgbColor(mixRgb(ctx.ink, [1, 1, 1], 0.65)),
-      });
-      page.drawRectangle({
-        x: innerX + 10,
-        y: innerY + innerH * 0.28,
-        width: innerW * 0.58,
-        height: 5,
-        color: rgbColor(mixRgb(ctx.ink, [1, 1, 1], 0.75)),
-      });
-    };
     let mobileY = heroY - 18;
     for (const vp of valueProps) {
       page.drawRectangle({
@@ -1107,34 +895,42 @@ async function drawFunnelSection(
       mobileY -= 38;
     }
 
-    for (const [i, section] of sections.entries()) {
+    const thumbPad = 6;
+    const thumbH = 46;
+    for (let si = 0; si < 3; si++) {
+      if (mobileY - thumbH < screenY + 14) break;
+      const thumbRect = {
+        x: screenX + thumbPad,
+        y: mobileY - thumbH,
+        width: screenW - thumbPad * 2,
+        height: thumbH,
+      };
       page.drawRectangle({
-        x: screenX + 14,
-        y: mobileY - 20,
-        width: screenW - 28,
-        height: 28,
-        color: rgbColor([0.985, 0.985, 0.98]),
-        borderColor: rgbColor([0.86, 0.86, 0.84]),
+        x: thumbRect.x,
+        y: thumbRect.y,
+        width: thumbRect.width,
+        height: thumbRect.height,
+        color: rgbColor(ctx.surface),
+        borderColor: rgbColor(mixRgb(ctx.primary, [1, 1, 1], 0.5)),
         borderWidth: 0.35,
       });
-      page.drawText(String(i + 1).padStart(2, "0"), {
-        x: screenX + 26,
-        y: mobileY - 7,
-        size: 7,
-        font: ctx.fonts.body,
-        color: rgbColor(ctx.primary),
-      });
-      drawLimitedWrappedText(section, {
-        x: screenX + 50,
-        y: mobileY - 6,
-        size: 7.4,
-        font: ctx.fonts.body,
-        color: ctx.ink,
-        maxWidth: screenW - 76,
-        maxLines: 1,
-      });
-      mobileY -= 34;
-      if (mobileY < screenY + 22) break;
+      const inner = {
+        x: thumbRect.x + 1,
+        y: thumbRect.y + 1,
+        width: thumbRect.width - 2,
+        height: thumbRect.height - 2,
+      };
+      const buf = landingSectionBuffers[si];
+      const thumbImg = await embedPngIfAny(ctx.pdf, buf);
+      if (thumbImg) {
+        drawImageFit(page, thumbImg, inner, "cover");
+      } else {
+        drawImagePlaceholder(page, ctx, {
+          ...inner,
+          label: "Section visual",
+        });
+      }
+      mobileY -= thumbH + 5;
     }
 
     const rightX = phoneX + phoneW + 44;
@@ -1142,59 +938,94 @@ async function drawFunnelSection(
     drawPageTitle(page, ctx, {
       x: rightX,
       y: PAGE_H - SAFE_MARGIN - 54,
-      text: "Mobile landing page flow.",
+      text: "Landing page sections.",
       size: 30,
       maxWidth: rightW,
     });
-    drawWrappedText(page, "A cleaner stacked layout keeps the hero, CTA, proof points, and page sections readable on one brand-book spread.", {
-      x: rightX,
-      y: PAGE_H - SAFE_MARGIN - 122,
-      size: 10.5,
-      font: ctx.fonts.body,
-      color: ctx.ink,
-      maxWidth: rightW,
-      lineGap: 4,
-    });
+    drawWrappedText(
+      page,
+      "Full-fidelity section renders for the page outline below—same scenes power the mobile preview at left. Copy stays live vector in the PDF; photography is generated from your palette and positioning.",
+      {
+        x: rightX,
+        y: PAGE_H - SAFE_MARGIN - 130,
+        size: 10.5,
+        font: ctx.fonts.body,
+        color: ctx.ink,
+        maxWidth: rightW,
+        lineGap: 4,
+      },
+    );
 
-    let blueprintY = PAGE_H - SAFE_MARGIN - 190;
+    let blueprintY = PAGE_H - SAFE_MARGIN - 200;
     drawSectionEyebrow(page, ctx, {
       x: rightX,
       y: blueprintY,
-      label: "Section snapshots",
+      label: "Generated section imagery",
     });
-    blueprintY -= 22;
-    const snapshotGap = 12;
-    const snapshotW = (rightW - snapshotGap) / 2;
-    const snapshotH = 72;
-    sections.forEach((section, i) => {
-      const col = i % 2;
-      const row = Math.floor(i / 2);
-      drawSectionSnapshot(section, i, {
-        x: rightX + col * (snapshotW + snapshotGap),
-        y: blueprintY - snapshotH - row * (snapshotH + snapshotGap),
-        width: snapshotW,
-        height: snapshotH,
-      });
-    });
-    blueprintY -= Math.ceil(sections.length / 2) * (snapshotH + snapshotGap) + 2;
+    blueprintY -= 24;
 
-    drawSectionEyebrow(page, ctx, {
-      x: rightX,
-      y: blueprintY - 10,
-      label: "Primary proof",
-    });
-    let proofY = blueprintY - 36;
-    valueProps.slice(0, 3).forEach((vp) => {
-      proofY = drawLimitedWrappedText(`- ${vp}`, {
+    const imgTileH = 102;
+    const imgGap = 16;
+    for (let i = 0; i < 3; i++) {
+      blueprintY = drawLimitedWrappedText(sanitizeForBrandBook(sectionThemes[i]), {
         x: rightX,
-        y: proofY,
+        y: blueprintY,
         size: 9,
-        font: ctx.fonts.body,
+        font: ctx.fonts.display,
         color: ctx.ink,
         maxWidth: rightW,
         maxLines: 2,
         lineGap: 3,
-      }) - 8;
+      });
+      blueprintY -= 8;
+
+      const rect = { x: rightX, y: blueprintY - imgTileH, width: rightW, height: imgTileH };
+      page.drawRectangle({
+        x: rect.x,
+        y: rect.y,
+        width: rect.width,
+        height: rect.height,
+        borderColor: rgbColor(mixRgb(ctx.primary, [1, 1, 1], 0.4)),
+        borderWidth: 0.45,
+        color: rgbColor([1, 1, 1]),
+      });
+      const pad = 2;
+      const innerRect = {
+        x: rect.x + pad,
+        y: rect.y + pad,
+        width: rect.width - pad * 2,
+        height: rect.height - pad * 2,
+      };
+      const tileImg = await embedPngIfAny(ctx.pdf, landingSectionBuffers[i]);
+      if (tileImg) {
+        drawImageFit(page, tileImg, innerRect, "cover");
+      } else {
+        drawImagePlaceholder(page, ctx, {
+          ...innerRect,
+          label: "Section image unavailable",
+        });
+      }
+      blueprintY = rect.y - imgGap;
+    }
+
+    drawSectionEyebrow(page, ctx, {
+      x: rightX,
+      y: blueprintY - 6,
+      label: "Primary proof",
+    });
+    let proofY = blueprintY - 32;
+    valueProps.slice(0, 3).forEach((vp) => {
+      proofY =
+        drawLimitedWrappedText(`- ${vp}`, {
+          x: rightX,
+          y: proofY,
+          size: 9,
+          font: ctx.fonts.body,
+          color: ctx.ink,
+          maxWidth: rightW,
+          maxLines: 2,
+          lineGap: 3,
+        }) - 8;
     });
 
     drawRunningFooter(page, ctx, {
@@ -2397,7 +2228,8 @@ async function composeBook(
     });
     const title = sanitizeForBrandBook(ctx.spec.brandName || "Brand");
     const titleSize = 68;
-    const titleLines = wrapText(title, ctx.fonts.display, titleSize, CONTENT_W);
+    const titleMaxW = CONTENT_W * 0.52;
+    const titleLines = wrapText(title, ctx.fonts.display, titleSize, titleMaxW);
     let yy = PAGE_H / 2 + titleLines.length * titleSize * 0.55;
     for (const line of titleLines) {
       pg.drawText(line, {
@@ -2409,6 +2241,66 @@ async function composeBook(
       });
       yy -= titleSize;
     }
+
+    const ctaLabel = "BOOK A CALL";
+    const ctaSize = 11;
+    const ctaPadX = 22;
+    const ctaPadY = 13;
+    const ctaTextW = ctx.fonts.body.widthOfTextAtSize(ctaLabel, ctaSize);
+    const btnW = ctaTextW + ctaPadX * 2;
+    const btnH = ctaSize + ctaPadY * 2;
+    const btnX = PAGE_W - SAFE_MARGIN - btnW;
+    const btnY = PAGE_H / 2 - btnH / 2;
+    pg.drawRectangle({
+      x: btnX,
+      y: btnY,
+      width: btnW,
+      height: btnH,
+      borderColor: rgbColor(fg),
+      borderWidth: 1,
+    });
+    pg.drawText(ctaLabel, {
+      x: btnX + ctaPadX,
+      y: btnY + ctaPadY + 2,
+      size: ctaSize,
+      font: ctx.fonts.body,
+      color: rgbColor(fg),
+    });
+    addUriLinkAnnotation(pg, { x: btnX, y: btnY, width: btnW, height: btnH }, ZENPHO_BOOKING_URL);
+
+    const contactSize = 9;
+    const contactGap = 15;
+    let contactY = btnY - 36;
+    const emailW = ctx.fonts.body.widthOfTextAtSize(ZENPHO_CONTACT_EMAIL, contactSize);
+    const emailX = PAGE_W - SAFE_MARGIN - emailW;
+    pg.drawText(ZENPHO_CONTACT_EMAIL, {
+      x: emailX,
+      y: contactY,
+      size: contactSize,
+      font: ctx.fonts.body,
+      color: rgbColor(fg),
+    });
+    addUriLinkAnnotation(
+      pg,
+      { x: emailX, y: contactY - 2, width: emailW, height: contactSize + 6 },
+      `mailto:${ZENPHO_CONTACT_EMAIL}`,
+    );
+    contactY -= contactGap;
+    const phoneW = ctx.fonts.body.widthOfTextAtSize(ZENPHO_PHONE_DISPLAY, contactSize);
+    const phoneX = PAGE_W - SAFE_MARGIN - phoneW;
+    pg.drawText(ZENPHO_PHONE_DISPLAY, {
+      x: phoneX,
+      y: contactY,
+      size: contactSize,
+      font: ctx.fonts.body,
+      color: rgbColor(fg),
+    });
+    addUriLinkAnnotation(
+      pg,
+      { x: phoneX, y: contactY - 2, width: phoneW, height: contactSize + 6 },
+      ZENPHO_PHONE_TEL_HREF,
+    );
+
     const date = new Date().toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",

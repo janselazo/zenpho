@@ -86,7 +86,7 @@ export default function BrandingKitHeroSearch({
           <h1 className="heading-display text-5xl font-black tracking-tight text-text-primary sm:text-6xl lg:text-7xl">
             <span className="block text-pretty leading-[1.02]">Shape Your Brand &amp;</span>
             <span className="mt-0.5 block text-pretty leading-[1.02] sm:mt-1">
-              Sales <span className="text-accent">Funnel</span>
+              Sales <span className="text-emerald-700 dark:text-emerald-400">Funnel</span>
             </span>
           </h1>
           <p className="mx-auto mt-6 max-w-3xl text-lg leading-8 text-text-secondary sm:text-xl">
@@ -150,7 +150,12 @@ export default function BrandingKitHeroSearch({
               </div>
             ) : null}
           </label>
-          <Button type="submit" size="lg" disabled={searching} className="h-full whitespace-nowrap">
+          <Button
+            type="submit"
+            size="lg"
+            disabled={searching}
+            className="h-full whitespace-nowrap !border-transparent !bg-emerald-600 !text-white hover:!bg-emerald-700 hover:!shadow-md"
+          >
             {searching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
             Build brand kit
           </Button>

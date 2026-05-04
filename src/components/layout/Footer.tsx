@@ -3,8 +3,9 @@
 import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Github, Linkedin, Mail } from "lucide-react";
+import { Github, Linkedin, Mail, Phone } from "lucide-react";
 import { marketingFooterColumns } from "@/lib/marketing-nav";
+import { ZENPHO_CONTACT_EMAIL, ZENPHO_PHONE_DISPLAY, ZENPHO_PHONE_TEL_HREF } from "@/lib/zenpho-contact";
 import Button from "@/components/ui/Button";
 
 function SocialIconLink({
@@ -73,8 +74,14 @@ export default function Footer() {
               </Button>
             </div>
             <div className="mt-5 flex flex-wrap items-center gap-2">
-              <SocialIconLink href="mailto:hello@zenpho.com" ariaLabel="Email hello@zenpho.com">
+              <SocialIconLink href={`mailto:${ZENPHO_CONTACT_EMAIL}`} ariaLabel={`Email ${ZENPHO_CONTACT_EMAIL}`}>
                 <Mail className="h-4 w-4" strokeWidth={2} aria-hidden />
+              </SocialIconLink>
+              <SocialIconLink
+                href={ZENPHO_PHONE_TEL_HREF}
+                ariaLabel={`Call Zenpho at ${ZENPHO_PHONE_DISPLAY}`}
+              >
+                <Phone className="h-4 w-4" strokeWidth={2} aria-hidden />
               </SocialIconLink>
               <SocialIconLink href="https://x.com/zenpho" ariaLabel="Zenpho on X" external>
                 <IconX className="h-[15px] w-[15px]" />

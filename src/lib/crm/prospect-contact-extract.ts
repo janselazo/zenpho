@@ -162,6 +162,42 @@ function decodeBasicHtmlEntities(raw: string): string {
     .replace(/&nbsp;|&#0*160;|&#x0*a0;/gi, " ");
 }
 
+/** Zero-width / invisible characters that break `\b` word-boundary email matching in raw HTML. */
+function stripInvisibleUiText(s: string): string {
+  return s.replace(/[\u200B-\u200D\uFEFF\u2060]/g, "");
+}
+
+/**
+ * Second-pass email discovery: approximate visible text (footer, etc.) so we still find addresses
+ * when raw-markup regex misses (no-break joins, unusual tag soup, builders like Wix).
+ */
+function extractEmailsFromHtmlPlainText(html: string): string[] {
+  const stripped = html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ");
+  const withBreaks = stripped
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<\/div>/gi, "\n")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<[^>]+>/g, " ");
+  const decoded = stripInvisibleUiText(decodeBasicHtmlEntities(withBreaks));
+  const normalized = decoded.replace(/\s+/g, " ").trim();
+  if (!normalized) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const m of normalized.matchAll(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi)) {
+    const e = m[0];
+    if (isJunkEmail(e)) continue;
+    const low = e.toLowerCase();
+    if (seen.has(low)) continue;
+    seen.add(low);
+    out.push(low);
+  }
+  return out;
+}
+
 export function extractPublicContactHints(html: string): {
   emails: string[];
   phones: string[];
@@ -171,7 +207,7 @@ export function extractPublicContactHints(html: string): {
   const phones = new Set<string>();
   let founderName: string | null = null;
 
-  const decodedHtml = decodeBasicHtmlEntities(html);
+  const decodedHtml = stripInvisibleUiText(decodeBasicHtmlEntities(html));
 
   for (const m of decodedHtml.matchAll(/mailto:([^\s'"<>]+)/gi)) {
     const addr = decodeURIComponent(m[1].split("?")[0]).trim();
@@ -180,6 +216,10 @@ export function extractPublicContactHints(html: string): {
   for (const m of decodedHtml.matchAll(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi)) {
     const e = m[0];
     if (!isJunkEmail(e)) emails.add(e.toLowerCase());
+  }
+
+  for (const e of extractEmailsFromHtmlPlainText(html)) {
+    if (!isJunkEmail(e)) emails.add(e);
   }
 
   for (const cf of extractCfEmails(html)) {

@@ -18,6 +18,7 @@ import type {
   MergedWebsiteContacts,
   OutscraperPlaceRow,
 } from "@/lib/crm/prospect-enrichment-types";
+import { rankEmailsUnique } from "@/lib/crm/prospect-contact-extract";
 import ProspectIntelBusinessSnapshot from "@/components/crm/prospecting/ProspectIntelBusinessSnapshot";
 
 export type ProspectWebsiteDeepStatus = {
@@ -171,16 +172,21 @@ export default function ProspectIntelEnrichment({
       setDeepLoading(false);
       const cb = websiteEmailsCbRef.current;
       if (r.ok) {
-        setDeep(r.contacts);
-        cb?.(r.contacts.emailsRanked);
+        const mergedRanked = rankEmailsUnique([
+          ...r.contacts.emailsRanked,
+          ...(homepageContacts?.emailsRanked ?? []),
+        ]);
+        const mergedContacts = { ...r.contacts, emailsRanked: mergedRanked };
+        setDeep(mergedContacts);
+        cb?.(mergedRanked);
         websiteDeepStatusCbRef.current?.({
           loading: false,
-          contacts: r.contacts,
+          contacts: mergedContacts,
           error: null,
         });
-        const first = r.contacts.emailsRanked[0];
+        const first = mergedRanked[0];
         if (first) pickEmailRef.current?.(first);
-        const ph = r.contacts.phones[0];
+        const ph = mergedContacts.phones[0];
         if (ph) pickPhoneRef.current?.(ph);
       } else {
         setDeep(homepageContacts);

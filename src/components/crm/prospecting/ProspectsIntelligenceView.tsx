@@ -38,6 +38,7 @@ import ProspectPreviewOutreachBlock, {
   type ProspectStitchContext,
 } from "@/components/crm/prospecting/ProspectPreviewOutreachBlock";
 import { useRouter, useSearchParams } from "next/navigation";
+import { rankEmailsUnique } from "@/lib/crm/prospect-contact-extract";
 import { primaryPlaceTypeLabel } from "@/lib/crm/places-search-ui";
 import {
   Building2,
@@ -1457,15 +1458,20 @@ function ProspectsIntelligenceViewInner({
       const r = await enrichWebsiteContactsDeepAction(websiteUrl);
       if (cancelled) return;
       if (r.ok) {
+        const mergedRanked = rankEmailsUnique([
+          ...r.contacts.emailsRanked,
+          ...(homepageContacts?.emailsRanked ?? []),
+        ]);
+        const mergedContacts = { ...r.contacts, emailsRanked: mergedRanked };
         setWebsiteDeepStatus({
           loading: false,
-          contacts: r.contacts,
+          contacts: mergedContacts,
           error: null,
         });
-        setWebsiteCrawlEmails(r.contacts.emailsRanked);
-        const first = r.contacts.emailsRanked[0];
+        setWebsiteCrawlEmails(mergedRanked);
+        const first = mergedRanked[0];
         if (first) applyPickedEmail(first);
-        const ph = r.contacts.phones[0];
+        const ph = mergedContacts.phones[0];
         if (ph) setLeadPhone((cur) => cur.trim() || ph);
       } else {
         setWebsiteDeepStatus({

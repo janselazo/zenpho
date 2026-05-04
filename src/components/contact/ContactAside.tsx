@@ -1,3 +1,5 @@
+import { ZENPHO_CONTACT_EMAIL, ZENPHO_PHONE_DISPLAY, ZENPHO_PHONE_TEL_HREF } from "@/lib/zenpho-contact";
+
 export default function ContactAside() {
   return (
     <aside className="lg:pt-4">
@@ -17,10 +19,22 @@ export default function ContactAside() {
               Email
             </h4>
             <a
-              href="mailto:hello@zenpho.com"
+              href={`mailto:${ZENPHO_CONTACT_EMAIL}`}
               className="mt-1.5 inline-block text-sm font-semibold text-text-primary transition-colors hover:text-accent"
             >
-              hello@zenpho.com
+              {ZENPHO_CONTACT_EMAIL}
+            </a>
+          </div>
+
+          <div>
+            <h4 className="font-mono text-[10px] font-bold uppercase tracking-widest text-text-secondary">
+              Phone
+            </h4>
+            <a
+              href={ZENPHO_PHONE_TEL_HREF}
+              className="mt-1.5 inline-block text-sm font-semibold text-text-primary transition-colors hover:text-accent"
+            >
+              {ZENPHO_PHONE_DISPLAY}
             </a>
           </div>
 

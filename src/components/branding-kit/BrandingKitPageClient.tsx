@@ -103,11 +103,13 @@ function GeneratingScreen({
     <section className="px-4 pt-6 pb-16 sm:px-6 sm:pt-8 sm:pb-20 lg:px-8">
       <div className="mx-auto max-w-3xl rounded-[2rem] border border-border bg-white p-8 shadow-soft-lg dark:border-zinc-700 dark:bg-zinc-900">
         <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-accent text-white">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white dark:bg-emerald-600">
             <BrandAnalyzingRing progress={ringProgress} secondsLeft={secondsLeft} />
           </div>
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Building brand kit</p>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-400">
+              Building brand kit
+            </p>
             <h2 className="text-2xl font-black text-text-primary dark:text-white">
               {progressSteps[headlineIndex]}
             </h2>
@@ -120,7 +122,7 @@ function GeneratingScreen({
             const indicatorClass = isDone
               ? "border-emerald-600 bg-emerald-600 dark:border-emerald-500 dark:bg-emerald-600"
               : isActive
-                ? "border-accent bg-accent text-white"
+                ? "border-emerald-600 bg-emerald-600 text-white dark:border-emerald-500 dark:bg-emerald-600"
                 : "border-border bg-surface text-text-secondary";
             return (
               <div key={label} className="flex items-center gap-3">
@@ -391,7 +393,7 @@ export default function BrandingKitPageClient() {
 
       {stage === "kit" ? (
         <section className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <div className="rounded-[1.75rem] border border-accent/35 bg-white p-6 shadow-soft-lg dark:border-accent/25 dark:bg-zinc-900">
+          <div className="rounded-[1.75rem] border border-emerald-600/35 bg-white p-6 shadow-soft-lg dark:border-emerald-400/25 dark:bg-zinc-900">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-bold uppercase tracking-widest text-text-secondary dark:text-zinc-400">
@@ -410,7 +412,7 @@ export default function BrandingKitPageClient() {
               <Button
                 type="button"
                 size="lg"
-                className="w-full justify-center sm:w-auto"
+                className="w-full justify-center !border-transparent !bg-emerald-600 !text-white hover:!bg-emerald-700 hover:!shadow-md sm:w-auto"
                 disabled={busy || !selected}
                 onClick={() => selected && void runPdfGeneration(selected)}
               >
@@ -448,7 +450,12 @@ export default function BrandingKitPageClient() {
               <p className="text-center text-sm text-text-secondary">
                 <Download className="mr-1 inline-block h-4 w-4 align-middle" aria-hidden />
                 Prefer a standalone viewer?{" "}
-                <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-accent underline">
+                <a
+                  href={pdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-emerald-700 underline dark:text-emerald-400"
+                >
                   Open PDF in new tab
                 </a>
               </p>
@@ -459,7 +466,7 @@ export default function BrandingKitPageClient() {
             <button
               type="button"
               onClick={restart}
-              className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-5 py-3 text-sm font-bold text-text-primary shadow-sm hover:border-accent/30 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:hover:border-accent/40"
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-5 py-3 text-sm font-bold text-text-primary shadow-sm hover:border-emerald-600/35 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:hover:border-emerald-400/40"
             >
               <RotateCcw className="h-4 w-4" />
               Start another business
