@@ -301,6 +301,9 @@ export async function updateLeadRow(formData: FormData) {
   const branding_document_url = String(
     formData.get("branding_document_url") ?? ""
   ).trim();
+  const revenue_leak_audit_url = String(
+    formData.get("revenue_leak_audit_url") ?? ""
+  ).trim();
   const google_business_category = String(
     formData.get("google_business_category") ?? ""
   ).trim();
@@ -374,6 +377,9 @@ export async function updateLeadRow(formData: FormData) {
   }
   if (formData.has("branding_document_url")) {
     leadUpdate.branding_document_url = branding_document_url || null;
+  }
+  if (formData.has("revenue_leak_audit_url")) {
+    leadUpdate.revenue_leak_audit_url = revenue_leak_audit_url || null;
   }
   if (formData.has("google_business_category")) {
     leadUpdate.google_business_category = google_business_category || null;

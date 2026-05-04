@@ -131,10 +131,17 @@ export const pricingComparisonSections: PricingComparisonSection[] = [
     heading: "Grow",
     rows: [
       {
-        id: "gr-ads",
-        label: "Google & Meta ads management",
+        id: "gr-google-ads",
+        label: "Google Ads Management",
         tooltip:
-          "Always-on campaign builds, testing, and budget stewardship across Search and Social placements.",
+          "Always-on Google Ads campaign builds, testing, and budget stewardship across Search and related placements.",
+        cells: { ...growScale },
+      },
+      {
+        id: "gr-meta-ads",
+        label: "Meta Ads Management",
+        tooltip:
+          "Always-on Meta campaign builds, testing, and budget stewardship across Feed, Stories, and partner placements.",
         cells: { ...growScale },
       },
       {
@@ -183,6 +190,20 @@ export const pricingComparisonSections: PricingComparisonSection[] = [
         label: "Advanced paid acquisition (LSA, YouTube/video, multi-offer testing)",
         tooltip:
           "Layered programs across additional networks with structured testing matrices for offers and audiences.",
+        cells: { ...scaleOnlyCells },
+      },
+      {
+        id: "sc-tiktok-ads",
+        label: "TikTok Ads Management",
+        tooltip:
+          "TikTok campaign structure, creative testing, and budget stewardship aligned to your offers and local or national targets.",
+        cells: { ...scaleOnlyCells },
+      },
+      {
+        id: "sc-bing-ads",
+        label: "Bing Ads Management",
+        tooltip:
+          "Microsoft Advertising (Bing) search and audience campaigns with ongoing optimization alongside your Google program.",
         cells: { ...scaleOnlyCells },
       },
       {

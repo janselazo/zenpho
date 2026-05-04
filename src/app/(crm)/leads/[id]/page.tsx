@@ -24,7 +24,7 @@ export default async function LeadDetailPage({ params }: Props) {
   const { data: lead, error } = await supabase
     .from("lead")
     .select(
-      "id, name, email, company, phone, website, facebook, instagram, google_business_category, google_place_types, source, stage, notes, project_type, contact_category, created_at, converted_client_id, prospect_preview_id, branding_funnel_pdf_path, branding_funnel_pdf_created_at, branding_document_url"
+      "id, name, email, company, phone, website, facebook, instagram, google_business_category, google_place_types, source, stage, notes, project_type, contact_category, created_at, converted_client_id, prospect_preview_id, branding_funnel_pdf_path, branding_funnel_pdf_created_at, branding_document_url, revenue_leak_audit_url"
     )
     .eq("id", id)
     .maybeSingle();

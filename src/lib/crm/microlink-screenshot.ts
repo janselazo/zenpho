@@ -39,6 +39,16 @@ export async function fetchMicrolinkScreenshotUrl(
     screenshot: "true",
     meta: "false",
   });
+  const delayRaw = process.env.MICROLINK_SCREENSHOT_DELAY_MS?.trim();
+  if (delayRaw && /^\d+$/.test(delayRaw)) {
+    const n = Number(delayRaw);
+    if (n > 0 && n <= 30_000) {
+      params.set("screenshot.delay", String(n));
+    }
+  } else if (!apiKey) {
+    // Free-tier captures often need extra time for consent banners and client-rendered hero content.
+    params.set("screenshot.delay", "1000");
+  }
   const hideOverlays =
     process.env.MICROLINK_SCREENSHOT_HIDE_OVERLAYS?.trim().toLowerCase() !== "false";
   if (hideOverlays) {

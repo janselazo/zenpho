@@ -162,6 +162,7 @@ type Lead = {
   branding_funnel_pdf_path?: string | null;
   branding_funnel_pdf_created_at?: string | null;
   branding_document_url?: string | null;
+  revenue_leak_audit_url?: string | null;
 };
 
 export type ClientProjectRow = {
@@ -691,15 +692,26 @@ export default function LeadEditForm({
                     />
                   </FieldRow>
                   <FieldRow icon={SearchCheck} label="Revenue leaks audit">
-                    <Link
-                      href="/audit"
-                      className="inline-flex w-fit items-center rounded-lg border border-blue-500/35 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 hover:bg-blue-500/[0.14] dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200 dark:hover:bg-blue-500/20"
-                    >
-                      Open revenue leak audit
-                    </Link>
-                    <p className="mt-1.5 text-[11px] text-zinc-400 dark:text-zinc-500">
-                      Same experience as Marketing → Audit in the sidebar.
-                    </p>
+                    <input
+                      name="revenue_leak_audit_url"
+                      type="url"
+                      inputMode="url"
+                      defaultValue={lead.revenue_leak_audit_url?.trim() ?? ""}
+                      className={inputClass}
+                      placeholder="https://…"
+                      autoComplete="off"
+                    />
+                    {(lead.revenue_leak_audit_url ?? "").trim() ? (
+                      <a
+                        href={(lead.revenue_leak_audit_url ?? "").trim()}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                        Open saved link
+                      </a>
+                    ) : null}
                   </FieldRow>
                   <FieldRow icon={FileText} label="Branding document">
                     <div className="min-w-0 flex-1 space-y-3">
@@ -724,11 +736,7 @@ export default function LeadEditForm({
                             Open PDF
                           </a>
                         </div>
-                      ) : (
-                        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                          No in-app generated PDF on this lead yet.
-                        </p>
-                      )}
+                      ) : null}
                       <div>
                         <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
                           External document link
@@ -742,10 +750,6 @@ export default function LeadEditForm({
                           placeholder="https://…"
                           autoComplete="off"
                         />
-                        <p className="mt-1.5 text-[11px] text-zinc-400 dark:text-zinc-500">
-                          Paste a link to a brand deck or PDF (Google Drive, Dropbox, etc.). Saves with{" "}
-                          <span className="font-medium text-zinc-500 dark:text-zinc-400">Save changes</span>.
-                        </p>
                         {(lead.branding_document_url ?? "").trim() ? (
                           <a
                             href={(lead.branding_document_url ?? "").trim()}

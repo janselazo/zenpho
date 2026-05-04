@@ -392,16 +392,7 @@ export async function createLeadFromPlacesListingAction(
     normalized.nationalPhoneNumber?.trim() ||
     normalized.internationalPhoneNumber?.trim() ||
     "";
-  const contactLines: string[] = [];
-  if (listingPhone) contactLines.push(`Google listing phone: ${listingPhone}`);
-  const maps = normalized.googleMapsUri?.trim();
-  if (maps) contactLines.push(`Google Maps: ${maps}`);
-  const extra = [normalized.formattedAddress, normalized.websiteUri].filter(Boolean).join("\n");
-  const notes = formatReportAsPlainNotes(
-    report,
-    extra || undefined,
-    contactLines.join("\n") || undefined
-  );
+  const notes = formatReportAsPlainNotes(report);
 
   return createLeadFromProspectIntelAction({
     name: normalized.name.trim() || "Unknown",

@@ -218,21 +218,17 @@ type OutreachLocale = "en" | "es";
 const OUTREACH_PREVIEW_SUBJECT_EN = "Quick preview for {{businessName}}";
 const OUTREACH_PREVIEW_SUBJECT_ES = "Preview rápido para {{businessName}}";
 
-const OUTREACH_PREVIEW_BODY_EN = `Hi {{businessName}},
-
-Congrats on what you're building — the reviews and service really show. Here's a preview so you can see a direction for your online presence:
+const OUTREACH_PREVIEW_BODY_EN = `Hi {{businessName}}, we love what you're building. Here's a quick preview for your online presence:
 
 {{previewUrl}}
 
-We're a Miami-based team with very competitive pricing. If it's helpful, let's schedule a quick chat (about 15 minutes), no pressure — happy to walk you through options.`;
+We're Miami-based with competitive pricing and happy to book a short intro call if that helps.`;
 
-const OUTREACH_PREVIEW_BODY_ES = `Hola {{businessName}},
-
-Felicitaciones por su negocio — se notan las buenas reseñas y el servicio. Les comparto un preview para que vean una propuesta de presencia online:
+const OUTREACH_PREVIEW_BODY_ES = `Hola {{businessName}}, nos gusta lo que están construyendo. Les comparto un preview para su presencia online:
 
 {{previewUrl}}
 
-Somos un equipo con base en Miami y precios muy competitivos. Si les hace sentido, coordinemos una charla rápida (unos 15 minutos) sin compromiso y les explico opciones.`;
+Somos un equipo en Miami con precios competitivos y con gusto agendamos una intro breve si les sirve.`;
 
 function previewStitchOfferTemplates(locale: OutreachLocale): ShareTemplates {
   const body = locale === "es" ? OUTREACH_PREVIEW_BODY_ES : OUTREACH_PREVIEW_BODY_EN;

@@ -33,23 +33,32 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Invalid or blocked URL" }, { status: 400 });
   }
 
-  const remote = await fetchMicrolinkScreenshotUrl(normalized);
-  if (!remote) {
+  const fetchRemoteImage = async (remoteUrl: string): Promise<Response | null> => {
+    try {
+      const imgRes = await fetch(remoteUrl, { signal: AbortSignal.timeout(45_000) });
+      return imgRes.ok ? imgRes : null;
+    } catch {
+      return null;
+    }
+  };
+
+  let remote = await fetchMicrolinkScreenshotUrl(normalized);
+  let imgRes = remote ? await fetchRemoteImage(remote) : null;
+
+  if (!imgRes) {
+    await new Promise((r) => setTimeout(r, 500));
+    remote = (await fetchMicrolinkScreenshotUrl(normalized)) ?? remote;
+    imgRes = remote ? await fetchRemoteImage(remote) : null;
+  }
+
+  if (!imgRes) {
     return NextResponse.json(
-      { error: "Screenshot unavailable (Microlink). Set MICROLINK_API_KEY for higher limits." },
-      { status: 502 }
+      {
+        error:
+          "Screenshot unavailable (Microlink). Set MICROLINK_API_KEY for higher success rates, or MICROLINK_SCREENSHOT_DELAY_MS if pages need more time to render.",
+      },
+      { status: 502 },
     );
-  }
-
-  let imgRes: Response;
-  try {
-    imgRes = await fetch(remote, { signal: AbortSignal.timeout(45_000) });
-  } catch {
-    return NextResponse.json({ error: "Image fetch failed" }, { status: 502 });
-  }
-
-  if (!imgRes.ok) {
-    return NextResponse.json({ error: "Image fetch failed" }, { status: 502 });
   }
 
   const buf = await imgRes.arrayBuffer();

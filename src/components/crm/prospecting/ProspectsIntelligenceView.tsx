@@ -329,27 +329,106 @@ function phonesMatchListing(listing: string | null | undefined, candidate: strin
 }
 
 function WebsiteScanLiveSnapshot({ siteUrl }: { siteUrl: string }) {
-  const [failed, setFailed] = useState(false);
-  const src = `/api/prospecting/website-snapshot?url=${encodeURIComponent(siteUrl)}`;
+  const [phase, setPhase] = useState<"loading" | "ready" | "error">("loading");
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
+
+  const openSiteHref = useMemo(() => {
+    const t = siteUrl.trim();
+    if (!t) return "#";
+    return /^https?:\/\//i.test(t) ? t : `https://${t}`;
+  }, [siteUrl]);
+
+  useEffect(() => {
+    let alive = true;
+    const ac = new AbortController();
+    let created: string | null = null;
+    setPhase("loading");
+    setObjectUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+
+    const reqUrl = `/api/prospecting/website-snapshot?url=${encodeURIComponent(siteUrl)}`;
+
+    const run = async () => {
+      const takeSnapshot = async () => {
+        const res = await fetch(reqUrl, { signal: ac.signal, credentials: "same-origin" });
+        if (!res.ok) throw new Error(`snapshot-${res.status}`);
+        const blob = await res.blob();
+        if (!blob.type.startsWith("image/")) throw new Error("not-image");
+        return blob;
+      };
+
+      try {
+        let blob: Blob;
+        try {
+          blob = await takeSnapshot();
+        } catch (firstErr: unknown) {
+          if (!alive) return;
+          if (firstErr instanceof DOMException && firstErr.name === "AbortError") return;
+          await new Promise((r) => setTimeout(r, 1000));
+          if (!alive) return;
+          blob = await takeSnapshot();
+        }
+        if (!alive) return;
+        const url = URL.createObjectURL(blob);
+        if (!alive) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+        created = url;
+        setObjectUrl(url);
+        setPhase("ready");
+      } catch (err: unknown) {
+        if (!alive) return;
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        setPhase("error");
+      }
+    };
+
+    void run();
+
+    return () => {
+      alive = false;
+      ac.abort();
+      if (created) URL.revokeObjectURL(created);
+    };
+  }, [siteUrl]);
+
   return (
     <div className="mt-3">
       <p className="text-[10px] font-medium uppercase tracking-wide text-text-secondary/60 dark:text-zinc-500">
         Live page snapshot
       </p>
-      {failed ? (
-        <p className="mt-2 text-[11px] text-text-secondary dark:text-zinc-500">
-          Website preview unavailable — the page may be blocking automated screenshots.
+      {phase === "loading" ? (
+        <p className="mt-2 text-[11px] text-text-secondary dark:text-zinc-500" aria-live="polite">
+          Loading preview…
         </p>
-      ) : (
-        // eslint-disable-next-line @next/next/no-img-element -- proxied Microlink screenshot
+      ) : null}
+      {phase === "error" ? (
+        <div className="mt-2 space-y-1.5">
+          <p className="text-[11px] text-text-secondary dark:text-zinc-500">
+            Website preview unavailable — the page may be blocking automated screenshots.
+          </p>
+          <a
+            href={openSiteHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex text-[11px] font-medium text-blue-600 hover:underline dark:text-blue-400"
+          >
+            Open site in new tab
+          </a>
+        </div>
+      ) : null}
+      {phase === "ready" && objectUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- blob URL from same-origin snapshot API
         <img
-          src={src}
+          src={objectUrl}
           alt={`Screenshot of ${siteUrl}`}
           className="mt-2 max-h-44 w-full max-w-md rounded-lg border border-border bg-zinc-100 object-cover object-top dark:border-zinc-700 dark:bg-zinc-900"
           loading="lazy"
-          onError={() => setFailed(true)}
         />
-      )}
+      ) : null}
     </div>
   );
 }
@@ -1199,14 +1278,7 @@ function ProspectsIntelligenceViewInner({
       setLeadInstagram("");
       setLeadGoogleBusinessCategory(primaryPlaceTypeLabel(place.types));
       setLeadGooglePlaceTypesJson(JSON.stringify(place.types ?? []));
-      const extra = [place.formattedAddress, place.websiteUri].filter(Boolean).join("\n");
-      const contactLines: string[] = [];
-      if (listingPhone) contactLines.push(`Google listing phone: ${listingPhone}`);
-      const maps = place.googleMapsUri?.trim();
-      if (maps) contactLines.push(`Google Maps: ${maps}`);
-      setLeadNotes(
-        formatReportAsPlainNotes(report, extra || undefined, contactLines.join("\n") || undefined)
-      );
+      setLeadNotes(formatReportAsPlainNotes(report));
     },
     []
   );
@@ -1481,17 +1553,7 @@ function ProspectsIntelligenceViewInner({
       setLeadName(result.pageTitle?.slice(0, 120) || domain);
       setLeadCompany(domain);
       const h = result.homepageContactHints;
-      const contactLines: string[] = [];
-      if (h.founderName) contactLines.push(`Name hint (homepage): ${h.founderName}`);
-      if (h.emails.length) contactLines.push(`Emails (homepage): ${h.emails.join(", ")}`);
-      if (h.phones.length) contactLines.push(`Phones (homepage): ${h.phones.join(", ")}`);
-      setLeadNotes(
-        formatReportAsPlainNotes(
-          result.report,
-          result.url,
-          contactLines.join("\n") || undefined
-        )
-      );
+      setLeadNotes(formatReportAsPlainNotes(result.report));
       setLeadEmail(firstUsableContactEmailInOrder(h.emails) ?? "");
       setLeadPhone(h.phones[0] ?? "");
       setLeadFacebook(h.socialUrls.facebook ?? "");
