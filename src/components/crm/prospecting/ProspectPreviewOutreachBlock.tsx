@@ -213,51 +213,68 @@ type ShareTemplates = {
   facebookBody: string;
 };
 
-function defaultShareTemplatesForOffer(offer: SelectedOffer): ShareTemplates {
+type OutreachLocale = "en" | "es";
+
+const OUTREACH_PREVIEW_SUBJECT_EN = "Quick preview for {{businessName}}";
+const OUTREACH_PREVIEW_SUBJECT_ES = "Preview rápido para {{businessName}}";
+
+const OUTREACH_PREVIEW_BODY_EN = `Hi {{businessName}},
+
+Congrats on what you're building — the reviews and service really show. Here's a preview so you can see a direction for your online presence:
+
+{{previewUrl}}
+
+We're a Miami-based team with very competitive pricing. If it's helpful, let's schedule a quick chat (about 15 minutes), no pressure — happy to walk you through options.`;
+
+const OUTREACH_PREVIEW_BODY_ES = `Hola {{businessName}},
+
+Felicitaciones por su negocio — se notan las buenas reseñas y el servicio. Les comparto un preview para que vean una propuesta de presencia online:
+
+{{previewUrl}}
+
+Somos un equipo con base en Miami y precios muy competitivos. Si les hace sentido, coordinemos una charla rápida (unos 15 minutos) sin compromiso y les explico opciones.`;
+
+function previewStitchOfferTemplates(locale: OutreachLocale): ShareTemplates {
+  const body = locale === "es" ? OUTREACH_PREVIEW_BODY_ES : OUTREACH_PREVIEW_BODY_EN;
+  const subject = locale === "es" ? OUTREACH_PREVIEW_SUBJECT_ES : OUTREACH_PREVIEW_SUBJECT_EN;
+  const dmSuffix = "\n\n— {{yourName}}";
+  const emailSignOff =
+    locale === "es" ? "\n\nSaludos,\n{{yourName}}" : "\n\nBest,\n{{yourName}}";
+  return {
+    smsBody: body,
+    emailSubject: subject,
+    emailBody: body + emailSignOff,
+    instagramBody: body + dmSuffix,
+    whatsappBody: body + dmSuffix,
+    facebookBody: body + dmSuffix,
+  };
+}
+
+function defaultShareTemplatesForOffer(
+  offer: SelectedOffer,
+  locale: OutreachLocale,
+): ShareTemplates {
   switch (offer) {
     case "website":
-      return {
-        smsBody:
-          "Hi {{businessName}}, we put together a website upgrade that could help you attract more customers online. Check it out:\n\n{{previewUrl}}\n\nHappy to walk you through it. Hablamos español!",
-        emailSubject: "A website concept we created for {{businessName}}",
-        emailBody:
-          "Hi {{businessName}},\n\nWe created a custom website concept for your business. Modern design, built to convert visitors into customers:\n\n{{previewUrl}}\n\nThis is yours to keep either way. If you'd like to take it live or make changes, we're here to help.\n\nHablamos español también.\n\nBest,\n{{yourName}}",
-        instagramBody:
-          "Hi {{businessName}}! We designed a website concept for your business, check it out:\n\n{{previewUrl}}\n\nLet us know what you think! Hablamos español\n\n{{yourName}}",
-        whatsappBody:
-          "Hi {{businessName}}! We put together a website concept for your business, take a look:\n\n{{previewUrl}}\n\nHappy to walk you through it. Hablamos español!\n\n— {{yourName}}",
-        facebookBody:
-          "Hi {{businessName}}! We designed a website concept for your business, check it out:\n\n{{previewUrl}}\n\nLet us know what you think! Hablamos español\n\n— {{yourName}}",
-      };
     case "webapp":
-      return {
-        smsBody:
-          "Hi {{businessName}}, imagine managing your business from one dashboard. We designed a web app concept just for you:\n\n{{previewUrl}}\n\nReply and we'll walk you through it. Se habla español.",
-        emailSubject: "A web app concept we designed for {{businessName}}",
-        emailBody:
-          "Hi {{businessName}},\n\nWe designed a web app concept that could help you run your business from a single dashboard. Appointments, clients, reports, all in one place:\n\n{{previewUrl}}\n\nIf this looks like something you'd use, we can hop on a quick call to talk about making it real.\n\nHablamos español también.\n\nBest,\n{{yourName}}",
-        instagramBody:
-          "Hi {{businessName}}! We designed a web app concept for your business, check it out:\n\n{{previewUrl}}\n\nLet us know what you think! Hablamos español\n\n{{yourName}}",
-        whatsappBody:
-          "Hi {{businessName}}! We designed a web app concept to run your business from one dashboard:\n\n{{previewUrl}}\n\nHappy to walk you through it. Hablamos español!\n\n— {{yourName}}",
-        facebookBody:
-          "Hi {{businessName}}! We designed a web app concept for your business, check it out:\n\n{{previewUrl}}\n\nLet us know what you think! Hablamos español\n\n— {{yourName}}",
-      };
     case "mobile":
-      return {
-        smsBody:
-          "Hi {{businessName}}, we designed a mobile app concept so your customers can book, browse, and connect with you right from their phone:\n\n{{previewUrl}}\n\nWant a quick walkthrough? Hablamos español!",
-        emailSubject: "A mobile app concept we designed for {{businessName}}",
-        emailBody:
-          "Hi {{businessName}},\n\nWe put together a mobile app preview for your business. Your customers would be able to reach you, book services, and stay connected all from their phone:\n\n{{previewUrl}}\n\nThis is yours to keep. If you want to take it further, let's set up a quick call.\n\nWe also speak Spanish if that's easier.\n\nBest,\n{{yourName}}",
-        instagramBody:
-          "Hi {{businessName}}! We designed a mobile app concept for your business, check it out:\n\n{{previewUrl}}\n\nLet us know what you think! Hablamos español\n\n{{yourName}}",
-        whatsappBody:
-          "Hi {{businessName}}! We designed a mobile app concept so your customers can book and connect from their phone:\n\n{{previewUrl}}\n\nWant a quick walkthrough? Hablamos español!\n\n— {{yourName}}",
-        facebookBody:
-          "Hi {{businessName}}! We designed a mobile app concept for your business, check it out:\n\n{{previewUrl}}\n\nLet us know what you think! Hablamos español\n\n— {{yourName}}",
-      };
+      return previewStitchOfferTemplates(locale);
     case "automations":
+      if (locale === "es") {
+        return {
+          smsBody:
+            "Hola — preparé un borrador de auditoría de IA para {{businessName}}: procesos repetibles, dónde se va tiempo y dinero, y pasos siguientes priorizados (la implementación se cotiza aparte). ¿Prefiere el PDF o una llamada breve para revisarlo?",
+          emailSubject: "Auditoría de IA para {{businessName}}",
+          emailBody:
+            "Hola —\n\nCon base en lo que vimos de {{businessName}}, armamos una auditoría de IA estructurada: mapear procesos repetibles, detectar los mayores costos de tiempo y dinero, y recomendar herramientas y flujos de trabajo. Recibe un plan de acción priorizado; implementar o desplegar sistemas se cotiza aparte si deciden avanzar.\n\nPuedo enviarle el PDF o verlo en una llamada corta.\n\n(Los enlaces de preview alojados son para conceptos de sitio web, web app o móvil. En esta pista, use Generar informe (PDF) en la tarjeta de auditoría de IA.)\n\nSaludos,\n{{yourName}}",
+          instagramBody:
+            "¡Hola! Borrador de auditoría de IA para {{businessName}}: procesos, focos de costo, herramientas/flujos recomendados y plan priorizado (implementación es un paso aparte). ¿Quiere el PDF o una llamada rápida?\n\n— {{yourName}}",
+          whatsappBody:
+            "¡Hola! Borrador de auditoría de IA para {{businessName}}: procesos, focos de costo, herramientas/flujos recomendados y plan priorizado (implementación es un paso aparte). ¿Quiere el PDF o una llamada rápida?\n\n— {{yourName}}",
+          facebookBody:
+            "¡Hola! Borrador de auditoría de IA para {{businessName}}: procesos, focos de costo, herramientas/flujos recomendados y plan priorizado (implementación es un paso aparte). ¿Quiere el PDF o una llamada rápida?\n\n— {{yourName}}",
+        };
+      }
       return {
         smsBody:
           "Hi — we drafted an AI audit for {{businessName}}: repeatable processes, where time/money goes, and prioritized next steps (implementation quoted separately). Want the PDF or a quick call to walk through it?",
@@ -272,6 +289,21 @@ function defaultShareTemplatesForOffer(offer: SelectedOffer): ShareTemplates {
           "Hi! AI audit draft for {{businessName}} — processes, cost hotspots, recommended tools/workflows, and a prioritized plan (implementation is a separate step). Want the PDF or a quick call?\n\n— {{yourName}}",
       };
     case "audit":
+      if (locale === "es") {
+        return {
+          smsBody:
+            "Hola {{businessName}} — preparé una imagen resumen de Revenue Leak Audit: captura de su Perfil de Negocio de Google (puntuación + métricas clave), señales de marca de su sitio, canales de contacto/redes cuando los vemos, $ mensual en riesgo + temas principales. ¿Quiere el PDF completo con cada tema y correcciones?",
+          emailSubject: "Resumen de Revenue Leak Audit para {{businessName}}",
+          emailBody:
+            "Hola {{businessName}},\n\nEjecuté un Revenue Leak Audit de su Perfil de Negocio de Google y sitio web. Adjunto va un resumen para compartir: captura de GBP + paleta/tipografía de marca, iconos de canales de contact cuando el rastreo los encuentra, puntuación del audit, estimado de $ mensual en riesgo y algunos temas principales.\n\nSi quiere el informe completo, puedo enviar el PDF después: posicionamiento local vs competidores, reseñas, conversión web, analíticas/anuncios, fotos/schema/SEO local y un plan de acción priorizado con correcciones sugeridas.\n\nSomos un equipo en Miami con precios muy competitivos; con gusto agendamos una charla rápida si le sirve.\n\nSaludos,\n{{yourName}}",
+          instagramBody:
+            "¡Hola {{businessName}}! Resumen de Revenue Leak Audit adjunto — GBP + marca + instantánea de $ en riesgo. ¿Quiere el PDF completo con todos los temas y correcciones?\n\n— {{yourName}}",
+          whatsappBody:
+            "¡Hola {{businessName}}! Imagen de Revenue Leak Audit — captura GBP, marca, canales que detectamos, $ en riesgo + temas principales. ¿Quiere el PDF completo con correcciones?\n\n— {{yourName}}",
+          facebookBody:
+            "¡Hola {{businessName}}! Imagen de Revenue Leak Audit — GBP + marca + vista de ingresos. Puedo enviar el PDF completo con cada tema y correcciones sugeridas si quiere.\n\n— {{yourName}}",
+        };
+      }
       return {
         smsBody:
           "Hi {{businessName}} — I put together a Revenue Leak Audit share image: your Google Business Profile snapshot (score + key metrics), brand cues from your site, detected contact/social channels when we can see them, monthly $ at risk + top issues. Want the full PDF with every issue and fixes?",
@@ -286,6 +318,21 @@ function defaultShareTemplatesForOffer(offer: SelectedOffer): ShareTemplates {
           "Hi {{businessName}}! Revenue Leak Audit share image — GBP + brand + revenue snapshot. I can send the full PDF with every issue & suggested fixes if you want.\n\n— {{yourName}}",
       };
     case "branding":
+      if (locale === "es") {
+        return {
+          smsBody:
+            "Hola {{businessName}} — preparé una imagen rápida de marca + anuncios: paleta, tipografía, dirección de sitio y creatividades de campaña. Puedo enviar el PDF detallado después si le interesa.",
+          emailSubject: "Brand kit + embudo de anuncios pagados para {{businessName}}",
+          emailBody:
+            "Hola {{businessName}},\n\nPrimero le comparto una imagen rápida de marca + anuncios: paleta, tipografía, dirección de sitio y creatividades para Meta, Instagram y Google.\n\nSi le sirve, puedo enviar después el PDF completo de Brand Kit + embudo de ventas con el brand book, estrategia de landing, textos de anuncios, presupuesto sugerido y KPIs.\n\nSomos un equipo en Miami con precios muy competitivos; coordinemos una charla rápida si quiere.\n\nSaludos,\n{{yourName}}",
+          instagramBody:
+            "¡Hola {{businessName}}! Hice una imagen rápida de marca + anuncios — paleta, dirección de sitio y creatividades FB/IG/Google. Puedo enviar el PDF detallado después si quiere.\n\n— {{yourName}}",
+          whatsappBody:
+            "¡Hola {{businessName}}! Hice una imagen rápida de marca + anuncios — paleta, dirección de sitio y creatividades FB/IG/Google. Puedo enviar el PDF detallado después si quiere.\n\n— {{yourName}}",
+          facebookBody:
+            "¡Hola {{businessName}}! Hice una imagen rápida de marca + anuncios — paleta, dirección de sitio y creatividades FB/IG/Google. Puedo enviar el PDF detallado después si quiere.\n\n— {{yourName}}",
+        };
+      }
       return {
         smsBody:
           "Hi {{businessName}} — I put together a quick brand + ads preview image for you: palette, typography, website direction, and campaign assets. I can send the detailed PDF next if you want.",
@@ -302,14 +349,14 @@ function defaultShareTemplatesForOffer(offer: SelectedOffer): ShareTemplates {
   }
 }
 
-function createInitialShareTemplates(): Record<SelectedOffer, ShareTemplates> {
+function createShareTemplates(locale: OutreachLocale): Record<SelectedOffer, ShareTemplates> {
   return {
-    website: defaultShareTemplatesForOffer("website"),
-    webapp: defaultShareTemplatesForOffer("webapp"),
-    mobile: defaultShareTemplatesForOffer("mobile"),
-    automations: defaultShareTemplatesForOffer("automations"),
-    branding: defaultShareTemplatesForOffer("branding"),
-    audit: defaultShareTemplatesForOffer("audit"),
+    website: defaultShareTemplatesForOffer("website", locale),
+    webapp: defaultShareTemplatesForOffer("webapp", locale),
+    mobile: defaultShareTemplatesForOffer("mobile", locale),
+    automations: defaultShareTemplatesForOffer("automations", locale),
+    branding: defaultShareTemplatesForOffer("branding", locale),
+    audit: defaultShareTemplatesForOffer("audit", locale),
   };
 }
 
@@ -877,7 +924,8 @@ export default function ProspectPreviewOutreachBlock({
   const [instagramTo, setInstagramTo] = useState(contactInstagram);
   const [whatsappTo, setWhatsappTo] = useState(contactWhatsapp || contactPhone);
   const [facebookTo, setFacebookTo] = useState(contactFacebook);
-  const [shareTemplates, setShareTemplates] = useState(createInitialShareTemplates);
+  const [shareTemplates, setShareTemplates] = useState(() => createShareTemplates("en"));
+  const [outreachLocale, setOutreachLocale] = useState<OutreachLocale>("en");
   const [attachPreviewImage, setAttachPreviewImage] = useState(true);
   const [outreachAttachments, setOutreachAttachments] = useState<OutreachAttachment[]>([]);
   const parentVideoBlobRef = useRef<Blob | null>(null);
@@ -1073,7 +1121,8 @@ export default function ProspectPreviewOutreachBlock({
     setStitchWebAppError(null);
     setStitchMobileError(null);
     setSelectedOffer("website");
-    setShareTemplates(createInitialShareTemplates());
+    setOutreachLocale("en");
+    setShareTemplates(createShareTemplates("en"));
     setShareMsg(null);
     setPdfMsg(null);
     setPdfFilename(null);
@@ -2015,15 +2064,6 @@ export default function ProspectPreviewOutreachBlock({
         <h3 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500">
           Design concepts &amp; outreach
         </h3>
-        <p className="mt-1 text-[11px] text-text-secondary dark:text-zinc-500">
-          Select a card to choose which hosted preview you send (after generation). SMS, email, and Instagram copy are
-          saved per
-          card type and update when you switch cards. Use{" "}
-          <span className="font-mono">{"{{previewUrl}}"}</span> and{" "}
-          <span className="font-mono">{"{{businessName}}"}</span> for Website, Web app, and Mobile; email defaults
-          also use <span className="font-mono">{"{{yourName}}"}</span> (from your CRM context when provided).
-          Revenue Leak Audit templates default to a share image summary (GBP + brand + revenue snapshot) first and the full PDF as follow-up.
-        </p>
         {stitchContext ? (
           <p className="mt-3 rounded-lg border border-border/60 bg-white/40 px-2.5 py-2 text-[11px] text-text-secondary dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
             {stitchBrandingSummary(stitchContext)}
@@ -2456,30 +2496,65 @@ export default function ProspectPreviewOutreachBlock({
         </div>
 
         <div className="mt-6 border-t border-border/60 pt-4 dark:border-zinc-700/60">
-          {selectedOffer === "website" ||
-          selectedOffer === "webapp" ||
-          selectedOffer === "mobile" ? (
-            <p className="text-[11px] font-medium text-text-secondary dark:text-zinc-400">
-              Templates for{" "}
-              <span className="text-text-primary dark:text-zinc-200">
-                {selectedOffer === "website"
-                  ? "Website design"
-                  : selectedOffer === "webapp"
-                    ? "Web apps"
-                    : "Mobile app design"}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0 flex-1 text-[11px] font-medium text-text-secondary dark:text-zinc-400">
+              {selectedOffer === "website" ||
+              selectedOffer === "webapp" ||
+              selectedOffer === "mobile" ? (
+                <>
+                  Templates for{" "}
+                  <span className="text-text-primary dark:text-zinc-200">
+                    {selectedOffer === "website"
+                      ? "Website design"
+                      : selectedOffer === "webapp"
+                        ? "Web apps"
+                        : "Mobile app design"}
+                  </span>
+                </>
+              ) : selectedOffer === "automations" ? (
+                <>
+                  Templates for <span className="text-text-primary dark:text-zinc-200">AI audit</span>{" "}
+                  <span className="font-normal text-text-secondary/90 dark:text-zinc-500">
+                    (hosted link send requires Website, Web app, or Mobile)
+                  </span>
+                </>
+              ) : selectedOffer === "audit" ? (
+                <span className="text-text-primary dark:text-zinc-200">Outreach templates</span>
+              ) : (
+                <>
+                  Templates for <span className="text-text-primary dark:text-zinc-200">Brand guidelines</span>{" "}
+                  <span className="font-normal text-text-secondary/90 dark:text-zinc-500">
+                    (generate the share image first to attach it)
+                  </span>
+                </>
+              )}
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={outreachLocale === "es"}
+              aria-label={
+                outreachLocale === "es"
+                  ? "Using Spanish outreach templates. Click to use English."
+                  : "Using English outreach templates. Click to use Spanish."
+              }
+              onClick={() => {
+                const next: OutreachLocale = outreachLocale === "en" ? "es" : "en";
+                setOutreachLocale(next);
+                setShareTemplates(createShareTemplates(next));
+              }}
+              className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide transition-colors ${
+                outreachLocale === "es"
+                  ? "border-blue-500/50 bg-blue-500/15 text-blue-900 dark:border-blue-400/45 dark:bg-blue-500/20 dark:text-blue-100"
+                  : "border-border/80 bg-white/60 text-text-secondary hover:bg-white dark:border-zinc-600 dark:bg-zinc-900/50 dark:text-zinc-400 dark:hover:bg-zinc-800/70"
+              }`}
+            >
+              <span className="text-sm leading-none" aria-hidden>
+                🇪🇸
               </span>
-            </p>
-          ) : selectedOffer === "automations" ? (
-            <p className="text-[11px] font-medium text-text-secondary dark:text-zinc-400">
-              Templates for <span className="text-text-primary dark:text-zinc-200">AI audit</span> (hosted link send
-              requires Website, Web app, or Mobile)
-            </p>
-          ) : selectedOffer === "audit" ? null : (
-            <p className="text-[11px] font-medium text-text-secondary dark:text-zinc-400">
-              Templates for <span className="text-text-primary dark:text-zinc-200">Brand guidelines</span> (generate
-              the share image first to attach it)
-            </p>
-          )}
+              ES
+            </button>
+          </div>
 
           <input
             ref={fileInputRef}

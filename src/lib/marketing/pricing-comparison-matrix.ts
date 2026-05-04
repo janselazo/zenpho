@@ -122,7 +122,7 @@ export const pricingComparisonSections: PricingComparisonSection[] = [
         label: "Monthly site care, social/GBP posts, review monitoring, performance report",
         tooltip:
           "Hosting/maintenance, light content updates, four social posts, two GBP updates, review monitoring, and reporting.",
-        cells: { ...launchOnlyCells },
+        cells: { ...growScale },
       },
     ],
   },
@@ -132,9 +132,16 @@ export const pricingComparisonSections: PricingComparisonSection[] = [
     rows: [
       {
         id: "gr-ads",
-        label: "Google & Meta ads management + retargeting",
+        label: "Google & Meta ads management",
         tooltip:
-          "Always-on campaign builds, testing, and budget stewardship across Search/Social placements with retargeting layers.",
+          "Always-on campaign builds, testing, and budget stewardship across Search and Social placements.",
+        cells: { ...growScale },
+      },
+      {
+        id: "gr-retargeting",
+        label: "Retargeting",
+        tooltip:
+          "Retargeting layers across placements to bring back site visitors and engaged audiences.",
         cells: { ...growScale },
       },
       {

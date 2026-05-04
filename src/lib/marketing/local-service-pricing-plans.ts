@@ -57,7 +57,7 @@ export const localServicePricingPlans: LocalServicePricingPlan[] = [
     title: "Launch",
     planTagline: "Start & Establish",
     priceLead: "$1,500",
-    headerNote: "Zenpho platform included on every tier.",
+    headerNote: "Platform included on every tier.",
     summary: "",
     included: [],
     bestFor: [
