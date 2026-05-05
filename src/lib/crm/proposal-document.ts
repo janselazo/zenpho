@@ -161,12 +161,119 @@ function escapeHtmlAttr(value: string): string {
     .replace(/</g, "&lt;");
 }
 
-function inlineMarkdownToHtml(value: string): string {
-  return escapeHtml(value)
+function applyBoldItalicAfterEscape(escaped: string): string {
+  return escaped
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/__([^_]+)__/g, "<strong>$1</strong>")
     .replace(/\*([^*]+)\*/g, "<em>$1</em>")
     .replace(/_([^_]+)_/g, "<em>$1</em>");
+}
+
+/** Inline markdown: links, bold, italic (link labels are escaped; URLs attribute-escaped). */
+function inlineMarkdownToHtml(value: string): string {
+  const chunks: string[] = [];
+  let pos = 0;
+  const re = /\[([^\]]*)\]\(([^)]+)\)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(value)) !== null) {
+    chunks.push(
+      applyBoldItalicAfterEscape(escapeHtml(value.slice(pos, m.index))),
+    );
+    const label = m[1] ?? "";
+    const href = (m[2] ?? "").trim();
+    chunks.push(
+      `<a href="${escapeHtmlAttr(href)}" target="_blank" rel="noopener noreferrer nofollow">${applyBoldItalicAfterEscape(escapeHtml(label))}</a>`,
+    );
+    pos = m.index + m[0].length;
+  }
+  chunks.push(applyBoldItalicAfterEscape(escapeHtml(value.slice(pos))));
+  return chunks.join("");
+}
+
+function parseMarkdownTableDataRow(line: string): string[] | null {
+  const t = line.trim();
+  if (!t || !t.includes("|")) return null;
+  let s = t;
+  if (s.startsWith("|")) s = s.slice(1);
+  if (s.endsWith("|")) s = s.slice(0, -1);
+  const cells = s.split("|").map((c) => c.trim());
+  return cells.length ? cells : null;
+}
+
+function isMarkdownTableSeparatorRow(line: string): boolean {
+  const cells = parseMarkdownTableDataRow(line);
+  if (!cells || cells.length < 2) return false;
+  return cells.every((c) => /^:?-{2,}:?$/.test(c.trim()));
+}
+
+function tryParseMarkdownTableBlock(
+  lines: string[],
+  start: number,
+): { html: string; end: number } | null {
+  const headerLine = lines[start]?.trim() ?? "";
+  const sepLine = lines[start + 1]?.trim() ?? "";
+  if (!headerLine.startsWith("|") || !isMarkdownTableSeparatorRow(sepLine)) {
+    return null;
+  }
+  const header = parseMarkdownTableDataRow(headerLine);
+  if (!header || header.length < 2) return null;
+
+  const bodyRows: string[][] = [];
+  let i = start + 2;
+  while (i < lines.length) {
+    const trimmed = lines[i]?.trim() ?? "";
+    if (!trimmed) break;
+    if (!trimmed.startsWith("|")) break;
+    const row = parseMarkdownTableDataRow(trimmed);
+    if (!row) break;
+    bodyRows.push(row);
+    i += 1;
+  }
+
+  let html = "<table><thead><tr>";
+  for (const c of header) {
+    html += `<th><p>${inlineMarkdownToHtml(c)}</p></th>`;
+  }
+  html += "</tr></thead><tbody>";
+  for (const row of bodyRows) {
+    html += "<tr>";
+    for (let ci = 0; ci < header.length; ci += 1) {
+      const c = row[ci] ?? "";
+      html += `<td><p>${inlineMarkdownToHtml(c)}</p></td>`;
+    }
+    html += "</tr>";
+  }
+  html += "</tbody></table>";
+  return { html, end: i };
+}
+
+function escapeGfmTableCell(value: string): string {
+  return value.replace(/\|/g, "\\|").replace(/\n+/g, " ").trim();
+}
+
+function tableElementToMarkdown(table: Element): string {
+  const allRows = Array.from(table.querySelectorAll("tr")).map((tr) =>
+    Array.from(tr.querySelectorAll("th, td")).map((cell) =>
+      markdownTextFromElement(cell),
+    ),
+  );
+  if (!allRows.length || !allRows[0]?.length) return "";
+  const colCount = Math.max(...allRows.map((r) => r.length));
+  const padRow = (cells: string[]) => {
+    const next = [...cells];
+    while (next.length < colCount) next.push("");
+    return next.slice(0, colCount);
+  };
+  const header = padRow(allRows[0]);
+  const lines: string[] = [
+    "| " + header.map(escapeGfmTableCell).join(" | ") + " |",
+    "| " + header.map(() => "---").join(" | ") + " |",
+  ];
+  for (let ri = 1; ri < allRows.length; ri += 1) {
+    const row = padRow(allRows[ri]);
+    lines.push("| " + row.map(escapeGfmTableCell).join(" | ") + " |");
+  }
+  return lines.join("\n");
 }
 
 function markdownBodyToEditorHtml(body: string): string {
@@ -180,10 +287,21 @@ function markdownBodyToEditorHtml(body: string): string {
     list = null;
   };
 
-  for (const rawLine of lines) {
+  let idx = 0;
+  while (idx < lines.length) {
+    const rawLine = lines[idx];
     const line = rawLine.trim();
     if (!line) {
       closeList();
+      idx += 1;
+      continue;
+    }
+
+    const tableBlock = tryParseMarkdownTableBlock(lines, idx);
+    if (tableBlock) {
+      closeList();
+      parts.push(tableBlock.html);
+      idx = tableBlock.end;
       continue;
     }
 
@@ -193,6 +311,7 @@ function markdownBodyToEditorHtml(body: string): string {
       const alt = escapeHtmlAttr(imageMd[1] ?? "");
       const src = escapeHtmlAttr(imageMd[2]?.trim() ?? "");
       parts.push(`<p><img src="${src}" alt="${alt}" /></p>`);
+      idx += 1;
       continue;
     }
 
@@ -200,6 +319,7 @@ function markdownBodyToEditorHtml(body: string): string {
     if (subheading) {
       closeList();
       parts.push(`<h3>${inlineMarkdownToHtml(subheading[1] ?? "")}</h3>`);
+      idx += 1;
       continue;
     }
 
@@ -211,6 +331,7 @@ function markdownBodyToEditorHtml(body: string): string {
         list = "ul";
       }
       parts.push(`<li>${inlineMarkdownToHtml(bullet[1] ?? "")}</li>`);
+      idx += 1;
       continue;
     }
 
@@ -222,11 +343,13 @@ function markdownBodyToEditorHtml(body: string): string {
         list = "ol";
       }
       parts.push(`<li>${inlineMarkdownToHtml(numbered[1] ?? "")}</li>`);
+      idx += 1;
       continue;
     }
 
     closeList();
     parts.push(`<p>${inlineMarkdownToHtml(line)}</p>`);
+    idx += 1;
   }
 
   closeList();
@@ -277,6 +400,11 @@ function markdownInlineFromNode(node: Node): string {
   }
   const text = Array.from(element.childNodes).map(markdownInlineFromNode).join("");
   switch (tag) {
+    case "a": {
+      const href = element.getAttribute("href")?.trim() ?? "";
+      if (!href) return text;
+      return `[${text}](${href})`;
+    }
     case "strong":
     case "b":
       return text.trim() ? `**${text}**` : "";
@@ -352,6 +480,19 @@ export function proposalEditorHtmlToMarkdown(
     if (tag === "h2") {
       flush();
       currentTitle = markdownTextFromElement(element) || "Untitled section";
+      continue;
+    }
+
+    if (tag === "div") {
+      const tbl = element.querySelector(":scope > table");
+      if (tbl) {
+        appendBody(tableElementToMarkdown(tbl));
+        continue;
+      }
+    }
+
+    if (tag === "table") {
+      appendBody(tableElementToMarkdown(element));
       continue;
     }
 

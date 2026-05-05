@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
+  Check,
   CheckCircle2,
   Loader2,
   Sparkles,
@@ -17,6 +18,7 @@ import {
 import ProposalActionsBar from "@/components/crm/proposals/ProposalActionsBar";
 import ProposalDocumentCanvas from "@/components/crm/proposals/ProposalDocumentCanvas";
 import type { CrmProductServiceRow } from "@/lib/crm/crm-catalog-types";
+import { catalogListAndEffectivePrice } from "@/lib/crm/crm-catalog-pricing";
 import type { ProposalWizardPartyOption } from "@/lib/crm/fetch-leads-for-proposal-picker";
 import type { SalesProposalDetail } from "@/lib/crm/sales-proposal-types";
 
@@ -33,6 +35,111 @@ const GENERATION_SUBSTEPS = [
   "Weaving enrichment & catalogue facts",
   "Rendering AI illustrations (when enabled)",
 ];
+
+function GenerationProgressPanel({
+  genStage,
+  onCancel,
+  variant = "initial",
+}: {
+  genStage: number;
+  onCancel: () => void;
+  variant?: "initial" | "regenerate";
+}) {
+  const total = GENERATION_SUBSTEPS.length;
+  const safeStage = Math.min(Math.max(genStage, 0), total - 1);
+  const completedCount = safeStage;
+
+  const title =
+    variant === "regenerate" ? "Regenerating proposal" : "Drafting your proposal";
+  const subtitle =
+    variant === "regenerate"
+      ? "Replacing your proposal with a fresh AI draft."
+      : "Let's shape the narrative and visuals for your buyer.";
+
+  return (
+    <div
+      className="relative overflow-hidden rounded-[2rem] border border-zinc-200/90 bg-gradient-to-br from-sky-50/90 via-white to-white p-8 shadow-sm dark:border-zinc-700/80 dark:from-zinc-900/80 dark:via-zinc-900 dark:to-zinc-950 sm:p-10"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div className="relative z-10 max-w-lg">
+        <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-3xl">
+          {title}
+        </h2>
+        <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+          {subtitle}
+        </p>
+
+        <p className="mt-6 inline-flex rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+          {completedCount}/{total} completed
+        </p>
+
+        <ul className="mt-8 space-y-5">
+          {GENERATION_SUBSTEPS.map((label, idx) => {
+            const done = idx < safeStage;
+            const active = idx === safeStage;
+
+            return (
+              <li
+                key={label}
+                className="flex items-start gap-4"
+                aria-current={active ? "step" : undefined}
+              >
+                <span className="mt-0.5 flex shrink-0 items-center justify-center" aria-hidden>
+                  {done ? (
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 dark:bg-zinc-100">
+                      <Check
+                        className="h-4 w-4 text-white dark:text-zinc-900"
+                        strokeWidth={2.5}
+                        aria-hidden
+                      />
+                    </span>
+                  ) : (
+                    <span
+                      className={`flex h-8 w-8 rounded-full border-2 border-dashed border-zinc-900 dark:border-zinc-500 ${
+                        active ? "ring-2 ring-zinc-900/10 ring-offset-2 ring-offset-white dark:ring-zinc-100/10 dark:ring-offset-zinc-900" : ""
+                      }`}
+                    />
+                  )}
+                </span>
+                <span
+                  className={`pt-1 text-sm leading-snug ${
+                    done
+                      ? "text-zinc-400 dark:text-zinc-500"
+                      : active
+                        ? "font-semibold text-zinc-900 dark:text-zinc-100"
+                        : "text-zinc-900 dark:text-zinc-200"
+                  }`}
+                >
+                  {label}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+
+        <p className="mt-8 text-xs leading-relaxed text-zinc-500 dark:text-zinc-500">
+          Keep this tab open while the model drafts your Markdown proposal.
+        </p>
+
+        <div className="mt-6 flex flex-wrap items-center gap-4">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="text-sm font-medium text-red-600 underline underline-offset-4 transition hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+          >
+            Cancel request
+          </button>
+          <Loader2
+            className="h-5 w-5 shrink-0 animate-spin text-zinc-400 dark:text-zinc-500"
+            aria-hidden
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function formatUsd(n: number): string {
   return new Intl.NumberFormat("en-US", {
@@ -195,7 +302,7 @@ export default function ProposalGenerationWizard({
     let s = 0;
     for (const id of selectedSvc) {
       const row = catalog.find((c) => c.id === id);
-      if (row) s += row.unit_price;
+      if (row) s += catalogListAndEffectivePrice(row).effectivePrice;
     }
     return s;
   }, [catalog, selectedSvc]);
@@ -205,13 +312,17 @@ export default function ProposalGenerationWizard({
       [...selectedSvc]
         .map((id) => catalog.find((c) => c.id === id))
         .filter((row): row is CrmProductServiceRow => Boolean(row))
-        .map((row) => ({
-          id: row.id,
-          description_snapshot: row.description.trim()
-            ? `${row.name}\n\n${row.description.trim()}`
-            : row.name,
-          unit_price_snapshot: row.unit_price,
-        })),
+        .map((row) => {
+          const pe = catalogListAndEffectivePrice(row);
+          return {
+            id: row.id,
+            description_snapshot: row.description.trim()
+              ? `${row.name}\n\n${row.description.trim()}`
+              : row.name,
+            unit_price_snapshot: pe.effectivePrice,
+            list_unit_price_snapshot: pe.hasDiscount ? pe.listPrice : null,
+          };
+        }),
     [catalog, selectedSvc]
   );
 
@@ -349,6 +460,25 @@ export default function ProposalGenerationWizard({
     }
   }
 
+  /** Sync current editor markdown (including Spanish) to the server before PDF export. */
+  async function persistBodyForPdfExport() {
+    if (!proposalId) return;
+    const statusForSave =
+      resume?.status === "final" ||
+      resume?.status === "sent" ||
+      resume?.status === "generated"
+        ? resume.status
+        : "draft";
+    const res = await updateSalesProposalBodyAndStatus(proposalId, {
+      title: title.trim() || "Untitled proposal",
+      proposal_body: markdown,
+      status: statusForSave,
+      signature_signer_name: signatureSignerName.trim() || null,
+    });
+    if ("error" in res && res.error) throw new Error(res.error);
+    router.refresh();
+  }
+
   async function finalizeDoc() {
     if (!proposalId) return;
     setErr(null);
@@ -413,9 +543,9 @@ export default function ProposalGenerationWizard({
             <span
               className={`flex h-8 min-w-[2rem] items-center justify-center rounded-full border px-2 text-xs font-bold ${
                 complete
-                  ? "border-emerald-600 bg-emerald-600 text-white"
+                  ? "border-orange-300 bg-orange-200 text-orange-900 dark:border-orange-400/45 dark:bg-orange-500/25 dark:text-orange-100"
                   : active
-                    ? "border-accent bg-accent text-white"
+                    ? "border-orange-400 bg-orange-300 text-orange-950 dark:border-orange-400/55 dark:bg-orange-500/35 dark:text-orange-50"
                     : "border-border bg-surface text-text-secondary dark:border-zinc-700"
               }`}
             >
@@ -461,9 +591,7 @@ export default function ProposalGenerationWizard({
         Proposal generation
       </h1>
       <p className="mt-2 max-w-xl text-sm text-text-secondary dark:text-zinc-400">
-        Select an open CRM lead as the buyer (converted accounts are omitted),
-        bundle catalog services with notes, generate a GPT-backed proposal,
-        refine the markdown, export PDF or continue in the full proposal editor.
+        Choose an open lead, add your services and any notes, and you'll get a draft proposal you can refine here, export as a PDF, or continue in the full editor.
       </p>
 
       <div className="mt-8">{stepperUi}</div>
@@ -623,15 +751,15 @@ export default function ProposalGenerationWizard({
       {/* Step 2 */}
       {phase === 2 ? (
         <div className="mt-10 space-y-6">
-          <p className="text-sm text-text-secondary dark:text-zinc-400">
-            Select one or more rows from Services. Timeline and
-            deliverables should be summarized in descriptions for now.
+          <p className="max-w-xl text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+            Select one or more services. Timeline and deliverables should live in
+            descriptions for now.
           </p>
-          <ul className="space-y-2">
+          <ul className="overflow-hidden rounded-xl border border-zinc-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-950">
             {catalog.length === 0 ? (
-              <li className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-text-secondary">
+              <li className="px-4 py-12 text-center text-sm text-zinc-500 dark:text-zinc-400">
                 Your catalog is empty.{" "}
-                <Link className="text-accent underline" href="/products-services">
+                <Link className="text-accent underline underline-offset-2" href="/products-services">
                   Manage catalog
                 </Link>
               </li>
@@ -639,69 +767,99 @@ export default function ProposalGenerationWizard({
               catalog.map((row) => {
                 const sel = selectedSvc.has(row.id);
                 return (
-                  <li key={row.id}>
-                    <button
-                      type="button"
-                      onClick={() => toggleService(row.id)}
-                      className={`flex w-full flex-col gap-1 rounded-2xl border px-4 py-3 text-left transition sm:flex-row sm:justify-between sm:gap-6 ${
+                  <li
+                    key={row.id}
+                    className="border-b border-zinc-100 last:border-b-0 dark:border-zinc-800/80"
+                  >
+                    <label
+                      className={`flex cursor-pointer items-start gap-3 px-4 py-3.5 transition-colors hover:bg-zinc-50/70 dark:hover:bg-zinc-900/40 has-[:focus-visible]:relative has-[:focus-visible]:z-10 ${
                         sel
-                          ? "border-accent bg-blue-50/80 dark:bg-blue-950/30"
-                          : "border-border bg-white hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-900"
+                          ? "bg-zinc-50/90 dark:bg-zinc-900/50"
+                          : ""
                       }`}
                     >
-                      <div>
-                        <p className="font-semibold text-text-primary dark:text-zinc-100">
+                      <input
+                        type="checkbox"
+                        checked={sel}
+                        onChange={() => toggleService(row.id)}
+                        className="mt-0.5 h-[1.125rem] w-[1.125rem] shrink-0 rounded border-zinc-300 bg-white text-zinc-900 accent-zinc-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/20 focus-visible:ring-offset-2 dark:border-zinc-600 dark:bg-zinc-950 dark:accent-zinc-100 dark:focus-visible:ring-white/25 dark:focus-visible:ring-offset-zinc-950"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
                           {row.name}
-                          {sel ? (
-                            <span className="ml-2 text-xs font-bold text-accent">
-                              Selected
-                            </span>
-                          ) : null}
                         </p>
                         {row.description.trim() ? (
-                          <p className="mt-1 text-xs text-text-secondary dark:text-zinc-500 whitespace-pre-wrap">
+                          <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-zinc-500 dark:text-zinc-500">
                             {row.description}
                           </p>
                         ) : null}
                       </div>
-                      <div className="shrink-0 text-sm font-bold text-text-primary dark:text-zinc-200">
-                        {formatUsd(row.unit_price)}
+                      <div className="shrink-0 text-right text-sm font-medium tabular-nums text-zinc-700 dark:text-zinc-300">
+                        {(() => {
+                          const pe = catalogListAndEffectivePrice(row);
+                          return pe.hasDiscount ? (
+                            <span className="inline-flex flex-col items-end gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
+                              <span className="text-xs font-normal text-zinc-400 line-through dark:text-zinc-600">
+                                {formatUsd(pe.listPrice)}
+                              </span>
+                              <span className="text-emerald-700 dark:text-emerald-400">
+                                {formatUsd(pe.effectivePrice)}
+                              </span>
+                            </span>
+                          ) : (
+                            formatUsd(pe.listPrice)
+                          );
+                        })()}
                       </div>
-                    </button>
+                    </label>
                   </li>
                 );
               })
             )}
           </ul>
 
-          <label className="block text-xs font-bold uppercase tracking-wider text-text-secondary dark:text-zinc-500">
+          <label className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-500">
             Proposal notes / instructions for AI (optional)
             <textarea
               rows={4}
               value={wizardNotes}
               onChange={(e) => setWizardNotes(e.target.value)}
-              className="mt-2 w-full rounded-xl border border-border bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              className="mt-2 w-full rounded-lg border border-zinc-200/90 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none transition-shadow placeholder:text-zinc-400 focus:border-zinc-300 focus:ring-1 focus:ring-zinc-900/10 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-zinc-600 dark:focus:ring-white/10"
             />
           </label>
 
-          <div className="rounded-2xl border border-border bg-surface px-5 py-4 dark:border-zinc-700 dark:bg-zinc-900/50">
-            <p className="text-xs font-bold uppercase tracking-wide text-text-secondary dark:text-zinc-500">
+          <div className="rounded-xl border border-zinc-200/80 bg-zinc-50/40 px-4 py-4 dark:border-zinc-800 dark:bg-zinc-900/25">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-500">
               Selection summary
             </p>
-            <ul className="mt-2 space-y-1 text-sm">
+            <ul className="mt-2 space-y-0.5 text-sm text-zinc-800 dark:text-zinc-200">
               {[...selectedSvc].map((id) => {
                 const r = catalog.find((c) => c.id === id);
                 return r ? (
-                  <li key={id} className="flex justify-between gap-3">
-                    <span>{r.name}</span>
-                    <span className="shrink-0 font-semibold">
-                      {formatUsd(r.unit_price)}
+                  <li key={id} className="flex justify-between gap-3 py-1">
+                    <span className="font-medium">{r.name}</span>
+                    <span className="shrink-0 text-right font-medium tabular-nums text-zinc-600 dark:text-zinc-400">
+                      {(() => {
+                        const pe = catalogListAndEffectivePrice(r);
+                        return pe.hasDiscount ? (
+                          <span className="inline-flex flex-col items-end gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
+                            <span className="text-xs font-normal text-zinc-400 line-through dark:text-zinc-600">
+                              {formatUsd(pe.listPrice)}
+                            </span>
+                            <span className="text-emerald-700 dark:text-emerald-400">
+                              {formatUsd(pe.effectivePrice)}
+                            </span>
+                          </span>
+                        ) : (
+                          formatUsd(pe.listPrice)
+                        );
+                      })()}
                     </span>
                   </li>
                 ) : null;
               })}
             </ul>
-            <p className="mt-3 border-t border-border pt-3 text-sm font-black text-text-primary dark:border-zinc-700 dark:text-zinc-100">
+            <p className="mt-3 border-t border-zinc-200/90 pt-3 text-sm font-semibold tabular-nums text-zinc-900 dark:border-zinc-800 dark:text-zinc-100">
               Subtotal: {formatUsd(subtotal)}
             </p>
           </div>
@@ -731,17 +889,6 @@ export default function ProposalGenerationWizard({
         <div className="mt-10 space-y-6">
           {!busyGen ? (
             <>
-              <p className="text-sm text-text-secondary dark:text-zinc-400">
-                Zenpho merges catalog context with any linked Google listing
-                plus a quick homepage/logo scrape when available. Imagery renders
-                in Markdown, and raster snapshots are stitched into PDF exports separately. Default model
-                is{" "}
-                <code className="rounded bg-zinc-200 px-1 text-xs dark:bg-zinc-800">
-                  OPENAI_PROPOSAL_MODEL
-                </code>
-                {" "}
-                (falls back to gpt-5.5 unless set).
-              </p>
               <div className="flex flex-wrap gap-3">
                 <button
                   type="button"
@@ -753,65 +900,18 @@ export default function ProposalGenerationWizard({
                 <button
                   type="button"
                   onClick={() => void runGeneration()}
-                  className="inline-flex items-center rounded-xl bg-emerald-600 px-6 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+                  className="inline-flex items-center rounded-xl bg-orange-600 px-6 py-2 text-sm font-semibold text-white hover:bg-orange-700"
                 >
                   <Sparkles className="mr-2 h-4 w-4" aria-hidden />
-                  Generate with AI
+                  Generate
                 </button>
               </div>
             </>
           ) : (
-            <div className="rounded-[2rem] border border-emerald-200 bg-white p-8 shadow-soft-lg dark:border-emerald-950 dark:bg-zinc-900">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-400">
-                Generating
-              </p>
-              <h2 className="mt-3 text-xl font-black text-text-primary dark:text-white">
-                {GENERATION_SUBSTEPS[genStage]}
-              </h2>
-              <div className="mt-6 space-y-2">
-                {GENERATION_SUBSTEPS.map((label, idx) => {
-                  const complete = idx < genStage;
-                  const active = idx === genStage;
-                  return (
-                    <div key={label} className="flex items-center gap-3">
-                      <span
-                        className={`flex h-7 w-7 items-center justify-center rounded-full border text-xs font-bold ${
-                          complete || active
-                            ? "border-emerald-600 bg-emerald-600 text-white dark:border-emerald-500 dark:bg-emerald-600"
-                            : "border-border bg-surface dark:border-zinc-700"
-                        }`}
-                      >
-                        {complete ? (
-                          <CheckCircle2 className="h-4 w-4" aria-hidden />
-                        ) : (
-                          idx + 1
-                        )}
-                      </span>
-                      <span
-                        className={
-                          complete || active
-                            ? "font-semibold dark:text-white"
-                            : "text-text-secondary dark:text-zinc-500"
-                        }
-                      >
-                        {label}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-              <p className="mt-4 text-xs text-text-secondary dark:text-zinc-500">
-                Keep this tab open while the model drafts your Markdown proposal.
-              </p>
-              <button
-                type="button"
-                onClick={() => abortRef.current?.abort()}
-                className="mt-6 text-xs font-semibold uppercase tracking-wide text-red-600 underline"
-              >
-                Cancel request
-              </button>
-              <Loader2 className="mt-4 h-6 w-6 animate-spin text-emerald-600" />
-            </div>
+            <GenerationProgressPanel
+              genStage={genStage}
+              onCancel={() => abortRef.current?.abort()}
+            />
           )}
         </div>
       ) : null}
@@ -820,24 +920,11 @@ export default function ProposalGenerationWizard({
       {phase === 4 ? (
         <div className="mt-10 space-y-6">
           {busyGen ? (
-            <div className="rounded-[2rem] border border-emerald-200 bg-white p-6 dark:border-emerald-950 dark:bg-zinc-900">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-400">
-                Regenerating
-              </p>
-              <Loader2 className="mt-4 h-7 w-7 animate-spin text-emerald-600" />
-              <p className="mt-3 text-sm text-text-secondary dark:text-zinc-500">
-                {GENERATION_SUBSTEPS[
-                  Math.min(genStage, GENERATION_SUBSTEPS.length - 1)
-                ]}
-              </p>
-              <button
-                type="button"
-                onClick={() => abortRef.current?.abort()}
-                className="mt-4 text-xs font-semibold uppercase tracking-wide text-red-600 underline"
-              >
-                Cancel
-              </button>
-            </div>
+            <GenerationProgressPanel
+              genStage={genStage}
+              onCancel={() => abortRef.current?.abort()}
+              variant="regenerate"
+            />
           ) : (
             <div className="space-y-4">
               {genWarnings.length > 0 ? (
@@ -864,6 +951,7 @@ export default function ProposalGenerationWizard({
                 signatureImagePath={resume?.signature_image_path ?? null}
                 signatureSignerName={signatureSignerName}
                 onSignatureSignerNameChange={setSignatureSignerName}
+                onSignatureSaved={() => router.refresh()}
                 title={title}
                 onTitleChange={setTitle}
                 buyerName={selectedParty?.name ?? resume?.clientName ?? null}
@@ -888,6 +976,7 @@ export default function ProposalGenerationWizard({
             onSaveDraft={saveDraft}
             onMarkFinal={finalizeDoc}
             onSendEmail={sendEmail}
+            onBeforePdf={persistBodyForPdfExport}
           />
 
           <div className="flex flex-wrap gap-3">

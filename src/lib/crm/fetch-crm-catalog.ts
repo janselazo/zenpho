@@ -2,11 +2,18 @@ import { createClient } from "@/lib/supabase/server";
 import type { CrmProductServiceRow } from "@/lib/crm/crm-catalog-types";
 
 function mapRow(raw: Record<string, unknown>): CrmProductServiceRow {
+  const discRaw = raw.discounted_price;
+  const discounted =
+    discRaw != null && discRaw !== ""
+      ? Number(discRaw)
+      : null;
   return {
     id: raw.id as string,
     name: String(raw.name ?? "").trim() || "Unnamed",
     description: String(raw.description ?? ""),
     unit_price: Number(raw.unit_price) || 0,
+    discounted_price:
+      discounted != null && Number.isFinite(discounted) ? discounted : null,
     currency: String(raw.currency ?? "usd").trim() || "usd",
     sku: raw.sku != null ? String(raw.sku).trim() || null : null,
     is_active: Boolean(raw.is_active),
@@ -20,7 +27,7 @@ export async function fetchActiveCrmCatalog(): Promise<CrmProductServiceRow[]> {
   const { data, error } = await supabase
     .from("crm_product_service")
     .select(
-      "id, name, description, unit_price, currency, sku, is_active, sort_order"
+      "id, name, description, unit_price, discounted_price, currency, sku, is_active, sort_order"
     )
     .eq("is_active", true)
     .order("sort_order", { ascending: true })
@@ -36,7 +43,7 @@ export async function fetchAllCrmCatalog(): Promise<CrmProductServiceRow[]> {
   const { data, error } = await supabase
     .from("crm_product_service")
     .select(
-      "id, name, description, unit_price, currency, sku, is_active, sort_order"
+      "id, name, description, unit_price, discounted_price, currency, sku, is_active, sort_order"
     )
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });

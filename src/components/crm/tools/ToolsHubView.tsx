@@ -11,7 +11,7 @@ export default function ToolsHubView() {
       </p>
       <p className="mt-3 max-w-2xl text-sm text-text-secondary dark:text-zinc-400">
         Each tool will have a public page on the marketing site for discovery and SEO; this hub
-        is where we track what exists and add sidebar links as we ship.
+        is where we track what exists and surface links in the Tools tab as we ship.
       </p>
 
       <div className="mt-8 rounded-2xl border border-border bg-white p-6 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/50 dark:shadow-none">
@@ -20,8 +20,11 @@ export default function ToolsHubView() {
         </h2>
         <p className="mt-2 text-sm text-text-secondary dark:text-zinc-400">
           No live tools yet. When we launch a calculator, checker, or similar utility, it will
-          appear here under{" "}
-          <strong className="font-medium text-text-primary dark:text-zinc-200">Product-Led → Tools</strong>.
+          appear here under the{" "}
+          <strong className="font-medium text-text-primary dark:text-zinc-200">
+            Lead Magnets → Tools
+          </strong>{" "}
+          tab.
         </p>
       </div>
 
@@ -42,7 +45,7 @@ export default function ToolsHubView() {
             <code className="rounded bg-surface px-1 py-0.5 font-mono text-xs dark:bg-zinc-800">
               src/lib/crm/tools-nav.ts
             </code>{" "}
-            so it appears under the Product-Led Tools tab.
+            so it appears on the Tools tab under Lead Magnets.
           </li>
           <li>Ship the public marketing URL when ready so founders can find it without logging in.</li>
         </ul>

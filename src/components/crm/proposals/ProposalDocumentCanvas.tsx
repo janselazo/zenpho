@@ -7,23 +7,28 @@ import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
 import Image from "@tiptap/extension-image";
+import Link from "@tiptap/extension-link";
+import { TableKit } from "@tiptap/extension-table";
 import {
   deriveProposalSummary,
   parseProposalDocumentForEditor,
   proposalEditorHtmlToMarkdown,
   proposalMarkdownToEditorHtml,
 } from "@/lib/crm/proposal-document";
+import { AGENCY_DOC_TABLE_PROSE_CLASS } from "@/lib/crm/agency-doc-body";
+import { plainTextToTableHtml } from "@/lib/crm/agency-doc-paste-table";
 import type {
   SalesProposalAiVisualRow,
   SalesProposalStatus,
 } from "@/lib/crm/sales-proposal-types";
+import { catalogLineHasStrikethroughList } from "@/lib/crm/crm-catalog-pricing";
 import type { PlacesSearchPlace } from "@/lib/crm/places-types";
 import {
   uploadProposalBodyImage,
-  uploadProposalSignatureImage,
   clearProposalSignature,
   translateProposalMarkdownToSpanish,
 } from "@/app/(crm)/actions/sales-proposals";
+import ProposalSignatureComposerDialog from "@/components/crm/proposals/ProposalSignatureComposerDialog";
 import {
   AlignCenter,
   AlignLeft,
@@ -33,11 +38,13 @@ import {
   Heading2,
   ImagePlus,
   Italic,
+  Link2,
   List,
   ListOrdered,
   ListPlus,
   Loader2,
   Redo2,
+  Table,
   Undo2,
   Underline as UnderlineIcon,
 } from "lucide-react";
@@ -46,6 +53,7 @@ type ServiceLine = {
   id?: string;
   description_snapshot: string;
   unit_price_snapshot: number;
+  list_unit_price_snapshot?: number | null;
 };
 
 function money(n: number) {
@@ -76,6 +84,7 @@ export default function ProposalDocumentCanvas({
   signatureImagePath = null,
   signatureSignerName = "",
   onSignatureSignerNameChange,
+  onSignatureSaved,
 }: {
   title: string;
   onTitleChange: (nextTitle: string) => void;
@@ -91,6 +100,8 @@ export default function ProposalDocumentCanvas({
   signatureImagePath?: string | null;
   signatureSignerName?: string;
   onSignatureSignerNameChange?: (name: string) => void;
+  /** Called after signature is created, cleared, or updated (e.g. refresh server props). */
+  onSignatureSaved?: () => void;
 }) {
   const doc = parseProposalDocumentForEditor(markdown);
   const latestTitleRef = useRef(title);
@@ -103,6 +114,7 @@ export default function ProposalDocumentCanvas({
     () => proposalMarkdownToEditorHtml(markdown, title),
     [markdown, title],
   );
+  const editorRef = useRef<Editor | null>(null);
   const extensions = useMemo(
     () => [
       StarterKit.configure({
@@ -110,11 +122,23 @@ export default function ProposalDocumentCanvas({
           levels: [1, 2, 3],
         },
       }),
+      Link.configure({
+        openOnClick: false,
+        autolink: true,
+        linkOnPaste: true,
+        HTMLAttributes: {
+          class:
+            "text-accent underline decoration-accent/80 underline-offset-2",
+        },
+      }),
       Underline,
       TextAlign.configure({
         types: ["heading", "paragraph"],
       }),
       Image.configure({ inline: false, allowBase64: false }),
+      TableKit.configure({
+        table: { resizable: false },
+      }),
     ],
     [],
   );
@@ -130,8 +154,7 @@ export default function ProposalDocumentCanvas({
   const [translateBusy, setTranslateBusy] = useState(false);
   const [translateErr, setTranslateErr] = useState<string | null>(null);
 
-  const [sigUploadBusy, setSigUploadBusy] = useState(false);
-  const sigFileRef = useRef<HTMLInputElement>(null);
+  const [sigDialogOpen, setSigDialogOpen] = useState(false);
   const bodyImgFileRef = useRef<HTMLInputElement>(null);
   const [bodyImgBusy, setBodyImgBusy] = useState(false);
 
@@ -176,8 +199,25 @@ export default function ProposalDocumentCanvas({
       editorProps: {
         attributes: {
           class:
-            "proposal-word-editor min-h-[860px] px-8 py-10 text-[15px] leading-8 text-text-primary outline-none dark:text-zinc-100 sm:px-12 sm:py-12 [&_h1]:heading-display [&_h1]:mb-8 [&_h1]:text-4xl [&_h1]:font-black [&_h1]:leading-tight [&_h1]:text-text-primary dark:[&_h1]:text-white sm:[&_h1]:text-5xl [&_h2]:heading-display [&_h2]:mb-4 [&_h2]:mt-10 [&_h2]:text-2xl [&_h2]:font-black [&_h2]:text-text-primary dark:[&_h2]:text-white [&_h3]:mb-2 [&_h3]:mt-6 [&_h3]:text-sm [&_h3]:font-bold [&_h3]:uppercase [&_h3]:tracking-wide [&_p]:mb-4 [&_ul]:mb-5 [&_ul]:list-disc [&_ul]:pl-7 [&_ol]:mb-5 [&_ol]:list-decimal [&_ol]:pl-7 [&_li]:my-1.5 [&_img]:my-4 [&_img]:max-w-full [&_img]:rounded-lg",
+            `proposal-word-editor min-h-[860px] px-8 py-10 text-[15px] leading-8 text-text-primary outline-none dark:text-zinc-100 sm:px-12 sm:py-12 [&_h1]:heading-display [&_h1]:mb-8 [&_h1]:text-4xl [&_h1]:font-black [&_h1]:leading-tight [&_h1]:text-text-primary dark:[&_h1]:text-white sm:[&_h1]:text-5xl [&_h2]:heading-display [&_h2]:mb-4 [&_h2]:mt-10 [&_h2]:text-2xl [&_h2]:font-black [&_h2]:text-text-primary dark:[&_h2]:text-white [&_h3]:mb-2 [&_h3]:mt-6 [&_h3]:text-sm [&_h3]:font-bold [&_h3]:uppercase [&_h3]:tracking-wide [&_p]:mb-4 [&_ul]:mb-5 [&_ul]:list-disc [&_ul]:pl-7 [&_ol]:mb-5 [&_ol]:list-decimal [&_ol]:pl-7 [&_li]:my-1.5 [&_img]:my-4 [&_img]:max-w-full [&_img]:rounded-lg ${AGENCY_DOC_TABLE_PROSE_CLASS}`,
         },
+        handlePaste: (_view, event) => {
+          const ed = editorRef.current;
+          if (!ed) return false;
+          const text = event.clipboardData?.getData("text/plain");
+          if (!text) return false;
+          const tableHtml = plainTextToTableHtml(text);
+          if (!tableHtml) return false;
+          event.preventDefault();
+          ed.chain().focus().insertContent(tableHtml).run();
+          return true;
+        },
+      },
+      onCreate: ({ editor: ed }) => {
+        editorRef.current = ed;
+      },
+      onDestroy: () => {
+        editorRef.current = null;
       },
       onUpdate: ({ editor: ed }) => {
         const nextMarkdown = proposalEditorHtmlToMarkdown(
@@ -196,7 +236,7 @@ export default function ProposalDocumentCanvas({
         }
       },
     },
-    [],
+    [extensions],
   );
 
   useEffect(() => {
@@ -232,33 +272,12 @@ export default function ProposalDocumentCanvas({
     [editor, proposalId],
   );
 
-  const handleSignaturePick = useCallback(
-    async (e: ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      e.target.value = "";
-      if (!file || !proposalId.trim()) return;
-      setSigUploadBusy(true);
-      try {
-        const fd = new FormData();
-        fd.append("file", file);
-        fd.append("signerName", signatureSignerName.trim());
-        const res = await uploadProposalSignatureImage(proposalId.trim(), fd);
-        if ("error" in res && res.error) {
-          alert(res.error);
-          return;
-        }
-      } finally {
-        setSigUploadBusy(false);
-      }
-    },
-    [proposalId, signatureSignerName],
-  );
-
   async function handleClearSignature() {
     if (!proposalId.trim()) return;
     if (!confirm("Remove the saved signature from this proposal?")) return;
     const res = await clearProposalSignature(proposalId.trim());
     if ("error" in res && res.error) alert(res.error);
+    else onSignatureSaved?.();
   }
 
   const signaturePreviewUrl =
@@ -345,28 +364,14 @@ export default function ProposalDocumentCanvas({
               className="rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
             />
           </label>
-          <input
-            ref={sigFileRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            className="hidden"
-            onChange={(e) => void handleSignaturePick(e)}
-          />
           <button
             type="button"
-            disabled={!proposalId.trim() || sigUploadBusy}
+            disabled={!proposalId.trim()}
             onMouseDown={(e) => e.preventDefault()}
-            onClick={() => sigFileRef.current?.click()}
-            className="rounded-xl border border-border px-4 py-2 text-sm font-semibold disabled:opacity-50 dark:border-zinc-700"
+            onClick={() => setSigDialogOpen(true)}
+            className="rounded-xl border border-border bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 dark:border-zinc-700"
           >
-            {sigUploadBusy ? (
-              <span className="inline-flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                Uploading…
-              </span>
-            ) : (
-              "Upload signature"
-            )}
+            Create signature
           </button>
           {signaturePreviewUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -388,9 +393,21 @@ export default function ProposalDocumentCanvas({
           ) : null}
         </div>
         <p className="mt-2 text-xs text-text-secondary dark:text-zinc-500">
-          When saved, this image is flattened onto generated proposal PDFs (download and email).
+          Type your name in a handwriting font or use a photo in the dialog. The
+          signature is stored for PDF download and email; you can also place it in
+          the document.
         </p>
       </div>
+
+      <ProposalSignatureComposerDialog
+        open={sigDialogOpen}
+        onClose={() => setSigDialogOpen(false)}
+        proposalId={proposalId}
+        signerName={signatureSignerName}
+        onSignerNameChange={onSignatureSignerNameChange}
+        editor={editor}
+        onSuccess={onSignatureSaved}
+      />
 
       <div className="p-4 sm:p-6">
         <div className="sticky top-4 z-20 mx-auto mb-4 max-w-5xl overflow-hidden rounded-2xl border border-border bg-white/95 shadow-sm backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
@@ -461,8 +478,19 @@ export default function ProposalDocumentCanvas({
                   <span className="text-text-primary dark:text-zinc-100">
                     {line.description_snapshot.split("\n")[0] || "Service"}
                   </span>
-                  <span className="font-semibold">
-                    {money(line.unit_price_snapshot)}
+                  <span className="text-right font-semibold tabular-nums">
+                    {catalogLineHasStrikethroughList(line) ? (
+                      <span className="inline-flex flex-col items-end gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
+                        <span className="text-xs font-normal text-text-secondary line-through dark:text-zinc-500">
+                          {money(line.list_unit_price_snapshot!)}
+                        </span>
+                        <span className="text-emerald-700 dark:text-emerald-400">
+                          {money(line.unit_price_snapshot)}
+                        </span>
+                      </span>
+                    ) : (
+                      money(line.unit_price_snapshot)
+                    )}
                   </span>
                 </li>
               ))}
@@ -516,6 +544,28 @@ function ProposalEditorToolbar({
         content: [{ type: "text", text: label }],
       })
       .insertContent("<p></p>")
+      .run();
+  }
+
+  function editLink() {
+    const previousUrl = (editor.getAttributes("link").href as string) ?? "";
+    const url =
+      typeof window !== "undefined"
+        ? window.prompt("Link URL", previousUrl)
+        : null;
+    if (url === null) return;
+    if (url.trim() === "") {
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      return;
+    }
+    editor.chain().focus().extendMarkRange("link").setLink({ href: url.trim() }).run();
+  }
+
+  function insertTable() {
+    editor
+      .chain()
+      .focus()
+      .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
       .run();
   }
 
@@ -576,6 +626,14 @@ function ProposalEditorToolbar({
       <span className="mx-1 h-6 w-px bg-border dark:bg-zinc-700" aria-hidden />
       <ToolbarBtn
         editor={editor}
+        label="Link"
+        isActive={() => editor.isActive("link")}
+        onPress={editLink}
+      >
+        <Link2 className="h-4 w-4" aria-hidden />
+      </ToolbarBtn>
+      <ToolbarBtn
+        editor={editor}
         label="Insert image"
         isActive={() => false}
         disabled={!canImage || bodyImageBusy}
@@ -586,6 +644,14 @@ function ProposalEditorToolbar({
         ) : (
           <ImagePlus className="h-4 w-4" aria-hidden />
         )}
+      </ToolbarBtn>
+      <ToolbarBtn
+        editor={editor}
+        label="Insert table"
+        isActive={() => false}
+        onPress={insertTable}
+      >
+        <Table className="h-4 w-4" aria-hidden />
       </ToolbarBtn>
       <span className="mx-1 h-6 w-px bg-border dark:bg-zinc-700" aria-hidden />
       <ToolbarBtn

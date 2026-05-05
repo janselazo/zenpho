@@ -24,7 +24,6 @@ import {
   Users,
   UsersRound,
   Workflow,
-  Wrench,
 } from "lucide-react";
 import { PROSPECTING_SECTIONS } from "@/lib/crm/prospecting-nav";
 
@@ -131,11 +130,6 @@ export const SIDEBAR_CREATIVE_STUDIO: AppSidebarItem[] = [
     label: "Lead Magnets",
     icon: Magnet,
   },
-  {
-    href: "/prospecting/product-led/tools",
-    label: "Tools",
-    icon: Wrench,
-  },
 ];
 
 export const SIDEBAR_CRM: AppSidebarItem[] = [
@@ -156,8 +150,8 @@ export const SIDEBAR_SALES: AppSidebarItem[] = [
     label: "Services",
     icon: Package,
   },
-  { href: "/invoices", label: "Invoices", icon: Receipt },
   { href: "/proposals", label: "Proposals", icon: FileText },
+  { href: "/invoices", label: "Invoices", icon: Receipt },
   { href: "/estimates", label: "Estimates", icon: Calculator, soon: true },
 ];
 

@@ -1,12 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Pencil, Trash2 } from "lucide-react";
 import {
   createCrmCatalogItem,
   deleteCrmCatalogItem,
   updateCrmCatalogItem,
 } from "@/app/(crm)/actions/crm-catalog";
 import type { CrmProductServiceRow } from "@/lib/crm/crm-catalog-types";
+import { catalogListAndEffectivePrice } from "@/lib/crm/crm-catalog-pricing";
+
+function parseDiscountedPriceInput(
+  raw: string,
+  unitPrice: number,
+): number | null {
+  const t = raw.trim();
+  if (!t) return null;
+  const n = parseFloat(t);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const list = Math.max(0, unitPrice);
+  if (n >= list) return null;
+  return n;
+}
 
 function formatMoney(n: number) {
   return new Intl.NumberFormat("en-US", {
@@ -30,8 +45,7 @@ export default function ProductsServicesPageClient({
     name: "",
     description: "",
     unitPrice: "",
-    sku: "",
-    sortOrder: "0",
+    discountedPrice: "",
   });
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -39,9 +53,8 @@ export default function ProductsServicesPageClient({
     name: "",
     description: "",
     unitPrice: "",
-    sku: "",
+    discountedPrice: "",
     isActive: true,
-    sortOrder: "0",
   });
 
   useEffect(() => {
@@ -52,14 +65,17 @@ export default function ProductsServicesPageClient({
     e.preventDefault();
     setMsg(null);
     const price = parseFloat(draftNew.unitPrice);
-    const sortOrder = parseInt(draftNew.sortOrder, 10);
+    const unit = Number.isFinite(price) ? price : 0;
+    const discountedPrice = parseDiscountedPriceInput(
+      draftNew.discountedPrice,
+      unit,
+    );
     setBusyId("__new");
     const res = await createCrmCatalogItem({
       name: draftNew.name,
       description: draftNew.description,
-      unitPrice: Number.isFinite(price) ? price : 0,
-      sku: draftNew.sku.trim() ? draftNew.sku.trim() : null,
-      sortOrder: Number.isFinite(sortOrder) ? sortOrder : 0,
+      unitPrice: unit,
+      discountedPrice,
     });
     setBusyId(null);
     if ("error" in res && res.error) {
@@ -70,8 +86,7 @@ export default function ProductsServicesPageClient({
       name: "",
       description: "",
       unitPrice: "",
-      sku: "",
-      sortOrder: "0",
+      discountedPrice: "",
     });
     setCreating(false);
     window.location.reload();
@@ -82,15 +97,18 @@ export default function ProductsServicesPageClient({
     if (!editingId) return;
     setMsg(null);
     const price = parseFloat(draftEdit.unitPrice);
-    const sortOrder = parseInt(draftEdit.sortOrder, 10);
+    const unit = Number.isFinite(price) ? price : 0;
+    const discountedPrice = parseDiscountedPriceInput(
+      draftEdit.discountedPrice,
+      unit,
+    );
     setBusyId(editingId);
     const res = await updateCrmCatalogItem(editingId, {
       name: draftEdit.name,
       description: draftEdit.description,
-      unitPrice: Number.isFinite(price) ? price : 0,
-      sku: draftEdit.sku.trim() ? draftEdit.sku.trim() : null,
+      unitPrice: unit,
+      discountedPrice,
       isActive: draftEdit.isActive,
-      sortOrder: Number.isFinite(sortOrder) ? sortOrder : 0,
     });
     setBusyId(null);
     if ("error" in res && res.error) {
@@ -117,14 +135,26 @@ export default function ProductsServicesPageClient({
       name: row.name,
       description: row.description,
       unitPrice: String(row.unit_price),
-      sku: row.sku ?? "",
+      discountedPrice:
+        row.discounted_price != null && Number.isFinite(row.discounted_price)
+          ? String(row.discounted_price)
+          : "",
       isActive: row.is_active,
-      sortOrder: String(row.sort_order),
     });
   }
 
   const inputClass =
     "w-full rounded-lg border border-border bg-white px-2 py-1.5 text-sm outline-none focus:border-blue-400 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100";
+
+  const newUnitParsed = parseFloat(draftNew.unitPrice);
+  const newUnitForDisc = Number.isFinite(newUnitParsed) ? newUnitParsed : 0;
+  const newDiscountActive =
+    parseDiscountedPriceInput(draftNew.discountedPrice, newUnitForDisc) != null;
+
+  const editUnitParsed = parseFloat(draftEdit.unitPrice);
+  const editUnitForDisc = Number.isFinite(editUnitParsed) ? editUnitParsed : 0;
+  const editDiscountActive =
+    parseDiscountedPriceInput(draftEdit.discountedPrice, editUnitForDisc) != null;
 
   return (
     <div className="mt-8 space-y-6">
@@ -196,19 +226,30 @@ export default function ProductsServicesPageClient({
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
-                SKU (optional)
+                Discounted price (USD)
               </label>
-              <input className={inputClass} value={draftNew.sku} onChange={(e) =>
-                setDraftNew((d) => ({ ...d, sku: e.target.value }))
-              } />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-text-secondary dark:text-zinc-400">
-                Sort order
-              </label>
-              <input className={inputClass} type="number" value={draftNew.sortOrder} onChange={(e) =>
-                setDraftNew((d) => ({ ...d, sortOrder: e.target.value }))
-              } />
+              <input
+                className={`${inputClass} ${
+                  newDiscountActive
+                    ? "border-emerald-500/55 bg-emerald-50/50 ring-1 ring-emerald-500/20 dark:border-emerald-600/45 dark:bg-emerald-950/30 dark:ring-emerald-500/15"
+                    : ""
+                }`}
+                type="number"
+                min={0}
+                step={0.01}
+                placeholder="Optional"
+                value={draftNew.discountedPrice}
+                onChange={(e) =>
+                  setDraftNew((d) => ({
+                    ...d,
+                    discountedPrice: e.target.value,
+                  }))
+                }
+              />
+              <p className="mt-1 text-[11px] text-text-secondary dark:text-zinc-500">
+                When set below unit price, proposals show the original price
+                crossed out.
+              </p>
             </div>
           </div>
           <button
@@ -227,8 +268,6 @@ export default function ProductsServicesPageClient({
             <tr>
               <th className="px-3 py-2 font-semibold">Name</th>
               <th className="px-3 py-2 font-semibold">Price</th>
-              <th className="px-3 py-2 font-semibold">SKU</th>
-              <th className="px-3 py-2 font-semibold">Order</th>
               <th className="px-3 py-2 font-semibold">Active</th>
               <th className="px-3 py-2 font-semibold"> </th>
             </tr>
@@ -238,7 +277,7 @@ export default function ProductsServicesPageClient({
               <tr>
                 <td
                   className="px-3 py-8 text-center text-text-secondary dark:text-zinc-500"
-                  colSpan={6}
+                  colSpan={4}
                 >
                   No catalog items yet. Add services you sell; they appear on invoice line-item pickers.
                 </td>
@@ -247,7 +286,7 @@ export default function ProductsServicesPageClient({
             {items.map((row) =>
               editingId === row.id ? (
                 <tr key={row.id} className="border-b border-border dark:border-zinc-800 align-top bg-blue-50/50 dark:bg-zinc-950/50">
-                  <td colSpan={6} className="p-3">
+                  <td colSpan={4} className="p-3">
                     <form onSubmit={(e) => void onSaveEdit(e)} className="space-y-3">
                       <div className="grid gap-2 sm:grid-cols-2">
                         <div className="sm:col-span-2">
@@ -263,24 +302,33 @@ export default function ProductsServicesPageClient({
                           } />
                         </div>
                         <div>
-                          <label className="mb-1 block text-xs font-medium">Unit price</label>
+                          <label className="mb-1 block text-xs font-medium">Unit price (USD)</label>
                           <input type="number" min={0} step={0.01} className={inputClass} value={draftEdit.unitPrice} onChange={(e) =>
                             setDraftEdit((d) => ({ ...d, unitPrice: e.target.value }))
                           } />
                         </div>
                         <div>
-                          <label className="mb-1 block text-xs font-medium">SKU</label>
-                          <input className={inputClass} value={draftEdit.sku} onChange={(e) =>
-                            setDraftEdit((d) => ({ ...d, sku: e.target.value }))
-                          } />
+                          <label className="mb-1 block text-xs font-medium">Discounted price (USD)</label>
+                          <input
+                            type="number"
+                            min={0}
+                            step={0.01}
+                            placeholder="Optional"
+                            className={`${inputClass} ${
+                              editDiscountActive
+                                ? "border-emerald-500/55 bg-emerald-50/50 ring-1 ring-emerald-500/20 dark:border-emerald-600/45 dark:bg-emerald-950/30 dark:ring-emerald-500/15"
+                                : ""
+                            }`}
+                            value={draftEdit.discountedPrice}
+                            onChange={(e) =>
+                              setDraftEdit((d) => ({
+                                ...d,
+                                discountedPrice: e.target.value,
+                              }))
+                            }
+                          />
                         </div>
-                        <div>
-                          <label className="mb-1 block text-xs font-medium">Sort order</label>
-                          <input type="number" className={inputClass} value={draftEdit.sortOrder} onChange={(e) =>
-                            setDraftEdit((d) => ({ ...d, sortOrder: e.target.value }))
-                          } />
-                        </div>
-                        <div className="flex items-end">
+                        <div className="flex items-end sm:col-span-2">
                           <label className="flex cursor-pointer items-center gap-2 text-sm">
                             <input
                               type="checkbox"
@@ -329,12 +377,22 @@ export default function ProductsServicesPageClient({
                     ) : null}
                   </td>
                   <td className="px-3 py-2 align-top tabular-nums">
-                    {formatMoney(row.unit_price)}
+                    {(() => {
+                      const pe = catalogListAndEffectivePrice(row);
+                      return pe.hasDiscount ? (
+                        <span className="inline-flex flex-col gap-0.5 sm:inline-flex sm:flex-row sm:items-baseline sm:gap-2">
+                          <span className="text-zinc-400 line-through dark:text-zinc-500">
+                            {formatMoney(pe.listPrice)}
+                          </span>
+                          <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+                            {formatMoney(pe.effectivePrice)}
+                          </span>
+                        </span>
+                      ) : (
+                        formatMoney(pe.listPrice)
+                      );
+                    })()}
                   </td>
-                  <td className="px-3 py-2 align-top text-text-secondary dark:text-zinc-400">
-                    {row.sku ?? "—"}
-                  </td>
-                  <td className="px-3 py-2 align-top">{row.sort_order}</td>
                   <td className="px-3 py-2 align-top">
                     {row.is_active ? (
                       <span className="text-emerald-700 dark:text-emerald-400">Yes</span>
@@ -343,22 +401,25 @@ export default function ProductsServicesPageClient({
                     )}
                   </td>
                   <td className="px-3 py-2 align-top text-right">
-                    <button
-                      type="button"
-                      onClick={() => startEdit(row)}
-                      className="text-xs font-semibold text-accent hover:underline"
-                    >
-                      Edit
-                    </button>
-                    {" · "}
-                    <button
-                      type="button"
-                      onClick={() => void onDelete(row.id)}
-                      disabled={busyId === row.id}
-                      className="text-xs font-semibold text-red-600 hover:underline dark:text-red-400"
-                    >
-                      Delete
-                    </button>
+                    <div className="inline-flex items-center justify-end gap-1">
+                      <button
+                        type="button"
+                        onClick={() => startEdit(row)}
+                        className="rounded-lg p-2 text-accent transition-colors hover:bg-surface dark:hover:bg-zinc-800"
+                        aria-label={`Edit ${row.name}`}
+                      >
+                        <Pencil className="h-4 w-4" aria-hidden />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void onDelete(row.id)}
+                        disabled={busyId === row.id}
+                        className="rounded-lg p-2 text-red-600 transition-colors hover:bg-red-50 disabled:opacity-40 dark:text-red-400 dark:hover:bg-red-950/30"
+                        aria-label={`Delete ${row.name}`}
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               )

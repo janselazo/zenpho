@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import type { CrmProductServiceRow } from "@/lib/crm/crm-catalog-types";
+import { catalogListAndEffectivePrice } from "@/lib/crm/crm-catalog-pricing";
 import {
   proposalGenerationLlmTimeoutMs,
   proposalGenerationMaxOutputTokens,
@@ -68,12 +69,18 @@ export function formatProposalServicesBlock(
 ): string {
   return services
     .map((s, i) => {
-      const price = new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: (s.currency || "usd").toUpperCase(),
-        minimumFractionDigits: 2,
-      }).format(s.unit_price);
-      return `${i + 1}. ${s.name}\n   Price guide: ${price}\n   Description: ${s.description.trim() || "—"}`;
+      const cur = (s.currency || "usd").toUpperCase();
+      const pe = catalogListAndEffectivePrice(s);
+      const fmt = (n: number) =>
+        new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: cur,
+          minimumFractionDigits: 2,
+        }).format(n);
+      const priceGuide = pe.hasDiscount
+        ? `${fmt(pe.listPrice)} (promotional ${fmt(pe.effectivePrice)})`
+        : fmt(pe.listPrice);
+      return `${i + 1}. ${s.name}\n   Price guide: ${priceGuide}\n   Description: ${s.description.trim() || "—"}`;
     })
     .join("\n\n");
 }

@@ -10,6 +10,7 @@ import type {
   SalesProposalCatalogLineRow,
   SalesProposalStatus,
 } from "@/lib/crm/sales-proposal-types";
+import { catalogLineHasStrikethroughList } from "@/lib/crm/crm-catalog-pricing";
 import type { PlacesSearchPlace } from "@/lib/crm/places-types";
 
 function money(n: number) {
@@ -209,8 +210,19 @@ export default function ProposalDocumentPreview({
                     <span className="text-text-primary dark:text-zinc-100">
                       {line.description_snapshot.split("\n")[0] || "Service"}
                     </span>
-                    <span className="font-semibold">
-                      {money(line.unit_price_snapshot)}
+                    <span className="text-right font-semibold tabular-nums">
+                      {catalogLineHasStrikethroughList(line) ? (
+                        <span className="inline-flex flex-col items-end gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
+                          <span className="text-xs font-normal text-text-secondary line-through dark:text-zinc-500">
+                            {money(line.list_unit_price_snapshot!)}
+                          </span>
+                          <span className="text-emerald-700 dark:text-emerald-400">
+                            {money(line.unit_price_snapshot)}
+                          </span>
+                        </span>
+                      ) : (
+                        money(line.unit_price_snapshot)
+                      )}
                     </span>
                   </li>
                 ))}

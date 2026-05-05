@@ -11,6 +11,7 @@ import {
 import ProposalActionsBar from "@/components/crm/proposals/ProposalActionsBar";
 import ProposalDocumentCanvas from "@/components/crm/proposals/ProposalDocumentCanvas";
 import type { CrmProductServiceRow } from "@/lib/crm/crm-catalog-types";
+import { catalogListAndEffectivePrice } from "@/lib/crm/crm-catalog-pricing";
 import type { ProposalClientOption } from "@/lib/crm/fetch-clients-for-proposal-picker";
 import type {
   SalesProposalDetail,
@@ -63,6 +64,7 @@ export default function SalesProposalEditorView({
           catalog_item_id: l.catalog_item_id,
           description_snapshot: l.description_snapshot,
           unit_price_snapshot: l.unit_price_snapshot,
+          list_unit_price_snapshot: l.list_unit_price_snapshot ?? null,
         }))
       : [],
   );
@@ -91,6 +93,7 @@ export default function SalesProposalEditorView({
         catalog_item_id: l.catalog_item_id,
         description_snapshot: l.description_snapshot,
         unit_price_snapshot: l.unit_price_snapshot,
+        list_unit_price_snapshot: l.list_unit_price_snapshot ?? null,
       })),
     );
   }, [initial.id, initial.updatedAt]);
@@ -133,6 +136,14 @@ export default function SalesProposalEditorView({
       setNotice("Proposal saved.");
       router.refresh();
     }
+  }, [initial.id, router, savePayload]);
+
+  const persistBodyForPdfExport = useCallback(async () => {
+    const res = await saveSalesProposal(initial.id, savePayload());
+    if ("error" in res && res.error) {
+      throw new Error(res.error);
+    }
+    router.refresh();
   }, [initial.id, router, savePayload]);
 
   async function markFinal() {
@@ -184,12 +195,14 @@ export default function SalesProposalEditorView({
     const snapshot = item.description.trim()
       ? `${item.name}\n\n${item.description.trim()}`
       : item.name;
+    const pe = catalogListAndEffectivePrice(item);
     setLines((prev) => [
       ...prev,
       {
         catalog_item_id: item.id,
         description_snapshot: snapshot,
-        unit_price_snapshot: item.unit_price,
+        unit_price_snapshot: pe.effectivePrice,
+        list_unit_price_snapshot: pe.hasDiscount ? pe.listPrice : null,
       },
     ]);
     setCatalogPick("");
@@ -285,45 +298,17 @@ export default function SalesProposalEditorView({
         onSaveDraft={persist}
         onMarkFinal={markFinal}
         onSendEmail={sendEmail}
+        onBeforePdf={persistBodyForPdfExport}
       />
 
       <div className="space-y-8">
         <div className="space-y-6">
-          <div className="rounded-2xl border border-border bg-surface/70 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <section className="space-y-2">
-                <LabelBlock title="Linked client (optional)" />
-                <select
-                  className={inputArea}
-                  value={clientId}
-                  onChange={(e) => setClientId(e.target.value)}
-                >
-                  <option value="">No client linked</option>
-                  {clientOptions.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                      {c.company ? ` — ${c.company}` : ""}
-                    </option>
-                  ))}
-                </select>
-              </section>
-              <div className="text-xs leading-relaxed text-text-secondary">
-                <p className="font-bold uppercase tracking-wider">Buyer</p>
-                <p className="mt-2 text-sm font-semibold text-text-primary dark:text-zinc-100">
-                  {clientPreviewName}
-                </p>
-                {initial.partyContact?.email ? (
-                  <p className="mt-1 break-all">{initial.partyContact.email}</p>
-                ) : null}
-              </div>
-            </div>
-          </div>
-
           <ProposalDocumentCanvas
             proposalId={initial.id}
             signatureImagePath={initial.signature_image_path}
             signatureSignerName={signatureSignerName}
             onSignatureSignerNameChange={setSignatureSignerName}
+            onSignatureSaved={() => router.refresh()}
             title={title}
             onTitleChange={setTitle}
             buyerName={clientPreviewName}
@@ -387,11 +372,17 @@ export default function SalesProposalEditorView({
                       onChange={(e) => setCatalogPick(e.target.value)}
                     >
                       <option value="">Add from catalog…</option>
-                      {catalogOptions.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name} ({formatMoney(c.unit_price)})
-                        </option>
-                      ))}
+                      {catalogOptions.map((c) => {
+                        const pe = catalogListAndEffectivePrice(c);
+                        const priceLabel = pe.hasDiscount
+                          ? `${formatMoney(pe.effectivePrice)} (list ${formatMoney(pe.listPrice)})`
+                          : formatMoney(pe.listPrice);
+                        return (
+                          <option key={c.id} value={c.id}>
+                            {c.name} ({priceLabel})
+                          </option>
+                        );
+                      })}
                     </select>
                     <button
                       type="button"
@@ -450,6 +441,7 @@ export default function SalesProposalEditorView({
                           onChange={(e) =>
                             updateLine(i, {
                               unit_price_snapshot: Number(e.target.value) || 0,
+                              list_unit_price_snapshot: null,
                             })
                           }
                         />

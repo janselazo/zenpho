@@ -2,7 +2,8 @@ import type { LucideIcon } from "lucide-react";
 import { Magnet, Wrench } from "lucide-react";
 
 /**
- * Lead magnets and Tools routes; in-app tabs use ProductLedShell (see ProductLedShell).
+ * Product-led hub: sidebar links only to Lead Magnets; the Tools hub lives on the
+ * "Tools" tab in ProductLedShell (layout for /prospecting/product-led/*).
  */
 export const PRODUCT_LED_HUB = "/prospecting/product-led";
 

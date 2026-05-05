@@ -42,7 +42,10 @@ export type SalesProposalCatalogLineRow = {
   id: string;
   catalog_item_id: string | null;
   description_snapshot: string;
+  /** Effective line price (promotional when discounted). */
   unit_price_snapshot: number;
+  /** Original list price when a discount applies; null otherwise. */
+  list_unit_price_snapshot: number | null;
   sort_order: number;
 };
 

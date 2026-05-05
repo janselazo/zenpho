@@ -13,8 +13,7 @@ export async function createCrmCatalogItem(input: {
   name: string;
   description: string;
   unitPrice: number;
-  sku: string | null;
-  sortOrder: number;
+  discountedPrice: number | null;
 }) {
   const supabase = await createClient();
   const {
@@ -29,14 +28,20 @@ export async function createCrmCatalogItem(input: {
     ? Math.max(0, input.unitPrice)
     : 0;
 
+  const disc =
+    input.discountedPrice != null &&
+    Number.isFinite(input.discountedPrice) &&
+    input.discountedPrice > 0
+      ? Math.max(0, input.discountedPrice)
+      : null;
+
   const { data, error } = await supabase
     .from("crm_product_service")
     .insert({
       name,
       description: input.description.trim(),
       unit_price: unit,
-      sku: input.sku?.trim() || null,
-      sort_order: Number.isFinite(input.sortOrder) ? input.sortOrder : 0,
+      discounted_price: disc,
       is_active: true,
     })
     .select("id")
@@ -53,9 +58,8 @@ export async function updateCrmCatalogItem(
     name: string;
     description: string;
     unitPrice: number;
-    sku: string | null;
+    discountedPrice: number | null;
     isActive: boolean;
-    sortOrder: number;
   }
 ) {
   const supabase = await createClient();
@@ -74,15 +78,21 @@ export async function updateCrmCatalogItem(
     ? Math.max(0, input.unitPrice)
     : 0;
 
+  const disc =
+    input.discountedPrice != null &&
+    Number.isFinite(input.discountedPrice) &&
+    input.discountedPrice > 0
+      ? Math.max(0, input.discountedPrice)
+      : null;
+
   const { error } = await supabase
     .from("crm_product_service")
     .update({
       name,
       description: input.description.trim(),
       unit_price: unit,
-      sku: input.sku?.trim() || null,
+      discounted_price: disc,
       is_active: input.isActive,
-      sort_order: Number.isFinite(input.sortOrder) ? input.sortOrder : 0,
       updated_at: new Date().toISOString(),
     })
     .eq("id", rid);

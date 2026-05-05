@@ -191,7 +191,7 @@ export async function POST(req: Request) {
 
   const { data: catalogRows, error: catErr } = await supabase
     .from("crm_product_service")
-    .select("id, name, description, unit_price, currency, sku, is_active, sort_order")
+    .select("id, name, description, unit_price, discounted_price, currency, sku, is_active, sort_order")
     .in("id", selectedIds);
 
   if (catErr || !catalogRows?.length) {
@@ -208,6 +208,12 @@ export async function POST(req: Request) {
       name: String(r.name ?? "").trim() || "Unnamed",
       description: String(r.description ?? ""),
       unit_price: Number(r.unit_price) || 0,
+      discounted_price: (() => {
+        const v = r.discounted_price;
+        if (v == null || v === "") return null;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : null;
+      })(),
       currency: String(r.currency ?? "usd"),
       sku: r.sku != null ? String(r.sku).trim() || null : null,
       is_active: Boolean(r.is_active),

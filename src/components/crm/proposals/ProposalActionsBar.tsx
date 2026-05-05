@@ -11,6 +11,8 @@ export default function ProposalActionsBar({
   onSaveDraft,
   onMarkFinal,
   onSendEmail,
+  /** Persist current editor state (e.g. Spanish body) before PDF is built from the server. */
+  onBeforePdf,
 }: {
   proposalId: string;
   recipientEmail?: string | null;
@@ -19,6 +21,7 @@ export default function ProposalActionsBar({
   onSaveDraft: () => Promise<void> | void;
   onMarkFinal: () => Promise<void> | void;
   onSendEmail?: () => Promise<void> | void;
+  onBeforePdf?: () => Promise<void>;
 }) {
   const [busyPdf, setBusyPdf] = useState(false);
   const [busySend, setBusySend] = useState(false);
@@ -29,6 +32,9 @@ export default function ProposalActionsBar({
     setErr(null);
     setBusyPdf(true);
     try {
+      if (onBeforePdf) {
+        await onBeforePdf();
+      }
       const res = await fetch("/api/crm/sales-proposal-pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

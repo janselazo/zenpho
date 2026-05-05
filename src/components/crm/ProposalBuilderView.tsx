@@ -11,6 +11,7 @@ import {
 } from "@/app/(crm)/actions/proposals";
 import type { ProposalClientOption } from "@/lib/crm/fetch-clients-for-proposal-picker";
 import type { CrmProductServiceRow } from "@/lib/crm/crm-catalog-types";
+import { catalogListAndEffectivePrice } from "@/lib/crm/crm-catalog-pricing";
 import type {
   AgencySnapshot,
   BillingSnapshot,
@@ -227,7 +228,7 @@ export default function ProposalBuilderView({
       {
         description: desc,
         quantity: 1,
-        unit_price: item.unit_price,
+        unit_price: catalogListAndEffectivePrice(item).effectivePrice,
         catalog_item_id: item.id,
       },
     ]);
@@ -590,11 +591,17 @@ export default function ProposalBuilderView({
                           aria-label="Pick from Services catalog"
                         >
                           <option value="">Add from catalog…</option>
-                          {catalogOptions.map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.name} ({formatMoney(c.unit_price)})
-                            </option>
-                          ))}
+                          {catalogOptions.map((c) => {
+                            const pe = catalogListAndEffectivePrice(c);
+                            const priceLabel = pe.hasDiscount
+                              ? `${formatMoney(pe.effectivePrice)} (list ${formatMoney(pe.listPrice)})`
+                              : formatMoney(pe.listPrice);
+                            return (
+                              <option key={c.id} value={c.id}>
+                                {c.name} ({priceLabel})
+                              </option>
+                            );
+                          })}
                         </select>
                         <button
                           type="button"

@@ -119,22 +119,33 @@ export async function fetchSalesProposalDetail(
   const { data: lineRows } = await supabase
     .from("sales_proposal_catalog_line")
     .select(
-      "id, catalog_item_id, description_snapshot, unit_price_snapshot, sort_order"
+      "id, catalog_item_id, description_snapshot, unit_price_snapshot, list_unit_price_snapshot, sort_order"
     )
     .eq("sales_proposal_id", id)
     .order("sort_order", { ascending: true });
 
   const catalogLines: SalesProposalCatalogLineRow[] = (lineRows ?? []).map(
-    (r) => ({
-      id: r.id as string,
-      catalog_item_id: (r.catalog_item_id as string | null) ?? null,
-      description_snapshot:
-        typeof r.description_snapshot === "string"
-          ? r.description_snapshot
-          : "",
-      unit_price_snapshot: Number(r.unit_price_snapshot) || 0,
-      sort_order: Number(r.sort_order) || 0,
-    })
+    (r) => {
+      const rawList = r.list_unit_price_snapshot;
+      const listSnap =
+        rawList != null && rawList !== ""
+          ? Number(rawList)
+          : null;
+      return {
+        id: r.id as string,
+        catalog_item_id: (r.catalog_item_id as string | null) ?? null,
+        description_snapshot:
+          typeof r.description_snapshot === "string"
+            ? r.description_snapshot
+            : "",
+        unit_price_snapshot: Number(r.unit_price_snapshot) || 0,
+        list_unit_price_snapshot:
+          listSnap != null && Number.isFinite(listSnap) && listSnap > 0
+            ? listSnap
+            : null,
+        sort_order: Number(r.sort_order) || 0,
+      };
+    },
   );
 
   const tpe =

@@ -168,7 +168,10 @@ export async function uploadProposalSignatureImage(
   revalidatePath("/proposals");
   revalidatePath(`/proposals/${id}`);
   revalidatePath(`/proposals/new`);
-  return { ok: true as const, path };
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from(PROPOSAL_PDF_BUCKET).getPublicUrl(path);
+  return { ok: true as const, path, publicUrl };
 }
 
 export async function clearProposalSignature(proposalId: string) {
@@ -221,6 +224,8 @@ export type SalesCatalogLineInput = {
   catalog_item_id?: string | null;
   description_snapshot: string;
   unit_price_snapshot: number;
+  /** Original list price when line uses a promotional price; omit or null for no strike-through. */
+  list_unit_price_snapshot?: number | null;
 };
 
 export async function createSalesProposalDraft(input?: {
@@ -470,6 +475,12 @@ export async function saveSalesProposal(
     catalog_item_id: li.catalog_item_id?.trim() || null,
     description_snapshot: li.description_snapshot.trim(),
     unit_price_snapshot: Math.max(0, li.unit_price_snapshot),
+    list_unit_price_snapshot:
+      li.list_unit_price_snapshot != null &&
+      Number.isFinite(li.list_unit_price_snapshot) &&
+      li.list_unit_price_snapshot > 0
+        ? Math.max(0, li.list_unit_price_snapshot)
+        : null,
     sort_order: i,
   }));
 
