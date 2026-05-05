@@ -13,10 +13,17 @@ import type { PlacesSearchPlace } from "@/lib/crm/places-types";
 import { buildSalesProposalPdfForDelivery } from "@/lib/crm/sales-proposal-pdf-build";
 import { getAgencySendGridCredentials } from "@/lib/sendgrid/agency-credentials";
 import { sendSendGridMail } from "@/lib/sendgrid/mail-send";
+import {
+  translateProposalMarkdownToSpanish as translateProposalMarkdownToSpanishLlm,
+} from "@/lib/crm/sales-proposal-llm";
 
 const STATUS_SET = new Set<string>(SALES_PROPOSAL_STATUSES);
 const SENDGRID_PROPOSAL_ATTACHMENT_MAX_BYTES = 18 * 1024 * 1024;
 const PROPOSAL_PDF_BUCKET = "prospect-attachments";
+const PROPOSAL_BODY_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+const PROPOSAL_BODY_IMAGE_EXTS = ["jpg", "jpeg", "png", "webp", "gif"] as const;
+const PROPOSAL_SIGNATURE_MAX_BYTES = 2 * 1024 * 1024;
+const PROPOSAL_SIGNATURE_EXTS = ["jpg", "jpeg", "png", "webp"] as const;
 
 function escapeHtml(s: string): string {
   return s
@@ -69,6 +76,145 @@ async function createProposalPdfSignedLink(params: {
   }
 
   return { ok: true, url: data.signedUrl };
+}
+
+export async function uploadProposalBodyImage(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" as const };
+
+  const proposalId = String(formData.get("proposalId") ?? "").trim();
+  const file = formData.get("file") as File | null;
+  if (!proposalId) return { error: "Missing proposal id." as const };
+  if (!file || !(file instanceof File) || file.size === 0) {
+    return { error: "Choose an image file." as const };
+  }
+  if (file.size > PROPOSAL_BODY_IMAGE_MAX_BYTES) {
+    return { error: "Image must be 5 MB or smaller." as const };
+  }
+
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+  if (!PROPOSAL_BODY_IMAGE_EXTS.includes(ext as (typeof PROPOSAL_BODY_IMAGE_EXTS)[number])) {
+    return { error: "Use JPG, PNG, WebP, or GIF." as const };
+  }
+
+  const path = `proposal-body-images/${proposalId}/${crypto.randomUUID()}.${ext}`;
+  const { error: upErr } = await supabase.storage
+    .from(PROPOSAL_PDF_BUCKET)
+    .upload(path, file, {
+      contentType: file.type || `image/${ext === "jpg" ? "jpeg" : ext}`,
+    });
+
+  if (upErr) return { error: upErr.message };
+
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from(PROPOSAL_PDF_BUCKET).getPublicUrl(path);
+
+  return { ok: true as const, url: publicUrl };
+}
+
+export async function uploadProposalSignatureImage(
+  proposalId: string,
+  formData: FormData,
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" as const };
+
+  const id = proposalId.trim();
+  if (!id) return { error: "Missing proposal id." as const };
+
+  const file = formData.get("file") as File | null;
+  if (!file || !(file instanceof File) || file.size === 0) {
+    return { error: "Choose an image file." as const };
+  }
+  if (file.size > PROPOSAL_SIGNATURE_MAX_BYTES) {
+    return { error: "Signature image must be 2 MB or smaller." as const };
+  }
+
+  const ext = (file.name.split(".").pop() || "png").toLowerCase();
+  if (!PROPOSAL_SIGNATURE_EXTS.includes(ext as (typeof PROPOSAL_SIGNATURE_EXTS)[number])) {
+    return { error: "Use PNG, JPG, or WebP for signatures." as const };
+  }
+
+  const signerName = String(formData.get("signerName") ?? "").trim() || null;
+
+  const path = `proposal-signatures/${id}/${crypto.randomUUID()}.${ext}`;
+  const { error: upErr } = await supabase.storage
+    .from(PROPOSAL_PDF_BUCKET)
+    .upload(path, file, {
+      contentType: file.type || `image/${ext === "jpg" ? "jpeg" : ext}`,
+    });
+
+  if (upErr) return { error: upErr.message };
+
+  const { error: dbErr } = await supabase
+    .from("sales_proposal")
+    .update({
+      signature_image_path: path,
+      signature_signer_name: signerName,
+      signature_signed_at: signerName ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (dbErr) return { error: dbErr.message };
+
+  revalidatePath("/proposals");
+  revalidatePath(`/proposals/${id}`);
+  revalidatePath(`/proposals/new`);
+  return { ok: true as const, path };
+}
+
+export async function clearProposalSignature(proposalId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" as const };
+
+  const id = proposalId.trim();
+  if (!id) return { error: "Missing proposal id." as const };
+
+  const { data: row } = await supabase
+    .from("sales_proposal")
+    .select("signature_image_path")
+    .eq("id", id)
+    .maybeSingle();
+
+  const oldPath =
+    typeof row?.signature_image_path === "string"
+      ? row.signature_image_path.trim()
+      : "";
+  if (oldPath) {
+    await supabase.storage.from(PROPOSAL_PDF_BUCKET).remove([oldPath]);
+  }
+
+  const { error } = await supabase
+    .from("sales_proposal")
+    .update({
+      signature_image_path: null,
+      signature_signer_name: null,
+      signature_signed_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/proposals");
+  revalidatePath(`/proposals/${id}`);
+  revalidatePath(`/proposals/new`);
+  return { ok: true as const };
+}
+
+export async function translateProposalMarkdownToSpanish(markdown: string) {
+  return translateProposalMarkdownToSpanishLlm(markdown);
 }
 
 export type SalesCatalogLineInput = {
@@ -183,6 +329,7 @@ export async function updateSalesProposalBodyAndStatus(
     title: string;
     proposal_body: string;
     status: SalesProposalStatus;
+    signature_signer_name?: string | null;
   }
 ) {
   const supabase = await createClient();
@@ -198,14 +345,35 @@ export async function updateSalesProposalBodyAndStatus(
     return { error: "Invalid status" };
   }
 
+  const updatePayload: Record<string, unknown> = {
+    title: body.title.trim() || "Untitled proposal",
+    proposal_body: body.proposal_body,
+    status: body.status,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (body.signature_signer_name !== undefined) {
+    const { data: cur } = await supabase
+      .from("sales_proposal")
+      .select("signature_image_path, signature_signed_at")
+      .eq("id", id)
+      .maybeSingle();
+    const name = body.signature_signer_name?.trim() || null;
+    updatePayload.signature_signer_name = name;
+    const hasPath =
+      typeof cur?.signature_image_path === "string" &&
+      cur.signature_image_path.trim().length > 0;
+    if (hasPath && name && !cur?.signature_signed_at) {
+      updatePayload.signature_signed_at = new Date().toISOString();
+    }
+    if (hasPath && !name) {
+      updatePayload.signature_signed_at = null;
+    }
+  }
+
   const { error } = await supabase
     .from("sales_proposal")
-    .update({
-      title: body.title.trim() || "Untitled proposal",
-      proposal_body: body.proposal_body,
-      status: body.status,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updatePayload)
     .eq("id", id);
 
   if (error) return { error: error.message };
@@ -228,6 +396,7 @@ export async function saveSalesProposal(
     closing_notes: string;
     proposal_body?: string;
     catalogLines: SalesCatalogLineInput[];
+    signature_signer_name?: string | null;
   }
 ) {
   const supabase = await createClient();
@@ -263,6 +432,25 @@ export async function saveSalesProposal(
   }
   if (body.proposal_body !== undefined) {
     updatePayload.proposal_body = body.proposal_body;
+  }
+
+  if (body.signature_signer_name !== undefined) {
+    const { data: cur } = await supabase
+      .from("sales_proposal")
+      .select("signature_image_path, signature_signed_at")
+      .eq("id", id)
+      .maybeSingle();
+    const name = body.signature_signer_name?.trim() || null;
+    updatePayload.signature_signer_name = name;
+    const hasPath =
+      typeof cur?.signature_image_path === "string" &&
+      cur.signature_image_path.trim().length > 0;
+    if (hasPath && name && !cur?.signature_signed_at) {
+      updatePayload.signature_signed_at = new Date().toISOString();
+    }
+    if (hasPath && !name) {
+      updatePayload.signature_signed_at = null;
+    }
   }
 
   const { error: upErr } = await supabase

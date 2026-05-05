@@ -8,7 +8,9 @@ import {
 import {
   buildSalesProposalPdfBytes,
   slugifyPdfFilenameSegment,
+  type SalesProposalPdfInput,
 } from "@/lib/crm/sales-proposal-pdf";
+import { downloadProposalSignatureBytesFromPath } from "@/lib/crm/proposal-pdf-signature";
 import { resolveProspectBrandAssets } from "@/lib/crm/prospect-branding-asset-resolve";
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>;
@@ -67,6 +69,9 @@ export async function buildSalesProposalPdfForDelivery(params: {
       lead_id,
       google_place_snapshot,
       proposal_ai_visuals,
+      signature_image_path,
+      signature_signer_name,
+      signature_signed_at,
       client(name, company, email),
       lead(name, company, email)
     `,
@@ -173,6 +178,36 @@ export async function buildSalesProposalPdfForDelivery(params: {
 
   const allRasters = [...rasterSlots, ...aiRasters];
 
+  let agencySignature: SalesProposalPdfInput["agencySignature"] = null;
+  const sigPath =
+    typeof row.signature_image_path === "string"
+      ? row.signature_image_path.trim()
+      : "";
+  if (sigPath) {
+    const sigBuf = await downloadProposalSignatureBytesFromPath(sigPath);
+    if (sigBuf?.length) {
+      const signerRaw =
+        typeof row.signature_signer_name === "string"
+          ? row.signature_signer_name.trim()
+          : "";
+      const signedRaw = row.signature_signed_at;
+      const signedAt =
+        typeof signedRaw === "string" && signedRaw.trim()
+          ? new Date(signedRaw)
+          : new Date();
+      const signedAtLabel = new Intl.DateTimeFormat("en-CA", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(Number.isNaN(signedAt.getTime()) ? new Date() : signedAt);
+      agencySignature = {
+        imageBytes: new Uint8Array(sigBuf),
+        signerName: signerRaw || "Authorized representative",
+        signedAtLabel,
+      };
+    }
+  }
+
   const pdfBytes = await buildSalesProposalPdfBytes({
     proposalTitle: title,
     clientLine,
@@ -182,6 +217,7 @@ export async function buildSalesProposalPdfForDelivery(params: {
     embeddedRasters: allRasters.length ? allRasters : undefined,
     brandAssets,
     placeTypes: placeSnapshot?.types ?? null,
+    agencySignature,
   });
 
   const slug = slugifyPdfFilenameSegment(buyerName);

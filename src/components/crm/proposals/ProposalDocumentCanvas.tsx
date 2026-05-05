@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useRef, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode, type RefObject } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import type { Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
+import Image from "@tiptap/extension-image";
 import {
   deriveProposalSummary,
-  parseProposalDocument,
+  parseProposalDocumentForEditor,
   proposalEditorHtmlToMarkdown,
   proposalMarkdownToEditorHtml,
 } from "@/lib/crm/proposal-document";
@@ -18,15 +19,24 @@ import type {
 } from "@/lib/crm/sales-proposal-types";
 import type { PlacesSearchPlace } from "@/lib/crm/places-types";
 import {
+  uploadProposalBodyImage,
+  uploadProposalSignatureImage,
+  clearProposalSignature,
+  translateProposalMarkdownToSpanish,
+} from "@/app/(crm)/actions/sales-proposals";
+import {
   AlignCenter,
   AlignLeft,
   AlignRight,
   Bold,
   Heading1,
   Heading2,
+  ImagePlus,
   Italic,
   List,
   ListOrdered,
+  ListPlus,
+  Loader2,
   Redo2,
   Undo2,
   Underline as UnderlineIcon,
@@ -46,43 +56,9 @@ function money(n: number) {
   }).format(n);
 }
 
-function VisualPanel({
-  photoRef,
-  caption,
-  index,
-}: {
-  photoRef?: string | null;
-  caption: string;
-  index: number;
-}) {
-  return (
-    <aside className="overflow-hidden rounded-[1.5rem] bg-white/75 shadow-sm ring-1 ring-border/70 dark:bg-zinc-950/70 dark:ring-zinc-800">
-      <div className="relative min-h-[160px] bg-gradient-to-br from-accent/10 via-sky-100/70 to-emerald-100/70 dark:from-accent/20 dark:via-zinc-900 dark:to-emerald-950/30">
-        {photoRef ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={`/api/crm/google-place-photo?photo=${encodeURIComponent(photoRef)}`}
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover"
-          />
-        ) : (
-          <div className="absolute inset-0">
-            <div className="absolute right-6 top-6 h-24 w-24 rounded-full bg-accent/20 blur-2xl" />
-            <div className="absolute bottom-8 left-8 h-20 w-32 rounded-full bg-emerald-400/20 blur-2xl" />
-            <div className="absolute inset-x-8 bottom-8 h-16 rounded-2xl border border-white/50 bg-white/40 backdrop-blur dark:border-white/10 dark:bg-white/5" />
-          </div>
-        )}
-      </div>
-      <div className="p-4">
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent">
-          Visual {String(index + 1).padStart(2, "0")}
-        </p>
-        <p className="mt-2 text-xs leading-relaxed text-text-secondary dark:text-zinc-400">
-          {caption}
-        </p>
-      </div>
-    </aside>
-  );
+function prospectAttachmentPublicUrl(path: string): string {
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "") ?? "";
+  return `${base}/storage/v1/object/public/prospect-attachments/${path.replace(/^\//, "")}`;
 }
 
 export default function ProposalDocumentCanvas({
@@ -93,9 +69,13 @@ export default function ProposalDocumentCanvas({
   onMarkdownChange,
   status,
   place,
-  aiVisuals = [],
+  aiVisuals: _aiVisuals = [],
   serviceLines = [],
   totalPriceEstimate,
+  proposalId,
+  signatureImagePath = null,
+  signatureSignerName = "",
+  onSignatureSignerNameChange,
 }: {
   title: string;
   onTitleChange: (nextTitle: string) => void;
@@ -107,10 +87,15 @@ export default function ProposalDocumentCanvas({
   aiVisuals?: SalesProposalAiVisualRow[];
   serviceLines?: ServiceLine[];
   totalPriceEstimate?: number | null;
+  proposalId: string;
+  signatureImagePath?: string | null;
+  signatureSignerName?: string;
+  onSignatureSignerNameChange?: (name: string) => void;
 }) {
-  const doc = parseProposalDocument(markdown);
+  const doc = parseProposalDocumentForEditor(markdown);
   const latestTitleRef = useRef(title);
   const lastEmittedMarkdownRef = useRef(markdown);
+  const englishSnapshotRef = useRef(markdown);
   const visibleSections = doc.sections.filter(
     (section) => !/^proposal title$/i.test(section.title),
   );
@@ -129,23 +114,11 @@ export default function ProposalDocumentCanvas({
       TextAlign.configure({
         types: ["heading", "paragraph"],
       }),
+      Image.configure({ inline: false, allowBase64: false }),
     ],
     [],
   );
   const photoRefs = place?.photoRefs?.map((p) => p.trim()).filter(Boolean) ?? [];
-  const visuals = [
-    ...photoRefs.slice(0, 3).map((ref) => ({
-      kind: "photo" as const,
-      photoRef: ref,
-      caption: "Business context and location imagery for the proposal.",
-    })),
-    ...aiVisuals.slice(0, 3).map((v) => ({
-      kind: "ai" as const,
-      photoRef: null,
-      caption: v.caption || "AI concept visualization for the proposed work.",
-    })),
-  ];
-  const fallbackVisual = visuals.length === 0;
   const estimate =
     totalPriceEstimate != null && Number.isFinite(totalPriceEstimate)
       ? money(totalPriceEstimate)
@@ -153,9 +126,47 @@ export default function ProposalDocumentCanvas({
         ? money(serviceLines.reduce((sum, line) => sum + line.unit_price_snapshot, 0))
         : null;
 
+  const [spanishOn, setSpanishOn] = useState(false);
+  const [translateBusy, setTranslateBusy] = useState(false);
+  const [translateErr, setTranslateErr] = useState<string | null>(null);
+
+  const [sigUploadBusy, setSigUploadBusy] = useState(false);
+  const sigFileRef = useRef<HTMLInputElement>(null);
+  const bodyImgFileRef = useRef<HTMLInputElement>(null);
+  const [bodyImgBusy, setBodyImgBusy] = useState(false);
+
   useEffect(() => {
     latestTitleRef.current = title;
   }, [title]);
+
+  useEffect(() => {
+    if (!spanishOn) {
+      englishSnapshotRef.current = markdown;
+    }
+  }, [markdown, spanishOn]);
+
+  const toggleSpanish = useCallback(async () => {
+    setTranslateErr(null);
+    if (spanishOn) {
+      setSpanishOn(false);
+      onMarkdownChange(englishSnapshotRef.current);
+      return;
+    }
+    setTranslateBusy(true);
+    try {
+      const source =
+        lastEmittedMarkdownRef.current || englishSnapshotRef.current;
+      const res = await translateProposalMarkdownToSpanish(source);
+      if (!res.ok) {
+        setTranslateErr(res.error);
+        return;
+      }
+      setSpanishOn(true);
+      onMarkdownChange(res.markdown);
+    } finally {
+      setTranslateBusy(false);
+    }
+  }, [onMarkdownChange, spanishOn]);
 
   const editor = useEditor(
     {
@@ -165,7 +176,7 @@ export default function ProposalDocumentCanvas({
       editorProps: {
         attributes: {
           class:
-            "proposal-word-editor min-h-[860px] px-8 py-10 text-[15px] leading-8 text-text-primary outline-none dark:text-zinc-100 sm:px-12 sm:py-12 [&_h1]:heading-display [&_h1]:mb-8 [&_h1]:text-4xl [&_h1]:font-black [&_h1]:leading-tight [&_h1]:text-text-primary dark:[&_h1]:text-white sm:[&_h1]:text-5xl [&_h2]:heading-display [&_h2]:mb-4 [&_h2]:mt-10 [&_h2]:text-2xl [&_h2]:font-black [&_h2]:text-text-primary dark:[&_h2]:text-white [&_h3]:mb-2 [&_h3]:mt-6 [&_h3]:text-sm [&_h3]:font-bold [&_h3]:uppercase [&_h3]:tracking-wide [&_p]:mb-4 [&_ul]:mb-5 [&_ul]:list-disc [&_ul]:pl-7 [&_ol]:mb-5 [&_ol]:list-decimal [&_ol]:pl-7 [&_li]:my-1.5",
+            "proposal-word-editor min-h-[860px] px-8 py-10 text-[15px] leading-8 text-text-primary outline-none dark:text-zinc-100 sm:px-12 sm:py-12 [&_h1]:heading-display [&_h1]:mb-8 [&_h1]:text-4xl [&_h1]:font-black [&_h1]:leading-tight [&_h1]:text-text-primary dark:[&_h1]:text-white sm:[&_h1]:text-5xl [&_h2]:heading-display [&_h2]:mb-4 [&_h2]:mt-10 [&_h2]:text-2xl [&_h2]:font-black [&_h2]:text-text-primary dark:[&_h2]:text-white [&_h3]:mb-2 [&_h3]:mt-6 [&_h3]:text-sm [&_h3]:font-bold [&_h3]:uppercase [&_h3]:tracking-wide [&_p]:mb-4 [&_ul]:mb-5 [&_ul]:list-disc [&_ul]:pl-7 [&_ol]:mb-5 [&_ol]:list-decimal [&_ol]:pl-7 [&_li]:my-1.5 [&_img]:my-4 [&_img]:max-w-full [&_img]:rounded-lg",
         },
       },
       onUpdate: ({ editor: ed }) => {
@@ -195,6 +206,63 @@ export default function ProposalDocumentCanvas({
     editor.commands.setContent(editorHtml, { emitUpdate: false });
     lastEmittedMarkdownRef.current = markdown;
   }, [editor, editorHtml, markdown]);
+
+  const handleBodyImagePick = useCallback(
+    async (e: ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      if (!file || !editor || !proposalId.trim()) return;
+      setBodyImgBusy(true);
+      try {
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("proposalId", proposalId.trim());
+        const res = await uploadProposalBodyImage(fd);
+        if ("error" in res && res.error) {
+          alert(res.error);
+          return;
+        }
+        if ("url" in res && res.url) {
+          editor.chain().focus().setImage({ src: res.url }).run();
+        }
+      } finally {
+        setBodyImgBusy(false);
+      }
+    },
+    [editor, proposalId],
+  );
+
+  const handleSignaturePick = useCallback(
+    async (e: ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      if (!file || !proposalId.trim()) return;
+      setSigUploadBusy(true);
+      try {
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("signerName", signatureSignerName.trim());
+        const res = await uploadProposalSignatureImage(proposalId.trim(), fd);
+        if ("error" in res && res.error) {
+          alert(res.error);
+          return;
+        }
+      } finally {
+        setSigUploadBusy(false);
+      }
+    },
+    [proposalId, signatureSignerName],
+  );
+
+  async function handleClearSignature() {
+    if (!proposalId.trim()) return;
+    if (!confirm("Remove the saved signature from this proposal?")) return;
+    const res = await clearProposalSignature(proposalId.trim());
+    if ("error" in res && res.error) alert(res.error);
+  }
+
+  const signaturePreviewUrl =
+    signatureImagePath?.trim() ? prospectAttachmentPublicUrl(signatureImagePath.trim()) : null;
 
   return (
     <article className="overflow-hidden rounded-[2rem] border border-border bg-zinc-100/80 shadow-soft-lg dark:border-zinc-800 dark:bg-zinc-950">
@@ -260,9 +328,115 @@ export default function ProposalDocumentCanvas({
         </div>
       </section>
 
+      <div className="border-b border-border bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950 sm:px-6">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-text-secondary">
+          PDF signature (optional)
+        </p>
+        <div className="mt-3 flex flex-wrap items-end gap-3">
+          <label className="flex min-w-[160px] flex-1 flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-text-secondary">
+              Signer name
+            </span>
+            <input
+              type="text"
+              value={signatureSignerName}
+              onChange={(e) => onSignatureSignerNameChange?.(e.target.value)}
+              placeholder="Printed name"
+              className="rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+            />
+          </label>
+          <input
+            ref={sigFileRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={(e) => void handleSignaturePick(e)}
+          />
+          <button
+            type="button"
+            disabled={!proposalId.trim() || sigUploadBusy}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => sigFileRef.current?.click()}
+            className="rounded-xl border border-border px-4 py-2 text-sm font-semibold disabled:opacity-50 dark:border-zinc-700"
+          >
+            {sigUploadBusy ? (
+              <span className="inline-flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                Uploading…
+              </span>
+            ) : (
+              "Upload signature"
+            )}
+          </button>
+          {signaturePreviewUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={signaturePreviewUrl}
+              alt="Signature preview"
+              className="h-14 max-w-[140px] rounded-md border border-border object-contain dark:border-zinc-700"
+            />
+          ) : null}
+          {signatureImagePath ? (
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => void handleClearSignature()}
+              className="text-sm font-semibold text-red-600 underline dark:text-red-400"
+            >
+              Clear signature
+            </button>
+          ) : null}
+        </div>
+        <p className="mt-2 text-xs text-text-secondary dark:text-zinc-500">
+          When saved, this image is flattened onto generated proposal PDFs (download and email).
+        </p>
+      </div>
+
       <div className="p-4 sm:p-6">
         <div className="sticky top-4 z-20 mx-auto mb-4 max-w-5xl overflow-hidden rounded-2xl border border-border bg-white/95 shadow-sm backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
-          {editor ? <ProposalEditorToolbar editor={editor} /> : null}
+          <div className="flex flex-wrap items-center justify-end gap-2 border-b border-border px-2 py-2 dark:border-zinc-800">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={spanishOn}
+              aria-label={
+                spanishOn
+                  ? "Proposal text is in Spanish. Click to restore English."
+                  : "Proposal text is in English. Click to translate to Spanish."
+              }
+              disabled={translateBusy}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => void toggleSpanish()}
+              className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide transition-colors disabled:opacity-50 ${
+                spanishOn
+                  ? "border-blue-500/50 bg-blue-500/15 text-blue-900 dark:border-blue-400/45 dark:bg-blue-500/20 dark:text-blue-100"
+                  : "border-border/80 bg-white/60 text-text-secondary hover:bg-white dark:border-zinc-600 dark:bg-zinc-900/50 dark:text-zinc-400 dark:hover:bg-zinc-800/70"
+              }`}
+            >
+              {translateBusy ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+              ) : (
+                <span className="text-sm leading-none" aria-hidden>
+                  🇪🇸
+                </span>
+              )}
+              ES
+            </button>
+          </div>
+          {translateErr ? (
+            <p className="border-b border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200">
+              {translateErr}
+            </p>
+          ) : null}
+          {editor ? (
+            <ProposalEditorToolbar
+              editor={editor}
+              proposalId={proposalId}
+              bodyImageFileRef={bodyImgFileRef}
+              bodyImageBusy={bodyImgBusy}
+              onBodyImageChange={handleBodyImagePick}
+            />
+          ) : null}
         </div>
 
         <div className="mx-auto max-w-5xl overflow-hidden rounded-[1.5rem] bg-white shadow-[0_20px_80px_rgba(15,23,42,0.12)] ring-1 ring-border dark:bg-zinc-950 dark:ring-zinc-800">
@@ -271,25 +445,6 @@ export default function ProposalDocumentCanvas({
           ) : (
             <div className="min-h-[860px] animate-pulse bg-white dark:bg-zinc-950" />
           )}
-          <div className="grid gap-4 px-8 pb-10 sm:px-12 md:grid-cols-3">
-            {visuals.length > 0
-              ? visuals.slice(0, 3).map((visual, idx) => (
-                  <VisualPanel
-                    key={`${visual.kind}-${idx}`}
-                    index={idx}
-                    photoRef={visual.photoRef}
-                    caption={visual.caption}
-                  />
-                ))
-              : fallbackVisual
-                ? (
-                    <VisualPanel
-                      index={0}
-                      caption="Zenpho proposal visual system: structured scope, clear outcomes, and polished delivery."
-                    />
-                  )
-                : null}
-          </div>
         </div>
 
         {serviceLines.length > 0 ? (
@@ -331,13 +486,52 @@ export default function ProposalDocumentCanvas({
   );
 }
 
-function ProposalEditorToolbar({ editor }: { editor: Editor }) {
+function ProposalEditorToolbar({
+  editor,
+  proposalId,
+  bodyImageFileRef,
+  bodyImageBusy,
+  onBodyImageChange,
+}: {
+  editor: Editor;
+  proposalId: string;
+  bodyImageFileRef: RefObject<HTMLInputElement | null>;
+  bodyImageBusy: boolean;
+  onBodyImageChange: (e: ChangeEvent<HTMLInputElement>) => void;
+}) {
+  const canImage = Boolean(proposalId.trim());
+
+  function insertSection() {
+    const title =
+      typeof window !== "undefined"
+        ? window.prompt("New section heading", "New section")
+        : null;
+    const label = (title ?? "New section").trim() || "New section";
+    editor
+      .chain()
+      .focus()
+      .insertContent({
+        type: "heading",
+        attrs: { level: 2 },
+        content: [{ type: "text", text: label }],
+      })
+      .insertContent("<p></p>")
+      .run();
+  }
+
   return (
     <div
       className="flex flex-wrap items-center gap-1 px-2 py-2"
       role="toolbar"
       aria-label="Proposal text formatting"
     >
+      <input
+        ref={bodyImageFileRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        className="hidden"
+        onChange={onBodyImageChange}
+      />
       <ToolbarBtn
         editor={editor}
         label="Undo"
@@ -370,6 +564,28 @@ function ProposalEditorToolbar({ editor }: { editor: Editor }) {
         onPress={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
       >
         <Heading2 className="h-4 w-4" aria-hidden />
+      </ToolbarBtn>
+      <ToolbarBtn
+        editor={editor}
+        label="Add section"
+        isActive={() => false}
+        onPress={insertSection}
+      >
+        <ListPlus className="h-4 w-4" aria-hidden />
+      </ToolbarBtn>
+      <span className="mx-1 h-6 w-px bg-border dark:bg-zinc-700" aria-hidden />
+      <ToolbarBtn
+        editor={editor}
+        label="Insert image"
+        isActive={() => false}
+        disabled={!canImage || bodyImageBusy}
+        onPress={() => bodyImageFileRef.current?.click()}
+      >
+        {bodyImageBusy ? (
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+        ) : (
+          <ImagePlus className="h-4 w-4" aria-hidden />
+        )}
       </ToolbarBtn>
       <span className="mx-1 h-6 w-px bg-border dark:bg-zinc-700" aria-hidden />
       <ToolbarBtn
@@ -449,12 +665,14 @@ function ToolbarBtn({
   label,
   isActive,
   onPress,
+  disabled,
   children,
 }: {
   editor: Editor;
   label: string;
   isActive: () => boolean;
   onPress: () => void;
+  disabled?: boolean;
   children: ReactNode;
 }) {
   const active = isActive();
@@ -463,7 +681,7 @@ function ToolbarBtn({
       type="button"
       onMouseDown={(e) => e.preventDefault()}
       onClick={onPress}
-      disabled={!editor.isEditable}
+      disabled={disabled ?? !editor.isEditable}
       className={`rounded-lg p-2 text-text-secondary transition-colors hover:bg-surface disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800 ${
         active ? "bg-surface text-accent dark:bg-zinc-800 dark:text-blue-400" : ""
       }`}

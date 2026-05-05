@@ -31,6 +31,10 @@ import type { ProposalPdfRasterSlot } from "@/lib/crm/proposal-pdf-rasters";
 import { stripMarkdownForProposalPdf } from "@/lib/crm/proposal-enrichment-context";
 import type { ResolvedBrandAssets } from "@/lib/crm/prospect-branding-asset-resolve";
 import {
+  drawAgencySignatureBlockOnPage,
+  embedSignatureImageForPdf,
+} from "@/lib/crm/proposal-pdf-signature";
+import {
   hasProspectBrandVisualCues,
   readZenphoPdfLogoPng,
   readZenphoPdfMarkPng,
@@ -60,6 +64,12 @@ export type SalesProposalPdfInput = {
   brandAssets?: ResolvedBrandAssets | null;
   /** Google place `types` for cover footer industry line. */
   placeTypes?: string[] | null;
+  /** Optional agency signature raster (PNG/JPEG) stamped on the last PDF page. */
+  agencySignature?: {
+    imageBytes: Uint8Array;
+    signerName: string;
+    signedAtLabel: string;
+  } | null;
 };
 
 type FlowResult = { page: PDFPage; y: number; pageNum: number };
@@ -311,6 +321,23 @@ export async function buildSalesProposalPdfBytes(
       ...(publisherMark ? { publisherMark } : {}),
     });
     pageNum = after.pageNum;
+  }
+
+  const sig = input.agencySignature;
+  if (sig?.imageBytes?.length) {
+    const embedded = await embedSignatureImageForPdf(
+      pdf,
+      Buffer.from(sig.imageBytes),
+    );
+    if (embedded) {
+      const pages = pdf.getPages();
+      const last = pages[pages.length - 1];
+      drawAgencySignatureBlockOnPage(last, ctx, {
+        image: embedded,
+        signerName: sig.signerName,
+        dateLabel: sig.signedAtLabel,
+      });
+    }
   }
 
   return pdf.save();

@@ -34,6 +34,58 @@ export function stripProposalImageMarkdown(markdown: string): string {
     .trim();
 }
 
+/**
+ * Parses proposal markdown for the TipTap editor and previews: keeps `![]()` / `<img>` lines in section bodies.
+ */
+export function parseProposalDocumentForEditor(markdown: string): ProposalDocument {
+  const normalized = markdown.replace(/\r\n/g, "\n");
+  if (!normalized.trim()) return { preamble: "", sections: [] };
+
+  const lines = normalized.split("\n");
+  const preamble: string[] = [];
+  const sections: ProposalDocumentSection[] = [];
+  let currentTitle: string | null = null;
+  let currentBody: string[] = [];
+
+  const flush = () => {
+    if (!currentTitle) return;
+    sections.push({
+      id: sectionId(currentTitle, sections.length),
+      title: currentTitle.trim() || "Untitled section",
+      body: currentBody.join("\n").trim(),
+    });
+    currentTitle = null;
+    currentBody = [];
+  };
+
+  for (const line of lines) {
+    const heading = /^##\s+(.+)$/.exec(line);
+    if (heading) {
+      flush();
+      currentTitle = heading[1]?.trim() || "Untitled section";
+      continue;
+    }
+
+    if (currentTitle) currentBody.push(line);
+    else preamble.push(line);
+  }
+  flush();
+
+  if (!sections.length && normalized.trim()) {
+    sections.push({
+      id: sectionId("Proposal", 0),
+      title: "Proposal",
+      body: normalized.trim(),
+    });
+    return { preamble: "", sections };
+  }
+
+  return {
+    preamble: preamble.join("\n").trim(),
+    sections,
+  };
+}
+
 export function parseProposalDocument(markdown: string): ProposalDocument {
   const normalized = stripProposalImageMarkdown(markdown.replace(/\r\n/g, "\n"));
   if (!normalized.trim()) return { preamble: "", sections: [] };
@@ -101,6 +153,14 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
+/** Minimal escaping for `src` / `alt` in editor HTML attributes. */
+function escapeHtmlAttr(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;");
+}
+
 function inlineMarkdownToHtml(value: string): string {
   return escapeHtml(value)
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
@@ -124,6 +184,15 @@ function markdownBodyToEditorHtml(body: string): string {
     const line = rawLine.trim();
     if (!line) {
       closeList();
+      continue;
+    }
+
+    const imageMd = /^!\[([^\]]*)]\(([^)]+)\)$/.exec(line);
+    if (imageMd) {
+      closeList();
+      const alt = escapeHtmlAttr(imageMd[1] ?? "");
+      const src = escapeHtmlAttr(imageMd[2]?.trim() ?? "");
+      parts.push(`<p><img src="${src}" alt="${alt}" /></p>`);
       continue;
     }
 
@@ -168,7 +237,7 @@ export function proposalMarkdownToEditorHtml(
   markdown: string,
   fallbackTitle = "Untitled proposal",
 ): string {
-  const doc = parseProposalDocument(markdown);
+  const doc = parseProposalDocumentForEditor(markdown);
   const titleLine =
     doc.sections
       .find((section) => /^proposal title$/i.test(section.title))
@@ -200,8 +269,14 @@ function markdownInlineFromNode(node: Node): string {
   if (node.nodeType !== Node.ELEMENT_NODE) return "";
 
   const element = node as Element;
+  const tag = element.tagName.toLowerCase();
+  if (tag === "img") {
+    const src = element.getAttribute("src")?.trim() ?? "";
+    const alt = element.getAttribute("alt")?.trim() ?? "";
+    return src ? `![${alt}](${src})` : "";
+  }
   const text = Array.from(element.childNodes).map(markdownInlineFromNode).join("");
-  switch (element.tagName.toLowerCase()) {
+  switch (tag) {
     case "strong":
     case "b":
       return text.trim() ? `**${text}**` : "";
@@ -280,6 +355,23 @@ export function proposalEditorHtmlToMarkdown(
       continue;
     }
 
+    if (tag === "img") {
+      const src = element.getAttribute("src")?.trim() ?? "";
+      const alt = element.getAttribute("alt")?.trim() ?? "";
+      if (src) appendBody(`![${alt}](${src})`);
+      continue;
+    }
+
+    if (tag === "figure") {
+      const im = element.querySelector("img");
+      if (im) {
+        const src = im.getAttribute("src")?.trim() ?? "";
+        const alt = im.getAttribute("alt")?.trim() ?? "";
+        if (src) appendBody(`![${alt}](${src})`);
+      }
+      continue;
+    }
+
     if (tag === "h3" || tag === "h4" || tag === "h5" || tag === "h6") {
       appendBody(`### ${markdownTextFromElement(element)}`);
       continue;
@@ -295,6 +387,26 @@ export function proposalEditorHtmlToMarkdown(
         .filter((line) => line.trim().length > 2);
       appendBody(lines.join("\n"));
       continue;
+    }
+
+    if (tag === "p") {
+      const onlyImg =
+        element.querySelectorAll("img").length === 1 &&
+        Array.from(element.childNodes).every((n) => {
+          if (n.nodeType === Node.TEXT_NODE)
+            return !(n.textContent ?? "").trim();
+          if (n.nodeType !== Node.ELEMENT_NODE) return false;
+          return (n as Element).tagName.toLowerCase() === "img";
+        });
+      if (onlyImg) {
+        const im = element.querySelector("img");
+        if (im) {
+          const src = im.getAttribute("src")?.trim() ?? "";
+          const alt = im.getAttribute("alt")?.trim() ?? "";
+          if (src) appendBody(`![${alt}](${src})`);
+          continue;
+        }
+      }
     }
 
     if (tag === "blockquote") {
@@ -338,7 +450,7 @@ export function replaceProposalSection(
   sectionIdToReplace: string,
   patch: Partial<Pick<ProposalDocumentSection, "title" | "body">>,
 ): string {
-  const doc = parseProposalDocument(markdown);
+  const doc = parseProposalDocumentForEditor(markdown);
   const sections = doc.sections.map((section) =>
     section.id === sectionIdToReplace
       ? {
@@ -375,7 +487,7 @@ export function deriveProposalSummary(markdown: string): {
   executiveSummary: string | null;
   investment: string | null;
 } {
-  const doc = parseProposalDocument(markdown);
+  const doc = parseProposalDocumentForEditor(markdown);
   const titleBody = doc.sections.find((s) => /^proposal title$/i.test(s.title))?.body.trim();
   const exec = doc.sections.find((s) => /^executive summary$/i.test(s.title))?.body.trim();
   const investment = doc.sections.find((s) => /investment|pricing/i.test(s.title))?.body.trim();

@@ -90,4 +90,8 @@ export type SalesProposalDetail = {
   closing_notes: string;
   catalogLines: SalesProposalCatalogLineRow[];
   updatedAt: string;
+  /** Storage path under prospect-attachments for PDF signature stamp. */
+  signature_image_path: string | null;
+  signature_signer_name: string | null;
+  signature_signed_at: string | null;
 };

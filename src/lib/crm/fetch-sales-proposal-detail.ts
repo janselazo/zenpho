@@ -88,6 +88,9 @@ export async function fetchSalesProposalDetail(
       services_overview,
       closing_notes,
       updated_at,
+      signature_image_path,
+      signature_signer_name,
+      signature_signed_at,
       client(name, company, email, phone, notes),
       lead(name, company, email, phone, notes)
     `
@@ -175,5 +178,17 @@ export async function fetchSalesProposalDetail(
       typeof row.closing_notes === "string" ? row.closing_notes : "",
     catalogLines,
     updatedAt: (row.updated_at as string) ?? "",
+    signature_image_path:
+      typeof row.signature_image_path === "string" && row.signature_image_path.trim()
+        ? row.signature_image_path.trim()
+        : null,
+    signature_signer_name:
+      typeof row.signature_signer_name === "string" && row.signature_signer_name.trim()
+        ? row.signature_signer_name.trim()
+        : null,
+    signature_signed_at:
+      typeof row.signature_signed_at === "string" && row.signature_signed_at.trim()
+        ? row.signature_signed_at.trim()
+        : null,
   };
 }

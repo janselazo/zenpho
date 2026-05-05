@@ -68,6 +68,9 @@ export default function SalesProposalEditorView({
   );
 
   const [catalogPick, setCatalogPick] = useState("");
+  const [signatureSignerName, setSignatureSignerName] = useState(
+    () => initial.signature_signer_name?.trim() ?? "",
+  );
   const [saving, setSaving] = useState(false);
   const [busyDelete, setBusyDelete] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -82,6 +85,7 @@ export default function SalesProposalEditorView({
     setServicesOverview(initial.services_overview);
     setClosingNotes(initial.closing_notes);
     setProposalBody(initial.proposal_body);
+    setSignatureSignerName(initial.signature_signer_name?.trim() ?? "");
     setLines(
       initial.catalogLines.map((l) => ({
         catalog_item_id: l.catalog_item_id,
@@ -102,6 +106,7 @@ export default function SalesProposalEditorView({
       closing_notes: closingNotes,
       proposal_body: proposalBody,
       catalogLines: lines,
+      signature_signer_name: signatureSignerName.trim() || null,
     }),
     [
       aboutUs,
@@ -111,6 +116,7 @@ export default function SalesProposalEditorView({
       ourStory,
       proposalBody,
       servicesOverview,
+      signatureSignerName,
       status,
       title,
     ],
@@ -314,6 +320,10 @@ export default function SalesProposalEditorView({
           </div>
 
           <ProposalDocumentCanvas
+            proposalId={initial.id}
+            signatureImagePath={initial.signature_image_path}
+            signatureSignerName={signatureSignerName}
+            onSignatureSignerNameChange={setSignatureSignerName}
             title={title}
             onTitleChange={setTitle}
             buyerName={clientPreviewName}

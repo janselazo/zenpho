@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  parseProposalDocument,
+  parseProposalDocumentForEditor,
   replaceProposalSection,
   serializeProposalDocument,
 } from "@/lib/crm/proposal-document";
@@ -16,7 +16,7 @@ export default function ProposalSectionEditor({
   markdown: string;
   onChange: (nextMarkdown: string) => void;
 }) {
-  const doc = parseProposalDocument(markdown);
+  const doc = parseProposalDocumentForEditor(markdown);
 
   if (!doc.sections.length) {
     return (

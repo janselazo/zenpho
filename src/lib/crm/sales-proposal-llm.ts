@@ -633,3 +633,77 @@ Write the JSON now.`;
     return { ok: false, error: msg };
   }
 }
+
+/**
+ * Translates proposal markdown to professional Spanish for the editor toggle.
+ * Preserves structure, URLs, and image lines `![alt](url)`.
+ */
+export async function translateProposalMarkdownToSpanish(markdown: string): Promise<
+  { ok: true; markdown: string } | { ok: false; error: string }
+> {
+  const trimmed = markdown.trim();
+  if (!trimmed) {
+    return { ok: true, markdown: "" };
+  }
+
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  if (!apiKey) {
+    return {
+      ok: false,
+      error: "OPENAI_API_KEY is not configured on the server.",
+    };
+  }
+
+  const model =
+    process.env.OPENAI_PROPOSAL_MODEL?.trim() || DEFAULT_OPENAI_MODEL;
+  const llmMs = proposalGenerationLlmTimeoutMs();
+  const maxOut = Math.min(
+    16_384,
+    Math.max(4_096, proposalGenerationMaxOutputTokens() * 2),
+  );
+
+  const system = `You are a professional translator for B2B agency proposals.
+
+Translate the user's Markdown into clear, professional Latin American Spanish suitable for business clients.
+
+Rules:
+- Preserve GitHub-flavored Markdown structure exactly: ## headings, ### subheadings, bullet/numbered lists, **bold**, *italic*, blockquotes.
+- Keep lines that are only images unchanged except for alt text: ![alt](url) — translate alt text if it is human language; never change URLs inside parentheses.
+- Do not wrap the result in markdown code fences.
+- Output only the translated Markdown document, nothing else.`;
+
+  try {
+    const openai = new OpenAI({ apiKey, timeout: llmMs });
+    const completion = await openai.chat.completions.create({
+      model,
+      ...proposalCompletionTemperature(model, 0.25),
+      max_completion_tokens: maxOut,
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: trimmed },
+      ],
+    });
+    const out = completion.choices[0]?.message?.content?.trim() ?? "";
+    if (!out) {
+      return {
+        ok: false,
+        error: "Translation returned empty content. Try again.",
+      };
+    }
+    const cleaned = out
+      .replace(/^```(?:markdown|md)?\s*/i, "")
+      .replace(/\s*```\s*$/i, "")
+      .trim();
+    return { ok: true, markdown: cleaned };
+  } catch (e) {
+    const msg =
+      e instanceof Error ? e.message : "OpenAI translation failed.";
+    if (/timeout|timed out|ETIMEDOUT|abort/i.test(msg)) {
+      return {
+        ok: false,
+        error: `Translation timed out (${llmMs}ms). Try again.`,
+      };
+    }
+    return { ok: false, error: msg };
+  }
+}

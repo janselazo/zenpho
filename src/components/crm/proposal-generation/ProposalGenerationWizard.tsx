@@ -144,6 +144,9 @@ export default function ProposalGenerationWizard({
   const [wizardNotes, setWizardNotes] = useState(boot?.notes ?? "");
   const [title, setTitle] = useState(boot?.title ?? "Untitled proposal");
   const [markdown, setMarkdown] = useState(boot?.markdown ?? "");
+  const [signatureSignerName, setSignatureSignerName] = useState(
+    () => resume?.signature_signer_name?.trim() ?? "",
+  );
 
   const [busyPatch, setBusyPatch] = useState(false);
   const [busyGen, setBusyGen] = useState(false);
@@ -163,6 +166,10 @@ export default function ProposalGenerationWizard({
     },
     []
   );
+
+  useEffect(() => {
+    setSignatureSignerName(resume?.signature_signer_name?.trim() ?? "");
+  }, [resume?.signature_signer_name]);
 
   function stepIndex(): number {
     return phase - 1;
@@ -332,6 +339,7 @@ export default function ProposalGenerationWizard({
       title: title.trim() || "Untitled proposal",
       proposal_body: markdown,
       status: "draft",
+      signature_signer_name: signatureSignerName.trim() || null,
     });
     setBusySave(false);
     if ("error" in res && res.error) setErr(res.error);
@@ -350,6 +358,7 @@ export default function ProposalGenerationWizard({
       title: title.trim() || "Untitled proposal",
       proposal_body: markdown,
       status: "final",
+      signature_signer_name: signatureSignerName.trim() || null,
     });
     setBusySave(false);
     if ("error" in res && res.error) setErr(res.error);
@@ -367,6 +376,7 @@ export default function ProposalGenerationWizard({
       title: title.trim() || "Untitled proposal",
       proposal_body: markdown,
       status: "final",
+      signature_signer_name: signatureSignerName.trim() || null,
     });
     if ("error" in save && save.error) throw new Error(save.error);
     const sent = await sendSalesProposalEmail(proposalId);
@@ -850,6 +860,10 @@ export default function ProposalGenerationWizard({
                 </div>
               ) : null}
               <ProposalDocumentCanvas
+                proposalId={proposalId}
+                signatureImagePath={resume?.signature_image_path ?? null}
+                signatureSignerName={signatureSignerName}
+                onSignatureSignerNameChange={setSignatureSignerName}
                 title={title}
                 onTitleChange={setTitle}
                 buyerName={selectedParty?.name ?? resume?.clientName ?? null}

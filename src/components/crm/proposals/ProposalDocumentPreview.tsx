@@ -3,7 +3,7 @@
 import {
   deriveProposalSummary,
   markdownBodyToBlocks,
-  parseProposalDocument,
+  parseProposalDocumentForEditor,
 } from "@/lib/crm/proposal-document";
 import type {
   SalesProposalAiVisualRow,
@@ -47,7 +47,7 @@ export default function ProposalDocumentPreview({
   catalogLines?: SalesProposalCatalogLineRow[];
   totalPriceEstimate?: number | null;
 }) {
-  const doc = parseProposalDocument(markdown);
+  const doc = parseProposalDocumentForEditor(markdown);
   const summary = deriveProposalSummary(markdown);
   const heroPhoto = place?.photoRefs?.[0]?.trim() ?? null;
   const visibleSections = doc.sections.filter(
