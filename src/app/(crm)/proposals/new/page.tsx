@@ -1,5 +1,4 @@
 import ProposalDraftBootstrap from "@/components/crm/proposal-generation/ProposalDraftBootstrap";
-import { isProposalAiImageGenerationEnabled } from "@/lib/crm/proposal-ai-image-env";
 import ProposalGenerationWizard from "@/components/crm/proposal-generation/ProposalGenerationWizard";
 import { fetchActiveCrmCatalog } from "@/lib/crm/fetch-crm-catalog";
 import {
@@ -53,8 +52,6 @@ export default async function NewSalesProposalPage({
   const initialProposalId =
     resume && resume.id === proposalPid ? resume.id : proposalPid;
 
-  const proposalAiImagesEnabled = isProposalAiImageGenerationEnabled();
-
   return (
     <div className="px-4 py-8 md:px-8">
       <ProposalGenerationWizard
@@ -63,7 +60,6 @@ export default async function NewSalesProposalPage({
         catalog={catalog}
         initialProposalId={initialProposalId}
         resume={resume ?? null}
-        proposalAiImagesEnabled={proposalAiImagesEnabled}
       />
     </div>
   );

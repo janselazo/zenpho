@@ -29,6 +29,113 @@ import {
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>;
 
+/** UI “Client” = at least one lead has `converted_client_id` pointing at this row. */
+type ClientLeadCrmUiStatus = "client" | "lead";
+
+async function syncClientLeadConversionFromRowEdit(opts: {
+  supabase: SupabaseServer;
+  ownerId: string;
+  clientId: string;
+  desired: ClientLeadCrmUiStatus;
+  /** Snapshot from Clients table (`linkedLead.id`) when edit started — best path to re-link. */
+  conversionLeadIdHint: string | null;
+  /** Fallback: match owner’s unconverted lead by email after saving client fields */
+  clientEmail: string | null;
+}): Promise<{ error: string } | { ok: true }> {
+  const {
+    supabase,
+    ownerId,
+    clientId,
+    desired,
+    conversionLeadIdHint,
+    clientEmail,
+  } = opts;
+
+  if (desired === "lead") {
+    const { error } = await supabase
+      .from("lead")
+      .update({ converted_client_id: null })
+      .eq("converted_client_id", clientId)
+      .eq("owner_id", ownerId);
+    if (error) return { error: error.message };
+    return { ok: true };
+  }
+
+  const { data: existingLink } = await supabase
+    .from("lead")
+    .select("id")
+    .eq("converted_client_id", clientId)
+    .eq("owner_id", ownerId)
+    .limit(1)
+    .maybeSingle();
+
+  if (existingLink?.id) {
+    return { ok: true };
+  }
+
+  const hintTrim = conversionLeadIdHint?.trim() ?? "";
+
+  const linkLead = async (lid: string) => {
+    const trimmed = lid.trim();
+    const { data: row, error: fetchErr } = await supabase
+      .from("lead")
+      .select("id, owner_id, converted_client_id")
+      .eq("id", trimmed)
+      .maybeSingle();
+
+    if (fetchErr || !row)
+      return { error: "Linked lead was not found." } as const;
+
+    const rowOwnerId = row.owner_id as string | null;
+    if (!rowOwnerId || rowOwnerId !== ownerId) {
+      return {
+        error: "You can only attach your own leads as clients.",
+      } as const;
+    }
+
+    const prev = row.converted_client_id as string | null;
+    if (prev && prev.trim() !== clientId) {
+      return {
+        error:
+          "That lead is already linked to a different client. Open it in Contacts first.",
+      } as const;
+    }
+
+    const { error } = await supabase
+      .from("lead")
+      .update({ converted_client_id: clientId })
+      .eq("id", trimmed);
+
+    if (error) return { error: error.message } as const;
+    return { ok: true } as const;
+  };
+
+  if (hintTrim.length > 0) {
+    return linkLead(hintTrim);
+  }
+
+  const em = clientEmail?.trim() ?? "";
+  if (em.length > 0) {
+    const { data: match } = await supabase
+      .from("lead")
+      .select("id")
+      .eq("owner_id", ownerId)
+      .ilike("email", em)
+      .is("converted_client_id", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const mid = match?.id as string | undefined;
+    if (mid) return linkLead(mid);
+  }
+
+  return {
+    error:
+      "Client status needs a matching CRM lead. Use the same email as an unconverted lead, or open that lead in Contacts and connect it via deal Won.",
+  };
+}
+
 /** Supabase returns schema-cache errors when `crm_settings` was never migrated. */
 function explainMissingCrmSettingsTable(message: string): string {
   const m = message.toLowerCase();
@@ -436,6 +543,23 @@ export async function updateClientRow(formData: FormData) {
     .eq("id", id);
 
   if (error) return { error: error.message };
+
+  const crmRaw = String(formData.get("crm_status") ?? "").trim().toLowerCase();
+  const crmStatus: ClientLeadCrmUiStatus | null =
+    crmRaw === "client" || crmRaw === "lead" ? crmRaw : null;
+
+  if (crmStatus !== null) {
+    const hint = String(formData.get("conversion_lead_id_hint") ?? "").trim();
+    const sync = await syncClientLeadConversionFromRowEdit({
+      supabase,
+      ownerId: user.id,
+      clientId: id,
+      desired: crmStatus,
+      conversionLeadIdHint: hint || null,
+      clientEmail: email || null,
+    });
+    if ("error" in sync) return { error: sync.error };
+  }
 
   revalidatePath("/leads");
   revalidatePath("/products");

@@ -74,6 +74,9 @@ type ClientDraft = {
   phone: string;
   company: string;
   notes: string;
+  crmStatus: "client" | "lead";
+  /** `linkedLead.id` when edit started — used to restore Client after a prior toggle in-session or on save */
+  conversionLeadIdHint: string | null;
 };
 
 function clientToDraft(c: ClientTableRow): ClientDraft {
@@ -83,6 +86,8 @@ function clientToDraft(c: ClientTableRow): ClientDraft {
     phone: c.phone ?? "",
     company: c.company ?? "",
     notes: c.notes ?? "",
+    crmStatus: c.linkedLead ? "client" : "lead",
+    conversionLeadIdHint: c.linkedLead?.id ?? null,
   };
 }
 
@@ -157,6 +162,9 @@ export default function ClientsView({
     fd.set("phone", draft.phone.trim());
     fd.set("company", draft.company.trim());
     fd.set("notes", draft.notes.trim());
+    fd.set("crm_status", draft.crmStatus);
+    if (draft.conversionLeadIdHint?.trim())
+      fd.set("conversion_lead_id_hint", draft.conversionLeadIdHint.trim());
     const res = await updateClientRow(fd);
     setSavePending(false);
     if ("error" in res && res.error) {
@@ -318,15 +326,42 @@ export default function ClientsView({
                   )}
                 </td>
                 <td className="px-4 py-3 align-top">
-                  <span
-                    className={`${neutralChipBase} items-center gap-1.5 font-medium text-emerald-800 dark:text-emerald-300`}
-                  >
+                  {isEditing && draft ? (
+                    <select
+                      value={draft.crmStatus}
+                      onChange={(e) =>
+                        setDraft((d) =>
+                          d ?
+                            {
+                              ...d,
+                              crmStatus: e.target.value as "client" | "lead",
+                            }
+                          : d,
+                        )
+                      }
+                      className={inlineInputClass}
+                      aria-label="CRM status — client converted from a lead vs lead-only"
+                    >
+                      <option value="client">Client</option>
+                      <option value="lead">Lead</option>
+                    </select>
+                  ) : (
                     <span
-                      className="h-2 w-2 shrink-0 rounded-full bg-emerald-500 ring-2 ring-border dark:ring-zinc-600"
-                      aria-hidden
-                    />
-                    Client
-                  </span>
+                      className={`${neutralChipBase} items-center gap-1.5 font-medium ${
+                        c.linkedLead ?
+                          "text-emerald-800 dark:text-emerald-300"
+                        : "text-amber-800 dark:text-amber-300"
+                      }`}
+                    >
+                      <span
+                        className={`h-2 w-2 shrink-0 rounded-full ring-2 ring-border dark:ring-zinc-600 ${
+                          c.linkedLead ? "bg-emerald-500" : "bg-amber-500"
+                        }`}
+                        aria-hidden
+                      />
+                      {c.linkedLead ? "Client" : "Lead"}
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3 align-top">
                   {c.dealName?.trim() ? (

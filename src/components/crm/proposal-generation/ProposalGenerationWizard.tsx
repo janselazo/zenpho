@@ -13,11 +13,8 @@ import {
   patchSalesProposalWizardDraft,
   updateSalesProposalBodyAndStatus,
 } from "@/app/(crm)/actions/sales-proposals";
-import PlacesBusinessAutocomplete from "@/components/crm/prospecting/PlacesBusinessAutocomplete";
 import type { CrmProductServiceRow } from "@/lib/crm/crm-catalog-types";
 import type { ProposalWizardPartyOption } from "@/lib/crm/fetch-leads-for-proposal-picker";
-import { sanitizePlacesSearchPlace } from "@/lib/crm/places-google-shared";
-import type { PlacesSearchPlace } from "@/lib/crm/places-types";
 import type { SalesProposalDetail } from "@/lib/crm/sales-proposal-types";
 
 const STEP_LABELS = [
@@ -119,15 +116,12 @@ export default function ProposalGenerationWizard({
   catalog,
   initialProposalId: proposalId,
   resume,
-  proposalAiImagesEnabled,
 }: {
   parties: ProposalWizardPartyOption[];
   catalog: CrmProductServiceRow[];
   /** Draft row created by `/proposals/new` before this view mounts. */
   initialProposalId: string;
   resume: SalesProposalDetail | null;
-  /** Server env: `PROPOSAL_AI_IMAGE_ENABLED` (GPT illustrations + PDF raster slots). */
-  proposalAiImagesEnabled: boolean;
 }) {
   const router = useRouter();
 
@@ -147,12 +141,6 @@ export default function ProposalGenerationWizard({
   const [wizardNotes, setWizardNotes] = useState(boot?.notes ?? "");
   const [title, setTitle] = useState(boot?.title ?? "Untitled proposal");
   const [markdown, setMarkdown] = useState(boot?.markdown ?? "");
-  const [listingPickerText, setListingPickerText] = useState(() =>
-    (resume?.google_place_snapshot?.name ?? "").trim()
-  );
-  const [listingPlace, setListingPlace] = useState<PlacesSearchPlace | null>(
-    resume?.google_place_snapshot ?? null
-  );
 
   const [busyPatch, setBusyPatch] = useState(false);
   const [busyGen, setBusyGen] = useState(false);
@@ -211,7 +199,6 @@ export default function ProposalGenerationWizard({
         ? { leadId: partyId.trim(), clientId: null }
         : { clientId: partyId.trim(), leadId: null }),
       title: title.trim() || "Untitled proposal",
-      googlePlaceSnapshot: listingPlace,
     });
     setBusyPatch(false);
     if ("error" in res && res.error) {
@@ -532,66 +519,7 @@ export default function ProposalGenerationWizard({
             </ul>
           </div>
           <aside className="rounded-2xl border border-border bg-zinc-50/80 p-5 dark:border-zinc-700 dark:bg-zinc-900/40">
-            <div className="space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-text-secondary dark:text-zinc-500">
-                Linked Google listing (optional)
-              </p>
-              <PlacesBusinessAutocomplete
-                value={listingPickerText}
-                onChange={(v) => setListingPickerText(v)}
-                cityHint=""
-                disabled={busyPatch}
-                suggestionSubcopy="Adds categories, imagery, website + logo cues into AI + PDF exports"
-                onPlaceResolved={(p) => {
-                  setListingPlace(sanitizePlacesSearchPlace(p));
-                }}
-              />
-              <p className="text-[11px] text-text-secondary dark:text-zinc-500">
-                Searching requires{" "}
-                <code className="rounded bg-zinc-200 px-1 text-[10px] dark:bg-zinc-800">
-                  GOOGLE_PLACES_API_KEY
-                </code>{" "}
-                (same prospecting integrations).
-              </p>
-              {listingPlace ? (
-                <div className="rounded-xl border border-border bg-white p-3 text-xs shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-semibold text-text-primary dark:text-zinc-50">
-                        {listingPlace.name}
-                      </p>
-                      {listingPlace.formattedAddress ? (
-                        <p className="mt-1 text-text-secondary dark:text-zinc-400">
-                          {listingPlace.formattedAddress}
-                        </p>
-                      ) : null}
-                      <p className="mt-2 text-[10px] uppercase tracking-wide text-text-secondary dark:text-zinc-500">
-                        Google categories ·{" "}
-                        {listingPlace.types?.filter(Boolean).slice(0, 4).join(", ") ||
-                          "Unknown"}
-                      </p>
-                      {listingPlace.photoRefs?.length ? (
-                        <p className="mt-2 text-emerald-700 dark:text-emerald-400">
-                          {listingPlace.photoRefs.length} listing photo
-                          {listingPlace.photoRefs.length > 1 ? "s" : ""} fetched
-                          for the document shell.
-                        </p>
-                      ) : null}
-                    </div>
-                    <button
-                      type="button"
-                      disabled={busyPatch}
-                      className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-red-600 underline"
-                      onClick={() => setListingPlace(null)}
-                    >
-                      Clear
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-
-            <p className="mt-8 text-[10px] font-bold uppercase tracking-widest text-text-secondary dark:text-zinc-500">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-text-secondary dark:text-zinc-500">
               Selected lead
             </p>
             {!selectedParty ? (
@@ -793,30 +721,6 @@ export default function ProposalGenerationWizard({
                 {" "}
                 (falls back to gpt-5.5 unless set).
               </p>
-              {!proposalAiImagesEnabled ? (
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
-                  <p className="text-xs font-bold uppercase tracking-wide">
-                    GPT proposal images off
-                  </p>
-                  <p className="mt-2 text-xs leading-relaxed">
-                    Illustration slots in Markdown and branded PDF spreads stay
-                    empty unless you set{" "}
-                    <code className="rounded bg-amber-100 px-1 text-[11px] dark:bg-amber-900/80">
-                      PROPOSAL_AI_IMAGE_ENABLED=true
-                    </code>
-                    {" "}
-                    and configure uploads (
-                    <code className="rounded bg-amber-100 px-1 text-[11px] dark:bg-amber-900/80">
-                      SUPABASE_SERVICE_ROLE_KEY
-                    </code>
-                    ). Listing photos still need a Places-backed listing and{" "}
-                    <code className="rounded bg-amber-100 px-1 text-[11px] dark:bg-amber-900/80">
-                      GOOGLE_PLACES_API_KEY
-                    </code>
-                    .
-                  </p>
-                </div>
-              ) : null}
               <div className="flex flex-wrap gap-3">
                 <button
                   type="button"
@@ -915,13 +819,6 @@ export default function ProposalGenerationWizard({
             </div>
           ) : (
             <div className="space-y-4">
-              {!proposalAiImagesEnabled ? (
-                <div className="rounded-2xl border border-border bg-surface px-4 py-3 text-xs text-text-secondary dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
-                  PDF merges listing photos (Places) and GPT rasters when
-                  available. With GPT images disabled, AI visual slots in the PDF
-                  stay empty unless the listing contributes photos.
-                </div>
-              ) : null}
               {genWarnings.length > 0 ? (
                 <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
                   <p className="text-xs font-bold uppercase tracking-wide">
