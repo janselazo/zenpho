@@ -259,18 +259,38 @@ export default function ProposalGenerationWizard({
         body: JSON.stringify({ proposalId }),
         signal: ac.signal,
       });
-      const data = (await res.json()) as
-        | { ok: true; title: string; markdown: string }
-        | { ok: false; error: string };
-
-      if (!res.ok || !data || typeof data !== "object" || !("ok" in data)) {
+      let data: unknown;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error(
+          `Generation failed (${res.status}). The server did not return JSON — check deployment logs.`
+        );
+      }
+      if (!data || typeof data !== "object" || !("ok" in data)) {
         throw new Error("Unexpected server response.");
       }
-      if (!data.ok) {
-        throw new Error(data.error);
+      const payload = data as {
+        ok: boolean;
+        error?: string;
+        title?: string;
+        markdown?: string;
+      };
+      if (!payload.ok) {
+        const msg =
+          typeof payload.error === "string" && payload.error.trim()
+            ? payload.error
+            : `Generation failed (${res.status}).`;
+        throw new Error(msg);
       }
-      setTitle(data.title.trim() || title);
-      setMarkdown(data.markdown);
+      if (typeof payload.markdown !== "string") {
+        throw new Error("Unexpected server response.");
+      }
+      setTitle(
+        (typeof payload.title === "string" ? payload.title : "").trim() ||
+          title
+      );
+      setMarkdown(payload.markdown);
       setPhase(4);
       router.refresh();
     } catch (e) {
