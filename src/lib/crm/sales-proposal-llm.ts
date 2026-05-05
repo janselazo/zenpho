@@ -190,7 +190,7 @@ Write the JSON now.`;
     const completion = await openai.chat.completions.create({
       model,
       temperature: 0.65,
-      max_tokens: maxTokens,
+      max_completion_tokens: maxTokens,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: system },
