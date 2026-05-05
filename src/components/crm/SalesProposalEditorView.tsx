@@ -9,8 +9,7 @@ import {
   type SalesCatalogLineInput,
 } from "@/app/(crm)/actions/sales-proposals";
 import ProposalActionsBar from "@/components/crm/proposals/ProposalActionsBar";
-import ProposalDocumentPreview from "@/components/crm/proposals/ProposalDocumentPreview";
-import ProposalSectionEditor from "@/components/crm/proposals/ProposalSectionEditor";
+import ProposalDocumentCanvas from "@/components/crm/proposals/ProposalDocumentCanvas";
 import type { CrmProductServiceRow } from "@/lib/crm/crm-catalog-types";
 import type { ProposalClientOption } from "@/lib/crm/fetch-clients-for-proposal-picker";
 import type {
@@ -210,6 +209,11 @@ export default function SalesProposalEditorView({
       : hit.name || hit.email || hit.company || "Client";
   }, [clientId, clientOptions, initial.clientName, initial.partyContact?.name]);
 
+  const currentEstimate = useMemo(() => {
+    if (lines.length === 0) return initial.total_price_estimate;
+    return lines.reduce((sum, line) => sum + line.unit_price_snapshot, 0);
+  }, [initial.total_price_estimate, lines]);
+
   return (
     <div className="mx-auto max-w-[1600px] space-y-8 px-4 py-8">
       <div className="flex flex-wrap items-center gap-3">
@@ -247,13 +251,10 @@ export default function SalesProposalEditorView({
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <section className="space-y-2">
-          <LabelBlock title="Title" />
-          <input
-            className={inputArea}
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
+        <section className="rounded-2xl border border-border bg-surface/70 p-4 text-sm text-text-secondary dark:border-zinc-800 dark:bg-zinc-900/40">
+          Edit the proposal directly in the document below. The title, section
+          headings, and copy are saved back to the same Markdown used for PDF
+          download and email sending.
         </section>
         <section className="space-y-2">
           <LabelBlock title="Status" />
@@ -280,7 +281,7 @@ export default function SalesProposalEditorView({
         onSendEmail={sendEmail}
       />
 
-      <div className="grid gap-8 xl:grid-cols-[minmax(420px,0.9fr)_minmax(0,1.1fr)]">
+      <div className="space-y-8">
         <div className="space-y-6">
           <div className="rounded-2xl border border-border bg-surface/70 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -312,13 +313,18 @@ export default function SalesProposalEditorView({
             </div>
           </div>
 
-          <section className="space-y-3">
-            <LabelBlock title="Proposal document" />
-            <ProposalSectionEditor
-              markdown={proposalBody}
-              onChange={setProposalBody}
-            />
-          </section>
+          <ProposalDocumentCanvas
+            title={title}
+            onTitleChange={setTitle}
+            buyerName={clientPreviewName}
+            markdown={proposalBody}
+            onMarkdownChange={setProposalBody}
+            status={status}
+            place={initial.google_place_snapshot}
+            aiVisuals={initial.ai_visuals}
+            serviceLines={lines}
+            totalPriceEstimate={currentEstimate}
+          />
 
           <details className="rounded-2xl border border-border bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
             <summary className="cursor-pointer text-xs font-bold uppercase tracking-widest text-text-secondary">
@@ -453,19 +459,6 @@ export default function SalesProposalEditorView({
             )}
           </section>
         </div>
-
-        <aside className="xl:sticky xl:top-8 xl:self-start">
-          <ProposalDocumentPreview
-            title={title}
-            buyerName={clientPreviewName}
-            markdown={proposalBody}
-            status={status}
-            place={initial.google_place_snapshot}
-            aiVisuals={initial.ai_visuals}
-            catalogLines={initial.catalogLines}
-            totalPriceEstimate={initial.total_price_estimate}
-          />
-        </aside>
       </div>
     </div>
   );

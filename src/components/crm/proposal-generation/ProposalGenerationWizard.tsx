@@ -15,8 +15,7 @@ import {
   updateSalesProposalBodyAndStatus,
 } from "@/app/(crm)/actions/sales-proposals";
 import ProposalActionsBar from "@/components/crm/proposals/ProposalActionsBar";
-import ProposalDocumentPreview from "@/components/crm/proposals/ProposalDocumentPreview";
-import ProposalSectionEditor from "@/components/crm/proposals/ProposalSectionEditor";
+import ProposalDocumentCanvas from "@/components/crm/proposals/ProposalDocumentCanvas";
 import type { CrmProductServiceRow } from "@/lib/crm/crm-catalog-types";
 import type { ProposalWizardPartyOption } from "@/lib/crm/fetch-leads-for-proposal-picker";
 import type { SalesProposalDetail } from "@/lib/crm/sales-proposal-types";
@@ -193,6 +192,21 @@ export default function ProposalGenerationWizard({
     }
     return s;
   }, [catalog, selectedSvc]);
+
+  const selectedServiceLines = useMemo(
+    () =>
+      [...selectedSvc]
+        .map((id) => catalog.find((c) => c.id === id))
+        .filter((row): row is CrmProductServiceRow => Boolean(row))
+        .map((row) => ({
+          id: row.id,
+          description_snapshot: row.description.trim()
+            ? `${row.name}\n\n${row.description.trim()}`
+            : row.name,
+          unit_price_snapshot: row.unit_price,
+        })),
+    [catalog, selectedSvc]
+  );
 
   const persistStep1to2 = async () => {
     if (!proposalId.trim() || !partyId.trim() || !partyKind) return;
@@ -835,41 +849,20 @@ export default function ProposalGenerationWizard({
                   </button>
                 </div>
               ) : null}
-              <label className="block text-xs font-bold uppercase tracking-wider text-text-secondary dark:text-zinc-500">
-                Proposal title
-                <input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-                />
-              </label>
-              <div className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-                <section>
-                  <p className="mb-3 text-xs font-bold uppercase tracking-wider text-text-secondary dark:text-zinc-500">
-                    Edit proposal sections
-                  </p>
-                  <ProposalSectionEditor
-                    markdown={markdown}
-                    onChange={setMarkdown}
-                  />
-                </section>
-                <section>
-                  <p className="mb-3 text-xs font-bold uppercase tracking-wider text-text-secondary dark:text-zinc-500">
-                    Client-facing preview
-                  </p>
-                  <ProposalDocumentPreview
-                    title={title}
-                    buyerName={selectedParty?.name ?? resume?.clientName ?? null}
-                    markdown={markdown}
-                    status="generated"
-                    place={resume?.google_place_snapshot ?? null}
-                    aiVisuals={resume?.ai_visuals ?? []}
-                    totalPriceEstimate={
-                      subtotal > 0 ? subtotal : (resume?.total_price_estimate ?? null)
-                    }
-                  />
-                </section>
-              </div>
+              <ProposalDocumentCanvas
+                title={title}
+                onTitleChange={setTitle}
+                buyerName={selectedParty?.name ?? resume?.clientName ?? null}
+                markdown={markdown}
+                onMarkdownChange={setMarkdown}
+                status="generated"
+                place={resume?.google_place_snapshot ?? null}
+                aiVisuals={resume?.ai_visuals ?? []}
+                serviceLines={selectedServiceLines}
+                totalPriceEstimate={
+                  subtotal > 0 ? subtotal : (resume?.total_price_estimate ?? null)
+                }
+              />
             </div>
           )}
 
