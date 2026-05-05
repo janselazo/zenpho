@@ -1,15 +1,75 @@
 "use server";
 
+import { Buffer } from "node:buffer";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   SALES_PROPOSAL_STATUSES,
   type SalesProposalStatus,
 } from "@/lib/crm/sales-proposal-types";
 import { sanitizePlacesSearchPlace } from "@/lib/crm/places-google-shared";
 import type { PlacesSearchPlace } from "@/lib/crm/places-types";
+import { buildSalesProposalPdfForDelivery } from "@/lib/crm/sales-proposal-pdf-build";
+import { getAgencySendGridCredentials } from "@/lib/sendgrid/agency-credentials";
+import { sendSendGridMail } from "@/lib/sendgrid/mail-send";
 
 const STATUS_SET = new Set<string>(SALES_PROPOSAL_STATUSES);
+const SENDGRID_PROPOSAL_ATTACHMENT_MAX_BYTES = 18 * 1024 * 1024;
+const PROPOSAL_PDF_BUCKET = "prospect-attachments";
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+async function createProposalPdfSignedLink(params: {
+  proposalId: string;
+  filename: string;
+  bytes: Buffer;
+}): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch (e) {
+    return {
+      ok: false,
+      error:
+        e instanceof Error
+          ? e.message
+          : "Server storage is not configured (SUPABASE_SERVICE_ROLE_KEY).",
+    };
+  }
+
+  const safeName =
+    params.filename.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 160) ||
+    "proposal.pdf";
+  const path = `sales-proposals/${params.proposalId}/${Date.now()}-${safeName}`;
+  const { error: uploadErr } = await admin.storage
+    .from(PROPOSAL_PDF_BUCKET)
+    .upload(path, params.bytes, {
+      contentType: "application/pdf",
+      upsert: true,
+    });
+  if (uploadErr) return { ok: false, error: uploadErr.message };
+
+  const { data, error: signedErr } = await admin.storage
+    .from(PROPOSAL_PDF_BUCKET)
+    .createSignedUrl(path, 60 * 60 * 24 * 7, {
+      download: safeName,
+    });
+  if (signedErr || !data?.signedUrl) {
+    return {
+      ok: false,
+      error: signedErr?.message || "Could not create proposal download link.",
+    };
+  }
+
+  return { ok: true, url: data.signedUrl };
+}
 
 export type SalesCatalogLineInput = {
   catalog_item_id?: string | null;
@@ -235,6 +295,102 @@ export async function saveSalesProposal(
   revalidatePath("/proposals");
   revalidatePath(`/proposals/${id}`);
   return { ok: true };
+}
+
+export async function sendSalesProposalEmail(proposalId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const id = proposalId.trim();
+  if (!id) return { error: "Missing proposal id" };
+
+  const creds = await getAgencySendGridCredentials();
+  if (!creds) {
+    return {
+      error:
+        "SendGrid is not configured. Add your SendGrid API key and verified sender in Settings → Integrations → SendGrid.",
+    };
+  }
+
+  const built = await buildSalesProposalPdfForDelivery({ supabase, proposalId: id });
+  if (!built.ok) return { error: built.error };
+  if (!built.recipientEmail?.trim()) {
+    return {
+      error: "The linked lead/client does not have an email address.",
+    };
+  }
+
+  const subject = `${built.title || "Proposal"} from Zenpho`;
+  let linkUrl: string | null = null;
+  const attachments =
+    built.bytes.length <= SENDGRID_PROPOSAL_ATTACHMENT_MAX_BYTES
+      ? [
+          {
+            contentBase64: built.bytes.toString("base64"),
+            filename: built.filename,
+            type: "application/pdf",
+            disposition: "attachment" as const,
+          },
+        ]
+      : undefined;
+
+  if (!attachments) {
+    const signed = await createProposalPdfSignedLink({
+      proposalId: id,
+      filename: built.filename,
+      bytes: built.bytes,
+    });
+    if (!signed.ok) return { error: signed.error };
+    linkUrl = signed.url;
+  }
+
+  const greeting = built.buyerName?.trim()
+    ? `Hi ${built.buyerName.trim()},`
+    : "Hi,";
+  const text =
+    `${greeting}\n\n` +
+    `Attached is the proposal we prepared for you.` +
+    (linkUrl ? `\n\nDownload the proposal here: ${linkUrl}` : "") +
+    `\n\nBest,\nZenpho`;
+
+  const html =
+    `<p>${escapeHtml(greeting)}</p>` +
+    `<p>Attached is the proposal we prepared for you.</p>` +
+    (linkUrl
+      ? `<p><a href="${escapeHtml(linkUrl)}">Download the proposal PDF</a></p>`
+      : "") +
+    `<p>Best,<br/>Zenpho</p>`;
+
+  const sent = await sendSendGridMail({
+    apiKey: creds.apiKey,
+    to: built.recipientEmail.trim(),
+    from: { email: creds.fromEmail, name: creds.fromName },
+    replyTo: creds.replyTo,
+    subject,
+    text,
+    html,
+    attachments,
+  });
+
+  if (!sent.ok) return { error: sent.error };
+
+  const { error: updateErr } = await supabase
+    .from("sales_proposal")
+    .update({
+      status: "sent",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (updateErr) return { error: updateErr.message };
+
+  revalidatePath("/proposals");
+  revalidatePath(`/proposals/${id}`);
+  revalidatePath(`/proposals/new`);
+  return { ok: true as const };
 }
 
 export async function deleteSalesProposal(proposalId: string) {

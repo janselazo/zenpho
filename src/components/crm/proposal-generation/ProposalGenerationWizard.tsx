@@ -11,8 +11,12 @@ import {
 } from "lucide-react";
 import {
   patchSalesProposalWizardDraft,
+  sendSalesProposalEmail,
   updateSalesProposalBodyAndStatus,
 } from "@/app/(crm)/actions/sales-proposals";
+import ProposalActionsBar from "@/components/crm/proposals/ProposalActionsBar";
+import ProposalDocumentPreview from "@/components/crm/proposals/ProposalDocumentPreview";
+import ProposalSectionEditor from "@/components/crm/proposals/ProposalSectionEditor";
 import type { CrmProductServiceRow } from "@/lib/crm/crm-catalog-types";
 import type { ProposalWizardPartyOption } from "@/lib/crm/fetch-leads-for-proposal-picker";
 import type { SalesProposalDetail } from "@/lib/crm/sales-proposal-types";
@@ -145,10 +149,10 @@ export default function ProposalGenerationWizard({
   const [busyPatch, setBusyPatch] = useState(false);
   const [busyGen, setBusyGen] = useState(false);
   const [busySave, setBusySave] = useState(false);
-  const [busyPdf, setBusyPdf] = useState(false);
   const [genStage, setGenStage] = useState(0);
   const [genWarnings, setGenWarnings] = useState<string[]>([]);
   const [err, setErr] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const genIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -308,6 +312,7 @@ export default function ProposalGenerationWizard({
   async function saveDraft() {
     if (!proposalId) return;
     setErr(null);
+    setNotice(null);
     setBusySave(true);
     const res = await updateSalesProposalBodyAndStatus(proposalId, {
       title: title.trim() || "Untitled proposal",
@@ -316,12 +321,16 @@ export default function ProposalGenerationWizard({
     });
     setBusySave(false);
     if ("error" in res && res.error) setErr(res.error);
-    else router.refresh();
+    else {
+      setNotice("Draft saved.");
+      router.refresh();
+    }
   }
 
   async function finalizeDoc() {
     if (!proposalId) return;
     setErr(null);
+    setNotice(null);
     setBusySave(true);
     const res = await updateSalesProposalBodyAndStatus(proposalId, {
       title: title.trim() || "Untitled proposal",
@@ -330,49 +339,32 @@ export default function ProposalGenerationWizard({
     });
     setBusySave(false);
     if ("error" in res && res.error) setErr(res.error);
-    else router.refresh();
+    else {
+      setNotice("Proposal marked final.");
+      router.refresh();
+    }
   }
 
-  async function downloadPdf() {
+  async function sendEmail() {
     if (!proposalId) return;
     setErr(null);
-    setBusyPdf(true);
-    try {
-      const res = await fetch("/api/crm/sales-proposal-pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ proposalId }),
-      });
-      if (!res.ok) {
-        const t = await res.text();
-        let msg = `PDF failed (${res.status})`;
-        try {
-          const j = JSON.parse(t) as { error?: string };
-          if (j.error) msg = j.error;
-        } catch {
-          msg = t.slice(0, 200) || msg;
-        }
-        throw new Error(msg);
-      }
-      const disposition = res.headers.get("Content-Disposition");
-      const fname =
-        disposition?.match(/filename="([^"]+)"/)?.[1] ??
-        `proposal-${proposalId.slice(0, 8)}.pdf`;
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = fname;
-      a.rel = "noopener";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "PDF export failed.");
-    } finally {
-      setBusyPdf(false);
-    }
+    setNotice(null);
+    const save = await updateSalesProposalBodyAndStatus(proposalId, {
+      title: title.trim() || "Untitled proposal",
+      proposal_body: markdown,
+      status: "final",
+    });
+    if ("error" in save && save.error) throw new Error(save.error);
+    const sent = await sendSalesProposalEmail(proposalId);
+    if ("error" in sent && sent.error) throw new Error(sent.error);
+    setNotice("Proposal sent by email.");
+    router.refresh();
+  }
+
+  function recipientEmail(): string | null {
+    if (selectedParty?.email?.trim()) return selectedParty.email.trim();
+    if (resume?.partyContact?.email?.trim()) return resume.partyContact.email.trim();
+    return null;
   }
 
   function toggleService(id: string) {
@@ -462,6 +454,11 @@ export default function ProposalGenerationWizard({
           >
             Dismiss
           </button>
+        </div>
+      ) : null}
+      {notice ? (
+        <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">
+          {notice}
         </div>
       ) : null}
 
@@ -846,36 +843,47 @@ export default function ProposalGenerationWizard({
                   className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
                 />
               </label>
-              <label className="block text-xs font-bold uppercase tracking-wider text-text-secondary dark:text-zinc-500">
-                Proposal document (Markdown)
-                <textarea
-                  rows={24}
-                  value={markdown}
-                  onChange={(e) => setMarkdown(e.target.value)}
-                  spellCheck={false}
-                  className="mt-1 w-full resize-y rounded-xl border border-border bg-white px-3 py-2 font-mono text-sm leading-relaxed dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-                />
-              </label>
+              <div className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+                <section>
+                  <p className="mb-3 text-xs font-bold uppercase tracking-wider text-text-secondary dark:text-zinc-500">
+                    Edit proposal sections
+                  </p>
+                  <ProposalSectionEditor
+                    markdown={markdown}
+                    onChange={setMarkdown}
+                  />
+                </section>
+                <section>
+                  <p className="mb-3 text-xs font-bold uppercase tracking-wider text-text-secondary dark:text-zinc-500">
+                    Client-facing preview
+                  </p>
+                  <ProposalDocumentPreview
+                    title={title}
+                    buyerName={selectedParty?.name ?? resume?.clientName ?? null}
+                    markdown={markdown}
+                    status="generated"
+                    place={resume?.google_place_snapshot ?? null}
+                    aiVisuals={resume?.ai_visuals ?? []}
+                    totalPriceEstimate={
+                      subtotal > 0 ? subtotal : (resume?.total_price_estimate ?? null)
+                    }
+                  />
+                </section>
+              </div>
             </div>
           )}
 
+          <ProposalActionsBar
+            proposalId={proposalId}
+            recipientEmail={recipientEmail()}
+            busySave={busySave}
+            disabled={busyGen}
+            onSaveDraft={saveDraft}
+            onMarkFinal={finalizeDoc}
+            onSendEmail={sendEmail}
+          />
+
           <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              disabled={busySave || busyGen}
-              onClick={() => void saveDraft()}
-              className="rounded-xl bg-accent px-5 py-2 text-sm font-semibold text-white disabled:opacity-50"
-            >
-              {busySave ? "Saving…" : "Save draft"}
-            </button>
-            <button
-              type="button"
-              disabled={busySave || busyGen}
-              onClick={() => void finalizeDoc()}
-              className="rounded-xl border border-border px-5 py-2 text-sm font-semibold dark:border-zinc-600"
-            >
-              Mark final
-            </button>
             <button
               type="button"
               disabled={busyGen}
@@ -894,19 +902,11 @@ export default function ProposalGenerationWizard({
             </button>
             <button
               type="button"
-              disabled={busyGen || busyPdf}
+              disabled={busyGen}
               onClick={() => setPhase(2)}
               className="rounded-xl border border-border px-5 py-2 text-sm font-semibold dark:border-zinc-600"
             >
               Back to services
-            </button>
-            <button
-              type="button"
-              disabled={busyPdf || busyGen}
-              onClick={() => void downloadPdf()}
-              className="rounded-xl border border-emerald-600 bg-emerald-600 px-5 py-2 text-sm font-semibold text-white disabled:opacity-50"
-            >
-              {busyPdf ? "Preparing PDF…" : "Download PDF"}
             </button>
           </div>
 

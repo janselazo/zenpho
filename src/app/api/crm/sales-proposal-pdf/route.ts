@@ -1,47 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import {
-  parseGooglePlaceSnapshot,
-} from "@/lib/crm/proposal-enrichment-context";
-import {
-  collectProposalAiVisualRasters,
-  collectProposalPdfRasters,
-} from "@/lib/crm/proposal-pdf-rasters";
-import {
-  buildSalesProposalPdfBytes,
-  slugifyPdfFilenameSegment,
-} from "@/lib/crm/sales-proposal-pdf";
-import { resolveProspectBrandAssets } from "@/lib/crm/prospect-branding-asset-resolve";
+import { buildSalesProposalPdfForDelivery } from "@/lib/crm/sales-proposal-pdf-build";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 type Body = { proposalId?: unknown };
-
-function formatUsd(n: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-  }).format(n);
-}
-
-function parseAiVisualRowsPdf(
-  raw: unknown,
-): { path: string; caption: string }[] {
-  if (!Array.isArray(raw)) return [];
-  const out: { path: string; caption: string }[] = [];
-  for (const x of raw) {
-    if (!x || typeof x !== "object") continue;
-    const o = x as Record<string, unknown>;
-    const path = typeof o.path === "string" ? o.path.trim() : "";
-    const caption = typeof o.caption === "string" ? o.caption.trim() : "";
-    if (path.startsWith("proposal-ai-visuals/"))
-      out.push({ path, caption: caption || "AI visualization" });
-  }
-  return out;
-}
 
 export async function POST(req: Request) {
   let body: Body;
@@ -78,144 +43,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { data: row, error } = await supabase
-    .from("sales_proposal")
-    .select(
-      `
-      id,
-      title,
-      proposal_body,
-      total_price_estimate,
-      client_id,
-      lead_id,
-      google_place_snapshot,
-      proposal_ai_visuals,
-      client(name, company),
-      lead(name, company)
-    `
-    )
-    .eq("id", proposalId)
-    .maybeSingle();
-
-  if (error || !row) {
-    return NextResponse.json({ error: "Proposal not found" }, { status: 404 });
-  }
-
-  const bodyMd =
-    typeof row.proposal_body === "string" ? row.proposal_body.trim() : "";
-  if (!bodyMd) {
+  const built = await buildSalesProposalPdfForDelivery({ supabase, proposalId });
+  if (!built.ok) {
     return NextResponse.json(
-      { error: "Proposal has no body to export yet." },
-      { status: 400 }
+      { error: built.error },
+      { status: built.status },
     );
   }
 
-  const lj = Array.isArray(row.lead)
-    ? row.lead[0]
-    : (row.lead as { name?: string | null; company?: string | null } | null);
-  const clientJoin = row.client as
-    | { name: string; company: string | null }
-    | null
-    | { name: string; company: string | null }[];
-
-  const cj = Array.isArray(clientJoin) ? clientJoin[0] : clientJoin;
-  const nameFromLead =
-    typeof lj?.name === "string" && lj.name.trim()
-      ? lj.name.trim()
-      : typeof lj?.company === "string" && lj.company.trim()
-        ? lj.company.trim()
-        : "";
-  const nameFromClient =
-    typeof cj?.name === "string" && cj.name.trim()
-      ? cj.name.trim()
-      : typeof cj?.company === "string" && cj.company.trim()
-        ? cj.company.trim()
-        : "";
-  const clientName =
-    nameFromLead || nameFromClient || "Client";
-
-  const company =
-    typeof cj?.company === "string" && cj.company.trim()
-      ? cj.company.trim()
-      : typeof lj?.company === "string" && lj.company.trim()
-        ? lj.company.trim()
-        : "";
-
-  const title =
-    typeof row.title === "string" && row.title.trim()
-      ? row.title.trim()
-      : "Proposal";
-
-  const tpe =
-    row.total_price_estimate != null &&
-    typeof row.total_price_estimate === "number"
-      ? row.total_price_estimate
-      : row.total_price_estimate != null &&
-          typeof row.total_price_estimate === "string"
-        ? Number.parseFloat(row.total_price_estimate)
-        : null;
-
-  const investment =
-    tpe != null && Number.isFinite(tpe)
-      ? `Estimated investment (from catalog selections): ${formatUsd(tpe)}. Final pricing subject to contract.`
-      : "";
-
-  const dateStr = new Intl.DateTimeFormat("en-CA", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-
-  const clientLine = company
-    ? `${clientName} (${company})`
-    : clientName;
-
-  const placeSnapshot = parseGooglePlaceSnapshot(row.google_place_snapshot);
-  const listingSite = placeSnapshot?.websiteUri?.trim() ?? "";
-  const brandLabel =
-    clientName || placeSnapshot?.name?.trim() || title;
-
-  const [rasterSlots, brandAssets] = await Promise.all([
-    collectProposalPdfRasters({
-      googlePlacesApiKey: process.env.GOOGLE_PLACES_API_KEY,
-      place: placeSnapshot,
-      businessLabel: clientName,
-    }),
-    listingSite
-      ? resolveProspectBrandAssets({
-          websiteUrl: listingSite,
-          businessName: brandLabel || undefined,
-        })
-      : Promise.resolve(null),
-  ]);
-
-  const aiRasterRows = parseAiVisualRowsPdf(row.proposal_ai_visuals);
-  const aiRasters =
-    aiRasterRows.length > 0
-      ? await collectProposalAiVisualRasters({ rows: aiRasterRows })
-      : [];
-
-  const allRasters = [...rasterSlots, ...aiRasters];
-
-  const pdfBytes = await buildSalesProposalPdfBytes({
-    proposalTitle: title,
-    clientLine,
-    investmentLine: investment,
-    markdownBody: bodyMd,
-    generatedAtLabel: dateStr,
-    embeddedRasters: allRasters.length ? allRasters : undefined,
-    brandAssets,
-    placeTypes: placeSnapshot?.types ?? null,
-  });
-
-  const slug = slugifyPdfFilenameSegment(clientName);
-  const filename = `proposal-${slug}-${dateStr}.pdf`;
-
-  return new NextResponse(Buffer.from(pdfBytes), {
+  return new NextResponse(new Uint8Array(built.bytes), {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Disposition": `attachment; filename="${built.filename}"`,
       "Cache-Control": "no-store",
     },
   });
