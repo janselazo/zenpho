@@ -41,6 +41,8 @@ export type AppSidebarItem = {
   icon: LucideIcon;
   soon?: boolean;
   badge?: "conversations";
+  /** When false, skip Next.js prefetch (routes that mutate on GET). */
+  prefetch?: boolean;
 };
 
 export type AppSidebarCollapsibleSection = {
@@ -162,6 +164,7 @@ export const SIDEBAR_SALES: AppSidebarItem[] = [
     href: "/proposals/new",
     label: "Proposal Generation",
     icon: Sparkles,
+    prefetch: false,
   },
   { href: "/proposals", label: "Proposals", icon: FileText },
   { href: "/estimates", label: "Estimates", icon: Calculator, soon: true },

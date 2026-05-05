@@ -72,6 +72,7 @@ export default function SalesProposalListView({
           </div>
           <Link
             href="/proposals/new"
+            prefetch={false}
             className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-4 py-2 text-sm font-semibold text-text-primary shadow-sm transition hover:bg-surface dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
           >
             <Plus className="h-4 w-4" aria-hidden />
@@ -100,7 +101,11 @@ export default function SalesProposalListView({
                     className="px-4 py-12 text-center text-text-secondary dark:text-zinc-500"
                   >
                     No proposals yet.{" "}
-                    <Link href="/proposals/new" className="text-accent underline">
+                    <Link
+                      href="/proposals/new"
+                      prefetch={false}
+                      className="text-accent underline"
+                    >
                       Create one
                     </Link>
                     .

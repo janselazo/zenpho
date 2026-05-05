@@ -151,7 +151,12 @@ export default function AppSidebar() {
               const showUnread =
                 item.badge === "conversations" && conversationUnreadCount > 0;
               return (
-                <NavLink key={item.href} href={item.href} active={active}>
+                <NavLink
+                  key={item.href}
+                  href={item.href}
+                  active={active}
+                  prefetch={item.prefetch}
+                >
                   <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
                   <span className="min-w-0 flex-1 truncate">{item.label}</span>
                   {showUnread ? <UnreadBadge count={conversationUnreadCount} /> : null}
@@ -241,15 +246,18 @@ function SidebarSection({
 function NavLink({
   href,
   active,
+  prefetch,
   children,
 }: {
   href: string;
   active: boolean;
+  prefetch?: boolean;
   children: ReactNode;
 }) {
   return (
     <Link
       href={href}
+      prefetch={prefetch === false ? false : undefined}
       className={`flex w-full min-w-0 items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
         active
           ? "bg-accent/10 text-accent dark:bg-blue-500/12 dark:text-blue-400"

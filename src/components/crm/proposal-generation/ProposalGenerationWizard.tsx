@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -10,7 +10,6 @@ import {
   Sparkles,
 } from "lucide-react";
 import {
-  createSalesProposalDraft,
   patchSalesProposalWizardDraft,
   updateSalesProposalBodyAndStatus,
 } from "@/app/(crm)/actions/sales-proposals";
@@ -42,12 +41,12 @@ function formatUsd(n: number): string {
   }).format(n);
 }
 
-type IdleOrStep = "start" | 1 | 2 | 3 | 4;
+type WizardStep = 1 | 2 | 3 | 4;
 
 function deriveBootstrap(
   resume: SalesProposalDetail | null
 ): null | {
-  step: Exclude<IdleOrStep, "start">;
+  step: WizardStep;
   clientId: string;
   selectedIds: Set<string>;
   notes: string;
@@ -101,22 +100,19 @@ function deriveBootstrap(
 export default function ProposalGenerationWizard({
   clients,
   catalog,
-  initialProposalId,
+  initialProposalId: proposalId,
   resume,
 }: {
   clients: ProposalClientOption[];
   catalog: CrmProductServiceRow[];
-  initialProposalId: string | null;
+  /** Draft row created by `/proposals/new` before this view mounts. */
+  initialProposalId: string;
   resume: SalesProposalDetail | null;
 }) {
   const router = useRouter();
 
-  const [phase, setPhase] = useState<IdleOrStep>(() =>
-    deriveBootstrap(resume) ? deriveBootstrap(resume)!.step : "start"
-  );
-  const [proposalId, setProposalId] = useState<string | null>(
-    initialProposalId ??
-      (resume && resume.id ? resume.id : null)
+  const [phase, setPhase] = useState<WizardStep>(() =>
+    deriveBootstrap(resume)?.step ?? 1
   );
 
   const boot = deriveBootstrap(resume);
@@ -135,7 +131,6 @@ export default function ProposalGenerationWizard({
     resume?.google_place_snapshot ?? null
   );
 
-  const [busyCreate, setBusyCreate] = useState(false);
   const [busyPatch, setBusyPatch] = useState(false);
   const [busyGen, setBusyGen] = useState(false);
   const [busySave, setBusySave] = useState(false);
@@ -155,7 +150,6 @@ export default function ProposalGenerationWizard({
   );
 
   function stepIndex(): number {
-    if (phase === "start") return 0;
     return phase - 1;
   }
 
@@ -184,28 +178,8 @@ export default function ProposalGenerationWizard({
     return s;
   }, [catalog, selectedSvc]);
 
-  const onStart = useCallback(async () => {
-    setErr(null);
-    setBusyCreate(true);
-    const res = await createSalesProposalDraft({});
-    setBusyCreate(false);
-    if ("error" in res && res.error) {
-      setErr(res.error);
-      return;
-    }
-    const id =
-      "id" in res && res.id ? res.id : null;
-    if (!id) {
-      setErr("Could not create draft.");
-      return;
-    }
-    setProposalId(id);
-    setPhase(1);
-    router.replace(`/proposals/new?proposal=${encodeURIComponent(id)}`);
-  }, [router]);
-
   const persistStep1to2 = async () => {
-    if (!proposalId || !clientId.trim()) return;
+    if (!proposalId.trim() || !clientId.trim()) return;
     setErr(null);
     setBusyPatch(true);
     const res = await patchSalesProposalWizardDraft(proposalId, {
@@ -222,7 +196,7 @@ export default function ProposalGenerationWizard({
   };
 
   const persistStep2to3 = async () => {
-    if (!proposalId || selectedSvc.size === 0) return;
+    if (!proposalId.trim() || selectedSvc.size === 0) return;
     setErr(null);
     setBusyPatch(true);
     const res = await patchSalesProposalWizardDraft(proposalId, {
@@ -240,7 +214,7 @@ export default function ProposalGenerationWizard({
   };
 
   const runGeneration = async () => {
-    if (!proposalId) return;
+    if (!proposalId.trim()) return;
     setErr(null);
     setBusyGen(true);
     setGenStage(0);
@@ -390,52 +364,50 @@ export default function ProposalGenerationWizard({
     });
   }
 
-  /** Step indicator (1-indexed visuals for non-start). */
-  const stepperUi =
-    phase === "start" ? null : (
-      <nav
-        aria-label="Proposal steps"
-        className="flex flex-wrap items-center gap-3 border-b border-border pb-6 dark:border-zinc-700"
-      >
-        {STEP_LABELS.map((label, idx) => {
-          const active = stepIndex() === idx;
-          const complete = stepIndex() > idx;
-          return (
-            <div key={label} className="flex items-center gap-2">
-              <span
-                className={`flex h-8 min-w-[2rem] items-center justify-center rounded-full border px-2 text-xs font-bold ${
-                  complete
-                    ? "border-emerald-600 bg-emerald-600 text-white"
-                    : active
-                      ? "border-accent bg-accent text-white"
-                      : "border-border bg-surface text-text-secondary dark:border-zinc-700"
-                }`}
-              >
-                {complete ? (
-                  <CheckCircle2 className="h-4 w-4" aria-hidden />
-                ) : (
-                  idx + 1
-                )}
+  const stepperUi = (
+    <nav
+      aria-label="Proposal steps"
+      className="flex flex-wrap items-center gap-3 border-b border-border pb-6 dark:border-zinc-700"
+    >
+      {STEP_LABELS.map((label, idx) => {
+        const active = stepIndex() === idx;
+        const complete = stepIndex() > idx;
+        return (
+          <div key={label} className="flex items-center gap-2">
+            <span
+              className={`flex h-8 min-w-[2rem] items-center justify-center rounded-full border px-2 text-xs font-bold ${
+                complete
+                  ? "border-emerald-600 bg-emerald-600 text-white"
+                  : active
+                    ? "border-accent bg-accent text-white"
+                    : "border-border bg-surface text-text-secondary dark:border-zinc-700"
+              }`}
+            >
+              {complete ? (
+                <CheckCircle2 className="h-4 w-4" aria-hidden />
+              ) : (
+                idx + 1
+              )}
+            </span>
+            <span
+              className={`text-xs font-semibold uppercase tracking-wide ${
+                active
+                  ? "text-text-primary dark:text-zinc-100"
+                  : "text-text-secondary dark:text-zinc-500"
+              }`}
+            >
+              {label}
+            </span>
+            {idx < STEP_LABELS.length - 1 ? (
+              <span className="hidden text-border sm:inline px-2 text-lg dark:text-zinc-700">
+                /
               </span>
-              <span
-                className={`text-xs font-semibold uppercase tracking-wide ${
-                  active
-                    ? "text-text-primary dark:text-zinc-100"
-                    : "text-text-secondary dark:text-zinc-500"
-                }`}
-              >
-                {label}
-              </span>
-              {idx < STEP_LABELS.length - 1 ? (
-                <span className="hidden text-border sm:inline px-2 text-lg dark:text-zinc-700">
-                  /
-                </span>
-              ) : null}
-            </div>
-          );
-        })}
-      </nav>
-    );
+            ) : null}
+          </div>
+        );
+      })}
+    </nav>
+  );
 
   return (
     <div className="mx-auto max-w-4xl pb-24">
@@ -458,7 +430,7 @@ export default function ProposalGenerationWizard({
         proposal editor.
       </p>
 
-      {stepperUi ? <div className="mt-8">{stepperUi}</div> : null}
+      <div className="mt-8">{stepperUi}</div>
 
       {err ? (
         <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
@@ -473,39 +445,8 @@ export default function ProposalGenerationWizard({
         </div>
       ) : null}
 
-      {/* Start */}
-      {phase === "start" ? (
-        <div className="mt-14 space-y-4 text-center">
-          <Sparkles className="mx-auto h-10 w-10 text-accent" aria-hidden />
-          <button
-            type="button"
-            disabled={busyCreate}
-            onClick={() => void onStart()}
-            className="inline-flex rounded-xl bg-accent px-8 py-3 text-sm font-semibold text-white shadow-sm hover:bg-accent-hover disabled:opacity-50"
-          >
-            {busyCreate ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating…
-              </>
-            ) : (
-              "Start proposal generation"
-            )}
-          </button>
-          <p className="text-xs text-text-secondary dark:text-zinc-500">
-            We’ll create a draft now so edits and regeneration stay synced.
-          </p>
-          <Link
-            href="/proposals"
-            className="block text-sm text-accent underline underline-offset-2"
-          >
-            Back to proposals
-          </Link>
-        </div>
-      ) : null}
-
       {/* Step 1 */}
-      {phase === 1 && proposalId ? (
+      {phase === 1 ? (
         <div className="mt-10 grid gap-8 lg:grid-cols-[1fr,minmax(0,320px)]">
           <div className="space-y-4">
             <label className="block text-xs font-bold uppercase tracking-wider text-text-secondary dark:text-zinc-500">
@@ -688,7 +629,7 @@ export default function ProposalGenerationWizard({
       ) : null}
 
       {/* Step 2 */}
-      {phase === 2 && proposalId ? (
+      {phase === 2 ? (
         <div className="mt-10 space-y-6">
           <p className="text-sm text-text-secondary dark:text-zinc-400">
             Select one or more rows from Products & Services. Timeline and
@@ -794,7 +735,7 @@ export default function ProposalGenerationWizard({
       ) : null}
 
       {/* Step 3 */}
-      {phase === 3 && proposalId ? (
+      {phase === 3 ? (
         <div className="mt-10 space-y-6">
           {!busyGen ? (
             <>
@@ -884,7 +825,7 @@ export default function ProposalGenerationWizard({
       ) : null}
 
       {/* Step 4 */}
-      {phase === 4 && proposalId ? (
+      {phase === 4 ? (
         <div className="mt-10 space-y-6">
           {busyGen ? (
             <div className="rounded-[2rem] border border-emerald-200 bg-white p-6 dark:border-emerald-950 dark:bg-zinc-900">
