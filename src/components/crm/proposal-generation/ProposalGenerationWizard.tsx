@@ -603,7 +603,7 @@ export default function ProposalGenerationWizard({
       {phase === 2 ? (
         <div className="mt-10 space-y-6">
           <p className="text-sm text-text-secondary dark:text-zinc-400">
-            Select one or more rows from Products & Services. Timeline and
+            Select one or more rows from Services. Timeline and
             deliverables should be summarized in descriptions for now.
           </p>
           <ul className="space-y-2">

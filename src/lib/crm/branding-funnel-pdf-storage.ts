@@ -1,7 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const BUCKET = "prospect-attachments";
-const BRANDING_FUNNEL_MAX_BYTES = 28 * 1024 * 1024;
+/** Brand book + funnel PDFs embed many rasters (50MB cap; raise in Dashboard if Storage rejects below this). */
+const BRANDING_FUNNEL_MAX_BYTES = 50 * 1024 * 1024;
 
 function safePdfName(filename: string | null | undefined): string {
   const safe =
@@ -25,7 +26,12 @@ export async function uploadBrandingFunnelPdf(params: {
     return { ok: false, error: "PDF payload too small." };
   }
   if (params.bytes.length > BRANDING_FUNNEL_MAX_BYTES) {
-    return { ok: false, error: "PDF is too large to store." };
+    const got = (params.bytes.length / (1024 * 1024)).toFixed(1);
+    const max = (BRANDING_FUNNEL_MAX_BYTES / (1024 * 1024)).toFixed(0);
+    return {
+      ok: false,
+      error: `PDF is too large to store (${got}MB; max ${max}MB). Reduce images in the brand book or raise Storage limits.`,
+    };
   }
 
   let admin;

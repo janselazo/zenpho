@@ -30,7 +30,7 @@ export async function fetchActiveCrmCatalog(): Promise<CrmProductServiceRow[]> {
   return data.map((r) => mapRow(r as Record<string, unknown>));
 }
 
-/** Full list for Products & Services admin (includes inactive). */
+/** Full list for Services admin (includes inactive). */
 export async function fetchAllCrmCatalog(): Promise<CrmProductServiceRow[]> {
   const supabase = await createClient();
   const { data, error } = await supabase

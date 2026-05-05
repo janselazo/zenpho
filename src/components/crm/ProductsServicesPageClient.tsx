@@ -240,7 +240,7 @@ export default function ProductsServicesPageClient({
                   className="px-3 py-8 text-center text-text-secondary dark:text-zinc-500"
                   colSpan={6}
                 >
-                  No catalog items yet. Add products and services you sell; they appear on invoice line-item pickers.
+                  No catalog items yet. Add services you sell; they appear on invoice line-item pickers.
                 </td>
               </tr>
             ) : null}

@@ -24,7 +24,7 @@ export type PlaceholderPageCopy = {
 export const PLACEHOLDER_PAGE_COPY: Record<PlaceholderPageKey, PlaceholderPageCopy> = {
   "products-services": {
     iconKey: "package",
-    title: "Products & Services",
+    title: "Services",
     description:
       "A sales-ready catalog of offerings, packages, and price books — distinct from the delivery pipeline you manage under Work → Products (List / Pipeline).",
     features: [
@@ -38,7 +38,7 @@ export const PLACEHOLDER_PAGE_COPY: Record<PlaceholderPageKey, PlaceholderPageCo
     iconKey: "calculator",
     title: "Estimates",
     description:
-      "Build branded estimates from Products & Services, send for approval, and convert wins to proposals — without leaving Zenpho.",
+      "Build branded estimates from Services, send for approval, and convert wins to proposals — without leaving Zenpho.",
     features: [
       "Line items tied to your catalog and default terms",
       "Client-facing PDF and e-approve flow",

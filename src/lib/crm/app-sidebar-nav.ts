@@ -153,7 +153,7 @@ export const SIDEBAR_CRM: AppSidebarItem[] = [
 export const SIDEBAR_SALES: AppSidebarItem[] = [
   {
     href: "/products-services",
-    label: "Products & Services",
+    label: "Services",
     icon: Package,
   },
   { href: "/invoices", label: "Invoices", icon: Receipt },

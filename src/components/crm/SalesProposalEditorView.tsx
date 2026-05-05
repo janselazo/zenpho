@@ -329,7 +329,7 @@ export default function SalesProposalEditorView({
         <section className="space-y-4 rounded-2xl border border-border bg-zinc-50/80 p-4 dark:border-zinc-700 dark:bg-zinc-900/40">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-xs font-bold uppercase tracking-widest text-text-secondary dark:text-zinc-500">
-              Selected products & services
+              Selected services
             </h3>
             <div className="flex flex-wrap items-center gap-2">
               {catalogOptions.length > 0 ? (
@@ -369,7 +369,7 @@ export default function SalesProposalEditorView({
           </div>
           {lines.length === 0 ? (
             <p className="text-sm text-text-secondary dark:text-zinc-500">
-              No services referenced yet — pick from Products & Services or leave
+              No services referenced yet — pick from Services or leave
               this section blank.
             </p>
           ) : (

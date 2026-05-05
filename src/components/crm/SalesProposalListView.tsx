@@ -56,7 +56,7 @@ export default function SalesProposalListView({
             Proposals
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-text-secondary dark:text-zinc-400">
-            Client-facing narratives about your studio, positioning, services, and highlighted offerings pulled from Products & Services.
+            Client-facing narratives about your studio, positioning, services, and highlighted offerings pulled from Services.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

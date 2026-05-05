@@ -587,7 +587,7 @@ export default function ProposalBuilderView({
                           value={catalogPick}
                           onChange={(e) => setCatalogPick(e.target.value)}
                           className="min-w-[12rem] rounded-lg border border-border bg-white px-2 py-1.5 text-xs font-medium dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
-                          aria-label="Pick from Products and Services catalog"
+                          aria-label="Pick from Services catalog"
                         >
                           <option value="">Add from catalog…</option>
                           {catalogOptions.map((c) => (
@@ -626,7 +626,7 @@ export default function ProposalBuilderView({
                   >
                     Add catalog items
                   </Link>{" "}
-                  under Products & Services to fill lines from your price list.
+                  under Services to fill lines from your price list.
                 </p>
               ) : null}
               <div className="space-y-3">
