@@ -15,6 +15,25 @@ export type SalesProposalLlmClientContext = {
 
 const DEFAULT_OPENAI_MODEL = "gpt-5.5";
 
+/** Some chat models reject non-default temperature (OpenAI returns 400). Proposal-only — branding LLM paths unchanged. */
+function proposalModelSupportsCustomTemperature(modelId: string): boolean {
+  const base = modelId.trim().toLowerCase().split("/").pop() ?? "";
+  if (base.startsWith("gpt-5")) return false;
+  if (base.startsWith("o1")) return false;
+  if (base.startsWith("o3")) return false;
+  if (base.startsWith("o4")) return false;
+  return true;
+}
+
+function proposalCompletionTemperature(
+  modelId: string,
+  temperature: number
+): { temperature: number } | Record<string, never> {
+  return proposalModelSupportsCustomTemperature(modelId)
+    ? { temperature }
+    : {};
+}
+
 const AGENCY_VOICE =
   "Zenpho positioning: outcomes-led product and growth studio. Voice is professional, warm, concise, trustworthy—consultative seller, not hypey. Match the framing used in polished agency proposals: specifics, timelines, clarity on investment.";
 
@@ -347,7 +366,7 @@ Return JSON now.`;
     const openai = new OpenAI({ apiKey, timeout: llmMs });
     const completion = await openai.chat.completions.create({
       model,
-      temperature: 0.55,
+      ...proposalCompletionTemperature(model, 0.55),
       max_completion_tokens: maxOut,
       response_format: { type: "json_object" },
       messages: [
@@ -462,7 +481,7 @@ Return JSON {"title","markdown"} now.`;
     const openai = new OpenAI({ apiKey, timeout: llmMs });
     const completion = await openai.chat.completions.create({
       model,
-      temperature: 0.62,
+      ...proposalCompletionTemperature(model, 0.62),
       max_completion_tokens: maxTokens,
       response_format: { type: "json_object" },
       messages: [
@@ -585,7 +604,7 @@ Write the JSON now.`;
     const openai = new OpenAI({ apiKey, timeout: llmMs });
     const completion = await openai.chat.completions.create({
       model,
-      temperature: 0.65,
+      ...proposalCompletionTemperature(model, 0.65),
       max_completion_tokens: maxTokens,
       response_format: { type: "json_object" },
       messages: [
