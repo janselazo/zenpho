@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createProposalFromLead } from "@/app/(crm)/actions/proposals";
-import type { ProposalLeadOption } from "@/lib/crm/fetch-leads-for-proposal-picker";
+import type { ProposalWizardPartyOption } from "@/lib/crm/fetch-leads-for-proposal-picker";
 
 export default function NewProposalForm({
   leads,
 }: {
-  leads: ProposalLeadOption[];
+  leads: ProposalWizardPartyOption[];
 }) {
   const router = useRouter();
   const [leadId, setLeadId] = useState("");

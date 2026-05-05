@@ -17,7 +17,9 @@ export async function fetchSalesProposalsForList(): Promise<
       status,
       updated_at,
       client_id,
-      client(name)
+      lead_id,
+      client(name),
+      lead(name)
     `
     )
     .order("updated_at", { ascending: false })
@@ -25,23 +27,29 @@ export async function fetchSalesProposalsForList(): Promise<
 
   if (error || !data) return [];
 
-  type RowWithClient = {
+  type RowWithParty = {
     id: string;
     title: string | null;
     status: string | null;
     updated_at: string | null;
     client_id: string | null;
+    lead_id: string | null;
     client: { name: string } | null | { name: string }[];
+    lead: { name: string } | null | { name: string }[];
   };
 
-  return (data as RowWithClient[]).map((r) => {
-    const cn = Array.isArray(r.client) ? r.client[0]?.name : r.client?.name;
+  return (data as RowWithParty[]).map((r) => {
+    const lc = Array.isArray(r.lead) ? r.lead[0]?.name : r.lead?.name;
+    const cc = Array.isArray(r.client) ? r.client[0]?.name : r.client?.name;
+    const raw =
+      (typeof lc === "string" && lc.trim()) ||
+      (typeof cc === "string" && cc.trim()) ||
+      null;
     return {
       id: r.id,
       title: (r.title as string)?.trim() || "Untitled",
       status: parseSalesProposalStatus(r.status as string),
-      clientName:
-        typeof cn === "string" && cn.trim() ? cn.trim() : null,
+      clientName: raw ? raw.trim() : null,
       updatedAt: (r.updated_at as string) ?? "",
     };
   });

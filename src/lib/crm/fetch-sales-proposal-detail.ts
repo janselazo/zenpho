@@ -4,6 +4,7 @@ import {
   type SalesProposalAiVisualRow,
   type SalesProposalCatalogLineRow,
   type SalesProposalDetail,
+  type SalesProposalPartyContact,
 } from "@/lib/crm/sales-proposal-types";
 import { coerceSalesProposalStrategySpec } from "@/lib/crm/sales-proposal-llm";
 import { parseGooglePlaceSnapshot } from "@/lib/crm/proposal-enrichment-context";
@@ -30,6 +31,38 @@ function parseUuidArray(raw: unknown): string[] {
   return raw.filter((x): x is string => typeof x === "string" && Boolean(x.trim()));
 }
 
+function firstJoinedRow(joined: unknown): Record<string, unknown> | null {
+  if (!joined || typeof joined !== "object") return null;
+  if (Array.isArray(joined)) {
+    const h = joined[0];
+    return h && typeof h === "object" ? (h as Record<string, unknown>) : null;
+  }
+  return joined as Record<string, unknown>;
+}
+
+function partyContactFromJoin(joined: unknown): SalesProposalPartyContact | null {
+  const j = firstJoinedRow(joined);
+  if (!j) return null;
+  const nm =
+    typeof j.name === "string" ? j.name.trim() : "";
+  const company =
+    typeof j.company === "string" ? j.company.trim() : "";
+  const display =
+    nm ||
+    company ||
+    (typeof j.email === "string" ? j.email.trim() : "") ||
+    "";
+  if (!display) return null;
+  return {
+    name: nm || company || display,
+    email: typeof j.email === "string" ? j.email.trim() || null : null,
+    company: company || null,
+    phone:
+      typeof j.phone === "string" ? j.phone.trim() || null : null,
+    notes: typeof j.notes === "string" ? j.notes.trim() || null : null,
+  };
+}
+
 export async function fetchSalesProposalDetail(
   id: string
 ): Promise<SalesProposalDetail | null> {
@@ -39,6 +72,7 @@ export async function fetchSalesProposalDetail(
     .select(
       `
       id,
+      lead_id,
       client_id,
       title,
       status,
@@ -54,7 +88,8 @@ export async function fetchSalesProposalDetail(
       services_overview,
       closing_notes,
       updated_at,
-      client(name)
+      client(name, company, email, phone, notes),
+      lead(name, company, email, phone, notes)
     `
     )
     .eq("id", id)
@@ -62,15 +97,21 @@ export async function fetchSalesProposalDetail(
 
   if (error || !row) return null;
 
-  type ClientJoin = null | { name: string };
+  const lid =
+    typeof row.lead_id === "string" && row.lead_id.trim()
+      ? row.lead_id.trim()
+      : null;
+  const cid =
+    typeof row.client_id === "string" && row.client_id.trim()
+      ? row.client_id.trim()
+      : null;
 
-  const cj =
-    typeof row.client === "object" && row.client && !Array.isArray(row.client)
-      ? (row.client as ClientJoin)
-      : Array.isArray(row.client)
-        ? (row.client[0] as ClientJoin | undefined) ?? null
-        : null;
-  const cn = typeof cj?.name === "string" ? cj.name.trim() : "";
+  let partyContact: SalesProposalPartyContact | null =
+    lid ? partyContactFromJoin(row.lead) : null;
+  if (!partyContact && cid)
+    partyContact = partyContactFromJoin(row.client);
+
+  const cn = partyContact?.name?.trim() || "";
 
   const { data: lineRows } = await supabase
     .from("sales_proposal_catalog_line")
@@ -108,11 +149,10 @@ export async function fetchSalesProposalDetail(
 
   return {
     id: row.id as string,
-    clientId:
-      typeof row.client_id === "string" && row.client_id.trim()
-        ? row.client_id.trim()
-        : null,
+    leadId: lid,
+    clientId: cid,
     clientName: cn || null,
+    partyContact,
     title:
       typeof row.title === "string"
         ? row.title.trim() || "Untitled"

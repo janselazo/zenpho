@@ -87,9 +87,11 @@ export async function POST(req: Request) {
       proposal_body,
       total_price_estimate,
       client_id,
+      lead_id,
       google_place_snapshot,
       proposal_ai_visuals,
-      client(name, company)
+      client(name, company),
+      lead(name, company)
     `
     )
     .eq("id", proposalId)
@@ -108,23 +110,36 @@ export async function POST(req: Request) {
     );
   }
 
+  const lj = Array.isArray(row.lead)
+    ? row.lead[0]
+    : (row.lead as { name?: string | null; company?: string | null } | null);
   const clientJoin = row.client as
     | { name: string; company: string | null }
     | null
     | { name: string; company: string | null }[];
 
   const cj = Array.isArray(clientJoin) ? clientJoin[0] : clientJoin;
-  const clientName =
+  const nameFromLead =
+    typeof lj?.name === "string" && lj.name.trim()
+      ? lj.name.trim()
+      : typeof lj?.company === "string" && lj.company.trim()
+        ? lj.company.trim()
+        : "";
+  const nameFromClient =
     typeof cj?.name === "string" && cj.name.trim()
       ? cj.name.trim()
       : typeof cj?.company === "string" && cj.company.trim()
         ? cj.company.trim()
-        : "Client";
+        : "";
+  const clientName =
+    nameFromLead || nameFromClient || "Client";
 
   const company =
     typeof cj?.company === "string" && cj.company.trim()
       ? cj.company.trim()
-      : "";
+      : typeof lj?.company === "string" && lj.company.trim()
+        ? lj.company.trim()
+        : "";
 
   const title =
     typeof row.title === "string" && row.title.trim()

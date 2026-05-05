@@ -69,7 +69,7 @@ export default function ProposalDraftBootstrap() {
         Creating draft…
       </p>
       <p className="mt-2 text-xs text-text-secondary dark:text-zinc-500">
-        You&apos;ll jump to customer selection next.
+        You&apos;ll jump to lead selection next.
       </p>
     </div>
   );

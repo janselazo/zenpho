@@ -108,7 +108,7 @@ export async function POST(req: Request) {
   const { data: row, error: rowErr } = await supabase
     .from("sales_proposal")
     .select(
-      "id, client_id, wizard_notes, selected_catalog_item_ids, title, google_place_snapshot"
+      "id, client_id, lead_id, wizard_notes, selected_catalog_item_ids, title, google_place_snapshot"
     )
     .eq("id", proposalId)
     .maybeSingle();
@@ -124,9 +124,63 @@ export async function POST(req: Request) {
     typeof row.client_id === "string" && row.client_id.trim()
       ? row.client_id.trim()
       : null;
-  if (!clientId) {
+  const leadId =
+    typeof row.lead_id === "string" && row.lead_id.trim()
+      ? row.lead_id.trim()
+      : null;
+
+  let clientRow:
+    | {
+        name?: string | null;
+        company?: string | null;
+        email?: string | null;
+        phone?: string | null;
+        notes?: string | null;
+      }
+    | null = null;
+
+  if (leadId) {
+    const { data: leadDb, error: leadErr } = await supabase
+      .from("lead")
+      .select("name, company, email, phone, notes")
+      .eq("id", leadId)
+      .maybeSingle();
+
+    if (leadErr || !leadDb) {
+      return NextResponse.json(
+        { ok: false as const, error: "Linked lead not found." },
+        { status: 400 }
+      );
+    }
+    clientRow = {
+      name: leadDb.name as string | null | undefined,
+      company: leadDb.company as string | null | undefined,
+      email: leadDb.email as string | null | undefined,
+      phone: typeof leadDb.phone === "string" ? leadDb.phone : null,
+      notes: typeof leadDb.notes === "string" ? leadDb.notes : null,
+    };
+  } else if (clientId) {
+    const { data: cRow, error: clientErr } = await supabase
+      .from("client")
+      .select("name, company, email, phone, notes")
+      .eq("id", clientId)
+      .maybeSingle();
+
+    if (clientErr || !cRow) {
+      return NextResponse.json(
+        { ok: false as const, error: "Client not found." },
+        { status: 400 }
+      );
+    }
+    clientRow = cRow;
+  }
+
+  if (!clientRow) {
     return NextResponse.json(
-      { ok: false as const, error: "Link a client before generating." },
+      {
+        ok: false as const,
+        error: "Could not resolve a buyer — go back and complete step 1.",
+      },
       { status: 400 }
     );
   }
@@ -135,19 +189,6 @@ export async function POST(req: Request) {
   if (selectedIds.length === 0) {
     return NextResponse.json(
       { ok: false as const, error: "Select at least one service first." },
-      { status: 400 }
-    );
-  }
-
-  const { data: clientRow, error: clientErr } = await supabase
-    .from("client")
-    .select("name, company, email, phone, notes")
-    .eq("id", clientId)
-    .maybeSingle();
-
-  if (clientErr || !clientRow) {
-    return NextResponse.json(
-      { ok: false as const, error: "Client not found." },
       { status: 400 }
     );
   }
@@ -196,9 +237,12 @@ export async function POST(req: Request) {
 
   const snapshot = parseGooglePlaceSnapshot(row.google_place_snapshot);
   const clientDisplayName =
-    (clientRow.name as string)?.trim() ||
-    (clientRow.company as string)?.trim() ||
-    "Client";
+    typeof clientRow.name === "string"
+      ? clientRow.name.trim()
+      : typeof clientRow.company === "string"
+        ? clientRow.company.trim()
+        : "";
+  const buyerLabel = clientDisplayName || "Buyer";
 
   let listingBlock: string | null = null;
   let brandSignalsBlock: string | null = null;
@@ -212,7 +256,7 @@ export async function POST(req: Request) {
       ? await resolveProspectBrandAssets({
           websiteUrl: snapshot.websiteUri,
           businessName:
-            snapshot.name?.trim() || clientDisplayName,
+            snapshot.name?.trim() || buyerLabel,
         })
       : null;
 
@@ -231,9 +275,9 @@ export async function POST(req: Request) {
   const llmInput = {
     client: {
       name:
-        (clientRow.name as string)?.trim() ||
-        (clientRow.company as string)?.trim() ||
-        "Client",
+        (typeof clientRow.name === "string" ? clientRow.name.trim() : "") ||
+        (typeof clientRow.company === "string" ? clientRow.company.trim() : "") ||
+        "Buyer",
       company:
         typeof clientRow.company === "string"
           ? clientRow.company.trim() || null
@@ -315,7 +359,7 @@ export async function POST(req: Request) {
         strategy,
         vertical,
         paletteHexes: hexes,
-        businessName: clientDisplayName,
+        businessName: buyerLabel,
         industryLabels: industryLabelsFromPlace(snapshot),
         serviceNamesLine: serviceNamesLine(services),
       });

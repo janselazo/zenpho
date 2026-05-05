@@ -87,7 +87,7 @@ export default function SalesProposalListView({
             <thead>
               <tr className="border-b border-border bg-surface/80 text-[11px] font-semibold uppercase tracking-wider text-text-secondary dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-500">
                 <th className="px-4 py-3">Title</th>
-                <th className="px-4 py-3">Client</th>
+                <th className="px-4 py-3">Buyer</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Updated</th>
                 <th className="px-4 py-3 text-right">Action</th>

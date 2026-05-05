@@ -54,10 +54,23 @@ export type SalesProposalAiVisualRow = {
   caption: string;
 };
 
+/** CRM snapshot for the linked sales-proposal party (lead or client). */
+export type SalesProposalPartyContact = {
+  name: string;
+  email: string | null;
+  company: string | null;
+  phone: string | null;
+  notes: string | null;
+};
+
 export type SalesProposalDetail = {
   id: string;
+  /** When set, proposal targets an open CRM lead (see proposal wizard picker). */
+  leadId: string | null;
   clientId: string | null;
   clientName: string | null;
+  /** Joined CRM fields for the linked lead or client (wizard sidebar + legacy rows). */
+  partyContact: SalesProposalPartyContact | null;
   title: string;
   status: SalesProposalStatus;
   /** Markdown / plain document from Proposal Generation wizard. */

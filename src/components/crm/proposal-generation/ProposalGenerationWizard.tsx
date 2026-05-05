@@ -15,13 +15,13 @@ import {
 } from "@/app/(crm)/actions/sales-proposals";
 import PlacesBusinessAutocomplete from "@/components/crm/prospecting/PlacesBusinessAutocomplete";
 import type { CrmProductServiceRow } from "@/lib/crm/crm-catalog-types";
-import type { ProposalClientOption } from "@/lib/crm/fetch-clients-for-proposal-picker";
+import type { ProposalWizardPartyOption } from "@/lib/crm/fetch-leads-for-proposal-picker";
 import { sanitizePlacesSearchPlace } from "@/lib/crm/places-google-shared";
 import type { PlacesSearchPlace } from "@/lib/crm/places-types";
 import type { SalesProposalDetail } from "@/lib/crm/sales-proposal-types";
 
 const STEP_LABELS = [
-  "Customer",
+  "Lead",
   "Services",
   "Generate",
   "Edit & export",
@@ -44,44 +44,59 @@ function formatUsd(n: number): string {
 
 type WizardStep = 1 | 2 | 3 | 4;
 
+type WizardPartyKind = "lead" | "client";
+
 function deriveBootstrap(
   resume: SalesProposalDetail | null
 ): null | {
   step: WizardStep;
-  clientId: string;
+  partyId: string;
+  partyKind: WizardPartyKind | null;
   selectedIds: Set<string>;
   notes: string;
   title: string;
   markdown: string;
 } {
   if (!resume) return null;
+  const leadTrim = resume.leadId?.trim() ?? "";
+  const clientTrim = resume.clientId?.trim() ?? "";
+  const partyKind: WizardPartyKind | null = leadTrim
+    ? "lead"
+    : clientTrim
+      ? "client"
+      : null;
+  const partyId = leadTrim || clientTrim || "";
+
   const body = resume.proposal_body?.trim() ?? "";
   if (body.length > 0 && (resume.status === "generated" || resume.status === "final")) {
     return {
       step: 4,
-      clientId: resume.clientId ?? "",
+      partyId,
+      partyKind,
       selectedIds: new Set(resume.selected_catalog_item_ids),
       notes: resume.wizard_notes ?? "",
       title: resume.title,
       markdown: resume.proposal_body,
     };
   }
-  const hasClient = Boolean(resume.clientId?.trim());
+  const hasParty = Boolean(partyId);
   const picks = resume.selected_catalog_item_ids ?? [];
-  if (hasClient && picks.length > 0) {
+  if (hasParty && picks.length > 0) {
     return {
       step: 3,
-      clientId: resume.clientId!.trim(),
+      partyId,
+      partyKind,
       selectedIds: new Set(picks),
       notes: resume.wizard_notes ?? "",
       title: resume.title,
       markdown: "",
     };
   }
-  if (hasClient) {
+  if (hasParty) {
     return {
       step: 2,
-      clientId: resume.clientId!.trim(),
+      partyId,
+      partyKind,
       selectedIds: picks.length ? new Set(picks) : new Set(),
       notes: resume.wizard_notes ?? "",
       title: resume.title,
@@ -90,7 +105,8 @@ function deriveBootstrap(
   }
   return {
     step: 1,
-    clientId: "",
+    partyId: "",
+    partyKind: null,
     selectedIds: new Set(),
     notes: resume.wizard_notes ?? "",
     title: resume.title,
@@ -99,12 +115,12 @@ function deriveBootstrap(
 }
 
 export default function ProposalGenerationWizard({
-  clients,
+  parties,
   catalog,
   initialProposalId: proposalId,
   resume,
 }: {
-  clients: ProposalClientOption[];
+  parties: ProposalWizardPartyOption[];
   catalog: CrmProductServiceRow[];
   /** Draft row created by `/proposals/new` before this view mounts. */
   initialProposalId: string;
@@ -117,7 +133,10 @@ export default function ProposalGenerationWizard({
   );
 
   const boot = deriveBootstrap(resume);
-  const [clientId, setClientId] = useState<string>(boot?.clientId ?? "");
+  const [partyId, setPartyId] = useState<string>(boot?.partyId ?? "");
+  const [partyKind, setPartyKind] = useState<WizardPartyKind | null>(
+    boot?.partyKind ?? null
+  );
   const [pickSearch, setPickSearch] = useState("");
   const [selectedSvc, setSelectedSvc] = useState<Set<string>>(
     boot?.selectedIds ?? new Set()
@@ -155,20 +174,20 @@ export default function ProposalGenerationWizard({
     return phase - 1;
   }
 
-  const filteredClients = useMemo(() => {
+  const filteredParties = useMemo(() => {
     const q = pickSearch.trim().toLowerCase();
-    if (!q) return clients;
-    return clients.filter(
+    if (!q) return parties;
+    return parties.filter(
       (c) =>
         c.name.toLowerCase().includes(q) ||
         (c.company?.toLowerCase().includes(q) ?? false) ||
         (c.email?.toLowerCase().includes(q) ?? false)
     );
-  }, [clients, pickSearch]);
+  }, [parties, pickSearch]);
 
-  const selectedClient = useMemo(
-    () => clients.find((c) => c.id === clientId) ?? null,
-    [clients, clientId]
+  const selectedParty = useMemo(
+    () => parties.find((c) => c.id === partyId) ?? null,
+    [parties, partyId]
   );
 
   const subtotal = useMemo(() => {
@@ -181,11 +200,13 @@ export default function ProposalGenerationWizard({
   }, [catalog, selectedSvc]);
 
   const persistStep1to2 = async () => {
-    if (!proposalId.trim() || !clientId.trim()) return;
+    if (!proposalId.trim() || !partyId.trim() || !partyKind) return;
     setErr(null);
     setBusyPatch(true);
     const res = await patchSalesProposalWizardDraft(proposalId, {
-      clientId: clientId.trim(),
+      ...(partyKind === "lead"
+        ? { leadId: partyId.trim(), clientId: null }
+        : { clientId: partyId.trim(), leadId: null }),
       title: title.trim() || "Untitled proposal",
       googlePlaceSnapshot: listingPlace,
     });
@@ -434,9 +455,9 @@ export default function ProposalGenerationWizard({
         Proposal generation
       </h1>
       <p className="mt-2 max-w-xl text-sm text-text-secondary dark:text-zinc-400">
-        Select a buyer, bundle catalog services with notes, generate a GPT-backed
-        proposal, refine the markdown, export PDF or continue in the full
-        proposal editor.
+        Select an open CRM lead as the buyer (converted accounts are omitted),
+        bundle catalog services with notes, generate a GPT-backed proposal,
+        refine the markdown, export PDF or continue in the full proposal editor.
       </p>
 
       <div className="mt-8">{stepperUi}</div>
@@ -459,7 +480,7 @@ export default function ProposalGenerationWizard({
         <div className="mt-10 grid gap-8 lg:grid-cols-[1fr,minmax(0,320px)]">
           <div className="space-y-4">
             <label className="block text-xs font-bold uppercase tracking-wider text-text-secondary dark:text-zinc-500">
-              Search customers
+              Search leads
               <input
                 type="search"
                 placeholder="Filter by name, company, email"
@@ -469,18 +490,21 @@ export default function ProposalGenerationWizard({
               />
             </label>
             <ul className="max-h-[440px] space-y-1 overflow-y-auto rounded-2xl border border-border bg-white p-2 dark:border-zinc-700 dark:bg-zinc-950">
-              {filteredClients.length === 0 ? (
+              {filteredParties.length === 0 ? (
                 <li className="px-4 py-8 text-center text-sm text-text-secondary">
-                  No customers match.
+                  No leads match — add open leads first, or widen your search.
                 </li>
               ) : (
-                filteredClients.map((c) => (
-                  <li key={c.id}>
+                filteredParties.map((c) => (
+                  <li key={`${c.partyKind}-${c.id}`}>
                     <button
                       type="button"
-                      onClick={() => setClientId(c.id)}
+                      onClick={() => {
+                        setPartyId(c.id);
+                        setPartyKind(c.partyKind);
+                      }}
                       className={`flex w-full flex-col rounded-xl px-3 py-3 text-left text-sm transition hover:bg-zinc-50 dark:hover:bg-zinc-900 ${
-                        clientId === c.id
+                        partyId === c.id
                           ? "bg-blue-50 ring-2 ring-blue-400/40 dark:bg-blue-950/30"
                           : ""
                       }`}
@@ -491,6 +515,11 @@ export default function ProposalGenerationWizard({
                       {c.company ? (
                         <span className="text-xs text-text-secondary dark:text-zinc-500">
                           {c.company}
+                        </span>
+                      ) : null}
+                      {c.partyKind === "client" ? (
+                        <span className="mt-1 text-[10px] uppercase tracking-wide text-zinc-500">
+                          Proposal linked via client · pick a lead for new drafts
                         </span>
                       ) : null}
                     </button>
@@ -560,9 +589,9 @@ export default function ProposalGenerationWizard({
             </div>
 
             <p className="mt-8 text-[10px] font-bold uppercase tracking-widest text-text-secondary dark:text-zinc-500">
-              Selected customer
+              Selected lead
             </p>
-            {!selectedClient ? (
+            {!selectedParty ? (
               <p className="mt-4 text-sm text-text-secondary">
                 Choose someone from the list.
               </p>
@@ -572,43 +601,43 @@ export default function ProposalGenerationWizard({
                   <dt className="text-[10px] font-bold uppercase text-text-secondary dark:text-zinc-500">
                     Name
                   </dt>
-                  <dd className="font-medium">{selectedClient.name}</dd>
+                  <dd className="font-medium">{selectedParty.name}</dd>
                 </div>
-                {selectedClient.company ? (
+                {selectedParty.company ? (
                   <div>
                     <dt className="text-[10px] font-bold uppercase text-text-secondary dark:text-zinc-500">
                       Company
                     </dt>
-                    <dd>{selectedClient.company}</dd>
+                    <dd>{selectedParty.company}</dd>
                   </div>
                 ) : null}
-                {selectedClient.email ? (
+                {selectedParty.email ? (
                   <div>
                     <dt className="text-[10px] font-bold uppercase text-text-secondary dark:text-zinc-500">
                       Email
                     </dt>
-                    <dd className="break-all">{selectedClient.email}</dd>
+                    <dd className="break-all">{selectedParty.email}</dd>
                   </div>
                 ) : (
                   <p className="text-xs text-zinc-500">No email on file</p>
                 )}
-                {selectedClient.phone ? (
+                {selectedParty.phone ? (
                   <div>
                     <dt className="text-[10px] font-bold uppercase text-text-secondary dark:text-zinc-500">
                       Phone
                     </dt>
-                    <dd>{selectedClient.phone}</dd>
+                    <dd>{selectedParty.phone}</dd>
                   </div>
                 ) : (
                   <p className="text-xs text-zinc-500">No phone on file</p>
                 )}
-                {selectedClient.notes?.trim() ? (
+                {selectedParty.notes?.trim() ? (
                   <div>
                     <dt className="text-[10px] font-bold uppercase text-text-secondary dark:text-zinc-500">
                       Notes
                     </dt>
                     <dd className="max-h-32 overflow-y-auto whitespace-pre-wrap text-xs text-text-secondary">
-                      {selectedClient.notes.trim()}
+                      {selectedParty.notes.trim()}
                     </dd>
                   </div>
                 ) : (
@@ -627,7 +656,9 @@ export default function ProposalGenerationWizard({
             </button>
             <button
               type="button"
-              disabled={!clientId.trim() || busyPatch}
+              disabled={
+                !partyId.trim() || partyKind === null || busyPatch
+              }
               onClick={() => void persistStep1to2()}
               className="rounded-xl bg-accent px-6 py-2 text-sm font-semibold text-white disabled:opacity-50"
             >

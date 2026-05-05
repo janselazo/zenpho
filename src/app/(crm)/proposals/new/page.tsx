@@ -1,7 +1,10 @@
 import ProposalDraftBootstrap from "@/components/crm/proposal-generation/ProposalDraftBootstrap";
 import ProposalGenerationWizard from "@/components/crm/proposal-generation/ProposalGenerationWizard";
 import { fetchActiveCrmCatalog } from "@/lib/crm/fetch-crm-catalog";
-import { fetchClientsForProposalPicker } from "@/lib/crm/fetch-clients-for-proposal-picker";
+import {
+  fetchOpenLeadsForNarrativeProposalWizard,
+  mergeLegacyClientIntoProposalParties,
+} from "@/lib/crm/fetch-leads-for-proposal-picker";
 import { fetchSalesProposalDetail } from "@/lib/crm/fetch-sales-proposal-detail";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
@@ -35,11 +38,16 @@ export default async function NewSalesProposalPage({
     );
   }
 
-  const [clients, catalog, resume] = await Promise.all([
-    fetchClientsForProposalPicker(),
+  const [leadRows, catalog, resume] = await Promise.all([
+    fetchOpenLeadsForNarrativeProposalWizard(),
     fetchActiveCrmCatalog(),
     fetchSalesProposalDetail(proposalPid),
   ]);
+
+  const parties = mergeLegacyClientIntoProposalParties(
+    leadRows,
+    resume ?? null,
+  );
 
   const initialProposalId =
     resume && resume.id === proposalPid ? resume.id : proposalPid;
@@ -48,7 +56,7 @@ export default async function NewSalesProposalPage({
     <div className="px-4 py-8 md:px-8">
       <ProposalGenerationWizard
         key={initialProposalId}
-        clients={clients}
+        parties={parties}
         catalog={catalog}
         initialProposalId={initialProposalId}
         resume={resume ?? null}

@@ -53,6 +53,7 @@ export async function patchSalesProposalWizardDraft(
   proposalId: string,
   patch: {
     clientId?: string | null;
+    leadId?: string | null;
     selectedCatalogItemIds?: string[];
     wizardNotes?: string;
     totalPriceEstimate?: number | null;
@@ -76,6 +77,9 @@ export async function patchSalesProposalWizardDraft(
 
   if (patch.clientId !== undefined) {
     update.client_id = patch.clientId?.trim() || null;
+  }
+  if (patch.leadId !== undefined) {
+    update.lead_id = patch.leadId?.trim() || null;
   }
   if (patch.selectedCatalogItemIds !== undefined) {
     update.selected_catalog_item_ids = patch.selectedCatalogItemIds;
@@ -184,13 +188,19 @@ export async function saveSalesProposal(
   const updatePayload: Record<string, unknown> = {
     title: body.title.trim() || "Untitled",
     status: body.status,
-    client_id: cid,
     about_us: body.about_us,
     our_story: body.our_story,
     services_overview: body.services_overview,
     closing_notes: body.closing_notes,
     updated_at: new Date().toISOString(),
   };
+
+  if (cid) {
+    updatePayload.client_id = cid;
+    updatePayload.lead_id = null;
+  } else {
+    updatePayload.client_id = null;
+  }
   if (body.proposal_body !== undefined) {
     updatePayload.proposal_body = body.proposal_body;
   }
