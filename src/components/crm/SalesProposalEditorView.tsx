@@ -13,7 +13,10 @@ import type {
   SalesProposalDetail,
   SalesProposalStatus,
 } from "@/lib/crm/sales-proposal-types";
-import { SALES_PROPOSAL_STATUSES } from "@/lib/crm/sales-proposal-types";
+import {
+  SALES_PROPOSAL_STATUSES,
+  salesProposalStatusLabel,
+} from "@/lib/crm/sales-proposal-types";
 import { Plus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -50,6 +53,7 @@ export default function SalesProposalEditorView({
     initial.services_overview
   );
   const [closingNotes, setClosingNotes] = useState(initial.closing_notes);
+  const [proposalBody, setProposalBody] = useState(initial.proposal_body);
 
   const [lines, setLines] = useState<CatalogDraft[]>(
     initial.catalogLines.length > 0
@@ -74,6 +78,7 @@ export default function SalesProposalEditorView({
     setOurStory(initial.our_story);
     setServicesOverview(initial.services_overview);
     setClosingNotes(initial.closing_notes);
+    setProposalBody(initial.proposal_body);
     setLines(
       initial.catalogLines.map((l) => ({
         catalog_item_id: l.catalog_item_id,
@@ -94,6 +99,7 @@ export default function SalesProposalEditorView({
       our_story: ourStory,
       services_overview: servicesOverview,
       closing_notes: closingNotes,
+      proposal_body: proposalBody,
       catalogLines: lines,
     });
     setSaving(false);
@@ -108,6 +114,7 @@ export default function SalesProposalEditorView({
     ourStory,
     servicesOverview,
     closingNotes,
+    proposalBody,
     lines,
     router,
   ]);
@@ -183,6 +190,12 @@ export default function SalesProposalEditorView({
           >
             ← Proposals
           </Link>
+          <Link
+            href={`/proposals/new?proposal=${encodeURIComponent(initial.id)}`}
+            className="rounded-xl border border-border px-3 py-2 text-xs font-semibold text-accent hover:bg-surface dark:border-zinc-700"
+          >
+            Proposal generation wizard
+          </Link>
           <button
             type="button"
             disabled={saving}
@@ -228,7 +241,7 @@ export default function SalesProposalEditorView({
             >
               {SALES_PROPOSAL_STATUSES.map((s) => (
                 <option key={s} value={s}>
-                  {s === "draft" ? "Draft" : "Sent"}
+                  {salesProposalStatusLabel(s)}
                 </option>
               ))}
             </select>
@@ -252,6 +265,22 @@ export default function SalesProposalEditorView({
             </select>
           </section>
         </div>
+
+        <section className="space-y-3">
+          <LabelBlock title="Wizard document (Markdown)" />
+          <textarea
+            rows={10}
+            spellCheck={false}
+            className={`${inputArea} font-mono text-xs leading-relaxed`}
+            placeholder="Populated when you use Proposal Generation…"
+            value={proposalBody}
+            onChange={(e) => setProposalBody(e.target.value)}
+          />
+          <p className="text-[11px] text-text-secondary dark:text-zinc-500">
+            Full narrative sections below are separate from the wizard export;
+            keep both in sync manually if you use both flows.
+          </p>
+        </section>
 
         <section className="space-y-3">
           <LabelBlock title="About us" />

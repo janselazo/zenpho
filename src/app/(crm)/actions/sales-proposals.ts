@@ -6,6 +6,8 @@ import {
   SALES_PROPOSAL_STATUSES,
   type SalesProposalStatus,
 } from "@/lib/crm/sales-proposal-types";
+import { sanitizePlacesSearchPlace } from "@/lib/crm/places-google-shared";
+import type { PlacesSearchPlace } from "@/lib/crm/places-types";
 
 const STATUS_SET = new Set<string>(SALES_PROPOSAL_STATUSES);
 
@@ -43,7 +45,111 @@ export async function createSalesProposalDraft(input?: {
 
   const id = data.id as string;
   revalidatePath("/proposals");
+  revalidatePath(`/proposals/new`);
   return { ok: true, id };
+}
+
+export async function patchSalesProposalWizardDraft(
+  proposalId: string,
+  patch: {
+    clientId?: string | null;
+    selectedCatalogItemIds?: string[];
+    wizardNotes?: string;
+    totalPriceEstimate?: number | null;
+    title?: string;
+    /** Clear with `null` to remove enrichment. */
+    googlePlaceSnapshot?: PlacesSearchPlace | null;
+  }
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const id = proposalId.trim();
+  if (!id) return { error: "Missing id" };
+
+  const update: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (patch.clientId !== undefined) {
+    update.client_id = patch.clientId?.trim() || null;
+  }
+  if (patch.selectedCatalogItemIds !== undefined) {
+    update.selected_catalog_item_ids = patch.selectedCatalogItemIds;
+  }
+  if (patch.wizardNotes !== undefined) {
+    update.wizard_notes = patch.wizardNotes;
+  }
+  if (patch.totalPriceEstimate !== undefined) {
+    update.total_price_estimate =
+      patch.totalPriceEstimate == null ||
+      !Number.isFinite(patch.totalPriceEstimate)
+        ? null
+        : patch.totalPriceEstimate;
+  }
+  if (patch.title !== undefined) {
+    update.title = patch.title.trim() || "Untitled proposal";
+  }
+  if (patch.googlePlaceSnapshot !== undefined) {
+    update.google_place_snapshot =
+      patch.googlePlaceSnapshot == null
+        ? null
+        : sanitizePlacesSearchPlace(patch.googlePlaceSnapshot);
+  }
+
+  const { error } = await supabase
+    .from("sales_proposal")
+    .update(update)
+    .eq("id", id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/proposals");
+  revalidatePath(`/proposals/${id}`);
+  revalidatePath(`/proposals/new`);
+  return { ok: true };
+}
+
+export async function updateSalesProposalBodyAndStatus(
+  proposalId: string,
+  body: {
+    title: string;
+    proposal_body: string;
+    status: SalesProposalStatus;
+  }
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const id = proposalId.trim();
+  if (!id) return { error: "Missing id" };
+
+  if (!STATUS_SET.has(body.status)) {
+    return { error: "Invalid status" };
+  }
+
+  const { error } = await supabase
+    .from("sales_proposal")
+    .update({
+      title: body.title.trim() || "Untitled proposal",
+      proposal_body: body.proposal_body,
+      status: body.status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/proposals");
+  revalidatePath(`/proposals/${id}`);
+  revalidatePath(`/proposals/new`);
+  return { ok: true };
 }
 
 export async function saveSalesProposal(
@@ -56,6 +162,7 @@ export async function saveSalesProposal(
     our_story: string;
     services_overview: string;
     closing_notes: string;
+    proposal_body?: string;
     catalogLines: SalesCatalogLineInput[];
   }
 ) {
@@ -74,18 +181,23 @@ export async function saveSalesProposal(
 
   const cid = body.clientId?.trim() || null;
 
+  const updatePayload: Record<string, unknown> = {
+    title: body.title.trim() || "Untitled",
+    status: body.status,
+    client_id: cid,
+    about_us: body.about_us,
+    our_story: body.our_story,
+    services_overview: body.services_overview,
+    closing_notes: body.closing_notes,
+    updated_at: new Date().toISOString(),
+  };
+  if (body.proposal_body !== undefined) {
+    updatePayload.proposal_body = body.proposal_body;
+  }
+
   const { error: upErr } = await supabase
     .from("sales_proposal")
-    .update({
-      title: body.title.trim() || "Untitled",
-      status: body.status,
-      client_id: cid,
-      about_us: body.about_us,
-      our_story: body.our_story,
-      services_overview: body.services_overview,
-      closing_notes: body.closing_notes,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updatePayload)
     .eq("id", id);
 
   if (upErr) return { error: upErr.message };
@@ -130,5 +242,6 @@ export async function deleteSalesProposal(proposalId: string) {
   if (error) return { error: error.message };
 
   revalidatePath("/proposals");
+  revalidatePath(`/proposals/new`);
   return { ok: true };
 }

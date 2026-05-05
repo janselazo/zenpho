@@ -13,4 +13,6 @@ export type PlacesSearchPlace = {
   googleMapsUri: string | null;
   /** Google listing lifecycle, e.g. OPERATIONAL, CLOSED_PERMANENTLY (Place Details / Text Search when requested). */
   businessStatus: string | null;
+  /** Place Photo API (New) resource names, e.g. `places/ChIJ…/photos/AWn…` (filled after Place Details with photos mask). */
+  photoRefs?: string[];
 };

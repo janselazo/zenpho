@@ -1,6 +1,10 @@
-export const SALES_PROPOSAL_STATUSES = ["draft", "sent"] as const;
-export type SalesProposalStatus =
-  (typeof SALES_PROPOSAL_STATUSES)[number];
+export const SALES_PROPOSAL_STATUSES = [
+  "draft",
+  "generated",
+  "final",
+  "sent",
+] as const;
+export type SalesProposalStatus = (typeof SALES_PROPOSAL_STATUSES)[number];
 
 export function parseSalesProposalStatus(
   raw: string | null | undefined
@@ -9,6 +13,21 @@ export function parseSalesProposalStatus(
   return (SALES_PROPOSAL_STATUSES as readonly string[]).includes(s)
     ? (s as SalesProposalStatus)
     : "draft";
+}
+
+export function salesProposalStatusLabel(status: SalesProposalStatus): string {
+  switch (status) {
+    case "draft":
+      return "Draft";
+    case "generated":
+      return "Generated";
+    case "final":
+      return "Final";
+    case "sent":
+      return "Sent";
+    default:
+      return status;
+  }
 }
 
 export type SalesProposalListRow = {
@@ -27,12 +46,21 @@ export type SalesProposalCatalogLineRow = {
   sort_order: number;
 };
 
+import type { PlacesSearchPlace } from "@/lib/crm/places-types";
+
 export type SalesProposalDetail = {
   id: string;
   clientId: string | null;
   clientName: string | null;
   title: string;
   status: SalesProposalStatus;
+  /** Markdown / plain document from Proposal Generation wizard. */
+  proposal_body: string;
+  /** Optional Google Places snapshot powering listing categories, photos, and website-derived branding scrape. */
+  google_place_snapshot: PlacesSearchPlace | null;
+  selected_catalog_item_ids: string[];
+  wizard_notes: string;
+  total_price_estimate: number | null;
   about_us: string;
   our_story: string;
   services_overview: string;

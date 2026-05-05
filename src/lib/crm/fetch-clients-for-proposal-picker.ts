@@ -5,6 +5,8 @@ export type ProposalClientOption = {
   name: string;
   email: string | null;
   company: string | null;
+  phone: string | null;
+  notes: string | null;
 };
 
 export async function fetchClientsForProposalPicker(): Promise<
@@ -13,7 +15,7 @@ export async function fetchClientsForProposalPicker(): Promise<
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("client")
-    .select("id, name, email, company")
+    .select("id, name, email, company, phone, notes")
     .order("created_at", { ascending: false })
     .limit(300);
 
@@ -28,5 +30,7 @@ export async function fetchClientsForProposalPicker(): Promise<
       "Unnamed",
     email: c.email ?? null,
     company: c.company ?? null,
+    phone: typeof c.phone === "string" ? c.phone.trim() || null : null,
+    notes: typeof c.notes === "string" ? c.notes : null,
   }));
 }

@@ -4,6 +4,12 @@ import {
   type SalesProposalCatalogLineRow,
   type SalesProposalDetail,
 } from "@/lib/crm/sales-proposal-types";
+import { parseGooglePlaceSnapshot } from "@/lib/crm/proposal-enrichment-context";
+
+function parseUuidArray(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((x): x is string => typeof x === "string" && Boolean(x.trim()));
+}
 
 export async function fetchSalesProposalDetail(
   id: string
@@ -17,6 +23,11 @@ export async function fetchSalesProposalDetail(
       client_id,
       title,
       status,
+      proposal_body,
+      google_place_snapshot,
+      selected_catalog_item_ids,
+      wizard_notes,
+      total_price_estimate,
       about_us,
       our_story,
       services_overview,
@@ -61,6 +72,15 @@ export async function fetchSalesProposalDetail(
     })
   );
 
+  const tpe =
+    row.total_price_estimate != null &&
+    typeof row.total_price_estimate === "number"
+      ? row.total_price_estimate
+      : row.total_price_estimate != null &&
+          typeof row.total_price_estimate === "string"
+        ? Number.parseFloat(row.total_price_estimate as string)
+        : null;
+
   return {
     id: row.id as string,
     clientId:
@@ -68,8 +88,18 @@ export async function fetchSalesProposalDetail(
         ? row.client_id.trim()
         : null,
     clientName: cn || null,
-    title: typeof row.title === "string" ? row.title.trim() || "Untitled" : "Untitled",
+    title:
+      typeof row.title === "string"
+        ? row.title.trim() || "Untitled"
+        : "Untitled",
     status: parseSalesProposalStatus(row.status as string),
+    proposal_body:
+      typeof row.proposal_body === "string" ? row.proposal_body : "",
+    google_place_snapshot: parseGooglePlaceSnapshot(row.google_place_snapshot),
+    selected_catalog_item_ids: parseUuidArray(row.selected_catalog_item_ids),
+    wizard_notes:
+      typeof row.wizard_notes === "string" ? row.wizard_notes : "",
+    total_price_estimate: Number.isFinite(tpe ?? NaN) ? tpe : null,
     about_us: typeof row.about_us === "string" ? row.about_us : "",
     our_story: typeof row.our_story === "string" ? row.our_story : "",
     services_overview:

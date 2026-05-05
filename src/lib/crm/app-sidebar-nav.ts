@@ -19,6 +19,7 @@ import {
   Package,
   Receipt,
   SearchCheck,
+  Sparkles,
   Star,
   Timer,
   Users,
@@ -157,6 +158,11 @@ export const SIDEBAR_SALES: AppSidebarItem[] = [
     icon: Package,
   },
   { href: "/invoices", label: "Invoices", icon: Receipt },
+  {
+    href: "/proposals/new",
+    label: "Proposal Generation",
+    icon: Sparkles,
+  },
   { href: "/proposals", label: "Proposals", icon: FileText },
   { href: "/estimates", label: "Estimates", icon: Calculator, soon: true },
 ];
