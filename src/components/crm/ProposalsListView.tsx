@@ -16,7 +16,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { deleteProposal } from "@/app/(crm)/actions/proposals";
-import ProposalsSubNav from "@/components/crm/ProposalsSubNav";
+import InvoiceSubNav from "@/components/crm/InvoiceSubNav";
 import type { ProposalListKpis } from "@/lib/crm/fetch-proposals-for-list";
 import {
   formatProposalId,
@@ -79,7 +79,7 @@ export default function ProposalsListView({
   }, [initialRows, search]);
 
   async function onDelete(id: string) {
-    if (!confirm("Delete this proposal?")) return;
+    if (!confirm("Delete this invoice?")) return;
     setDeletingId(id);
     const res = await deleteProposal(id);
     setDeletingId(null);
@@ -92,14 +92,14 @@ export default function ProposalsListView({
 
   return (
     <div className="space-y-8">
-      <ProposalsSubNav />
+      <InvoiceSubNav />
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary dark:text-zinc-500">
-            App / Proposals
+            App / Invoices
           </p>
           <h1 className="heading-display mt-1 text-2xl font-bold text-text-primary dark:text-zinc-100">
-            Proposals
+            Invoices
           </h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -114,11 +114,11 @@ export default function ProposalsListView({
             />
           </div>
           <Link
-            href="/proposals/new"
+            href="/invoices/new"
             className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-4 py-2 text-sm font-semibold text-text-primary shadow-sm transition hover:bg-surface dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
           >
             <Plus className="h-4 w-4" aria-hidden />
-            Add Proposal
+            New invoice
           </Link>
         </div>
       </div>
@@ -153,7 +153,7 @@ export default function ProposalsListView({
               <tr className="border-b border-border bg-surface/80 text-[11px] font-semibold uppercase tracking-wider text-text-secondary dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-500">
                 <th className="px-4 py-3">ID#</th>
                 <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Proposed to</th>
+                <th className="px-4 py-3">Bill to</th>
                 <th className="px-4 py-3">Title</th>
                 <th className="px-4 py-3">Value</th>
                 <th className="px-4 py-3">Valid until</th>
@@ -168,8 +168,8 @@ export default function ProposalsListView({
                     colSpan={8}
                     className="px-4 py-12 text-center text-text-secondary dark:text-zinc-500"
                   >
-                    No proposals yet.{" "}
-                    <Link href="/proposals/new" className="text-accent underline">
+                    No invoices yet.{" "}
+                    <Link href="/invoices/new" className="text-accent underline">
                       Add one
                     </Link>
                     .
@@ -209,14 +209,14 @@ export default function ProposalsListView({
                     <td className="whitespace-nowrap px-4 py-3 text-right">
                       <div className="flex justify-end gap-1">
                         <Link
-                          href={`/proposals/${r.id}`}
+                          href={`/invoices/${r.id}`}
                           className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-text-secondary hover:bg-surface hover:text-text-primary dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
                           title="Edit"
                         >
                           <Pencil className="h-4 w-4" />
                         </Link>
                         <Link
-                          href={`/proposals/${r.id}`}
+                          href={`/invoices/${r.id}`}
                           className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-text-secondary hover:bg-surface hover:text-text-primary dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
                           title="View"
                         >

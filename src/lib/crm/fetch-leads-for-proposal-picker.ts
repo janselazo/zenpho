@@ -7,7 +7,11 @@ export type ProposalLeadOption = {
   company: string | null;
 };
 
-/** Leads that are not linked to a client yet (open pipeline / pre-conversion). */
+/**
+ * Leads for the new-proposal picker. Includes converted contacts (Won/Lost and
+ * other paths that set `converted_client_id`) so proposals can be tied to the
+ * same lead record; `ensureClientIdForProposalFromLead` reuses the linked client.
+ */
 export async function fetchLeadsForProposalPicker(): Promise<
   ProposalLeadOption[]
 > {
@@ -15,7 +19,6 @@ export async function fetchLeadsForProposalPicker(): Promise<
   const { data, error } = await supabase
     .from("lead")
     .select("id, name, email, company")
-    .is("converted_client_id", null)
     .order("created_at", { ascending: false })
     .limit(300);
 

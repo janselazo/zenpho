@@ -8,5 +8,5 @@ export default async function ContractPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  redirect(`/proposals/agreements/${id}`);
+  redirect(`/invoices/agreements/${id}`);
 }

@@ -25,6 +25,11 @@ const nextConfig = {
   async redirects() {
     return [
       {
+        source: "/proposals/agreements/:path*",
+        destination: "/invoices/agreements/:path*",
+        permanent: true,
+      },
+      {
         source: "/product/lead-capture-tracking",
         destination: "/product/lead-management",
         permanent: true,

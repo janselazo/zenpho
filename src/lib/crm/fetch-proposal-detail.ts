@@ -42,7 +42,7 @@ export async function fetchProposalDetail(
       supabase
         .from("proposal_line_item")
         .select(
-          "id, proposal_id, description, quantity, unit_price, line_total, sort_order"
+          "id, proposal_id, description, quantity, unit_price, line_total, sort_order, catalog_item_id"
         )
         .eq("proposal_id", id)
         .order("sort_order", { ascending: true }),
@@ -58,6 +58,7 @@ export async function fetchProposalDetail(
     line_total:
       row.line_total != null ? Number(row.line_total) : undefined,
     sort_order: Number(row.sort_order) || 0,
+    catalog_item_id: (row.catalog_item_id as string | null)?.trim() || null,
   }));
 
   const clientName =

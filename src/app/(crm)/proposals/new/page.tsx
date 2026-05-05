@@ -1,11 +1,10 @@
 import Link from "next/link";
-import NewProposalForm from "@/components/crm/NewProposalForm";
-import { fetchLeadsForProposalPicker } from "@/lib/crm/fetch-leads-for-proposal-picker";
+import SalesProposalNewStarter from "@/components/crm/SalesProposalNewStarter";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewProposalPage() {
+export default function NewSalesProposalPage() {
   if (!isSupabaseConfigured()) {
     return (
       <div className="p-8">
@@ -15,35 +14,23 @@ export default async function NewProposalPage() {
     );
   }
 
-  const leads = await fetchLeadsForProposalPicker();
-
   return (
     <div className="p-8">
-      <div className="mx-auto max-w-lg">
+      <div className="mx-auto max-w-lg text-center">
         <Link
           href="/proposals"
-          className="text-sm text-text-secondary hover:text-text-primary dark:text-zinc-500 dark:hover:text-zinc-300"
+          className="text-sm text-text-secondary hover:text-text-primary dark:text-zinc-500"
         >
           ← Proposals
         </Link>
         <h1 className="heading-display mt-4 text-2xl font-bold text-text-primary dark:text-zinc-100">
-          New proposal
+          New proposal document
         </h1>
         <p className="mt-2 text-sm text-text-secondary dark:text-zinc-400">
-          Choose a lead (not yet a client), then build the proposal on the next screen.
+          Build a narrative for your buyer: positioning, story, services, plus
+          optional catalog picks for reference pricing.
         </p>
-
-        {leads.length === 0 ? (
-          <p className="mt-8 rounded-xl border border-border bg-white p-6 text-sm text-text-secondary dark:border-zinc-800 dark:bg-zinc-900/40 dark:text-zinc-400">
-            No open leads without a client record.{" "}
-            <Link href="/leads?section=leads" className="text-accent underline">
-              Add or review leads
-            </Link>
-            .
-          </p>
-        ) : (
-          <NewProposalForm leads={leads} />
-        )}
+        <SalesProposalNewStarter />
       </div>
     </div>
   );

@@ -1,13 +1,13 @@
 import { notFound } from "next/navigation";
-import SalesProposalEditorView from "@/components/crm/SalesProposalEditorView";
-import { fetchActiveCrmCatalog } from "@/lib/crm/fetch-crm-catalog";
+import ProposalBuilderView from "@/components/crm/ProposalBuilderView";
 import { fetchClientsForProposalPicker } from "@/lib/crm/fetch-clients-for-proposal-picker";
-import { fetchSalesProposalDetail } from "@/lib/crm/fetch-sales-proposal-detail";
+import { fetchActiveCrmCatalog } from "@/lib/crm/fetch-crm-catalog";
+import { fetchProposalDetail } from "@/lib/crm/fetch-proposal-detail";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 export const dynamic = "force-dynamic";
 
-export default async function SalesProposalDetailPage({
+export default async function InvoiceDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -17,25 +17,25 @@ export default async function SalesProposalDetailPage({
   if (!isSupabaseConfigured()) {
     return (
       <div className="p-8">
-        <h1 className="heading-display text-2xl font-bold">Proposal</h1>
+        <h1 className="heading-display text-2xl font-bold">Invoice</h1>
         <p className="mt-2 text-text-secondary">Configure Supabase first.</p>
       </div>
     );
   }
 
-  const [detail, catalogOptions, clientOptions] = await Promise.all([
-    fetchSalesProposalDetail(id),
-    fetchActiveCrmCatalog(),
+  const [detail, clientOptions, catalogOptions] = await Promise.all([
+    fetchProposalDetail(id),
     fetchClientsForProposalPicker(),
+    fetchActiveCrmCatalog(),
   ]);
   if (!detail) notFound();
 
   return (
-    <SalesProposalEditorView
-      key={detail.updatedAt || detail.id}
+    <ProposalBuilderView
+      key={detail.id}
       initial={detail}
-      catalogOptions={catalogOptions}
       clientOptions={clientOptions}
+      catalogOptions={catalogOptions}
     />
   );
 }

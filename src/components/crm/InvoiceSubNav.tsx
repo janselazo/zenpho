@@ -3,29 +3,29 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-function isProposalsTab(pathname: string) {
-  if (pathname === "/proposals") return true;
-  if (pathname.startsWith("/proposals/new")) return true;
-  if (pathname.startsWith("/proposals/agreements")) return false;
-  return pathname.startsWith("/proposals/");
+function isInvoicesTab(pathname: string) {
+  if (pathname === "/invoices") return true;
+  if (pathname.startsWith("/invoices/new")) return true;
+  if (pathname.startsWith("/invoices/agreements")) return false;
+  return pathname.startsWith("/invoices/");
 }
 
 const links = [
-  { href: "/proposals", label: "Proposals", match: isProposalsTab },
+  { href: "/invoices", label: "Invoices", match: isInvoicesTab },
   {
-    href: "/proposals/agreements",
+    href: "/invoices/agreements",
     label: "Agreements",
-    match: (p: string) => p.startsWith("/proposals/agreements"),
+    match: (p: string) => p.startsWith("/invoices/agreements"),
   },
 ] as const;
 
-export default function ProposalsSubNav() {
+export default function InvoiceSubNav() {
   const pathname = usePathname();
 
   return (
     <nav
       className="flex gap-1 rounded-xl border border-border bg-surface/60 p-1 dark:border-zinc-800 dark:bg-zinc-900/50"
-      aria-label="Proposals sections"
+      aria-label="Invoices sections"
     >
       {links.map(({ href, label, match }) => {
         const active = match(pathname);

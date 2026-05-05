@@ -475,6 +475,22 @@ export const servicePackages: ServicePackage[] = [
   },
 ];
 
+/** Home page stack strip — labels only (no logos in this pass). */
+export const techStack: { name: string }[] = [
+  { name: "Next.js" },
+  { name: "React" },
+  { name: "TypeScript" },
+  { name: "Tailwind CSS" },
+  { name: "Supabase" },
+  { name: "Postgres" },
+  { name: "Stripe" },
+  { name: "Vercel" },
+  { name: "Framer Motion" },
+  { name: "TanStack Query" },
+  { name: "Vitest" },
+  { name: "Playwright" },
+];
+
 export const experienceStats = [
   { value: "15+", label: "Projects shipped" },
   { value: "9+", label: "Years of experience" },

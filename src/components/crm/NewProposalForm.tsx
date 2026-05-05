@@ -26,7 +26,7 @@ export default function NewProposalForm({
       return;
     }
     if ("id" in res && res.id) {
-      router.push(`/proposals/${res.id}`);
+      router.push(`/invoices/${res.id}`);
       router.refresh();
     }
   }
@@ -52,7 +52,7 @@ export default function NewProposalForm({
           required
           className="w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
         >
-          <option value="">Select lead…</option>
+          <option value="">Select contact…</option>
           {leads.map((l) => (
             <option key={l.id} value={l.id}>
               {l.name}

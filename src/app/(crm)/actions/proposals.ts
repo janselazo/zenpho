@@ -27,7 +27,7 @@ function humanizeProposalDbError(message: string): string {
       m.includes("accept_proposal"))
   ) {
     return (
-      "Proposals are not set up on this database yet. In Supabase → SQL Editor, run the SQL in " +
+      "Invoices are not set up on this database yet. In Supabase → SQL Editor, run the SQL in " +
       "supabase/migrations/20260331120000_proposals_contracts.sql (or from the project folder run " +
       "`supabase link` then `supabase db push`)."
     );
@@ -62,7 +62,7 @@ export async function createProposal(clientId: string) {
     .from("proposal")
     .insert({
       client_id: cid,
-      title: "New proposal",
+      title: "New invoice",
       status: "draft",
       billing_snapshot: billing,
       agency_snapshot: {
@@ -85,11 +85,12 @@ export async function createProposal(clientId: string) {
   });
   if (lineErr) return { error: humanizeProposalDbError(lineErr.message) };
 
-  revalidatePath("/proposals");
+  revalidatePath("/invoices");
+  revalidatePath("/proposals"); // narrative module (optional)
   return { ok: true, id: pid };
 }
 
-/** Start a proposal from a lead (not yet a client). Creates/links client as needed. */
+/** Start a proposal from a lead. Reuses linked client when present; otherwise creates/links. */
 export async function createProposalFromLead(leadId: string) {
   const ensured = await ensureClientIdForProposalFromLead(leadId);
   if ("error" in ensured) return ensured;
@@ -102,6 +103,7 @@ export type ProposalLineInput = {
   quantity: number;
   unit_price: number;
   sort_order: number;
+  catalog_item_id?: string | null;
 };
 
 export async function saveProposal(
@@ -126,7 +128,7 @@ export async function saveProposal(
   if (!user) return { error: "Unauthorized" };
 
   const id = proposalId.trim();
-  if (!id) return { error: "Missing proposal id" };
+  if (!id) return { error: "Missing invoice id" };
 
   if (!STATUS_SET.has(input.status)) {
     return { error: "Invalid status" };
@@ -138,11 +140,11 @@ export async function saveProposal(
     .eq("id", id)
     .maybeSingle();
 
-  if (!existing) return { error: "Proposal not found" };
+  if (!existing) return { error: "Invoice not found" };
 
   const current = parseProposalStatus(existing.status as string);
   if (current === "accepted") {
-    return { error: "Accepted proposals cannot be edited" };
+    return { error: "Accepted invoices cannot be edited" };
   }
 
   const discount =
@@ -176,6 +178,7 @@ export async function saveProposal(
     quantity: Math.max(0, li.quantity),
     unit_price: Math.max(0, li.unit_price),
     sort_order: li.sort_order ?? i,
+    catalog_item_id: li.catalog_item_id?.trim() || null,
   }));
 
   if (rows.length > 0) {
@@ -185,8 +188,9 @@ export async function saveProposal(
     if (liErr) return { error: humanizeProposalDbError(liErr.message) };
   }
 
-  revalidatePath("/proposals");
-  revalidatePath(`/proposals/${id}`);
+  revalidatePath("/invoices");
+  revalidatePath("/proposals"); // narrative module (optional)
+  revalidatePath(`/invoices/${id}`);
   return { ok: true };
 }
 
@@ -202,7 +206,7 @@ export async function updateProposalClient(
 
   const pid = proposalId.trim();
   const cid = newClientId.trim();
-  if (!pid || !cid) return { error: "Missing client or proposal" };
+  if (!pid || !cid) return { error: "Missing client or invoice" };
 
   const { data: proposal, error: pErr } = await supabase
     .from("proposal")
@@ -210,9 +214,9 @@ export async function updateProposalClient(
     .eq("id", pid)
     .maybeSingle();
 
-  if (pErr || !proposal) return { error: "Proposal not found" };
+  if (pErr || !proposal) return { error: "Invoice not found" };
   if (parseProposalStatus(proposal.status as string) === "accepted") {
-    return { error: "Cannot change client on an accepted proposal" };
+    return { error: "Cannot change client on an accepted invoice" };
   }
 
   const { data: client, error: cErr } = await supabase
@@ -250,8 +254,9 @@ export async function updateProposalClient(
 
   if (error) return { error: humanizeProposalDbError(error.message) };
 
-  revalidatePath("/proposals");
-  revalidatePath(`/proposals/${pid}`);
+  revalidatePath("/invoices");
+  revalidatePath("/proposals"); // narrative module (optional)
+  revalidatePath(`/invoices/${pid}`);
   return { ok: true };
 }
 
@@ -273,13 +278,14 @@ export async function deleteProposal(proposalId: string) {
 
   if (!existing) return { error: "Not found" };
   if (parseProposalStatus(existing.status as string) === "accepted") {
-    return { error: "Cannot delete an accepted proposal" };
+    return { error: "Cannot delete an accepted invoice" };
   }
 
   const { error } = await supabase.from("proposal").delete().eq("id", id);
   if (error) return { error: humanizeProposalDbError(error.message) };
 
-  revalidatePath("/proposals");
+  revalidatePath("/invoices");
+  revalidatePath("/proposals"); // narrative module (optional)
   return { ok: true };
 }
 
@@ -300,20 +306,21 @@ export async function acceptProposal(proposalId: string) {
   if (error) {
     const msg = error.message || "Could not accept proposal";
     if (msg.includes("invalid_status")) {
-      return { error: "Only draft, sent, or pending proposals can be accepted" };
+      return { error: "Only draft, sent, or pending invoices can be accepted" };
     }
     if (msg.includes("forbidden")) return { error: "Unauthorized" };
-    if (msg.includes("not_found")) return { error: "Proposal not found" };
+    if (msg.includes("not_found")) return { error: "Invoice not found" };
     return { error: humanizeProposalDbError(msg) };
   }
 
   const cid = contractId as string | null;
-  revalidatePath("/proposals");
-  revalidatePath(`/proposals/${id}`);
+  revalidatePath("/invoices");
+  revalidatePath("/proposals"); // narrative module (optional)
+  revalidatePath(`/invoices/${id}`);
   if (cid) {
     revalidatePath(`/contracts/${cid}`);
-    revalidatePath(`/proposals/agreements/${cid}`);
-    revalidatePath("/proposals/agreements");
+    revalidatePath(`/invoices/agreements/${cid}`);
+    revalidatePath("/invoices/agreements");
   }
 
   return { ok: true, contractId: cid };

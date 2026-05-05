@@ -39,9 +39,9 @@ export async function updateContractStatus(
   if (error) return { error: error.message };
 
   revalidatePath(`/contracts/${id}`);
-  revalidatePath(`/proposals/agreements/${id}`);
-  revalidatePath("/proposals/agreements");
-  revalidatePath("/proposals");
+  revalidatePath(`/invoices/agreements/${id}`);
+  revalidatePath("/invoices/agreements");
+  revalidatePath("/invoices");
   return { ok: true };
 }
 
@@ -80,9 +80,9 @@ export async function updateContractTermsSnapshot(
   if (error) return { error: error.message };
 
   revalidatePath(`/contracts/${id}`);
-  revalidatePath(`/proposals/agreements/${id}`);
-  revalidatePath("/proposals/agreements");
-  revalidatePath("/proposals");
+  revalidatePath(`/invoices/agreements/${id}`);
+  revalidatePath("/invoices/agreements");
+  revalidatePath("/invoices");
   return { ok: true };
 }
 
@@ -126,8 +126,8 @@ export async function recordContractSignature(
   if (error) return { error: error.message };
 
   revalidatePath(`/contracts/${id}`);
-  revalidatePath(`/proposals/agreements/${id}`);
-  revalidatePath("/proposals/agreements");
-  revalidatePath("/proposals");
+  revalidatePath(`/invoices/agreements/${id}`);
+  revalidatePath("/invoices/agreements");
+  revalidatePath("/invoices");
   return { ok: true };
 }

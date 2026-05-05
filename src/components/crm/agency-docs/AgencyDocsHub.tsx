@@ -1,8 +1,8 @@
 import { getAgencyHubDocItems } from "@/lib/crm/agency-docs-hub";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
-import type { AgencyDocType } from "@/lib/crm/agency-custom-doc";
-import AgencyNewDocButton from "@/components/crm/agency-docs/AgencyNewDocButton";
 import AgencyDocsHubSortableGrid from "@/components/crm/agency-docs/AgencyDocsHubSortableGrid";
+import AgencyNewDocButton from "@/components/crm/agency-docs/AgencyNewDocButton";
+import type { AgencyDocType } from "@/lib/crm/agency-custom-doc";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 const DOCS_HUB_PATH = "/docs";
 
@@ -11,15 +11,23 @@ type Props = {
   subtitle?: string;
   /** Which workspace doc kinds appear on this hub (default: agency docs + former “Industries” cards). */
   docTypes?: AgencyDocType | AgencyDocType[];
+  /** Base URL for card links + new-doc redirect (defaults to `/docs`). */
+  hubBasePath?: string;
 };
 
 export default async function AgencyDocsHub({
   heading = "Agency docs",
-  subtitle = "Strategy, positioning, and operating context for the team \u2014 one place per topic.",
+  subtitle =
+    "Strategy, positioning, and operating context for the team — one place per topic.",
   docTypes = ["doc", "industry"],
+  hubBasePath = DOCS_HUB_PATH,
 }: Props) {
   const items = await getAgencyHubDocItems(docTypes);
   const canPersist = isSupabaseConfigured();
+
+  const docKinds = Array.isArray(docTypes) ? docTypes : [docTypes];
+  const newDocType: AgencyDocType =
+    docKinds.length === 1 && docKinds[0] === "industry" ? "industry" : "doc";
 
   return (
     <div className="mx-auto max-w-6xl p-8">
@@ -43,7 +51,7 @@ export default async function AgencyDocsHub({
           </p>
         </div>
         {canPersist ? (
-          <AgencyNewDocButton docType="doc" basePath={DOCS_HUB_PATH} />
+          <AgencyNewDocButton docType={newDocType} basePath={hubBasePath} />
         ) : null}
       </div>
 
@@ -55,7 +63,7 @@ export default async function AgencyDocsHub({
         <AgencyDocsHubSortableGrid
           items={items}
           canPersist={canPersist}
-          basePath={DOCS_HUB_PATH}
+          basePath={hubBasePath}
         />
       )}
     </div>

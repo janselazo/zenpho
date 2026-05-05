@@ -67,21 +67,21 @@ export default function ContractDetailView({
     <div className="mx-auto max-w-2xl space-y-8 p-8">
       <div>
         <Link
-          href="/proposals"
+          href="/invoices"
           className="text-sm text-text-secondary hover:text-text-primary dark:text-zinc-500"
         >
-          ← Proposals
+          ← Invoices
         </Link>
         <h1 className="heading-display mt-4 text-2xl font-bold text-text-primary dark:text-zinc-100">
           Contract
         </h1>
         <p className="mt-1 text-sm text-text-secondary dark:text-zinc-400">
-          From proposal {formatProposalId(initial.proposalNumber)} —{" "}
+          From invoice {formatProposalId(initial.proposalNumber)} —{" "}
           <Link
-            href={`/proposals/${initial.proposalId}`}
+            href={`/invoices/${initial.proposalId}`}
             className="text-accent underline"
           >
-            View proposal
+            View invoice
           </Link>
         </p>
       </div>

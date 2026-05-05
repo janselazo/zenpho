@@ -10,6 +10,7 @@ import {
   type ProposalLineInput,
 } from "@/app/(crm)/actions/proposals";
 import type { ProposalClientOption } from "@/lib/crm/fetch-clients-for-proposal-picker";
+import type { CrmProductServiceRow } from "@/lib/crm/crm-catalog-types";
 import type {
   AgencySnapshot,
   BillingSnapshot,
@@ -41,14 +42,17 @@ type LineDraft = {
   description: string;
   quantity: number;
   unit_price: number;
+  catalog_item_id: string | null;
 };
 
 export default function ProposalBuilderView({
   initial,
   clientOptions,
+  catalogOptions = [],
 }: {
   initial: ProposalDetail;
   clientOptions: ProposalClientOption[];
+  catalogOptions?: CrmProductServiceRow[];
 }) {
   const router = useRouter();
   const readOnly = initial.status === "accepted";
@@ -65,14 +69,17 @@ export default function ProposalBuilderView({
   );
   const [agency, setAgency] = useState<AgencySnapshot>(initial.agency);
   const [billing, setBilling] = useState<BillingSnapshot>(initial.billing);
+  const [catalogPick, setCatalogPick] = useState("");
+
   const [lines, setLines] = useState<LineDraft[]>(
     initial.lineItems.length
       ? initial.lineItems.map((li) => ({
           description: li.description,
           quantity: li.quantity,
           unit_price: li.unit_price,
+          catalog_item_id: li.catalog_item_id,
         }))
-      : [{ description: "", quantity: 1, unit_price: 0 }]
+      : [{ description: "", quantity: 1, unit_price: 0, catalog_item_id: null }]
   );
 
   const [saving, setSaving] = useState(false);
@@ -96,8 +103,9 @@ export default function ProposalBuilderView({
             description: li.description,
             quantity: li.quantity,
             unit_price: li.unit_price,
+            catalog_item_id: li.catalog_item_id,
           }))
-        : [{ description: "", quantity: 1, unit_price: 0 }]
+        : [{ description: "", quantity: 1, unit_price: 0, catalog_item_id: null }]
     );
   }, [initial.id, initial.updatedAt]);
 
@@ -124,6 +132,7 @@ export default function ProposalBuilderView({
         quantity: li.quantity,
         unit_price: li.unit_price,
         sort_order: i,
+        catalog_item_id: li.catalog_item_id,
       }));
       const res = await saveProposal(initial.id, {
         title,
@@ -187,7 +196,7 @@ export default function ProposalBuilderView({
       return;
     }
     if ("contractId" in res && res.contractId) {
-      router.push(`/proposals/agreements/${res.contractId}`);
+      router.push(`/invoices/agreements/${res.contractId}`);
       router.refresh();
     }
   }
@@ -201,14 +210,34 @@ export default function ProposalBuilderView({
   function addLine() {
     setLines((prev) => [
       ...prev,
-      { description: "", quantity: 1, unit_price: 0 },
+      { description: "", quantity: 1, unit_price: 0, catalog_item_id: null },
     ]);
+  }
+
+  function addFromCatalog() {
+    const id = catalogPick.trim();
+    if (!id) return;
+    const item = catalogOptions.find((c) => c.id === id);
+    if (!item) return;
+    const desc = item.description.trim()
+      ? `${item.name}\n\n${item.description.trim()}`
+      : item.name;
+    setLines((prev) => [
+      ...prev,
+      {
+        description: desc,
+        quantity: 1,
+        unit_price: item.unit_price,
+        catalog_item_id: item.id,
+      },
+    ]);
+    setCatalogPick("");
   }
 
   function removeLine(i: number) {
     setLines((prev) =>
       prev.length <= 1
-        ? [{ description: "", quantity: 1, unit_price: 0 }]
+        ? [{ description: "", quantity: 1, unit_price: 0, catalog_item_id: null }]
         : prev.filter((_, j) => j !== i)
     );
   }
@@ -223,10 +252,10 @@ export default function ProposalBuilderView({
       <div className="border-b border-border bg-white px-6 py-3 dark:border-zinc-800 dark:bg-zinc-900/50">
         <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-3">
           <Link
-            href="/proposals"
+            href="/invoices"
             className="text-sm text-text-secondary hover:text-text-primary dark:text-zinc-500"
           >
-            ← Proposals
+            ← Invoices
           </Link>
           <Link
             href="/dashboard"
@@ -239,7 +268,7 @@ export default function ProposalBuilderView({
             onChange={(e) => setTitle(e.target.value)}
             disabled={readOnly}
             className="min-w-[12rem] flex-1 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-semibold outline-none focus:border-blue-400 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-            placeholder="Proposal title"
+            placeholder="Invoice title"
           />
           {!readOnly ? (
             <select
@@ -283,7 +312,7 @@ export default function ProposalBuilderView({
 
           {readOnly && initial.contractId ? (
             <Link
-              href={`/proposals/agreements/${initial.contractId}`}
+              href={`/invoices/agreements/${initial.contractId}`}
               className="inline-flex rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
             >
               Open contract
@@ -546,30 +575,75 @@ export default function ProposalBuilderView({
 
           {step === 2 && (
             <section className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h2 className="text-xs font-bold uppercase tracking-widest text-text-secondary dark:text-zinc-500">
                   Services
                 </h2>
                 {!readOnly ? (
-                  <button
-                    type="button"
-                    onClick={addLine}
-                    className="inline-flex items-center gap-1 rounded-lg border border-border bg-white px-2 py-1 text-xs font-semibold dark:border-zinc-600 dark:bg-zinc-800"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Add line
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {catalogOptions.length > 0 ? (
+                      <>
+                        <select
+                          value={catalogPick}
+                          onChange={(e) => setCatalogPick(e.target.value)}
+                          className="min-w-[12rem] rounded-lg border border-border bg-white px-2 py-1.5 text-xs font-medium dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                          aria-label="Pick from Products and Services catalog"
+                        >
+                          <option value="">Add from catalog…</option>
+                          {catalogOptions.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name} ({formatMoney(c.unit_price)})
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={addFromCatalog}
+                          disabled={!catalogPick.trim()}
+                          className="inline-flex items-center gap-1 rounded-lg border border-border bg-white px-2 py-1 text-xs font-semibold disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-800"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          Add
+                        </button>
+                      </>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={addLine}
+                      className="inline-flex items-center gap-1 rounded-lg border border-border bg-white px-2 py-1 text-xs font-semibold dark:border-zinc-600 dark:bg-zinc-800"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Add line
+                    </button>
+                  </div>
                 ) : null}
               </div>
+              {catalogOptions.length === 0 && !readOnly ? (
+                <p className="text-xs text-text-secondary dark:text-zinc-500">
+                  <Link
+                    href="/products-services"
+                    className="font-medium text-accent underline"
+                  >
+                    Add catalog items
+                  </Link>{" "}
+                  under Products & Services to fill lines from your price list.
+                </p>
+              ) : null}
               <div className="space-y-3">
                 {lines.map((li, i) => (
                   <div
                     key={i}
                     className="rounded-xl border border-border bg-white p-3 dark:border-zinc-700 dark:bg-zinc-900"
                   >
-                    <input
-                      className={`${inputClass} mb-2`}
+                    {li.catalog_item_id ? (
+                      <span className="mb-2 inline-block rounded bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                        Catalog
+                      </span>
+                    ) : null}
+                    <textarea
+                      className={`${inputClass} mb-2 min-h-[2.75rem]`}
                       placeholder="Description"
+                      rows={li.description.includes("\n") ? 4 : 2}
                       value={li.description}
                       disabled={readOnly}
                       onChange={(e) =>
@@ -837,7 +911,7 @@ function ProposalPreview({
               Zenpho · Local Growth Platform
             </p>
             <p className="text-xs text-text-secondary dark:text-zinc-500">
-              Proposal
+              Invoice
             </p>
           </div>
           <div className="text-right text-xs text-text-secondary dark:text-zinc-400">
@@ -852,7 +926,7 @@ function ProposalPreview({
         </div>
 
         <p className="mt-4 text-center text-sm font-semibold text-text-primary dark:text-zinc-200">
-          {title || "Untitled proposal"}
+          {title || "Untitled invoice"}
         </p>
 
         <div className="mt-6 grid gap-6 sm:grid-cols-2">
@@ -896,7 +970,7 @@ function ProposalPreview({
                   key={i}
                   className="border-b border-border last:border-0 dark:border-zinc-800"
                 >
-                  <td className="px-3 py-2 text-text-primary dark:text-zinc-200">
+                  <td className="whitespace-pre-wrap px-3 py-2 text-text-primary dark:text-zinc-200">
                     {li.description || "—"}
                   </td>
                   <td className="px-3 py-2 text-text-secondary dark:text-zinc-400">

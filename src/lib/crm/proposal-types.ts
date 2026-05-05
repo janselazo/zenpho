@@ -44,6 +44,8 @@ export type ProposalLineItemRow = {
   unit_price: number;
   line_total?: number;
   sort_order: number;
+  /** Optional link to `crm_product_service`; snapshot stays in description/price. */
+  catalog_item_id: string | null;
 };
 
 export type ProposalListRow = {

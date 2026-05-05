@@ -100,11 +100,11 @@ export default function AgreementEditorView({
       <div className="sticky top-0 z-10 border-b border-border bg-surface/95 px-4 py-3 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/90">
         <div className="mx-auto flex max-w-[1400px] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <nav className="flex flex-wrap items-center gap-1 text-xs text-text-secondary dark:text-zinc-500">
-            <Link href="/proposals" className="hover:text-accent">
-              Proposals
+            <Link href="/invoices" className="hover:text-accent">
+              Invoices
             </Link>
             <span aria-hidden>/</span>
-            <Link href="/proposals/agreements" className="hover:text-accent">
+            <Link href="/invoices/agreements" className="hover:text-accent">
               Agreements
             </Link>
             <span aria-hidden>/</span>
@@ -336,11 +336,11 @@ export default function AgreementEditorView({
               </div>
               <div>
                 <dt className="text-text-secondary dark:text-zinc-500">
-                  Proposal
+                  Invoice
                 </dt>
                 <dd className="mt-1">
                   <Link
-                    href={`/proposals/${initial.proposalId}`}
+                    href={`/invoices/${initial.proposalId}`}
                     className="font-medium text-accent hover:underline"
                   >
                     {propRef}

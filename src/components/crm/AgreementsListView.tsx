@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
-import ProposalsSubNav from "@/components/crm/ProposalsSubNav";
+import InvoiceSubNav from "@/components/crm/InvoiceSubNav";
 import {
   formatProposalId,
   type ContractStatus,
@@ -57,17 +57,17 @@ export default function AgreementsListView({
 
   return (
     <div className="space-y-8">
-      <ProposalsSubNav />
+      <InvoiceSubNav />
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary dark:text-zinc-500">
-            App / Proposals / Agreements
+            App / Invoices / Agreements
           </p>
           <h1 className="heading-display mt-1 text-2xl font-bold text-text-primary dark:text-zinc-100">
             Agreements
           </h1>
           <p className="mt-1 text-sm text-text-secondary dark:text-zinc-400">
-            Contracts generated from accepted proposals. Edit terms before
+            Contracts generated from accepted invoices. Edit terms before
             sending for signature.
           </p>
         </div>
@@ -88,7 +88,7 @@ export default function AgreementsListView({
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead>
               <tr className="border-b border-border bg-surface/80 text-[11px] font-semibold uppercase tracking-wider text-text-secondary dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-500">
-                <th className="px-4 py-3">Proposal</th>
+                <th className="px-4 py-3">Invoice</th>
                 <th className="px-4 py-3">Client</th>
                 <th className="px-4 py-3">Agreement</th>
                 <th className="px-4 py-3">Amount</th>
@@ -104,7 +104,7 @@ export default function AgreementsListView({
                     colSpan={7}
                     className="px-4 py-12 text-center text-text-secondary dark:text-zinc-500"
                   >
-                    No agreements yet. Accept a proposal to generate a contract.
+                    No agreements yet. Accept an invoice to generate a contract.
                   </td>
                 </tr>
               ) : (
@@ -137,7 +137,7 @@ export default function AgreementsListView({
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right">
                       <Link
-                        href={`/proposals/agreements/${r.contractId}`}
+                        href={`/invoices/agreements/${r.contractId}`}
                         className="font-medium text-accent hover:underline"
                       >
                         Open

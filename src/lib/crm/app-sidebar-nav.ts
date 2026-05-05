@@ -155,11 +155,10 @@ export const SIDEBAR_SALES: AppSidebarItem[] = [
     href: "/products-services",
     label: "Products & Services",
     icon: Package,
-    soon: true,
   },
+  { href: "/invoices", label: "Invoices", icon: Receipt },
   { href: "/proposals", label: "Proposals", icon: FileText },
   { href: "/estimates", label: "Estimates", icon: Calculator, soon: true },
-  { href: "/invoices", label: "Invoices", icon: Receipt, soon: true },
 ];
 
 export const SIDEBAR_REVIEWS: AppSidebarItem[] = [
