@@ -28,9 +28,10 @@ const STEP_LABELS = [
 ];
 
 const GENERATION_SUBSTEPS = [
-  "Reading Google listing, categories & photos",
-  "Scraping website hues / logo cues",
-  "Structuring narrative & pricing story",
+  "Planning narrative strategy",
+  "Composing Markdown sections",
+  "Weaving enrichment & catalogue facts",
+  "Rendering AI illustrations (when enabled)",
 ];
 
 function formatUsd(n: number): string {
@@ -136,6 +137,7 @@ export default function ProposalGenerationWizard({
   const [busySave, setBusySave] = useState(false);
   const [busyPdf, setBusyPdf] = useState(false);
   const [genStage, setGenStage] = useState(0);
+  const [genWarnings, setGenWarnings] = useState<string[]>([]);
   const [err, setErr] = useState<string | null>(null);
 
   const genIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -221,7 +223,7 @@ export default function ProposalGenerationWizard({
     genIntervalRef.current && clearInterval(genIntervalRef.current);
     genIntervalRef.current = setInterval(() => {
       setGenStage((s) => Math.min(s + 1, GENERATION_SUBSTEPS.length - 1));
-    }, 2_800);
+    }, 4_600);
 
     const ac = new AbortController();
     abortRef.current = ac;
@@ -249,6 +251,7 @@ export default function ProposalGenerationWizard({
         error?: string;
         title?: string;
         markdown?: string;
+        warnings?: unknown;
       };
       if (!payload.ok) {
         const msg =
@@ -260,6 +263,12 @@ export default function ProposalGenerationWizard({
       if (typeof payload.markdown !== "string") {
         throw new Error("Unexpected server response.");
       }
+
+      const w = Array.isArray(payload.warnings)
+        ? payload.warnings.filter((x): x is string => typeof x === "string")
+        : [];
+      setGenWarnings(w);
+
       setTitle(
         (typeof payload.title === "string" ? payload.title : "").trim() ||
           title
@@ -848,6 +857,25 @@ export default function ProposalGenerationWizard({
             </div>
           ) : (
             <div className="space-y-4">
+              {genWarnings.length > 0 ? (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+                  <p className="text-xs font-bold uppercase tracking-wide">
+                    Generation notes
+                  </p>
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-xs">
+                    {genWarnings.map((w) => (
+                      <li key={w}>{w}</li>
+                    ))}
+                  </ul>
+                  <button
+                    type="button"
+                    onClick={() => setGenWarnings([])}
+                    className="mt-2 text-xs font-semibold underline"
+                  >
+                    Dismiss notes
+                  </button>
+                </div>
+              ) : null}
               <label className="block text-xs font-bold uppercase tracking-wider text-text-secondary dark:text-zinc-500">
                 Proposal title
                 <input

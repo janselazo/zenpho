@@ -1,26 +1,64 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { CrmProductServiceRow } from "@/lib/crm/crm-catalog-types";
+import type { SalesProposalStrategySpec } from "@/lib/crm/sales-proposal-llm";
 import {
   buildBusinessVisualMarkdownBlock,
+  buildProposalAiVisualMarkdownSection,
   originFromRequest,
   parseGooglePlaceSnapshot,
   spliceBeforeExecutiveSummary,
   summarizeBrandAssetsForPrompt,
   summarizeGoogleListingForPrompt,
 } from "@/lib/crm/proposal-enrichment-context";
-import { generateSalesProposalMarkdown } from "@/lib/crm/sales-proposal-llm";
+import {
+  expandSalesProposalFromStrategy,
+  generateSalesProposalMarkdown,
+  generateSalesProposalStrategySpec,
+} from "@/lib/crm/sales-proposal-llm";
+import { uploadProposalAiVisualPng } from "@/lib/crm/sales-proposal-ai-visual-storage";
+import {
+  generateProposalAiImages,
+  paletteHexesFromBrand,
+} from "@/lib/crm/sales-proposal-image-gen";
 import { resolveProspectBrandAssets } from "@/lib/crm/prospect-branding-asset-resolve";
+import type { ResolvedBrandAssets } from "@/lib/crm/prospect-branding-asset-resolve";
+import { classifyProspectVertical } from "@/lib/crm/prospect-vertical-classify";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 type Body = { proposalId?: unknown };
 
 function parseUuidArray(raw: unknown): string[] {
   if (!Array.isArray(raw)) return [];
   return raw.filter((x): x is string => typeof x === "string" && Boolean(x.trim()));
+}
+
+function proposalStrategyDisabled(): boolean {
+  const raw = process.env.PROPOSAL_STRATEGY_DISABLED?.trim().toLowerCase();
+  return raw === "1" || raw === "true" || raw === "yes";
+}
+
+function proposalAiImagesEnabled(): boolean {
+  const raw = process.env.PROPOSAL_AI_IMAGE_ENABLED?.trim().toLowerCase();
+  return raw === "1" || raw === "true" || raw === "yes";
+}
+
+function industryLabelsFromPlace(snapshot: ReturnType<
+  typeof parseGooglePlaceSnapshot
+>): string {
+  if (!snapshot?.types?.length) return "";
+  return snapshot.types
+    .map((t) => t.replace(/_/g, " "))
+    .filter(Boolean)
+    .slice(0, 14)
+    .join(", ");
+}
+
+function serviceNamesLine(services: CrmProductServiceRow[]): string {
+  return services.map((s) => s.name).join(", ").slice(0, 640);
 }
 
 export async function POST(req: Request) {
@@ -128,7 +166,7 @@ export async function POST(req: Request) {
 
   const byId = new Map<string, CrmProductServiceRow>();
   for (const r of catalogRows as Record<string, unknown>[]) {
-    const row: CrmProductServiceRow = {
+    const line: CrmProductServiceRow = {
       id: r.id as string,
       name: String(r.name ?? "").trim() || "Unnamed",
       description: String(r.description ?? ""),
@@ -138,7 +176,7 @@ export async function POST(req: Request) {
       is_active: Boolean(r.is_active),
       sort_order: Number(r.sort_order) || 0,
     };
-    byId.set(row.id, row);
+    byId.set(line.id, line);
   }
 
   const services: CrmProductServiceRow[] = [];
@@ -166,9 +204,11 @@ export async function POST(req: Request) {
   let brandSignalsBlock: string | null = null;
   let visualMd: string | null = null;
 
+  let brandAssets: ResolvedBrandAssets | null = null;
+
   if (snapshot) {
     listingBlock = summarizeGoogleListingForPrompt(snapshot);
-    const brandAssets = snapshot.websiteUri?.trim()
+    brandAssets = snapshot.websiteUri?.trim()
       ? await resolveProspectBrandAssets({
           websiteUrl: snapshot.websiteUri,
           businessName:
@@ -188,7 +228,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const llm = await generateSalesProposalMarkdown({
+  const llmInput = {
     client: {
       name:
         (clientRow.name as string)?.trim() ||
@@ -220,18 +260,98 @@ export async function POST(req: Request) {
             brandSignalsBlock,
           }
         : null,
-  });
+  };
+
+  const warnings: string[] = [];
+
+  let strategy: SalesProposalStrategySpec | null = null;
+
+  if (!proposalStrategyDisabled()) {
+    const strat = await generateSalesProposalStrategySpec(llmInput);
+    if (strat.ok) {
+      strategy = strat.data;
+    } else {
+      warnings.push(
+        `Proposal strategy outline skipped: ${strat.error} Falling back to single-pass.`,
+      );
+    }
+  }
+
+  const llm =
+    strategy != null && !proposalStrategyDisabled()
+      ? await expandSalesProposalFromStrategy(strategy, llmInput)
+      : await generateSalesProposalMarkdown(llmInput);
 
   if (!llm.ok) {
     return NextResponse.json(
-      { ok: false as const, error: llm.error },
+      { ok: false as const, error: llm.error, warnings },
       { status: 500 }
     );
   }
 
   let proposalMd = llm.markdown;
-  if (visualMd) {
-    proposalMd = spliceBeforeExecutiveSummary(llm.markdown, visualMd);
+
+  /** Stored AI visual metadata for PDF re-fetch */
+  let aiStored: { path: string; caption: string }[] = [];
+  let aiMarkdownSection: string | null = null;
+
+  const apiKeyConfigured = Boolean(process.env.OPENAI_API_KEY?.trim());
+
+  if (proposalAiImagesEnabled() && apiKeyConfigured) {
+    const vertical = classifyProspectVertical({
+      place: snapshot,
+      signals: {},
+    });
+
+    const hexes =
+      paletteHexesFromBrand(
+        brandAssets?.palette ?? [],
+        brandAssets?.primary ?? null,
+        brandAssets?.accent ?? null,
+      );
+
+    try {
+      const imgOut = await generateProposalAiImages({
+        strategy,
+        vertical,
+        paletteHexes: hexes,
+        businessName: clientDisplayName,
+        industryLabels: industryLabelsFromPlace(snapshot),
+        serviceNamesLine: serviceNamesLine(services),
+      });
+      imgOut.errors.forEach((e) => warnings.push(`AI image: ${e}`));
+
+      const mdItems: { caption: string; publicUrl: string }[] = [];
+      for (const img of imgOut.images) {
+        if (!img.buffer?.length) continue;
+        const uploaded = await uploadProposalAiVisualPng({
+          proposalId,
+          ordinal: img.slotIndex,
+          bytes: img.buffer,
+        });
+        if (!uploaded.ok) {
+          warnings.push(`AI image upload: ${uploaded.error}`);
+          continue;
+        }
+        aiStored.push({ path: uploaded.path, caption: img.caption });
+        mdItems.push({ caption: img.caption, publicUrl: uploaded.publicUrl });
+      }
+
+      aiMarkdownSection = buildProposalAiVisualMarkdownSection(mdItems);
+    } catch (e) {
+      const msg =
+        e instanceof Error ? e.message : "Unexpected AI imagery failure.";
+      warnings.push(`AI images skipped: ${msg}`);
+    }
+  }
+
+  const visualPieces = [
+    typeof visualMd === "string" ? visualMd.trim() : "",
+    aiMarkdownSection?.trim() ?? "",
+  ].filter(Boolean);
+  const insertCombined = visualPieces.join("\n");
+  if (insertCombined) {
+    proposalMd = spliceBeforeExecutiveSummary(proposalMd, `${insertCombined}\n`);
   }
 
   const { error: upErr } = await supabase
@@ -240,13 +360,16 @@ export async function POST(req: Request) {
       title: llm.title.trim() || (row.title as string) || "Proposal",
       proposal_body: proposalMd,
       status: "generated",
+      proposal_strategy:
+        strategy && !proposalStrategyDisabled() ? strategy : null,
+      proposal_ai_visuals: aiStored,
       updated_at: new Date().toISOString(),
     })
     .eq("id", proposalId);
 
   if (upErr) {
     return NextResponse.json(
-      { ok: false as const, error: upErr.message },
+      { ok: false as const, error: upErr.message, warnings },
       { status: 500 }
     );
   }
@@ -255,5 +378,6 @@ export async function POST(req: Request) {
     ok: true as const,
     title: llm.title,
     markdown: proposalMd,
+    warnings,
   });
 }

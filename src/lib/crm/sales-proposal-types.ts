@@ -47,6 +47,12 @@ export type SalesProposalCatalogLineRow = {
 };
 
 import type { PlacesSearchPlace } from "@/lib/crm/places-types";
+import type { SalesProposalStrategySpec } from "@/lib/crm/sales-proposal-llm";
+
+export type SalesProposalAiVisualRow = {
+  path: string;
+  caption: string;
+};
 
 export type SalesProposalDetail = {
   id: string;
@@ -61,6 +67,10 @@ export type SalesProposalDetail = {
   selected_catalog_item_ids: string[];
   wizard_notes: string;
   total_price_estimate: number | null;
+  /** Layer-1 strategy JSON last run (may be null for legacy rows). */
+  strategy: SalesProposalStrategySpec | null;
+  /** Stored Supabase Storage paths (+ captions) for AI illustrations. */
+  ai_visuals: SalesProposalAiVisualRow[];
   about_us: string;
   our_story: string;
   services_overview: string;

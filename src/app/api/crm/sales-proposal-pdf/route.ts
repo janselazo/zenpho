@@ -2,9 +2,12 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import {
   parseGooglePlaceSnapshot,
-  stripMarkdownCrmListingImages,
+  stripMarkdownForProposalPdf,
 } from "@/lib/crm/proposal-enrichment-context";
-import { collectProposalPdfRasters } from "@/lib/crm/proposal-pdf-rasters";
+import {
+  collectProposalAiVisualRasters,
+  collectProposalPdfRasters,
+} from "@/lib/crm/proposal-pdf-rasters";
 import {
   buildSalesProposalPdfBytes,
   slugifyPdfFilenameSegment,
@@ -22,6 +25,22 @@ function formatUsd(n: number): string {
     currency: "USD",
     minimumFractionDigits: 2,
   }).format(n);
+}
+
+function parseAiVisualRowsPdf(
+  raw: unknown,
+): { path: string; caption: string }[] {
+  if (!Array.isArray(raw)) return [];
+  const out: { path: string; caption: string }[] = [];
+  for (const x of raw) {
+    if (!x || typeof x !== "object") continue;
+    const o = x as Record<string, unknown>;
+    const path = typeof o.path === "string" ? o.path.trim() : "";
+    const caption = typeof o.caption === "string" ? o.caption.trim() : "";
+    if (path.startsWith("proposal-ai-visuals/"))
+      out.push({ path, caption: caption || "AI visualization" });
+  }
+  return out;
 }
 
 export async function POST(req: Request) {
@@ -69,6 +88,7 @@ export async function POST(req: Request) {
       total_price_estimate,
       client_id,
       google_place_snapshot,
+      proposal_ai_visuals,
       client(name, company)
     `
     )
@@ -142,7 +162,15 @@ export async function POST(req: Request) {
     businessLabel: clientName,
   });
 
-  const bodyForPdf = stripMarkdownCrmListingImages(bodyMd).trim();
+  const aiRasterRows = parseAiVisualRowsPdf(row.proposal_ai_visuals);
+  const aiRasters =
+    aiRasterRows.length > 0
+      ? await collectProposalAiVisualRasters({ rows: aiRasterRows })
+      : [];
+
+  const allRasters = [...rasterSlots, ...aiRasters];
+
+  const bodyForPdf = stripMarkdownForProposalPdf(bodyMd).trim();
 
   const pdfBytes = await buildSalesProposalPdfBytes({
     proposalTitle: title,
@@ -150,7 +178,7 @@ export async function POST(req: Request) {
     investmentLine: investment,
     markdownBody: bodyForPdf,
     generatedAtLabel: dateStr,
-    embeddedRasters: rasterSlots.length ? rasterSlots : undefined,
+    embeddedRasters: allRasters.length ? allRasters : undefined,
   });
 
   const slug = slugifyPdfFilenameSegment(clientName);

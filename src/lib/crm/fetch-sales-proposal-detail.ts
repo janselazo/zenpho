@@ -1,10 +1,29 @@
 import { createClient } from "@/lib/supabase/server";
 import {
   parseSalesProposalStatus,
+  type SalesProposalAiVisualRow,
   type SalesProposalCatalogLineRow,
   type SalesProposalDetail,
 } from "@/lib/crm/sales-proposal-types";
+import { coerceSalesProposalStrategySpec } from "@/lib/crm/sales-proposal-llm";
 import { parseGooglePlaceSnapshot } from "@/lib/crm/proposal-enrichment-context";
+
+function parseAiVisualRows(raw: unknown): SalesProposalAiVisualRow[] {
+  if (!Array.isArray(raw)) return [];
+  const out: SalesProposalAiVisualRow[] = [];
+  for (const x of raw) {
+    if (!x || typeof x !== "object") continue;
+    const o = x as Record<string, unknown>;
+    const path = typeof o.path === "string" ? o.path.trim() : "";
+    const caption = typeof o.caption === "string" ? o.caption.trim() : "";
+    if (path.startsWith("proposal-ai-visuals/"))
+      out.push({
+        path,
+        caption: caption || "AI visualization",
+      });
+  }
+  return out;
+}
 
 function parseUuidArray(raw: unknown): string[] {
   if (!Array.isArray(raw)) return [];
@@ -28,6 +47,8 @@ export async function fetchSalesProposalDetail(
       selected_catalog_item_ids,
       wizard_notes,
       total_price_estimate,
+      proposal_strategy,
+      proposal_ai_visuals,
       about_us,
       our_story,
       services_overview,
@@ -81,6 +102,10 @@ export async function fetchSalesProposalDetail(
         ? Number.parseFloat(row.total_price_estimate as string)
         : null;
 
+  const strategyParsed = coerceSalesProposalStrategySpec(
+    row.proposal_strategy,
+  );
+
   return {
     id: row.id as string,
     clientId:
@@ -100,6 +125,8 @@ export async function fetchSalesProposalDetail(
     wizard_notes:
       typeof row.wizard_notes === "string" ? row.wizard_notes : "",
     total_price_estimate: Number.isFinite(tpe ?? NaN) ? tpe : null,
+    strategy: strategyParsed ?? null,
+    ai_visuals: parseAiVisualRows(row.proposal_ai_visuals),
     about_us: typeof row.about_us === "string" ? row.about_us : "",
     our_story: typeof row.our_story === "string" ? row.our_story : "",
     services_overview:

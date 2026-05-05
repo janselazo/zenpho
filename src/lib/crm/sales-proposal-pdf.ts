@@ -6,7 +6,7 @@ import { Buffer } from "node:buffer";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { drawImageFit, embedPngIfAny } from "@/lib/crm/pdf-brand-book";
 import type { ProposalPdfRasterSlot } from "@/lib/crm/proposal-pdf-rasters";
-import { stripMarkdownCrmListingImages } from "@/lib/crm/proposal-enrichment-context";
+import { stripMarkdownForProposalPdf } from "@/lib/crm/proposal-enrichment-context";
 
 const PAGE_W = 612;
 const PAGE_H = 792;
@@ -260,7 +260,7 @@ export async function buildSalesProposalPdfBytes(
   }
 
   drawBoldLine(ctx, "Proposal");
-  const body = stripMarkdownCrmListingImages(
+  const body = stripMarkdownForProposalPdf(
     input.markdownBody.replace(/\r\n/g, "\n")
   ).trim();
   const lines = body.split("\n");

@@ -179,8 +179,34 @@ export function buildBusinessVisualMarkdownBlock(
 const CRM_IMG_LINE =
   /^!\[[^\]]*\]\([^)]*(?:\/api\/crm\/google-place-photo\b)[^)]*\)\s*$/gm;
 
+const PROPOSAL_AI_IMG_LINE =
+  /^!\[[^\]]*\]\([^)]*proposal-ai-visuals[^)]*\)\s*$/gm;
+
 export function stripMarkdownCrmListingImages(markdownBody: string): string {
   return markdownBody.replace(CRM_IMG_LINE, "").replace(/\n{3,}/g, "\n\n");
+}
+
+export function stripMarkdownProposalAiImages(markdownBody: string): string {
+  return markdownBody.replace(PROPOSAL_AI_IMG_LINE, "").replace(/\n{3,}/g, "\n\n");
+}
+
+/** Strip markdown image rows stitched for web preview — PDF renders rasters separately. */
+export function stripMarkdownForProposalPdf(markdownBody: string): string {
+  return stripMarkdownProposalAiImages(
+    stripMarkdownCrmListingImages(markdownBody),
+  );
+}
+
+/** AI-generated visuals stored under `proposal-ai-visuals/` (public CDN URLs). */
+export function buildProposalAiVisualMarkdownSection(
+  items: { caption: string; publicUrl: string }[],
+): string | null {
+  if (!items.length) return null;
+  const lines = items.map(
+    (it) =>
+      `![${it.caption.replace(/[\[\]]/g, "")}](${it.publicUrl})\n`,
+  );
+  return `\n## Concept illustrations\nAI-generated visuals for narrative texture (conceptual — not factual photography).\n\n${lines.join("")}\n`;
 }
 
 export function spliceBeforeExecutiveSummary(
