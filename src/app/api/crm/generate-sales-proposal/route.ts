@@ -23,6 +23,7 @@ import {
 } from "@/lib/crm/sales-proposal-image-gen";
 import { resolveProspectBrandAssets } from "@/lib/crm/prospect-branding-asset-resolve";
 import type { ResolvedBrandAssets } from "@/lib/crm/prospect-branding-asset-resolve";
+import { isProposalAiImageGenerationEnabled } from "@/lib/crm/proposal-ai-image-env";
 import { classifyProspectVertical } from "@/lib/crm/prospect-vertical-classify";
 
 export const runtime = "nodejs";
@@ -38,11 +39,6 @@ function parseUuidArray(raw: unknown): string[] {
 
 function proposalStrategyDisabled(): boolean {
   const raw = process.env.PROPOSAL_STRATEGY_DISABLED?.trim().toLowerCase();
-  return raw === "1" || raw === "true" || raw === "yes";
-}
-
-function proposalAiImagesEnabled(): boolean {
-  const raw = process.env.PROPOSAL_AI_IMAGE_ENABLED?.trim().toLowerCase();
   return raw === "1" || raw === "true" || raw === "yes";
 }
 
@@ -341,7 +337,7 @@ export async function POST(req: Request) {
 
   const apiKeyConfigured = Boolean(process.env.OPENAI_API_KEY?.trim());
 
-  if (proposalAiImagesEnabled() && apiKeyConfigured) {
+  if (isProposalAiImageGenerationEnabled() && apiKeyConfigured) {
     const vertical = classifyProspectVertical({
       place: snapshot,
       signals: {},

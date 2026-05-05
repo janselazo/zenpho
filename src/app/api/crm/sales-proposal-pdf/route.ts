@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import {
   parseGooglePlaceSnapshot,
-  stripMarkdownForProposalPdf,
 } from "@/lib/crm/proposal-enrichment-context";
 import {
   collectProposalAiVisualRasters,
@@ -12,6 +11,7 @@ import {
   buildSalesProposalPdfBytes,
   slugifyPdfFilenameSegment,
 } from "@/lib/crm/sales-proposal-pdf";
+import { resolveProspectBrandAssets } from "@/lib/crm/prospect-branding-asset-resolve";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -171,11 +171,23 @@ export async function POST(req: Request) {
     : clientName;
 
   const placeSnapshot = parseGooglePlaceSnapshot(row.google_place_snapshot);
-  const rasterSlots = await collectProposalPdfRasters({
-    googlePlacesApiKey: process.env.GOOGLE_PLACES_API_KEY,
-    place: placeSnapshot,
-    businessLabel: clientName,
-  });
+  const listingSite = placeSnapshot?.websiteUri?.trim() ?? "";
+  const brandLabel =
+    clientName || placeSnapshot?.name?.trim() || title;
+
+  const [rasterSlots, brandAssets] = await Promise.all([
+    collectProposalPdfRasters({
+      googlePlacesApiKey: process.env.GOOGLE_PLACES_API_KEY,
+      place: placeSnapshot,
+      businessLabel: clientName,
+    }),
+    listingSite
+      ? resolveProspectBrandAssets({
+          websiteUrl: listingSite,
+          businessName: brandLabel || undefined,
+        })
+      : Promise.resolve(null),
+  ]);
 
   const aiRasterRows = parseAiVisualRowsPdf(row.proposal_ai_visuals);
   const aiRasters =
@@ -185,15 +197,15 @@ export async function POST(req: Request) {
 
   const allRasters = [...rasterSlots, ...aiRasters];
 
-  const bodyForPdf = stripMarkdownForProposalPdf(bodyMd).trim();
-
   const pdfBytes = await buildSalesProposalPdfBytes({
     proposalTitle: title,
     clientLine,
     investmentLine: investment,
-    markdownBody: bodyForPdf,
+    markdownBody: bodyMd,
     generatedAtLabel: dateStr,
     embeddedRasters: allRasters.length ? allRasters : undefined,
+    brandAssets,
+    placeTypes: placeSnapshot?.types ?? null,
   });
 
   const slug = slugifyPdfFilenameSegment(clientName);

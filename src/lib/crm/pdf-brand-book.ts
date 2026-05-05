@@ -406,7 +406,15 @@ export function addUriLinkAnnotation(
 export function drawRunningFooter(
   page: PDFPage,
   ctx: BrandBookContext,
-  opts: { pageNumber: number; sectionLabel: string; onDark?: boolean },
+  opts: {
+    pageNumber: number;
+    sectionLabel: string;
+    onDark?: boolean;
+    /** Left-strip document type (defaults to brand guidelines wording). */
+    documentLabel?: string;
+    /** Small mark rendered after the left strip when space allows (e.g. Zenpho proposals). */
+    publisherMark?: PDFImage;
+  },
 ): void {
   const col = opts.onDark ? contrastTextRgb(ctx.primary) : ctx.ink;
   const y = 24;
@@ -417,8 +425,9 @@ export function drawRunningFooter(
     color: rgbColor(col),
     opacity: 0.25,
   });
+  const docLabel = (opts.documentLabel ?? "Brand Guidelines").trim();
   const leftText = sanitizeForBrandBook(
-    `${ctx.spec.brandName || "Brand"}  ·  Brand Guidelines`,
+    `${ctx.spec.brandName || "Brand"}  ·  ${docLabel}`,
   ).toUpperCase();
   page.drawText(leftText, {
     x: SAFE_MARGIN,
@@ -431,6 +440,24 @@ export function drawRunningFooter(
     `${opts.sectionLabel.toUpperCase()}  ·  ${String(opts.pageNumber).padStart(2, "0")}`,
   );
   const rightW = ctx.fonts.body.widthOfTextAtSize(rightText, 7.5);
+  const leftW = ctx.fonts.body.widthOfTextAtSize(leftText, 7.5);
+  const mark = opts.publisherMark;
+  if (mark) {
+    const mh = 8;
+    const mw = (mark.width / mark.height) * mh;
+    const gap = 8;
+    const markX = SAFE_MARGIN + leftW + gap;
+    const rightEdge = PAGE_W - SAFE_MARGIN - rightW;
+    if (markX + mw < rightEdge - 6) {
+      page.drawImage(mark, {
+        x: markX,
+        y: y - 0.5,
+        width: mw,
+        height: mh,
+        opacity: 0.92,
+      });
+    }
+  }
   page.drawText(rightText, {
     x: PAGE_W - SAFE_MARGIN - rightW,
     y,
@@ -484,9 +511,26 @@ export function drawPageTitle(
 export async function drawCoverPage(
   ctx: BrandBookContext,
   coverImage: PDFImage | null,
+  opts?: { eyebrowLabel?: string; variant?: "lightSurface" },
 ): Promise<PDFPage> {
-  const page = addBlankPage(ctx.pdf, ctx.primary);
-  const fg = contrastTextRgb(ctx.primary);
+  const useLightSurface =
+    !coverImage && opts?.variant === "lightSurface";
+
+  const page = addBlankPage(ctx.pdf, useLightSurface ? ctx.surface : ctx.primary);
+
+  if (useLightSurface) {
+    page.drawRectangle({
+      x: 0,
+      y: PAGE_H - 6,
+      width: PAGE_W,
+      height: 6,
+      color: rgbColor(ctx.primary),
+      borderWidth: 0,
+    });
+  }
+
+  const fg: Rgb = useLightSurface ? ctx.ink : contrastTextRgb(ctx.primary);
+  const eyebrowColor: Rgb = useLightSurface ? ctx.primary : fg;
 
   if (coverImage) {
     const img = coverImage;
@@ -510,11 +554,12 @@ export async function drawCoverPage(
     });
   }
 
+  const eyebrow = (opts?.eyebrowLabel ?? "Brand Guidelines").trim();
   drawSectionEyebrow(page, ctx, {
     x: SAFE_MARGIN,
     y: PAGE_H - SAFE_MARGIN - 4,
-    label: "Brand Guidelines",
-    color: fg,
+    label: eyebrow,
+    color: eyebrowColor,
   });
 
   const titleSize = 96;

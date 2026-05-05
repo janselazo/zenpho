@@ -119,12 +119,15 @@ export default function ProposalGenerationWizard({
   catalog,
   initialProposalId: proposalId,
   resume,
+  proposalAiImagesEnabled,
 }: {
   parties: ProposalWizardPartyOption[];
   catalog: CrmProductServiceRow[];
   /** Draft row created by `/proposals/new` before this view mounts. */
   initialProposalId: string;
   resume: SalesProposalDetail | null;
+  /** Server env: `PROPOSAL_AI_IMAGE_ENABLED` (GPT illustrations + PDF raster slots). */
+  proposalAiImagesEnabled: boolean;
 }) {
   const router = useRouter();
 
@@ -790,6 +793,30 @@ export default function ProposalGenerationWizard({
                 {" "}
                 (falls back to gpt-5.5 unless set).
               </p>
+              {!proposalAiImagesEnabled ? (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
+                  <p className="text-xs font-bold uppercase tracking-wide">
+                    GPT proposal images off
+                  </p>
+                  <p className="mt-2 text-xs leading-relaxed">
+                    Illustration slots in Markdown and branded PDF spreads stay
+                    empty unless you set{" "}
+                    <code className="rounded bg-amber-100 px-1 text-[11px] dark:bg-amber-900/80">
+                      PROPOSAL_AI_IMAGE_ENABLED=true
+                    </code>
+                    {" "}
+                    and configure uploads (
+                    <code className="rounded bg-amber-100 px-1 text-[11px] dark:bg-amber-900/80">
+                      SUPABASE_SERVICE_ROLE_KEY
+                    </code>
+                    ). Listing photos still need a Places-backed listing and{" "}
+                    <code className="rounded bg-amber-100 px-1 text-[11px] dark:bg-amber-900/80">
+                      GOOGLE_PLACES_API_KEY
+                    </code>
+                    .
+                  </p>
+                </div>
+              ) : null}
               <div className="flex flex-wrap gap-3">
                 <button
                   type="button"
@@ -888,6 +915,13 @@ export default function ProposalGenerationWizard({
             </div>
           ) : (
             <div className="space-y-4">
+              {!proposalAiImagesEnabled ? (
+                <div className="rounded-2xl border border-border bg-surface px-4 py-3 text-xs text-text-secondary dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
+                  PDF merges listing photos (Places) and GPT rasters when
+                  available. With GPT images disabled, AI visual slots in the PDF
+                  stay empty unless the listing contributes photos.
+                </div>
+              ) : null}
               {genWarnings.length > 0 ? (
                 <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
                   <p className="text-xs font-bold uppercase tracking-wide">
