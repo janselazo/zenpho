@@ -6,7 +6,6 @@ import Link from "next/link";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { SUPABASE_ENV_SETUP_MESSAGE } from "@/lib/supabase/config";
-import Button from "@/components/ui/Button";
 
 export default function LoginForm({ configured }: { configured: boolean }) {
   const router = useRouter();
@@ -143,9 +142,12 @@ export default function LoginForm({ configured }: { configured: boolean }) {
         </div>
       </div>
 
-      <Button href="/register" variant="secondary" size="lg" className="w-full justify-center">
+      <Link
+        href="/register"
+        className="flex w-full items-center justify-center rounded-full border border-border bg-white px-8 py-4 text-base font-medium text-text-primary transition-colors hover:border-zinc-300 hover:bg-surface"
+      >
         Create a free account
-      </Button>
+      </Link>
 
       <p className="mt-8 text-center text-xs leading-relaxed text-text-secondary">
         By signing in, you agree to our{" "}

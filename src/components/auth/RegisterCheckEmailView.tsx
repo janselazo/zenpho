@@ -1,8 +1,18 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ArrowRight, Check } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
+
+function authEmailRedirectTo(): string | undefined {
+  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "");
+  const origin =
+    fromEnv || (typeof window !== "undefined" ? window.location.origin : "");
+  return origin ? `${origin}/` : undefined;
+}
 
 export default function RegisterCheckEmailView() {
   const searchParams = useSearchParams();
@@ -17,6 +27,43 @@ export default function RegisterCheckEmailView() {
           }
         })()
       : null;
+
+  const [resendStatus, setResendStatus] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
+
+  const resendConfirmation = useCallback(async () => {
+    if (!email?.trim()) return;
+    if (!isSupabaseConfigured()) {
+      setResendStatus("error");
+      setResendMessage("Supabase isn’t configured in this environment.");
+      return;
+    }
+    setResendStatus("loading");
+    setResendMessage(null);
+    try {
+      const supabase = createClient();
+      const redirectTo = authEmailRedirectTo();
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: email.trim(),
+        ...(redirectTo ? { options: { emailRedirectTo: redirectTo } } : {}),
+      });
+      if (error) {
+        setResendStatus("error");
+        setResendMessage(error.message);
+        return;
+      }
+      setResendStatus("success");
+      setResendMessage("We sent another confirmation email. Check spam if it’s still missing.");
+    } catch (err) {
+      setResendStatus("error");
+      setResendMessage(
+        err instanceof Error ? err.message : "Could not resend the email."
+      );
+    }
+  }, [email]);
 
   return (
     <div className="w-full text-center">
@@ -46,7 +93,9 @@ export default function RegisterCheckEmailView() {
         .
       </p>
       <p className="mt-2 text-sm text-text-secondary">
-        Click the link to activate your account.
+        Open the email and tap the confirmation <strong className="font-semibold text-text-primary">link</strong>
+        —there isn&apos;t a separate login code. After confirming, use your email and password on{" "}
+        <strong className="font-semibold text-text-primary">Sign in</strong>.
       </p>
 
       <Link
@@ -58,8 +107,33 @@ export default function RegisterCheckEmailView() {
       </Link>
 
       <p className="mt-8 text-xs text-text-secondary">
-        Didn&apos;t receive the email? Check your spam folder.
+        Didn&apos;t receive it? Check spam and promotions. Still nothing—wait a minute and try resend.
       </p>
+
+      <button
+        type="button"
+        disabled={
+          resendStatus === "loading" || !email?.trim() || !isSupabaseConfigured()
+        }
+        onClick={resendConfirmation}
+        className="mt-4 w-full rounded-xl border border-border bg-white py-3 text-sm font-medium text-text-primary transition-colors hover:border-zinc-300 hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {resendStatus === "loading" ? "Sending…" : "Resend confirmation email"}
+      </button>
+
+      {resendMessage ? (
+        <p
+          className={`mt-3 text-xs ${
+            resendStatus === "success"
+              ? "font-medium text-emerald-700"
+              : "text-red-700"
+          }`}
+          role="status"
+          aria-live="polite"
+        >
+          {resendMessage}
+        </p>
+      ) : null}
     </div>
   );
 }

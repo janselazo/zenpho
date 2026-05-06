@@ -9,7 +9,7 @@ export const metadata = {
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-      <aside className="relative hidden min-h-0 w-full lg:flex">
+      <aside className="relative hidden min-h-0 w-full overflow-y-auto lg:flex lg:max-h-screen">
         <AuthMarketingPanel />
       </aside>
 

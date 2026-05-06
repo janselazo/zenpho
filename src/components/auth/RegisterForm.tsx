@@ -180,25 +180,25 @@ export default function RegisterForm({ configured }: { configured: boolean }) {
         .
       </p>
 
-      <blockquote className="mt-10 rounded-2xl border border-emerald-400/35 bg-gradient-to-br from-emerald-800 via-emerald-900 to-slate-950 p-5 shadow-lg shadow-emerald-950/25">
-        <p className="text-sm italic leading-relaxed text-white">
+      <blockquote className="mt-10 w-full max-w-xl rounded-2xl border border-border bg-white p-5 text-left shadow-sm">
+        <p className="text-sm italic leading-relaxed text-text-primary">
           &ldquo;Zenpho put web leads, phone calls, and referrals in{" "}
-          <span className="font-semibold not-italic text-emerald-200">
+          <span className="font-semibold not-italic text-emerald-600">
             one workspace
           </span>
           . We respond faster and finally see which marketing brings real booked jobs—not
           just clicks.&rdquo;
         </p>
-        <footer className="mt-5 flex items-center gap-3 border-t border-white/10 pt-4">
+        <footer className="mt-5 flex items-center gap-3 border-t border-border pt-4">
           <span
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-base font-bold text-white shadow-inner shadow-emerald-950/40"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-base font-bold text-white"
             aria-hidden
           >
             M
           </span>
           <div className="min-w-0 text-left">
-            <p className="truncate font-semibold text-white">Marcus V.</p>
-            <p className="truncate text-xs text-emerald-100/90">
+            <p className="truncate font-semibold text-text-primary">Marcus V.</p>
+            <p className="truncate text-xs text-text-secondary">
               Owner, Lakeside Property Care
             </p>
           </div>
