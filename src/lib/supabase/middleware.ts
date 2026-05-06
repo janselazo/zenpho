@@ -61,6 +61,36 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
+  /** PKCE email confirmation / OAuth: Supabase redirects here with `?code=` — exchange before getUser(). */
+  const authCode = request.nextUrl.searchParams.get("code");
+  if (authCode) {
+    const { error: exchangeError } =
+      await supabase.auth.exchangeCodeForSession(authCode);
+
+    const cleanUrl = request.nextUrl.clone();
+    cleanUrl.searchParams.delete("code");
+    cleanUrl.searchParams.delete("error");
+    cleanUrl.searchParams.delete("error_description");
+
+    const redirectTarget = exchangeError
+      ? (() => {
+          const loginUrl = request.nextUrl.clone();
+          loginUrl.pathname = "/login";
+          loginUrl.searchParams.delete("code");
+          loginUrl.searchParams.delete("error");
+          loginUrl.searchParams.delete("error_description");
+          loginUrl.searchParams.set("error", "confirm");
+          return loginUrl;
+        })()
+      : cleanUrl;
+
+    const redirectResponse = NextResponse.redirect(redirectTarget);
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie.name, cookie.value);
+    });
+    return redirectResponse;
+  }
+
   const {
     data: { user },
   } = await supabase.auth.getUser();

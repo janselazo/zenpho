@@ -3,8 +3,23 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { CircleCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { SUPABASE_ENV_SETUP_MESSAGE } from "@/lib/supabase/config";
+
+const SIGNUP_BENEFITS = [
+  "No credit card",
+  "14-day trial",
+  "Cancel anytime",
+] as const;
+
+/** Prefer NEXT_PUBLIC_SITE_URL in production so confirmation links match zenpho.com even when another domain is misconfigured in Supabase. */
+function emailRedirectOrigin(): string {
+  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "");
+  if (fromEnv) return fromEnv;
+  if (typeof window !== "undefined") return window.location.origin;
+  return "";
+}
 
 export default function RegisterForm({ configured }: { configured: boolean }) {
   const router = useRouter();
@@ -12,13 +27,11 @@ export default function RegisterForm({ configured }: { configured: boolean }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setMessage(null);
     if (!configured) {
       setError(SUPABASE_ENV_SETUP_MESSAGE);
       return;
@@ -26,11 +39,13 @@ export default function RegisterForm({ configured }: { configured: boolean }) {
     setLoading(true);
     try {
       const supabase = createClient();
-      const { error: signError } = await supabase.auth.signUp({
+      const origin = emailRedirectOrigin();
+      const { data, error: signError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: { full_name: fullName },
+          ...(origin ? { emailRedirectTo: `${origin}/` } : {}),
         },
       });
       if (signError) {
@@ -38,11 +53,13 @@ export default function RegisterForm({ configured }: { configured: boolean }) {
         setLoading(false);
         return;
       }
-      setMessage(
-        "Check your email to confirm your account, then sign in. If email confirmation is disabled in Supabase, you can sign in now."
-      );
       setLoading(false);
-      router.refresh();
+      if (data.session) {
+        router.push("/dashboard");
+        router.refresh();
+        return;
+      }
+      router.push(`/register/check-email?email=${encodeURIComponent(email)}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
       setLoading(false);
@@ -65,11 +82,6 @@ export default function RegisterForm({ configured }: { configured: boolean }) {
             role="alert"
           >
             {error}
-          </p>
-        ) : null}
-        {message ? (
-          <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
-            {message}
           </p>
         ) : null}
         <div>
@@ -131,8 +143,23 @@ export default function RegisterForm({ configured }: { configured: boolean }) {
           disabled={loading}
           className="w-full rounded-xl bg-accent py-3 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-60"
         >
-          {loading ? "Creating…" : "Register"}
+          {loading ? "Creating…" : "Create Account"}
         </button>
+        <div
+          className="flex flex-wrap items-center justify-evenly gap-x-4 gap-y-2 pt-2 text-sm text-text-secondary"
+          aria-label="Trial benefits"
+        >
+          {SIGNUP_BENEFITS.map((label) => (
+            <div key={label} className="flex items-center gap-2">
+              <CircleCheck
+                className="h-5 w-5 shrink-0 text-emerald-600"
+                strokeWidth={2}
+                aria-hidden
+              />
+              <span>{label}</span>
+            </div>
+          ))}
+        </div>
       </form>
 
       <p className="mt-8 text-center text-sm text-text-secondary">
@@ -141,6 +168,42 @@ export default function RegisterForm({ configured }: { configured: boolean }) {
           Sign in
         </Link>
       </p>
+      <p className="mt-4 text-center text-xs leading-relaxed text-text-secondary">
+        By creating an account, you agree to our{" "}
+        <Link href="/terms" className="font-medium text-accent hover:underline">
+          Terms of Service
+        </Link>{" "}
+        and{" "}
+        <Link href="/privacy" className="font-medium text-accent hover:underline">
+          Privacy Policy
+        </Link>
+        .
+      </p>
+
+      <blockquote className="mt-10 rounded-2xl border border-emerald-400/35 bg-gradient-to-br from-emerald-800 via-emerald-900 to-slate-950 p-5 shadow-lg shadow-emerald-950/25">
+        <p className="text-sm italic leading-relaxed text-white">
+          &ldquo;Zenpho put web leads, phone calls, and referrals in{" "}
+          <span className="font-semibold not-italic text-emerald-200">
+            one workspace
+          </span>
+          . We respond faster and finally see which marketing brings real booked jobs—not
+          just clicks.&rdquo;
+        </p>
+        <footer className="mt-5 flex items-center gap-3 border-t border-white/10 pt-4">
+          <span
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-base font-bold text-white shadow-inner shadow-emerald-950/40"
+            aria-hidden
+          >
+            M
+          </span>
+          <div className="min-w-0 text-left">
+            <p className="truncate font-semibold text-white">Marcus V.</p>
+            <p className="truncate text-xs text-emerald-100/90">
+              Owner, Lakeside Property Care
+            </p>
+          </div>
+        </footer>
+      </blockquote>
     </div>
   );
 }
