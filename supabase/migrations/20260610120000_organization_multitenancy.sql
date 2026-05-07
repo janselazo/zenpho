@@ -14,6 +14,17 @@ insert into public.organization (id, name)
 values ('00000000-0000-0000-0000-000000000001'::uuid, 'Zenpho Legacy')
 on conflict (id) do nothing;
 
+-- ── profiles.organization_id (must exist before current_organization_id body) ─
+alter table public.profiles
+  add column if not exists organization_id uuid references public.organization (id) on delete restrict;
+
+update public.profiles
+set organization_id = '00000000-0000-0000-0000-000000000001'::uuid
+where organization_id is null;
+
+-- Clients: tie profile to their client row's org (after client has org_id, below)
+-- Second pass runs after client backfill.
+
 -- Current user's organization (session-scoped; avoids RLS recursion on profiles)
 create or replace function public.current_organization_id()
 returns uuid
@@ -30,17 +41,6 @@ $$;
 revoke all on function public.current_organization_id() from public;
 grant execute on function public.current_organization_id() to authenticated;
 grant execute on function public.current_organization_id() to service_role;
-
--- ── profiles.organization_id ────────────────────────────────────────────────
-alter table public.profiles
-  add column if not exists organization_id uuid references public.organization (id) on delete restrict;
-
-update public.profiles
-set organization_id = '00000000-0000-0000-0000-000000000001'::uuid
-where organization_id is null;
-
--- Clients: tie profile to their client row's org (after client has org_id, below)
--- Second pass runs after client backfill.
 
 -- ── Core CRM & related tables: add column ─────────────────────────────────
 alter table public.client add column if not exists organization_id uuid references public.organization (id);
