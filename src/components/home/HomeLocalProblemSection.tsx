@@ -17,18 +17,19 @@ export default function HomeLocalProblemSection() {
             <div className="flex flex-col lg:max-w-xl">
               <div className="mb-5 flex justify-start">
                 <span className="inline-flex rounded-full border border-red-200 bg-white px-4 py-1.5 text-xs font-bold uppercase tracking-[0.2em] text-red-700 shadow-sm dark:border-red-500/35 dark:bg-zinc-900/80 dark:text-red-400">
-                  The Problem
+                  THE PROBLEM
                 </span>
               </div>
               <h2
                 id={HEADLINE_ID}
                 className="heading-display text-balance text-3xl font-bold leading-[1.12] tracking-tight text-text-primary sm:text-4xl lg:text-[2.35rem] lg:leading-[1.1]"
               >
-                Where software builds stall before launch
+                Where Great Ideas Get Stuck Before Launch
               </h2>
               <p className="mt-5 max-w-prose text-base leading-relaxed text-text-secondary sm:text-lg">
-                Teams often have ideas, traffic, or partial designs—but without tight scope, UX clarity, and a steady ship
-                rhythm, releases slip and budgets balloon before users ever touch a credible version one.
+                Many founders and business owners have strong ideas for websites, apps, and digital products. But without a
+                clear scope, the right product strategy, and a focused development process, projects get delayed,
+                overbuilt, or never launched at all.
               </p>
             </div>
 
@@ -60,8 +61,8 @@ export default function HomeLocalProblemSection() {
           <div className="mt-10 rounded-2xl border border-border/80 bg-white px-6 py-6 shadow-soft sm:px-8 sm:py-8 dark:border-zinc-700/80 dark:bg-zinc-900/85">
             <p className="text-base font-semibold leading-snug text-text-primary sm:text-lg">Our job is simple:</p>
             <p className="mt-3 text-sm leading-relaxed text-text-secondary sm:text-base">
-              We help local businesses find the leaks, fix them, and build a system that turns more opportunities into
-              revenue.
+              We help founders and businesses turn ideas into launch-ready websites, web apps, mobile apps, and MVPs —
+              with clear strategy, focused development, and support after launch.
             </p>
           </div>
         </div>

@@ -1,26 +1,26 @@
-export const homeHowItWorksEyebrow = "How we work";
+export const homeHowItWorksEyebrow = "HOW IT WORKS";
 
-export const homeHowItWorksHeadline = "From discovery to launch-ready software";
+export const homeHowItWorksHeadline = "From Idea to Launch-Ready Product";
 
 export const homeHowItWorksSteps = [
   {
-    title: "Discovery & scope",
-    body: "We align on the smallest coherent MVP slice—users, hero workflows, acceptance criteria, and what success looks like before pixels or code dominate the conversation.",
+    title: "Clarify the Idea",
+    body: "We start by understanding your business, users, goals, timeline, and what you want to build — whether it is a website, web app, mobile app, or MVP.",
   },
   {
-    title: "UX/UI for core journeys",
-    body: "We design the screens and flows that prove value first: navigation, states, components, and handoff-ready specs so engineering isn’t guessing.",
+    title: "Define the First Version",
+    body: "We prioritize the most important features, pages, screens, and user flows so your product can launch fast without being overbuilt.",
   },
   {
-    title: "Build on staging",
-    body: "Implementation covers front-end, APIs, database, auth, admin surfaces, and integrations as scoped—with weekly visibility into working software.",
+    title: "Design the Experience",
+    body: "We map the user journey and design clean, modern interfaces that make your product easy to understand, easy to use, and ready for development.",
   },
   {
-    title: "QA, performance & launch prep",
-    body: "Testing, fixes, analytics hooks, deployment support, and readiness checks so release day is boring—in the good way.",
+    title: "Build the Product",
+    body: "We develop the agreed scope, connect the required tools, set up core functionality, and build the website, web app, mobile app, or MVP.",
   },
   {
-    title: "Handoff & next milestone",
-    body: "Documentation, training buffer, and a sane roadmap for v2—so your team can operate what shipped and we can extend when you’re ready.",
+    title: "Launch, Test, and Improve",
+    body: "We test the product, fix issues, deploy it, and help you understand what to improve next based on real users, feedback, and business goals.",
   },
 ] as const;

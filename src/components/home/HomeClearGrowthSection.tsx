@@ -15,7 +15,7 @@ const DASHBOARD_CAPTION_ID = "home-clear-growth-dashboard-caption";
 function dashboardScreenReaderSummary(): string {
   const metricPart = homeClearGrowthMetricCards.map((c) => `${c.label}: ${c.value}`).join("; ");
   const insightPart = homeClearGrowthSummaryItems.map((i) => `${i.eyebrow}, ${i.value}`).join("; ");
-  return `Sample Zenpho dashboard layout with metrics including ${metricPart}. Summary callouts: ${insightPart}. ${homeClearGrowthClosingLead}${homeClearGrowthClosingAccent}`;
+  return `Illustrative product launch snapshot — example planning figures, not guaranteed results. ${metricPart}. Insights: ${insightPart}. ${homeClearGrowthClosingLead}${homeClearGrowthClosingAccent}`;
 }
 
 export default function HomeClearGrowthSection() {

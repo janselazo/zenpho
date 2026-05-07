@@ -54,51 +54,51 @@ export function iconForLocalProblemCard(key: HomeLocalProblemIconKey): LucideIco
 
 export const homeLocalProblemCards: HomeLocalProblemCard[] = [
   {
-    iconKey: "salesPipeline",
-    text: "Version-one scope keeps expanding",
-  },
-  {
     iconKey: "mapVisibility",
-    text: "No shared map of core user journeys",
-  },
-  {
-    iconKey: "reviews",
-    text: "Pretty visuals without product logic underneath",
-  },
-  {
-    iconKey: "conversion",
-    text: "Landing or onboarding doesn’t explain the offer",
-  },
-  {
-    iconKey: "missedCalls",
-    text: "Slow stakeholder feedback delaying decisions",
+    text: "No clear MVP scope",
   },
   {
     iconKey: "tracking",
-    text: "Success metrics undefined before build starts",
+    text: "Website or app idea stuck in planning",
   },
   {
     iconKey: "channels",
-    text: "Too many priorities, no single hero workflow",
+    text: "Too many features for version one",
   },
   {
-    iconKey: "ads",
-    text: "Integrations or dependencies blocking the critical path",
+    iconKey: "conversion",
+    text: "Poor user experience and weak design",
   },
   {
     iconKey: "reviewSystem",
-    text: "No predictable staging demo rhythm",
+    text: "Expensive quotes with unclear deliverables",
   },
   {
-    iconKey: "referrals",
-    text: "Post-launch iteration plan is fuzzy",
+    iconKey: "salesPipeline",
+    text: "No product roadmap or launch plan",
+  },
+  {
+    iconKey: "missedCalls",
+    text: "Slow development and missed deadlines",
+  },
+  {
+    iconKey: "reviews",
+    text: "No working prototype to test with users",
   },
   {
     iconKey: "followUp",
-    text: "Handoff and docs won’t support your team",
+    text: "No user login, payments, or dashboard setup",
+  },
+  {
+    iconKey: "referrals",
+    text: "Disconnected tools and missing integrations",
   },
   {
     iconKey: "dashboard",
-    text: "Hard to see what’s shipped vs still blocked",
+    text: "No analytics or feedback tracking after launch",
+  },
+  {
+    iconKey: "ads",
+    text: "No post-launch support for improvements",
   },
 ];

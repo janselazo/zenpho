@@ -1,22 +1,22 @@
-export const homeWhatMakesUsDifferentEyebrow = "What makes us different";
+export const homeWhatMakesUsDifferentEyebrow = "WHAT MAKES US DIFFERENT";
 
 export const homeWhatMakesUsDifferentHeadline =
-  "Not slide decks. Not vague retainers. Product shipped on a timeline.";
+  "Not Just Developers. A Product Launch Partner.";
 
 export const homeWhatMakesUsDifferentIntro = [
-  "Many studios sell endless discovery or generic marketing retainers.",
-  "Many dev shops quote months without a crisp definition of what “done” means for your MVP.",
-  "We combine product judgment with implementation—so scope, UX, and code stay aligned to something you can launch.",
+  "Most developers wait for a full scope before they start building. Most agencies focus only on visuals, branding, or individual pages.",
+  "We help you go deeper — clarifying the idea, defining the right first version, designing the user experience, building the product, and preparing it for launch.",
+  "Our goal is simple: help you move from idea to a working website, web app, mobile app, or MVP without wasting time on features you do not need yet.",
 ] as const;
 
-export const homeUnderstandingLeadIn = "You leave each sprint knowing:";
+export const homeUnderstandingLeadIn = "We help you understand:";
 
 export const homeUnderstandingPoints = [
-  "What the hero workflow is—and what is intentionally out of v1",
-  "How UX maps to real states, errors, and adoption—not static mocks",
-  "What engineering risks or integrations could block ship",
-  "How we demo progress on staging on a predictable cadence",
-  "What launch readiness and analytics hooks look like",
-  "What documentation and ownership look like after release",
-  "What the next milestone should be once users react",
+  "What should be built first",
+  "Which features can wait until later",
+  "How users should move through the product",
+  "What pages, screens, or flows are needed for launch",
+  "Which integrations, payments, dashboards, or admin tools are required",
+  "How to launch quickly and improve after real user feedback",
+  "What actions will move the product forward next",
 ] as const;

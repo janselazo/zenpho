@@ -6,60 +6,60 @@ export type HomeGrowthAchieveCard = {
   imageLabel: string;
 };
 
-export const homeGrowthAchieveSectionEyebrow = "What we deliver";
+export const homeGrowthAchieveSectionEyebrow = "WHAT WE HELP YOU LAUNCH";
 
-export const homeGrowthAchieveHeadline = "Outcomes from a disciplined MVP sprint";
+export const homeGrowthAchieveHeadline = "Websites, Apps & MVPs Built to Go Live Fast";
 
 export const homeGrowthAchieveDescription =
-  "Not scattered tasks—a sequenced path from clarity to shipped software: scope, UX, build, launch prep, and handoff so stakeholders see real progress every week.";
+  "We do not just design screens or write code. We help you clarify the idea, define the first version, build the product, and launch with a clear path for improvement.";
 
 export const homeGrowthAchieveCards: HomeGrowthAchieveCard[] = [
   {
     id: "qualified-leads",
-    title: "Scope you can actually ship",
+    title: "Launch-Ready Websites",
     description:
-      "A prioritized version-one slice with clear acceptance criteria—so engineering time buys a demoable product, not endless exploration.",
+      "Build a professional business or ecommerce website that explains your offer, builds trust, and gives visitors a clear path to take action.",
     imageSrc: "/home-growth-achieve/qualified-leads.svg",
-    imageLabel: "Roadmap & priorities",
+    imageLabel: "Launch-Ready Websites",
   },
   {
     id: "appointments",
-    title: "UX/UI for hero workflows",
+    title: "Functional Web Apps",
     description:
-      "Screens, flows, and components aligned to how users adopt your product—not decorative mockups disconnected from behavior.",
+      "Turn your idea into a working web app with user login, dashboards, admin tools, databases, payments, and integrations.",
     imageSrc: "/home-growth-achieve/appointments.svg",
-    imageLabel: "Core journeys designed",
+    imageLabel: "Functional Web Apps",
   },
   {
     id: "paying-clients",
-    title: "Production-ready implementation",
+    title: "Mobile App MVPs",
     description:
-      "Staging-backed builds with disciplined QA: fewer surprises at launch and a product your team can click through end-to-end.",
+      "Launch a focused mobile app experience for iOS and Android users with clean onboarding, core features, and a smooth user flow.",
     imageSrc: "/home-growth-achieve/paying-clients.svg",
-    imageLabel: "Staging demos",
+    imageLabel: "Mobile App MVPs",
   },
   {
     id: "revenue",
-    title: "Auth, data & integrations",
+    title: "Clear Product Roadmaps",
     description:
-      "Login, roles, database modeling, APIs, payments or booking when scoped—wired so your MVP behaves like real software.",
+      "Define what needs to be built first, what can wait, and how to avoid wasting time and budget on unnecessary features.",
     imageSrc: "/home-growth-achieve/revenue.svg",
-    imageLabel: "Foundations in place",
+    imageLabel: "Clear Product Roadmaps",
   },
   {
     id: "reviews",
-    title: "Launch readiness",
+    title: "Faster Market Validation",
     description:
-      "Performance checks, analytics foundations for public surfaces, deployment support, and documentation so go-live isn’t a scramble.",
+      "Get your first version in front of real users quickly so you can collect feedback, test demand, and improve with confidence.",
     imageSrc: "/home-growth-achieve/reviews.svg",
-    imageLabel: "Release checklist",
+    imageLabel: "Faster Market Validation",
   },
   {
     id: "referrals",
-    title: "Support after go-live",
+    title: "Post-Launch Improvements",
     description:
-      "A defined post-launch window and handoff so you can stabilize with users—and plan the next build wave with evidence.",
+      "After launch, we help you improve features, fix friction points, add integrations, and build the next version based on real feedback.",
     imageSrc: "/home-growth-achieve/referrals.svg",
-    imageLabel: "Handoff & iteration",
+    imageLabel: "Post-Launch Improvements",
   },
 ];
