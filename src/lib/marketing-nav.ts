@@ -4,6 +4,7 @@ import {
   Mail,
   Newspaper,
   Palette,
+  SearchCheck,
   User,
 } from "lucide-react";
 import { marketingIndustryPages } from "./marketing-industries-pages";
@@ -54,6 +55,24 @@ export const marketingIndustriesMegaItems: MarketingMegaItem[] =
     iconClassName: i.iconClassName,
   }));
 
+const toolsMegaItems: MarketingMegaItem[] = [
+  {
+    title: "Business Audit",
+    description:
+      "Scan your Google profile, reviews, and local presence to spot revenue leaks—free instant preview.",
+    href: "/tools/business-audit",
+    icon: SearchCheck,
+    iconClassName: "bg-accent/15 text-accent",
+  },
+  {
+    title: "Brand Kit",
+    description: "Generate a brand guidelines PDF and sales funnel playbook from your Google listing.",
+    href: "/branding",
+    icon: Palette,
+    iconClassName: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+  },
+];
+
 const resourcesMegaItems: MarketingMegaItem[] = [
   {
     title: "About us",
@@ -75,13 +94,6 @@ const resourcesMegaItems: MarketingMegaItem[] = [
     href: "/resources",
     icon: FileText,
     iconClassName: "bg-emerald-500/15 text-emerald-600",
-  },
-  {
-    title: "Brand Kit",
-    description: "Generate a brand guidelines PDF and sales funnel playbook from your Google listing.",
-    href: "/branding",
-    icon: Palette,
-    iconClassName: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
   },
   {
     title: "Contact",
@@ -112,6 +124,12 @@ export const marketingTopNav: MarketingTopNavItem[] = [
     items: marketingIndustriesMegaItems,
   },
   { type: "link", label: "Pricing", href: "/pricing" },
+  {
+    type: "mega",
+    label: "Tools",
+    sectionEyebrow: "Utilities",
+    items: toolsMegaItems,
+  },
   {
     type: "mega",
     label: "Resources",
@@ -148,11 +166,17 @@ export const marketingFooterColumns: MarketingFooterColumn[] = [
     })),
   },
   {
+    heading: "Tools",
+    links: [
+      { label: "Business Audit", href: "/tools/business-audit" },
+      { label: "Brand Kit", href: "/branding" },
+    ],
+  },
+  {
     heading: "Resources",
     links: [
       { label: "About", href: "/about" },
       { label: "Blog", href: "/blog" },
-      { label: "Brand Kit", href: "/branding" },
       { label: "Contact", href: "/contact" },
       { label: "Pricing", href: "/pricing" },
       { label: "Case studies", href: "/case-studies" },
