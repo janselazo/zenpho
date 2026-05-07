@@ -3,7 +3,8 @@ import {
   homeUnderstandingLeadIn,
   homeUnderstandingPoints,
   homeWhatMakesUsDifferentEyebrow,
-  homeWhatMakesUsDifferentHeadline,
+  homeWhatMakesUsDifferentHeadlineLead,
+  homeWhatMakesUsDifferentHeadlineRest,
   homeWhatMakesUsDifferentIntro,
 } from "@/lib/home-difference-sections";
 
@@ -19,15 +20,16 @@ export default function HomeWhatMakesUsDifferentSection() {
         <div className="rounded-[2rem] border border-border/80 bg-white p-8 shadow-soft ring-1 ring-black/[0.04] sm:p-10 lg:p-12 dark:border-zinc-700/80 dark:bg-zinc-900/50">
           <div className="mx-auto max-w-3xl text-center">
             <div className="mb-5 flex justify-center">
-              <span className="inline-flex rounded-full border border-border/80 bg-white/90 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.2em] text-text-secondary shadow-sm dark:border-zinc-600/80 dark:bg-zinc-900/80 dark:text-zinc-300">
+              <span className="inline-flex rounded-full border border-border/80 bg-white/90 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.2em] text-emerald-600 shadow-sm dark:border-zinc-600/80 dark:bg-zinc-900/80 dark:text-emerald-400">
                 {homeWhatMakesUsDifferentEyebrow}
               </span>
             </div>
             <h2
               id={HEADING_ID}
-              className="heading-display text-balance text-3xl font-bold leading-[1.12] tracking-tight text-text-primary sm:text-4xl lg:text-[2.35rem] lg:leading-[1.08]"
+              className="heading-display text-3xl font-bold leading-[1.12] tracking-tight text-text-primary sm:text-4xl lg:text-[2.35rem] lg:leading-[1.08]"
             >
-              {homeWhatMakesUsDifferentHeadline}
+              {homeWhatMakesUsDifferentHeadlineLead}{" "}
+              <span className="whitespace-nowrap">{homeWhatMakesUsDifferentHeadlineRest}</span>
             </h2>
           </div>
 

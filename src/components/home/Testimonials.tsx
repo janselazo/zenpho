@@ -8,24 +8,46 @@ import SectionHeading from "@/components/ui/SectionHeading";
 interface Testimonial {
   quote: string;
   name: string;
-  title: string;
-  company: string;
+  /** Full line below name, e.g. "Founder, Operations Platform" */
+  attribution: string;
+  initials: string;
 }
 
 const testimonials: Testimonial[] = [
   {
-    quote:
-      "We went from a rough idea to a production SaaS in weeks. The inspection platform they shipped became our single source of truth overnight. Our team was able to adopt it immediately and we've gotten nothing but compliments from clients.",
+    initials: "MT",
     name: "Michael Torres",
-    title: "CEO",
-    company: "Apex Inspection Pro",
+    attribution: "Founder, Operations Platform",
+    quote:
+      "We came in with a rough product idea and left with a working MVP our team could actually use. Zenpho helped us simplify the scope, design the core flows, and launch much faster than we expected.",
   },
   {
-    quote:
-      "They built our mobile-first ordering product end to end — catalog, checkout, fulfillment — and today we operate without a bench of engineers. Velocity and craftsmanship were standout.",
+    initials: "AG",
     name: "Andrea Guzmán",
-    title: "Founder",
-    company: "TQMuch",
+    attribution: "Founder, Ecommerce Startup",
+    quote:
+      "Zenpho turned our website and app concept into a clean, functional product. They helped us prioritize what mattered for version one and avoided wasting time on features we didn't need yet.",
+  },
+  {
+    initials: "DC",
+    name: "David Chen",
+    attribution: "CEO, SaaS MVP",
+    quote:
+      "We needed more than a designer. We needed a partner who could understand the business, map the user experience, and build the product. Zenpho handled everything from strategy to launch.",
+  },
+  {
+    initials: "SL",
+    name: "Samantha Lee",
+    attribution: "Founder, Mobile App MVP",
+    quote:
+      "The process was clear from day one. We knew what was being built, what could wait, and what needed to happen before launch. The final product gave us exactly what we needed to start testing with users.",
+  },
+  {
+    initials: "CM",
+    name: "Chris Morgan",
+    attribution: "Owner, Digital Service Brand",
+    quote:
+      "Zenpho helped us rebuild our digital experience into something professional, fast, and easy for customers to use. The combination of strategy, design, and development made the whole process simple.",
   },
 ];
 
@@ -45,10 +67,10 @@ export default function Testimonials() {
     <section className="relative py-24">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <SectionHeading
-          label="Testimonials"
-          title="Trusted by founders"
-          titleAccent="Hear what clients are saying"
-          description="Real feedback from the teams we've built with."
+          label="CLIENT FEEDBACK"
+          title="Founders Trust Zenpho"
+          titleAccent="to Build and Launch Fast"
+          description="Real feedback from founders and businesses we've helped move from idea to launch-ready digital products."
         />
       </div>
 
@@ -83,7 +105,7 @@ export default function Testimonials() {
 
         {testimonials.map((t, i) => (
           <motion.div
-            key={t.company}
+            key={t.name}
             initial={{ opacity: 1, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.05, margin: "0px 0px 200px 0px" }}
@@ -97,17 +119,14 @@ export default function Testimonials() {
 
               <div className="mt-6 flex items-center gap-3 border-t border-border pt-5">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface text-xs font-bold text-text-primary">
-                  {t.name
-                    .split(" ")
-                    .map((w) => w[0])
-                    .join("")}
+                  {t.initials}
                 </span>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-text-primary">
                     {t.name}
                   </p>
                   <p className="truncate text-xs text-text-secondary">
-                    {t.title}, {t.company}
+                    {t.attribution}
                   </p>
                 </div>
               </div>

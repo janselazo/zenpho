@@ -34,7 +34,7 @@ export const marketingSolutionPages: MarketingSolutionPage[] = [
     slug: "lead-to-revenue-setup",
     title: "Design",
     description:
-      "Clarify your idea, map the user experience, define the key pages or screens, and create a clean interface for your website, web app, mobile app, or MVP.",
+      "Clarify the idea, map the flow, and design the key screens or pages.",
     icon: Wrench,
     iconClassName: "bg-indigo-500/15 text-indigo-600",
     metaDescription:
@@ -55,7 +55,7 @@ export const marketingSolutionPages: MarketingSolutionPage[] = [
     slug: "growth-engine-management",
     title: "Build",
     description:
-      "Develop the core functionality, connect integrations, set up databases, dashboards, admin tools, payments, and everything needed for a working product.",
+      "Develop the core features, integrations, dashboards, and product functionality.",
     icon: Rocket,
     iconClassName: "bg-rose-500/15 text-rose-600",
     metaDescription:
@@ -76,7 +76,7 @@ export const marketingSolutionPages: MarketingSolutionPage[] = [
     slug: "full-growth-partner",
     title: "Launch",
     description:
-      "Test, deploy, and support your product after launch so you can collect feedback, improve quickly, and plan the next version with confidence.",
+      "Test, deploy, and support your product as you launch and improve.",
     icon: Handshake,
     iconClassName: "bg-emerald-500/15 text-emerald-700",
     metaDescription:

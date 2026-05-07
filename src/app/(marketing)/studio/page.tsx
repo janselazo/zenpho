@@ -1,28 +1,14 @@
 import type { Metadata } from "next";
-import StudioHero from "./StudioHero";
-import StudioVision from "./StudioVision";
-import StudioModelSection from "./StudioModelSection";
-import FutureProductAreas from "./FutureProductAreas";
-import VenturesGrid from "@/components/studio/VenturesGrid";
-import StudioPageCTA from "./StudioPageCTA";
+import StudioPageContent from "./StudioPageContent";
 
 export const metadata: Metadata = {
   title: {
-    absolute: "Zenpho Studio | MVP Development Studio",
+    absolute: "Zenpho Studio · In-house products",
   },
   description:
-    "Zenpho Studio is building toward an MVP and product studio model—developing and growing tech startups and ecommerce brands while creating our own AI-powered software.",
+    "Zenpho is a product studio too: Soldtools, Business Audit, Branding Kit—plus client builds for websites, web apps, and MVPs.",
 };
 
 export default function StudioPage() {
-  return (
-    <>
-      <StudioHero />
-      <StudioVision />
-      <StudioModelSection />
-      <FutureProductAreas />
-      <VenturesGrid />
-      <StudioPageCTA />
-    </>
-  );
+  return <StudioPageContent />;
 }

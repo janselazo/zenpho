@@ -1,7 +1,8 @@
 export const homeWhatMakesUsDifferentEyebrow = "WHAT MAKES US DIFFERENT";
 
-export const homeWhatMakesUsDifferentHeadline =
-  "Not Just Developers. A Product Launch Partner.";
+export const homeWhatMakesUsDifferentHeadlineLead = "Not Just Developers.";
+
+export const homeWhatMakesUsDifferentHeadlineRest = "A Product Launch Partner.";
 
 export const homeWhatMakesUsDifferentIntro = [
   "Most developers wait for a full scope before they start building. Most agencies focus only on visuals, branding, or individual pages.",

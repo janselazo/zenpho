@@ -31,17 +31,17 @@ const nextConfig = {
       },
       {
         source: "/product/lead-capture-tracking",
-        destination: "/product/lead-management",
+        destination: "/",
         permanent: true,
       },
       {
         source: "/product/follow-up-automation",
-        destination: "/product/lead-management",
+        destination: "/",
         permanent: true,
       },
       {
         source: "/product/revenue-dashboard",
-        destination: "/product/growth-intelligence",
+        destination: "/",
         permanent: true,
       },
       { source: "/studio", destination: "/", permanent: true },

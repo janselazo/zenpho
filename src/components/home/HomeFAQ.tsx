@@ -26,14 +26,14 @@ export default function HomeFAQ() {
           className="!mb-10 sm:!mb-12"
           description={
             <p className="sm:text-lg">
-              How MVP launch packages work, timelines, what we build, and how pricing is scoped. See{" "}
+              Everything you need to know about building your website, web app, mobile app, or MVP with Zenpho. See{" "}
               <Link
                 href="/pricing"
                 className="font-medium text-accent underline-offset-4 hover:underline"
               >
                 pricing
               </Link>{" "}
-              for packages and the comparison table.
+              for launch packages.
             </p>
           }
         />

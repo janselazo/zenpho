@@ -7,8 +7,6 @@ import {
   SearchCheck,
   User,
 } from "lucide-react";
-import { marketingIndustryPages } from "./marketing-industries-pages";
-import { marketingProductPages } from "./marketing-product-pages";
 import { marketingSolutionPages } from "./marketing-solutions-pages";
 import { BOOKING_NAV_COMPACT_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
 
@@ -29,15 +27,6 @@ export type MarketingTopNavItem =
     }
   | { type: "link"; label: string; href: string };
 
-export const marketingProductMegaItems: MarketingMegaItem[] =
-  marketingProductPages.map((p) => ({
-    title: p.title,
-    description: p.description,
-    href: `/product/${p.slug}`,
-    icon: p.icon,
-    iconClassName: p.iconClassName,
-  }));
-
 export const marketingSolutionsMegaItems: MarketingMegaItem[] =
   marketingSolutionPages.map((s) => ({
     title: s.title,
@@ -45,15 +34,6 @@ export const marketingSolutionsMegaItems: MarketingMegaItem[] =
     href: `/solutions/${s.slug}`,
     icon: s.icon,
     iconClassName: s.iconClassName,
-  }));
-
-export const marketingIndustriesMegaItems: MarketingMegaItem[] =
-  marketingIndustryPages.map((i) => ({
-    title: i.title,
-    description: i.description,
-    href: `/industries/${i.slug}`,
-    icon: i.icon,
-    iconClassName: i.iconClassName,
   }));
 
 const toolsMegaItems: MarketingMegaItem[] = [
@@ -77,31 +57,28 @@ const toolsMegaItems: MarketingMegaItem[] = [
 const resourcesMegaItems: MarketingMegaItem[] = [
   {
     title: "About us",
-    description:
-      "Who we are, how we work, and how Zenpho helps founders and businesses turn ideas into launch-ready digital products.",
+    description: "How Zenpho helps turn ideas into launch-ready products.",
     href: "/about",
     icon: User,
     iconClassName: "bg-accent/15 text-accent",
   },
   {
     title: "Blog",
-    description:
-      "Insights on MVP development, product strategy, websites, web apps, mobile apps, ecommerce, and launching faster.",
+    description: "Insights on MVPs, websites, apps, and product launches.",
     href: "/blog",
     icon: Newspaper,
     iconClassName: "bg-sky-500/15 text-sky-600",
   },
   {
     title: "Resources",
-    description:
-      "Guides, tools, checklists, and frameworks to help you plan, build, launch, and improve your digital product.",
+    description: "Guides and tools to help you plan, build, and launch.",
     href: "/resources",
     icon: FileText,
     iconClassName: "bg-emerald-500/15 text-emerald-600",
   },
   {
     title: "Contact",
-    description: "Have a website, app, or MVP idea? Reach out and we’ll help you map the next step.",
+    description: "Tell us what you want to build next.",
     href: "/contact",
     icon: Mail,
     iconClassName: "bg-violet-500/15 text-violet-600",
@@ -111,22 +88,11 @@ const resourcesMegaItems: MarketingMegaItem[] = [
 export const marketingTopNav: MarketingTopNavItem[] = [
   {
     type: "mega",
-    label: "Platform",
-    sectionEyebrow: "Features",
-    items: marketingProductMegaItems,
-  },
-  {
-    type: "mega",
     label: "Solutions",
     sectionEyebrow: "HOW WE HELP",
     items: marketingSolutionsMegaItems,
   },
-  {
-    type: "mega",
-    label: "Industries",
-    sectionEyebrow: "Verticals",
-    items: marketingIndustriesMegaItems,
-  },
+  { type: "link", label: "Studio", href: "/studio" },
   { type: "link", label: "Pricing", href: "/pricing" },
   {
     type: "mega",
@@ -149,24 +115,10 @@ export type MarketingFooterColumn = {
 
 export const marketingFooterColumns: MarketingFooterColumn[] = [
   {
-    heading: "Platform",
-    links: marketingProductPages.map((p) => ({
-      label: p.title,
-      href: `/product/${p.slug}`,
-    })),
-  },
-  {
     heading: "Solutions",
     links: marketingSolutionPages.map((s) => ({
       label: s.title,
       href: `/solutions/${s.slug}`,
-    })),
-  },
-  {
-    heading: "Industries",
-    links: marketingIndustryPages.map((i) => ({
-      label: i.title,
-      href: `/industries/${i.slug}`,
     })),
   },
   {
@@ -179,6 +131,7 @@ export const marketingFooterColumns: MarketingFooterColumn[] = [
   {
     heading: "Resources",
     links: [
+      { label: "Studio", href: "/studio" },
       { label: "About", href: "/about" },
       { label: "Blog", href: "/blog" },
       { label: "Contact", href: "/contact" },
