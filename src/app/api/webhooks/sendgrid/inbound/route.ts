@@ -10,6 +10,7 @@ import {
   findConversationIdByThreading,
   parseRawHeaderBlock,
 } from "@/lib/crm/inbound-email-threading";
+import { LEGACY_ORGANIZATION_ID } from "@/lib/organization";
 
 /**
  * SendGrid Inbound Parse webhook.
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
   if (secret) {
     const token = req.nextUrl.searchParams.get("token");
     if (token !== secret) {
-      await logInbound(supabase, {
+      await logInbound(supabase, LEGACY_ORGANIZATION_ID, {
         status: "unauthorized",
         errorMessage:
           token == null
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
   try {
     formData = await req.formData();
   } catch (err) {
-    await logInbound(supabase, {
+    await logInbound(supabase, LEGACY_ORGANIZATION_ID, {
       status: "invalid_payload",
       errorMessage:
         err instanceof Error
@@ -62,6 +63,12 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
   }
+
+  const inboundOrganizationId =
+    await resolveOrganizationFromInboundRecipients(
+      supabase,
+      gatherInboundRecipientHints(formData)
+    );
 
   let fromRaw = String(formData.get("from") ?? "").trim();
   let subject = String(formData.get("subject") ?? "").trim();
@@ -110,7 +117,7 @@ export async function POST(req: NextRequest) {
     parsed["message-id"] ?? extractHeaderLegacy(rawHeaders, "Message-ID");
 
   if (!fromEmail) {
-    await logInbound(supabase, {
+    await logInbound(supabase, inboundOrganizationId, {
       status: "invalid_payload",
       subject: subject || null,
       inReplyTo,
@@ -126,7 +133,8 @@ export async function POST(req: NextRequest) {
     let conversationId: string | null = await findConversationIdByThreading(
       supabase,
       inReplyTo,
-      references
+      references,
+      inboundOrganizationId
     );
     const threaded = !!conversationId;
 
@@ -134,6 +142,7 @@ export async function POST(req: NextRequest) {
       const result = await findOrCreateEmailConversation(supabase, {
         contactEmail: fromEmail,
         contactName: fromName,
+        organizationId: inboundOrganizationId,
       });
       conversationId = result.conversationId;
     }
@@ -148,7 +157,7 @@ export async function POST(req: NextRequest) {
       emailInReplyTo: inReplyTo || null,
     });
 
-    await logInbound(supabase, {
+    await logInbound(supabase, inboundOrganizationId, {
       status: threaded ? "threaded" : "new_conversation",
       fromEmail,
       subject: subject || null,
@@ -167,7 +176,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     const errorMessage =
       err instanceof Error ? err.message : "Unknown inbound webhook error.";
-    await logInbound(supabase, {
+    await logInbound(supabase, inboundOrganizationId, {
       status: "error",
       fromEmail,
       subject: subject || null,
@@ -185,6 +194,7 @@ export async function POST(req: NextRequest) {
 /** Insert one row into sendgrid_inbound_log. Never throws — logging must never break the webhook. */
 async function logInbound(
   supabase: SupabaseClient,
+  organizationId: string,
   row: {
     status:
       | "unauthorized"
@@ -205,6 +215,7 @@ async function logInbound(
 ): Promise<void> {
   try {
     await supabase.from("sendgrid_inbound_log").insert({
+      organization_id: organizationId,
       status: row.status,
       from_email: row.fromEmail ?? null,
       subject: row.subject ?? null,
@@ -256,4 +267,73 @@ function stripHtmlToText(html: string): string {
     .replace(/&#39;/g, "'")
     .replace(/\r\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n");
+}
+
+/** Pull To addresses from multipart fields + envelope JSON (Inbound Parse variants). */
+function gatherInboundRecipientHints(formData: FormData): string[] {
+  const out = new Set<string>();
+  const toField = String(formData.get("to") ?? "").trim();
+  if (toField) {
+    for (const token of toField.split(/[,;\s]+/)) {
+      const t = token.trim();
+      if (t) out.add(t);
+    }
+  }
+  const envelopeRaw = String(formData.get("envelope") ?? "").trim();
+  if (envelopeRaw.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(envelopeRaw) as {
+        to?: string | string[];
+        toemail?: string;
+      };
+      const list = ([] as string[]).concat(parsed.to ?? []);
+      if (typeof parsed.toemail === "string" && parsed.toemail.trim()) {
+        list.push(parsed.toemail.trim());
+      }
+      for (const addr of list) {
+        const t = String(addr).trim();
+        if (t) out.add(t);
+      }
+    } catch {
+      /* ignore malformed envelope */
+    }
+  }
+  return [...out];
+}
+
+function canonicalInboundEmail(raw: string): string {
+  const s = raw.trim();
+  const m = s.match(/<([^>]+)>/);
+  const addr = (m?.[1] ?? s).trim().toLowerCase();
+  return addr.includes("@") ? addr : "";
+}
+
+async function resolveOrganizationFromInboundRecipients(
+  admin: SupabaseClient,
+  recipientHints: string[]
+): Promise<string> {
+  if (recipientHints.length === 0) return LEGACY_ORGANIZATION_ID;
+  try {
+    const { data } = await admin.from("agency_sendgrid_integration").select(
+      "organization_id, from_email, reply_to",
+    );
+
+    for (const raw of recipientHints) {
+      const needle = canonicalInboundEmail(raw);
+      if (!needle) continue;
+
+      for (const row of data ?? []) {
+        if (!row.organization_id) continue;
+        if (needle === canonicalInboundEmail(row.from_email ?? "")) {
+          return row.organization_id as string;
+        }
+        if (needle === canonicalInboundEmail(row.reply_to ?? "")) {
+          return row.organization_id as string;
+        }
+      }
+    }
+  } catch {
+    /* legacy fallback below */
+  }
+  return LEGACY_ORGANIZATION_ID;
 }

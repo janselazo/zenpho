@@ -14,13 +14,15 @@ export const runtime = "nodejs";
  */
 export async function GET() {
   const auth = await requireAgencyStaff();
-  if (auth.error || !auth.user) {
+  if (auth.error !== null || !auth.user || !auth.supabase) {
     return NextResponse.json({ ok: false as const, error: auth.error ?? "Unauthorized" }, { status: 401 });
   }
 
   const env = getTwilioEnvVarPresence();
   const fullyConfigured = env.accountSid && env.authToken && env.fromPhone;
-  const resolved = await getAgencyTwilioCredentials();
+  const resolved = await getAgencyTwilioCredentials({
+    organizationId: auth.organizationId,
+  });
 
   return NextResponse.json({
     ok: true as const,

@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { decryptIntegrationSecret } from "@/lib/crypto/integration-secrets";
+import { LEGACY_ORGANIZATION_ID } from "@/lib/organization";
 
 export type AgencyTwilioCreds = {
   accountSid: string;
@@ -40,7 +41,9 @@ export function getTwilioEnvVarPresence(): {
  * Settings → Integrations takes priority so admins can change sender numbers without
  * redeploying Vercel. Env vars are the fallback when no saved integration exists.
  */
-export async function getAgencyTwilioCredentials(): Promise<AgencyTwilioCreds | null> {
+export async function getAgencyTwilioCredentials(opts?: {
+  organizationId?: string | null;
+}): Promise<AgencyTwilioCreds | null> {
   const envSid = process.env["TWILIO_ACCOUNT_SID"]?.trim();
   const envToken =
     process.env["TWILIO_AUTH_TOKEN"]?.trim() || process.env["TWILIO_SECRET_KEY"]?.trim();
@@ -48,10 +51,11 @@ export async function getAgencyTwilioCredentials(): Promise<AgencyTwilioCreds | 
 
   try {
     const admin = createAdminClient();
+    const orgId = opts?.organizationId?.trim() || LEGACY_ORGANIZATION_ID;
     const { data, error } = await admin
       .from("agency_twilio_integration")
       .select("account_sid, auth_token_encrypted, from_phone")
-      .eq("id", 1)
+      .eq("organization_id", orgId)
       .maybeSingle();
 
     if (!error && data?.account_sid && data.auth_token_encrypted) {

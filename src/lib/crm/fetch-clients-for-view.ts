@@ -9,12 +9,19 @@ export type FetchClientsForViewResult = {
 /**
  * Loads clients with linked lead + deal title for the Clients CRM table.
  */
-export async function fetchClientsForClientsView(): Promise<FetchClientsForViewResult> {
+export async function fetchClientsForClientsView(
+  organizationId: string | null
+): Promise<FetchClientsForViewResult> {
+  if (!organizationId) {
+    return { rows: [], error: null };
+  }
+
   const supabase = await createClient();
   const [clientsRes, leadsRes, dealsRes] = await Promise.all([
     supabase
       .from("client")
       .select("id, name, email, phone, company, notes, created_at")
+      .eq("organization_id", organizationId)
       .order("created_at", { ascending: false })
       .limit(200),
     supabase
@@ -22,11 +29,13 @@ export async function fetchClientsForClientsView(): Promise<FetchClientsForViewR
       .select(
         "id, name, email, company, source, converted_client_id, created_at"
       )
+      .eq("organization_id", organizationId)
       .not("converted_client_id", "is", null)
       .order("created_at", { ascending: false }),
     supabase
       .from("deal")
       .select("title, lead_id, updated_at")
+      .eq("organization_id", organizationId)
       .order("updated_at", { ascending: false })
       .limit(500),
   ]);

@@ -67,11 +67,13 @@ function extractAllMessageIdLikeTokens(refs: string): string[] {
 
 /**
  * Resolve `conversation_id` by matching In-Reply-To and References to stored outbound IDs.
+ * When `organizationId` is set, only considers messages belonging to that workspace.
  */
 export async function findConversationIdByThreading(
   supabase: SupabaseClient,
   inReplyTo: string | null,
-  references: string | null
+  references: string | null,
+  organizationId?: string | null
 ): Promise<string | null> {
   const keys = new Set<string>();
   if (inReplyTo) {
@@ -86,11 +88,16 @@ export async function findConversationIdByThreading(
   const list = [...keys].filter(Boolean);
   if (list.length === 0) return null;
 
-  const { data: rows } = await supabase
+  let q = supabase
     .from("conversation_message")
     .select("conversation_id, email_message_id")
     .in("email_message_id", list)
     .limit(5);
+  const org = organizationId?.trim();
+  if (org) {
+    q = q.eq("organization_id", org);
+  }
+  const { data: rows } = await q;
 
   if (rows && rows.length > 0) {
     return (rows[0] as { conversation_id: string }).conversation_id;

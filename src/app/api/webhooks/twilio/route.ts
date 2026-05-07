@@ -15,10 +15,10 @@ const PATH = "/api/webhooks/twilio";
 const EMPTY_TWIML = '<?xml version="1.0" encoding="UTF-8"?><Response></Response>';
 
 export async function POST(req: NextRequest) {
-  const result = await validateTwilioSignature(req, PATH);
-  if (!result.valid) return result.response;
+  const validation = await validateTwilioSignature(req, PATH);
+  if (!validation.valid) return validation.response;
 
-  const { params } = result;
+  const { params, organizationId } = validation;
   const from = normalizeSmsPhone(params.From?.trim() ?? "");
   const body = params.Body?.trim() ?? "";
   const messageSid = params.MessageSid?.trim() ?? "";
@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
     const { conversationId } = await findOrCreateSmsConversation(supabase, {
       contactPhone: from,
       contactName: from,
+      organizationId,
     });
 
     await insertSmsMessage(supabase, {

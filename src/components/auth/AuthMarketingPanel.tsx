@@ -46,7 +46,7 @@ export default function AuthMarketingPanel() {
     <div className="relative flex min-h-[min(100vh,900px)] flex-1 flex-col overflow-hidden bg-[#060a12] lg:min-h-screen">
       {/* Radial glow */}
       <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(59,130,246,0.18),transparent_55%),radial-gradient(ellipse_60%_45%_at_80%_90%,rgba(139,92,246,0.12),transparent_50%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(59,130,246,0.18),transparent_55%),radial-gradient(ellipse_60%_45%_at_80%_90%,rgba(16,185,129,0.1),transparent_50%)]"
         aria-hidden
       />
       <div
@@ -73,9 +73,9 @@ export default function AuthMarketingPanel() {
           </div>
 
           <h2 className="mt-8 text-4xl font-black leading-[1.08] tracking-tight text-white sm:text-5xl lg:text-[3.25rem] lg:leading-[1.06]">
-            Win every lead.
-            <span className="mt-1 block bg-gradient-to-r from-sky-400 via-blue-400 to-violet-500 bg-clip-text text-transparent">
-              Book smarter jobs.
+            Everything in one flow.
+            <span className="mt-1 block bg-gradient-to-r from-sky-300 via-teal-400 to-emerald-400 bg-clip-text text-transparent">
+              From hello to booked.
             </span>
           </h2>
 
@@ -114,7 +114,7 @@ export default function AuthMarketingPanel() {
             ))}
           </div>
 
-          <blockquote className="mt-14 w-full max-w-xl rounded-2xl border border-white/[0.08] bg-slate-900/40 p-5 text-left backdrop-blur-sm">
+          <blockquote className="mt-8 w-full max-w-xl rounded-2xl border border-white/[0.08] bg-slate-900/40 p-5 text-left backdrop-blur-sm lg:mt-10">
             <p className="text-sm italic leading-relaxed text-slate-300">
               &ldquo;Zenpho put web leads, phone calls, and referrals in{" "}
               <span className="font-semibold not-italic text-emerald-400">one workspace</span>. We

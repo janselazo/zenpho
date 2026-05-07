@@ -1,10 +1,26 @@
+import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import {
   getSupabasePublicEnv,
   SUPABASE_ENV_SETUP_MESSAGE,
 } from "@/lib/supabase/config";
 
-export async function requireAgencyStaff() {
+export type RequireAgencyStaffOk = {
+  error: null;
+  supabase: SupabaseClient;
+  user: User;
+  organizationId: string;
+};
+
+export type RequireAgencyStaffDenied = {
+  error: string;
+  supabase: null;
+  user: null;
+};
+
+export type RequireAgencyStaffResult = RequireAgencyStaffOk | RequireAgencyStaffDenied;
+
+export async function requireAgencyStaff(): Promise<RequireAgencyStaffResult> {
   if (!getSupabasePublicEnv()) {
     return {
       error: SUPABASE_ENV_SETUP_MESSAGE,
@@ -16,15 +32,26 @@ export async function requireAgencyStaff() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "Unauthorized" as const, supabase: null, user: null };
+  if (!user) return { error: "Unauthorized", supabase: null, user: null };
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, organization_id")
     .eq("id", user.id)
     .maybeSingle();
   const role = profile?.role;
   if (role !== "agency_admin" && role !== "agency_member") {
-    return { error: "Forbidden" as const, supabase: null, user: null };
+    return { error: "Forbidden", supabase: null, user: null };
   }
-  return { error: null, supabase, user };
+  const organizationId =
+    typeof profile?.organization_id === "string"
+      ? profile.organization_id.trim()
+      : "";
+  if (!organizationId) {
+    return {
+      error: "Forbidden: profile has no workspace.",
+      supabase: null,
+      user: null,
+    };
+  }
+  return { error: null, supabase, user, organizationId };
 }

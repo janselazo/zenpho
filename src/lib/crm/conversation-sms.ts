@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import twilio from "twilio";
+import { fetchCurrentOrganizationId } from "@/lib/organization";
 import { getAgencyTwilioCredentials } from "@/lib/twilio/agency-credentials";
 
 export type FindOrCreateSmsConversationResult = {
@@ -31,15 +32,25 @@ export async function findOrCreateSmsConversation(
     contactName: string;
     leadId?: string | null;
     clientId?: string | null;
+    organizationId?: string | null;
   }
 ): Promise<FindOrCreateSmsConversationResult> {
   const phone = normalizeSmsPhone(opts.contactPhone);
+
+  let orgId =
+    opts.organizationId?.trim() ||
+    (await fetchCurrentOrganizationId(supabase)) ||
+    null;
+  if (!orgId) {
+    throw new Error("Missing organization scope for SMS conversation.");
+  }
 
   const { data: existing } = await supabase
     .from("conversation")
     .select("id, lead_id")
     .eq("channel", "sms")
     .eq("contact_phone", phone)
+    .eq("organization_id", orgId)
     .order("last_message_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -55,6 +66,7 @@ export async function findOrCreateSmsConversation(
   }
 
   const insert: Record<string, unknown> = {
+    organization_id: orgId,
     contact_name: opts.contactName.trim() || phone,
     channel: "sms",
     contact_phone: phone,
@@ -100,9 +112,20 @@ export async function insertSmsMessage(
     if (existing?.id) return existing.id;
   }
 
+  const { data: convoMeta, error: convoLookupErr } = await supabase
+    .from("conversation")
+    .select("organization_id")
+    .eq("id", opts.conversationId)
+    .maybeSingle();
+
+  if (convoLookupErr || !convoMeta?.organization_id) {
+    throw new Error(convoLookupErr?.message ?? "Conversation not found for SMS message insert.");
+  }
+
   const { data: msg, error: msgErr } = await supabase
     .from("conversation_message")
     .insert({
+      organization_id: convoMeta.organization_id,
       conversation_id: opts.conversationId,
       kind: "external",
       direction: opts.direction,
@@ -150,8 +173,11 @@ export async function sendConversationSms(opts: {
   body: string;
   /** Optional public URLs of media attachments (Twilio MMS). Up to 10 entries. */
   mediaUrl?: string[];
+  organizationId?: string | null;
 }): Promise<SendConversationSmsResult> {
-  const creds = await getAgencyTwilioCredentials();
+  const creds = await getAgencyTwilioCredentials({
+    organizationId: opts.organizationId,
+  });
   if (!creds) {
     return {
       ok: false,

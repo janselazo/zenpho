@@ -26,6 +26,7 @@ import {
   prospectShellLine,
   stripProspectShellMarkerAndAppend,
 } from "@/lib/crm/prospect-client-shell";
+import { fetchCurrentOrganizationId } from "@/lib/organization";
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>;
 
@@ -170,10 +171,14 @@ function explainMissingCrmSettingsTable(message: string): string {
 }
 
 async function leadStageSlugSet(supabase: SupabaseServer): Promise<Set<string>> {
+  const organizationId = await fetchCurrentOrganizationId(supabase);
+  if (!organizationId) {
+    return new Set(mergeLeadPipelineFromDb(null).map((c) => c.slug));
+  }
   const { data, error } = await supabase
     .from("crm_settings")
     .select("lead_pipeline")
-    .eq("id", 1)
+    .eq("organization_id", organizationId)
     .maybeSingle();
   if (error) {
     return new Set(
@@ -186,10 +191,14 @@ async function leadStageSlugSet(supabase: SupabaseServer): Promise<Set<string>> 
 }
 
 async function dealStageSlugSet(supabase: SupabaseServer): Promise<Set<string>> {
+  const organizationId = await fetchCurrentOrganizationId(supabase);
+  if (!organizationId) {
+    return new Set(mergeDealPipelineFromDb(null).map((c) => c.slug));
+  }
   const { data, error } = await supabase
     .from("crm_settings")
     .select("deal_pipeline")
-    .eq("id", 1)
+    .eq("organization_id", organizationId)
     .maybeSingle();
   if (error) {
     return new Set(
@@ -1690,10 +1699,17 @@ export async function saveCrmFieldOptions(input: CrmFieldOptionsSaveInput) {
     const normalized = validateFieldOptionsForSave(input);
     if ("error" in normalized) return { error: normalized.error };
 
+    const organizationId = await fetchCurrentOrganizationId(supabase);
+    if (!organizationId) {
+      return {
+        error: "Your profile is missing a workspace. Reload or contact support.",
+      };
+    }
+
     const { data: cur, error: readErr } = await supabase
       .from("crm_settings")
       .select("lead_pipeline, deal_pipeline")
-      .eq("id", 1)
+      .eq("organization_id", organizationId)
       .maybeSingle();
 
     if (readErr)
@@ -1701,13 +1717,13 @@ export async function saveCrmFieldOptions(input: CrmFieldOptionsSaveInput) {
 
     const { error } = await supabase.from("crm_settings").upsert(
       {
-        id: 1,
+        organization_id: organizationId,
         lead_pipeline: mergeLeadPipelineFromDb(cur?.lead_pipeline),
         deal_pipeline: mergeDealPipelineFromDb(cur?.deal_pipeline),
         crm_field_options: normalized,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: "id" }
+      { onConflict: "organization_id" },
     );
 
     if (error) return { error: explainMissingCrmSettingsTable(error.message) };
@@ -1739,10 +1755,17 @@ export async function saveCrmPipelineSettings(input: {
   } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized" };
 
+  const organizationId = await fetchCurrentOrganizationId(supabase);
+  if (!organizationId) {
+    return {
+      error: "Your profile is missing a workspace. Reload or contact support.",
+    };
+  }
+
   const { data: cur, error: readErr } = await supabase
     .from("crm_settings")
     .select("lead_pipeline, deal_pipeline, crm_field_options")
-    .eq("id", 1)
+    .eq("organization_id", organizationId)
     .maybeSingle();
 
   if (readErr) return { error: explainMissingCrmSettingsTable(readErr.message) };
@@ -1770,13 +1793,13 @@ export async function saveCrmPipelineSettings(input: {
 
   const { error } = await supabase.from("crm_settings").upsert(
     {
-      id: 1,
+      organization_id: organizationId,
       lead_pipeline: lead,
       deal_pipeline: deal,
       crm_field_options: fieldOpts,
       updated_at: new Date().toISOString(),
     },
-    { onConflict: "id" }
+    { onConflict: "organization_id" },
   );
 
   if (error) return { error: explainMissingCrmSettingsTable(error.message) };

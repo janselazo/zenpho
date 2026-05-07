@@ -107,11 +107,13 @@ export async function sendProspectPreviewSmsAction(input: {
   extraAttachments?: OutreachFileAttachment[];
 }) {
   const auth = await requireAgencyStaff();
-  if (auth.error || !auth.supabase) {
+  if (auth.error !== null || !auth.supabase) {
     return { ok: false as const, error: auth.error ?? "Unauthorized" };
   }
 
-  const creds = await getAgencyTwilioCredentials();
+  const { supabase: staffSupabase, organizationId } = auth;
+
+  const creds = await getAgencyTwilioCredentials({ organizationId });
   if (!creds) {
     const e = getTwilioEnvVarPresence();
     const missing: string[] = [];
@@ -150,7 +152,7 @@ export async function sendProspectPreviewSmsAction(input: {
     slug?: string | null;
   } | null = null;
   if (previewId) {
-    const { data, error: rowErr } = await auth.supabase
+    const { data, error: rowErr } = await staffSupabase
       .from("prospect_preview")
       .select("screenshot_url, screenshot_status, slug")
       .eq("id", previewId)
@@ -217,13 +219,14 @@ export async function sendProspectPreviewSmsAction(input: {
       ...(statusCallback ? { statusCallback } : {}),
       ...(allMediaUrls.length ? { mediaUrl: allMediaUrls.slice(0, 10) } : {}),
     });
-    await logProspectSmsToConversation(auth.supabase, {
+    await logProspectSmsToConversation(staffSupabase, {
       to: toPhone,
       businessName: input.businessName,
       body,
       smsSid: smsResult.sid,
       senderName: input.yourName ?? "You",
       leadId: input.leadId ?? null,
+      organizationId,
     });
     return {
       ok: true as const,
@@ -248,13 +251,14 @@ export async function sendProspectPreviewSmsAction(input: {
           body,
           ...(statusCallback ? { statusCallback } : {}),
         });
-        await logProspectSmsToConversation(auth.supabase, {
+        await logProspectSmsToConversation(staffSupabase, {
           to: toPhone,
           businessName: input.businessName,
           body,
           smsSid: smsRetry.sid,
           senderName: input.yourName ?? "You",
           leadId: input.leadId ?? null,
+          organizationId,
         });
         return {
           ok: true as const,
@@ -288,9 +292,11 @@ export async function sendProspectPreviewEmailAction(input: {
   extraAttachments?: OutreachFileAttachment[];
 }) {
   const auth = await requireAgencyStaff();
-  if (auth.error || !auth.supabase) {
+  if (auth.error !== null || !auth.supabase) {
     return { ok: false as const, error: auth.error ?? "Unauthorized" };
   }
+
+  const { supabase: staffSupabase, organizationId } = auth;
 
   const previewId = input.previewId?.trim() || null;
   let prevRow: {
@@ -299,7 +305,7 @@ export async function sendProspectPreviewEmailAction(input: {
     screenshot_status?: string | null;
   } | null = null;
   if (previewId) {
-    const { data, error: prevRowErr } = await auth.supabase
+    const { data, error: prevRowErr } = await staffSupabase
       .from("prospect_preview")
       .select("slug, screenshot_url, screenshot_status")
       .eq("id", previewId)
@@ -383,7 +389,7 @@ ${previewImageHtml}
 
   const plainText = previewUrl ? `${textBody}\n\n${previewUrl}` : textBody;
 
-  const sendGridCreds = await getAgencySendGridCredentials();
+  const sendGridCreds = await getAgencySendGridCredentials({ organizationId });
   if (sendGridCreds) {
     const sgAttachments =
       attachments?.map((a) => {
@@ -416,7 +422,7 @@ ${previewImageHtml}
       return { ok: false as const, error: sent.error };
     }
 
-    await logProspectEmailToConversation(auth.supabase, {
+    await logProspectEmailToConversation(staffSupabase, {
       to: input.to.trim(),
       businessName: input.businessName,
       subject: subj,
@@ -424,6 +430,7 @@ ${previewImageHtml}
       emailMessageId: emailMid,
       senderName: input.yourName ?? "You",
       leadId: input.leadId ?? null,
+      organizationId,
     });
     return { ok: true as const, emailChannel: "sendgrid" as const };
   }
@@ -462,7 +469,7 @@ ${previewImageHtml}
     return { ok: false as const, error: error.message };
   }
 
-  await logProspectEmailToConversation(auth.supabase, {
+  await logProspectEmailToConversation(staffSupabase, {
     to: input.to.trim(),
     businessName: input.businessName,
     subject: subj,
@@ -470,6 +477,7 @@ ${previewImageHtml}
     emailMessageId: emailMid,
     senderName: input.yourName ?? "You",
     leadId: input.leadId ?? null,
+    organizationId,
   });
   return { ok: true as const, emailChannel: "resend" as const };
 }
@@ -484,6 +492,7 @@ async function logProspectEmailToConversation(
     emailMessageId: string;
     senderName: string;
     leadId?: string | null;
+    organizationId: string;
   }
 ) {
   try {
@@ -491,6 +500,7 @@ async function logProspectEmailToConversation(
       contactEmail: opts.to,
       contactName: opts.businessName || opts.to,
       leadId: opts.leadId,
+      organizationId: opts.organizationId,
     });
 
     await insertEmailMessage(supabase, {
@@ -515,6 +525,7 @@ async function logProspectSmsToConversation(
     smsSid: string;
     senderName: string;
     leadId?: string | null;
+    organizationId: string;
   }
 ) {
   try {
@@ -522,6 +533,7 @@ async function logProspectSmsToConversation(
       contactPhone: opts.to,
       contactName: opts.businessName || opts.to,
       leadId: opts.leadId,
+      organizationId: opts.organizationId,
     });
 
     await insertSmsMessage(supabase, {

@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { decryptIntegrationSecret } from "@/lib/crypto/integration-secrets";
+import { LEGACY_ORGANIZATION_ID } from "@/lib/organization";
 
 export type AgencySendGridCreds = {
   apiKey: string;
@@ -14,13 +15,17 @@ export type AgencySendGridCreds = {
  * Resolution order (per field):
  * 1. Vercel env (`SENDGRID_API_KEY`, `SENDGRID_FROM_EMAIL`, `SENDGRID_FROM_NAME`, `SENDGRID_REPLY_TO`)
  * 2. Encrypted row in `agency_sendgrid_integration` (saved via Settings → Integrations)
+ *    for the logged-in workspace (`organization_id`).
  *
  * Reply-To and From-Name are typically only set in Settings, so we always read the DB row to fill
  * in any field the env vars didn't provide. Without this merge, saving "Reply-to" in the UI has
  * no effect when env vars are set on Vercel — outbound mail gets no Reply-To header and replies
  * default to the From address (which lives on a non-inbound domain and bounces).
  */
-export async function getAgencySendGridCredentials(): Promise<AgencySendGridCreds | null> {
+export async function getAgencySendGridCredentials(opts?: {
+  /** When set, reads the integration row for this workspace. */
+  organizationId?: string | null;
+}): Promise<AgencySendGridCreds | null> {
   const envKey = process.env.SENDGRID_API_KEY?.trim() || null;
   const envFromEmail = process.env.SENDGRID_FROM_EMAIL?.trim() || null;
   const envFromName = process.env.SENDGRID_FROM_NAME?.trim() || null;
@@ -33,10 +38,11 @@ export async function getAgencySendGridCredentials(): Promise<AgencySendGridCred
 
   try {
     const admin = createAdminClient();
+    const orgId = opts?.organizationId?.trim() || LEGACY_ORGANIZATION_ID;
     const { data, error } = await admin
       .from("agency_sendgrid_integration")
       .select("api_key_encrypted, from_email, from_name, reply_to")
-      .eq("id", 1)
+      .eq("organization_id", orgId)
       .maybeSingle();
 
     if (!error && data) {

@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import LeadEditForm from "@/components/crm/LeadEditForm";
 import { fetchMergedCrmFieldOptions } from "@/lib/crm/fetch-crm-field-options";
 import { fetchCrmPipelineSettings } from "@/lib/crm/fetch-pipeline-settings";
+import { fetchCurrentOrganizationId } from "@/lib/organization";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 import type { LeadFollowUpAppointment } from "@/lib/crm/lead-follow-up-appointment";
@@ -21,12 +22,16 @@ export default async function LeadDetailPage({ params }: Props) {
   }
 
   const supabase = await createClient();
+  const organizationId = await fetchCurrentOrganizationId(supabase);
+  if (!organizationId) notFound();
+
   const { data: lead, error } = await supabase
     .from("lead")
     .select(
       "id, name, email, company, phone, website, facebook, instagram, google_business_category, google_place_types, source, stage, notes, project_type, contact_category, created_at, converted_client_id, prospect_preview_id, branding_funnel_pdf_path, branding_funnel_pdf_created_at, branding_document_url, revenue_leak_audit_url"
     )
     .eq("id", id)
+    .eq("organization_id", organizationId)
     .maybeSingle();
 
   if (error || !lead) notFound();
@@ -44,6 +49,7 @@ export default async function LeadDetailPage({ params }: Props) {
       .from("prospect_preview")
       .select("slug, preview_target")
       .eq("id", pvId)
+      .eq("organization_id", organizationId)
       .maybeSingle();
     if (pv && typeof pv === "object") {
       previewMeta = {
@@ -77,6 +83,7 @@ export default async function LeadDetailPage({ params }: Props) {
     const { data: rows } = await supabase
       .from("project")
       .select("id, title, created_at")
+      .eq("organization_id", organizationId)
       .eq("client_id", cid)
       .is("parent_project_id", null)
       .order("created_at", { ascending: false })
@@ -92,6 +99,7 @@ export default async function LeadDetailPage({ params }: Props) {
   const tagsRes = await supabase
     .from("lead_tag")
     .select("id, name, color")
+    .eq("organization_id", organizationId)
     .order("name");
   const leadTagCatalog =
     !tagsRes.error && tagsRes.data
@@ -108,6 +116,7 @@ export default async function LeadDetailPage({ params }: Props) {
   const assignRes = await supabase
     .from("lead_tag_assignment")
     .select("tag_id")
+    .eq("organization_id", organizationId)
     .eq("lead_id", id);
   const leadTagIds =
     !assignRes.error && assignRes.data
@@ -117,6 +126,7 @@ export default async function LeadDetailPage({ params }: Props) {
   const followUpsRes = await supabase
     .from("appointment")
     .select("id, title, starts_at, ends_at, description, status")
+    .eq("organization_id", organizationId)
     .eq("lead_id", id)
     .order("starts_at", { ascending: true });
   const followUpAppointments: LeadFollowUpAppointment[] =

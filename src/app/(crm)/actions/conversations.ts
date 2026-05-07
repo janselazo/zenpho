@@ -129,9 +129,12 @@ export async function sendConversationMessage(formData: FormData) {
 
   const { data: convo } = await supabase
     .from("conversation")
-    .select("channel, contact_email, contact_phone")
+    .select("channel, contact_email, contact_phone, organization_id")
     .eq("id", conversationId)
     .single();
+
+  const convoOrg =
+    typeof convo?.organization_id === "string" ? convo.organization_id : null;
 
   const isEmail =
     convo?.channel === "email" &&
@@ -153,6 +156,7 @@ export async function sendConversationMessage(formData: FormData) {
       to: contactPhone,
       body,
       mediaUrl: uploaded ? [uploaded.url] : undefined,
+      organizationId: convoOrg,
     });
     if (!sent.ok) return { error: sent.error };
     smsSid = sent.smsSid;
@@ -187,6 +191,7 @@ export async function sendConversationMessage(formData: FormData) {
       inReplyTo: lastMid,
       references: lastMid,
       attachments: emailAttachments,
+      organizationId: convoOrg,
     });
 
     if (!sent.ok) return { error: sent.error };
@@ -205,6 +210,7 @@ export async function sendConversationMessage(formData: FormData) {
     : null;
 
   const { error: msgErr } = await supabase.from("conversation_message").insert({
+    ...(convoOrg ? { organization_id: convoOrg } : {}),
     conversation_id: conversationId,
     kind,
     direction: "outbound",

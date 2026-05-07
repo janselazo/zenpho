@@ -3,6 +3,7 @@ import { fetchClientsForClientsView } from "@/lib/crm/fetch-clients-for-view";
 import { fetchMergedCrmFieldOptions } from "@/lib/crm/fetch-crm-field-options";
 import { fetchCrmPipelineSettings } from "@/lib/crm/fetch-pipeline-settings";
 import type { LeadTagCatalogRow } from "@/lib/crm/lead-tag-catalog";
+import { fetchCurrentOrganizationId } from "@/lib/organization";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
@@ -66,16 +67,21 @@ export default async function LeadsPage({
   }
 
   const supabase = await createClient();
+  const organizationId = await fetchCurrentOrganizationId(supabase);
+
   const [leadsRes, pipeline, clientsPack, fieldOptions] = await Promise.all([
-    supabase
-      .from("lead")
-      .select(
-        "id, name, email, phone, company, website, stage, source, notes, project_type, contact_category, temperature, created_at, converted_client_id"
-      )
-      .order("created_at", { ascending: false })
-      .limit(200),
+    organizationId
+      ? supabase
+          .from("lead")
+          .select(
+            "id, name, email, phone, company, website, stage, source, notes, project_type, contact_category, temperature, created_at, converted_client_id"
+          )
+          .eq("organization_id", organizationId)
+          .order("created_at", { ascending: false })
+          .limit(200)
+      : Promise.resolve({ data: [], error: null }),
     fetchCrmPipelineSettings(),
-    fetchClientsForClientsView(),
+    fetchClientsForClientsView(organizationId),
     fetchMergedCrmFieldOptions(),
   ]);
 
@@ -84,10 +90,6 @@ export default async function LeadsPage({
   const leadRows = leads ?? [];
 
   let leadTagCatalog: LeadTagCatalogRow[] = [];
-  const tagsRes = await supabase
-    .from("lead_tag")
-    .select("id, name, color")
-    .order("name");
   const tagMetaById = new Map<
     string,
     { id: string; name: string; color: string }
@@ -96,51 +98,61 @@ export default async function LeadsPage({
     string,
     { id: string; name: string; color: string }[]
   >();
-  const tagAssignmentCounts = new Map<string, number>();
 
-  if (!tagsRes.error && tagsRes.data) {
-    for (const t of tagsRes.data) {
-      const id = t.id as string;
-      tagMetaById.set(id, {
-        id,
+  if (organizationId) {
+    const tagsRes = await supabase
+      .from("lead_tag")
+      .select("id, name, color")
+      .eq("organization_id", organizationId)
+      .order("name");
+
+    const tagAssignmentCounts = new Map<string, number>();
+
+    if (!tagsRes.error && tagsRes.data) {
+      for (const t of tagsRes.data) {
+        const id = t.id as string;
+        tagMetaById.set(id, {
+          id,
+          name: t.name as string,
+          color:
+            typeof t.color === "string" && t.color.trim()
+              ? t.color.trim()
+              : "#2563eb",
+        });
+      }
+
+      const assignRes = await supabase
+        .from("lead_tag_assignment")
+        .select("lead_id, tag_id")
+        .eq("organization_id", organizationId);
+      const assigns = assignRes.error ? [] : (assignRes.data ?? []);
+      const leadIdOnPage = new Set(leadRows.map((l) => l.id as string));
+
+      for (const a of assigns) {
+        const tid = a.tag_id as string;
+        tagAssignmentCounts.set(tid, (tagAssignmentCounts.get(tid) ?? 0) + 1);
+        const lid = a.lead_id as string;
+        if (!leadIdOnPage.has(lid)) continue;
+        const meta = tagMetaById.get(tid);
+        if (!meta) continue;
+        if (!tagsByLeadId.has(lid)) tagsByLeadId.set(lid, []);
+        tagsByLeadId.get(lid)!.push(meta);
+      }
+
+      for (const [, list] of tagsByLeadId) {
+        list.sort((x, y) => x.name.localeCompare(y.name));
+      }
+
+      leadTagCatalog = tagsRes.data.map((t) => ({
+        id: t.id as string,
         name: t.name as string,
         color:
           typeof t.color === "string" && t.color.trim()
             ? t.color.trim()
             : "#2563eb",
-      });
+        leadCount: tagAssignmentCounts.get(t.id as string) ?? 0,
+      }));
     }
-
-    const assignRes = await supabase
-      .from("lead_tag_assignment")
-      .select("lead_id, tag_id");
-    const assigns = assignRes.error ? [] : (assignRes.data ?? []);
-    const leadIdOnPage = new Set(leadRows.map((l) => l.id as string));
-
-    for (const a of assigns) {
-      const tid = a.tag_id as string;
-      tagAssignmentCounts.set(tid, (tagAssignmentCounts.get(tid) ?? 0) + 1);
-      const lid = a.lead_id as string;
-      if (!leadIdOnPage.has(lid)) continue;
-      const meta = tagMetaById.get(tid);
-      if (!meta) continue;
-      if (!tagsByLeadId.has(lid)) tagsByLeadId.set(lid, []);
-      tagsByLeadId.get(lid)!.push(meta);
-    }
-
-    for (const [, list] of tagsByLeadId) {
-      list.sort((x, y) => x.name.localeCompare(y.name));
-    }
-
-    leadTagCatalog = tagsRes.data.map((t) => ({
-      id: t.id as string,
-      name: t.name as string,
-      color:
-        typeof t.color === "string" && t.color.trim()
-          ? t.color.trim()
-          : "#2563eb",
-      leadCount: tagAssignmentCounts.get(t.id as string) ?? 0,
-    }));
   }
   const clientIds = [
     ...new Set(
@@ -154,10 +166,11 @@ export default async function LeadsPage({
     string,
     { title: string | null }
   >();
-  if (clientIds.length > 0) {
+  if (organizationId && clientIds.length > 0) {
     const { data: projRows } = await supabase
       .from("project")
       .select("client_id, title, created_at")
+      .eq("organization_id", organizationId)
       .in("client_id", clientIds)
       .is("parent_project_id", null)
       .order("created_at", { ascending: false });
@@ -173,10 +186,11 @@ export default async function LeadsPage({
 
   const appointmentStartsByLeadId = new Map<string, string[]>();
   const leadIdList = leadRows.map((l) => l.id as string);
-  if (leadIdList.length > 0) {
+  if (organizationId && leadIdList.length > 0) {
     const { data: apptRows, error: apptErr } = await supabase
       .from("appointment")
       .select("lead_id, starts_at")
+      .eq("organization_id", organizationId)
       .in("lead_id", leadIdList);
     if (!apptErr && apptRows) {
       for (const r of apptRows) {

@@ -10,6 +10,7 @@ import SettingsPageView, {
 } from "@/components/crm/SettingsPageView";
 import { fetchCrmPipelineSettings } from "@/lib/crm/fetch-pipeline-settings";
 import { fetchMergedCrmFieldOptions } from "@/lib/crm/fetch-crm-field-options";
+import { fetchCurrentOrganizationId } from "@/lib/organization";
 
 function asNullableString(v: unknown): string | null {
   if (v == null) return null;
@@ -75,11 +76,16 @@ export default async function SettingsPage() {
   if (configured) {
     try {
       const supabase = await createClient();
+      const organizationId = await fetchCurrentOrganizationId(supabase);
       const [pipeline, fieldOptions, leadsRes, dealsRes] = await Promise.all([
         fetchCrmPipelineSettings(),
         fetchMergedCrmFieldOptions(),
-        supabase.from("lead").select("stage"),
-        supabase.from("deal").select("stage"),
+        organizationId
+          ? supabase.from("lead").select("stage").eq("organization_id", organizationId)
+          : Promise.resolve({ data: [] as { stage: string }[], error: null }),
+        organizationId
+          ? supabase.from("deal").select("stage").eq("organization_id", organizationId)
+          : Promise.resolve({ data: [] as { stage: string }[], error: null }),
       ]);
       const leadStageCounts: Record<string, number> = {};
       for (const row of leadsRes.data ?? []) {

@@ -1,3 +1,4 @@
+import { fetchCurrentOrganizationId } from "@/lib/organization";
 import { createClient } from "@/lib/supabase/server";
 import type {
   SalesProposalDetail,
@@ -22,9 +23,13 @@ export async function fetchLeadsForProposalPicker(): Promise<
   ProposalWizardPartyOption[]
 > {
   const supabase = await createClient();
+  const organizationId = await fetchCurrentOrganizationId(supabase);
+  if (!organizationId) return [];
+
   const { data, error } = await supabase
     .from("lead")
     .select("id, name, email, company, phone, notes")
+    .eq("organization_id", organizationId)
     .order("created_at", { ascending: false })
     .limit(400);
 
@@ -40,9 +45,13 @@ export async function fetchOpenLeadsForNarrativeProposalWizard(): Promise<
   ProposalWizardPartyOption[]
 > {
   const supabase = await createClient();
+  const organizationId = await fetchCurrentOrganizationId(supabase);
+  if (!organizationId) return [];
+
   const { data, error } = await supabase
     .from("lead")
     .select("id, name, email, company, phone, notes")
+    .eq("organization_id", organizationId)
     .is("converted_client_id", null)
     .order("created_at", { ascending: false })
     .limit(400);

@@ -506,7 +506,21 @@ export async function sendSalesProposalEmail(proposalId: string) {
   const id = proposalId.trim();
   if (!id) return { error: "Missing proposal id" };
 
-  const creds = await getAgencySendGridCredentials();
+  const { data: proposalRow, error: proposalErr } = await supabase
+    .from("sales_proposal")
+    .select("organization_id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (proposalErr || !proposalRow?.organization_id) {
+    return {
+      error: proposalErr?.message ?? "Proposal not found.",
+    };
+  }
+
+  const creds = await getAgencySendGridCredentials({
+    organizationId: proposalRow.organization_id,
+  });
   if (!creds) {
     return {
       error:

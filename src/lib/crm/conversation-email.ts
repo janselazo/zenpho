@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
+import { fetchCurrentOrganizationId } from "@/lib/organization";
 import { getAgencySendGridCredentials } from "@/lib/sendgrid/agency-credentials";
 import { sendSendGridMail } from "@/lib/sendgrid/mail-send";
 
@@ -37,15 +38,28 @@ export async function findOrCreateEmailConversation(
     contactName: string;
     leadId?: string | null;
     clientId?: string | null;
+    /**
+     * Explicit workspace scope (required for service-role callers). Omit to resolve from JWT.
+     */
+    organizationId?: string | null;
   }
 ): Promise<FindOrCreateConversationResult> {
   const email = opts.contactEmail.trim().toLowerCase();
+
+  let orgId =
+    opts.organizationId?.trim() ||
+    (await fetchCurrentOrganizationId(supabase)) ||
+    null;
+  if (!orgId) {
+    throw new Error("Missing organization scope for email conversation.");
+  }
 
   const { data: existing } = await supabase
     .from("conversation")
     .select("id, lead_id")
     .eq("channel", "email")
     .ilike("contact_email", email)
+    .eq("organization_id", orgId)
     .order("last_message_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -61,6 +75,7 @@ export async function findOrCreateEmailConversation(
   }
 
   const insert: Record<string, unknown> = {
+    organization_id: orgId,
     contact_name: opts.contactName.trim() || email,
     channel: "email",
     contact_email: email,
@@ -99,9 +114,20 @@ export async function insertEmailMessage(
     attachment?: Record<string, unknown> | null;
   }
 ): Promise<string> {
+  const { data: convoMeta, error: convoLookupErr } = await supabase
+    .from("conversation")
+    .select("organization_id")
+    .eq("id", opts.conversationId)
+    .maybeSingle();
+
+  if (convoLookupErr || !convoMeta?.organization_id) {
+    throw new Error(convoLookupErr?.message ?? "Conversation not found for message insert.");
+  }
+
   const { data: msg, error: msgErr } = await supabase
     .from("conversation_message")
     .insert({
+      organization_id: convoMeta.organization_id,
       conversation_id: opts.conversationId,
       kind: "external",
       direction: opts.direction,
@@ -201,8 +227,12 @@ export async function sendConversationEmail(opts: {
   inReplyTo?: string | null;
   references?: string | null;
   attachments?: ConversationEmailAttachment[];
+  /** Workspace SendGrid configuration; defaults to Zenpho Legacy org when omitted. */
+  organizationId?: string | null;
 }): Promise<SendConversationEmailResult> {
-  const sgCreds = await getAgencySendGridCredentials();
+  const sgCreds = await getAgencySendGridCredentials({
+    organizationId: opts.organizationId,
+  });
   const messageId = generateMessageId(
     sgCreds ? domainFromEmail(sgCreds.fromEmail) : undefined
   );

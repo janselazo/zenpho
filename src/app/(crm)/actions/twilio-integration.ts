@@ -10,34 +10,29 @@ import {
   decryptIntegrationSecret,
   INTEGRATION_SECRETS_KEY_HELP,
 } from "@/lib/crypto/integration-secrets";
-
-const ROW_ID = 1;
+import { requireAgencyStaff as baseRequireAgencyStaff } from "@/app/(crm)/actions/prospect-preview-agency";
 
 type StaffGate =
-  | { ok: true; user: { id: string }; supabase: Awaited<ReturnType<typeof createClient>> }
+  | {
+      ok: true;
+      user: { id: string };
+      supabase: Awaited<ReturnType<typeof createClient>>;
+      organizationId: string;
+    }
   | { ok: false; reason: "no_user" | "forbidden" };
 
 async function requireAgencyStaff(): Promise<StaffGate> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, reason: "no_user" };
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (
-    !profile ||
-    (profile.role !== "agency_admin" && profile.role !== "agency_member")
-  ) {
+  const res = await baseRequireAgencyStaff();
+  if (!res.supabase || !res.user || res.error !== null) {
+    if (res.error === "Unauthorized") return { ok: false, reason: "no_user" };
     return { ok: false, reason: "forbidden" };
   }
-
-  return { ok: true, user, supabase };
+  return {
+    ok: true,
+    user: res.user,
+    supabase: res.supabase,
+    organizationId: res.organizationId,
+  };
 }
 
 function gateErrorMessage(gate: Extract<StaffGate, { ok: false }>) {
@@ -78,7 +73,7 @@ export async function loadTwilioIntegrationPage(): Promise<LoadTwilioIntegration
     .select(
       "account_sid, from_phone, test_destination_phone, whatsapp_from, whatsapp_sandbox, auth_token_encrypted",
     )
-    .eq("id", ROW_ID)
+    .eq("organization_id", gate.organizationId)
     .maybeSingle();
 
   const initial: TwilioIntegrationFormState = !data
@@ -125,7 +120,7 @@ export async function saveTwilioIntegration(formData: FormData) {
       const { data: existing } = await gate.supabase
         .from("agency_twilio_integration")
         .select("auth_token_encrypted")
-        .eq("id", ROW_ID)
+        .eq("organization_id", gate.organizationId)
         .maybeSingle();
       if (!existing?.auth_token_encrypted) {
         return { error: "Auth Token is required on first save." };
@@ -144,7 +139,7 @@ export async function saveTwilioIntegration(formData: FormData) {
 
   const { error } = await gate.supabase.from("agency_twilio_integration").upsert(
     {
-      id: ROW_ID,
+      organization_id: gate.organizationId,
       account_sid: accountSid,
       auth_token_encrypted: authTokenEncrypted,
       from_phone: fromPhone || null,
@@ -154,7 +149,7 @@ export async function saveTwilioIntegration(formData: FormData) {
       updated_at: new Date().toISOString(),
       updated_by: gate.user.id,
     },
-    { onConflict: "id" },
+    { onConflict: "organization_id" },
   );
 
   if (error) return { error: error.message };
@@ -179,7 +174,7 @@ export async function testTwilioConnection(formData: FormData) {
     const { data: existing } = await gate.supabase
       .from("agency_twilio_integration")
       .select("auth_token_encrypted")
-      .eq("id", ROW_ID)
+      .eq("organization_id", gate.organizationId)
       .maybeSingle();
     if (!existing?.auth_token_encrypted) {
       return { error: "Enter an Auth Token or save credentials first." };
@@ -229,7 +224,7 @@ export async function syncTwilioSmsWebhook() {
   const gate = await requireAgencyStaff();
   if (!gate.ok) return { error: gateErrorMessage(gate) };
 
-  const creds = await getAgencyTwilioCredentials();
+  const creds = await getAgencyTwilioCredentials({ organizationId: gate.organizationId });
   if (!creds) {
     return {
       error:

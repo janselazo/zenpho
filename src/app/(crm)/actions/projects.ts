@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { resolveOrCreateClientForLead } from "@/app/(crm)/actions/crm";
+import { fetchCurrentOrganizationId } from "@/lib/organization";
 import { createClient } from "@/lib/supabase/server";
 import {
   clientRowToProjectSlice,
@@ -108,11 +109,15 @@ export async function listCrmProjectsForAgency(): Promise<{
   } = await supabase.auth.getUser();
   if (!user) return { projects: [], error: "Unauthorized" };
 
+  const organizationId = await fetchCurrentOrganizationId(supabase);
+  if (!organizationId) return { projects: [], error: null };
+
   const { data: rows, error } = await supabase
     .from("project")
     .select(
       "id, client_id, title, description, status, target_date, website, budget, plan_stage, project_type, metadata, parent_project_id, reference_number"
     )
+    .eq("organization_id", organizationId)
     .is("parent_project_id", null)
     .order("created_at", { ascending: false })
     .limit(500);
@@ -128,6 +133,7 @@ export async function listCrmProjectsForAgency(): Promise<{
   const { data: clients } = await supabase
     .from("client")
     .select("id, name, email, company")
+    .eq("organization_id", organizationId)
     .in("id", clientIds);
 
   const sliceFor = (cid: string) => {
@@ -139,6 +145,7 @@ export async function listCrmProjectsForAgency(): Promise<{
   const { data: phaseRows } = await supabase
     .from("project")
     .select("id, parent_project_id")
+    .eq("organization_id", organizationId)
     .in("parent_project_id", productIds)
     .order("created_at", { ascending: true });
 

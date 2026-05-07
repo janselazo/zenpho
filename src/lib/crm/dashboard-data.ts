@@ -8,6 +8,7 @@ import {
   type DashboardRangeTotals,
   type LeadsAppointmentsPoint,
 } from "@/lib/crm/dashboard-types";
+import { fetchCurrentOrganizationId } from "@/lib/organization";
 import { createClient } from "@/lib/supabase/server";
 
 function toLocalYmd(d: Date): string {
@@ -38,6 +39,11 @@ const rangeEnd = (to: string) => `${to}T23:59:59.999Z`;
 
 export async function fetchDashboardKpis(from: string, to: string) {
   const supabase = await createClient();
+  const organizationId = await fetchCurrentOrganizationId(supabase);
+  if (!organizationId) {
+    return { activeClients: 0, activeProjects: 0, errors: [] };
+  }
+
   const rs = rangeStart(from);
   const re = rangeEnd(to);
 
@@ -46,11 +52,13 @@ export async function fetchDashboardKpis(from: string, to: string) {
       supabase
         .from("client")
         .select("notes")
+        .eq("organization_id", organizationId)
         .gte("created_at", rs)
         .lte("created_at", re),
       supabase
         .from("project")
         .select("*", { count: "exact", head: true })
+        .eq("organization_id", organizationId)
         .is("parent_project_id", null)
         .gte("created_at", rs)
         .lte("created_at", re),
@@ -72,6 +80,7 @@ export async function fetchDashboardFunnel(
   to: string
 ): Promise<DashboardFunnelStage[]> {
   const supabase = await createClient();
+  const organizationId = await fetchCurrentOrganizationId(supabase);
   const rs = rangeStart(from);
   const re = rangeEnd(to);
 
@@ -80,36 +89,47 @@ export async function fetchDashboardFunnel(
     apptsRes,
     qualifiedRes,
     projectsRes,
-  ] = await Promise.all([
-    supabase
-      .from("lead")
-      .select("*", { count: "exact", head: true })
-      .gte("created_at", rs)
-      .lte("created_at", re),
-    supabase
-      .from("appointment")
-      .select("*", { count: "exact", head: true })
-      .gte("starts_at", rs)
-      .lte("starts_at", re),
-    supabase
-      .from("lead")
-      .select("*", { count: "exact", head: true })
-      .in("stage", [
-        "qualified",
-        "discoverycall_completed",
-        "proposal_sent",
-        "negotiation",
+  ] = organizationId
+    ? await Promise.all([
+        supabase
+          .from("lead")
+          .select("*", { count: "exact", head: true })
+          .eq("organization_id", organizationId)
+          .gte("created_at", rs)
+          .lte("created_at", re),
+        supabase
+          .from("appointment")
+          .select("*", { count: "exact", head: true })
+          .eq("organization_id", organizationId)
+          .gte("starts_at", rs)
+          .lte("starts_at", re),
+        supabase
+          .from("lead")
+          .select("*", { count: "exact", head: true })
+          .eq("organization_id", organizationId)
+          .in("stage", [
+            "qualified",
+            "discoverycall_completed",
+            "proposal_sent",
+            "negotiation",
+          ])
+          .gte("created_at", rs)
+          .lte("created_at", re),
+        /** Root projects created in range (funnel “Projects” count). */
+        supabase
+          .from("project")
+          .select("*", { count: "exact", head: true })
+          .eq("organization_id", organizationId)
+          .is("parent_project_id", null)
+          .gte("created_at", rs)
+          .lte("created_at", re),
       ])
-      .gte("created_at", rs)
-      .lte("created_at", re),
-    /** Root projects created in range (funnel “Projects” count). */
-    supabase
-      .from("project")
-      .select("*", { count: "exact", head: true })
-      .is("parent_project_id", null)
-      .gte("created_at", rs)
-      .lte("created_at", re),
-  ]);
+    : [
+        { count: 0 },
+        { count: 0 },
+        { count: 0 },
+        { count: 0 },
+      ];
 
   const projectsCreatedCount = projectsRes.count ?? 0;
 
@@ -151,20 +171,29 @@ export async function fetchLeadsAppointmentsSeries(
   to: string
 ): Promise<LeadsAppointmentsPoint[]> {
   const supabase = await createClient();
+  const organizationId = await fetchCurrentOrganizationId(supabase);
   const days = enumerateDays(from, to);
   if (days.length === 0) return [];
 
   const rs = rangeStart(from);
   const re = rangeEnd(to);
 
-  const [leadsRes, apptsRes] = await Promise.all([
-    supabase.from("lead").select("created_at").gte("created_at", rs).lte("created_at", re),
-    supabase
-      .from("appointment")
-      .select("starts_at")
-      .gte("starts_at", rs)
-      .lte("starts_at", re),
-  ]);
+  const [leadsRes, apptsRes] = organizationId
+    ? await Promise.all([
+        supabase
+          .from("lead")
+          .select("created_at")
+          .eq("organization_id", organizationId)
+          .gte("created_at", rs)
+          .lte("created_at", re),
+        supabase
+          .from("appointment")
+          .select("starts_at")
+          .eq("organization_id", organizationId)
+          .gte("starts_at", rs)
+          .lte("starts_at", re),
+      ])
+    : [{ data: [] }, { data: [] }];
 
   const leadByDay: Record<string, number> = {};
   const apptByDay: Record<string, number> = {};
@@ -254,6 +283,16 @@ export async function fetchDashboardRangeTotals(
   to: string
 ): Promise<DashboardRangeTotals> {
   const supabase = await createClient();
+  const organizationId = await fetchCurrentOrganizationId(supabase);
+  if (!organizationId) {
+    return {
+      leads: 0,
+      appointments: 0,
+      clients: 0,
+      revenue: 0,
+    };
+  }
+
   const rs = rangeStart(from);
   const re = rangeEnd(to);
 
@@ -261,21 +300,25 @@ export async function fetchDashboardRangeTotals(
     supabase
       .from("lead")
       .select("*", { count: "exact", head: true })
+      .eq("organization_id", organizationId)
       .gte("created_at", rs)
       .lte("created_at", re),
     supabase
       .from("appointment")
       .select("*", { count: "exact", head: true })
+      .eq("organization_id", organizationId)
       .gte("starts_at", rs)
       .lte("starts_at", re),
     supabase
       .from("client")
       .select("notes")
+      .eq("organization_id", organizationId)
       .gte("created_at", rs)
       .lte("created_at", re),
     supabase
       .from("transaction")
       .select("amount")
+      .eq("organization_id", organizationId)
       .eq("type", "revenue")
       .gte("date", from)
       .lte("date", to),
@@ -302,17 +345,21 @@ export async function fetchClientsCreatedSeries(
   to: string
 ): Promise<ClientsCreatedPoint[]> {
   const supabase = await createClient();
+  const organizationId = await fetchCurrentOrganizationId(supabase);
   const days = enumerateDays(from, to);
   if (days.length === 0) return [];
 
   const rs = rangeStart(from);
   const re = rangeEnd(to);
 
-  const { data } = await supabase
-    .from("client")
-    .select("created_at, notes")
-    .gte("created_at", rs)
-    .lte("created_at", re);
+  const { data } = organizationId
+    ? await supabase
+        .from("client")
+        .select("created_at, notes")
+        .eq("organization_id", organizationId)
+        .gte("created_at", rs)
+        .lte("created_at", re)
+    : { data: [] as { created_at: string; notes: string | null }[] };
 
   const byDay: Record<string, number> = {};
   for (const d of days) {

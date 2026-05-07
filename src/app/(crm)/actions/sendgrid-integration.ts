@@ -10,34 +10,29 @@ import {
   decryptIntegrationSecret,
   INTEGRATION_SECRETS_KEY_HELP,
 } from "@/lib/crypto/integration-secrets";
-
-const ROW_ID = 1;
+import { requireAgencyStaff as baseRequireAgencyStaff } from "@/app/(crm)/actions/prospect-preview-agency";
 
 type StaffGate =
-  | { ok: true; user: { id: string }; supabase: Awaited<ReturnType<typeof createClient>> }
+  | {
+      ok: true;
+      user: { id: string };
+      supabase: Awaited<ReturnType<typeof createClient>>;
+      organizationId: string;
+    }
   | { ok: false; reason: "no_user" | "forbidden" };
 
 async function requireAgencyStaff(): Promise<StaffGate> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, reason: "no_user" };
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (
-    !profile ||
-    (profile.role !== "agency_admin" && profile.role !== "agency_member")
-  ) {
+  const res = await baseRequireAgencyStaff();
+  if (!res.supabase || !res.user || res.error !== null) {
+    if (res.error === "Unauthorized") return { ok: false, reason: "no_user" };
     return { ok: false, reason: "forbidden" };
   }
-
-  return { ok: true, user, supabase };
+  return {
+    ok: true,
+    user: res.user,
+    supabase: res.supabase,
+    organizationId: res.organizationId,
+  };
 }
 
 function gateErrorMessage(gate: Extract<StaffGate, { ok: false }>) {
@@ -96,7 +91,7 @@ export async function loadSendGridIntegrationPage(): Promise<LoadSendGridIntegra
   const { data } = await gate.supabase
     .from("agency_sendgrid_integration")
     .select("from_email, from_name, reply_to, test_destination_email, api_key_encrypted")
-    .eq("id", ROW_ID)
+    .eq("organization_id", gate.organizationId)
     .maybeSingle();
 
   const initial: SendGridIntegrationFormState = !data
@@ -127,6 +122,7 @@ export async function loadSendGridIntegrationPage(): Promise<LoadSendGridIntegra
     .select(
       "id, created_at, status, from_email, subject, conversation_id, error_message"
     )
+    .eq("organization_id", gate.organizationId)
     .order("created_at", { ascending: false })
     .limit(INBOUND_ACTIVITY_LIMIT);
 
@@ -192,6 +188,7 @@ export async function runSendGridInboundDiagnostic(): Promise<RunSendGridInbound
     .from("conversation_message")
     .select("email_message_id, conversation_id, created_at")
     .eq("direction", "outbound")
+    .eq("organization_id", gate.organizationId)
     .not("email_message_id", "is", null)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -252,6 +249,7 @@ export async function runSendGridInboundDiagnostic(): Promise<RunSendGridInbound
   const { data: latestLog } = await gate.supabase
     .from("sendgrid_inbound_log")
     .select("id, conversation_id")
+    .eq("organization_id", gate.organizationId)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -291,7 +289,7 @@ export async function saveSendGridIntegration(formData: FormData) {
       const { data: existing } = await gate.supabase
         .from("agency_sendgrid_integration")
         .select("api_key_encrypted")
-        .eq("id", ROW_ID)
+        .eq("organization_id", gate.organizationId)
         .maybeSingle();
       if (!existing?.api_key_encrypted) {
         return { error: "API key is required on first save." };
@@ -310,7 +308,7 @@ export async function saveSendGridIntegration(formData: FormData) {
 
   const { error } = await gate.supabase.from("agency_sendgrid_integration").upsert(
     {
-      id: ROW_ID,
+      organization_id: gate.organizationId,
       api_key_encrypted: apiKeyEncrypted,
       from_email: fromEmail,
       from_name: fromName || null,
@@ -319,7 +317,7 @@ export async function saveSendGridIntegration(formData: FormData) {
       updated_at: new Date().toISOString(),
       updated_by: gate.user.id,
     },
-    { onConflict: "id" },
+    { onConflict: "organization_id" },
   );
 
   if (error) return { error: error.message };
@@ -345,7 +343,7 @@ export async function testSendGridConnection(formData: FormData) {
     const { data: existing } = await gate.supabase
       .from("agency_sendgrid_integration")
       .select("api_key_encrypted")
-      .eq("id", ROW_ID)
+      .eq("organization_id", gate.organizationId)
       .maybeSingle();
     if (!existing?.api_key_encrypted) {
       return { error: "Enter an API key or save credentials first." };

@@ -1,3 +1,4 @@
+import { fetchCurrentOrganizationId } from "@/lib/organization";
 import { createClient } from "@/lib/supabase/server";
 import { enumerateDays } from "@/lib/crm/dashboard-range";
 import { readProjectSourceLeadId } from "@/lib/crm/prospect-client-shell";
@@ -11,6 +12,7 @@ export type DailyMoneyPoint = {
 /** Last 7 calendar days including today, keyed by local date string. */
 export async function getLastSevenDaysMoney(): Promise<DailyMoneyPoint[]> {
   const supabase = await createClient();
+  const organizationId = await fetchCurrentOrganizationId(supabase);
   const days: string[] = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
@@ -20,11 +22,14 @@ export async function getLastSevenDaysMoney(): Promise<DailyMoneyPoint[]> {
   }
   const startStr = days[0]!;
 
-  const { data, error } = await supabase
-    .from("transaction")
-    .select("date, type, amount")
-    .gte("date", startStr)
-    .order("date", { ascending: true });
+  const { data, error } = organizationId
+    ? await supabase
+        .from("transaction")
+        .select("date, type, amount")
+        .eq("organization_id", organizationId)
+        .gte("date", startStr)
+        .order("date", { ascending: true })
+    : { data: [] as { date: string; type: string; amount: unknown }[], error: null };
 
   if (error) {
     return [];
@@ -158,14 +163,18 @@ export async function getMoneySeriesForRange(
   to: string
 ): Promise<DailyMoneyPoint[]> {
   const supabase = await createClient();
+  const organizationId = await fetchCurrentOrganizationId(supabase);
   const plan = planRangeBuckets(from, to);
   if (!plan) return [];
 
-  const { data, error } = await supabase
-    .from("transaction")
-    .select("date, type, amount")
-    .gte("date", from)
-    .lte("date", to);
+  const { data, error } = organizationId
+    ? await supabase
+        .from("transaction")
+        .select("date, type, amount")
+        .eq("organization_id", organizationId)
+        .gte("date", from)
+        .lte("date", to)
+    : { data: [] as { date: string; type: string; amount: unknown }[], error: null };
 
   if (error) {
     return [];
@@ -210,9 +219,15 @@ export async function getProjectBudgetSeriesForRange(
     }));
 
   const supabase = await createClient();
+  const organizationId = await fetchCurrentOrganizationId(supabase);
+  if (!organizationId) {
+    return emptySeries();
+  }
+
   const { data, error } = await supabase
     .from("project")
     .select("created_at, budget, metadata")
+    .eq("organization_id", organizationId)
     .is("parent_project_id", null)
     .gte("created_at", `${from}T00:00:00.000Z`)
     .lte("created_at", `${to}T23:59:59.999Z`);
@@ -237,6 +252,7 @@ export async function getProjectBudgetSeriesForRange(
       const { data: lr } = await supabase
         .from("lead")
         .select("id, stage")
+        .eq("organization_id", organizationId)
         .in("id", slice);
       for (const r of lr ?? []) {
         stageByLead.set(
