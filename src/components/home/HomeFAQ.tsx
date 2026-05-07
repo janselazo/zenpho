@@ -26,15 +26,14 @@ export default function HomeFAQ() {
           className="!mb-10 sm:!mb-12"
           description={
             <p className="sm:text-lg">
-              How we help local service businesses grow, what the Revenue Leak Audit covers, and how ROI is tracked.
-              See{" "}
+              Everything you need to know about building your website, web app, mobile app, or MVP with Zenpho. See{" "}
               <Link
                 href="/pricing"
                 className="font-medium text-accent underline-offset-4 hover:underline"
               >
                 pricing
               </Link>{" "}
-              for plans.
+              for launch packages.
             </p>
           }
         />

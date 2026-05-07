@@ -1,22 +1,22 @@
-export const homeWhatMakesUsDifferentEyebrow = "What Makes Us Different";
+export const homeWhatMakesUsDifferentEyebrow = "WHAT MAKES US DIFFERENT";
 
 export const homeWhatMakesUsDifferentHeadline =
-  "Not Just an Agency. Not Just Software. A Growth System.";
+  "Not Just Developers. A Product Launch Partner.";
 
 export const homeWhatMakesUsDifferentIntro = [
-  "Most platforms help local businesses manage messages, reviews, automations, or customer communication.",
-  "Most agencies focus on one piece of the puzzle: ads, SEO, websites, or reports.",
-  "We go deeper.",
+  "Most developers wait for a full scope before they start building. Most agencies focus only on visuals, branding, or individual pages.",
+  "We help you go deeper — clarifying the idea, defining the right first version, designing the user experience, building the product, and preparing it for launch.",
+  "Our goal is simple: help you move from idea to a working website, web app, mobile app, or MVP without wasting time on features you do not need yet.",
 ] as const;
 
 export const homeUnderstandingLeadIn = "We help you understand:";
 
 export const homeUnderstandingPoints = [
-  "Where leads are coming from",
-  "Which channels are producing real clients",
-  "Where revenue is leaking",
-  "What competitors are doing better",
-  "Why leads are not converting",
-  "Whether reviews and referrals are being captured",
-  "What actions will improve revenue next",
+  "What should be built first",
+  "Which features can wait until later",
+  "How users should move through the product",
+  "What pages, screens, or flows are needed for launch",
+  "Which integrations, payments, dashboards, or admin tools are required",
+  "How to launch quickly and improve after real user feedback",
+  "What actions will move the product forward next",
 ] as const;

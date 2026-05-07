@@ -12,7 +12,7 @@ export default function HomeLocalProblemSection() {
       aria-labelledby={HEADLINE_ID}
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="rounded-[2rem] border border-emerald-100/90 bg-emerald-50/95 p-8 shadow-soft ring-1 ring-black/[0.04] sm:p-10 lg:p-12 dark:border-emerald-900/40 dark:bg-emerald-950/35">
+        <div className="rounded-[2rem] border border-rose-100/90 bg-rose-50/95 p-8 shadow-soft ring-1 ring-black/[0.04] sm:p-10 lg:p-12 dark:border-rose-900/40 dark:bg-rose-950/35">
           <div className="grid gap-12 lg:grid-cols-2 lg:gap-14 xl:gap-16">
             <div className="flex flex-col lg:max-w-xl">
               <div className="mb-5 flex justify-start">
@@ -44,7 +44,7 @@ export default function HomeLocalProblemSection() {
                   return (
                     <li key={card.text} className={`relative list-none ${tilt}`}>
                       <div className="flex h-full gap-3 rounded-xl border border-border/80 bg-white p-4 shadow-soft dark:border-zinc-700/80 dark:bg-zinc-900/85 sm:p-4">
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-100/90 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300">
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-rose-100/90 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
                           <Icon className="h-5 w-5" aria-hidden />
                         </span>
                         <p className="min-w-0 pt-0.5 text-sm font-medium leading-snug text-text-primary sm:text-[0.9375rem]">

@@ -1,12 +1,12 @@
-export const homeClearGrowthEyebrow = "Real results";
+export const homeClearGrowthEyebrow = "LAUNCH OUTCOMES";
 
-export const homeClearGrowthHeadline = "What Clear Growth Looks Like";
+export const homeClearGrowthHeadline = "What a Clean Product Launch Looks Like";
 
 /** Subheadline — accent word rendered in component */
 export const homeClearGrowthSubheadParts = {
-  before: "We don't just drive clicks. We deliver ",
-  accent: "measurable",
-  after: " business growth.",
+  before: "We do not just design concepts. We deliver a ",
+  accent: "working",
+  after: " product with the core pieces needed to test, launch, and improve.",
 } as const;
 
 export type ClearGrowthMetricIcon =
@@ -42,41 +42,47 @@ export type ClearGrowthMetricCard = {
   tone: ClearGrowthMetricTone;
 };
 
-/** Order matches homepage story: funnel → revenue → reputation → diagnostics */
+/** Illustrative launch snapshot — not a guaranteed outcome */
 export const homeClearGrowthMetricCards: ClearGrowthMetricCard[] = [
-  { id: "leads", icon: "users", value: "84", label: "New leads generated", tone: "sky" },
-  { id: "calls", icon: "phone", value: "42", label: "Calls from Google", tone: "teal" },
-  { id: "quotes", icon: "fileText", value: "18", label: "Quote requests from landing pages", tone: "indigo" },
-  { id: "appointments", icon: "calendar", value: "31", label: "Appointments booked", tone: "violet" },
-  { id: "proposals", icon: "send", value: "16", label: "Proposals sent", tone: "cyan" },
-  { id: "revenue", icon: "dollarSign", value: "$42,000", label: "Estimated revenue", tone: "emerald" },
-  { id: "reviews", icon: "star", value: "9", label: "New Google reviews", tone: "amber" },
-  { id: "jobs", icon: "handshake", value: "7", label: "Jobs won", tone: "blue" },
-  { id: "referrals", icon: "userPlus", value: "5", label: "Referrals generated", tone: "orange" },
-  { id: "missed", icon: "target", value: "11", label: "Missed opportunities identified", tone: "rose" },
+  { id: "live-product", icon: "users", value: "1", label: "Live product launched", tone: "sky" },
+  { id: "core-flows", icon: "phone", value: "5", label: "Core user flows built", tone: "teal" },
+  { id: "screens-designed", icon: "fileText", value: "12", label: "Pages or screens designed", tone: "indigo" },
+  { id: "integrations", icon: "calendar", value: "3", label: "Integrations connected", tone: "violet" },
+  { id: "admin-dashboard", icon: "send", value: "1", label: "Admin dashboard included", tone: "cyan" },
+  {
+    id: "mobile-responsive",
+    icon: "dollarSign",
+    value: "100%",
+    label: "Mobile responsive experience",
+    tone: "emerald",
+  },
+  { id: "payment-flow", icon: "star", value: "1", label: "Payment or booking flow", tone: "amber" },
+  { id: "analytics", icon: "handshake", value: "1", label: "Analytics setup completed", tone: "blue" },
+  { id: "launch-support", icon: "userPlus", value: "90", label: "Days of launch support", tone: "orange" },
+  { id: "roadmap-next", icon: "target", value: "Next", label: "Version roadmap defined", tone: "rose" },
 ];
 
 export const homeClearGrowthSummaryItems = [
   {
-    id: "best-channel",
-    eyebrow: "Best Channel",
-    value: "Google Business Profile",
+    id: "best-next-step",
+    eyebrow: "Best Next Step",
+    value: "Launch with real users",
     icon: "barChart3" as const,
   },
   {
     id: "biggest-opportunity",
     eyebrow: "Biggest Opportunity",
-    value: "Proposal follow-up",
+    value: "Improve from feedback",
     icon: "alertTriangle" as const,
   },
 ] as const;
 
 export const homeClearGrowthClosingLead =
-  "This is the difference between marketing activity and ";
+  "This is the difference between an idea and a ";
 
-export const homeClearGrowthClosingAccent = "real business growth.";
+export const homeClearGrowthClosingAccent = "working product people can actually use.";
 
-export const homeClearGrowthFinalCtaHeadline = "Ready to Grow With More Clarity?";
+export const homeClearGrowthFinalCtaHeadline = "Ready to Launch Your Product With Clarity?";
 
 export const homeClearGrowthFinalCtaBody =
-  "Run your Revenue Leak Audit to see where opportunities are slipping through—or book a call and we’ll map the right next step.";
+  "Tell us what you want to build — website, web app, mobile app, or MVP — and we'll help you map the fastest path from idea to launch.";

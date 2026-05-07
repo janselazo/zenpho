@@ -38,11 +38,11 @@ export default function HomeClearGrowthFinalCta() {
               {homeClearGrowthFinalCtaBody}
             </p>
             <div className="mx-auto mt-8 flex max-w-xl flex-col items-stretch justify-center gap-3 sm:flex-row sm:gap-4">
-              <Button href="/revenue" variant="primary" size="lg" className="sm:flex-1">
-                Run Revenue Leak Audit
+              <Button href="/booking" variant="primary" size="lg" className="sm:flex-1">
+                Book a Free Build Call
               </Button>
-              <Button href="/booking" variant="dark" size="lg" showLiveDot className="sm:flex-1">
-                Book a growth call
+              <Button href="/pricing" variant="dark" size="lg" showLiveDot className="sm:flex-1">
+                View Launch Packages
               </Button>
             </div>
           </div>

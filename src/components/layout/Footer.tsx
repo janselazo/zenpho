@@ -60,17 +60,18 @@ export default function Footer() {
               />
             </Link>
             <p className="mt-5 text-sm font-semibold leading-snug text-text-primary">
-              Growth for local service businesses
+              MVP Development &amp; Product Studio
             </p>
             <p className="mt-3 max-w-sm text-sm leading-relaxed text-text-secondary">
-              We help local owners generate qualified leads, book more appointments, collect Google reviews, grow referrals, and see exactly which marketing channel produces revenue.
+              We help founders and businesses design, build, and launch websites, ecommerce stores, web apps, mobile apps,
+              and MVPs — without hiring a full product team.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Button href="/booking" variant="primary" size="md">
-                Book a growth call
+                Book a Free Build Call
               </Button>
-              <Button href="/revenue" variant="secondary" size="md">
-                Free revenue check
+              <Button href="/pricing" variant="secondary" size="md">
+                View Launch Packages
               </Button>
             </div>
             <div className="mt-5 flex flex-wrap items-center gap-2">
