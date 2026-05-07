@@ -1,6 +1,7 @@
 import Button from "@/components/ui/Button";
+import { BOOKING_PRIMARY_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
 
-const HEADING_ID = "pricing-audit-cta";
+const HEADING_ID = "pricing-launch-package-cta";
 
 export default function PricingAuditCtaSection() {
   return (
@@ -13,15 +14,15 @@ export default function PricingAuditCtaSection() {
           id={HEADING_ID}
           className="heading-display text-balance text-2xl font-bold tracking-tight text-text-primary sm:text-3xl lg:text-4xl"
         >
-          Not Sure Which Plan Fits?
+          Not sure which launch package fits?
         </h2>
         <p className="mx-auto mt-5 max-w-2xl text-pretty text-base leading-relaxed text-text-secondary sm:text-lg">
-          Start by running your Revenue Leak Audit to see where your business is losing opportunities and what should be
-          fixed first.
+          Whether you need a marketing or ecommerce site, a website where users sign in (dashboards, accounts), or a mobile
+          MVP—we&apos;ll match you to the right bundle and timeline. Focused scopes are built to ship in about two weeks.
         </p>
         <div className="mt-8 flex justify-center">
-          <Button href="/revenue" variant="primary" size="lg">
-            Run Revenue Leak Audit
+          <Button href="/booking" variant="primary" size="lg">
+            {BOOKING_PRIMARY_BUTTON_LABEL}
           </Button>
         </div>
       </div>

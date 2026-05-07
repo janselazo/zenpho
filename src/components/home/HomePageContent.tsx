@@ -21,7 +21,7 @@ export default function HomePageContent() {
         headlineLine2Prefix=""
         headlineAccent="software"
         headlineLine2Suffix=" companies"
-        subheadline="We help founders and businesses turn ideas into launch-ready websites, web apps, and mobile apps — fast"
+        subheadline="We help founders and businesses turn ideas into launch-ready websites, ecommerce, and mobile—in 2 weeks"
       />
       <ProblemSection />
       <HomeLocalProblemSection />

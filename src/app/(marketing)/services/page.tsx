@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     absolute: "MVP Development and Growth Services | Zenpho",
   },
   description:
-    "Explore Zenpho's MVP Development and MVP Growth services for founders building AI SaaS products, web apps, mobile-first apps, internal tools, and marketplaces.",
+    "Explore Zenpho MVP Development and Growth services for founders building AI-powered sites, ecommerce, mobile-first experiences, internal tools, and marketplaces.",
 };
 
 export default function ServicesPage() {

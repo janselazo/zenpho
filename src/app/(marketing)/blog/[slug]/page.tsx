@@ -89,7 +89,7 @@ export default async function BlogPostPage({ params }: Props) {
             Ready to plan your next build?
           </p>
           <p className="mt-2 text-sm text-text-secondary">
-            Book a call—we&apos;ll map priorities for your website, web app, or MVP.
+            Book a call—we&apos;ll map priorities for your website, ecommerce, or mobile MVP.
           </p>
           <div className="mt-4 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link

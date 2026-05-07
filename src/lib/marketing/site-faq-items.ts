@@ -1,5 +1,5 @@
 /**
- * Marketing FAQs — homepage (full list) and any route using SITE_PRIMARY_FAQS.
+ * Marketing FAQs — homepage (full list) and routes using `SITE_PRIMARY_FAQS`.
  */
 
 export interface SiteFaqItem {
@@ -9,52 +9,48 @@ export interface SiteFaqItem {
 
 export const SITE_HOME_FULL_FAQS: SiteFaqItem[] = [
   {
-    q: "What do you do?",
-    a: "We help local service businesses generate more leads, book more appointments, close more clients, collect more reviews, increase referrals, and track revenue from marketing.",
+    q: "What does Zenpho build?",
+    a: "Launch-ready websites and ecommerce storefronts, custom browser experiences when users need sign-in (SaaS, portals, dashboards), and mobile app MVPs—with strategy, UX/UI, engineering, QA, deployment support, and documentation.",
+  },
+  {
+    q: "How fast do you ship?",
+    a: "Most focused scopes are built on a sprint rhythm measured in weeks (not quarters). Exact timelines depend on package and scope; see pricing for typical ranges and book a call to confirm dates for your build.",
+  },
+  {
+    q: "Website Launch vs sign-in product vs Mobile—which should I pick?",
+    a: "Choose Website Launch when you need credibility and conversion on the web. Choose the Web App MVP package on pricing when people log in, use dashboards, or you need admin tooling (still delivered as a website experience in the browser). Choose Mobile App MVP when the product must be mobile-first with onboarding and core native flows.",
+  },
+  {
+    q: "Do you run paid ads or local SEO retainers?",
+    a: "Our launch packages center on product delivery—sites and apps with sensible analytics and SEO foundations for public pages where applicable. Ongoing paid media or deep SEO programs are scoped separately when they make sense after launch.",
   },
   {
     q: "What is a Revenue Leak Audit?",
-    a: "A Revenue Leak Audit analyzes your Google Business Profile, competitors, reviews, website, photos, tracking, ads readiness, and local positioning to identify where your business may be losing revenue.",
+    a: "An optional tool for local operators who want a structured read on Google Business Profile, web conversion, and revenue signals. It complements—but does not replace—our MVP development engagements.",
   },
   {
-    q: "Is this just an SEO audit?",
-    a: "No. SEO is only one part. The audit looks at the full local growth journey: visibility, conversion, tracking, follow-up, reviews, referrals, and revenue opportunity.",
-  },
-  {
-    q: "Is this just software?",
-    a: "No. We combine software, tracking, automation, strategy, and done-for-you growth services. You get the system and the execution needed to improve results.",
-  },
-  {
-    q: "Do you run ads?",
-    a: "Yes. We manage Google Ads and other paid channels when they make sense. But first, we make sure your tracking, landing pages, and follow-up systems are ready so ad spend is not wasted.",
-  },
-  {
-    q: "Do you build websites?",
-    a: "Yes. We build and optimize websites and landing pages designed to turn visitors into calls, quote requests, appointments, and clients.",
-  },
-  {
-    q: "Do you help with reviews?",
-    a: "Yes. We install review request systems to help happy customers leave Google reviews consistently.",
-  },
-  {
-    q: "Do you help with referrals?",
-    a: "Yes. We help create referral campaigns and customer follow-up workflows so satisfied customers can generate more business.",
-  },
-  {
-    q: "How do you prove ROI?",
-    a: "We track leads, sources, appointments, proposals, closed jobs, revenue, reviews, and referrals. This helps show which channels are creating real business results.",
+    q: "Is this offshore or only templates?",
+    a: "No. We work hands-on with your scope: custom UX/UI, production engineering, integrations, and QA on staging before release—not cookie-cutter theme dumps.",
   },
   {
     q: "Who is this for?",
-    a: "This is for local service businesses such as roofers, HVAC companies, plumbers, remodelers, med spas, dentists, lawyers, auto repair shops, and other businesses that rely on local leads and appointments.",
+    a: "Founders, small teams, and businesses that need a credible version one—a marketing site, storefront, logged-in website experience, or mobile MVP—without hiring a full in-house product org.",
   },
   {
-    q: "Do I need to replace my current tools?",
-    a: "Not necessarily. If you already use tools like Podium, Birdeye, GoHighLevel, Jobber, ServiceTitan, or another CRM, we can work with what you have. Our focus is helping you understand what is working, what is leaking, and what actions will grow revenue.",
+    q: "How does pricing work?",
+    a: "Three discounted launch packages are listed on pricing with a comparison matrix. Larger or more complex work may need a custom quote or follow-on sprint after discovery.",
+  },
+  {
+    q: "What stacks do you use?",
+    a: "We choose pragmatic modern stacks—typically Next.js/React for websites and browser-based products, APIs and databases as scoped, plus mobile tooling that fits your MVP goals—discussed transparently before kickoff.",
+  },
+  {
+    q: "What happens after launch?",
+    a: "Packages include a defined post-launch support window and handoff materials so your team can operate the product; we can plan additional builds when you are ready for the next milestone.",
   },
 ];
 
-/** Same list as home — used by legacy `components/services/FAQ` if mounted on a route. */
+/** Same list as home — used by `components/services/FAQ` on services routes. */
 export const SITE_PRIMARY_FAQS: SiteFaqItem[] = SITE_HOME_FULL_FAQS;
 
 /** Kept empty so imports do not break; home uses `SITE_HOME_FULL_FAQS` only. */

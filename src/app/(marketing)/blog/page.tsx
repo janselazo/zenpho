@@ -5,7 +5,7 @@ import PostGrid from "./PostGrid";
 export const metadata: Metadata = {
   title: "Blog",
   description:
-    "Insights on MVP development, product strategy, websites, web apps, mobile apps, ecommerce, and launching faster—from Zenpho.",
+    "Insights on MVP development, product strategy, websites, ecommerce, mobile, and launching faster—from Zenpho.",
 };
 
 export default function BlogPage() {

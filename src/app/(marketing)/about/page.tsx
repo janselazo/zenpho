@@ -67,7 +67,7 @@ export default function AboutPage() {
               pragmatic UX, implementation you can operate, instrumentation you can trust, and a launch plan your team will
               actually follow
             </span>
-            —whether that is a marketing site, a customer-facing web app, a mobile companion, or internal tooling that needs
+            —whether that is a marketing site, a customer-facing website with accounts and dashboards, a mobile companion, or internal tooling that needs
             to ship.
           </p>
           <p className="mt-6 text-base leading-relaxed text-text-secondary">

@@ -8,8 +8,8 @@ export default function ProblemSection() {
           <MoreRotatingHeadline />
           <div className="mx-auto mt-3 max-w-2xl space-y-3 text-pretty sm:mt-3.5 [&_p]:text-base [&_p]:leading-relaxed [&_p]:text-text-secondary [&_p]:sm:text-lg">
             <p>
-              We help founders and businesses design, develop, and launch websites, web apps, and mobile apps — without
-              hiring a full product team.
+              We help founders and businesses design, develop, and launch websites, ecommerce, and mobile experiences —
+              without hiring a full product team.
             </p>
           </div>
         </div>

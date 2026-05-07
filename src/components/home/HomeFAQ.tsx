@@ -26,15 +26,14 @@ export default function HomeFAQ() {
           className="!mb-10 sm:!mb-12"
           description={
             <p className="sm:text-lg">
-              How we help local service businesses grow, what the Revenue Leak Audit covers, and how ROI is tracked.
-              See{" "}
+              How MVP launch packages work, timelines, what we build, and how pricing is scoped. See{" "}
               <Link
                 href="/pricing"
                 className="font-medium text-accent underline-offset-4 hover:underline"
               >
                 pricing
               </Link>{" "}
-              for plans.
+              for packages and the comparison table.
             </p>
           }
         />

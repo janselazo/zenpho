@@ -24,12 +24,11 @@ export default function HomeLocalProblemSection() {
                 id={HEADLINE_ID}
                 className="heading-display text-balance text-3xl font-bold leading-[1.12] tracking-tight text-text-primary sm:text-4xl lg:text-[2.35rem] lg:leading-[1.1]"
               >
-                Where Local Service Businesses Lose Revenue
+                Where software builds stall before launch
               </h2>
               <p className="mt-5 max-w-prose text-base leading-relaxed text-text-secondary sm:text-lg">
-                Many local businesses are already getting calls, website visits, quote requests, and referrals. But if
-                those opportunities are not captured, tracked, followed up with, and converted, money is being left on
-                the table.
+                Teams often have ideas, traffic, or partial designs—but without tight scope, UX clarity, and a steady ship
+                rhythm, releases slip and budgets balloon before users ever touch a credible version one.
               </p>
             </div>
 

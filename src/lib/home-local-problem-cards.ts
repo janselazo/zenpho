@@ -55,50 +55,50 @@ export function iconForLocalProblemCard(key: HomeLocalProblemIconKey): LucideIco
 export const homeLocalProblemCards: HomeLocalProblemCard[] = [
   {
     iconKey: "salesPipeline",
-    text: "No predictable sales pipeline",
+    text: "Version-one scope keeps expanding",
   },
   {
     iconKey: "mapVisibility",
-    text: "Weak Google Business Profile visibility",
+    text: "No shared map of core user journeys",
   },
   {
     iconKey: "reviews",
-    text: "Low review count compared to competitors",
+    text: "Pretty visuals without product logic underneath",
   },
   {
     iconKey: "conversion",
-    text: "Poor website conversion",
+    text: "Landing or onboarding doesn’t explain the offer",
   },
   {
     iconKey: "missedCalls",
-    text: "Missed calls and slow follow-up",
+    text: "Slow stakeholder feedback delaying decisions",
   },
   {
     iconKey: "tracking",
-    text: "No clear lead tracking",
+    text: "Success metrics undefined before build starts",
   },
   {
     iconKey: "channels",
-    text: "No idea which marketing channels actually produce clients",
+    text: "Too many priorities, no single hero workflow",
   },
   {
     iconKey: "ads",
-    text: "Ads sending traffic to weak pages",
+    text: "Integrations or dependencies blocking the critical path",
   },
   {
     iconKey: "reviewSystem",
-    text: "No consistent review request system",
+    text: "No predictable staging demo rhythm",
   },
   {
     iconKey: "referrals",
-    text: "No referral process",
+    text: "Post-launch iteration plan is fuzzy",
   },
   {
     iconKey: "followUp",
-    text: "No follow-up with old leads or unsold proposals",
+    text: "Handoff and docs won’t support your team",
   },
   {
     iconKey: "dashboard",
-    text: "No dashboard showing the real business numbers",
+    text: "Hard to see what’s shipped vs still blocked",
   },
 ];

@@ -64,7 +64,7 @@ export default function Footer() {
               MVP development agency & product studio
             </p>
             <p className="mt-3 max-w-sm text-sm leading-relaxed text-text-secondary">
-              Websites, web apps, and mobile MVPs—from discovery and UX through build, deployment, and handoff.
+              Websites, ecommerce, and mobile—from discovery and UX through build, deployment, and handoff.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Button href="/booking" variant="primary" size="md">

@@ -21,7 +21,7 @@ export default function AboutWhoWeHelp() {
         titleAccent="shipping digital products"
         description={
           <p className="!text-[15px] !leading-relaxed text-text-secondary sm:!text-base">
-            If you are moving from idea → launch for a website, web app, mobile app, or MVP, we are built for you.
+            If you are moving from idea → launch for a website, ecommerce, mobile experience, or MVP, we are built for you.
           </p>
         }
       />

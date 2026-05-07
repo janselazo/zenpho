@@ -32,7 +32,7 @@ export default function BookingHero() {
           transition={{ duration: 0.45, delay: 0.14 }}
           className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-text-secondary"
         >
-          We&apos;ll help you clarify what to ship first—website, web app, or mobile MVP—how it should behave for users, and the fastest path from discovery to a production-ready handoff.
+          We&apos;ll help you clarify what to ship first—marketing site, ecommerce, mobile, or a site that needs accounts and dashboards—how it should behave for users, and the fastest path from discovery to a production-ready handoff.
         </motion.p>
       </div>
     </section>

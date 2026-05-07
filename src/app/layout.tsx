@@ -17,11 +17,11 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Zenpho · MVP Development Agency",
   description:
-    "Website, web app, and mobile MVP development—discovery through deployment—for founders and teams shipping credible products fast.",
+    "Website and mobile MVP development—marketing sites, ecommerce, and apps—from discovery through deployment for founders shipping credible launches fast.",
   openGraph: {
     title: "Zenpho · MVP Development Agency",
     description:
-      "Websites, web apps, mobile MVPs, and launch support—strategy, UX, engineering, and handoff from Zenpho.",
+      "Websites, ecommerce, mobile, and launch support—strategy, UX, engineering, and handoff from Zenpho.",
     type: "website",
     locale: "en_US",
   },

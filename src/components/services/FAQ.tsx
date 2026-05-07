@@ -9,7 +9,7 @@ export default function FAQ() {
         title="Common"
         titleAccent="questions"
         titleAccentInline
-        description="What we do for local service businesses, audits, ads, websites, reviews, referrals, and ROI."
+        description="Launch packages, timelines, what we build for websites and apps, pricing scope, and what happens after go-live."
       />
 
       <div className="mx-auto max-w-3xl space-y-3">

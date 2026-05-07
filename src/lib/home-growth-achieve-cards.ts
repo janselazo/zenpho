@@ -6,60 +6,60 @@ export type HomeGrowthAchieveCard = {
   imageLabel: string;
 };
 
-export const homeGrowthAchieveSectionEyebrow = "What We Help You Achieve";
+export const homeGrowthAchieveSectionEyebrow = "What we deliver";
 
-export const homeGrowthAchieveHeadline = "A Complete Growth System for Local Service Businesses";
+export const homeGrowthAchieveHeadline = "Outcomes from a disciplined MVP sprint";
 
 export const homeGrowthAchieveDescription =
-  "We do not just run ads, build websites, or set up automation. We help you build a complete system to generate, capture, manage, convert, and multiply local business opportunities.";
+  "Not scattered tasks—a sequenced path from clarity to shipped software: scope, UX, build, launch prep, and handoff so stakeholders see real progress every week.";
 
 export const homeGrowthAchieveCards: HomeGrowthAchieveCard[] = [
   {
     id: "qualified-leads",
-    title: "More Qualified Leads",
+    title: "Scope you can actually ship",
     description:
-      "Get found by more people searching for your services through Google, local SEO, optimized landing pages, paid ads, reviews, referrals, and local visibility.",
+      "A prioritized version-one slice with clear acceptance criteria—so engineering time buys a demoable product, not endless exploration.",
     imageSrc: "/home-growth-achieve/qualified-leads.svg",
-    imageLabel: "Local search and leads",
+    imageLabel: "Roadmap & priorities",
   },
   {
     id: "appointments",
-    title: "More Appointments",
+    title: "UX/UI for hero workflows",
     description:
-      "Turn more calls, forms, and inquiries into booked estimates, consultations, service calls, or appointments.",
+      "Screens, flows, and components aligned to how users adopt your product—not decorative mockups disconnected from behavior.",
     imageSrc: "/home-growth-achieve/appointments.svg",
-    imageLabel: "Booked appointments",
+    imageLabel: "Core journeys designed",
   },
   {
     id: "paying-clients",
-    title: "More Paying Clients",
+    title: "Production-ready implementation",
     description:
-      "Improve follow-up, proposal tracking, lead management, and conversion so fewer opportunities fall through the cracks.",
+      "Staging-backed builds with disciplined QA: fewer surprises at launch and a product your team can click through end-to-end.",
     imageSrc: "/home-growth-achieve/paying-clients.svg",
-    imageLabel: "Client conversion",
+    imageLabel: "Staging demos",
   },
   {
     id: "revenue",
-    title: "More Revenue",
+    title: "Auth, data & integrations",
     description:
-      "Track which channels are creating real business outcomes, not just clicks, impressions, or website traffic.",
+      "Login, roles, database modeling, APIs, payments or booking when scoped—wired so your MVP behaves like real software.",
     imageSrc: "/home-growth-achieve/revenue.svg",
-    imageLabel: "Revenue attribution",
+    imageLabel: "Foundations in place",
   },
   {
     id: "reviews",
-    title: "More Reviews",
+    title: "Launch readiness",
     description:
-      "Automatically ask happy customers for Google reviews after completed jobs, improving trust and local conversion.",
+      "Performance checks, analytics foundations for public surfaces, deployment support, and documentation so go-live isn’t a scramble.",
     imageSrc: "/home-growth-achieve/reviews.svg",
-    imageLabel: "Google reviews",
+    imageLabel: "Release checklist",
   },
   {
     id: "referrals",
-    title: "More Referrals",
+    title: "Support after go-live",
     description:
-      "Turn satisfied customers into referral sources with simple campaigns, follow-up workflows, and referral tracking.",
+      "A defined post-launch window and handoff so you can stabilize with users—and plan the next build wave with evidence.",
     imageSrc: "/home-growth-achieve/referrals.svg",
-    imageLabel: "Referral growth",
+    imageLabel: "Handoff & iteration",
   },
 ];

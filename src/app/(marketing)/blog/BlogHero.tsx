@@ -31,8 +31,8 @@ export default function BlogHero() {
           transition={{ duration: 0.45, delay: 0.14 }}
           className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-text-secondary"
         >
-          Insights on MVP development, product strategy, websites, web apps, mobile apps, ecommerce, and launching
-          faster—from scope to ship.
+          Insights on MVP development, product strategy, websites, ecommerce, mobile, and launching faster—from scope to
+          ship.
         </motion.p>
       </div>
     </section>

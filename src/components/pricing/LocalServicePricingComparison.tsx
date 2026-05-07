@@ -13,12 +13,10 @@ import {
   type PricingCellValue,
   type PricingComparisonPlanId,
 } from "@/lib/marketing/pricing-comparison-matrix";
-import { pricingDevelopmentAddOns } from "@/lib/marketing/pricing-development-add-ons";
 
 const COLUMN_IDS: PricingComparisonPlanId[] = ["setup", "growth-engine", "full-partner"];
 
 const HEADING_ID = "pricing-plans-compare";
-const ADD_ONS_HEADING_ID = "pricing-development-add-ons";
 
 const LAUNCH_OFFER_NOTE =
   "Limited 50% launch offer available for the next 2 client spots. Larger or more complex projects may require a custom quote or additional development sprint.";
@@ -152,33 +150,6 @@ export default function LocalServicePricingComparison() {
           <p className="border-t border-border/55 px-4 py-4 text-center text-xs leading-relaxed text-text-secondary sm:px-6 sm:text-sm">
             {LAUNCH_OFFER_NOTE}
           </p>
-        </div>
-
-        <div className="mt-12 lg:mt-14" aria-labelledby={ADD_ONS_HEADING_ID}>
-          <h2
-            id={ADD_ONS_HEADING_ID}
-            className="text-lg font-bold tracking-tight text-text-primary sm:text-xl"
-          >
-            Add-ons
-          </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-text-secondary sm:text-base">
-            Optional builds alongside your plan.
-          </p>
-          <ul className="mt-6 grid list-none gap-4 p-0 sm:grid-cols-2 lg:grid-cols-3">
-            {pricingDevelopmentAddOns.map((addOn) => (
-              <li
-                key={addOn.id}
-                className="rounded-2xl border border-border/70 bg-white p-5 shadow-soft sm:p-6"
-              >
-                <h3 className="text-base font-semibold leading-snug text-text-primary">
-                  {addOn.title}
-                </h3>
-                <p className="mt-3 text-sm font-semibold tabular-nums text-text-primary">
-                  Starting at {addOn.startingPrice}
-                </p>
-              </li>
-            ))}
-          </ul>
         </div>
       </div>
     </section>

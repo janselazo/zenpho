@@ -1,26 +1,26 @@
-export const homeHowItWorksEyebrow = "How It Works";
+export const homeHowItWorksEyebrow = "How we work";
 
-export const homeHowItWorksHeadline = "From Revenue Leaks to Revenue Growth";
+export const homeHowItWorksHeadline = "From discovery to launch-ready software";
 
 export const homeHowItWorksSteps = [
   {
-    title: "Run Your Revenue Leak Audit",
-    body: "Search your business and get a report showing where you may be losing leads, clients, reviews, referrals, and revenue.",
+    title: "Discovery & scope",
+    body: "We align on the smallest coherent MVP slice—users, hero workflows, acceptance criteria, and what success looks like before pixels or code dominate the conversation.",
   },
   {
-    title: "Identify the Highest-Impact Fixes",
-    body: "We prioritize the problems most likely costing you money, such as weak reviews, poor website conversion, missed calls, no tracking, or competitor gaps.",
+    title: "UX/UI for core journeys",
+    body: "We design the screens and flows that prove value first: navigation, states, components, and handoff-ready specs so engineering isn’t guessing.",
   },
   {
-    title: "Install Your Growth Foundation",
-    body: "We deliver Development—website, GBP, email, foundational SEO, hosting—and Zenpho so capture, tracking, and dashboards work before we scale ads.",
+    title: "Build on staging",
+    body: "Implementation covers front-end, APIs, database, auth, admin surfaces, and integrations as scoped—with weekly visibility into working software.",
   },
   {
-    title: "Generate and Optimize Leads",
-    body: "We improve your Google presence, ads, landing pages, SEO, reviews, referrals, and follow-up systems.",
+    title: "QA, performance & launch prep",
+    body: "Testing, fixes, analytics hooks, deployment support, and readiness checks so release day is boring—in the good way.",
   },
   {
-    title: "Track Revenue and Scale What Works",
-    body: "You get simple reporting showing which channels generate leads, appointments, clients, revenue, reviews, and referrals.",
+    title: "Handoff & next milestone",
+    body: "Documentation, training buffer, and a sane roadmap for v2—so your team can operate what shipped and we can extend when you’re ready.",
   },
 ] as const;
