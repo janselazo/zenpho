@@ -60,7 +60,7 @@ export const marketingSolutionPages: MarketingSolutionPage[] = [
     slug: "custom-websites",
     title: "Custom Websites",
     description:
-      "Professional business and ecommerce websites built to explain your offer, build trust, and convert visitors.",
+      "Websites and stores built to explain, build trust, and convert.",
     icon: Globe,
     iconClassName: "bg-indigo-500/15 text-indigo-600",
     metaTitle: "Custom Website Development | Zenpho",
@@ -155,7 +155,7 @@ export const marketingSolutionPages: MarketingSolutionPage[] = [
     slug: "web-apps",
     title: "Web Apps",
     description:
-      "Custom dashboards, portals, SaaS MVPs, and platforms with login, databases, payments, and integrations.",
+      "Dashboards, portals, and SaaS MVPs with login and integrations.",
     icon: LayoutDashboard,
     iconClassName: "bg-rose-500/15 text-rose-600",
     metaTitle: "Web App Development | Dashboards, Portals & SaaS MVPs | Zenpho",
@@ -260,8 +260,7 @@ export const marketingSolutionPages: MarketingSolutionPage[] = [
   {
     slug: "mobile-apps",
     title: "Mobile Apps",
-    description:
-      "Mobile-first MVPs with onboarding, user accounts, core features, and launch support for real users.",
+    description: "Mobile MVPs with onboarding, accounts, and core features.",
     icon: Smartphone,
     iconClassName: "bg-emerald-500/15 text-emerald-700",
     metaTitle: "Mobile App Development | Mobile App MVPs | Zenpho",

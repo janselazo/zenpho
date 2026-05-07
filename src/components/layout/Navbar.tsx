@@ -14,7 +14,7 @@ import {
 } from "@/lib/marketing/booking-cta";
 
 function desktopLinkClass(active: boolean) {
-  return `flex items-center gap-1 whitespace-nowrap border-b-2 pb-1 text-sm font-medium transition-colors ${
+  return `inline-flex h-9 min-h-9 shrink-0 items-center gap-1 whitespace-nowrap border-b-2 pb-0.5 text-sm font-medium leading-none transition-colors ${
     active
       ? "border-accent font-semibold text-text-primary"
       : "border-transparent text-text-secondary hover:border-accent/35 hover:text-text-primary"

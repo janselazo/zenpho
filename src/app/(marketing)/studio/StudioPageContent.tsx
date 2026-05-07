@@ -86,7 +86,7 @@ const WHY_BULLETS = [
 export default function StudioPageContent() {
   return (
     <div className="bg-background">
-      <section className="border-b border-border/50 bg-gradient-to-b from-surface/35 to-background py-16 sm:py-20 lg:py-24">
+      <section className="border-b border-border/50 bg-gradient-to-b from-surface/35 to-background pt-28 pb-10 sm:pt-32 sm:pb-12 lg:pt-36 lg:pb-16">
         <div className="mx-auto max-w-3xl px-6 text-center lg:px-8">
           <div className="mb-5 flex justify-center">
             <span className="inline-flex rounded-full border border-accent/25 bg-white/90 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-accent shadow-sm dark:bg-zinc-900/80">
@@ -113,7 +113,7 @@ export default function StudioPageContent() {
 
       <section
         id="studio-products"
-        className="mx-auto max-w-6xl scroll-mt-28 px-6 py-16 sm:py-20 lg:px-8 lg:py-24"
+        className="mx-auto max-w-6xl scroll-mt-28 px-6 pt-8 pb-16 sm:pt-10 sm:pb-20 lg:px-8 lg:pt-12 lg:pb-24"
         aria-labelledby="studio-products-heading"
       >
         <div className="mx-auto max-w-3xl text-center">

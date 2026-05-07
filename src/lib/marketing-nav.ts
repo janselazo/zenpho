@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import { FileText, Mail, Newspaper, Palette, SearchCheck, User } from "lucide-react";
 import { marketingSolutionPages } from "./marketing-solutions-pages";
 import { BOOKING_NAV_COMPACT_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
 
@@ -36,6 +37,55 @@ export const marketingSolutionsMegaItems: MarketingMegaItem[] =
     iconClassName: s.iconClassName,
   }));
 
+const toolsMegaItems: MarketingMegaItem[] = [
+  {
+    title: "Business Audit",
+    description:
+      "Scan your Google profile, reviews, and local presence to spot revenue leaks—free instant preview.",
+    href: "/tools/business-audit",
+    icon: SearchCheck,
+    iconClassName: "bg-accent/15 text-accent",
+  },
+  {
+    title: "Brand Kit",
+    description: "Generate a brand guidelines PDF and sales funnel playbook from your Google listing.",
+    href: "/branding",
+    icon: Palette,
+    iconClassName: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+  },
+];
+
+const resourcesMegaItems: MarketingMegaItem[] = [
+  {
+    title: "About us",
+    description: "How Zenpho helps turn ideas into launch-ready products.",
+    href: "/about",
+    icon: User,
+    iconClassName: "bg-accent/15 text-accent",
+  },
+  {
+    title: "Blog",
+    description: "Insights on MVPs, websites, apps, and product launches.",
+    href: "/blog",
+    icon: Newspaper,
+    iconClassName: "bg-sky-500/15 text-sky-600",
+  },
+  {
+    title: "Resources",
+    description: "Guides and tools to help you plan, build, and launch.",
+    href: "/resources",
+    icon: FileText,
+    iconClassName: "bg-emerald-500/15 text-emerald-600",
+  },
+  {
+    title: "Contact",
+    description: "Tell us what you want to build next.",
+    href: "/contact",
+    icon: Mail,
+    iconClassName: "bg-violet-500/15 text-violet-600",
+  },
+];
+
 export const marketingTopNav: MarketingTopNavItem[] = [
   {
     type: "mega",
@@ -45,6 +95,18 @@ export const marketingTopNav: MarketingTopNavItem[] = [
   },
   { type: "link", label: "Studio", href: "/studio" },
   { type: "link", label: "Pricing", href: "/pricing" },
+  {
+    type: "mega",
+    label: "Tools",
+    sectionEyebrow: "Utilities",
+    items: toolsMegaItems,
+  },
+  {
+    type: "mega",
+    label: "Resources",
+    sectionEyebrow: "LEARN",
+    items: resourcesMegaItems,
+  },
   { type: "link", label: "FAQ", href: "/pricing#faq" },
   { type: "link", label: "Contact", href: "/contact" },
 ];
