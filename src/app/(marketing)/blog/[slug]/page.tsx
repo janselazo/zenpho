@@ -5,6 +5,8 @@ import ArticleContent from "./ArticleContent";
 import Link from "next/link";
 import { SECTION_EYEBROW_COMPACT_CLASSNAME } from "@/components/ui/SectionHeading";
 import { BOOKING_PRIMARY_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
+
+interface Props {
   params: Promise<{ slug: string }>;
 }
 

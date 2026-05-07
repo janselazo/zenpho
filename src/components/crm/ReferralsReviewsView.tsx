@@ -2,6 +2,8 @@
 
 import Button from "@/components/ui/Button";
 import { BOOKING_NAV_COMPACT_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
+
+export default function ReferralsReviewsView() {
   return (
     <div>
       <div>

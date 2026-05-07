@@ -3,6 +3,8 @@
 import { motion } from "framer-motion";
 import Button from "@/components/ui/Button";
 import { BOOKING_PRIMARY_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
+
+export default function ServicesClosingCTA() {
   return (
     <section className="mx-auto max-w-7xl px-4 pb-24 pt-8 sm:px-6 lg:px-8">
       <motion.div

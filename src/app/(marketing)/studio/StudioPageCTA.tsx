@@ -4,6 +4,8 @@ import { motion } from "framer-motion";
 import Button from "@/components/ui/Button";
 import { SECTION_EYEBROW_CLASSNAME } from "@/components/ui/SectionHeading";
 import { BOOKING_PRIMARY_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
+
+export default function StudioPageCTA() {
   return (
     <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:pb-24 lg:px-8">
       <motion.div

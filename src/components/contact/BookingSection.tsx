@@ -3,6 +3,8 @@
 import { motion } from "framer-motion";
 import BookingCalendar from "./BookingCalendar";
 import { BOOKING_PRIMARY_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
+
+export default function BookingSection() {
   return (
     <section
       id="booking"

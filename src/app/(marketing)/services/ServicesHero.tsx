@@ -5,6 +5,8 @@ import Link from "next/link";
 import Button from "@/components/ui/Button";
 import { SECTION_EYEBROW_CLASSNAME } from "@/components/ui/SectionHeading";
 import { BOOKING_PRIMARY_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
+
+export default function ServicesHero() {
   return (
     <section className="hero-sky relative overflow-hidden pb-24 pt-28 sm:pb-32 sm:pt-32">
       <div className="relative z-10 mx-auto flex max-w-3xl flex-col items-center px-6 text-center">
