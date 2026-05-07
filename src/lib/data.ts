@@ -530,7 +530,7 @@ export const resourceItems: ResourceItem[] = [
   {
     title: "Pricing & FAQs",
     description:
-      "Website Launch, Web App MVP, and Mobile App MVP bundles — pricing, comparison, and FAQs.",
+      "Custom Websites, Web Apps, and Mobile Apps bundles — pricing, comparison, and FAQs.",
     href: "/pricing",
     tag: "Engagement",
   },

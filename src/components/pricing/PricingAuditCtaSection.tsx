@@ -17,8 +17,8 @@ export default function PricingAuditCtaSection() {
           Not sure which launch package fits?
         </h2>
         <p className="mx-auto mt-5 max-w-2xl text-pretty text-base leading-relaxed text-text-secondary sm:text-lg">
-          Whether you need a marketing or ecommerce site, a website where users sign in (dashboards, accounts), or a mobile
-          MVP—we&apos;ll match you to the right bundle and timeline. Focused scopes are built to ship in about two weeks.
+          Choose the right package for your website, web app, or mobile MVP. Each bundle has a clear scope, timeline, and
+          launch support — with focused builds ready in about two weeks.
         </p>
         <div className="mt-8 flex justify-center">
           <Button href="/booking" variant="primary" size="lg">

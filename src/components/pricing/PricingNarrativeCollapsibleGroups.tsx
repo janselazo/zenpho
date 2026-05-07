@@ -23,7 +23,7 @@ function CollapsibleGroup({
         aria-expanded={open}
         className="flex w-full items-center justify-between gap-2 bg-surface/65 px-3 py-2.5 text-left text-xs font-bold uppercase tracking-[0.18em] text-text-primary transition-colors hover:bg-surface/80 dark:bg-zinc-800/40 dark:hover:bg-zinc-800/60"
       >
-        <span className="leading-snug">{title}</span>
+        <span className="font-bold leading-snug">{title}</span>
         <ChevronDown
           className={`h-4 w-4 shrink-0 text-text-secondary transition-transform duration-200 ${open ? "rotate-180" : ""}`}
           aria-hidden

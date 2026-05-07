@@ -98,7 +98,7 @@ export const pricingComparisonSections: PricingComparisonSection[] = [
       {
         id: "dv-site",
         label: "Business website or ecommerce storefront",
-        cells: c(true, "Optional", "Optional"),
+        cells: c(true, true, true),
       },
       {
         id: "dv-webapp",
@@ -128,7 +128,7 @@ export const pricingComparisonSections: PricingComparisonSection[] = [
       {
         id: "dv-db",
         label: "Database setup",
-        cells: c("Basic / Optional", true, true),
+        cells: c("Basic", true, true),
       },
       {
         id: "dv-forms",
@@ -138,7 +138,7 @@ export const pricingComparisonSections: PricingComparisonSection[] = [
       {
         id: "dv-payment",
         label: "Payment or booking flow",
-        cells: c("Optional", true, true),
+        cells: c(true, true, true),
       },
       {
         id: "dv-api",

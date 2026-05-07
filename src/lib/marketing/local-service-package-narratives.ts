@@ -26,8 +26,8 @@ export const localServicePackageNarratives: PackageNarrativeContent[] = [
       "Teams launching or upgrading a professional marketing site, brochure presence, or ecommerce storefront.",
     mainGoal:
       "Explain your offer clearly, build trust, capture inquiries or orders, and ship with analytics plus foundational SEO.",
-    priceSummary: "$2,497",
-    priceFootnote: "one-time · 50% off (was $4,994)",
+    priceSummary: "$1,000",
+    priceFootnote: "one-time · 50% off (was $2,000)",
     includeGroups: [
       {
         heading: "STRATEGY & PLANNING",
@@ -78,8 +78,8 @@ export const localServicePackageNarratives: PackageNarrativeContent[] = [
     bestFor: "Founders shipping authenticated web apps, internal tools, or customer portals with dashboard workflows.",
     mainGoal:
       "Deliver a functional MVP with login, core user/admin surfaces, data layer, integrations, and launch-ready QA.",
-    priceSummary: "$4,997",
-    priceFootnote: "one-time · 50% off (was $9,994)",
+    priceSummary: "$2,500",
+    priceFootnote: "one-time · 50% off (was $5,000)",
     includeGroups: [
       {
         heading: "STRATEGY & PLANNING",
@@ -131,8 +131,8 @@ export const localServicePackageNarratives: PackageNarrativeContent[] = [
       "Teams that need a mobile-first experience with accounts, onboarding, core screens, integrations, and store-ready launch support.",
     mainGoal:
       "Ship a focused mobile MVP that demonstrates value to early adopters with disciplined UX, integrations, and go-live coverage.",
-    priceSummary: "$5,997",
-    priceFootnote: "one-time · 50% off (was $11,994)",
+    priceSummary: "$3,000",
+    priceFootnote: "one-time · 50% off (was $6,000)",
     includeGroups: [
       {
         heading: "STRATEGY & PLANNING",

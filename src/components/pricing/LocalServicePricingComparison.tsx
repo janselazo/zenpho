@@ -18,8 +18,11 @@ const COLUMN_IDS: PricingComparisonPlanId[] = ["setup", "growth-engine", "full-p
 
 const HEADING_ID = "pricing-plans-compare";
 
+const LAUNCH_OFFER_TAGLINE =
+  "Limited 50% launch offer available for the next 2 client spots.";
+
 const LAUNCH_OFFER_NOTE =
-  "Limited 50% launch offer available for the next 2 client spots. Larger or more complex projects may require a custom quote or additional development sprint.";
+  `${LAUNCH_OFFER_TAGLINE} Larger or more complex projects may require a custom quote or additional development sprint.`;
 
 function ComparisonCell({ value }: { value: PricingCellValue }) {
   const ariaLabel =
@@ -69,6 +72,15 @@ export default function LocalServicePricingComparison() {
         </h2>
 
         <div className="overflow-hidden rounded-2xl border border-border/70 bg-white shadow-soft">
+          <div className="border-b border-emerald-200/80 bg-emerald-50 px-4 py-3.5 sm:px-5 dark:border-emerald-900/50 dark:bg-emerald-950/35">
+            <p className="mx-auto flex max-w-4xl flex-wrap items-center justify-center gap-2.5 text-center text-sm font-medium leading-snug text-emerald-950 dark:text-emerald-100/95 sm:text-[0.9375rem]">
+              <span
+                className="h-2 w-2 shrink-0 rounded-full bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.22)]"
+                aria-hidden
+              />
+              <span>{LAUNCH_OFFER_TAGLINE}</span>
+            </p>
+          </div>
           <div className="overflow-x-auto pt-6 [-webkit-overflow-scrolling:touch] sm:pt-7">
             <p className="sr-only">Scroll horizontally to compare plans on small screens.</p>
             <table className="w-full min-w-[760px] border-collapse text-left text-sm">
@@ -107,7 +119,7 @@ export default function LocalServicePricingComparison() {
                             aria-expanded={open}
                             className="flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left text-xs font-bold uppercase tracking-[0.18em] text-text-secondary transition-colors hover:bg-surface/80 sm:px-5 dark:hover:bg-zinc-800/40"
                           >
-                            <span className="leading-snug">{section.heading}</span>
+                            <span className="font-bold leading-snug">{section.heading}</span>
                             <ChevronDown
                               className={`h-4 w-4 shrink-0 text-text-secondary transition-transform duration-200 ${open ? "rotate-180" : ""}`}
                               aria-hidden

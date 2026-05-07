@@ -27,13 +27,12 @@ export type LocalServicePricingPlan = {
 export const localServicePricingPlans: LocalServicePricingPlan[] = [
   {
     id: "setup",
-    title: "Website Launch",
+    title: "Custom Websites",
     planTagline: "WEBSITES & STORES",
     headerNote:
       "A clean website or ecommerce store built to explain your offer, build trust, and convert visitors.",
-    priceLead: "$2,497",
-    priceWas: "$4,994",
-    priceNote: "one-time · 50% off",
+    priceLead: "$1,000",
+    priceWas: "$2,000",
     summary: "",
     included: [],
     bestFor: ["Websites", "landing pages", "ecommerce"],
@@ -43,13 +42,12 @@ export const localServicePricingPlans: LocalServicePricingPlan[] = [
   },
   {
     id: "growth-engine",
-    title: "Web App MVP",
+    title: "Web Apps",
     planTagline: "WEB APPS & DASHBOARDS",
     headerNote:
       "A working MVP with login, dashboards, database, admin tools, integrations, and launch support.",
-    priceLead: "$4,997",
-    priceWas: "$9,994",
-    priceNote: "one-time · 50% off",
+    priceLead: "$2,500",
+    priceWas: "$5,000",
     summary: "",
     included: [],
     bestFor: ["SaaS", "portals", "dashboards", "internal tools"],
@@ -60,13 +58,12 @@ export const localServicePricingPlans: LocalServicePricingPlan[] = [
   },
   {
     id: "full-partner",
-    title: "Mobile App MVP",
-    planTagline: "MOBILE APP MVPS",
+    title: "Mobile Apps",
+    planTagline: "IOS & ANDROID APPS",
     headerNote:
       "A focused mobile app with onboarding, user accounts, core screens, integrations, and launch support.",
-    priceLead: "$5,997",
-    priceWas: "$11,994",
-    priceNote: "one-time · 50% off",
+    priceLead: "$3,000",
+    priceWas: "$6,000",
     summary: "",
     included: [],
     bestFor: ["Mobile app ideas", "customer apps", "mobile MVPs"],

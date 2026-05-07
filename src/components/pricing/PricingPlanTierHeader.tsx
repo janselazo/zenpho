@@ -44,15 +44,9 @@ export function PricingPlanTierHeaderBlock({ plan }: { plan: LocalServicePricing
               {plan.priceWas}
             </p>
           ) : null}
-          <p className="min-h-[1.125rem] text-xs leading-snug text-text-secondary sm:text-sm">
-            {plan.priceNote ? (
-              plan.priceNote
-            ) : (
-              <span className="invisible select-none" aria-hidden>
-                —
-              </span>
-            )}
-          </p>
+          {plan.priceNote ? (
+            <p className="text-xs leading-snug text-text-secondary sm:text-sm">{plan.priceNote}</p>
+          ) : null}
           {plan.priceAlt ? (
             <p className="text-[11px] leading-snug text-text-secondary/90 sm:text-xs">{plan.priceAlt}</p>
           ) : null}
