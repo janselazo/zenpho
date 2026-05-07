@@ -7,20 +7,13 @@ export type PackageIncludeGroup = {
 
 export type PackageNarrativeContent = {
   id: PricingComparisonPlanId;
-  /** Eyebrow chip, e.g. "Start & Establish" */
   tagline: string;
   bestFor: string;
   mainGoal: string;
-  /** Primary price line (shown in card; matches table header intent) */
   priceSummary: string;
-  /** Footnote under price, e.g. ad spend */
   priceFootnote?: string;
-  /** Alternative offer (Launch only) */
   priceAlternative?: string;
-  /** Ad spend guidance (Grow/Scale) */
-  adSpendNote?: string;
   includeGroups: PackageIncludeGroup[];
-  /** Platform & monthly bullets not already in includeGroups */
   platformAndMonthly?: string[];
   positioning: string;
 };
@@ -28,248 +21,159 @@ export type PackageNarrativeContent = {
 export const localServicePackageNarratives: PackageNarrativeContent[] = [
   {
     id: "setup",
-    tagline: "Start & Establish",
+    tagline: "BUSINESS & ECOMMERCE WEBSITES",
     bestFor:
-      "Business owners who are just starting out and need their digital foundation built correctly.",
+      "Teams launching or upgrading a professional marketing site, brochure presence, or ecommerce storefront.",
     mainGoal:
-      "Help them look professional, get found online, capture leads, and manage contacts from day one.",
-    priceSummary: "$1,500",
-    priceAlternative:
-      "Alternative entry-level pricing if your market is more price-sensitive: $997 setup + $697/month with a 6-month agreement.",
+      "Explain your offer clearly, build trust, capture inquiries or orders, and ship with analytics plus foundational SEO.",
+    priceSummary: "$2,497",
+    priceFootnote: "one-time · 50% off (was $4,994)",
     includeGroups: [
       {
-        heading: "Digital foundation",
+        heading: "STRATEGY & PLANNING",
         items: [
-          "Business strategy onboarding session",
-          "Basic brand direction: colors, fonts, messaging",
-          "Logo cleanup or simple starter logo if needed",
-          "Business email/domain setup guidance",
-          "Website copy structure and service positioning",
+          "Discovery and strategy session",
+          "Feature prioritization",
+          "Launch scope & roadmap",
+          "Sitemap and flow planning",
+          "Version-one product planning",
         ],
       },
       {
-        heading: "Website",
+        heading: "DESIGN",
         items: [
-          "3 to 5-page professional website",
-          "Mobile-friendly design",
-          "Homepage, services, about, contact, and booking/lead page",
-          "Contact forms connected to your CRM platform",
-          "Call-to-action buttons",
-          "Basic website SEO setup",
-          "Website analytics installed",
+          "Custom UX/UI design",
+          "Responsive layouts",
+          "Landing/home coverage plus core pages/screens",
+          "Basic reusable components where scoped",
         ],
       },
       {
-        heading: "Google Business Profile",
+        heading: "DEVELOPMENT",
         items: [
-          "Google Business Profile setup or optimization",
-          "Business categories, services, hours, description",
-          "Photos, logo, service areas",
-          "Google Maps optimization basics",
-          "Review request system setup",
+          "Website or ecommerce storefront build",
+          "Forms and submissions aligned to goals",
+          "Basic integrations plus optional payment/booking flows when scoped",
         ],
       },
       {
-        heading: "Local SEO foundation",
+        heading: "LAUNCH SETUP",
         items: [
-          "Basic keyword research",
-          "Homepage and service page SEO",
-          "Metadata setup",
-          "Local business schema if possible",
-          "Google Search Console setup",
-          "Google Analytics setup",
-          "Basic local citations/directory submissions",
+          "Analytics tracking",
+          "SEO foundation for public pages",
+          "Performance checks, QA, deployment support, documentation & handoff",
         ],
       },
       {
-        heading: "Social media foundation",
-        items: [
-          "Facebook and Instagram profile setup or optimization",
-          "Branded cover images/profile images",
-          "8 to 12 starter social media posts or templates",
-          "Social media posting connected through Zenpho",
-        ],
+        heading: "SUPPORT & TIMELINE",
+        items: ["30 days post-launch support", "Typical timeline 1–2 weeks", "50% upfront / 50% on delivery"],
       },
-    ],
-    platformAndMonthly: [
-      "Included in Launch — Zenpho platform access: CRM/contact management; lead pipeline; conversations inbox; website form capture; appointment booking/calendar; proposal templates; social media post scheduling; basic automation; review request workflow; monthly reporting dashboard.",
-      "Monthly support: Zenpho platform access; website hosting/maintenance; basic edits and updates; 4 social media posts per month; 2 Google Business Profile posts per month; review monitoring; monthly performance report.",
     ],
     positioning:
-      "We build your online business foundation so customers can find you, trust you, and contact you.",
+      "Website Launch keeps focus on credibility and conversion—fast to ship, easy to extend when you’re ready for more product depth.",
   },
   {
     id: "growth-engine",
-    tagline: "Lead Generation",
-    bestFor:
-      "Businesses that already have a website and online presence but need more leads, calls, and appointments.",
+    tagline: "SAAS, PORTALS & DASHBOARDS",
+    bestFor: "Founders shipping authenticated web apps, internal tools, or customer portals with dashboard workflows.",
     mainGoal:
-      "Create a predictable lead generation system using paid ads, landing pages, tracking, and CRM automation.",
-    priceSummary: "$2,000/month",
-    priceFootnote: "Ad spend is separate.",
-    adSpendNote:
-      "Recommended minimum ad spend: $1,500 to $3,000/month. For competitive industries like roofing, legal, med spa, HVAC, dental, or home remodeling, recommend $3,000 to $10,000/month in ad spend.",
+      "Deliver a functional MVP with login, core user/admin surfaces, data layer, integrations, and launch-ready QA.",
+    priceSummary: "$4,997",
+    priceFootnote: "one-time · 50% off (was $9,994)",
     includeGroups: [
       {
-        heading: "Paid ads management",
+        heading: "STRATEGY & PLANNING",
         items: [
-          "Google Ads campaign setup and management",
-          "Meta/Facebook Ads campaign setup and management",
-          "Retargeting campaign setup",
-          "Local service campaign strategy if applicable",
-          "Keyword research",
-          "Audience targeting",
-          "Ad copywriting",
-          "Monthly ad creative updates",
-          "Weekly campaign optimization",
+          "Discovery and strategy session",
+          "Feature prioritization & roadmap",
+          "Flow planning for authenticated experiences",
         ],
       },
       {
-        heading: "Landing page/funnel",
+        heading: "DESIGN",
         items: [
-          "Dedicated landing page for paid traffic",
-          "Lead form connected to your CRM",
-          "Click-to-call tracking",
-          "Appointment booking integration",
-          "Offer and call-to-action strategy",
-          "Conversion-focused copywriting",
+          "Custom UX/UI for web app surfaces",
+          "Responsive layouts & reusable components",
+          "Dashboard and core screen coverage",
         ],
       },
       {
-        heading: "Tracking and reporting",
+        heading: "DEVELOPMENT",
         items: [
-          "Google Tag Manager setup",
-          "Google Analytics tracking",
-          "Conversion tracking",
-          "Call tracking",
-          "Form tracking",
-          "Cost per lead reporting",
-          "Appointment tracking inside Zenpho",
+          "Functional web app development",
+          "Authentication & login flows",
+          "User dashboard/account areas",
+          "Admin dashboard/panel",
+          "Database setup, forms/actions, payments/booking as scoped",
+          "API integrations",
         ],
       },
       {
-        heading: "Lead follow-up automation",
+        heading: "LAUNCH SETUP",
         items: [
-          "Missed call text-back",
-          "New lead SMS/email follow-up",
-          "Appointment confirmation reminders",
-          "No-show reduction reminders",
-          "Lead nurturing sequence",
-          "Pipeline stage automation",
+          "Analytics tracking",
+          "SEO foundation for public pages",
+          "Performance checks, QA, deployment support, documentation & handoff",
         ],
+      },
+      {
+        heading: "SUPPORT & TIMELINE",
+        items: ["90 days post-launch support", "Typical timeline ~2 weeks", "50% upfront / 50% on delivery"],
       },
     ],
-    platformAndMonthly: [
-      "Everything from Launch, plus Zenpho paid lead pipeline, ad campaign reporting dashboard, automated lead follow-up, appointment tracking, conversation history, proposal workflows, and sales activity tracking.",
-      "Monthly support: monthly strategy call; campaign optimization; landing page optimization; lead quality review; CRM/pipeline review; monthly report with recommendations.",
-    ],
-    positioning: "We help you turn traffic into leads and leads into booked appointments.",
+    positioning:
+      "Web App MVP packages everything needed to move from prototype conversations to a staging-backed product your team can review and launch.",
   },
   {
     id: "full-partner",
-    tagline: "Full growth system",
+    tagline: "IOS & ANDROID APP MVPS",
     bestFor:
-      "Established businesses that already have proof of demand and want to grow faster, increase conversion rates, improve operations, and dominate their local market.",
+      "Teams that need a mobile-first experience with accounts, onboarding, core screens, integrations, and store-ready launch support.",
     mainGoal:
-      "Build a complete growth system: paid ads, SEO, automation, sales process, conversion optimization, reputation, and expansion strategy.",
-    priceSummary: "$3,000/month",
-    priceFootnote: "Ad spend is separate.",
-    adSpendNote:
-      "Recommended minimum ad spend: $5,000/month and up. For aggressive growth: $10,000 to $25,000+/month in ad spend.",
+      "Ship a focused mobile MVP that demonstrates value to early adopters with disciplined UX, integrations, and go-live coverage.",
+    priceSummary: "$5,997",
+    priceFootnote: "one-time · 50% off (was $11,994)",
     includeGroups: [
       {
-        heading: "Advanced paid acquisition",
+        heading: "STRATEGY & PLANNING",
         items: [
-          "Google Ads management",
-          "Meta Ads management",
-          "Retargeting campaigns",
-          "YouTube or video ad strategy if relevant",
-          "Local Services Ads support if applicable",
-          "Campaign testing across multiple offers",
-          "Advanced audience targeting",
-          "Conversion tracking and attribution",
+          "Discovery and strategy session",
+          "Feature prioritization & roadmap",
+          "App flow planning and screen inventory",
         ],
       },
       {
-        heading: "Local SEO growth",
+        heading: "DESIGN",
         items: [
-          "Local SEO strategy",
-          "Service page expansion",
-          "City/location page strategy",
-          "Google Business Profile optimization",
-          "Review growth campaigns",
-          "Content planning",
-          "Citation and authority building",
-          "Competitor analysis",
+          "Custom UX/UI for mobile surfaces",
+          "Responsive/mobile-first layouts",
+          "Onboarding + core screens designed",
         ],
       },
       {
-        heading: "Conversion optimization",
+        heading: "DEVELOPMENT",
         items: [
-          "Landing page A/B testing",
-          "Offer testing",
-          "Call-to-action testing",
-          "Form optimization",
-          "Appointment booking optimization",
-          "Website conversion review",
-          "Heatmap/session recording recommendations if applicable",
+          "Mobile app MVP development",
+          "Authentication & login",
+          "User dashboard/account experiences",
+          "Admin tooling when scoped",
+          "Database setup, payments/booking, API integrations",
         ],
       },
       {
-        heading: "Sales process improvement",
+        heading: "LAUNCH SETUP",
         items: [
-          "CRM pipeline optimization",
-          "Lead scoring",
-          "Sales stage automation",
-          "Follow-up sequences",
-          "Missed opportunity campaigns",
-          "Old lead reactivation",
-          "Appointment confirmation workflows",
-          "Proposal templates and automation",
-          "Sales script recommendations",
+          "Analytics tracking",
+          "SEO coverage for landing/public surfaces (landing page scope)",
+          "Performance checks, QA, deployment support, documentation & handoff",
         ],
       },
       {
-        heading: "Reputation and referrals",
-        items: [
-          "Review generation campaigns",
-          "Negative review response process",
-          "Referral campaign setup",
-          "Customer reactivation campaigns",
-          "Email/SMS promotions to past customers",
-        ],
+        heading: "SUPPORT & TIMELINE",
+        items: ["90 days post-launch support", "Typical timeline 2–4 weeks", "50% upfront / 50% on delivery"],
       },
-      {
-        heading: "Reporting and strategy",
-        items: [
-          "Advanced dashboard",
-          "Lead source attribution",
-          "Cost per lead tracking",
-          "Cost per booked appointment tracking",
-          "Revenue pipeline tracking if the client updates deal stages",
-          "Monthly growth strategy call",
-          "Quarterly planning session",
-        ],
-      },
-      {
-        heading: "Optional Scale add-ons (quoted separately)",
-        items: [
-          "Appointment setting",
-          "Call answering",
-          "Sales team training",
-          "Custom software integrations",
-          "Custom automations",
-          "Multi-location expansion",
-          "Video/photo content production",
-          "AI chatbot or website chat",
-          "Email newsletter management",
-        ],
-      },
-    ],
-    platformAndMonthly: [
-      "Everything from Launch and Grow, plus Zenpho advanced CRM workflows; multi-pipeline support; sales automation; proposal automation; reputation campaigns; reactivation campaigns; advanced reporting dashboard; team user access; priority support.",
     ],
     positioning:
-      "We help established local businesses turn marketing, sales, automation, and operations into one growth system.",
+      "Mobile App MVP is built for founders who need something tangible in-market—accounts, onboarding, core journeys, and support through stabilization.",
   },
 ];

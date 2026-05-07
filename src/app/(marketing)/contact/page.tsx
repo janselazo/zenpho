@@ -7,10 +7,10 @@ import ContactAside from "@/components/contact/ContactAside";
 
 export const metadata: Metadata = {
   title: {
-    absolute: "Contact Zenpho | Local growth & revenue clarity",
+    absolute: "Contact Zenpho | MVP product studio",
   },
   description:
-    "Contact Zenpho about Revenue Leak Audits, lead-to-revenue setup, and growth programs for local service businesses.",
+    "Have a website, app, or MVP idea? Contact Zenpho—we help you map the next step with Design → Build → Launch programs, custom builds, Revenue Leak Audits, and roadmaps.",
 };
 
 export default function ContactPage() {

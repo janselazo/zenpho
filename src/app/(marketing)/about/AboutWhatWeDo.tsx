@@ -2,18 +2,15 @@ import SectionHeading from "@/components/ui/SectionHeading";
 import Card from "@/components/ui/Card";
 
 const activities = [
-  "Revenue Leak Audits (Google Business Profile, site, competitors, reviews)",
-  "Lead tracking dashboards and source attribution",
-  "CRM and pipeline setup—or tuning what you already use",
-  "Call, form, and landing-page tracking",
-  "Google Business Profile optimization",
-  "Website and landing page conversion improvements",
-  "Google Ads and paid social when the foundation is ready",
-  "Local SEO and content that supports real appointments",
-  "Review request systems and referral campaigns",
-  "Proposal workflows",
-  "Monthly ROI reporting and revenue-leak monitoring",
-  "Growth recommendations with done-for-you execution",
+  "Discovery workshops, journey mapping, IA, and prioritized screen plans",
+  "UX/UI design artifacts and dev-ready notes for web, mobile, or responsive experiences",
+  "Full-stack implementation: frontends, APIs, data models, auth, and admin consoles",
+  "Integrations—payments, CRMs, messaging, analytics, and third-party APIs",
+  "Staging environments, QA passes, instrumentation, and observability hooks",
+  "Production releases, DNS/hosting cutovers, rollback plans, and go-live support",
+  "Post-launch stabilization, backlog grooming, and roadmap planning for fast follows",
+  "Revenue Leak Audits and Brand Kit flows when marketing clarity needs a fast baseline",
+  "Milestone demos, documented decisions, and pragmatic scope management",
 ] as const;
 
 export default function AboutWhatWeDo() {
@@ -22,11 +19,11 @@ export default function AboutWhatWeDo() {
       <div className="mx-auto max-w-3xl px-6 lg:px-8">
         <SectionHeading
           align="left"
-          title="We help you go from"
-          titleAccent="leaks to leverage"
+          title="We take you from"
+          titleAccent="idea to operating product"
           description={
             <p className="!text-[15px] !leading-relaxed text-text-secondary sm:!text-base">
-              A practical mix of diagnosis, systems, and ongoing growth work:
+              The practical mix of discovery, design, engineering, release, and iteration:
             </p>
           }
         />

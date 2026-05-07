@@ -6,6 +6,7 @@ import {
   homeClearGrowthFinalCtaBody,
   homeClearGrowthFinalCtaHeadline,
 } from "@/lib/home-clear-growth";
+import { BOOKING_PRIMARY_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
 
 const CTA_ID = "home-clear-growth-cta-heading";
 
@@ -38,11 +39,11 @@ export default function HomeClearGrowthFinalCta() {
               {homeClearGrowthFinalCtaBody}
             </p>
             <div className="mx-auto mt-8 flex max-w-xl flex-col items-stretch justify-center gap-3 sm:flex-row sm:gap-4">
-              <Button href="/booking" variant="primary" size="lg" className="sm:flex-1">
-                Book a Free Build Call
+              <Button href="/revenue" variant="primary" size="lg" className="sm:flex-1">
+                Run Revenue Leak Audit
               </Button>
-              <Button href="/pricing" variant="dark" size="lg" showLiveDot className="sm:flex-1">
-                View Launch Packages
+              <Button href="/booking" variant="dark" size="lg" showLiveDot className="sm:flex-1">
+                {BOOKING_PRIMARY_BUTTON_LABEL}
               </Button>
             </div>
           </div>

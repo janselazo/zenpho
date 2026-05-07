@@ -4,8 +4,7 @@ import { blogPosts } from "@/lib/data";
 import ArticleContent from "./ArticleContent";
 import Link from "next/link";
 import { SECTION_EYEBROW_COMPACT_CLASSNAME } from "@/components/ui/SectionHeading";
-
-interface Props {
+import { BOOKING_PRIMARY_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
   params: Promise<{ slug: string }>;
 }
 
@@ -85,10 +84,10 @@ export default async function BlogPostPage({ params }: Props) {
 
         <div className="mt-16 rounded-2xl border border-border bg-surface p-8 text-center">
           <p className="text-lg font-semibold text-text-primary">
-            Want to see where revenue is leaking?
+            Ready to plan your next build?
           </p>
           <p className="mt-2 text-sm text-text-secondary">
-            Run a Revenue Leak Audit or book a call—we&apos;ll map the highest-impact fixes for your market.
+            Book a call—we&apos;ll map priorities for your website, web app, or MVP.
           </p>
           <div className="mt-4 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
@@ -101,7 +100,7 @@ export default async function BlogPostPage({ params }: Props) {
               href="/booking"
               className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-white px-6 py-3 text-sm font-medium text-text-primary transition-colors hover:bg-surface"
             >
-              Book a growth call
+              {BOOKING_PRIMARY_BUTTON_LABEL}
             </Link>
           </div>
         </div>

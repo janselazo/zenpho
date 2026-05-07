@@ -5,6 +5,7 @@ import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import { serviceIconMap } from "@/components/services/service-icons";
 import { services } from "@/lib/data";
+import { BOOKING_PRIMARY_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
 import {
   getServicePagePayload,
   serviceDetailSlugs,
@@ -84,7 +85,7 @@ export default async function ServiceDetailPage({ params }: Props) {
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
             <Button href="/booking" variant="primary" size="lg">
-              Book a Call
+              {BOOKING_PRIMARY_BUTTON_LABEL}
             </Button>
             <Button href="/pricing" variant="dark" size="lg" showLiveDot>
               View pricing

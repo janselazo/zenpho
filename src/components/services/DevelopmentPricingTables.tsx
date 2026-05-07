@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import type { DevelopmentPricingOffering, PricingIncludedGroup } from "@/lib/data";
 import { developmentPricingOfferings } from "@/lib/data";
 import Button from "@/components/ui/Button";
+import { BOOKING_PRIMARY_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
 
 function resolvedIncludedGroups(
   offering: DevelopmentPricingOffering,
@@ -56,7 +57,7 @@ function RichOfferingCard({
   index: number;
 }) {
   const featured = Boolean(offering.featured);
-  const cta = offering.ctaLabel ?? "Book a Call";
+  const cta = offering.ctaLabel ?? BOOKING_PRIMARY_BUTTON_LABEL;
   const includedGroups = resolvedIncludedGroups(offering);
 
   return (

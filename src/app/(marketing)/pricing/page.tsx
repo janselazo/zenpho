@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     absolute: "Pricing | Zenpho",
   },
   description:
-    "Zenpho Launch, Grow, and Scale for local service businesses: Launch $1,500; Grow $2,000/mo and Scale $3,000/mo (ad spend separate for Grow and Scale), optional Launch alternate tier, and custom ecommerce / app builds quoted on request.",
+    "Zenpho MVP launch packages: Website Launch from $2,497, Web App MVP from $4,997, Mobile App MVP from $5,997 (limited-time 50% launch pricing); strategy through deployment; custom quotes for larger scopes.",
 };
 
 export default function PricingPage() {

@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, Check, Clock, ArrowLeft } from "lucide-react";
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { BOOKING_NAV_COMPACT_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
 
 const BUSINESS_HOURS = { start: 9, end: 17 };
 const SLOT_DURATION = 30;
@@ -496,7 +497,7 @@ export default function BookingCalendar() {
                 disabled={submitting}
                 className="w-full rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-accent-hover disabled:opacity-60"
               >
-                {submitting ? "Booking…" : "Book call"}
+                {submitting ? "Booking…" : BOOKING_NAV_COMPACT_BUTTON_LABEL}
               </button>
             </form>
           </motion.div>

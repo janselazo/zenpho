@@ -13,6 +13,7 @@ import {
   marketingSolutionSlugs,
   marketingSolutionToPlanId,
 } from "@/lib/marketing-solutions-pages";
+import { BOOKING_NAV_COMPACT_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -98,7 +99,7 @@ export default async function SolutionDetailPage({ params }: Props) {
             href="/booking"
             className="inline-flex items-center gap-1 font-semibold text-accent hover:underline"
           >
-            Book a call
+            {BOOKING_NAV_COMPACT_BUTTON_LABEL}
             <ChevronRight className="h-4 w-4" aria-hidden />
           </Link>
         </div>

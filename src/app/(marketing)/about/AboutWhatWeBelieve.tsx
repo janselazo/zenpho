@@ -3,24 +3,24 @@ import Card from "@/components/ui/Card";
 
 const beliefs = [
   {
-    title: "Revenue clarity first",
-    body: "If you cannot see leaks, sources, and outcomes, you cannot fix them. We prioritize tracking, reporting, and honest baselines before pouring more budget into channels.",
+    title: "Clarity beats thrash",
+    body: "We document assumptions, sequencing, and tradeoffs early so builders and stakeholders share the same picture of scope, milestones, and risk.",
   },
   {
-    title: "The full journey matters",
-    body: "Local growth is not only SEO or only ads. Visibility, conversion, follow-up, reviews, referrals, and reactivation all affect whether opportunities become booked work.",
+    title: "The smallest coherent release wins",
+    body: "We bias toward scopes that prove value quickly—experience, integrations, and quality included—rather than spreadsheets that balloon before users ever click.",
   },
   {
-    title: "Systems beat one-off tactics",
-    body: "Campaigns work better when dashboards, CRM, automations, and landing pages are aligned so nothing falls through the cracks.",
+    title: "Instrumentation is part of MVP",
+    body: "If you cannot see adoption, friction, or errors, you cannot iterate. Observability hooks are planned alongside features—not bolted on after launch surprises.",
   },
   {
-    title: "Execution, not just recommendations",
-    body: "We install tools, improve pages, run ads where appropriate, and stay accountable for monthly outcomes—not PDFs that sit in your inbox.",
+    title: "Partnership ends with usable software",
+    body: "We ship code your team can run: handoffs, runbooks, and pragmatic documentation so launches do not evaporate when the sprint ends.",
   },
   {
-    title: "Your stack should flex with you",
-    body: "We work with what you already run when it makes sense—whether that is a CRM, a field-service platform, or a reviews tool—and focus on wiring insight and follow-through.",
+    title: "Your stack should evolve with you",
+    body: "We integrate sensibly with what you already rely on—auth providers, commerce platforms, Zenpho workspaces, CRMs—and focus on seams that unblock product velocity.",
   },
 ] as const;
 
@@ -32,7 +32,7 @@ export default function AboutWhatWeBelieve() {
           align="left"
           label="Philosophy"
           title="How we think about"
-          titleAccent="local growth"
+          titleAccent="product delivery"
           titleAccentInline
         />
 

@@ -1,26 +1,26 @@
-export const homeHowItWorksEyebrow = "HOW IT WORKS";
+export const homeHowItWorksEyebrow = "How It Works";
 
-export const homeHowItWorksHeadline = "From Idea to Launch-Ready Product";
+export const homeHowItWorksHeadline = "From Revenue Leaks to Revenue Growth";
 
 export const homeHowItWorksSteps = [
   {
-    title: "Clarify the Idea",
-    body: "We start by understanding your business, users, goals, timeline, and what you want to build — whether it is a website, web app, mobile app, or MVP.",
+    title: "Run Your Revenue Leak Audit",
+    body: "Search your business and get a report showing where you may be losing leads, clients, reviews, referrals, and revenue.",
   },
   {
-    title: "Define the First Version",
-    body: "We prioritize the most important features, pages, screens, and user flows so your product can launch fast without being overbuilt.",
+    title: "Identify the Highest-Impact Fixes",
+    body: "We prioritize the problems most likely costing you money, such as weak reviews, poor website conversion, missed calls, no tracking, or competitor gaps.",
   },
   {
-    title: "Design the Experience",
-    body: "We map the user journey and design clean, modern interfaces that make your product easy to understand, easy to use, and ready for development.",
+    title: "Install Your Growth Foundation",
+    body: "We deliver Development—website, GBP, email, foundational SEO, hosting—and Zenpho so capture, tracking, and dashboards work before we scale ads.",
   },
   {
-    title: "Build the Product",
-    body: "We develop the agreed scope, connect the required tools, set up core functionality, and build the website, web app, mobile app, or MVP.",
+    title: "Generate and Optimize Leads",
+    body: "We improve your Google presence, ads, landing pages, SEO, reviews, referrals, and follow-up systems.",
   },
   {
-    title: "Launch, Test, and Improve",
-    body: "We test the product, fix issues, deploy it, and help you understand what to improve next based on real users, feedback, and business goals.",
+    title: "Track Revenue and Scale What Works",
+    body: "You get simple reporting showing which channels generate leads, appointments, clients, revenue, reviews, and referrals.",
   },
 ] as const;

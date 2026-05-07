@@ -10,47 +10,47 @@ export interface SiteFaqItem {
 export const SITE_HOME_FULL_FAQS: SiteFaqItem[] = [
   {
     q: "What do you do?",
-    a: "We help founders, startups, and businesses design, build, and launch websites, ecommerce websites, web apps, mobile apps, and MVPs. We handle strategy, UX/UI design, development, integrations, testing, deployment, and launch support.",
+    a: "We help local service businesses generate more leads, book more appointments, close more clients, collect more reviews, increase referrals, and track revenue from marketing.",
   },
   {
-    q: "What is an MVP?",
-    a: "An MVP, or minimum viable product, is the first focused version of your product. It includes the core features needed to test your idea with real users, collect feedback, and decide what to build next.",
+    q: "What is a Revenue Leak Audit?",
+    a: "A Revenue Leak Audit analyzes your Google Business Profile, competitors, reviews, website, photos, tracking, ads readiness, and local positioning to identify where your business may be losing revenue.",
   },
   {
-    q: "Can you really launch in 2 weeks?",
-    a: "Yes, if the scope is focused. We help you define the most important version one features so your product can launch quickly without being overbuilt. Larger projects may require additional sprints.",
+    q: "Is this just an SEO audit?",
+    a: "No. SEO is only one part. The audit looks at the full local growth journey: visibility, conversion, tracking, follow-up, reviews, referrals, and revenue opportunity.",
   },
   {
-    q: "What can you build?",
-    a: "We build business websites, ecommerce websites, SaaS MVPs, dashboards, client portals, booking platforms, admin panels, internal tools, mobile app MVPs, and custom web apps.",
+    q: "Is this just software?",
+    a: "No. We combine software, tracking, automation, strategy, and done-for-you growth services. You get the system and the execution needed to improve results.",
   },
   {
-    q: "Do I need designs ready before starting?",
-    a: "No. We can handle the full process from idea to launch, including strategy, user flows, wireframes, UX/UI design, development, testing, and deployment.",
+    q: "Do you run ads?",
+    a: "Yes. We manage Google Ads and other paid channels when they make sense. But first, we make sure your tracking, landing pages, and follow-up systems are ready so ad spend is not wasted.",
   },
   {
-    q: "What is included in a launch package?",
-    a: "Depending on the package, your project can include strategy, feature planning, UX/UI design, website or app development, user authentication, dashboards, admin tools, database setup, integrations, analytics, deployment, documentation, and launch support.",
+    q: "Do you build websites?",
+    a: "Yes. We build and optimize websites and landing pages designed to turn visitors into calls, quote requests, appointments, and clients.",
   },
   {
-    q: "How does payment work?",
-    a: "Most launch packages are split into two payments: 50% upfront and 50% on delivery. Custom projects may have a different payment structure depending on scope and timeline.",
+    q: "Do you help with reviews?",
+    a: "Yes. We install review request systems to help happy customers leave Google reviews consistently.",
   },
   {
-    q: "Can you work on an existing website or app?",
-    a: "Yes. We can redesign, rebuild, improve, or add new features to an existing website, web app, ecommerce store, or mobile app.",
+    q: "Do you help with referrals?",
+    a: "Yes. We help create referral campaigns and customer follow-up workflows so satisfied customers can generate more business.",
   },
   {
-    q: "Can I add more features after launch?",
-    a: "Yes. After your first version is live, we can continue with additional sprints to add features, improve the user experience, connect more integrations, or build version two.",
+    q: "How do you prove ROI?",
+    a: "We track leads, sources, appointments, proposals, closed jobs, revenue, reviews, and referrals. This helps show which channels are creating real business results.",
   },
   {
-    q: "Do you handle integrations?",
-    a: "Yes. We can connect your product to payment processors, email tools, CRMs, booking systems, analytics tools, databases, AI tools, and other third-party APIs when needed.",
+    q: "Who is this for?",
+    a: "This is for local service businesses such as roofers, HVAC companies, plumbers, remodelers, med spas, dentists, lawyers, auto repair shops, and other businesses that rely on local leads and appointments.",
   },
   {
-    q: "How do I get started?",
-    a: "Book a free call. We'll discuss your idea, goals, timeline, and budget, then recommend the best path to launch your website, web app, mobile app, or MVP.",
+    q: "Do I need to replace my current tools?",
+    a: "Not necessarily. If you already use tools like Podium, Birdeye, GoHighLevel, Jobber, ServiceTitan, or another CRM, we can work with what you have. Our focus is helping you understand what is working, what is leaking, and what actions will grow revenue.",
   },
 ];
 

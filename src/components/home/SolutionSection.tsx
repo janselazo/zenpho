@@ -32,8 +32,8 @@ export default function SolutionSection() {
     <section className="relative border-t border-border/60 bg-surface/70 py-24 lg:py-28">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <SectionHeading
-          title="From Idea To"
-          titleAccent="Launch 🚀"
+          title="From idea to MVP"
+          titleAccent="to launch"
           align="center"
           description={
             <p className="!text-base sm:!text-lg">

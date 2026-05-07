@@ -2,8 +2,7 @@
 
 import { motion } from "framer-motion";
 import Button from "@/components/ui/Button";
-
-export default function ServicesClosingCTA() {
+import { BOOKING_PRIMARY_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
   return (
     <section className="mx-auto max-w-7xl px-4 pb-24 pt-8 sm:px-6 lg:px-8">
       <motion.div
@@ -22,12 +21,11 @@ export default function ServicesClosingCTA() {
             Not sure what your MVP should include?
           </h2>
           <p className="mx-auto mt-4 max-w-md text-base leading-relaxed text-text-secondary">
-            Book a strategy call and we&apos;ll help you define a focused version
-            one.
+            Book a short working session and we&apos;ll help you define a focused version-one scope.
           </p>
           <div className="mt-8 flex justify-center">
             <Button href="/booking" variant="primary" size="lg">
-              Book an MVP Strategy Call
+              {BOOKING_PRIMARY_BUTTON_LABEL}
             </Button>
           </div>
         </div>

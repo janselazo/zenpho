@@ -1,37 +1,33 @@
 import type { SiteFaqItem } from "@/lib/marketing/site-faq-items";
 
-/** FAQs shown only on /pricing (Launch, Grow, Scale). */
+/** FAQs shown only on /pricing (launch MVP packages). */
 export const PRICING_PAGE_FAQS: SiteFaqItem[] = [
   {
-    q: "What is Launch?",
-    a: "Launch is $1,500/month. It establishes Zenpho CRM, a mobile-friendly site (about 3 to 5 core pages plus booking/lead capture), Google Business Profile with Maps fundamentals and review-request setup, local SEO foundations, starter social execution, Zenpho workspace access for CRM and pipeline workflows, hosting, recurring social and GBP posts, review monitoring, and monthly reporting—all in one system.",
+    q: "What is Website Launch?",
+    a: "Website Launch is a one-time build focused on a professional marketing site or ecommerce storefront: strategy and planning, custom UX/UI, responsive layouts, core pages, forms and integrations as scoped, analytics and SEO foundation for public pages, QA, deployment, documentation, and 30 days of post-launch support. Priced at $2,497 during the limited launch offer (50% off the standard $4,994).",
   },
   {
-    q: "Is there an alternate Launch price?",
-    a: "Yes. In more price-sensitive markets we can start at $997 setup plus $697/month on a six-month agreement. You get the same Launch deliverables; the payment structure is adjusted for cash flow.",
+    q: "What is Web App MVP?",
+    a: "Web App MVP ships a functional authenticated web product—login, user and admin dashboards, database setup, forms and actions, payments or booking flows as scoped, API integrations, plus launch setup (analytics, SEO for public pages, performance checks, QA, deployment, handoff) and 90 days of support. Priced at $4,997 during the limited launch offer (50% off $9,994). Typical timeline is about two weeks.",
   },
   {
-    q: "What is Grow, and does it include Launch?",
-    a: "Grow is $2,000/month (ad spend is separate). It includes everything in Launch—site, GBP, baseline SEO, Zenpho platform, and monthly rhythm—plus Google and Meta campaign management, retargeting, a dedicated landing page, Tag Manager and conversion/call/form tracking, cost-per-lead and appointment reporting, and lead follow-up automations with weekly optimizations and a monthly strategy cadence.",
+    q: "What is Mobile App MVP?",
+    a: "Mobile App MVP is for iOS and Android–oriented MVPs: mobile-first UX/UI, user accounts and onboarding, core screens, integrations, database setup, launch support, and 90 days of post-launch support. Public-page SEO is scoped to landing surfaces where applicable. Priced at $5,997 during the limited launch offer (50% off $11,994). Typical timeline is two to four weeks.",
   },
   {
-    q: "What is Scale, and how is it different from Grow?",
-    a: "Scale is $3,000/month (ad spend separate). It inherits Launch plus Grow foundations, then layers deeper paid programs (video/LSAs where relevant, broader testing), local SEO expansion, experimentation on offers and bookings, CRM and sales workflows, referral/review motions, attribution dashboards tied to bookings, quarterly planning, advanced Zenpho automation, multi-pipeline tooling, multi-seat access, priority support—and optional Scale add-ons (appointment setting, call coverage, integrations, AI chat, newsletters, creative production, and more) when quoted separately.",
+    q: "How does payment work?",
+    a: "Each package uses the same structure: 50% upfront when we kick off, 50% on delivery. Third-party subscriptions or tooling and major scope additions outside the comparison matrix are quoted separately after discovery.",
   },
   {
-    q: "Is ad spend included in Grow or Scale?",
-    a: "No. Monthly fees fund strategy and execution inside Zenpho; media budgets settle directly with each ad platform. Typical ranges: Grow often needs about $1,500–$3,000/month in spend (higher—roughly $3,000–$10,000/month—in tougher verticals). Scale tends to slot at $5,000+/month, with aggressive growth plans frequently landing around $10,000–$25,000+/month.",
+    q: "What does the limited 50% launch offer mean?",
+    a: "We’re offering three discounted launch packages for the next two client spots. After those spots fill, pricing returns to the listed “was” amounts or we’ll quote custom engagements—especially for larger or more complex work that needs an extra sprint.",
   },
   {
-    q: "Can you build ecommerce, a web app, or a mobile app?",
-    a: "Yes, as separate scoped projects—not bundled into Launch–Scale retainers. Ecommerce storefronts, customer portals/SaaS-style web apps, and mobile apps are quoted with their own timelines and pricing. Mention it on the contact form or in a discovery call.",
+    q: "Can we customize scope or combine ideas from multiple columns?",
+    a: "Yes. The table reflects standard bundles; discovery may surface add-ons (extra integrations, more screens, multi-tenant complexity, etc.). We’ll map those to a clear quote or a follow-on sprint so expectations stay explicit.",
   },
   {
-    q: "Can I start on Launch and move to Grow later?",
-    a: "Yes. Many operators validate their foundation first, then add paid acquisition once forms, tracking, and creative are ready. We map the migration so you don't rebuild work twice.",
-  },
-  {
-    q: "How do I know what to prioritize first?",
-    a: "Run the Revenue Leak Audit. It highlights where leads, reviews, referrals, or revenue slip through so we can tackle the biggest gaps before scaling spend.",
+    q: "How do we choose which package to start with?",
+    a: "If you primarily need a credible site or storefront, start with Website Launch. If your roadmap centers on logged-in users, dashboards, or portals, Web App MVP fits. If the experience must live as a native-feeling mobile MVP first, choose Mobile App MVP—or book a call and we’ll align the smallest coherent slice to prove value.",
   },
 ];

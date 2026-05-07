@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Button from "@/components/ui/Button";
+import { BOOKING_PRIMARY_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
 
 export type MarketingPillarLayoutProps = {
   title: string;
@@ -32,10 +33,10 @@ export default function MarketingPillarLayout({
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button href="/booking" variant="primary" size="md">
-              Book a growth call
+              {BOOKING_PRIMARY_BUTTON_LABEL}
             </Button>
-            <Button href="/revenue" variant="secondary" size="md">
-              Free revenue leak check
+            <Button href="/contact" variant="secondary" size="md">
+              Contact
             </Button>
           </div>
         </div>

@@ -5,7 +5,7 @@ import ResourcesGrid from "@/components/resources/ResourcesGrid";
 export const metadata: Metadata = {
   title: "Resources",
   description:
-    "Resources: blog, case studies, pricing, and LinkedIn — for local service businesses growing leads, reviews, and ROI.",
+    "Guides, tools, checklists, and frameworks to help you plan, build, launch, and improve your digital product—from Zenpho.",
 };
 
 export default function ResourcesPage() {

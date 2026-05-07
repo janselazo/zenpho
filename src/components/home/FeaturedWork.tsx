@@ -11,6 +11,7 @@ import { SECTION_EYEBROW_CLASSNAME } from "@/components/ui/SectionHeading";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
+import { BOOKING_NAV_COMPACT_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
 
 export default function FeaturedWork() {
   return (
@@ -74,7 +75,7 @@ export default function FeaturedWork() {
               showLiveDot
               className="whitespace-nowrap"
             >
-              Book a Call
+              {BOOKING_NAV_COMPACT_BUTTON_LABEL}
             </Button>
           </motion.div>
         </div>

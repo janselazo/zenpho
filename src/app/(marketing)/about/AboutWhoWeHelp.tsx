@@ -2,14 +2,14 @@ import SectionHeading from "@/components/ui/SectionHeading";
 import Card from "@/components/ui/Card";
 
 const audience = [
-  "Roofers, HVAC, plumbers, and remodelers",
-  "Med spas, dental practices, and other appointment-driven clinics",
-  "Attorneys and professional services that live on consultations",
-  "Auto repair and home service brands with local search volume",
-  "Multi-location operators standardizing lead handling",
-  "Owners spending on marketing without clear ROI",
-  "Teams losing leads to missed calls, slow follow-up, or weak proposals",
-  "Businesses ready to invest in reviews, referrals, and reactivation",
+  "Founders turning a concept into a demo, MVP, or first paying customers",
+  "Small product teams that need senior hands across UX, engineering, and release",
+  "Operators modernizing a legacy site or internal tool into a web or mobile experience",
+  "Brands launching ecommerce, membership, or content systems that must work on day one",
+  "Agencies or studios looking for a disciplined build partner without hiring a full bench",
+  "Teams that already shipped v1 and need stabilization, instrumentation, or roadmap for v2",
+  "Non-technical leaders who want weekly visibility into scope, milestones, and tradeoffs",
+  "Builders who value documentation, handoff, and pragmatic maintainability",
 ] as const;
 
 export default function AboutWhoWeHelp() {
@@ -17,11 +17,11 @@ export default function AboutWhoWeHelp() {
     <section className="mx-auto max-w-3xl px-6 py-20 lg:px-8 lg:py-24">
       <SectionHeading
         align="left"
-        title="Built for local service"
-        titleAccent="businesses"
+        title="Built for teams"
+        titleAccent="shipping digital products"
         description={
           <p className="!text-[15px] !leading-relaxed text-text-secondary sm:!text-base">
-            If your growth depends on nearby customers booking calls, visits, or jobs—we are built for you.
+            If you are moving from idea → launch for a website, web app, mobile app, or MVP, we are built for you.
           </p>
         }
       />

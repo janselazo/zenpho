@@ -8,6 +8,10 @@ import { useEffect, useState } from "react";
 import type { MarketingMegaItem } from "@/lib/marketing-nav";
 import { marketingTopNav } from "@/lib/marketing-nav";
 import Button from "@/components/ui/Button";
+import {
+  BOOKING_NAV_COMPACT_BUTTON_LABEL,
+  BOOKING_PRIMARY_BUTTON_LABEL,
+} from "@/lib/marketing/booking-cta";
 
 function desktopLinkClass(active: boolean) {
   return `flex items-center gap-1 whitespace-nowrap border-b-2 pb-1 text-sm font-medium transition-colors ${
@@ -222,11 +226,11 @@ export default function Navbar() {
               variant="primary"
               size="sm"
               className="!px-3 sm:!px-4 md:!px-5"
-              aria-label="Book a growth call"
+              aria-label={BOOKING_PRIMARY_BUTTON_LABEL}
             >
-              <span className="sm:hidden">Book call</span>
-              <span className="hidden sm:inline xl:hidden">Book a call</span>
-              <span className="hidden xl:inline">Book a growth call</span>
+              <span className="sm:hidden">{BOOKING_NAV_COMPACT_BUTTON_LABEL}</span>
+              <span className="hidden sm:inline xl:hidden">{BOOKING_NAV_COMPACT_BUTTON_LABEL}</span>
+              <span className="hidden xl:inline">{BOOKING_PRIMARY_BUTTON_LABEL}</span>
             </Button>
             <button
               type="button"
@@ -266,7 +270,7 @@ export default function Navbar() {
               href="/booking"
               className="block rounded-xl bg-accent px-4 py-3 text-center text-sm font-semibold text-white shadow-md"
             >
-              Book a growth call
+              {BOOKING_PRIMARY_BUTTON_LABEL}
             </Link>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-2">

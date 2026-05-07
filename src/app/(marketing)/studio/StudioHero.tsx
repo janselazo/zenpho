@@ -3,8 +3,7 @@
 import { motion } from "framer-motion";
 import Button from "@/components/ui/Button";
 import { SECTION_EYEBROW_CLASSNAME } from "@/components/ui/SectionHeading";
-
-export default function StudioHero() {
+import { BOOKING_PRIMARY_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
   return (
     <section className="hero-sky relative overflow-hidden pb-24 pt-28 sm:pb-32 sm:pt-32">
       <div className="pointer-events-none absolute inset-0">
@@ -64,7 +63,7 @@ export default function StudioHero() {
             showLiveDot
             className="whitespace-nowrap"
           >
-            Book an MVP Strategy Call
+            {BOOKING_PRIMARY_BUTTON_LABEL}
           </Button>
         </motion.div>
       </div>

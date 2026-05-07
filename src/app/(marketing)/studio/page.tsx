@@ -8,10 +8,10 @@ import StudioPageCTA from "./StudioPageCTA";
 
 export const metadata: Metadata = {
   title: {
-    absolute: "Zenpho Studio | AI Product Studio",
+    absolute: "Zenpho Studio | MVP Development Studio",
   },
   description:
-    "Zenpho Studio is building toward an AI Product Studio model—developing and growing tech startups and ecommerce brands while creating our own AI-powered software.",
+    "Zenpho Studio is building toward an MVP and product studio model—developing and growing tech startups and ecommerce brands while creating our own AI-powered software.",
 };
 
 export default function StudioPage() {

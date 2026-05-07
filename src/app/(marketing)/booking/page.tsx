@@ -3,9 +3,9 @@ import BookingHero from "./BookingHero";
 import BookingSection from "@/components/contact/BookingSection";
 
 export const metadata: Metadata = {
-  title: "Book a growth call · Zenpho",
+  title: "Book a Free Build Call · Zenpho",
   description:
-    "Schedule time with Zenpho to talk leads, bookings, reviews, referrals, and revenue tracking for your local service business.",
+    "Schedule time with Zenpho to align on your website, web app, or mobile MVP—scope, timeline, and how we ship together.",
 };
 
 export default function BookingPage() {

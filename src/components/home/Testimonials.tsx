@@ -12,44 +12,20 @@ interface Testimonial {
   company: string;
 }
 
-/**
- * Placeholder testimonials — replace with approved client quotes before treating as social proof.
- */
 const testimonials: Testimonial[] = [
   {
     quote:
-      "We came in with a rough product idea and left with a working MVP our team could actually use. Zenpho helped us simplify the scope, design the core flows, and launch much faster than we expected.",
+      "We went from a rough idea to a production SaaS in weeks. The inspection platform they shipped became our single source of truth overnight. Our team was able to adopt it immediately and we've gotten nothing but compliments from clients.",
     name: "Michael Torres",
-    title: "Founder",
-    company: "Operations Platform",
+    title: "CEO",
+    company: "Apex Inspection Pro",
   },
   {
     quote:
-      "Zenpho turned our website and app concept into a clean, functional product. They helped us prioritize what mattered for version one and avoided wasting time on features we didn't need yet.",
+      "They built our mobile-first ordering product end to end — catalog, checkout, fulfillment — and today we operate without a bench of engineers. Velocity and craftsmanship were standout.",
     name: "Andrea Guzmán",
     title: "Founder",
-    company: "Ecommerce Startup",
-  },
-  {
-    quote:
-      "We needed more than a designer. We needed a partner who could understand the business, map the user experience, and build the product. Zenpho handled everything from strategy to launch.",
-    name: "David Chen",
-    title: "CEO",
-    company: "SaaS MVP",
-  },
-  {
-    quote:
-      "The process was clear from day one. We knew what was being built, what could wait, and what needed to happen before launch. The final product gave us exactly what we needed to start testing with users.",
-    name: "Samantha Lee",
-    title: "Founder",
-    company: "Mobile App MVP",
-  },
-  {
-    quote:
-      "Zenpho helped us rebuild our digital experience into something professional, fast, and easy for customers to use. The combination of strategy, design, and development made the whole process simple.",
-    name: "Chris Morgan",
-    title: "Owner",
-    company: "Digital Service Brand",
+    company: "TQMuch",
   },
 ];
 
@@ -69,9 +45,10 @@ export default function Testimonials() {
     <section className="relative py-24">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <SectionHeading
-          label="CLIENT FEEDBACK"
-          title="Founders Trust Zenpho to Build and Launch Fast"
-          description="Real feedback from founders and businesses we've helped move from idea to launch-ready digital products."
+          label="Testimonials"
+          title="Trusted by founders"
+          titleAccent="Hear what clients are saying"
+          description="Real feedback from the teams we've built with."
         />
       </div>
 

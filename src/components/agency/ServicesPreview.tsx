@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Check } from "lucide-react";
 import Button from "@/components/ui/Button";
+import { BOOKING_PRIMARY_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
 
 const BOOKING_HREF = "/booking";
 
@@ -97,7 +98,7 @@ const MVP_DEVELOPMENT_SERVICE: ServiceConfig = {
     "Operators productizing workflows or consultants packaging expertise",
   ],
   primaryHref: BOOKING_HREF,
-  primaryLabel: "Book a Call",
+  primaryLabel: BOOKING_PRIMARY_BUTTON_LABEL,
   learnHref: "/services/mvp-development",
   learnLabel: "More about MVP Development",
 };
@@ -146,7 +147,7 @@ const MVP_GROWTH_SERVICE: ServiceConfig = {
     "Operators who need repeatable beta feedback loops—not one-off bursts",
   ],
   primaryHref: BOOKING_HREF,
-  primaryLabel: "Book a Call",
+  primaryLabel: BOOKING_PRIMARY_BUTTON_LABEL,
   learnHref: "/services/mvp-growth",
   learnLabel: "More about MVP Growth",
 };

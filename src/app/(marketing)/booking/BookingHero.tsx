@@ -23,7 +23,7 @@ export default function BookingHero() {
           className="heading-display text-balance text-4xl font-bold leading-tight tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
         >
           <span>Book a </span>
-          <span className="text-accent">Growth Call</span>
+          <span className="text-accent">Free Build Call</span>
         </motion.h1>
 
         <motion.p
@@ -32,8 +32,7 @@ export default function BookingHero() {
           transition={{ duration: 0.45, delay: 0.14 }}
           className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-text-secondary"
         >
-          We&apos;ll help you understand how to attract better leads, turn more inquiries into booked appointments, grow
-          your business reputation, and track which marketing efforts are making you money.
+          We&apos;ll help you clarify what to ship first—website, web app, or mobile MVP—how it should behave for users, and the fastest path from discovery to a production-ready handoff.
         </motion.p>
       </div>
     </section>

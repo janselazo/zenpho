@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import Button from "@/components/ui/Button";
 import { SECTION_EYEBROW_CLASSNAME } from "@/components/ui/SectionHeading";
+import { BOOKING_PRIMARY_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
 
 export default function ContactPageCTA() {
   return (
@@ -26,15 +27,15 @@ export default function ContactPageCTA() {
             Prefer to start with an audit?
           </h2>
           <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-text-secondary sm:text-base">
-            Run a Revenue Leak Audit on your Google Business Profile and local presence—or book a growth call and we&apos;ll
-            map priorities together.
+            Run a Revenue Leak Audit on your digital presence—or book a working session and we&apos;ll map priorities for
+            your website, app, or MVP.
           </p>
           <div className="mx-auto mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:gap-4">
             <Button href="/revenue" variant="primary" size="lg" className="sm:min-w-[200px]">
               Run Revenue Leak Audit
             </Button>
             <Button href="/booking" variant="dark" size="lg" showLiveDot className="sm:min-w-[200px]">
-              Book a growth call
+              {BOOKING_PRIMARY_BUTTON_LABEL}
             </Button>
           </div>
         </div>

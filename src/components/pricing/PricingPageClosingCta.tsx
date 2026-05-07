@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import Button from "@/components/ui/Button";
 import { SECTION_EYEBROW_CLASSNAME } from "@/components/ui/SectionHeading";
+import { BOOKING_PRIMARY_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
 
 export default function PricingPageClosingCta() {
   return (
@@ -23,15 +24,14 @@ export default function PricingPageClosingCta() {
             <span className={SECTION_EYEBROW_CLASSNAME}>Next step</span>
           </div>
           <h2 className="heading-display text-balance text-3xl font-bold tracking-tight text-text-primary sm:text-4xl">
-            Ready to <span className="text-accent">grow</span>?
+            Ready to <span className="text-accent">scope</span> your build?
           </h2>
           <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-text-secondary sm:mt-4 sm:text-base">
-            Book a quick call. We&apos;ll align on your market, what you&apos;re tracking today, and which plan matches
-            where you are.
+            Book a short call. We&apos;ll align on what you&apos;re shipping, timeline, and which launch package fits.
           </p>
           <div className="mx-auto mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:gap-4">
             <Button href="/booking" variant="primary" size="lg" className="sm:min-w-[200px]">
-              Book a growth call
+              {BOOKING_PRIMARY_BUTTON_LABEL}
             </Button>
             <Button href="/contact" variant="dark" size="lg" showLiveDot className="sm:min-w-[200px]">
               Contact

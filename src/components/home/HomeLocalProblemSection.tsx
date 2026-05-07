@@ -24,12 +24,12 @@ export default function HomeLocalProblemSection() {
                 id={HEADLINE_ID}
                 className="heading-display text-balance text-3xl font-bold leading-[1.12] tracking-tight text-text-primary sm:text-4xl lg:text-[2.35rem] lg:leading-[1.1]"
               >
-                Where Great Ideas Get Stuck Before Launch
+                Where Local Service Businesses Lose Revenue
               </h2>
               <p className="mt-5 max-w-prose text-base leading-relaxed text-text-secondary sm:text-lg">
-                Many founders and business owners have strong ideas for websites, apps, and digital products. But without
-                a clear scope, the right product strategy, and a focused development process, projects get delayed,
-                overbuilt, or never launched at all.
+                Many local businesses are already getting calls, website visits, quote requests, and referrals. But if
+                those opportunities are not captured, tracked, followed up with, and converted, money is being left on
+                the table.
               </p>
             </div>
 
@@ -61,8 +61,8 @@ export default function HomeLocalProblemSection() {
           <div className="mt-10 rounded-2xl border border-border/80 bg-white px-6 py-6 shadow-soft sm:px-8 sm:py-8 dark:border-zinc-700/80 dark:bg-zinc-900/85">
             <p className="text-base font-semibold leading-snug text-text-primary sm:text-lg">Our job is simple:</p>
             <p className="mt-3 text-sm leading-relaxed text-text-secondary sm:text-base">
-              We help founders and businesses turn ideas into launch-ready websites, web apps, mobile apps, and MVPs —
-              with clear strategy, focused development, and support after launch.
+              We help local businesses find the leaks, fix them, and build a system that turns more opportunities into
+              revenue.
             </p>
           </div>
         </div>

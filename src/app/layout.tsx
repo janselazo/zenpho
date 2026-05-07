@@ -15,13 +15,13 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Zenpho · Growth for local service businesses",
+  title: "Zenpho · MVP Development Agency",
   description:
-    "Zenpho helps local service businesses generate qualified leads, book more appointments, collect Google reviews, grow referrals, and track which marketing channel produces revenue—with our web app and expert support.",
+    "Website, web app, and mobile MVP development—discovery through deployment—for founders and teams shipping credible products fast.",
   openGraph: {
-    title: "Zenpho · Growth for local service businesses",
+    title: "Zenpho · MVP Development Agency",
     description:
-      "Qualified leads, appointments, reviews, referrals, and revenue clarity for local service businesses—product plus solutions from Zenpho.",
+      "Websites, web apps, mobile MVPs, and launch support—strategy, UX, engineering, and handoff from Zenpho.",
     type: "website",
     locale: "en_US",
   },

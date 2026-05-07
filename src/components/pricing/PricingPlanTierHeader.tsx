@@ -1,7 +1,7 @@
 import Button from "@/components/ui/Button";
 import type { LocalServicePricingPlan } from "@/lib/marketing/local-service-pricing-plans";
 
-/** Matches comparison table column chrome (Launch / Grow / Scale). */
+/** Matches comparison table column chrome (tier headers). */
 export function pricingPlanColumnSurfaceClass(featured?: boolean) {
   return featured
     ? "border-x border-accent/25 bg-accent/[0.04] shadow-[inset_0_1px_0_0_rgba(37,99,235,0.12)]"
@@ -18,7 +18,7 @@ export function PricingPlanTierHeaderBlock({ plan }: { plan: LocalServicePricing
       <div className="flex min-h-[30px] items-end justify-center pb-2 sm:min-h-[32px]">
         {plan.featured ? (
           <span className="rounded-full bg-accent px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
-            Most booked
+            MOST BOOKED
           </span>
         ) : null}
       </div>
@@ -38,15 +38,18 @@ export function PricingPlanTierHeaderBlock({ plan }: { plan: LocalServicePricing
           <p className="text-xs leading-relaxed text-text-secondary sm:text-[13px]">{plan.summary}</p>
         ) : null}
         <div className="mt-3 flex flex-col gap-0.5">
-          <p className="text-xl font-black tabular-nums tracking-tight text-text-primary sm:text-2xl">
-            {plan.priceLead}
-          </p>
-          <p className="text-xs leading-snug text-text-secondary sm:text-sm">
+          <p className="text-xl font-black tabular-nums tracking-tight text-text-primary sm:text-2xl">{plan.priceLead}</p>
+          {plan.priceWas ? (
+            <p className="text-xs tabular-nums leading-snug text-text-secondary line-through decoration-text-secondary/55 sm:text-sm">
+              {plan.priceWas}
+            </p>
+          ) : null}
+          <p className="min-h-[1.125rem] text-xs leading-snug text-text-secondary sm:text-sm">
             {plan.priceNote ? (
               plan.priceNote
             ) : (
               <span className="invisible select-none" aria-hidden>
-                Plus ad spend
+                —
               </span>
             )}
           </p>

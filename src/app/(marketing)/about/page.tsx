@@ -11,10 +11,10 @@ import Button from "@/components/ui/Button";
 
 export const metadata: Metadata = {
   title: {
-    absolute: "About Zenpho · Local business growth",
+    absolute: "About Zenpho · MVP product studio",
   },
   description:
-    "Zenpho builds software and services for local service businesses—more qualified leads, booked jobs, Google reviews, referrals, and clear marketing ROI.",
+    "Who we are, how we work, and how Zenpho helps founders and businesses turn ideas into launch-ready digital products.",
 };
 
 export default function AboutPage() {
@@ -56,17 +56,19 @@ export default function AboutPage() {
         <SectionHeading
           align="left"
           label="Journey"
-          title="From product scale to"
-          titleAccent="local growth systems"
-          description="Years of building and scaling software reinforced a simple idea: growth is a system—discovery, trust, conversion, follow-up, and measurement—not a single channel or tactic."
+          title="From software craft to"
+          titleAccent="shipping products"
+          description="Years of building and releasing software reinforced a simple rhythm: clarify the problem, design the smallest coherent experience, build with observable quality, ship, learn, and tighten the loop."
         />
         <Card className="border-border/80 bg-white p-8 shadow-soft sm:p-10">
           <p className="text-base leading-relaxed text-text-secondary">
-            We bring the same rigor Zenpho uses in product to local service:{" "}
+            We bring full-stack discipline to MVPs—{" "}
             <span className="font-medium text-text-primary">
-              define the funnel, instrument it, prioritize what moves revenue, and improve in tight loops
+              pragmatic UX, implementation you can operate, instrumentation you can trust, and a launch plan your team will
+              actually follow
             </span>
-            —whether that is search presence, landing pages, ads, reviews, or referral workflows.
+            —whether that is a marketing site, a customer-facing web app, a mobile companion, or internal tooling that needs
+            to ship.
           </p>
           <p className="mt-6 text-base leading-relaxed text-text-secondary">
             A chapter that shaped that discipline was{" "}
@@ -74,8 +76,7 @@ export default function AboutPage() {
             <span className="font-medium text-text-primary">0 to 15,000</span> customers with teams at{" "}
             <span className="font-medium text-text-primary">Authentic Brands Group</span>,{" "}
             <span className="font-medium text-text-primary">Coral Gables City</span>, and thousands of SMBs. Living
-            inside support, product, and growth as one system is what we bring when we partner with operators who need
-            clarity—not just more noise.
+            inside support, product, and growth as one system is what we carry into every Zenpho engagement.
           </p>
         </Card>
       </section>
@@ -84,17 +85,17 @@ export default function AboutPage() {
         <SectionHeading
           align="left"
           label="Zenpho"
-          title="Software roots,"
-          titleAccent="local focus"
+          title="Product studio roots,"
+          titleAccent="builder mindset"
           titleAccentInline
-          description="We are a growth partner for local service businesses—audits, tracking foundations, campaigns, and execution—backed by engineers who still ship production software."
+          description="We are an MVP development agency—Design, Build, and Launch engagements plus focused tools like Revenue Leak Audits when they help—backed by engineers who still ship production software."
         />
         <Card className="border-border/80 bg-white p-8 shadow-soft sm:p-10">
           <p className="text-base leading-relaxed text-text-secondary">
             Most of our calendar is{" "}
-            <span className="font-medium text-text-primary">client growth work</span>: Revenue Leak Audits, lead-to-revenue
-            setup, monthly growth programs, and full partnerships for operators scaling hard. We stay product-led—clear
-            scope, measurable outcomes, and reporting you can act on.
+            <span className="font-medium text-text-primary">client product work</span>: discovery, UX and UI direction,
+            implementation sprints, integrations, go-live support, and iteration plans for founders who need speed without
+            sacrificing maintainability. We stay product-led—clear scope, milestone demos, and outcomes you can measure.
           </p>
           <p className="mt-6 text-base leading-relaxed text-text-secondary">
             We also operate{" "}

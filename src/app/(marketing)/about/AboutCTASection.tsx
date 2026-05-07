@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import Button from "@/components/ui/Button";
+import { BOOKING_PRIMARY_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
 
 export default function AboutCTASection() {
   return (
@@ -23,18 +24,17 @@ export default function AboutCTASection() {
 
         <div className="relative z-10">
           <h2 className="heading-display text-balance text-3xl font-bold tracking-tight text-text-primary sm:text-4xl">
-            See where revenue is leaking
+            Plan your next website or product milestone
           </h2>
           <p className="mx-auto mt-4 max-w-lg text-base leading-relaxed text-text-secondary sm:mt-5">
-            Run a Revenue Leak Audit on your business, or book a call and we&apos;ll align on the right plan—setup,
-            monthly growth, or full partnership.
+            Book a working session—scope, stack, roadmap, and concrete next steps for your MVP or storefront build.
           </p>
           <div className="mx-auto mt-9 flex max-w-md flex-col items-stretch justify-center gap-3 sm:mx-auto sm:max-w-none sm:flex-row sm:gap-4">
             <Button href="/revenue" variant="primary" size="lg" className="sm:min-w-[200px]">
               Run Revenue Leak Audit
             </Button>
             <Button href="/booking" variant="dark" size="lg" showLiveDot className="sm:min-w-[200px]">
-              Book a growth call
+              {BOOKING_PRIMARY_BUTTON_LABEL}
             </Button>
           </div>
         </div>

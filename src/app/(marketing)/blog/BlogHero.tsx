@@ -21,8 +21,8 @@ export default function BlogHero() {
           transition={{ duration: 0.5, delay: 0.06 }}
           className="heading-display text-4xl font-bold leading-tight tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
         >
-          <span className="block">Local growth &</span>
-          <span className="mt-1 block text-accent">revenue clarity</span>
+          <span className="block">MVP &amp; product</span>
+          <span className="mt-1 block text-accent">launch notes</span>
         </motion.h1>
 
         <motion.p
@@ -31,8 +31,8 @@ export default function BlogHero() {
           transition={{ duration: 0.45, delay: 0.14 }}
           className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-text-secondary"
         >
-          Practical notes on leaks, tracking, reviews, referrals, ads, and how to connect marketing to booked jobs and
-          real ROI.
+          Insights on MVP development, product strategy, websites, web apps, mobile apps, ecommerce, and launching
+          faster—from scope to ship.
         </motion.p>
       </div>
     </section>

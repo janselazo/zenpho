@@ -22,8 +22,8 @@ export default function ContactHero() {
           transition={{ duration: 0.5, delay: 0.06 }}
           className="heading-display text-balance text-4xl font-bold leading-tight tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
         >
-          <span>Book a </span>
-          <span className="text-accent">Growth Call</span>
+          <span>Have a website, app, or </span>
+          <span className="text-accent">MVP idea?</span>
         </motion.h1>
 
         <motion.p
@@ -32,8 +32,8 @@ export default function ContactHero() {
           transition={{ duration: 0.45, delay: 0.14 }}
           className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-text-secondary"
         >
-          We&apos;ll help you understand how to attract better leads, turn more inquiries into booked appointments, grow
-          your business reputation, and track which marketing efforts are making you money.
+          Reach out and we&apos;ll help you map the next step—scope, stack, timeline, and whether Design, Build, or Launch
+          support fits first.
         </motion.p>
       </div>
     </section>

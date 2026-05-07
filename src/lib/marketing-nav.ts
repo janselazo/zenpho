@@ -10,6 +10,7 @@ import {
 import { marketingIndustryPages } from "./marketing-industries-pages";
 import { marketingProductPages } from "./marketing-product-pages";
 import { marketingSolutionPages } from "./marketing-solutions-pages";
+import { BOOKING_NAV_COMPACT_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
 
 export type MarketingMegaItem = {
   title: string;
@@ -76,28 +77,31 @@ const toolsMegaItems: MarketingMegaItem[] = [
 const resourcesMegaItems: MarketingMegaItem[] = [
   {
     title: "About us",
-    description: "Who we are and how we help local service businesses grow.",
+    description:
+      "Who we are, how we work, and how Zenpho helps founders and businesses turn ideas into launch-ready digital products.",
     href: "/about",
     icon: User,
     iconClassName: "bg-accent/15 text-accent",
   },
   {
     title: "Blog",
-    description: "Ideas on leads, bookings, reviews, referrals, and revenue.",
+    description:
+      "Insights on MVP development, product strategy, websites, web apps, mobile apps, ecommerce, and launching faster.",
     href: "/blog",
     icon: Newspaper,
     iconClassName: "bg-sky-500/15 text-sky-600",
   },
   {
     title: "Resources",
-    description: "Guides, links, and tools we think founders and owners will reuse.",
+    description:
+      "Guides, tools, checklists, and frameworks to help you plan, build, launch, and improve your digital product.",
     href: "/resources",
     icon: FileText,
     iconClassName: "bg-emerald-500/15 text-emerald-600",
   },
   {
     title: "Contact",
-    description: "Reach the team for questions or partnerships.",
+    description: "Have a website, app, or MVP idea? Reach out and we’ll help you map the next step.",
     href: "/contact",
     icon: Mail,
     iconClassName: "bg-violet-500/15 text-violet-600",
@@ -114,7 +118,7 @@ export const marketingTopNav: MarketingTopNavItem[] = [
   {
     type: "mega",
     label: "Solutions",
-    sectionEyebrow: "How we help",
+    sectionEyebrow: "HOW WE HELP",
     items: marketingSolutionsMegaItems,
   },
   {
@@ -133,7 +137,7 @@ export const marketingTopNav: MarketingTopNavItem[] = [
   {
     type: "mega",
     label: "Resources",
-    sectionEyebrow: "Learn",
+    sectionEyebrow: "LEARN",
     items: resourcesMegaItems,
   },
 ];
@@ -180,7 +184,7 @@ export const marketingFooterColumns: MarketingFooterColumn[] = [
       { label: "Contact", href: "/contact" },
       { label: "Pricing", href: "/pricing" },
       { label: "Case studies", href: "/case-studies" },
-      { label: "Book a call", href: "/booking" },
+      { label: BOOKING_NAV_COMPACT_BUTTON_LABEL, href: "/booking" },
     ],
   },
 ];

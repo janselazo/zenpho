@@ -1,3 +1,5 @@
+import { BOOKING_PRIMARY_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
+
 export interface Service {
   /** URL segment for `/services/[slug]` */
   slug: string;
@@ -133,7 +135,7 @@ export const developmentPricingOfferings: DevelopmentPricingOffering[] = [
         ],
       },
     ],
-    ctaLabel: "Book a Call",
+    ctaLabel: BOOKING_PRIMARY_BUTTON_LABEL,
   },
   {
     id: "mvp-growth",
@@ -172,7 +174,7 @@ export const developmentPricingOfferings: DevelopmentPricingOffering[] = [
         ],
       },
     ],
-    ctaLabel: "Book a Call",
+    ctaLabel: BOOKING_PRIMARY_BUTTON_LABEL,
   },
 ];
 
@@ -514,21 +516,21 @@ export const resourceItems: ResourceItem[] = [
   {
     title: "Blog",
     description:
-      "Notes on local growth: revenue leaks, tracking, reviews, referrals, ads, and proving ROI for service businesses.",
+      "Insights on MVP development, product strategy, websites, web apps, mobile apps, ecommerce, and launching faster.",
     href: "/blog",
     tag: "Writing",
   },
   {
     title: "Case studies",
     description:
-      "Selected builds and growth work—product launches, web apps, and systems that scale.",
+      "Selected builds—product launches, web apps, mobile experiences, and systems that scale.",
     href: "/case-studies",
     tag: "Work",
   },
   {
     title: "Pricing & FAQs",
     description:
-      "Development, Growth, and Scale programs—scoped on a call.",
+      "Website Launch, Web App MVP, and Mobile App MVP bundles — pricing, comparison, and FAQs.",
     href: "/pricing",
     tag: "Engagement",
   },

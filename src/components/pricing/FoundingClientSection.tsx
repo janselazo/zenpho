@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import Button from "@/components/ui/Button";
 import { SECTION_EYEBROW_CLASSNAME } from "@/components/ui/SectionHeading";
+import { BOOKING_PRIMARY_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
 
 export default function FoundingClientSection() {
   return (
@@ -34,7 +35,7 @@ export default function FoundingClientSection() {
           </p>
           <div className="mt-8 flex justify-center">
             <Button href="/booking" variant="primary" size="lg">
-              Apply for a Strategy Call
+              {BOOKING_PRIMARY_BUTTON_LABEL}
             </Button>
           </div>
         </div>

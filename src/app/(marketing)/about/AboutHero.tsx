@@ -26,7 +26,7 @@ export default function AboutHero() {
           transition={{ duration: 0.5, delay: 0.06 }}
           className="heading-display max-w-[22rem] text-2xl font-bold leading-snug tracking-tight text-text-primary min-[460px]:max-w-none sm:text-4xl sm:leading-tight lg:text-[2.5rem] lg:leading-[1.15]"
         >
-          We help local service businesses find leaks, fix them, and grow with clarity
+          We help founders turn ideas into launch-ready digital products
         </motion.h1>
         <motion.p
           initial={{ opacity: 1, y: 16 }}
@@ -34,8 +34,8 @@ export default function AboutHero() {
           transition={{ duration: 0.45, delay: 0.12 }}
           className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-text-secondary sm:text-lg"
         >
-          Zenpho combines audits, tracking, campaigns, automation, and done-for-you execution so you can see which channels
-          produce leads, appointments, clients, reviews, referrals—and real revenue—not just clicks.
+          Zenpho is an MVP development agency and product studio—clarifying scope, crafting the experience, engineering
+          what matters, and supporting you after release so you learn from real usage—not assumptions.
         </motion.p>
       </div>
     </section>

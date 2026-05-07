@@ -7,28 +7,28 @@ export default function AboutOurStory() {
       <SectionHeading
         align="left"
         label="Our story"
-        title="Zenpho was built for operators"
-        titleAccent="who need answers"
+        title="Zenpho was built for teams"
+        titleAccent="shipping under pressure"
       />
       <Card className="border-border/80 bg-white p-8 shadow-soft sm:p-10">
         <p className="text-base leading-relaxed text-text-secondary">
-          Most local service businesses are already getting calls, searches, form fills, and referrals—but when those
-          moments are not captured, tracked, and followed up, revenue leaks out quietly.
+          Most product ideas fail slowly—scope creeps, UX stays fuzzy, engineering restarts, or launch day arrives without
+          a plan to learn from users. We founded Zenpho to compress that risk: move from concept to something shippable with
+          disciplined scope, visible progress, and tooling you can operate.
         </p>
         <p className="mt-6 text-base leading-relaxed text-text-secondary">
-          Zenpho exists to close that gap: not another generic agency ticket, and not software alone, but a{" "}
-          <span className="font-medium text-text-primary">lead-to-revenue system</span> you can actually read—where leads
-          came from, what converted, what stalled, and what to fix next.
+          Our work sits at the intersection of studio craft and operator reality: a{" "}
+          <span className="font-medium text-text-primary">Design → Build → Launch</span> cadence you can read—what is
+          scoped, what shipped this week, what is waiting on feedback, and what should wait for v2.
         </p>
-        <p className="mt-6 font-medium text-text-primary">Activity without visibility is expensive.</p>
+        <p className="mt-6 font-medium text-text-primary">Speed without clarity is just expensive motion.</p>
         <p className="mt-6 text-base leading-relaxed text-text-secondary">
-          We started by applying the same discipline we use in product and growth: instrument the funnel, prioritize what
-          moves revenue, ship improvements fast, and report in terms owners care about—appointments, jobs won, reviews,
-          referrals, and ROI.
+          We apply the same loops we use shipping our own SaaS: prioritize the riskiest assumptions, instrument the
+          product, demo on staging often, and tighten after real traffic—not slide decks.
         </p>
         <p className="mt-6 text-base leading-relaxed text-text-secondary">
-          Today that shows up as Revenue Leak Audits, setup and tracking foundations, ongoing growth management, and
-          partnerships for operators who are ready to scale with a clear scoreboard.
+          Alongside custom builds, we keep tools like Revenue Leak Audits and Brand Kit workflows for teams that need
+          fast marketing clarity before or after a launch.
         </p>
       </Card>
     </section>

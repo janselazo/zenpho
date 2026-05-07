@@ -9,7 +9,7 @@ export default function PricingFAQ() {
         title="Common"
         titleAccent="questions"
         titleAccentInline
-        description="Launch, Grow, and Scale—what’s included, ad spend minimums, the alternate Launch tier, cross-tier ecommerce and app builds, and how to choose."
+        description="Website Launch, Web App MVP, and Mobile App MVP — what each package covers, how payment works, the limited launch offer, and when to ask for a custom quote."
       />
 
       <div className="mx-auto max-w-3xl space-y-3">

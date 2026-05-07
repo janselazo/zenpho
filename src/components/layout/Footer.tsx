@@ -7,6 +7,7 @@ import { Github, Linkedin, Mail, Phone } from "lucide-react";
 import { marketingFooterColumns } from "@/lib/marketing-nav";
 import { ZENPHO_CONTACT_EMAIL, ZENPHO_PHONE_DISPLAY, ZENPHO_PHONE_TEL_HREF } from "@/lib/zenpho-contact";
 import Button from "@/components/ui/Button";
+import { BOOKING_PRIMARY_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
 
 function SocialIconLink({
   href,
@@ -60,18 +61,17 @@ export default function Footer() {
               />
             </Link>
             <p className="mt-5 text-sm font-semibold leading-snug text-text-primary">
-              MVP Development &amp; Product Studio
+              MVP development agency & product studio
             </p>
             <p className="mt-3 max-w-sm text-sm leading-relaxed text-text-secondary">
-              We help founders and businesses design, build, and launch websites, ecommerce stores, web apps, mobile apps,
-              and MVPs — without hiring a full product team.
+              Websites, web apps, and mobile MVPs—from discovery and UX through build, deployment, and handoff.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Button href="/booking" variant="primary" size="md">
-                Book a Free Build Call
+                {BOOKING_PRIMARY_BUTTON_LABEL}
               </Button>
-              <Button href="/pricing" variant="secondary" size="md">
-                View Launch Packages
+              <Button href="/contact" variant="secondary" size="md">
+                Contact
               </Button>
             </div>
             <div className="mt-5 flex flex-wrap items-center gap-2">

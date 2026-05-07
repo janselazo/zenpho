@@ -2,8 +2,7 @@
 
 import { motion } from "framer-motion";
 import Button from "@/components/ui/Button";
-
-/** Homepage closing CTA (single primary action). */
+import { BOOKING_PRIMARY_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
 export default function HomeFinalCTA() {
   return (
     <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
@@ -33,7 +32,7 @@ export default function HomeFinalCTA() {
           </p>
           <div className="mx-auto mt-8 flex justify-center sm:mt-10">
             <Button href="/booking" variant="primary" size="lg">
-              Book an MVP Strategy Call
+              {BOOKING_PRIMARY_BUTTON_LABEL}
             </Button>
           </div>
         </div>

@@ -1,8 +1,7 @@
 "use client";
 
 import Button from "@/components/ui/Button";
-
-export default function ReferralsReviewsView() {
+import { BOOKING_NAV_COMPACT_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
   return (
     <div>
       <div>
@@ -49,7 +48,7 @@ export default function ReferralsReviewsView() {
               Contact (introduce someone)
             </Button>
             <Button href="/booking" variant="dark" size="md" showLiveDot>
-              Book a Call
+              {BOOKING_NAV_COMPACT_BUTTON_LABEL}
             </Button>
           </div>
           <p className="mt-4 text-xs text-text-secondary dark:text-zinc-500">

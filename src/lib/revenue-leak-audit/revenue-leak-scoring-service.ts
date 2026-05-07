@@ -2032,7 +2032,6 @@ export function scoreAudit(input: BuildInput) {
     moneySummary,
     sectionSummaries,
     actionPlan,
-    recommendedNextStep:
-      "Book a Growth Call with the Zenpho team to fix these revenue leaks.",
+    recommendedNextStep: "Book a Call with the Zenpho team to plan fixes and next steps.",
   };
 }

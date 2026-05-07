@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import Button from "@/components/ui/Button";
 import { SECTION_EYEBROW_CLASSNAME } from "@/components/ui/SectionHeading";
 import { experienceStats } from "@/lib/data";
+import { BOOKING_PRIMARY_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
 
 const clients = [
   "Taptok",
@@ -68,7 +69,7 @@ export default function Hero() {
             size="lg"
             className="min-h-9 flex-1 !gap-1.5 !px-2 !py-2 !text-[11px] leading-tight sm:min-h-11 sm:flex-initial sm:!gap-2.5 sm:!px-6 sm:!py-3.5 sm:!text-sm sm:leading-normal"
           >
-            Book an MVP Strategy Call
+            {BOOKING_PRIMARY_BUTTON_LABEL}
           </Button>
           <Button
             href="/services"

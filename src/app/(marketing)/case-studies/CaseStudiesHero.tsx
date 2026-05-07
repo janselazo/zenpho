@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import Button from "@/components/ui/Button";
 import { SECTION_EYEBROW_CLASSNAME } from "@/components/ui/SectionHeading";
+import { BOOKING_NAV_COMPACT_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
 
 export default function CaseStudiesHero() {
   return (
@@ -54,7 +55,7 @@ export default function CaseStudiesHero() {
             showLiveDot
             className="whitespace-nowrap"
           >
-            Book a Call
+            {BOOKING_NAV_COMPACT_BUTTON_LABEL}
           </Button>
         </motion.div>
       </div>
