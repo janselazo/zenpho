@@ -47,6 +47,7 @@ export default function ContactForm() {
           phone: fd.get("phone"),
           company: fd.get("company"),
           website_linkedin: fd.get("website_linkedin"),
+          product_type: fd.get("product_type"),
           sms_consent: fd.get("sms_consent") === "on",
         }),
       });
@@ -136,6 +137,29 @@ export default function ContactForm() {
               className={inputClass}
             />
           </div>
+        </div>
+        <div>
+          <label
+            htmlFor="contact-project-type"
+            className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-secondary"
+          >
+            Project type
+          </label>
+          <select
+            id="contact-project-type"
+            name="product_type"
+            required
+            defaultValue=""
+            className={`${inputClass} cursor-pointer`}
+          >
+            <option value="" disabled>
+              Select one
+            </option>
+            <option value="Custom Website">Custom Website</option>
+            <option value="Web App">Web App</option>
+            <option value="Mobile App">Mobile App</option>
+            <option value="Other project">Other project</option>
+          </select>
         </div>
         <div>
           <label

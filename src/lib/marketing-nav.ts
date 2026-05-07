@@ -107,8 +107,6 @@ export const marketingTopNav: MarketingTopNavItem[] = [
     sectionEyebrow: "LEARN",
     items: resourcesMegaItems,
   },
-  { type: "link", label: "FAQ", href: "/pricing#faq" },
-  { type: "link", label: "Contact", href: "/contact" },
 ];
 
 export type MarketingFooterColumn = {

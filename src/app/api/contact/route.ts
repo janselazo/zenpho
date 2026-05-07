@@ -10,6 +10,7 @@ function str(v: unknown): string {
 }
 
 function buildLeadNotes(payload: Record<string, unknown>): string {
+  const projectType = str(payload.product_type);
   const what = str(payload.what_building);
   const whom = str(payload.product_for);
   const validation = str(payload.validation_notes);
@@ -20,6 +21,7 @@ function buildLeadNotes(payload: Record<string, unknown>): string {
   const web = str(payload.website_linkedin);
 
   const parts: string[] = [];
+  if (projectType) parts.push(`Project type:\n${projectType}`);
   if (what) parts.push(`Business goals / what to improve:\n${what}`);
   if (whom) parts.push(`Service area & ideal customer:\n${whom}`);
   if (validation)
