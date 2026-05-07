@@ -12,7 +12,7 @@ export default function HomeLocalProblemSection() {
       aria-labelledby={HEADLINE_ID}
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="rounded-[2rem] border border-rose-100/90 bg-rose-50/95 p-8 shadow-soft ring-1 ring-black/[0.04] sm:p-10 lg:p-12 dark:border-rose-900/40 dark:bg-rose-950/35">
+        <div className="rounded-[2rem] border border-emerald-100/90 bg-emerald-50/95 p-8 shadow-soft ring-1 ring-black/[0.04] sm:p-10 lg:p-12 dark:border-emerald-900/40 dark:bg-emerald-950/35">
           <div className="grid gap-12 lg:grid-cols-2 lg:gap-14 xl:gap-16">
             <div className="flex flex-col lg:max-w-xl">
               <div className="mb-5 flex justify-start">
@@ -24,12 +24,12 @@ export default function HomeLocalProblemSection() {
                 id={HEADLINE_ID}
                 className="heading-display text-balance text-3xl font-bold leading-[1.12] tracking-tight text-text-primary sm:text-4xl lg:text-[2.35rem] lg:leading-[1.1]"
               >
-                Where Local Service Businesses Lose Revenue
+                Where Great Ideas Get Stuck Before Launch
               </h2>
               <p className="mt-5 max-w-prose text-base leading-relaxed text-text-secondary sm:text-lg">
-                Many local businesses are already getting calls, website visits, quote requests, and referrals. But if
-                those opportunities are not captured, tracked, followed up with, and converted, money is being left on
-                the table.
+                Many founders and business owners have strong ideas for websites, apps, and digital products. But without
+                a clear scope, the right product strategy, and a focused development process, projects get delayed,
+                overbuilt, or never launched at all.
               </p>
             </div>
 
@@ -44,7 +44,7 @@ export default function HomeLocalProblemSection() {
                   return (
                     <li key={card.text} className={`relative list-none ${tilt}`}>
                       <div className="flex h-full gap-3 rounded-xl border border-border/80 bg-white p-4 shadow-soft dark:border-zinc-700/80 dark:bg-zinc-900/85 sm:p-4">
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-rose-100/90 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-100/90 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300">
                           <Icon className="h-5 w-5" aria-hidden />
                         </span>
                         <p className="min-w-0 pt-0.5 text-sm font-medium leading-snug text-text-primary sm:text-[0.9375rem]">
@@ -61,8 +61,8 @@ export default function HomeLocalProblemSection() {
           <div className="mt-10 rounded-2xl border border-border/80 bg-white px-6 py-6 shadow-soft sm:px-8 sm:py-8 dark:border-zinc-700/80 dark:bg-zinc-900/85">
             <p className="text-base font-semibold leading-snug text-text-primary sm:text-lg">Our job is simple:</p>
             <p className="mt-3 text-sm leading-relaxed text-text-secondary sm:text-base">
-              We help local businesses find the leaks, fix them, and build a system that turns more opportunities into
-              revenue.
+              We help founders and businesses turn ideas into launch-ready websites, web apps, mobile apps, and MVPs —
+              with clear strategy, focused development, and support after launch.
             </p>
           </div>
         </div>

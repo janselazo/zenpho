@@ -1,32 +1,32 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  BadgeDollarSign,
   BarChart3,
-  Gauge,
-  Megaphone,
-  MessageSquareWarning,
-  MousePointerClick,
-  PhoneMissed,
-  Route,
-  Share2,
-  Star,
-  Target,
-  Users,
-  Workflow,
+  ClipboardList,
+  Clock,
+  FlaskConical,
+  Layers,
+  LayoutDashboard,
+  LifeBuoy,
+  Lightbulb,
+  Map,
+  Palette,
+  Puzzle,
 } from "lucide-react";
 
 export type HomeLocalProblemIconKey =
-  | "salesPipeline"
-  | "mapVisibility"
-  | "reviews"
-  | "conversion"
-  | "missedCalls"
-  | "tracking"
-  | "channels"
-  | "ads"
-  | "reviewSystem"
-  | "referrals"
-  | "followUp"
-  | "dashboard";
+  | "mvpScope"
+  | "stuckPlanning"
+  | "tooManyFeatures"
+  | "weakUx"
+  | "unclearQuotes"
+  | "noRoadmap"
+  | "slowDev"
+  | "noPrototype"
+  | "noCoreProduct"
+  | "integrations"
+  | "noAnalytics"
+  | "noSupport";
 
 export type HomeLocalProblemCard = {
   text: string;
@@ -34,18 +34,18 @@ export type HomeLocalProblemCard = {
 };
 
 const iconMap: Record<HomeLocalProblemIconKey, LucideIcon> = {
-  salesPipeline: Workflow,
-  mapVisibility: Target,
-  reviews: Star,
-  conversion: MousePointerClick,
-  missedCalls: PhoneMissed,
-  tracking: Route,
-  channels: Gauge,
-  ads: Megaphone,
-  reviewSystem: MessageSquareWarning,
-  referrals: Share2,
-  followUp: Users,
-  dashboard: BarChart3,
+  mvpScope: ClipboardList,
+  stuckPlanning: Lightbulb,
+  tooManyFeatures: Layers,
+  weakUx: Palette,
+  unclearQuotes: BadgeDollarSign,
+  noRoadmap: Map,
+  slowDev: Clock,
+  noPrototype: FlaskConical,
+  noCoreProduct: LayoutDashboard,
+  integrations: Puzzle,
+  noAnalytics: BarChart3,
+  noSupport: LifeBuoy,
 };
 
 export function iconForLocalProblemCard(key: HomeLocalProblemIconKey): LucideIcon {
@@ -54,51 +54,51 @@ export function iconForLocalProblemCard(key: HomeLocalProblemIconKey): LucideIco
 
 export const homeLocalProblemCards: HomeLocalProblemCard[] = [
   {
-    iconKey: "salesPipeline",
-    text: "No predictable sales pipeline",
+    iconKey: "mvpScope",
+    text: "No clear MVP scope",
   },
   {
-    iconKey: "mapVisibility",
-    text: "Weak Google Business Profile visibility",
+    iconKey: "stuckPlanning",
+    text: "Website or app idea stuck in planning",
   },
   {
-    iconKey: "reviews",
-    text: "Low review count compared to competitors",
+    iconKey: "tooManyFeatures",
+    text: "Too many features for version one",
   },
   {
-    iconKey: "conversion",
-    text: "Poor website conversion",
+    iconKey: "weakUx",
+    text: "Poor user experience and weak design",
   },
   {
-    iconKey: "missedCalls",
-    text: "Missed calls and slow follow-up",
+    iconKey: "unclearQuotes",
+    text: "Expensive quotes with unclear deliverables",
   },
   {
-    iconKey: "tracking",
-    text: "No clear lead tracking",
+    iconKey: "noRoadmap",
+    text: "No product roadmap or launch plan",
   },
   {
-    iconKey: "channels",
-    text: "No idea which marketing channels actually produce clients",
+    iconKey: "slowDev",
+    text: "Slow development and missed deadlines",
   },
   {
-    iconKey: "ads",
-    text: "Ads sending traffic to weak pages",
+    iconKey: "noPrototype",
+    text: "No working prototype to test with users",
   },
   {
-    iconKey: "reviewSystem",
-    text: "No consistent review request system",
+    iconKey: "noCoreProduct",
+    text: "No user login, payments, or dashboard setup",
   },
   {
-    iconKey: "referrals",
-    text: "No referral process",
+    iconKey: "integrations",
+    text: "Disconnected tools and missing integrations",
   },
   {
-    iconKey: "followUp",
-    text: "No follow-up with old leads or unsold proposals",
+    iconKey: "noAnalytics",
+    text: "No analytics or feedback tracking after launch",
   },
   {
-    iconKey: "dashboard",
-    text: "No dashboard showing the real business numbers",
+    iconKey: "noSupport",
+    text: "No post-launch support for improvements",
   },
 ];

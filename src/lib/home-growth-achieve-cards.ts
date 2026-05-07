@@ -6,60 +6,60 @@ export type HomeGrowthAchieveCard = {
   imageLabel: string;
 };
 
-export const homeGrowthAchieveSectionEyebrow = "What We Help You Achieve";
+export const homeGrowthAchieveSectionEyebrow = "WHAT WE HELP YOU LAUNCH";
 
-export const homeGrowthAchieveHeadline = "A Complete Growth System for Local Service Businesses";
+export const homeGrowthAchieveHeadline = "Websites, Apps & MVPs Built to Go Live Fast";
 
 export const homeGrowthAchieveDescription =
-  "We do not just run ads, build websites, or set up automation. We help you build a complete system to generate, capture, manage, convert, and multiply local business opportunities.";
+  "We do not just design screens or write code. We help you clarify the idea, define the first version, build the product, and launch with a clear path for improvement.";
 
 export const homeGrowthAchieveCards: HomeGrowthAchieveCard[] = [
   {
-    id: "qualified-leads",
-    title: "More Qualified Leads",
+    id: "launch-ready-websites",
+    title: "Launch-Ready Websites",
     description:
-      "Get found by more people searching for your services through Google, local SEO, optimized landing pages, paid ads, reviews, referrals, and local visibility.",
+      "Build a professional business or ecommerce website that explains your offer, builds trust, and gives visitors a clear path to take action.",
     imageSrc: "/home-growth-achieve/qualified-leads.svg",
-    imageLabel: "Local search and leads",
+    imageLabel: "Launch-Ready Websites",
   },
   {
-    id: "appointments",
-    title: "More Appointments",
+    id: "functional-web-apps",
+    title: "Functional Web Apps",
     description:
-      "Turn more calls, forms, and inquiries into booked estimates, consultations, service calls, or appointments.",
+      "Turn your idea into a working web app with user login, dashboards, admin tools, databases, payments, and integrations.",
     imageSrc: "/home-growth-achieve/appointments.svg",
-    imageLabel: "Booked appointments",
+    imageLabel: "Functional Web Apps",
   },
   {
-    id: "paying-clients",
-    title: "More Paying Clients",
+    id: "mobile-app-mvps",
+    title: "Mobile App MVPs",
     description:
-      "Improve follow-up, proposal tracking, lead management, and conversion so fewer opportunities fall through the cracks.",
+      "Launch a focused mobile app experience for iOS and Android users with clean onboarding, core features, and a smooth user flow.",
     imageSrc: "/home-growth-achieve/paying-clients.svg",
-    imageLabel: "Client conversion",
+    imageLabel: "Mobile App MVPs",
   },
   {
-    id: "revenue",
-    title: "More Revenue",
+    id: "clear-product-roadmaps",
+    title: "Clear Product Roadmaps",
     description:
-      "Track which channels are creating real business outcomes, not just clicks, impressions, or website traffic.",
+      "Define what needs to be built first, what can wait, and how to avoid wasting time and budget on unnecessary features.",
     imageSrc: "/home-growth-achieve/revenue.svg",
-    imageLabel: "Revenue attribution",
+    imageLabel: "Clear Product Roadmaps",
   },
   {
-    id: "reviews",
-    title: "More Reviews",
+    id: "faster-market-validation",
+    title: "Faster Market Validation",
     description:
-      "Automatically ask happy customers for Google reviews after completed jobs, improving trust and local conversion.",
+      "Get your first version in front of real users quickly so you can collect feedback, test demand, and improve with confidence.",
     imageSrc: "/home-growth-achieve/reviews.svg",
-    imageLabel: "Google reviews",
+    imageLabel: "Faster Market Validation",
   },
   {
-    id: "referrals",
-    title: "More Referrals",
+    id: "post-launch-improvements",
+    title: "Post-Launch Improvements",
     description:
-      "Turn satisfied customers into referral sources with simple campaigns, follow-up workflows, and referral tracking.",
+      "After launch, we help you improve features, fix friction points, add integrations, and build the next version based on real feedback.",
     imageSrc: "/home-growth-achieve/referrals.svg",
-    imageLabel: "Referral growth",
+    imageLabel: "Post-Launch Improvements",
   },
 ];

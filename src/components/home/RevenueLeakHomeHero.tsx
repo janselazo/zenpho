@@ -25,6 +25,7 @@ type RevenueLeakHomeHeroProps = {
   headlineLine1?: string;
   headlineLine2Prefix?: string;
   headlineAccent?: string;
+  headlineLine2Suffix?: string;
   subheadline?: string;
 };
 
@@ -33,6 +34,7 @@ export default function RevenueLeakHomeHero({
   headlineLine1,
   headlineLine2Prefix,
   headlineAccent,
+  headlineLine2Suffix,
   subheadline,
 }: RevenueLeakHomeHeroProps) {
   const router = useRouter();
@@ -78,6 +80,7 @@ export default function RevenueLeakHomeHero({
         headlineLine1={headlineLine1}
         headlineLine2Prefix={headlineLine2Prefix}
         headlineAccent={headlineAccent}
+        headlineLine2Suffix={headlineLine2Suffix}
         subheadline={subheadline}
         onSearch={handleSearch}
         onSelectBusiness={(r) => goToAudit(r)}

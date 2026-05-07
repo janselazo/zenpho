@@ -30,6 +30,8 @@ export type RevenueLeakHeroSearchProps = {
   headlineLine2Prefix?: string;
   /** Accent-colored phrase on the second line (uses `text-accent`). */
   headlineAccent?: string;
+  /** Text after the accent span on line two (primary body color). */
+  headlineLine2Suffix?: string;
   /** Paragraph under the headline (default: revenue audit positioning). */
   subheadline?: string;
 };
@@ -46,6 +48,7 @@ export default function RevenueLeakHeroSearch({
   headlineLine1 = "Find Where Your Business",
   headlineLine2Prefix = "Is Leaking ",
   headlineAccent = "Revenue",
+  headlineLine2Suffix = "",
   subheadline = DEFAULT_REVENUE_LEAK_SUBHEADLINE,
 }: RevenueLeakHeroSearchProps) {
   const [businessName, setBusinessName] = useState("");
@@ -111,6 +114,7 @@ export default function RevenueLeakHeroSearch({
             <span className="mt-0.5 block text-pretty leading-[1.02] sm:mt-1">
               {headlineLine2Prefix}
               <span className="text-accent">{headlineAccent}</span>
+              {headlineLine2Suffix}
             </span>
           </h1>
           <p className="mx-auto mt-6 max-w-3xl text-lg leading-8 text-text-secondary sm:text-xl">{subheadline}</p>
