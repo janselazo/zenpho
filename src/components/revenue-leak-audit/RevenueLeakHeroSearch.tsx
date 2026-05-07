@@ -22,13 +22,31 @@ export type RevenueLeakHeroSearchProps = {
   searching: boolean;
   /** Homepage: extra top padding below MarketingShell navbar; standalone matches full /revenue tool page. */
   variant?: "standalone" | "homepage";
+  /** Pill badge above the headline (default: Local Businesses). */
+  badgeLabel?: string;
+  /** First line of the display headline (black). */
+  headlineLine1?: string;
+  /** Text before the accent span on the second line (default includes trailing space before “Revenue”). */
+  headlineLine2Prefix?: string;
+  /** Accent-colored phrase on the second line (uses `text-accent`). */
+  headlineAccent?: string;
+  /** Paragraph under the headline (default: revenue audit positioning). */
+  subheadline?: string;
 };
+
+const DEFAULT_REVENUE_LEAK_SUBHEADLINE =
+  "Analyze your Google profile, reviews, competitors, website, ads, and local positioning to uncover missed revenue opportunities";
 
 export default function RevenueLeakHeroSearch({
   onSearch,
   onSelectBusiness,
   searching,
   variant = "standalone",
+  badgeLabel = "Local Businesses",
+  headlineLine1 = "Find Where Your Business",
+  headlineLine2Prefix = "Is Leaking ",
+  headlineAccent = "Revenue",
+  subheadline = DEFAULT_REVENUE_LEAK_SUBHEADLINE,
 }: RevenueLeakHeroSearchProps) {
   const [businessName, setBusinessName] = useState("");
   const [suggestions, setSuggestions] = useState<BusinessSearchResult[]>([]);
@@ -86,18 +104,16 @@ export default function RevenueLeakHeroSearch({
         <div className="mx-auto max-w-4xl text-center">
           <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-white/80 px-4 py-2 text-xs font-bold tracking-wide text-emerald-700 shadow-sm dark:border-emerald-400/35 dark:text-emerald-400">
             <Target className="h-3.5 w-3.5 shrink-0" />
-            Local Businesses
+            {badgeLabel}
           </div>
           <h1 className="heading-display text-5xl font-black tracking-tight text-text-primary sm:text-6xl lg:text-7xl">
-            <span className="block text-pretty leading-[1.02]">Find Where Your Business</span>
+            <span className="block text-pretty leading-[1.02]">{headlineLine1}</span>
             <span className="mt-0.5 block text-pretty leading-[1.02] sm:mt-1">
-              Is Leaking <span className="text-accent">Revenue</span>
+              {headlineLine2Prefix}
+              <span className="text-accent">{headlineAccent}</span>
             </span>
           </h1>
-          <p className="mx-auto mt-6 max-w-3xl text-lg leading-8 text-text-secondary sm:text-xl">
-            Analyze your Google profile, reviews, competitors, website, ads, and local positioning to uncover missed
-            revenue opportunities
-          </p>
+          <p className="mx-auto mt-6 max-w-3xl text-lg leading-8 text-text-secondary sm:text-xl">{subheadline}</p>
         </div>
 
         <form

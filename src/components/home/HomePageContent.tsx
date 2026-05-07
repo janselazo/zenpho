@@ -15,7 +15,13 @@ const Testimonials = dynamic(() => import("@/components/home/Testimonials"));
 export default function HomePageContent() {
   return (
     <>
-      <RevenueLeakHomeHero />
+      <RevenueLeakHomeHero
+        badgeLabel="MVP Development Agency"
+        headlineLine1="We build and scale"
+        headlineLine2Prefix=""
+        headlineAccent="software companies"
+        subheadline="We design and build business websites, ecommerce stores, web apps, and mobile apps for founders and businesses ready to move from idea to launch."
+      />
       <ProblemSection />
       <HomeLocalProblemSection />
       <HomeGrowthAchieveSection />

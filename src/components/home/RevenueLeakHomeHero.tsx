@@ -20,7 +20,21 @@ function InlineAlert({ message }: { message: string }) {
   );
 }
 
-export default function RevenueLeakHomeHero() {
+type RevenueLeakHomeHeroProps = {
+  badgeLabel?: string;
+  headlineLine1?: string;
+  headlineLine2Prefix?: string;
+  headlineAccent?: string;
+  subheadline?: string;
+};
+
+export default function RevenueLeakHomeHero({
+  badgeLabel,
+  headlineLine1,
+  headlineLine2Prefix,
+  headlineAccent,
+  subheadline,
+}: RevenueLeakHomeHeroProps) {
   const router = useRouter();
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +74,11 @@ export default function RevenueLeakHomeHero() {
     <>
       <RevenueLeakHeroSearch
         variant="homepage"
+        badgeLabel={badgeLabel}
+        headlineLine1={headlineLine1}
+        headlineLine2Prefix={headlineLine2Prefix}
+        headlineAccent={headlineAccent}
+        subheadline={subheadline}
         onSearch={handleSearch}
         onSelectBusiness={(r) => goToAudit(r)}
         searching={searching}
