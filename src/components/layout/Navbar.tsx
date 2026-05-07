@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { MarketingMegaItem } from "@/lib/marketing-nav";
-import { marketingTopNav } from "@/lib/marketing-nav";
+import { marketingTopNav, isMarketingTopNavLinkActive } from "@/lib/marketing-nav";
 import Button from "@/components/ui/Button";
 import {
   BOOKING_NAV_COMPACT_BUTTON_LABEL,
@@ -194,7 +194,7 @@ export default function Navbar() {
                   <li key={item.href} className="shrink-0">
                     <Link
                       href={item.href}
-                      className={desktopLinkClass(pathname === item.href)}
+                      className={desktopLinkClass(isMarketingTopNavLinkActive(pathname, item.href))}
                     >
                       {item.label}
                     </Link>
@@ -280,7 +280,7 @@ export default function Navbar() {
                   key={item.href}
                   href={item.href}
                   className={`block px-4 py-3.5 text-sm font-medium ${
-                    pathname === item.href
+                    isMarketingTopNavLinkActive(pathname, item.href)
                       ? "bg-accent/10 font-semibold text-accent"
                       : "text-text-secondary hover:bg-surface"
                   }`}

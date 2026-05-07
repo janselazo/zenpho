@@ -3,10 +3,15 @@ import StudioPageContent from "./StudioPageContent";
 
 export const metadata: Metadata = {
   title: {
-    absolute: "Zenpho Studio · In-house products",
+    absolute: "Zenpho Studio | Products Built by Zenpho",
   },
   description:
-    "Zenpho is a product studio too: Soldtools, Business Audit, Branding Kit—plus client builds for websites, web apps, and MVPs.",
+    "Explore Zenpho Studio — digital products built by Zenpho, including Soldtools, Business Audit, and Branding Kit.",
+  openGraph: {
+    title: "Zenpho Studio | Products Built by Zenpho",
+    description:
+      "Explore Zenpho Studio — digital products built by Zenpho, including Soldtools, Business Audit, and Branding Kit.",
+  },
 };
 
 export default function StudioPage() {

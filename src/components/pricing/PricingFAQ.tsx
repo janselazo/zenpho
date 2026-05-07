@@ -3,7 +3,10 @@ import { PRICING_PAGE_FAQS } from "@/lib/marketing/pricing-page-faq-items";
 
 export default function PricingFAQ() {
   return (
-    <section className="mx-auto max-w-7xl px-6 py-20 lg:px-8 lg:py-24">
+    <section
+      id="faq"
+      className="mx-auto max-w-7xl scroll-mt-28 px-6 py-20 lg:px-8 lg:py-24"
+    >
       <SectionHeading
         label="FAQ"
         title="Common"

@@ -22,14 +22,14 @@ const PRODUCTS: StudioProduct[] = [
     name: "Soldtools",
     tagline: "Sell more cars. Work smarter.",
     description:
-      "Everything dealerships and sales teams need to generate leads, set appointments, close deals, and grow their referral network — in one powerful platform.",
+      "A sales platform for auto teams to generate leads, set appointments, track deals, and grow referrals in one place.",
     bestFor: "Auto dealerships, sales teams, and automotive businesses.",
     features: [
       "Lead generation",
       "Appointment setting",
       "Deal tracking",
-      "Referral network growth",
-      "Sales pipeline management",
+      "Referral growth",
+      "Sales pipeline tools",
     ],
     ctaLabel: "View Product",
     ctaHref: "https://app.soldtools.com",
@@ -41,15 +41,14 @@ const PRODUCTS: StudioProduct[] = [
     name: "Business Audit",
     tagline: "Find the gaps before they cost you growth.",
     description:
-      "A simple audit tool that helps businesses identify weaknesses in their website, branding, customer journey, online presence, and conversion flow.",
-    bestFor:
-      "Business owners who want a clear picture of what needs to improve before investing in marketing, design, or development.",
+      "A simple audit tool that reviews your website, brand, customer journey, and conversion flow.",
+    bestFor: "Business owners who want clear, actionable improvement opportunities.",
     features: [
       "Website review",
       "Brand clarity check",
       "Conversion audit",
-      "Online presence scoring",
-      "Actionable recommendations",
+      "Online presence score",
+      "Action plan",
     ],
     ctaLabel: "Run an Audit",
     ctaHref: "/tools/business-audit",
@@ -58,16 +57,16 @@ const PRODUCTS: StudioProduct[] = [
   },
   {
     name: "Branding Kit",
-    tagline: "Launch with a brand that looks ready from day one.",
+    tagline: "Launch with a brand that looks ready.",
     description:
-      "A brand starter system that helps founders and businesses create the essentials they need to launch professionally — including brand direction, colors, typography, messaging, and visual assets.",
-    bestFor: "Startups, new businesses, creators, and founders preparing to launch a website, app, or product.",
+      "A brand starter kit with the visual and messaging essentials needed to launch professionally.",
+    bestFor: "Startups, creators, founders, and new businesses preparing to launch.",
     features: [
-      "Brand identity direction",
-      "Logo and visual guidelines",
-      "Color and typography system",
+      "Brand direction",
+      "Logo guidelines",
+      "Color system",
+      "Typography system",
       "Messaging foundation",
-      "Launch-ready brand assets",
     ],
     ctaLabel: "Explore Branding Kit",
     ctaHref: "/branding",
@@ -76,40 +75,72 @@ const PRODUCTS: StudioProduct[] = [
   },
 ];
 
+const WHY_BULLETS = [
+  "We test ideas in the real world",
+  "We design for actual users",
+  "We build with launch in mind",
+  "We improve based on feedback",
+  "We bring product thinking into client work",
+];
+
 export default function StudioPageContent() {
   return (
     <div className="bg-background">
       <section className="border-b border-border/50 bg-gradient-to-b from-surface/35 to-background py-16 sm:py-20 lg:py-24">
         <div className="mx-auto max-w-3xl px-6 text-center lg:px-8">
           <div className="mb-5 flex justify-center">
-            <span className="inline-flex rounded-full border border-accent/25 bg-white/90 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.2em] text-accent shadow-sm dark:bg-zinc-900/80">
+            <span className="inline-flex rounded-full border border-accent/25 bg-white/90 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-accent shadow-sm dark:bg-zinc-900/80">
               Zenpho Studio
             </span>
           </div>
           <h1 className="heading-display text-balance text-3xl font-bold tracking-tight text-text-primary sm:text-4xl lg:text-[2.5rem] lg:leading-[1.08]">
-            We Don&apos;t Just Build for Clients. We Build Products Too.
+            Products Built by Zenpho
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-pretty text-lg leading-relaxed text-text-secondary sm:text-xl">
-            Our studio develops practical digital products, tools, and platforms that solve real business problems — from sales
-            systems to business audits and brand launch kits.
+            We build our own digital products too — practical tools for sales, business audits, branding, and faster
+            launches.
           </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <Button href="#studio-products" variant="primary" size="lg" className="min-w-[12rem] justify-center">
+              Explore Products
+            </Button>
+            <Button href="/booking" variant="secondary" size="lg" className="min-w-[12rem] justify-center">
+              Build My Product
+            </Button>
+          </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-6 py-16 sm:py-20 lg:px-8 lg:py-24">
-        <ul className="grid list-none gap-8 lg:grid-cols-3 lg:gap-8">
+      <section
+        id="studio-products"
+        className="mx-auto max-w-6xl scroll-mt-28 px-6 py-16 sm:py-20 lg:px-8 lg:py-24"
+        aria-labelledby="studio-products-heading"
+      >
+        <div className="mx-auto max-w-3xl text-center">
+          <h2
+            id="studio-products-heading"
+            className="heading-display text-balance text-2xl font-bold tracking-tight text-text-primary sm:text-3xl"
+          >
+            Tools we&apos;ve built to solve real business problems.
+          </h2>
+          <p className="mx-auto mt-4 max-w-2xl text-pretty text-base leading-relaxed text-text-secondary sm:text-lg">
+            Zenpho Studio is where we develop our own platforms, tools, and launch systems.
+          </p>
+        </div>
+
+        <ul className="mt-14 grid list-none gap-8 lg:grid-cols-3 lg:gap-8">
           {PRODUCTS.map((p) => {
             const Icon = p.icon;
             return (
               <li key={p.name}>
-                <Card className="flex h-full flex-col p-6 sm:p-8">
+                <Card className="flex h-full flex-col p-6 shadow-soft sm:p-8">
                   <div
                     className={`flex h-12 w-12 items-center justify-center rounded-2xl ${p.iconWrapClass}`}
                     aria-hidden
                   >
                     <Icon className="h-6 w-6" strokeWidth={2} />
                   </div>
-                  <h2 className="mt-5 text-xl font-bold text-text-primary sm:text-2xl">{p.name}</h2>
+                  <h3 className="mt-5 text-xl font-bold text-text-primary sm:text-2xl">{p.name}</h3>
                   <p className="mt-2 text-sm font-semibold text-accent sm:text-base">{p.tagline}</p>
                   <p className="mt-4 flex-1 text-sm leading-relaxed text-text-secondary sm:text-[0.9375rem]">
                     {p.description}
@@ -150,14 +181,34 @@ export default function StudioPageContent() {
         </ul>
       </section>
 
-      <section className="border-t border-border/50 bg-surface/25 py-16 sm:py-20 lg:py-24 dark:bg-zinc-950/40">
+      <section className="border-t border-border/50 bg-surface/30 px-6 py-16 sm:py-20 lg:px-8 lg:py-24">
+        <div className="mx-auto max-w-3xl">
+          <h2 className="heading-display text-center text-2xl font-bold tracking-tight text-text-primary sm:text-3xl">
+            We build products because we understand product launches.
+          </h2>
+          <p className="mx-auto mt-5 text-center text-base leading-relaxed text-text-secondary sm:text-lg">
+            Building our own tools keeps us close to real users, real workflows, and real launch problems. That experience
+            helps us build better websites, web apps, mobile apps, and MVPs for our clients.
+          </p>
+          <ul className="mt-10 space-y-3">
+            {WHY_BULLETS.map((line) => (
+              <li key={line} className="flex gap-3 text-sm leading-relaxed text-text-primary sm:text-base">
+                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" aria-hidden />
+                <span>{line}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <section className="border-t border-border/50 bg-gradient-to-b from-background to-surface/40 py-16 sm:py-20 lg:py-24">
         <div className="mx-auto max-w-3xl px-6 text-center lg:px-8">
           <div className="rounded-[2rem] border border-border/80 bg-white p-8 shadow-soft ring-1 ring-black/[0.04] sm:p-10 lg:p-12 dark:border-zinc-700/80 dark:bg-zinc-900/50 dark:ring-white/[0.04]">
             <h2 className="heading-display text-2xl font-bold tracking-tight text-text-primary sm:text-3xl">
               Have an idea for a product like these?
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-text-secondary sm:text-lg">
-              Zenpho can help you design, build, and launch your own website, web app, mobile app, or MVP.
+              Zenpho can help you design, build, and launch your website, web app, mobile app, or MVP.
             </p>
             <div className="mt-8 flex justify-center">
               <Button href="/booking" variant="primary" size="lg" className="min-w-[12rem] justify-center">

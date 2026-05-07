@@ -25,6 +25,21 @@ const nextConfig = {
   async redirects() {
     return [
       {
+        source: "/solutions/lead-to-revenue-setup",
+        destination: "/solutions/custom-websites",
+        permanent: true,
+      },
+      {
+        source: "/solutions/growth-engine-management",
+        destination: "/solutions/web-apps",
+        permanent: true,
+      },
+      {
+        source: "/solutions/full-growth-partner",
+        destination: "/solutions/mobile-apps",
+        permanent: true,
+      },
+      {
         source: "/proposals/agreements/:path*",
         destination: "/invoices/agreements/:path*",
         permanent: true,
@@ -44,7 +59,6 @@ const nextConfig = {
         destination: "/",
         permanent: true,
       },
-      { source: "/studio", destination: "/", permanent: true },
       {
         source: "/blog/nine-years-shipping-custom-software",
         destination: "/blog",
