@@ -120,12 +120,19 @@ export default function StudioPageContent() {
           <h2 id="studio-founder-heading" className="mt-3 heading-display text-2xl font-bold tracking-tight text-text-primary">
             Janse Lazo
           </h2>
-          <p className="mt-2 text-sm font-semibold text-text-secondary">Founder &amp; CEO, Zenpho</p>
+          <p className="mt-2 text-sm font-semibold text-text-secondary">
+            Founder &amp; CEO, Zenpho
+          </p>
           <p className="mt-5 text-base leading-relaxed text-text-secondary">
-            Janse leads Zenpho—a Miami-area MVP Development Agency &amp; Product Studio helping teams ship credible web apps,
-            mobile MVPs, and launches. With a CS background from CUJAE and years bridging engineering and growth, including
-            as co-founder of Taptok, he carries the same product and go-to-market rigor into client engagements and Zenpho
-            Studio products.
+            Janse Lazo is the Founder and CEO of Zenpho, a Miami-area MVP development agency and product studio that helps
+            teams design, build, and launch web apps, mobile MVPs, and digital products. With a background in Computer
+            Science and years of experience bridging engineering, product, and growth, Janse brings a practical,
+            go-to-market-driven approach to every client engagement.
+          </p>
+          <p className="mt-4 text-base leading-relaxed text-text-secondary">
+            As a co-founder of Taptok, he gained firsthand experience building and scaling products, which now informs
+            Zenpho&apos;s work with startups, founders, and growing teams. Through Zenpho and Zenpho Studio, Janse helps turn
+            ideas into launch-ready products with a focus on speed, clarity, and real-world execution.
           </p>
           <p className="mt-8">
             <a

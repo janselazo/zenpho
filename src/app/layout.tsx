@@ -15,11 +15,11 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Product Studio",
+  title: "Zenpho • AI Product Studio",
   description:
     "Website and mobile MVP development—marketing sites, ecommerce, and apps—from discovery through deployment for founders shipping credible launches fast.",
   openGraph: {
-    title: "AI Product Studio",
+    title: "Zenpho • AI Product Studio",
     description:
       "Websites, ecommerce, mobile, and launch support—strategy, UX, engineering, and handoff from Zenpho.",
     type: "website",
