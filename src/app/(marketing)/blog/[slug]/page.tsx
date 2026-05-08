@@ -85,24 +85,22 @@ export default async function BlogPostPage({ params }: Props) {
         </div>
 
         <div className="mt-16 rounded-2xl border border-border bg-surface p-8 text-center">
-          <p className="text-lg font-semibold text-text-primary">
-            Ready to plan your next build?
-          </p>
+          <p className="text-lg font-semibold text-text-primary">Ready to plan your MVP?</p>
           <p className="mt-2 text-sm text-text-secondary">
-            Book a call—we&apos;ll map priorities for your website, ecommerce, or mobile MVP.
+            Book a working session—we&apos;ll align scope for web apps, ecommerce, mobile, or integrated experiences.
           </p>
           <div className="mt-4 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
-              href="/revenue"
+              href="/booking"
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-accent/90"
             >
-              Run Revenue Leak Audit
+              {BOOKING_PRIMARY_BUTTON_LABEL}
             </Link>
             <Link
-              href="/booking"
+              href="/services"
               className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-white px-6 py-3 text-sm font-medium text-text-primary transition-colors hover:bg-surface"
             >
-              {BOOKING_PRIMARY_BUTTON_LABEL}
+              Explore services
             </Link>
           </div>
         </div>

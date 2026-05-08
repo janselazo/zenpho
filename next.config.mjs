@@ -84,6 +84,31 @@ const nextConfig = {
         destination: "/blog",
         permanent: true,
       },
+      {
+        source: "/blog/local-service-revenue-leaks-most-teams-miss",
+        destination: "/blog/scope-leaks-that-kill-mvp-timelines",
+        permanent: true,
+      },
+      {
+        source: "/blog/what-revenue-leak-audit-really-shows",
+        destination: "/blog/focused-discovery-sprint-what-you-get",
+        permanent: true,
+      },
+      {
+        source: "/blog/tracking-from-lead-to-job-won",
+        destination: "/blog/instrumentation-that-matters-after-you-ship",
+        permanent: true,
+      },
+      {
+        source: "/blog/reviews-referrals-and-follow-up-systems",
+        destination: "/blog/early-users-feedback-and-launch-credibility",
+        permanent: true,
+      },
+      {
+        source: "/blog/before-you-scale-ads-fix-the-foundation",
+        destination: "/blog/before-you-scale-marketing-ship-the-core",
+        permanent: true,
+      },
       { source: "/portfolio", destination: "/case-studies", permanent: true },
       { source: "/agency", destination: "/services", permanent: true },
       { source: "/methodology", destination: "/about", permanent: true },

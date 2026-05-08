@@ -61,7 +61,7 @@ export default function Footer() {
               />
             </Link>
             <p className="mt-5 text-sm font-semibold leading-snug text-text-primary">
-              MVP development agency & product studio
+              MVP Development Agency & Product Studio
             </p>
             <p className="mt-3 max-w-sm text-sm leading-relaxed text-text-secondary">
               Websites, ecommerce, and mobile—from discovery and UX through build, deployment, and handoff.

@@ -46,8 +46,8 @@ export const localServicePricingPlans: LocalServicePricingPlan[] = [
     planTagline: "WEB APPS & DASHBOARDS",
     headerNote:
       "A working MVP with login, dashboards, database, admin tools, integrations, and launch support.",
-    priceLead: "$2,500",
-    priceWas: "$5,000",
+    priceLead: "$2,000",
+    priceWas: "$4,000",
     summary: "",
     included: [],
     bestFor: ["SaaS", "portals", "dashboards", "internal tools"],

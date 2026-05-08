@@ -141,7 +141,6 @@ export const marketingFooterColumns: MarketingFooterColumn[] = [
     heading: "Resources",
     links: [
       { label: "Blog", href: "/blog" },
-      { label: "Resources", href: "/resources" },
       { label: "Pricing", href: "/pricing" },
       { label: "Case studies", href: "/case-studies" },
       { label: BOOKING_NAV_COMPACT_BUTTON_LABEL, href: "/booking" },

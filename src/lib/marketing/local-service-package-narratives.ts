@@ -78,8 +78,8 @@ export const localServicePackageNarratives: PackageNarrativeContent[] = [
     bestFor: "Founders shipping authenticated web apps, internal tools, or customer portals with dashboard workflows.",
     mainGoal:
       "Deliver a functional MVP with login, core user/admin surfaces, data layer, integrations, and launch-ready QA.",
-    priceSummary: "$2,500",
-    priceFootnote: "one-time · 50% off (was $5,000)",
+    priceSummary: "$2,000",
+    priceFootnote: "one-time · 50% off (was $4,000)",
     includeGroups: [
       {
         heading: "STRATEGY & PLANNING",

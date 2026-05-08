@@ -516,7 +516,7 @@ export const resourceItems: ResourceItem[] = [
   {
     title: "Blog",
     description:
-      "Insights on MVP development, product strategy, websites, web apps, mobile apps, ecommerce, and launching faster.",
+      "Notes from our MVP Development Agency work—discovery, UX, engineering, web and mobile, and credible launches.",
     href: "/blog",
     tag: "Writing",
   },

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     absolute: "Pricing | Zenpho",
   },
   description:
-    "Zenpho MVP launch packages: Custom Websites from $1,000, Web Apps from $2,500, Mobile Apps from $3,000 (limited-time 50% launch pricing); strategy through deployment; custom quotes for larger scopes.",
+    "Zenpho MVP launch packages: Custom Websites from $1,000, Web Apps from $2,000, Mobile Apps from $3,000 (limited-time 50% launch pricing); strategy through deployment; custom quotes for larger scopes.",
 };
 
 export default function PricingPage() {

@@ -10,139 +10,143 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
-    slug: "local-service-revenue-leaks-most-teams-miss",
-    title: "The revenue leaks most local service businesses miss",
+    slug: "scope-leaks-that-kill-mvp-timelines",
+    title: "The scope leaks that quietly kill MVP timelines",
     excerpt:
-      "Clicks and impressions feel productive—until you ask what happened to the lead after the click. Here is where money quietly disappears.",
+      "Frozen requirements are a myth. When “just one more thing” slips in without a tradeoff, timelines slip—and the launch you promised investors or early users slips with them.",
     date: "2026-04-22",
     readTime: "6 min read",
-    category: "Local growth",
-    content: `Many local operators already get found. The harder question is what happens after someone shows intent.
+    category: "Product",
+    content: `Most MVPs die from **quiet scope growth**, not from engineering speed.
 
-## Leaks start before the CRM
+## Leaks start in the backlog
 
-A call goes to voicemail and no one calls back within minutes. A form fires but lands in a generic inbox. A chat widget promises "we'll get back to you" and the thread dies. None of that shows up as "bad marketing" in a dashboard—because nothing was measured as a lead in the first place.
+“A small admin page,” “quick CSV export,” or “just match what Notion does for sharing” rarely stay small once real users arrive. Without a ruthless **in / out list** for version one, every edge case feels reasonable—and the backlog quietly doubles.
 
-## Leaks live in the handoff
+## Leaks hide in unnamed owners
 
-The business that answers fast, books the job, sends the proposal, and follows up like clockwork wins even when the ad account looks identical to a competitor's. When handoffs are fuzzy—who owns the lead, which script gets used, whether a missed call gets a text—revenue falls through in Week One, not in the campaign report.
+Someone needs to decide error states, empty states, who gets notified when something breaks, and what “done” means in production. When those choices float, engineers improvise—or wait—while calendar weeks burn.
 
-## Leaks hide in "we're busy"
+## “We’ll polish later” piles up
 
-Being booked out feels like success until you look at wait times, price leaks, callbacks you never made, or referrals you never asked for. Busy teams often stop logging, stop tagging sources, and stop asking why someone chose you. That is when you cannot say which channel is actually paying for itself.
+Animation, onboarding, and instrumentation look optional until demo day or first paying users. Deferred polish turns into rework under pressure, exactly when you have the least slack.
 
 ## What to do first
 
-Before spending more on reach, tighten the spine: **capture, tag, follow up, and close the loop** so you can see leads, appointments, and jobs in one place. When that spine exists, every channel—Google Business Profile, paid search, landing pages, referrals—can be improved with numbers instead of opinions.
+Lock a **narrow outcome** (“book a call,” “complete checkout,” “issue an invite”). Cut anything that doesn’t serve that spine in v1 **or** pair every add with something you remove.
 
-That is the shift from marketing activity to **clear growth**.`,
+That is how an MVP stays shippable—and how an agency + product studio can stand behind an actual date.`,
   },
   {
-    slug: "what-revenue-leak-audit-really-shows",
-    title: "What a Revenue Leak Audit really shows you",
+    slug: "focused-discovery-sprint-what-you-get",
+    title: "What a focused discovery sprint actually leaves you with",
     excerpt:
-      "It is not a PDF trophy. It is a prioritized picture of visibility, conversion, follow-up, reviews, referrals, and where opportunity is slipping away.",
+      "Discovery is not a workshop trophy. Done well you leave with a prioritized problem statement, UX direction, architecture sketch, and a build plan tied to milestones you can defend.",
     date: "2026-04-10",
     readTime: "5 min read",
     category: "Playbooks",
-    content: `A Revenue Leak Audit is built for owners who are tired of guessing whether marketing is working.
+    content: `Discovery exists to **de-risk spend**—yours and ours—not to produce another slide deck.
 
-## Beyond a single tactic
+## Before a single sprint of build
 
-SEO alone cannot explain a slow callback. A pretty website cannot fix a broken intake form. The audit looks across the **local growth journey**: how you show up, how you convert, how you track, how you follow up, how reviews and referrals reinforce trust, and whether you can tie outcomes back to spend.
+Strong discovery answers: Who is this for? What outcome proves we should keep investing? Which integrations and constraints are immovable?
 
-## What we actually inspect
+We map journeys at the level that matters—**signup, core job, monetization edge**—and flag where ambiguity will force expensive guesses later.
 
-Typical inputs include your Google Business Profile, competitive context, reviews, website and key landing pages, photo and category signals, basic readiness for paid campaigns, and whether tracking matches how customers really contact you. The output is not a list of shame—it is a **ranked view** of what is most likely costing you money right now.
+## What we actually produce
 
-## How teams use it
+Depending on stakes, outputs may include prioritized user stories with acceptance sketches, UX wireflows for the critical paths, API and data-shape notes aligned with your CRM or auth choices, environments and release expectations, and a **milestone backlog** grounded in staffing reality.
 
-Some audits end in a one-time setup: dashboards, CRM hygiene, call and form tracking, a review request flow, and a first ROI report. Others hand off into monthly growth management once the foundation is in place. In both cases, the goal is the same: **replace vague activity with visible opportunity.**
+This is intentionally practical: your team—and ours—knows what “first shippable” means.
 
-If you have not run one yet, treat it as a reset on clarity—not another subscription you adopt before you know what is broken.`,
+## How teams act on it
+
+Some teams pause and self-build against the plan; others engage for **design + build + launch** with checkpoints at demo, staged rollout, and handoff. Either way you stop funding guesswork—you fund a backlog with accountable slices.
+
+Treat discovery as procurement for momentum, not a ceremony. Done right, everyone can explain what ships first and why.`,
   },
   {
-    slug: "tracking-from-lead-to-job-won",
-    title: "Tracking that matters: from lead to job won",
+    slug: "instrumentation-that-matters-after-you-ship",
+    title: "Instrumentation that matters once you ship",
     excerpt:
-      "Vanity metrics peak early. Durable growth needs source tags, stages, and a honest link between marketing, sales, and the work you actually invoice.",
+      "Pageviews spike early and then lie. Sustainable products instrument funnels around your real job-to-be-done so you fix the right bottleneck after launch.",
     date: "2026-03-28",
     readTime: "6 min read",
-    category: "Operations",
-    content: `"Traffic is up" is not a strategy. For local service businesses, the scoreboard needs to read in **business units**, not only analytics events.
+    category: "Engineering",
+    content: `“Things look fine” is not an operating rhythm. Instrumentation aligns product, design, and eng around **truth that forces decisions**.
 
-## Define the spine
+## Start from the funnel, not the dashboard
 
-Start with a simple chain: **source → lead → response time → appointment → proposal or quote → won job → revenue (and review / referral)**. If you cannot draw that chain on a whiteboard and match each step to a field or tag in your systems, your reporting will always feel fuzzy.
+Identify the shortest path that proves value—for example **visit → signup → activate → pay**—and ensure each step has an event worth defending in code review.
 
-## Tag sources honestly
+If nobody knows which event constitutes “activated,” dashboards only decorate arguments.
 
-UTM parameters, call-tracking numbers, and CRM picklists only help when people use them. Make the **default** path the accurate one—a receptionist should not have to become a data steward to log "this came from Google Local Services."
+## Tag releases and experiments
 
-## Close the loop weekly
+Cheap wins: annotate deploys against metrics, cohort new users cleanly, segment web vs native if you ship both. Naming conventions beat clever charts when you revisit the funnel at 11 p.m.
 
-Pick one rhythm—weekly or biweekly—and ask: which sources produced booked appointments, which stalled at estimate, and which produced nothing but noise? That meeting should be short, blunt, and tied to **one or two fixes** (page speed, script, offer, tighter follow-up), not a twelve-initiative wish list.
+## Review telemetry like a backlog
 
-## Prove ROI without fantasy math
+Weekly or biweekly, ask which step regressed after the last ship, whether errors spiked along with churn, which paths never complete. Tie each finding to **one** prioritized fix—not a swarm of guesses.
 
-ROI is not "divide spend by clicks." It is **spend against attributed jobs** (even if attribution is imperfect at first). Directionally correct beats precisely wrong. Start conservative, improve tagging every month, and let the model get sharper over time.
-
-When tracking matches how you actually run the business, marketing stops being a debate and becomes a set of levers you can pull with intent.`,
+Instrumentation is boring until revenue or retention depends on it. Build it beside the MVP, not six months later when you wish you’d measured activation instead of vanity.`,
   },
   {
-    slug: "reviews-referrals-and-follow-up-systems",
-    title: "Reviews, referrals, and the systems behind them",
+    slug: "early-users-feedback-and-launch-credibility",
+    title: "Early users, feedback loops, and launch credibility",
     excerpt:
-      "Happy customers do not always leave five stars or send friends your way unless you make it easy, timely, and consistent—without sounding desperate.",
+      "Design partners will forgive rough edges—they will not forgive feeling ignored. Credibility compounds when you acknowledge feedback fast and funnel it back into visible shipping.",
     date: "2026-03-12",
     readTime: "5 min read",
-    category: "Growth",
-    content: `Reviews and referrals look like "brand" work. For local services, they are **conversion and repeat revenue** dressed in a nicer label.
+    category: "Launch",
+    content: `The first cohort does not owe you praise—they owe you honesty if you earn it through **attention and pacing**.
 
-## Reviews need a moment, not a campaign
+## Build a humane feedback lane
 
-The best time to ask is right after a solved problem—when the truck rolls away, the treatment is done, or the invoice is paid. A lightweight SMS or email sequence, tied to the job record, beats a quarterly blast that lands cold. Make one tap to Google (or your Reviews link of choice) and keep the copy human.
+Prefer a crisp channel—a shared doc, Slack, or predictable office hours—to random DMs scattered across screenshots. Lightweight status notes (“accepted / duplicate / roadmap / not planned + why”) build trust faster than silence.
 
-## Referrals need a reason to share
+## Close the loop in public-ish ways
 
-People refer when they trust you, when it is easy to describe what you do for someone similar to them, and when there is a simple way to make the introduction—whether that is a shared link, a call tree, or a small thank-you you actually honor.
+Changelogs or short Loom summaries show early adopters they moved the roadmap. Psychological safety matters: people share sharper feedback when they see it matter before you ask again.
 
-## Follow-up protects both
+## Credibility stacks with reliability
 
-Missed callbacks erode reviews before you ever ask. Slow invoicing kills referral energy. Treat **speed and closure** as part of the same system you use to ask for public proof.
+Deployments that fail quietly, flaky magic links, and surprise breaking changes chew trust faster than any missing feature demo. Operational hygiene is chapter one of positioning as a credible **product studio**.
 
-## Measure both like leads
+## Measure qualitative like product
 
-Count **asks sent**, **reviews gained**, **referrals logged**, just like you count form fills. If you are not logging it, you are not improving it—you are hoping.
+Track **sessions held**, **patterns raised**, **items shipped**. Your second cohort inherits the seriousness of how you handled the first.
 
-Done well, reviews and referrals compound: they lower cost per acquisition on everything else you run, because trust shows up before the ad does.`,
+Momentum is cumulative—what you demonstrate in responsiveness often matters more than a single flashy release.`,
   },
   {
-    slug: "before-you-scale-ads-fix-the-foundation",
-    title: "Before you scale ads, fix the foundation",
+    slug: "before-you-scale-marketing-ship-the-core",
+    title: "Before you scale acquisition, nail the core product loop",
     excerpt:
-      "Pouring budget into Google or Meta without tracking, landing pages, and follow-up is how busy teams get expensive lessons instead of booked jobs.",
+      "Paid traffic buys attention for what already works. Shoveling clicks at a leaky activation path teaches expensive lessons—not traction.",
     date: "2026-02-20",
     readTime: "5 min read",
     category: "Strategy",
-    content: `Paid media can scale what already works. It rarely invents demand that your operations cannot serve.
+    content: `Scaling spend before the **core loop** is reliable is how teams mistake activity for traction.
 
-## What "ready" looks like
+## “Ready” is behavioral
 
-You can answer calls and web leads quickly. Forms hit a system that alerts the right people. Landing pages match the promise in the ad (service, geography, proof). You know which conversion actions matter—calls, forms, bookings—and those events actually fire in your analytics stack. If any of those are broken, increasing spend mostly increases **leak volume**.
+Acquisition makes sense once new users reliably reach activation, retention on early cohorts is not hiding behind founder hand-holding, and support load is observable.
 
-## Start with offers that survive contact
+Otherwise you widen the funnel for a leaky bucket.
 
-If your offer is vague ("contact us for a quote") and your competitor names the outcome and the timeline, you will pay more for the click and still lose the appointment. Tighten the offer first; then widen the funnel.
+## Tight loops beat hero campaigns
 
-## Use tests that teach
+Test smaller experiments—segmented onboarding, sharper empty states, a pricing page clarification—against **conversion and retention** before you widen channel mix.
 
-Small geo tests or budget ladders beat a hero launch where nobody knows what failed. Change one variable at a time—creative, keyword theme, landing headline, callback SLA—and read the result against **appointments and cost per booked job**, not just CTR.
+Spend should answer specific hypotheses, not “more logo impressions.”
 
-## Protect margin with discipline
+## Protect velocity with checkpoints
 
-Daily checks on spend, search terms, and lead quality beat a monthly "how did we do?" surprise. Build a rhythm where the person signing the check can see **cost, lead count, booking rate, and rough revenue** without a data science degree.
+Establish simple gates—support ticket themes, churn reasons, instrumentation gaps—between spend increases.
 
-If the foundation is shaky, fix the leaks first. Then scaling ads becomes an investment with a scoreboard—not a hope.`,
+If fundamentals wobble—auth edge cases, mobile parity, flaky payments—marketing amplifies churn, not conviction.
+
+Acquisition is arithmetic on top of a product experience. Solve the numerator first; widen the denominator only once the numerator holds.`,
   },
 ];

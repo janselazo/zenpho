@@ -8,7 +8,7 @@ export const PRICING_PAGE_FAQS: SiteFaqItem[] = [
   },
   {
     q: "Web Apps",
-    a: "The Web Apps package ships a functional authenticated web product—login, user and admin dashboards, database setup, forms and actions, payments or booking flows as scoped, API integrations, plus launch setup (analytics, SEO for public pages, performance checks, QA, deployment, handoff) and 90 days of support. Priced at $2,500 during the limited launch offer (50% off $5,000). Typical timeline is about two weeks.",
+    a: "The Web Apps package ships a functional authenticated web product—login, user and admin dashboards, database setup, forms and actions, payments or booking flows as scoped, API integrations, plus launch setup (analytics, SEO for public pages, performance checks, QA, deployment, handoff) and 90 days of support. Priced at $2,000 during the limited launch offer (50% off $4,000). Typical timeline is about two weeks.",
   },
   {
     q: "Mobile Apps",

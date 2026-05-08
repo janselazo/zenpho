@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Car, Check, ClipboardCheck, Palette } from "lucide-react";
+import { Car, Check, ClipboardCheck, Linkedin, Palette } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
@@ -108,6 +108,38 @@ export default function StudioPageContent() {
               Build My Product
             </Button>
           </div>
+        </div>
+      </section>
+
+      <section
+        className="border-b border-border/50 px-6 py-12 sm:py-14 lg:px-8 lg:py-16"
+        aria-labelledby="studio-founder-heading"
+      >
+        <div className="mx-auto max-w-3xl rounded-3xl border border-border/70 bg-white/90 p-6 shadow-soft ring-1 ring-black/[0.04] sm:p-8 dark:border-zinc-700/80 dark:bg-zinc-900/40 dark:ring-white/[0.04]">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-accent">Founder</p>
+          <h2 id="studio-founder-heading" className="mt-3 heading-display text-2xl font-bold tracking-tight text-text-primary">
+            Janse Lazo
+          </h2>
+          <p className="mt-2 text-sm font-semibold text-text-secondary">Founder &amp; CEO, Zenpho</p>
+          <p className="mt-5 text-base leading-relaxed text-text-secondary">
+            Janse leads Zenpho—a Miami-area MVP Development Agency &amp; Product Studio helping teams ship credible web apps,
+            mobile MVPs, and launches. With a CS background from CUJAE and years bridging engineering and growth, including
+            as co-founder of Taptok, he carries the same product and go-to-market rigor into client engagements and Zenpho
+            Studio products.
+          </p>
+          <p className="mt-8">
+            <a
+              href="https://www.linkedin.com/in/janselazo/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-accent transition-colors hover:text-accent/85"
+              aria-label="Janse Lazo on LinkedIn (opens in a new tab)"
+            >
+              <Linkedin className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
+              Connect on LinkedIn
+              <span className="text-text-secondary">&nbsp;→</span>
+            </a>
+          </p>
         </div>
       </section>
 

@@ -31,8 +31,8 @@ export default function BlogHero() {
           transition={{ duration: 0.45, delay: 0.14 }}
           className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-text-secondary"
         >
-          Insights on MVP development, product strategy, websites, ecommerce, mobile, and launching faster—from scope to
-          ship.
+          Practical notes from an MVP Development Agency&nbsp;&amp; Product Studio—discovery, UX, engineering,
+          integrations, web and mobile—from scope to credible launch.
         </motion.p>
       </div>
     </section>
