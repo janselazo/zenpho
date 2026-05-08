@@ -21,6 +21,7 @@ import {
   CalendarPlus,
   Check,
   ChevronDown,
+  DollarSign,
   ExternalLink,
   Flag,
   FolderKanban,
@@ -87,8 +88,10 @@ export interface Lead {
   project_type?: string | null;
   contact_category?: string | null;
   created_at?: string | null;
-  /** Latest project title for the lead’s converted client, if any */
-  primaryProject?: { title: string | null } | null;
+  /** Latest root project for the lead’s converted client, if any */
+  primaryProject?: { title: string | null; budget?: number | null } | null;
+  /** Max deal `value` for this lead (used when project budget not set). */
+  dealValue?: number | null;
   /** Tags assigned to this lead (from `lead_tag` / `lead_tag_assignment`) */
   leadTags?: { id: string; name: string; color: string }[];
   /**
@@ -459,6 +462,27 @@ function formatLeadPhone(phone: string | null | undefined): string {
     return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
   }
   return phone.trim();
+}
+
+/** Project budget from linked CRM project, else best deal value for pipeline card. */
+function pipelineCardProjectPriceUsd(lead: Lead): string | null {
+  const pb = lead.primaryProject?.budget;
+  if (pb != null && Number.isFinite(Number(pb)) && Number(pb) > 0) {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    }).format(Number(pb));
+  }
+  const dv = lead.dealValue;
+  if (dv != null && Number.isFinite(dv) && dv > 0) {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    }).format(dv);
+  }
+  return null;
 }
 
 function formatDate(iso?: string | null) {
@@ -1479,6 +1503,7 @@ function LeadsPipelineBoard({
       renderCard={(lead) => {
         const deleteLabel =
           lead.name?.trim() || lead.email?.trim() || "this lead";
+        const projectPriceLabel = pipelineCardProjectPriceUsd(lead);
         return (
           <div className="flex flex-col rounded-xl border border-zinc-200/90 bg-white p-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:border-zinc-700 dark:bg-zinc-900">
             <div className="flex items-start justify-between gap-2">
@@ -1548,6 +1573,20 @@ function LeadsPipelineBoard({
                   className={`min-w-0 truncate font-medium ${getContactCategoryTextClass(lead.contact_category)}`}
                 >
                   {lead.contact_category.trim()}
+                </span>
+              </div>
+            ) : null}
+            {projectPriceLabel ? (
+              <div className="mt-1.5 flex min-w-0 items-baseline gap-1.5 text-xs">
+                <DollarSign
+                  className="h-3.5 w-3.5 shrink-0 translate-y-0.5 text-zinc-400"
+                  aria-hidden
+                />
+                <span className="shrink-0 text-zinc-500 dark:text-zinc-400">
+                  Project price
+                </span>
+                <span className="min-w-0 truncate font-semibold tabular-nums text-zinc-800 dark:text-zinc-100">
+                  {projectPriceLabel}
                 </span>
               </div>
             ) : null}

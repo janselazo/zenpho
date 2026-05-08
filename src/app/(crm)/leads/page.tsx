@@ -164,12 +164,12 @@ export default async function LeadsPage({
 
   const primaryProjectByClientId = new Map<
     string,
-    { title: string | null }
+    { title: string | null; budget: number | null }
   >();
   if (organizationId && clientIds.length > 0) {
     const { data: projRows } = await supabase
       .from("project")
-      .select("client_id, title, created_at")
+      .select("client_id, title, created_at, budget")
       .eq("organization_id", organizationId)
       .in("client_id", clientIds)
       .is("parent_project_id", null)
@@ -177,8 +177,14 @@ export default async function LeadsPage({
     for (const row of projRows ?? []) {
       const cid = row.client_id as string;
       if (!primaryProjectByClientId.has(cid)) {
+        const raw = row.budget as number | string | null | undefined;
+        const budgetNum =
+          raw != null && raw !== ""
+            ? Number(raw)
+            : NaN;
         primaryProjectByClientId.set(cid, {
           title: (row.title as string | null) ?? null,
+          budget: Number.isFinite(budgetNum) ? budgetNum : null,
         });
       }
     }
@@ -186,6 +192,27 @@ export default async function LeadsPage({
 
   const appointmentStartsByLeadId = new Map<string, string[]>();
   const leadIdList = leadRows.map((l) => l.id as string);
+
+  const dealValueByLeadId = new Map<string, number>();
+  if (organizationId && leadIdList.length > 0) {
+    const { data: dealRows } = await supabase
+      .from("deal")
+      .select("lead_id, value")
+      .eq("organization_id", organizationId)
+      .in("lead_id", leadIdList);
+    for (const row of dealRows ?? []) {
+      const lid = row.lead_id as string | null;
+      if (!lid) continue;
+      const n =
+        row.value != null && row.value !== ""
+          ? Number(row.value as number | string)
+          : NaN;
+      if (!Number.isFinite(n) || n <= 0) continue;
+      const prev = dealValueByLeadId.get(lid);
+      if (prev == null || n > prev) dealValueByLeadId.set(lid, n);
+    }
+  }
+
   if (organizationId && leadIdList.length > 0) {
     const { data: apptRows, error: apptErr } = await supabase
       .from("appointment")
@@ -216,6 +243,7 @@ export default async function LeadsPage({
         cid && primaryProjectByClientId.has(cid)
           ? primaryProjectByClientId.get(cid)!
           : null,
+      dealValue: dealValueByLeadId.get(lid) ?? null,
       leadTags: tagsByLeadId.get(lid) ?? [],
       nextAppointmentStartsAt,
     };
