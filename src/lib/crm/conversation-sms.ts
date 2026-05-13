@@ -44,6 +44,10 @@ export async function findOrCreateSmsConversation(
   if (!orgId) {
     throw new Error("Missing organization scope for SMS conversation.");
   }
+  const ownerId = await resolveConversationOwner(supabase, {
+    leadId: opts.leadId,
+    clientId: opts.clientId,
+  });
 
   const { data: existing } = await supabase
     .from("conversation")
@@ -73,6 +77,7 @@ export async function findOrCreateSmsConversation(
     last_message_at: new Date().toISOString(),
     unread_count: 0,
   };
+  if (ownerId) insert.owner_id = ownerId;
   if (opts.leadId) insert.lead_id = opts.leadId;
   if (opts.clientId) insert.client_id = opts.clientId;
 
@@ -114,7 +119,7 @@ export async function insertSmsMessage(
 
   const { data: convoMeta, error: convoLookupErr } = await supabase
     .from("conversation")
-    .select("organization_id")
+    .select("organization_id, owner_id")
     .eq("id", opts.conversationId)
     .maybeSingle();
 
@@ -126,6 +131,7 @@ export async function insertSmsMessage(
     .from("conversation_message")
     .insert({
       organization_id: convoMeta.organization_id,
+      owner_id: convoMeta.owner_id,
       conversation_id: opts.conversationId,
       kind: "external",
       direction: opts.direction,
@@ -159,6 +165,29 @@ export async function insertSmsMessage(
     .eq("id", opts.conversationId);
 
   return msg.id;
+}
+
+async function resolveConversationOwner(
+  supabase: SupabaseClient,
+  opts: { leadId?: string | null; clientId?: string | null }
+): Promise<string | null> {
+  if (opts.leadId) {
+    const { data } = await supabase
+      .from("lead")
+      .select("owner_id")
+      .eq("id", opts.leadId)
+      .maybeSingle();
+    if (typeof data?.owner_id === "string") return data.owner_id;
+  }
+  if (opts.clientId) {
+    const { data } = await supabase
+      .from("client")
+      .select("owner_id")
+      .eq("id", opts.clientId)
+      .maybeSingle();
+    if (typeof data?.owner_id === "string") return data.owner_id;
+  }
+  return null;
 }
 
 export type SendConversationSmsResult =

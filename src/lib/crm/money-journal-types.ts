@@ -61,6 +61,8 @@ export type MoneyJournalEntryPayload = {
   improveNextHour: string;
   promiseKeepGoing: string;
   billable: boolean;
+  /** Root product title (Work → Products) when the user linked the hour to a product. */
+  productName?: string | null;
   projectId: string | null;
   taskId: string | null;
   goalsSnapshot: MoneyJournalGoals;

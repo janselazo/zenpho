@@ -22,6 +22,7 @@ import {
   MONEY_JOURNAL_TAG,
   type MoneyJournalEntryPayload,
 } from "@/lib/crm/money-journal-types";
+import { normalizeInternalRole } from "@/lib/crm/roles";
 import { createClient } from "@/lib/supabase/client";
 import {
   deleteTimeEntry,
@@ -32,22 +33,31 @@ import {
 type ProjectRow = {
   id: string;
   title: string;
+  /** Null for root products; phases point at their parent product row. */
+  parent_project_id: string | null;
   client: {
     name: string | null;
     company: string | null;
     email: string | null;
   } | null;
+  owner_id?: string | null;
+  assigned_to?: string | null;
 };
 
 type TaskRow = {
   id: string;
   title: string;
   project_id: string;
+  owner_id?: string | null;
+  assigned_to?: string | null;
 };
 
 type ProjectQueryRow = {
   id: string;
   title: string;
+  parent_project_id: string | null;
+  owner_id?: string | null;
+  assigned_to?: string | null;
   client:
     | { name: string | null; company: string | null; email: string | null }
     | { name: string | null; company: string | null; email: string | null }[]
@@ -62,6 +72,9 @@ function projectsFromQuery(rows: ProjectQueryRow[] | null): ProjectRow[] {
     return {
       id: p.id,
       title: p.title,
+      parent_project_id: p.parent_project_id ?? null,
+      owner_id: p.owner_id ?? null,
+      assigned_to: p.assigned_to ?? null,
       client: one
         ? {
             name: one.name ?? null,
@@ -162,6 +175,41 @@ function clientDisplay(p: ProjectRow | undefined): string {
   );
 }
 
+/** Row linked on the entry, or inferred from task → project. */
+function displayProjectForEntry(
+  e: TimeEntryRow,
+  projectById: Map<string, ProjectRow>,
+  taskById: Map<string, TaskRow>
+): ProjectRow | undefined {
+  if (e.project_id) {
+    const row = projectById.get(e.project_id);
+    if (row) return row;
+  }
+  if (e.task_id) {
+    const task = taskById.get(e.task_id);
+    if (task?.project_id) return projectById.get(task.project_id);
+  }
+  return undefined;
+}
+
+/** Client often lives on the root product; walk up from phase rows. */
+function clientStringForProjectChain(
+  start: ProjectRow | undefined,
+  projectById: Map<string, ProjectRow>
+): string {
+  if (!start) return "—";
+  let p: ProjectRow | undefined = start;
+  const seen = new Set<string>();
+  while (p) {
+    const s = clientDisplay(p);
+    if (s !== "—") return s;
+    if (!p.parent_project_id || seen.has(p.id)) break;
+    seen.add(p.id);
+    p = projectById.get(p.parent_project_id);
+  }
+  return "—";
+}
+
 const WEEK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
 function tagColor(label: string) {
@@ -210,6 +258,12 @@ export default function TimeTrackingView() {
     [tasks]
   );
 
+  /** Timer picker: phases only (legacy UX); resolution map includes roots too. */
+  const phaseProjectsForPicker = useMemo(
+    () => projects.filter((p) => p.parent_project_id != null),
+    [projects]
+  );
+
   const tasksForProject = useMemo(() => {
     if (!projectId.trim()) return tasks;
     return tasks.filter((t) => t.project_id === projectId);
@@ -232,18 +286,35 @@ export default function TimeTrackingView() {
     const rangeEnd = addDays(monday, 8);
     rangeEnd.setHours(0, 0, 0, 0);
 
-    const [pRes, tRes, eRes, runRes] = await Promise.all([
-      supabase
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+    const role = normalizeInternalRole(profile?.role, user.email);
+
+    let projectQuery = supabase
         .from("project")
-        .select("id, title, client:client_id ( name, company, email )")
-        .not("parent_project_id", "is", null)
+        .select(
+          "id, title, parent_project_id, owner_id, assigned_to, client:client_id ( name, company, email )"
+        )
         .order("title")
-        .limit(300),
-      supabase
+        .limit(500);
+    let taskQuery = supabase
         .from("task")
-        .select("id, title, project_id")
+        .select("id, title, project_id, owner_id, assigned_to")
         .order("title")
-        .limit(500),
+        .limit(500);
+    if (role === "user") {
+      projectQuery = projectQuery.or(
+        `owner_id.eq.${user.id},assigned_to.eq.${user.id}`
+      );
+      taskQuery = taskQuery.or(`owner_id.eq.${user.id},assigned_to.eq.${user.id}`);
+    }
+
+    const [pRes, tRes, eRes, runRes] = await Promise.all([
+      projectQuery,
+      taskQuery,
       supabase
         .from("time_entry")
         .select(
@@ -602,7 +673,7 @@ export default function TimeTrackingView() {
                 className={`${selectBaseClass} disabled:opacity-60`}
               >
                 <option value="">Select phase…</option>
-                {projects.map((p) => (
+                {phaseProjectsForPicker.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.title}
                   </option>
@@ -746,9 +817,25 @@ export default function TimeTrackingView() {
                 </tr>
               ) : (
                 entriesForSelectedDay.map((e) => {
-                  const p = e.project_id
-                    ? projectById.get(e.project_id)
-                    : undefined;
+                  const p = displayProjectForEntry(e, projectById, taskById);
+                  const journalProduct = e.journal_data?.productName?.trim();
+                  const projectTitle =
+                    p?.title?.trim() ||
+                    journalProduct ||
+                    "—";
+                  const rootGuess =
+                    !p && journalProduct
+                      ? projects.find(
+                          (pr) =>
+                            pr.parent_project_id == null &&
+                            pr.title.trim().toLowerCase() ===
+                              journalProduct.toLowerCase()
+                        )
+                      : undefined;
+                  const clientLabel = clientStringForProjectChain(
+                    p ?? rootGuess,
+                    projectById
+                  );
                   const t = e.task_id ? taskById.get(e.task_id) : undefined;
                   const dur = durationSeconds(e, nowMs);
                   const isJournal = Boolean(e.journal_data);
@@ -801,7 +888,7 @@ export default function TimeTrackingView() {
                       <td className="px-4 py-3 text-text-primary dark:text-zinc-200">
                         <span className="inline-flex items-center gap-1">
                           <Briefcase className="h-3.5 w-3.5 opacity-50" />
-                          {p?.title ?? "—"}
+                          {projectTitle}
                         </span>
                         {t ? (
                           <div className="mt-0.5 text-xs text-text-secondary dark:text-zinc-500">
@@ -810,7 +897,7 @@ export default function TimeTrackingView() {
                         ) : null}
                       </td>
                       <td className="px-4 py-3 text-text-primary dark:text-zinc-200">
-                        {clientDisplay(p)}
+                        {clientLabel}
                       </td>
                       <td className="px-4 py-3 text-right align-top">
                         <div className="font-semibold tabular-nums text-text-primary dark:text-zinc-100">
@@ -874,6 +961,9 @@ export default function TimeTrackingView() {
           >
             <div className="flex items-center justify-between gap-2">
               <h3 className="text-lg font-semibold text-text-primary dark:text-zinc-100">
+                {journalDetail.journal_data.productName
+                  ? `${journalDetail.journal_data.productName} · `
+                  : ""}
                 Money Journal · hour {journalDetail.journal_data.hourNumber}
               </h3>
               <button
@@ -903,6 +993,12 @@ export default function TimeTrackingView() {
                       </span>
                     ) : null}
                   </p>
+                  {j.productName ? (
+                    <p>
+                      <span className="font-medium">Product: </span>
+                      {j.productName}
+                    </p>
+                  ) : null}
                   <p>
                     <span className="font-medium">Prospecting: </span>
                     {j.prospectingDone || "—"}

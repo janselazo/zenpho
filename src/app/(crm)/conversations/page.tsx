@@ -1,6 +1,7 @@
 import ConversationsView from "@/components/crm/ConversationsView";
 import { conversationBusinessLogoById } from "@/lib/crm/conversation-business-logos";
 import { conversationPreviewById } from "@/lib/crm/conversationPreviews";
+import { fetchCrmAccessContext } from "@/lib/crm/access-context";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
@@ -17,11 +18,16 @@ export default async function ConversationsPage() {
   }
 
   const supabase = await createClient();
-  const { data: conversations, error } = await supabase
+  const access = await fetchCrmAccessContext(supabase);
+  let query = supabase
     .from("conversation")
     .select("id, contact_name, channel, contact_email, contact_phone, lead_id, last_message_at, unread_count")
     .order("last_message_at", { ascending: false })
     .limit(200);
+  if (access && !access.canManageTeam) {
+    query = query.eq("owner_id", access.userId);
+  }
+  const { data: conversations, error } = await query;
 
   if (error) {
     return (

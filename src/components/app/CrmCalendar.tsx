@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { normalizeInternalRole } from "@/lib/crm/roles";
 import {
   createAppointmentAction,
   deleteAppointment,
@@ -129,12 +130,29 @@ export default function CrmCalendar({ configured }: { configured: boolean }) {
     if (!configured) return;
     try {
       const supabase = createClient();
-      const { data, error: qErr } = await supabase
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setLoadError("Sign in to load appointments.");
+        return;
+      }
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+      const role = normalizeInternalRole(profile?.role, user.email);
+      let query = supabase
         .from("appointment")
         .select(
           "id, title, description, starts_at, ends_at, status, lead:lead_id ( name, company, project_type )"
         )
         .order("starts_at", { ascending: true });
+      if (role === "user") {
+        query = query.eq("created_by", user.id);
+      }
+      const { data, error: qErr } = await query;
       if (qErr) {
         setLoadError(qErr.message);
         return;

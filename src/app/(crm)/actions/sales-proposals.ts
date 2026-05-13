@@ -240,6 +240,13 @@ export async function createSalesProposalDraft(input?: {
 
   const title = input?.title?.trim() || "Untitled proposal";
   const cid = input?.clientId?.trim() || null;
+  const { data: client } = cid
+    ? await supabase
+        .from("client")
+        .select("owner_id")
+        .eq("id", cid)
+        .maybeSingle()
+    : { data: null };
 
   const { data, error } = await supabase
     .from("sales_proposal")
@@ -248,6 +255,7 @@ export async function createSalesProposalDraft(input?: {
       status: "draft",
       client_id: cid || null,
       created_by: user.id,
+      owner_id: (client?.owner_id as string | null) ?? user.id,
     })
     .select("id")
     .single();

@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import LeadEditForm from "@/components/crm/LeadEditForm";
+import { fetchCrmAccessContext } from "@/lib/crm/access-context";
 import { fetchMergedCrmFieldOptions } from "@/lib/crm/fetch-crm-field-options";
 import { fetchCrmPipelineSettings } from "@/lib/crm/fetch-pipeline-settings";
-import { fetchCurrentOrganizationId } from "@/lib/organization";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 import type { LeadFollowUpAppointment } from "@/lib/crm/lead-follow-up-appointment";
@@ -22,17 +22,22 @@ export default async function LeadDetailPage({ params }: Props) {
   }
 
   const supabase = await createClient();
-  const organizationId = await fetchCurrentOrganizationId(supabase);
+  const access = await fetchCrmAccessContext(supabase);
+  if (!access) notFound();
+  const organizationId = access.organizationId;
   if (!organizationId) notFound();
 
-  const { data: lead, error } = await supabase
+  let leadQuery = supabase
     .from("lead")
     .select(
       "id, name, email, company, phone, website, facebook, instagram, google_business_category, google_place_types, source, stage, notes, project_type, contact_category, created_at, converted_client_id, prospect_preview_id, branding_funnel_pdf_path, branding_funnel_pdf_created_at, branding_document_url, revenue_leak_audit_url"
     )
     .eq("id", id)
-    .eq("organization_id", organizationId)
-    .maybeSingle();
+    .eq("organization_id", organizationId);
+  if (!access.canManageTeam) {
+    leadQuery = leadQuery.eq("owner_id", access.userId);
+  }
+  const { data: lead, error } = await leadQuery.maybeSingle();
 
   if (error || !lead) notFound();
 

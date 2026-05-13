@@ -3,12 +3,14 @@ import {
   parseSalesProposalStatus,
   type SalesProposalListRow,
 } from "@/lib/crm/sales-proposal-types";
+import { fetchCrmAccessContext } from "@/lib/crm/access-context";
 
 export async function fetchSalesProposalsForList(): Promise<
   SalesProposalListRow[]
 > {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const access = await fetchCrmAccessContext(supabase);
+  let query = supabase
     .from("sales_proposal")
     .select(
       `
@@ -24,6 +26,10 @@ export async function fetchSalesProposalsForList(): Promise<
     )
     .order("updated_at", { ascending: false })
     .limit(200);
+  if (access && !access.canManageTeam) {
+    query = query.or(`owner_id.eq.${access.userId},created_by.eq.${access.userId}`);
+  }
+  const { data, error } = await query;
 
   if (error || !data) return [];
 

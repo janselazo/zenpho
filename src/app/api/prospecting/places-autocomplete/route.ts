@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { isInternalStaffRole } from "@/lib/crm/roles";
 
 const MAX_INPUT = 200;
 const AUTOCOMPLETE_FIELD_MASK =
@@ -32,7 +33,7 @@ export async function POST(req: Request) {
     .eq("id", user.id)
     .maybeSingle();
 
-  if (profile?.role !== "agency_admin" && profile?.role !== "agency_member") {
+  if (!isInternalStaffRole(profile?.role, user.email)) {
     return NextResponse.json({ error: "Forbidden", suggestions: [] }, { status: 403 });
   }
 

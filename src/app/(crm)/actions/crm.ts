@@ -26,6 +26,7 @@ import {
   prospectShellLine,
   stripProspectShellMarkerAndAppend,
 } from "@/lib/crm/prospect-client-shell";
+import { fetchCrmAccessContext } from "@/lib/crm/access-context";
 import { fetchCurrentOrganizationId } from "@/lib/organization";
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>;
@@ -400,7 +401,9 @@ export async function updateLeadRow(formData: FormData) {
     .from("lead")
     .select("source, project_type, contact_category, stage, converted_client_id")
     .eq("id", id)
+    .eq("owner_id", user.id)
     .maybeSingle();
+  if (!existingLead) return { error: "Lead not found" };
   const existingSource = (existingLead?.source as string | null)?.trim() || null;
   const existingProjectType =
     (existingLead?.project_type as string | null)?.trim() || null;
@@ -509,7 +512,11 @@ export async function updateLeadRow(formData: FormData) {
     leadUpdate.converted_client_id = null;
   }
 
-  const { error } = await supabase.from("lead").update(leadUpdate).eq("id", id);
+  const { error } = await supabase
+    .from("lead")
+    .update(leadUpdate)
+    .eq("id", id)
+    .eq("owner_id", user.id);
 
   if (error) return { error: error.message };
 
@@ -614,7 +621,8 @@ export async function updateLeadNotes(leadId: string, notes: string) {
   const { error } = await supabase
     .from("lead")
     .update({ notes: notesValue })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("owner_id", user.id);
 
   if (error) return { error: error.message };
 
@@ -647,7 +655,8 @@ export async function updateLeadTemperature(
   const { error } = await supabase
     .from("lead")
     .update({ temperature: raw })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("owner_id", user.id);
 
   if (error) return { error: error.message };
 
@@ -693,6 +702,7 @@ export async function updateLeadStage(
     .from("lead")
     .select("stage")
     .eq("id", id)
+    .eq("owner_id", user.id)
     .maybeSingle();
   if (priorErr) return { error: priorErr.message };
   const prevStage = (prior?.stage as string | null)?.trim() || "";
@@ -709,6 +719,7 @@ export async function updateLeadStage(
       .from("lead")
       .select("notes")
       .eq("id", id)
+      .eq("owner_id", user.id)
       .maybeSingle();
     if (fetchErr) return { error: fetchErr.message };
     notesPayload = appendLostReasonToLeadNotes(
@@ -728,7 +739,11 @@ export async function updateLeadStage(
     updateBody.converted_client_id = null;
   }
 
-  const { error } = await supabase.from("lead").update(updateBody).eq("id", id);
+  const { error } = await supabase
+    .from("lead")
+    .update(updateBody)
+    .eq("id", id)
+    .eq("owner_id", user.id);
 
   if (error) return { error: error.message };
 
@@ -760,6 +775,7 @@ export async function updateLeadProjectType(
     .from("lead")
     .select("project_type")
     .eq("id", id)
+    .eq("owner_id", user.id)
     .maybeSingle();
   const existing =
     (row?.project_type as string | null)?.trim() || null;
@@ -774,7 +790,8 @@ export async function updateLeadProjectType(
   const { error } = await supabase
     .from("lead")
     .update({ project_type })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("owner_id", user.id);
 
   if (error) return { error: error.message };
 
@@ -802,6 +819,7 @@ export async function updateLeadSourceField(leadId: string, sourceRaw: string) {
     .from("lead")
     .select("source")
     .eq("id", id)
+    .eq("owner_id", user.id)
     .maybeSingle();
   const existing = (row?.source as string | null)?.trim() || null;
 
@@ -812,7 +830,8 @@ export async function updateLeadSourceField(leadId: string, sourceRaw: string) {
   const { error } = await supabase
     .from("lead")
     .update({ source })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("owner_id", user.id);
 
   if (error) return { error: error.message };
 
@@ -990,6 +1009,7 @@ async function insertClientFromLeadAndLink(
     company: string | null;
     notes: string | null;
     converted_client_id: string | null;
+    owner_id?: string | null;
   },
   conversionLine: string,
   companyHint?: string | null
@@ -1018,6 +1038,7 @@ async function insertClientFromLeadAndLink(
       phone: lead.phone?.trim() || null,
       company,
       notes,
+      owner_id: lead.owner_id ?? null,
     })
     .select("id")
     .single();
@@ -1058,6 +1079,7 @@ async function insertProspectShellClientForLead(
     phone: string | null;
     company: string | null;
     notes: string | null;
+    owner_id?: string | null;
   },
   hints?: { company?: string | null; email?: string | null }
 ): Promise<string | null> {
@@ -1084,6 +1106,7 @@ async function insertProspectShellClientForLead(
       phone: lead.phone?.trim() || null,
       company,
       notes,
+      owner_id: lead.owner_id ?? null,
     })
     .select("id")
     .single();
@@ -1113,7 +1136,7 @@ export async function resolveOrCreateClientForLead(
   const { data: lead, error: leadErr } = await supabase
     .from("lead")
     .select(
-      "id, name, email, phone, company, notes, converted_client_id"
+      "id, name, email, phone, company, notes, converted_client_id, owner_id"
     )
     .eq("id", id)
     .maybeSingle();
@@ -1179,7 +1202,7 @@ export async function ensureClientIdForProposalFromLead(
 
   const { data: lead, error: leadErr } = await supabase
     .from("lead")
-    .select("id, name, email, phone, company, notes, converted_client_id")
+    .select("id, name, email, phone, company, notes, converted_client_id, owner_id")
     .eq("id", id)
     .maybeSingle();
 
@@ -1234,7 +1257,7 @@ async function ensureClientFromClosedDeal(
 
   const { data: lead, error: leadErr } = await supabase
     .from("lead")
-    .select("id, name, email, phone, company, notes, converted_client_id")
+    .select("id, name, email, phone, company, notes, converted_client_id, owner_id")
     .eq("id", leadId)
     .maybeSingle();
 
@@ -1453,8 +1476,15 @@ export async function createDealRecord(input: {
   const expectedClose =
     input.expectedClose?.trim() ? input.expectedClose.trim() : null;
 
+  const { data: leadOwner } = await supabase
+    .from("lead")
+    .select("owner_id")
+    .eq("id", leadId)
+    .maybeSingle();
+
   const { error } = await supabase.from("deal").insert({
     lead_id: leadId,
+    owner_id: (leadOwner?.owner_id as string | null) ?? user.id,
     title: input.title.trim() || null,
     company: input.company.trim() || null,
     value: valueNum,
@@ -1489,7 +1519,11 @@ export async function deleteLead(id: string) {
   const trimmed = id.trim();
   if (!trimmed) return { error: "Missing lead id" };
 
-  const { error } = await supabase.from("lead").delete().eq("id", trimmed);
+  const { error } = await supabase
+    .from("lead")
+    .delete()
+    .eq("id", trimmed)
+    .eq("owner_id", user.id);
   if (error) return { error: error.message };
 
   revalidatePath("/leads");
@@ -1656,7 +1690,8 @@ export async function updateAppointmentAction(input: {
 
   const status = parseAppointmentStatus(input.status);
 
-  const { error } = await supabase
+  const access = await fetchCrmAccessContext(supabase);
+  let updateQuery = supabase
     .from("appointment")
     .update({
       title,
@@ -1666,6 +1701,10 @@ export async function updateAppointmentAction(input: {
       status,
     })
     .eq("id", id);
+  if (access && !access.canManageTeam) {
+    updateQuery = updateQuery.eq("created_by", user.id);
+  }
+  const { error } = await updateQuery;
 
   if (error) return { error: error.message };
   revalidatePath("/dashboard");
@@ -1681,7 +1720,12 @@ export async function deleteAppointment(id: string) {
   if (!user) return { error: "Unauthorized" };
   if (!id) return { error: "Missing id" };
 
-  const { error } = await supabase.from("appointment").delete().eq("id", id);
+  const access = await fetchCrmAccessContext(supabase);
+  let deleteQuery = supabase.from("appointment").delete().eq("id", id);
+  if (access && !access.canManageTeam) {
+    deleteQuery = deleteQuery.eq("created_by", user.id);
+  }
+  const { error } = await deleteQuery;
   if (error) return { error: error.message };
   revalidatePath("/dashboard");
   revalidatePath("/calendar");
@@ -1861,11 +1905,16 @@ export async function reassignLeadsFromStage(fromSlug: string, toSlug: string) {
   const { data: toMove, error: selErr } = await supabase
     .from("lead")
     .select("id")
-    .eq("stage", from);
+    .eq("stage", from)
+    .eq("owner_id", user.id);
 
   if (selErr) return { error: selErr.message };
 
-  const { error } = await supabase.from("lead").update({ stage: to }).eq("stage", from);
+  const { error } = await supabase
+    .from("lead")
+    .update({ stage: to })
+    .eq("stage", from)
+    .eq("owner_id", user.id);
 
   if (error) return { error: error.message };
 

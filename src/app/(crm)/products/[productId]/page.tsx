@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { fetchCrmAccessContext } from "@/lib/crm/access-context";
 import {
   clientRowToProjectSlice,
   projectRowToMock,
@@ -27,18 +28,35 @@ export default async function ProductOverviewPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: row, error } = await supabase
+  const access = await fetchCrmAccessContext(supabase);
+  let productQuery = supabase
     .from("project")
     .select(
-      "id, client_id, title, description, status, target_date, website, budget, plan_stage, project_type, metadata, parent_project_id"
+      "id, client_id, title, description, status, target_date, website, budget, plan_stage, project_type, metadata, parent_project_id, owner_id, assigned_to"
     )
-    .eq("id", productId)
-    .maybeSingle();
+    .eq("id", productId);
+  if (access && !access.canManageTeam) {
+    productQuery = productQuery.or(
+      `owner_id.eq.${access.userId},assigned_to.eq.${access.userId}`
+    );
+  }
+  const { data: row, error } = await productQuery.maybeSingle();
 
   if (error || !row) notFound();
   if (row.parent_project_id) {
     redirect(
       `/products/${row.parent_project_id as string}?project=${row.id}&tab=backlog`
+    );
+  }
+
+  let childrenQuery = supabase
+    .from("project")
+    .select("id, title, plan_stage, metadata, target_date, created_at")
+    .eq("parent_project_id", productId)
+    .order("created_at", { ascending: true });
+  if (access && !access.canManageTeam) {
+    childrenQuery = childrenQuery.or(
+      `owner_id.eq.${access.userId},assigned_to.eq.${access.userId}`
     );
   }
 
@@ -55,11 +73,7 @@ export default async function ProductOverviewPage({
       .select("name, email, company")
       .eq("id", row.client_id as string)
       .maybeSingle(),
-    supabase
-      .from("project")
-      .select("id, title, plan_stage, metadata, target_date, created_at")
-      .eq("parent_project_id", productId)
-      .order("created_at", { ascending: true }),
+    childrenQuery,
     listRoadmapPhases(productId),
     listDiscoverySections(productId),
   ]);

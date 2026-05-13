@@ -129,12 +129,14 @@ export async function sendConversationMessage(formData: FormData) {
 
   const { data: convo } = await supabase
     .from("conversation")
-    .select("channel, contact_email, contact_phone, organization_id")
+    .select("channel, contact_email, contact_phone, organization_id, owner_id")
     .eq("id", conversationId)
     .single();
 
   const convoOrg =
     typeof convo?.organization_id === "string" ? convo.organization_id : null;
+  const convoOwner =
+    typeof convo?.owner_id === "string" ? convo.owner_id : user.id;
 
   const isEmail =
     convo?.channel === "email" &&
@@ -211,6 +213,7 @@ export async function sendConversationMessage(formData: FormData) {
 
   const { error: msgErr } = await supabase.from("conversation_message").insert({
     ...(convoOrg ? { organization_id: convoOrg } : {}),
+    owner_id: convoOwner,
     conversation_id: conversationId,
     kind,
     direction: "outbound",

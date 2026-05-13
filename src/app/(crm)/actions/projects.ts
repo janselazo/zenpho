@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { resolveOrCreateClientForLead } from "@/app/(crm)/actions/crm";
+import { fetchCrmAccessContext } from "@/lib/crm/access-context";
 import { fetchCurrentOrganizationId } from "@/lib/organization";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -112,15 +113,22 @@ export async function listCrmProjectsForAgency(): Promise<{
   const organizationId = await fetchCurrentOrganizationId(supabase);
   if (!organizationId) return { projects: [], error: null };
 
-  const { data: rows, error } = await supabase
+  const access = await fetchCrmAccessContext(supabase);
+  let projectQuery = supabase
     .from("project")
     .select(
-      "id, client_id, title, description, status, target_date, website, budget, plan_stage, project_type, metadata, parent_project_id, reference_number"
+      "id, client_id, title, description, status, target_date, website, budget, plan_stage, project_type, metadata, parent_project_id, reference_number, owner_id, assigned_to"
     )
     .eq("organization_id", organizationId)
     .is("parent_project_id", null)
     .order("created_at", { ascending: false })
     .limit(500);
+  if (access && !access.canManageTeam) {
+    projectQuery = projectQuery.or(
+      `owner_id.eq.${access.userId},assigned_to.eq.${access.userId}`
+    );
+  }
+  const { data: rows, error } = await projectQuery;
 
   if (error) {
     return { projects: [], error: humanizeProjectDbError(error.message) };
@@ -216,6 +224,7 @@ export async function createCrmProject(
       project_type: ptRes.projectType,
       metadata,
       parent_project_id: null,
+      owner_id: user.id,
     })
     .select("id")
     .single();
@@ -521,7 +530,7 @@ export async function createCrmPhase(
 
   const { data: parent, error: pErr } = await supabase
     .from("project")
-    .select("id, client_id, metadata, project_type")
+    .select("id, client_id, metadata, project_type, owner_id")
     .eq("id", pid)
     .is("parent_project_id", null)
     .maybeSingle();
@@ -547,6 +556,7 @@ export async function createCrmPhase(
       project_type: (parent.project_type as string | null) ?? null,
       metadata,
       parent_project_id: pid,
+      owner_id: (parent.owner_id as string | null) ?? user.id,
     })
     .select("id")
     .single();
@@ -619,7 +629,7 @@ export async function createCrmChildProject(
 
   const { data: parent, error: pErr } = await supabase
     .from("project")
-    .select("id, client_id, metadata, project_type")
+    .select("id, client_id, metadata, project_type, owner_id")
     .eq("id", pid)
     .is("parent_project_id", null)
     .maybeSingle();
@@ -734,6 +744,7 @@ export async function createCrmChildProject(
       budget: null,
       metadata: childMetadata,
       parent_project_id: pid,
+      owner_id: (parent.owner_id as string | null) ?? user.id,
     })
     .select("id")
     .single();

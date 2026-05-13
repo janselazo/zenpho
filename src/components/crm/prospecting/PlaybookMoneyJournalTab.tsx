@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { normalizeInternalRole } from "@/lib/crm/roles";
 import { logMoneyJournalEntry } from "@/app/(crm)/actions/money-journal";
 import {
   EMPTY_MONEY_JOURNAL_GOALS,
@@ -32,16 +33,32 @@ import MoneyJournalTimer, {
 type ProjectRow = {
   id: string;
   title: string;
+  owner_id?: string | null;
+  assigned_to?: string | null;
   client: { name: string | null; company: string | null; email: string | null } | null;
 };
 
-type TaskRow = { id: string; title: string; project_id: string };
+type TaskRow = {
+  id: string;
+  title: string;
+  project_id: string;
+  owner_id?: string | null;
+  assigned_to?: string | null;
+};
 
-type PhaseRow = { id: string; title: string; parent_project_id: string };
+type PhaseRow = {
+  id: string;
+  title: string;
+  parent_project_id: string;
+  owner_id?: string | null;
+  assigned_to?: string | null;
+};
 
 type ProjectQueryRow = {
   id: string;
   title: string;
+  owner_id?: string | null;
+  assigned_to?: string | null;
   client:
     | { name: string | null; company: string | null; email: string | null }
     | { name: string | null; company: string | null; email: string | null }[]
@@ -56,6 +73,8 @@ function projectsFromQuery(rows: ProjectQueryRow[] | null): ProjectRow[] {
     return {
       id: p.id,
       title: p.title,
+      owner_id: p.owner_id ?? null,
+      assigned_to: p.assigned_to ?? null,
       client: one
         ? { name: one.name, company: one.company, email: one.email }
         : null,
@@ -113,8 +132,11 @@ function parseJournalPayload(v: unknown): MoneyJournalEntryPayload | null {
   if (typeof o.hourNumber !== "number" || typeof o.workDetail60m !== "string")
     return null;
   const base = v as MoneyJournalEntryPayload;
+  const pn =
+    typeof o.productName === "string" ? o.productName.trim() || null : null;
   return {
     ...base,
+    productName: pn,
     timerStartedAtIso:
       typeof o.timerStartedAtIso === "string" ? o.timerStartedAtIso : "",
     timerStoppedAtIso:
@@ -180,6 +202,12 @@ function JournalPergaminoLeaves({ entries }: { entries: JournalPamphletRow[] }) 
                 <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
                   <span className="font-serif text-sm font-semibold tracking-tight text-amber-950/95 dark:text-amber-100">
                     Hour {j.hourNumber}
+                    {j.productName ? (
+                      <span className="font-sans text-[11px] font-normal text-amber-800/85 dark:text-amber-200/75">
+                        {" "}
+                        · {j.productName}
+                      </span>
+                    ) : null}
                     <span className="font-sans text-[11px] font-normal text-amber-800/80 dark:text-amber-200/70">
                       {" "}
                       · {dateStr}
@@ -204,6 +232,9 @@ function JournalPergaminoLeaves({ entries }: { entries: JournalPamphletRow[] }) 
                 />
               </summary>
               <div className="space-y-2.5 border-t border-amber-200/60 px-3 py-3 text-xs leading-relaxed text-amber-950/95 dark:border-amber-800/50 dark:text-amber-50/90">
+                {j.productName ? (
+                  <PergField label="Product" value={j.productName} />
+                ) : null}
                 <PergField label="Prospecting" value={j.prospectingDone || "—"} />
                 <PergField label="Money for" value={j.moneyPurpose || "—"} />
                 <PergField label="This hour" value={j.workDetail60m || "—"} multiline />
@@ -297,10 +328,15 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
     billable,
     projectId: "",
     taskId: "",
+    productName: null as string | null,
   });
   const timeEntryIds = useMemo(
     () => resolveTimeEntryProjectTask(workLink, tasks),
     [workLink, tasks]
+  );
+  const selectedProductTitle = useMemo(
+    () => products.find((p) => p.id === productId)?.title ?? "Product",
+    [products, productId]
   );
   formRef.current = {
     prospectingDone,
@@ -312,6 +348,9 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
     billable,
     projectId: timeEntryIds.projectId,
     taskId: timeEntryIds.taskId,
+    productName: productId.trim()
+      ? products.find((p) => p.id === productId)?.title?.trim() || null
+      : null,
   };
   const nextHourNRef = useRef(nextHourN);
   nextHourNRef.current = nextHourN;
@@ -330,11 +369,6 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
       .filter((t) => allowed.has(t.project_id))
       .sort((a, b) => a.title.localeCompare(b.title));
   }, [tasks, productId, phasesForProduct]);
-
-  const selectedProductTitle = useMemo(
-    () => products.find((p) => p.id === productId)?.title ?? "Product",
-    [products, productId]
-  );
 
   const refreshMeta = useCallback(async () => {
     if (!isSupabaseConfigured()) {
@@ -360,24 +394,41 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
     lookback.setDate(lookback.getDate() - 120);
     lookback.setHours(0, 0, 0, 0);
 
-    const [pRoot, pPhases, tRes, dayRes, runRes, histRes] = await Promise.all([
-      supabase
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+    const role = normalizeInternalRole(profile?.role, user.email);
+
+    let rootProjectQuery = supabase
         .from("project")
-        .select("id, title, client:client_id ( name, company, email )")
+        .select("id, title, owner_id, assigned_to, client:client_id ( name, company, email )")
         .is("parent_project_id", null)
         .order("title")
-        .limit(300),
-      supabase
+        .limit(300);
+    let phaseProjectQuery = supabase
         .from("project")
-        .select("id, title, parent_project_id")
+        .select("id, title, parent_project_id, owner_id, assigned_to")
         .not("parent_project_id", "is", null)
         .order("title")
-        .limit(500),
-      supabase
+        .limit(500);
+    let taskQuery = supabase
         .from("task")
-        .select("id, title, project_id")
+        .select("id, title, project_id, owner_id, assigned_to")
         .order("title")
-        .limit(1000),
+        .limit(1000);
+    if (role === "user") {
+      const own = `owner_id.eq.${user.id},assigned_to.eq.${user.id}`;
+      rootProjectQuery = rootProjectQuery.or(own);
+      phaseProjectQuery = phaseProjectQuery.or(own);
+      taskQuery = taskQuery.or(own);
+    }
+
+    const [pRoot, pPhases, tRes, dayRes, runRes, histRes] = await Promise.all([
+      rootProjectQuery,
+      phaseProjectQuery,
+      taskQuery,
       supabase
         .from("time_entry")
         .select("id, tags, journal_data, started_at")
@@ -499,6 +550,7 @@ export default function PlaybookMoneyJournalTab({ today }: Props) {
         improveNextHour: f.improveNextHour.trim(),
         promiseKeepGoing: f.promiseKeepGoing.trim(),
         billable: f.billable,
+        productName: f.productName,
         projectId: f.projectId.trim() || null,
         taskId: f.taskId.trim() || null,
         goalsSnapshot: { ...EMPTY_MONEY_JOURNAL_GOALS },

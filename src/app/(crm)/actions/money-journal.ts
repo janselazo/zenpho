@@ -74,21 +74,35 @@ function isMoneyJournalEntryPayload(v: unknown): v is MoneyJournalEntryPayload {
     if (typeof v[k] !== "string") return false;
   }
   if (typeof v.billable !== "boolean") return false;
+  if (
+    v.productName != null &&
+    typeof v.productName !== "string"
+  ) {
+    return false;
+  }
   if (v.projectId !== null && typeof v.projectId !== "string") return false;
   if (v.taskId !== null && typeof v.taskId !== "string") return false;
   if (!isMoneyJournalGoals(v.goalsSnapshot)) return false;
   return true;
 }
 
-function buildDescription(hourN: number, workDetail: string): string {
+function buildDescription(
+  hourN: number,
+  workDetail: string,
+  productName: string | null | undefined
+): string {
   const detail = workDetail.trim();
   const firstLine = detail.split(/\r?\n/)[0]?.trim() || "";
   const head =
     firstLine.length > 80
       ? `${firstLine.slice(0, 77)}...`
       : firstLine;
-  if (head) return `Hour ${hourN}: ${head}`;
-  return `Money Journal · hour ${hourN}`;
+  const prod = (productName ?? "").trim();
+  const prodBit = prod ? `${prod} · ` : "";
+  if (head) return `${prodBit}Hour ${hourN}: ${head}`;
+  return prod
+    ? `${prod} · Money Journal · hour ${hourN}`
+    : `Money Journal · hour ${hourN}`;
 }
 
 /**
@@ -145,7 +159,11 @@ export async function logMoneyJournalEntry(input: {
     }
   }
 
-  const description = buildDescription(jd.hourNumber, jd.workDetail60m);
+  const description = buildDescription(
+    jd.hourNumber,
+    jd.workDetail60m,
+    jd.productName
+  );
   const baseTags = (input.extraTags ?? []).map((t) => t.trim().toLowerCase()).filter(Boolean);
   const tagSet = new Set<string>([MONEY_JOURNAL_TAG, ...baseTags]);
   const tags = [...tagSet];

@@ -8,7 +8,7 @@ import {
   type DashboardRangeTotals,
   type LeadsAppointmentsPoint,
 } from "@/lib/crm/dashboard-types";
-import { fetchCurrentOrganizationId } from "@/lib/organization";
+import { fetchCrmAccessContext } from "@/lib/crm/access-context";
 import { createClient } from "@/lib/supabase/server";
 
 function toLocalYmd(d: Date): string {
@@ -39,30 +39,36 @@ const rangeEnd = (to: string) => `${to}T23:59:59.999Z`;
 
 export async function fetchDashboardKpis(from: string, to: string) {
   const supabase = await createClient();
-  const organizationId = await fetchCurrentOrganizationId(supabase);
+  const access = await fetchCrmAccessContext(supabase);
+  const organizationId = access?.organizationId ?? null;
   if (!organizationId) {
     return { activeClients: 0, activeProjects: 0, errors: [] };
   }
 
   const rs = rangeStart(from);
   const re = rangeEnd(to);
+  let clientsQuery = supabase
+    .from("client")
+    .select("notes")
+    .eq("organization_id", organizationId)
+    .gte("created_at", rs)
+    .lte("created_at", re);
+  let projectsQuery = supabase
+    .from("project")
+    .select("*", { count: "exact", head: true })
+    .eq("organization_id", organizationId)
+    .is("parent_project_id", null)
+    .gte("created_at", rs)
+    .lte("created_at", re);
+  if (access && !access.canManageTeam) {
+    clientsQuery = clientsQuery.eq("owner_id", access.userId);
+    projectsQuery = projectsQuery.or(
+      `owner_id.eq.${access.userId},assigned_to.eq.${access.userId}`
+    );
+  }
 
   const [{ data: clientsInRange, error: clientsErr }, projects] =
-    await Promise.all([
-      supabase
-        .from("client")
-        .select("notes")
-        .eq("organization_id", organizationId)
-        .gte("created_at", rs)
-        .lte("created_at", re),
-      supabase
-        .from("project")
-        .select("*", { count: "exact", head: true })
-        .eq("organization_id", organizationId)
-        .is("parent_project_id", null)
-        .gte("created_at", rs)
-        .lte("created_at", re),
-    ]);
+    await Promise.all([clientsQuery, projectsQuery]);
 
   const activeClients = (clientsInRange ?? []).filter(
     (r) => !notesIncludeProspectShellMarker(r.notes as string | null)
@@ -80,56 +86,62 @@ export async function fetchDashboardFunnel(
   to: string
 ): Promise<DashboardFunnelStage[]> {
   const supabase = await createClient();
-  const organizationId = await fetchCurrentOrganizationId(supabase);
+  const access = await fetchCrmAccessContext(supabase);
+  const organizationId = access?.organizationId ?? null;
   const rs = rangeStart(from);
   const re = rangeEnd(to);
 
-  const [
-    leadsRes,
-    apptsRes,
-    qualifiedRes,
-    projectsRes,
-  ] = organizationId
-    ? await Promise.all([
-        supabase
-          .from("lead")
-          .select("*", { count: "exact", head: true })
-          .eq("organization_id", organizationId)
-          .gte("created_at", rs)
-          .lte("created_at", re),
-        supabase
-          .from("appointment")
-          .select("*", { count: "exact", head: true })
-          .eq("organization_id", organizationId)
-          .gte("starts_at", rs)
-          .lte("starts_at", re),
-        supabase
-          .from("lead")
-          .select("*", { count: "exact", head: true })
-          .eq("organization_id", organizationId)
-          .in("stage", [
-            "qualified",
-            "discoverycall_completed",
-            "proposal_sent",
-            "negotiation",
-          ])
-          .gte("created_at", rs)
-          .lte("created_at", re),
-        /** Root projects created in range (funnel “Projects” count). */
-        supabase
-          .from("project")
-          .select("*", { count: "exact", head: true })
-          .eq("organization_id", organizationId)
-          .is("parent_project_id", null)
-          .gte("created_at", rs)
-          .lte("created_at", re),
-      ])
-    : [
-        { count: 0 },
-        { count: 0 },
-        { count: 0 },
-        { count: 0 },
-      ];
+  let leadsQuery = organizationId
+    ? supabase
+        .from("lead")
+        .select("*", { count: "exact", head: true })
+        .eq("organization_id", organizationId)
+        .gte("created_at", rs)
+        .lte("created_at", re)
+    : null;
+  let apptsQuery = organizationId
+    ? supabase
+        .from("appointment")
+        .select("*", { count: "exact", head: true })
+        .eq("organization_id", organizationId)
+        .gte("starts_at", rs)
+        .lte("starts_at", re)
+    : null;
+  let qualifiedQuery = organizationId
+    ? supabase
+        .from("lead")
+        .select("*", { count: "exact", head: true })
+        .eq("organization_id", organizationId)
+        .in("stage", [
+          "qualified",
+          "discoverycall_completed",
+          "proposal_sent",
+          "negotiation",
+        ])
+        .gte("created_at", rs)
+        .lte("created_at", re)
+    : null;
+  let projectsQuery = organizationId
+    ? supabase
+        .from("project")
+        .select("*", { count: "exact", head: true })
+        .eq("organization_id", organizationId)
+        .is("parent_project_id", null)
+        .gte("created_at", rs)
+        .lte("created_at", re)
+    : null;
+  if (access && !access.canManageTeam) {
+    leadsQuery = leadsQuery?.eq("owner_id", access.userId) ?? null;
+    apptsQuery = apptsQuery?.eq("created_by", access.userId) ?? null;
+    qualifiedQuery = qualifiedQuery?.eq("owner_id", access.userId) ?? null;
+    projectsQuery =
+      projectsQuery?.or(`owner_id.eq.${access.userId},assigned_to.eq.${access.userId}`) ??
+      null;
+  }
+
+  const [leadsRes, apptsRes, qualifiedRes, projectsRes] = organizationId
+    ? await Promise.all([leadsQuery!, apptsQuery!, qualifiedQuery!, projectsQuery!])
+    : [{ count: 0 }, { count: 0 }, { count: 0 }, { count: 0 }];
 
   const projectsCreatedCount = projectsRes.count ?? 0;
 
@@ -171,28 +183,37 @@ export async function fetchLeadsAppointmentsSeries(
   to: string
 ): Promise<LeadsAppointmentsPoint[]> {
   const supabase = await createClient();
-  const organizationId = await fetchCurrentOrganizationId(supabase);
+  const access = await fetchCrmAccessContext(supabase);
+  const organizationId = access?.organizationId ?? null;
   const days = enumerateDays(from, to);
   if (days.length === 0) return [];
 
   const rs = rangeStart(from);
   const re = rangeEnd(to);
 
+  let leadsQuery = organizationId
+    ? supabase
+        .from("lead")
+        .select("created_at")
+        .eq("organization_id", organizationId)
+        .gte("created_at", rs)
+        .lte("created_at", re)
+    : null;
+  let apptsQuery = organizationId
+    ? supabase
+        .from("appointment")
+        .select("starts_at")
+        .eq("organization_id", organizationId)
+        .gte("starts_at", rs)
+        .lte("starts_at", re)
+    : null;
+  if (access && !access.canManageTeam) {
+    leadsQuery = leadsQuery?.eq("owner_id", access.userId) ?? null;
+    apptsQuery = apptsQuery?.eq("created_by", access.userId) ?? null;
+  }
+
   const [leadsRes, apptsRes] = organizationId
-    ? await Promise.all([
-        supabase
-          .from("lead")
-          .select("created_at")
-          .eq("organization_id", organizationId)
-          .gte("created_at", rs)
-          .lte("created_at", re),
-        supabase
-          .from("appointment")
-          .select("starts_at")
-          .eq("organization_id", organizationId)
-          .gte("starts_at", rs)
-          .lte("starts_at", re),
-      ])
+    ? await Promise.all([leadsQuery!, apptsQuery!])
     : [{ data: [] }, { data: [] }];
 
   const leadByDay: Record<string, number> = {};
@@ -283,7 +304,8 @@ export async function fetchDashboardRangeTotals(
   to: string
 ): Promise<DashboardRangeTotals> {
   const supabase = await createClient();
-  const organizationId = await fetchCurrentOrganizationId(supabase);
+  const access = await fetchCrmAccessContext(supabase);
+  const organizationId = access?.organizationId ?? null;
   if (!organizationId) {
     return {
       leads: 0,
@@ -295,33 +317,43 @@ export async function fetchDashboardRangeTotals(
 
   const rs = rangeStart(from);
   const re = rangeEnd(to);
+  let leadsQuery = supabase
+    .from("lead")
+    .select("*", { count: "exact", head: true })
+    .eq("organization_id", organizationId)
+    .gte("created_at", rs)
+    .lte("created_at", re);
+  let apptsQuery = supabase
+    .from("appointment")
+    .select("*", { count: "exact", head: true })
+    .eq("organization_id", organizationId)
+    .gte("starts_at", rs)
+    .lte("starts_at", re);
+  let clientsQuery = supabase
+    .from("client")
+    .select("notes")
+    .eq("organization_id", organizationId)
+    .gte("created_at", rs)
+    .lte("created_at", re);
+  let revenueQuery = supabase
+    .from("transaction")
+    .select("amount")
+    .eq("organization_id", organizationId)
+    .eq("type", "revenue")
+    .gte("date", from)
+    .lte("date", to);
+  if (access && !access.canManageTeam) {
+    leadsQuery = leadsQuery.eq("owner_id", access.userId);
+    apptsQuery = apptsQuery.eq("created_by", access.userId);
+    clientsQuery = clientsQuery.eq("owner_id", access.userId);
+    revenueQuery = revenueQuery.eq("owner_id", access.userId);
+  }
 
   const [leadsRes, apptsRes, clientsRange, revenueRes] = await Promise.all([
-    supabase
-      .from("lead")
-      .select("*", { count: "exact", head: true })
-      .eq("organization_id", organizationId)
-      .gte("created_at", rs)
-      .lte("created_at", re),
-    supabase
-      .from("appointment")
-      .select("*", { count: "exact", head: true })
-      .eq("organization_id", organizationId)
-      .gte("starts_at", rs)
-      .lte("starts_at", re),
-    supabase
-      .from("client")
-      .select("notes")
-      .eq("organization_id", organizationId)
-      .gte("created_at", rs)
-      .lte("created_at", re),
-    supabase
-      .from("transaction")
-      .select("amount")
-      .eq("organization_id", organizationId)
-      .eq("type", "revenue")
-      .gte("date", from)
-      .lte("date", to),
+    leadsQuery,
+    apptsQuery,
+    clientsQuery,
+    revenueQuery,
   ]);
 
   const revenue =
@@ -345,20 +377,28 @@ export async function fetchClientsCreatedSeries(
   to: string
 ): Promise<ClientsCreatedPoint[]> {
   const supabase = await createClient();
-  const organizationId = await fetchCurrentOrganizationId(supabase);
+  const access = await fetchCrmAccessContext(supabase);
+  const organizationId = access?.organizationId ?? null;
   const days = enumerateDays(from, to);
   if (days.length === 0) return [];
 
   const rs = rangeStart(from);
   const re = rangeEnd(to);
 
-  const { data } = organizationId
-    ? await supabase
+  let clientsQuery = organizationId
+    ? supabase
         .from("client")
         .select("created_at, notes")
         .eq("organization_id", organizationId)
         .gte("created_at", rs)
         .lte("created_at", re)
+    : null;
+  if (access && !access.canManageTeam) {
+    clientsQuery = clientsQuery?.eq("owner_id", access.userId) ?? null;
+  }
+
+  const { data } = organizationId
+    ? await clientsQuery!
     : { data: [] as { created_at: string; notes: string | null }[] };
 
   const byDay: Record<string, number> = {};

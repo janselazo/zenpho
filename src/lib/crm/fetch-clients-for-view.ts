@@ -10,39 +10,27 @@ export type FetchClientsForViewResult = {
  * Loads clients with linked lead + deal title for the Clients CRM table.
  */
 export async function fetchClientsForClientsView(
-  organizationId: string | null
+  organizationId: string | null,
+  opts: { ownerId: string | null; teamWide?: boolean }
 ): Promise<FetchClientsForViewResult> {
-  if (!organizationId) {
+  if (!organizationId || (!opts.teamWide && !opts.ownerId)) {
     return { rows: [], error: null };
   }
 
   const supabase = await createClient();
-  const [clientsRes, leadsRes, dealsRes] = await Promise.all([
-    supabase
-      .from("client")
-      .select("id, name, email, phone, company, notes, created_at")
-      .eq("organization_id", organizationId)
-      .order("created_at", { ascending: false })
-      .limit(200),
-    supabase
-      .from("lead")
-      .select(
-        "id, name, email, company, source, converted_client_id, created_at"
-      )
-      .eq("organization_id", organizationId)
-      .not("converted_client_id", "is", null)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("deal")
-      .select("title, lead_id, updated_at")
-      .eq("organization_id", organizationId)
-      .order("updated_at", { ascending: false })
-      .limit(500),
-  ]);
+  let leadQuery = supabase
+    .from("lead")
+    .select("id, name, email, company, source, converted_client_id, created_at")
+    .eq("organization_id", organizationId)
+    .not("converted_client_id", "is", null)
+    .order("created_at", { ascending: false });
+  if (!opts.teamWide) {
+    leadQuery = leadQuery.eq("owner_id", opts.ownerId ?? "");
+  }
+  const leadsRes = await leadQuery;
 
-  const { data: clients, error } = clientsRes;
-  if (error) {
-    return { rows: [], error: { message: error.message } };
+  if (leadsRes.error) {
+    return { rows: [], error: { message: leadsRes.error.message } };
   }
 
   const leadByClientId = new Map<
@@ -65,6 +53,34 @@ export async function fetchClientsForClientsView(
       company: row.company,
       source: row.source,
     });
+  }
+
+  const clientIds = [...leadByClientId.keys()];
+  if (clientIds.length === 0) {
+    return { rows: [], error: null };
+  }
+
+  const leadIds = new Set((leadsRes.data ?? []).map((row) => row.id as string));
+  const [clientsRes, dealsRes] = await Promise.all([
+    supabase
+      .from("client")
+      .select("id, name, email, phone, company, notes, created_at")
+      .eq("organization_id", organizationId)
+      .in("id", clientIds)
+      .order("created_at", { ascending: false })
+      .limit(200),
+    supabase
+      .from("deal")
+      .select("title, lead_id, updated_at")
+      .eq("organization_id", organizationId)
+      .in("lead_id", [...leadIds])
+      .order("updated_at", { ascending: false })
+      .limit(500),
+  ]);
+
+  const { data: clients, error } = clientsRes;
+  if (error) {
+    return { rows: [], error: { message: error.message } };
   }
 
   const dealTitleByLeadId = new Map<string, string>();

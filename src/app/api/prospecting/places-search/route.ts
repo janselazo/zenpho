@@ -6,6 +6,7 @@ import {
   PLACES_TEXT_SEARCH_FIELD_MASK,
   type GoogPlaceJson,
 } from "@/lib/crm/places-google-shared";
+import { isInternalStaffRole } from "@/lib/crm/roles";
 
 const MAX_QUERY_LEN = 280;
 
@@ -85,7 +86,7 @@ export async function POST(req: Request) {
     .eq("id", user.id)
     .maybeSingle();
 
-  if (profile?.role !== "agency_admin" && profile?.role !== "agency_member") {
+  if (!isInternalStaffRole(profile?.role, user.email)) {
     return NextResponse.json({ error: "Forbidden", places: [] }, { status: 403 });
   }
 

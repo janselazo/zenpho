@@ -10,7 +10,7 @@ import SettingsPageView, {
 } from "@/components/crm/SettingsPageView";
 import { fetchCrmPipelineSettings } from "@/lib/crm/fetch-pipeline-settings";
 import { fetchMergedCrmFieldOptions } from "@/lib/crm/fetch-crm-field-options";
-import { fetchCurrentOrganizationId } from "@/lib/organization";
+import { fetchCrmAccessContext } from "@/lib/crm/access-context";
 
 function asNullableString(v: unknown): string | null {
   if (v == null) return null;
@@ -76,16 +76,25 @@ export default async function SettingsPage() {
   if (configured) {
     try {
       const supabase = await createClient();
-      const organizationId = await fetchCurrentOrganizationId(supabase);
+      const access = await fetchCrmAccessContext(supabase);
+      const organizationId = access?.organizationId ?? null;
+      let leadStageQuery = organizationId
+        ? supabase.from("lead").select("stage").eq("organization_id", organizationId)
+        : null;
+      if (leadStageQuery && access && !access.canManageTeam) {
+        leadStageQuery = leadStageQuery.eq("owner_id", access.userId);
+      }
+      let dealStageQuery = organizationId
+        ? supabase.from("deal").select("stage").eq("organization_id", organizationId)
+        : null;
+      if (dealStageQuery && access && !access.canManageTeam) {
+        dealStageQuery = dealStageQuery.eq("owner_id", access.userId);
+      }
       const [pipeline, fieldOptions, leadsRes, dealsRes] = await Promise.all([
         fetchCrmPipelineSettings(),
         fetchMergedCrmFieldOptions(),
-        organizationId
-          ? supabase.from("lead").select("stage").eq("organization_id", organizationId)
-          : Promise.resolve({ data: [] as { stage: string }[], error: null }),
-        organizationId
-          ? supabase.from("deal").select("stage").eq("organization_id", organizationId)
-          : Promise.resolve({ data: [] as { stage: string }[], error: null }),
+        leadStageQuery ?? Promise.resolve({ data: [] as { stage: string }[], error: null }),
+        dealStageQuery ?? Promise.resolve({ data: [] as { stage: string }[], error: null }),
       ]);
       const leadStageCounts: Record<string, number> = {};
       for (const row of leadsRes.data ?? []) {

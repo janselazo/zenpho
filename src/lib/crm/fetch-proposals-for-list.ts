@@ -4,6 +4,7 @@ import {
   type ProposalStatus,
   parseProposalStatus,
 } from "@/lib/crm/proposal-types";
+import { fetchCrmAccessContext } from "@/lib/crm/access-context";
 
 function lineTotal(q: number, p: number): number {
   return Math.round(q * p * 100) / 100;
@@ -21,13 +22,18 @@ export async function fetchProposalsForList(): Promise<{
   kpis: ProposalListKpis;
 }> {
   const supabase = await createClient();
-  const { data: proposals, error } = await supabase
+  const access = await fetchCrmAccessContext(supabase);
+  let query = supabase
     .from("proposal")
     .select(
-      "id, client_id, title, status, proposal_number, issued_at, valid_until, discount_amount, updated_at"
+      "id, client_id, title, status, proposal_number, issued_at, valid_until, discount_amount, updated_at, owner_id, created_by"
     )
     .order("updated_at", { ascending: false })
     .limit(500);
+  if (access && !access.canManageTeam) {
+    query = query.or(`owner_id.eq.${access.userId},created_by.eq.${access.userId}`);
+  }
+  const { data: proposals, error } = await query;
 
   if (error || !proposals?.length) {
     return {

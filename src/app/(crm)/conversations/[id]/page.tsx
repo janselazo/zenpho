@@ -4,6 +4,7 @@ import ConversationsView, {
 } from "@/components/crm/ConversationsView";
 import { conversationBusinessLogoById } from "@/lib/crm/conversation-business-logos";
 import { conversationPreviewById } from "@/lib/crm/conversationPreviews";
+import { fetchCrmAccessContext } from "@/lib/crm/access-context";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
@@ -26,12 +27,17 @@ export default async function ConversationThreadPage({
   }
 
   const supabase = await createClient();
+  const access = await fetchCrmAccessContext(supabase);
 
-  const { data: conversations, error: listError } = await supabase
+  let listQuery = supabase
     .from("conversation")
     .select("id, contact_name, channel, contact_email, contact_phone, lead_id, last_message_at, unread_count")
     .order("last_message_at", { ascending: false })
     .limit(200);
+  if (access && !access.canManageTeam) {
+    listQuery = listQuery.eq("owner_id", access.userId);
+  }
+  const { data: conversations, error: listError } = await listQuery;
 
   if (listError) {
     return (
@@ -67,13 +73,17 @@ export default async function ConversationThreadPage({
     preview: previews[c.id] ?? null,
   }));
 
-  const { data: rawMessages, error: msgError } = await supabase
+  let messageQuery = supabase
     .from("conversation_message")
     .select(
       "id, conversation_id, kind, direction, body, sender_name, sender_avatar_url, attachment, created_at, email_subject, email_message_id"
     )
     .eq("conversation_id", id)
     .order("created_at", { ascending: true });
+  if (access && !access.canManageTeam) {
+    messageQuery = messageQuery.eq("owner_id", access.userId);
+  }
+  const { data: rawMessages, error: msgError } = await messageQuery;
 
   if (msgError) {
     return (

@@ -3,7 +3,7 @@ import { fetchClientsForClientsView } from "@/lib/crm/fetch-clients-for-view";
 import { fetchMergedCrmFieldOptions } from "@/lib/crm/fetch-crm-field-options";
 import { fetchCrmPipelineSettings } from "@/lib/crm/fetch-pipeline-settings";
 import type { LeadTagCatalogRow } from "@/lib/crm/lead-tag-catalog";
-import { fetchCurrentOrganizationId } from "@/lib/organization";
+import { fetchCrmAccessContext } from "@/lib/crm/access-context";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
@@ -67,21 +67,38 @@ export default async function LeadsPage({
   }
 
   const supabase = await createClient();
-  const organizationId = await fetchCurrentOrganizationId(supabase);
+  const access = await fetchCrmAccessContext(supabase);
+  if (!access) {
+    return (
+      <div className="p-8">
+        <h1 className="heading-display text-2xl font-bold">Leads</h1>
+        <p className="mt-2 text-text-secondary">Sign in to load CRM.</p>
+      </div>
+    );
+  }
+  const organizationId = access.organizationId;
+
+  let leadQuery = organizationId
+    ? supabase
+        .from("lead")
+        .select(
+          "id, name, email, phone, company, website, stage, source, notes, project_type, contact_category, temperature, created_at, converted_client_id"
+        )
+        .eq("organization_id", organizationId)
+        .order("created_at", { ascending: false })
+        .limit(200)
+    : null;
+  if (leadQuery && !access.canManageTeam) {
+    leadQuery = leadQuery.eq("owner_id", access.userId);
+  }
 
   const [leadsRes, pipeline, clientsPack, fieldOptions] = await Promise.all([
-    organizationId
-      ? supabase
-          .from("lead")
-          .select(
-            "id, name, email, phone, company, website, stage, source, notes, project_type, contact_category, temperature, created_at, converted_client_id"
-          )
-          .eq("organization_id", organizationId)
-          .order("created_at", { ascending: false })
-          .limit(200)
-      : Promise.resolve({ data: [], error: null }),
+    leadQuery ?? Promise.resolve({ data: [], error: null }),
     fetchCrmPipelineSettings(),
-    fetchClientsForClientsView(organizationId),
+    fetchClientsForClientsView(organizationId, {
+      ownerId: access.userId,
+      teamWide: access.canManageTeam,
+    }),
     fetchMergedCrmFieldOptions(),
   ]);
 
@@ -129,10 +146,10 @@ export default async function LeadsPage({
       const leadIdOnPage = new Set(leadRows.map((l) => l.id as string));
 
       for (const a of assigns) {
-        const tid = a.tag_id as string;
-        tagAssignmentCounts.set(tid, (tagAssignmentCounts.get(tid) ?? 0) + 1);
         const lid = a.lead_id as string;
         if (!leadIdOnPage.has(lid)) continue;
+        const tid = a.tag_id as string;
+        tagAssignmentCounts.set(tid, (tagAssignmentCounts.get(tid) ?? 0) + 1);
         const meta = tagMetaById.get(tid);
         if (!meta) continue;
         if (!tagsByLeadId.has(lid)) tagsByLeadId.set(lid, []);

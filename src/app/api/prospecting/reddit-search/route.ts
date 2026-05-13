@@ -12,6 +12,7 @@ import {
   type IntentKey,
   type RedditFitScore,
 } from "@/lib/crm/reddit-intent-signals";
+import { isInternalStaffRole } from "@/lib/crm/roles";
 
 export const runtime = "nodejs";
 
@@ -50,7 +51,7 @@ export async function POST(req: Request) {
     .eq("id", user.id)
     .maybeSingle();
 
-  if (profile?.role !== "agency_admin" && profile?.role !== "agency_member") {
+  if (!isInternalStaffRole(profile?.role, user.email)) {
     return NextResponse.json({ error: "Forbidden", results: [] }, { status: 403 });
   }
 

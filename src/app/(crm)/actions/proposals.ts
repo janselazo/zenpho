@@ -47,7 +47,7 @@ export async function createProposal(clientId: string) {
 
   const { data: client, error: clientErr } = await supabase
     .from("client")
-    .select("id, name, email, company")
+    .select("id, name, email, company, owner_id")
     .eq("id", cid)
     .maybeSingle();
 
@@ -69,6 +69,7 @@ export async function createProposal(clientId: string) {
         name: "Zenpho · Local Growth Platform",
       },
       created_by: user.id,
+      owner_id: (client.owner_id as string | null) ?? user.id,
     })
     .select("id")
     .single();

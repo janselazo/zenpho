@@ -40,6 +40,7 @@ import {
   fingerprintSiteStack,
   type StackFingerprint,
 } from "@/lib/crm/tech-stack-fingerprint";
+import { isInternalStaffRole } from "@/lib/crm/roles";
 
 async function requireAgencyStaff() {
   const supabase = await createClient();
@@ -53,7 +54,7 @@ async function requireAgencyStaff() {
     .eq("id", user.id)
     .maybeSingle();
   const role = profile?.role;
-  if (role !== "agency_admin" && role !== "agency_member") {
+  if (!isInternalStaffRole(role, user.email)) {
     return { error: "Forbidden" as const, supabase: null, user: null };
   }
   return { error: null, supabase, user };

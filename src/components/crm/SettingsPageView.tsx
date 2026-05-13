@@ -14,7 +14,8 @@ import {
   uploadAvatar,
   removeAvatar,
 } from "@/app/(crm)/actions/settings";
-import { ROLE_LABELS } from "@/lib/crm/role-labels";
+import { ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/lib/crm/role-labels";
+import { normalizeInternalRole } from "@/lib/crm/roles";
 
 export type SettingsInitial = {
   configured: boolean;
@@ -368,8 +369,12 @@ function ProfileTab({ initial }: { initial: SettingsInitial }) {
     );
   }
 
-  const roleLabel =
-    (initial.role && ROLE_LABELS[initial.role]) || initial.role || "—";
+  const internalRole = normalizeInternalRole(initial.role, initial.email);
+  const roleLabel = ROLE_LABELS[internalRole] ?? ROLE_LABELS[initial.role ?? ""] ?? "—";
+  const roleDescription =
+    ROLE_DESCRIPTIONS[internalRole] ??
+    ROLE_DESCRIPTIONS[initial.role ?? ""] ??
+    "Role is assigned by an administrator.";
 
   async function onSaveProfile(formData: FormData) {
     setProfileMsg(null);
@@ -601,13 +606,17 @@ function ProfileTab({ initial }: { initial: SettingsInitial }) {
             <select
               id="role_display"
               disabled
-              value={initial.role ?? "agency_member"}
+              value={internalRole}
               className={`${inputClass} cursor-not-allowed bg-surface/60 text-text-secondary`}
             >
-              <option value={initial.role ?? ""}>{roleLabel}</option>
+              <option value={internalRole}>{roleLabel}</option>
             </select>
             <p className="mt-1 text-xs text-text-secondary">
-              Role is assigned by an administrator.
+              {roleDescription}
+            </p>
+            <p className="mt-1 text-xs text-text-secondary">
+              Super Admin is reserved for Zenpho platform owners. Admins manage
+              their own teams; Users work inside an Admin's team.
             </p>
           </div>
 

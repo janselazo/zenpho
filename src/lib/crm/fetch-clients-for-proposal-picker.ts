@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { fetchCrmAccessContext } from "@/lib/crm/access-context";
 
 export type ProposalClientOption = {
   id: string;
@@ -13,11 +14,16 @@ export async function fetchClientsForProposalPicker(): Promise<
   ProposalClientOption[]
 > {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const access = await fetchCrmAccessContext(supabase);
+  let query = supabase
     .from("client")
-    .select("id, name, email, company, phone, notes")
+    .select("id, name, email, company, phone, notes, owner_id")
     .order("created_at", { ascending: false })
     .limit(300);
+  if (access && !access.canManageTeam) {
+    query = query.eq("owner_id", access.userId);
+  }
+  const { data, error } = await query;
 
   if (error || !data) return [];
 
