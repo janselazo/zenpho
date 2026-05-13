@@ -58,11 +58,13 @@ create index if not exists prospect_signal_monitor_run_started_idx
 alter table public.prospect_signal_hit enable row level security;
 alter table public.prospect_signal_monitor_run enable row level security;
 
+drop policy if exists "agency_all_prospect_signal_hit" on public.prospect_signal_hit;
 create policy "agency_all_prospect_signal_hit"
   on public.prospect_signal_hit for all
   using (public.is_agency_staff())
   with check (public.is_agency_staff());
 
+drop policy if exists "agency_all_prospect_signal_monitor_run" on public.prospect_signal_monitor_run;
 create policy "agency_all_prospect_signal_monitor_run"
   on public.prospect_signal_monitor_run for all
   using (public.is_agency_staff())

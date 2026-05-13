@@ -5,5 +5,4 @@ set crm_field_options = jsonb_set(
   '{leadContactCategories}',
   '["Local Business Owner", "Tech Founder", "Ecommerce Founder"]'::jsonb,
   true
-)
-where id = 1;
+);

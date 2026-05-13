@@ -3,7 +3,7 @@
 -- and unparseable payloads, so the agency can diagnose why a reply did or did not appear in
 -- Conversations.
 
-create table public.sendgrid_inbound_log (
+create table if not exists public.sendgrid_inbound_log (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
   status text not null check (
@@ -26,7 +26,7 @@ create table public.sendgrid_inbound_log (
   headers_snippet text
 );
 
-create index sendgrid_inbound_log_created_at_idx
+create index if not exists sendgrid_inbound_log_created_at_idx
   on public.sendgrid_inbound_log (created_at desc);
 
 comment on table public.sendgrid_inbound_log is
@@ -34,6 +34,8 @@ comment on table public.sendgrid_inbound_log is
 
 alter table public.sendgrid_inbound_log enable row level security;
 
+drop policy if exists "agency_staff_sendgrid_inbound_log_select"
+  on public.sendgrid_inbound_log;
 create policy "agency_staff_sendgrid_inbound_log_select"
   on public.sendgrid_inbound_log for select
   using (public.is_agency_staff());

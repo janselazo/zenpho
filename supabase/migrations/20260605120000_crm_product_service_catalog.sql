@@ -1,6 +1,6 @@
 -- Agency CRM catalog for Products & Services (invoice/proposal line pickers).
 
-create table public.crm_product_service (
+create table if not exists public.crm_product_service (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   description text not null default '',
@@ -13,11 +13,12 @@ create table public.crm_product_service (
   updated_at timestamptz not null default now()
 );
 
-create index crm_product_service_active_sort_idx
+create index if not exists crm_product_service_active_sort_idx
   on public.crm_product_service (is_active, sort_order);
 
 alter table public.crm_product_service enable row level security;
 
+drop policy if exists "agency_staff_crm_product_service_all" on public.crm_product_service;
 create policy "agency_staff_crm_product_service_all"
   on public.crm_product_service for all
   using (public.is_agency_staff())
@@ -30,7 +31,7 @@ create index if not exists proposal_line_item_catalog_item_id_idx
   on public.proposal_line_item (catalog_item_id);
 
 -- Sales proposals (narrative documents); catalog lines reference same catalog table.
-create table public.sales_proposal (
+create table if not exists public.sales_proposal (
   id uuid primary key default gen_random_uuid(),
   client_id uuid references public.client (id) on delete set null,
   title text not null default '',
@@ -45,17 +46,18 @@ create table public.sales_proposal (
   updated_at timestamptz not null default now()
 );
 
-create index sales_proposal_client_id_idx on public.sales_proposal (client_id);
-create index sales_proposal_updated_at_idx on public.sales_proposal (updated_at desc);
+create index if not exists sales_proposal_client_id_idx on public.sales_proposal (client_id);
+create index if not exists sales_proposal_updated_at_idx on public.sales_proposal (updated_at desc);
 
 alter table public.sales_proposal enable row level security;
 
+drop policy if exists "agency_staff_sales_proposal_all" on public.sales_proposal;
 create policy "agency_staff_sales_proposal_all"
   on public.sales_proposal for all
   using (public.is_agency_staff())
   with check (public.is_agency_staff());
 
-create table public.sales_proposal_catalog_line (
+create table if not exists public.sales_proposal_catalog_line (
   id uuid primary key default gen_random_uuid(),
   sales_proposal_id uuid not null references public.sales_proposal (id) on delete cascade,
   catalog_item_id uuid references public.crm_product_service (id) on delete set null,
@@ -65,11 +67,12 @@ create table public.sales_proposal_catalog_line (
   created_at timestamptz not null default now()
 );
 
-create index sales_proposal_catalog_line_proposal_idx
+create index if not exists sales_proposal_catalog_line_proposal_idx
   on public.sales_proposal_catalog_line (sales_proposal_id, sort_order);
 
 alter table public.sales_proposal_catalog_line enable row level security;
 
+drop policy if exists "agency_staff_sales_proposal_catalog_line_all" on public.sales_proposal_catalog_line;
 create policy "agency_staff_sales_proposal_catalog_line_all"
   on public.sales_proposal_catalog_line for all
   using (public.is_agency_staff())

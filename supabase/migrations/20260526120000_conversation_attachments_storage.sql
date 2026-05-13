@@ -7,7 +7,12 @@
 
 insert into storage.buckets (id, name, public)
   values ('conversation-attachments', 'conversation-attachments', true)
-  on conflict (id) do nothing;
+    on conflict (id) do nothing;
+
+drop policy if exists "conversation_attachments_public_read" on storage.objects;
+drop policy if exists "conversation_attachments_insert_staff" on storage.objects;
+drop policy if exists "conversation_attachments_update_staff" on storage.objects;
+drop policy if exists "conversation_attachments_delete_staff" on storage.objects;
 
 create policy "conversation_attachments_public_read"
   on storage.objects for select

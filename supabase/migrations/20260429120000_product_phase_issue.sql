@@ -81,6 +81,7 @@ do $$
 declare
   rec record;
   new_pid uuid;
+  org_id uuid;
 begin
   for rec in
     select p.*
@@ -90,41 +91,112 @@ begin
         select 1 from public.project c where c.parent_project_id = p.id
       )
   loop
+    if exists (
+      select 1
+      from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'project'
+        and column_name = 'organization_id'
+    ) then
+      org_id :=
+        coalesce(
+          (rec.organization_id)::uuid,
+          (
+            select c.organization_id
+            from public.client c
+            where c.id = rec.client_id
+            limit 1
+          )
+        );
+      if org_id is null then
+        raise notice 'Skipping product/phase split for project %: no organization_id', rec.id;
+        continue;
+      end if;
+    else
+      org_id := null;
+    end if;
+
     new_pid := gen_random_uuid();
-    insert into public.project (
-      id,
-      client_id,
-      title,
-      description,
-      status,
-      assigned_to,
-      start_date,
-      target_date,
-      created_at,
-      website,
-      budget,
-      plan_stage,
-      project_type,
-      metadata,
-      parent_project_id
-    )
-    values (
-      new_pid,
-      rec.client_id,
-      rec.title,
-      rec.description,
-      rec.status,
-      rec.assigned_to,
-      rec.start_date,
-      rec.target_date,
-      rec.created_at,
-      rec.website,
-      rec.budget,
-      rec.plan_stage,
-      rec.project_type,
-      coalesce(rec.metadata, '{}'::jsonb),
-      null
-    );
+
+    if exists (
+      select 1
+      from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'project'
+        and column_name = 'organization_id'
+    ) then
+      insert into public.project (
+        id,
+        client_id,
+        organization_id,
+        title,
+        description,
+        status,
+        assigned_to,
+        start_date,
+        target_date,
+        created_at,
+        website,
+        budget,
+        plan_stage,
+        project_type,
+        metadata,
+        parent_project_id
+      )
+      values (
+        new_pid,
+        rec.client_id,
+        org_id,
+        rec.title,
+        rec.description,
+        rec.status,
+        rec.assigned_to,
+        rec.start_date,
+        rec.target_date,
+        rec.created_at,
+        rec.website,
+        rec.budget,
+        rec.plan_stage,
+        rec.project_type,
+        coalesce(rec.metadata, '{}'::jsonb),
+        null
+      );
+    else
+      insert into public.project (
+        id,
+        client_id,
+        title,
+        description,
+        status,
+        assigned_to,
+        start_date,
+        target_date,
+        created_at,
+        website,
+        budget,
+        plan_stage,
+        project_type,
+        metadata,
+        parent_project_id
+      )
+      values (
+        new_pid,
+        rec.client_id,
+        rec.title,
+        rec.description,
+        rec.status,
+        rec.assigned_to,
+        rec.start_date,
+        rec.target_date,
+        rec.created_at,
+        rec.website,
+        rec.budget,
+        rec.plan_stage,
+        rec.project_type,
+        coalesce(rec.metadata, '{}'::jsonb),
+        null
+      );
+    end if;
     update public.project
     set
       parent_project_id = new_pid,
