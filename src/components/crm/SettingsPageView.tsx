@@ -4,7 +4,7 @@ import { Suspense, useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { User, Plug, Upload, Trash2, KeyRound, Zap, ListTree } from "lucide-react";
+import { User, Plug, Upload, Trash2, KeyRound, Zap, ListTree, Bell } from "lucide-react";
 import type { MergedCrmFieldOptions } from "@/lib/crm/field-options";
 import type { CrmPipelineSettings } from "@/lib/crm/fetch-pipeline-settings";
 import SettingsFieldsTab from "@/components/crm/SettingsFieldsTab";
@@ -190,6 +190,14 @@ const INTEGRATIONS: IntegrationItem[] = [
     available: false,
   },
   {
+    id: "facebook-leads",
+    name: "Facebook Lead Ads",
+    category: "Advertising",
+    description:
+      "Capture Lead Ads form submissions in real time and notify your team via email + SMS",
+    available: true,
+  },
+  {
     id: "facebook-instagram",
     name: "Facebook & Instagram",
     category: "Social",
@@ -281,6 +289,26 @@ function IntegrationsTab() {
         Connect channels and tools to capture leads and keep conversations in
         one place.
       </p>
+      <Link
+        href="/settings/notifications"
+        className="mt-6 flex items-center gap-3 rounded-2xl border border-border bg-white p-4 shadow-sm transition-colors hover:bg-surface dark:border-zinc-800 dark:bg-zinc-950/80 dark:hover:bg-zinc-900"
+      >
+        <span
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+          aria-hidden
+        >
+          <Bell className="h-5 w-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="text-sm font-semibold text-text-primary dark:text-zinc-100">
+            Lead notifications
+          </span>
+          <span className="mt-0.5 block text-xs text-text-secondary dark:text-zinc-400">
+            Email + SMS preferences and team templates for new-lead alerts.
+          </span>
+        </span>
+        <span className="text-xs font-semibold text-accent">Configure →</span>
+      </Link>
       <ul className="mt-6 space-y-3" role="list">
         {INTEGRATIONS.map((item) => (
           <li
@@ -320,6 +348,13 @@ function IntegrationsTab() {
                 ) : item.id === "sendgrid" ? (
                   <Link
                     href="/settings/integrations/sendgrid"
+                    className="rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-text-primary shadow-sm transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                  >
+                    Configure
+                  </Link>
+                ) : item.id === "facebook-leads" ? (
+                  <Link
+                    href="/settings/integrations/facebook"
                     className="rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-text-primary shadow-sm transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
                   >
                     Configure

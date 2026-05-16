@@ -1,0 +1,353 @@
+import twilio from "twilio";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getAgencySendGridCredentials } from "@/lib/sendgrid/agency-credentials";
+import { sendSendGridMail } from "@/lib/sendgrid/mail-send";
+import { getAgencyTwilioCredentials } from "@/lib/twilio/agency-credentials";
+
+const SUPER_ADMIN_DOMAIN = "zenpho.com";
+const SUPER_ADMIN_EMAIL = "janse.lazo@gmail.com";
+
+type LeadRow = {
+  id: string;
+  organization_id: string | null;
+  owner_id: string | null;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  source: string | null;
+};
+
+type Recipient = {
+  userId: string;
+  email: string | null;
+  fullName: string | null;
+  smsPhone: string | null;
+  emailEnabled: boolean;
+  smsEnabled: boolean;
+};
+
+type RecipientChannelResult = {
+  channel: "email" | "sms";
+  ok: boolean;
+  reason: string;
+};
+
+export type NotifyNewLeadResult = {
+  ok: boolean;
+  recipientCount: number;
+  results: Array<{
+    userId: string;
+    email: string | null;
+    channels: RecipientChannelResult[];
+  }>;
+  errors: string[];
+};
+
+/**
+ * Resolve recipients + render template tokens + dispatch via SendGrid and Twilio.
+ *
+ * Recipient policy:
+ * - If `lead.owner_id` is set → that user only.
+ * - Otherwise → every Admin or Super Admin in the lead's org.
+ *
+ * Per-user preferences in `lead_notification_preference` are honored:
+ * - email_new_lead toggles whether SendGrid is called for that user.
+ * - sms_new_lead + sms_phone toggle SMS via Twilio.
+ *
+ * Template tokens (`{{lead.name}}`, `{{lead.email}}`, `{{lead.phone}}`,
+ * `{{lead.source}}`, `{{lead.url}}`, `{{owner.name}}`) are substituted in
+ * email subject, HTML body, and SMS body.
+ *
+ * Failures never throw — the webhook keeps returning 200 to Meta and we log
+ * the failure into `facebook_lead_event_log` from the caller.
+ */
+export async function notifyNewLead(opts: {
+  organizationId: string;
+  leadId: string;
+}): Promise<NotifyNewLeadResult> {
+  const out: NotifyNewLeadResult = {
+    ok: true,
+    recipientCount: 0,
+    results: [],
+    errors: [],
+  };
+  const admin = createAdminClient();
+
+  const { data: leadRow, error: leadErr } = await admin
+    .from("lead")
+    .select("id, organization_id, owner_id, name, email, phone, source")
+    .eq("id", opts.leadId)
+    .maybeSingle<LeadRow>();
+
+  if (leadErr || !leadRow) {
+    out.ok = false;
+    out.errors.push(leadErr?.message ?? "Lead not found.");
+    return out;
+  }
+  if (leadRow.organization_id !== opts.organizationId) {
+    out.ok = false;
+    out.errors.push("Lead does not belong to the supplied organization.");
+    return out;
+  }
+
+  const recipients = await resolveRecipients(admin, leadRow);
+  out.recipientCount = recipients.length;
+  if (recipients.length === 0) {
+    out.errors.push("No notification recipients (no owner and no team Admin in org).");
+    return out;
+  }
+
+  const template = await loadTemplate(admin, opts.organizationId);
+  const leadUrl = buildLeadUrl(leadRow.id);
+
+  for (const recipient of recipients) {
+    const channels: RecipientChannelResult[] = [];
+
+    const tokens = {
+      lead: {
+        name: leadRow.name ?? "(no name)",
+        email: leadRow.email ?? "",
+        phone: leadRow.phone ?? "",
+        source: leadRow.source ?? "Facebook Lead Ads",
+        url: leadUrl,
+      },
+      owner: { name: recipient.fullName ?? recipient.email ?? "" },
+    };
+
+    if (recipient.emailEnabled && recipient.email) {
+      const sgCreds = await getAgencySendGridCredentials({
+        organizationId: opts.organizationId,
+      });
+      if (!sgCreds) {
+        channels.push({
+          channel: "email",
+          ok: false,
+          reason: "SendGrid is not configured for this org.",
+        });
+      } else {
+        const subject = renderTemplate(template.email_subject, tokens);
+        const html = renderTemplate(template.email_html, tokens);
+        const text = htmlToText(html);
+        const sent = await sendSendGridMail({
+          apiKey: sgCreds.apiKey,
+          to: recipient.email,
+          from: { email: sgCreds.fromEmail, name: sgCreds.fromName ?? null },
+          replyTo: sgCreds.replyTo ?? null,
+          subject,
+          text,
+          html,
+        });
+        channels.push({
+          channel: "email",
+          ok: sent.ok,
+          reason: sent.ok ? "sent" : `error: ${sent.error}`,
+        });
+        if (!sent.ok) out.ok = false;
+      }
+    } else if (recipient.emailEnabled && !recipient.email) {
+      channels.push({
+        channel: "email",
+        ok: false,
+        reason: "Recipient has no email on profile.",
+      });
+    }
+
+    if (recipient.smsEnabled && recipient.smsPhone) {
+      const twCreds = await getAgencyTwilioCredentials({
+        organizationId: opts.organizationId,
+      });
+      if (!twCreds || !twCreds.fromPhone) {
+        channels.push({
+          channel: "sms",
+          ok: false,
+          reason: "Twilio is not configured (or no From phone) for this org.",
+        });
+      } else {
+        try {
+          const client = twilio(twCreds.accountSid, twCreds.authToken);
+          await client.messages.create({
+            from: twCreds.fromPhone,
+            to: recipient.smsPhone,
+            body: renderTemplate(template.sms_body, tokens).slice(0, 1500),
+          });
+          channels.push({ channel: "sms", ok: true, reason: "sent" });
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : "SMS failed";
+          channels.push({ channel: "sms", ok: false, reason: `error: ${msg}` });
+          out.ok = false;
+        }
+      }
+    } else if (recipient.smsEnabled && !recipient.smsPhone) {
+      channels.push({
+        channel: "sms",
+        ok: false,
+        reason: "Recipient has no SMS phone configured.",
+      });
+    }
+
+    out.results.push({
+      userId: recipient.userId,
+      email: recipient.email,
+      channels,
+    });
+  }
+
+  return out;
+}
+
+async function resolveRecipients(
+  admin: SupabaseClient,
+  lead: LeadRow
+): Promise<Recipient[]> {
+  const userIds = new Set<string>();
+
+  if (lead.owner_id) {
+    userIds.add(lead.owner_id);
+  } else if (lead.organization_id) {
+    const { data: admins } = await admin
+      .from("profiles")
+      .select("id, email, role")
+      .eq("organization_id", lead.organization_id);
+
+    for (const row of admins ?? []) {
+      const role = ((row.role as string | null) ?? "").trim();
+      const email = (row.email as string | null) ?? null;
+      const isAdminRole =
+        role === "super_admin" ||
+        role === "admin" ||
+        role === "agency_admin" ||
+        (email ? isSuperAdminEmail(email) : false);
+      if (isAdminRole) userIds.add(row.id as string);
+    }
+  }
+
+  if (userIds.size === 0) return [];
+
+  const { data: profiles } = await admin
+    .from("profiles")
+    .select("id, email, full_name")
+    .in("id", [...userIds]);
+
+  const { data: prefs } = await admin
+    .from("lead_notification_preference")
+    .select("user_id, email_new_lead, sms_new_lead, sms_phone")
+    .in("user_id", [...userIds]);
+
+  const prefMap = new Map<string, {
+    email: boolean;
+    sms: boolean;
+    smsPhone: string | null;
+  }>();
+  for (const p of prefs ?? []) {
+    prefMap.set(p.user_id as string, {
+      email: p.email_new_lead !== false,
+      sms: p.sms_new_lead === true,
+      smsPhone: (p.sms_phone as string | null)?.trim() || null,
+    });
+  }
+
+  return (profiles ?? []).map((row) => {
+    const id = row.id as string;
+    const pref = prefMap.get(id);
+    return {
+      userId: id,
+      email: (row.email as string | null) ?? null,
+      fullName: (row.full_name as string | null) ?? null,
+      emailEnabled: pref?.email ?? true,
+      smsEnabled: pref?.sms ?? false,
+      smsPhone: pref?.smsPhone ?? null,
+    };
+  });
+}
+
+async function loadTemplate(
+  admin: SupabaseClient,
+  organizationId: string
+): Promise<{ email_subject: string; email_html: string; sms_body: string }> {
+  const { data } = await admin
+    .from("lead_notification_template")
+    .select("email_subject, email_html, sms_body")
+    .eq("organization_id", organizationId)
+    .maybeSingle();
+  return {
+    email_subject: (data?.email_subject as string) || DEFAULT_TEMPLATE.email_subject,
+    email_html: (data?.email_html as string) || DEFAULT_TEMPLATE.email_html,
+    sms_body: (data?.sms_body as string) || DEFAULT_TEMPLATE.sms_body,
+  };
+}
+
+const DEFAULT_TEMPLATE = {
+  email_subject: "New lead: {{lead.name}}",
+  email_html:
+    '<p>You have a new lead.</p><ul><li><strong>Name:</strong> {{lead.name}}</li><li><strong>Email:</strong> {{lead.email}}</li><li><strong>Phone:</strong> {{lead.phone}}</li><li><strong>Source:</strong> {{lead.source}}</li></ul><p><a href="{{lead.url}}">Open in CRM</a></p>',
+  sms_body:
+    "New lead {{lead.name}} ({{lead.source}}). Phone: {{lead.phone}}. Open: {{lead.url}}",
+};
+
+type TemplateTokens = {
+  lead: {
+    name: string;
+    email: string;
+    phone: string;
+    source: string;
+    url: string;
+  };
+  owner: { name: string };
+};
+
+/**
+ * Lightweight `{{token.path}}` substitution. Unknown tokens render as empty
+ * strings rather than echoing the raw `{{...}}` so emails never look broken.
+ */
+export function renderTemplate(input: string, tokens: TemplateTokens): string {
+  return input.replace(/\{\{\s*([a-zA-Z][a-zA-Z0-9_.]*)\s*\}\}/g, (_, path) => {
+    const value = lookup(tokens, String(path));
+    return value ?? "";
+  });
+}
+
+function lookup(obj: unknown, path: string): string | null {
+  const parts = path.split(".");
+  let current: unknown = obj;
+  for (const part of parts) {
+    if (current && typeof current === "object" && part in current) {
+      current = (current as Record<string, unknown>)[part];
+    } else {
+      return null;
+    }
+  }
+  if (current == null) return null;
+  return String(current);
+}
+
+function htmlToText(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<br\s*\/?>(\s*)/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\r\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function buildLeadUrl(leadId: string): string {
+  const origin =
+    process.env["PUBLIC_APP_URL"]?.trim().replace(/\/$/, "") ||
+    process.env["NEXT_PUBLIC_APP_URL"]?.trim().replace(/\/$/, "") ||
+    "http://localhost:3000";
+  return `${origin}/leads/${leadId}`;
+}
+
+function isSuperAdminEmail(email: string): boolean {
+  const e = email.trim().toLowerCase();
+  return e === SUPER_ADMIN_EMAIL || e.endsWith(`@${SUPER_ADMIN_DOMAIN}`);
+}
