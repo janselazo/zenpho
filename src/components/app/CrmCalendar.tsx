@@ -232,6 +232,41 @@ export default function CrmCalendar({ configured }: { configured: boolean }) {
     setModalOpen(true);
   }
 
+  // Drag-and-drop reschedule: keep the appointment's wall-clock time + duration
+  // and only move the calendar date. Optimistically update the grid so the move
+  // feels instant; on server failure we restore the prior state and surface the
+  // error in the load banner.
+  async function onMoveEvent(
+    row: AppointmentCalendarRow,
+    newStartsAt: string,
+    newEndsAt: string
+  ) {
+    const prev = rows;
+    const next = rows.map((r) =>
+      r.id === row.id
+        ? { ...r, starts_at: newStartsAt, ends_at: newEndsAt }
+        : r
+    );
+    setRows(next);
+
+    const res = await updateAppointmentAction({
+      id: row.id,
+      title: row.title,
+      description: row.description ?? "",
+      starts_at: newStartsAt,
+      ends_at: newEndsAt,
+      status: row.status,
+    });
+    if ("error" in res && res.error) {
+      setRows(prev);
+      setLoadError(res.error);
+      return;
+    }
+    setLoadError(null);
+    // Refresh from server to capture any normalization (timezone, etc.).
+    await load();
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setFormError(null);
@@ -393,6 +428,7 @@ export default function CrmCalendar({ configured }: { configured: boolean }) {
             onToday={goThisMonth}
             onSelectDay={(day) => openNewForDay(day)}
             onEditEvent={onEditEvent}
+            onMoveEvent={onMoveEvent}
           />
         )}
 
