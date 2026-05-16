@@ -110,6 +110,180 @@ export async function fetchLeadgen(
   };
 }
 
+export type LeadFormQuestion = {
+  /** Stable form-side question id from Meta. */
+  id: string | null;
+  /** Question text shown to the lead (e.g. "Tienes un carro..."). */
+  label: string;
+  /** Field name Meta will use in the leadgen field_data array. */
+  fieldKey: string | null;
+  /** Question type, e.g. "CUSTOM", "FULL_NAME", "EMAIL", "MULTIPLE_CHOICE". */
+  type: string | null;
+};
+
+export type LeadFormProfile = {
+  id: string;
+  name: string | null;
+  status: string | null;
+  questions: LeadFormQuestion[];
+};
+
+/**
+ * Fetch a Lead Ad form's name + questions via the Page access token. Used by
+ * the integration settings UI to show admins the question keys they can wire
+ * into notification templates with `{{lead.answer:key}}`.
+ */
+export async function fetchLeadForm(
+  formId: string,
+  pageAccessToken: string
+): Promise<{ ok: true; form: LeadFormProfile } | { ok: false; error: FacebookGraphError }> {
+  const url = new URL(
+    `https://graph.facebook.com/${facebookGraphVersion()}/${encodeURIComponent(formId)}`
+  );
+  url.searchParams.set("fields", "id,name,status,questions{id,label,key,type}");
+  url.searchParams.set("access_token", pageAccessToken);
+
+  let res: Response;
+  try {
+    res = await fetch(url.toString(), { method: "GET" });
+  } catch (e) {
+    return {
+      ok: false,
+      error: {
+        message: e instanceof Error ? `fetchLeadForm: ${e.message}` : "fetchLeadForm failed.",
+      },
+    };
+  }
+
+  let body: unknown = null;
+  try {
+    body = await res.json();
+  } catch {
+    body = null;
+  }
+
+  if (!res.ok) return { ok: false, error: parseGraphError(body) };
+
+  const json = (body ?? {}) as Record<string, unknown>;
+  const rawQuestions = (() => {
+    const q = json.questions;
+    if (q && typeof q === "object" && Array.isArray((q as Record<string, unknown>).data)) {
+      return (q as Record<string, unknown>).data as unknown[];
+    }
+    if (Array.isArray(q)) return q as unknown[];
+    return [] as unknown[];
+  })();
+
+  const questions: LeadFormQuestion[] = rawQuestions
+    .map((row): LeadFormQuestion | null => {
+      if (!row || typeof row !== "object") return null;
+      const r = row as Record<string, unknown>;
+      const label = typeof r.label === "string" ? r.label : "";
+      if (!label) return null;
+      return {
+        id: typeof r.id === "string" ? r.id : null,
+        label,
+        fieldKey: typeof r.key === "string" ? r.key : null,
+        type: typeof r.type === "string" ? r.type : null,
+      };
+    })
+    .filter((q): q is LeadFormQuestion => q !== null);
+
+  return {
+    ok: true,
+    form: {
+      id: typeof json.id === "string" ? json.id : formId,
+      name: typeof json.name === "string" ? json.name : null,
+      status: typeof json.status === "string" ? json.status : null,
+      questions,
+    },
+  };
+}
+
+/**
+ * List all Lead Ad forms attached to a Page using the Page access token. Used
+ * by the integration settings UI's "Discover form fields" panel.
+ */
+export async function listLeadForms(
+  pageId: string,
+  pageAccessToken: string
+): Promise<
+  { ok: true; forms: LeadFormProfile[] } | { ok: false; error: FacebookGraphError }
+> {
+  const url = new URL(
+    `https://graph.facebook.com/${facebookGraphVersion()}/${encodeURIComponent(pageId)}/leadgen_forms`
+  );
+  url.searchParams.set(
+    "fields",
+    "id,name,status,questions{id,label,key,type}"
+  );
+  url.searchParams.set("access_token", pageAccessToken);
+  url.searchParams.set("limit", "50");
+
+  let res: Response;
+  try {
+    res = await fetch(url.toString(), { method: "GET" });
+  } catch (e) {
+    return {
+      ok: false,
+      error: {
+        message: e instanceof Error ? `listLeadForms: ${e.message}` : "listLeadForms failed.",
+      },
+    };
+  }
+
+  let body: unknown = null;
+  try {
+    body = await res.json();
+  } catch {
+    body = null;
+  }
+
+  if (!res.ok) return { ok: false, error: parseGraphError(body) };
+
+  const json = (body ?? {}) as Record<string, unknown>;
+  const rawData = Array.isArray(json.data) ? (json.data as unknown[]) : [];
+
+  const forms: LeadFormProfile[] = rawData
+    .map((row): LeadFormProfile | null => {
+      if (!row || typeof row !== "object") return null;
+      const r = row as Record<string, unknown>;
+      const id = typeof r.id === "string" ? r.id : null;
+      if (!id) return null;
+      const rawQuestions = (() => {
+        const q = r.questions;
+        if (q && typeof q === "object" && Array.isArray((q as Record<string, unknown>).data)) {
+          return (q as Record<string, unknown>).data as unknown[];
+        }
+        if (Array.isArray(q)) return q as unknown[];
+        return [] as unknown[];
+      })();
+      const questions: LeadFormQuestion[] = rawQuestions
+        .map((qrow): LeadFormQuestion | null => {
+          if (!qrow || typeof qrow !== "object") return null;
+          const q = qrow as Record<string, unknown>;
+          const label = typeof q.label === "string" ? q.label : "";
+          if (!label) return null;
+          return {
+            id: typeof q.id === "string" ? q.id : null,
+            label,
+            fieldKey: typeof q.key === "string" ? q.key : null,
+            type: typeof q.type === "string" ? q.type : null,
+          };
+        })
+        .filter((q): q is LeadFormQuestion => q !== null);
+      return {
+        id,
+        name: typeof r.name === "string" ? r.name : null,
+        status: typeof r.status === "string" ? r.status : null,
+        questions,
+      };
+    })
+    .filter((f): f is LeadFormProfile => f !== null);
+
+  return { ok: true, forms };
+}
+
 /**
  * Validate a Page access token by fetching the Page object.
  * Used by the "Test connection" button in the settings UI.

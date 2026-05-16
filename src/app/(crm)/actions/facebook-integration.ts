@@ -10,7 +10,11 @@ import {
   INTEGRATION_SECRETS_KEY_HELP,
   isIntegrationSecretsKeyConfigured,
 } from "@/lib/crypto/integration-secrets";
-import { fetchPageProfile } from "@/lib/facebook/graph";
+import {
+  fetchPageProfile,
+  listLeadForms,
+  type LeadFormQuestion,
+} from "@/lib/facebook/graph";
 import { getPublicOriginFromHeaders } from "@/lib/site-public-url";
 
 type AdminGateOk = {
@@ -83,6 +87,22 @@ export type FacebookEventLogRow = {
   errorMessage: string | null;
 };
 
+export type FacebookFormQuestionRow = {
+  /** Pretty label as shown to the lead (e.g. "Tienes un carro..."). */
+  label: string;
+  /** Snake-case key used by the `{{lead.answer:KEY}}` token. */
+  key: string;
+  /** Raw question type from Meta (CUSTOM, FULL_NAME, EMAIL, etc.). */
+  type: string | null;
+};
+
+export type FacebookFormSummary = {
+  formId: string;
+  formName: string | null;
+  questions: FacebookFormQuestionRow[];
+  syncedAt: string | null;
+};
+
 export type LoadFacebookIntegrationPageResult =
   | {
       status: "ok";
@@ -91,6 +111,7 @@ export type LoadFacebookIntegrationPageResult =
       owners: FacebookOwnerOption[];
       webhookUrl: string;
       events: FacebookEventLogRow[];
+      forms: FacebookFormSummary[];
       integrationKeyConfigured: boolean;
     }
   | { status: "no_user" }
@@ -224,6 +245,19 @@ export async function loadFacebookIntegrationPage(): Promise<LoadFacebookIntegra
     errorMessage: (row.error_message as string | null) ?? null,
   }));
 
+  const { data: formRows } = await admin
+    .from("agency_facebook_form_map")
+    .select("form_id, form_name, form_questions, form_synced_at")
+    .eq("organization_id", gate.organizationId)
+    .order("form_name", { ascending: true });
+
+  const forms: FacebookFormSummary[] = (formRows ?? []).map((row) => ({
+    formId: row.form_id as string,
+    formName: (row.form_name as string | null) ?? null,
+    questions: normalizeFormQuestions(row.form_questions),
+    syncedAt: (row.form_synced_at as string | null) ?? null,
+  }));
+
   return {
     status: "ok",
     integration,
@@ -231,8 +265,36 @@ export async function loadFacebookIntegrationPage(): Promise<LoadFacebookIntegra
     owners,
     webhookUrl,
     events,
+    forms,
     integrationKeyConfigured: isIntegrationSecretsKeyConfigured(),
   };
+}
+
+function normalizeFormQuestions(value: unknown): FacebookFormQuestionRow[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((row): FacebookFormQuestionRow | null => {
+      if (!row || typeof row !== "object") return null;
+      const r = row as Record<string, unknown>;
+      const label = typeof r.label === "string" ? r.label : "";
+      if (!label) return null;
+      // Question key from Graph is the same field name we store on field_data.
+      // Normalize the same way mapping.normalizeKey does so the
+      // {{lead.answer:KEY}} token can match.
+      const rawKey = typeof r.fieldKey === "string" ? r.fieldKey : "";
+      const key = rawKey
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "_")
+        .replace(/[^a-z0-9_]/g, "");
+      if (!key) return null;
+      return {
+        label,
+        key,
+        type: typeof r.type === "string" ? r.type : null,
+      };
+    })
+    .filter((q): q is FacebookFormQuestionRow => q !== null);
 }
 
 export async function saveFacebookIntegration(formData: FormData) {
@@ -485,6 +547,91 @@ export async function testFacebookPage(formData: FormData) {
     message: result.name
       ? `Connected to “${result.name}”.`
       : "Page access token is valid.",
+  };
+}
+
+/**
+ * Pull the latest Lead Ad forms (and their question schemas) for a single
+ * connected Page from Graph and cache them in `agency_facebook_form_map`.
+ * The "Discover form fields" panel uses this to populate the answer-key
+ * picker. Safe to call repeatedly — `(organization_id, form_id)` is unique.
+ */
+export async function syncFacebookFormsForPage(formData: FormData) {
+  const gate = await requireAdminGate();
+  if (!gate.ok) return gateError(gate);
+
+  const pageRowId = String(formData.get("page_row_id") ?? "").trim();
+  if (!pageRowId) return { error: "Missing page row id." };
+
+  const admin = createAdminClient();
+  const { data: page } = await admin
+    .from("agency_facebook_page")
+    .select("page_id, page_access_token_encrypted")
+    .eq("id", pageRowId)
+    .eq("organization_id", gate.organizationId)
+    .maybeSingle();
+
+  if (!page) return { error: "Page not found in this workspace." };
+  if (!page.page_access_token_encrypted) {
+    return { error: "No saved access token for this Page." };
+  }
+
+  let token: string;
+  try {
+    const { decryptIntegrationSecret } = await import(
+      "@/lib/crypto/integration-secrets"
+    );
+    token = decryptIntegrationSecret(page.page_access_token_encrypted as string);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Decryption failed.";
+    return {
+      error:
+        msg === "INTEGRATION_SECRETS_KEY_MISSING"
+          ? INTEGRATION_SECRETS_KEY_HELP
+          : msg,
+    };
+  }
+
+  const result = await listLeadForms(page.page_id as string, token);
+  if (!result.ok) {
+    return { error: result.error.message || "Graph API error." };
+  }
+
+  const now = new Date().toISOString();
+  for (const form of result.forms) {
+    const persistedQuestions: Array<{
+      label: string;
+      fieldKey: string | null;
+      type: string | null;
+      id: string | null;
+    }> = form.questions.map((q: LeadFormQuestion) => ({
+      label: q.label,
+      fieldKey: q.fieldKey,
+      type: q.type,
+      id: q.id,
+    }));
+    await admin
+      .from("agency_facebook_form_map")
+      .upsert(
+        {
+          organization_id: gate.organizationId,
+          form_id: form.id,
+          form_name: form.name,
+          form_questions: persistedQuestions,
+          form_synced_at: now,
+        },
+        { onConflict: "organization_id,form_id" }
+      );
+  }
+
+  revalidatePath("/settings/integrations/facebook");
+  return {
+    ok: true as const,
+    message:
+      result.forms.length === 0
+        ? "No Lead Ad forms found on this Page yet."
+        : `Synced ${result.forms.length} form${result.forms.length === 1 ? "" : "s"}.`,
+    syncedCount: result.forms.length,
   };
 }
 

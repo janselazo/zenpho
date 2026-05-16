@@ -17,6 +17,7 @@ import {
   Eye,
   EyeOff,
   Facebook,
+  ListOrdered,
   RefreshCw,
   Shield,
   Trash2,
@@ -26,9 +27,11 @@ import {
   removeFacebookPage,
   rotateFacebookSecrets,
   saveFacebookIntegration,
+  syncFacebookFormsForPage,
   testFacebookPage,
   type FacebookConnectedPageRow,
   type FacebookEventLogRow,
+  type FacebookFormSummary,
   type FacebookIntegrationFormState,
   type FacebookOwnerOption,
 } from "@/app/(crm)/actions/facebook-integration";
@@ -57,6 +60,7 @@ type Props = {
   owners: FacebookOwnerOption[];
   webhookUrl: string;
   events: FacebookEventLogRow[];
+  forms: FacebookFormSummary[];
   integrationKeyConfigured: boolean;
 };
 
@@ -66,6 +70,7 @@ export default function FacebookIntegrationSettings({
   owners,
   webhookUrl,
   events,
+  forms,
   integrationKeyConfigured,
 }: Props) {
   const router = useRouter();
@@ -458,6 +463,8 @@ export default function FacebookIntegrationSettings({
         />
       </section>
 
+      <FormFieldsExplorer pages={pages} forms={forms} />
+
       <section className={`${cardClass} mt-8`}>
         <h2 className="text-base font-semibold text-text-primary dark:text-zinc-100">
           Webhook activity
@@ -823,4 +830,212 @@ function formatRelative(iso: string): string {
   const days = Math.round(hours / 24);
   if (days < 14) return `${days}d ago`;
   return new Date(iso).toLocaleDateString();
+}
+
+/* -------------------------------------------------------------------------- */
+/* Form fields explorer                                                       */
+/* -------------------------------------------------------------------------- */
+
+function FormFieldsExplorer({
+  pages,
+  forms,
+}: {
+  pages: FacebookConnectedPageRow[];
+  forms: FacebookFormSummary[];
+}) {
+  const router = useRouter();
+  const [pending, startSync] = useTransition();
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [copiedToken, setCopiedToken] = useState<string | null>(null);
+
+  function syncPage(pageRowId: string) {
+    setActiveId(pageRowId);
+    setMessage(null);
+    setError(null);
+    const fd = new FormData();
+    fd.set("page_row_id", pageRowId);
+    startSync(async () => {
+      const res = await syncFacebookFormsForPage(fd);
+      if ("error" in res && res.error) {
+        setError(res.error);
+      } else if ("message" in res) {
+        setMessage(res.message);
+        router.refresh();
+      }
+      setActiveId(null);
+    });
+  }
+
+  function copyToken(token: string) {
+    void navigator.clipboard?.writeText(token);
+    setCopiedToken(token);
+    setTimeout(() => {
+      setCopiedToken((prev) => (prev === token ? null : prev));
+    }, 1500);
+  }
+
+  return (
+    <section className={`${cardClass} mt-8`}>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300">
+            <ListOrdered className="h-5 w-5" aria-hidden />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold text-text-primary dark:text-zinc-100">
+              Lead Ad form fields
+            </h2>
+            <p className="mt-1 max-w-2xl text-sm text-text-secondary dark:text-zinc-400">
+              Each Lead Ad form has its own custom questions. Sync a Page to
+              fetch its forms, then copy any question key as a{" "}
+              <code className="rounded bg-surface px-1 py-0.5 font-mono text-xs dark:bg-zinc-800">
+                {"{{lead.answer:KEY}}"}
+              </code>{" "}
+              token to drop into your{" "}
+              <Link
+                href="/automations/new-lead-alert"
+                className="font-medium text-accent underline-offset-2 hover:underline"
+              >
+                New lead alert template
+              </Link>
+              .
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {error ? (
+        <p className="mt-4 text-sm text-red-600 dark:text-red-400" role="alert">
+          {error}
+        </p>
+      ) : null}
+      {message ? (
+        <p className="mt-4 text-sm text-emerald-700 dark:text-emerald-400">
+          {message}
+        </p>
+      ) : null}
+
+      <div className="mt-6 space-y-3">
+        {pages.length === 0 ? (
+          <p className="text-sm text-text-secondary dark:text-zinc-400">
+            Connect at least one Page above to discover its Lead Ad forms.
+          </p>
+        ) : (
+          pages.map((page) => {
+            const isSyncing = pending && activeId === page.id;
+            return (
+              <div
+                key={page.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface/40 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900/40"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-text-primary dark:text-zinc-100">
+                    {page.pageName ?? "(unnamed Page)"}
+                  </p>
+                  <p className="text-xs text-text-secondary dark:text-zinc-400">
+                    Page ID {page.pageId}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => syncPage(page.id)}
+                  disabled={pending}
+                  className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-3 py-2 text-xs font-semibold text-text-primary shadow-sm transition-colors hover:bg-surface disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                >
+                  <RefreshCw
+                    className={`h-3.5 w-3.5 ${isSyncing ? "animate-spin" : ""}`}
+                    aria-hidden
+                  />
+                  {isSyncing ? "Syncing…" : "Sync forms"}
+                </button>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      <div className="mt-6 space-y-4">
+        {forms.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-border bg-surface/30 p-4 text-sm text-text-secondary dark:border-zinc-700 dark:bg-zinc-900/30 dark:text-zinc-400">
+            No forms synced yet. Click <strong>Sync forms</strong> on a Page
+            above. Once leads start arriving, the form name and question keys
+            will also auto-populate.
+          </p>
+        ) : (
+          forms.map((form) => (
+            <div
+              key={form.formId}
+              className="rounded-xl border border-border bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/60"
+            >
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-text-primary dark:text-zinc-100">
+                    {form.formName ?? "(unnamed form)"}
+                  </p>
+                  <p className="text-xs text-text-secondary dark:text-zinc-500">
+                    Form ID {form.formId}
+                    {form.syncedAt ? (
+                      <>
+                        {" \u00b7 "}
+                        Synced {formatRelative(form.syncedAt)}
+                      </>
+                    ) : null}
+                  </p>
+                </div>
+              </div>
+
+              {form.questions.length === 0 ? (
+                <p className="mt-3 text-xs text-text-secondary dark:text-zinc-400">
+                  No question metadata captured. Re-sync this Page or send a
+                  test lead to populate.
+                </p>
+              ) : (
+                <ul className="mt-3 space-y-1.5">
+                  {form.questions.map((q) => {
+                    const token = `{{lead.answer:${q.key}}}`;
+                    const justCopied = copiedToken === token;
+                    return (
+                      <li
+                        key={`${form.formId}:${q.key}`}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface/40 px-3 py-2 text-sm dark:bg-zinc-900/40"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-text-primary dark:text-zinc-100">
+                            {q.label}
+                          </p>
+                          <code className="font-mono text-[11px] text-text-secondary dark:text-zinc-400">
+                            {token}
+                          </code>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => copyToken(token)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-2.5 py-1.5 text-xs font-semibold text-text-primary shadow-sm transition-colors hover:bg-surface dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                          aria-label={`Copy ${token}`}
+                        >
+                          {justCopied ? (
+                            <>
+                              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
+                              Copied
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3.5 w-3.5" aria-hidden />
+                              Copy token
+                            </>
+                          )}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    </section>
+  );
 }

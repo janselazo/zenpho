@@ -4,6 +4,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getAgencySendGridCredentials } from "@/lib/sendgrid/agency-credentials";
 import { sendSendGridMail } from "@/lib/sendgrid/mail-send";
 import { getAgencyTwilioCredentials } from "@/lib/twilio/agency-credentials";
+import { normalizeE164 } from "@/lib/crm/phone";
+import {
+  findFieldDataAnswer,
+  renderStructuredAnswers,
+  type StructuredFieldEntry,
+} from "@/lib/facebook/mapping";
 
 const SUPER_ADMIN_DOMAIN = "zenpho.com";
 const SUPER_ADMIN_EMAIL = "janse.lazo@gmail.com";
@@ -16,6 +22,8 @@ type LeadRow = {
   email: string | null;
   phone: string | null;
   source: string | null;
+  facebook_field_data: StructuredFieldEntry[] | null;
+  facebook_form_name: string | null;
 };
 
 type Recipient = {
@@ -76,7 +84,9 @@ export async function notifyNewLead(opts: {
 
   const { data: leadRow, error: leadErr } = await admin
     .from("lead")
-    .select("id, organization_id, owner_id, name, email, phone, source")
+    .select(
+      "id, organization_id, owner_id, name, email, phone, source, facebook_field_data, facebook_form_name"
+    )
     .eq("id", opts.leadId)
     .maybeSingle<LeadRow>();
 
@@ -107,49 +117,67 @@ export async function notifyNewLead(opts: {
   const template = automation.template;
   const leadUrl = buildLeadUrl(leadRow.id);
 
+  // Channel-level dedup: even if we resolve N admin user rows, never deliver
+  // the same lead alert twice to the same destination email or phone in this
+  // dispatch. Lower-cased email and E.164-normalized phone act as the keys.
+  const sentEmailAddresses = new Set<string>();
+  const sentPhoneNumbers = new Set<string>();
+
   for (const recipient of recipients) {
     const channels: RecipientChannelResult[] = [];
 
-    const tokens = {
+    const tokens: TemplateTokens = {
       lead: {
         name: leadRow.name ?? "(no name)",
         email: leadRow.email ?? "",
         phone: leadRow.phone ?? "",
         source: leadRow.source ?? "Facebook Lead Ads",
         url: leadUrl,
+        formName: leadRow.facebook_form_name ?? "",
+        fieldData: leadRow.facebook_field_data ?? [],
       },
       owner: { name: recipient.fullName ?? recipient.email ?? "" },
     };
 
     if (recipient.emailEnabled && recipient.email) {
-      const sgCreds = await getAgencySendGridCredentials({
-        organizationId: opts.organizationId,
-      });
-      if (!sgCreds) {
+      const emailKey = recipient.email.trim().toLowerCase();
+      if (sentEmailAddresses.has(emailKey)) {
         channels.push({
           channel: "email",
-          ok: false,
-          reason: "SendGrid is not configured for this org.",
+          ok: true,
+          reason: `skipped: duplicate destination ${emailKey}`,
         });
       } else {
-        const subject = renderTemplate(template.email_subject, tokens);
-        const html = renderTemplate(template.email_html, tokens);
-        const text = htmlToText(html);
-        const sent = await sendSendGridMail({
-          apiKey: sgCreds.apiKey,
-          to: recipient.email,
-          from: { email: sgCreds.fromEmail, name: sgCreds.fromName ?? null },
-          replyTo: sgCreds.replyTo ?? null,
-          subject,
-          text,
-          html,
+        const sgCreds = await getAgencySendGridCredentials({
+          organizationId: opts.organizationId,
         });
-        channels.push({
-          channel: "email",
-          ok: sent.ok,
-          reason: sent.ok ? "sent" : `error: ${sent.error}`,
-        });
-        if (!sent.ok) out.ok = false;
+        if (!sgCreds) {
+          channels.push({
+            channel: "email",
+            ok: false,
+            reason: "SendGrid is not configured for this org.",
+          });
+        } else {
+          const subject = renderTemplate(template.email_subject, tokens, "text");
+          const html = renderTemplate(template.email_html, tokens, "html");
+          const text = htmlToText(html);
+          const sent = await sendSendGridMail({
+            apiKey: sgCreds.apiKey,
+            to: recipient.email,
+            from: { email: sgCreds.fromEmail, name: sgCreds.fromName ?? null },
+            replyTo: sgCreds.replyTo ?? null,
+            subject,
+            text,
+            html,
+          });
+          channels.push({
+            channel: "email",
+            ok: sent.ok,
+            reason: sent.ok ? "sent" : `error: ${sent.error}`,
+          });
+          if (sent.ok) sentEmailAddresses.add(emailKey);
+          if (!sent.ok) out.ok = false;
+        }
       }
     } else if (recipient.emailEnabled && !recipient.email) {
       channels.push({
@@ -160,28 +188,38 @@ export async function notifyNewLead(opts: {
     }
 
     if (recipient.smsEnabled && recipient.smsPhone) {
-      const twCreds = await getAgencyTwilioCredentials({
-        organizationId: opts.organizationId,
-      });
-      if (!twCreds || !twCreds.fromPhone) {
+      const phoneKey = normalizeE164(recipient.smsPhone) ?? recipient.smsPhone.trim();
+      if (sentPhoneNumbers.has(phoneKey)) {
         channels.push({
           channel: "sms",
-          ok: false,
-          reason: "Twilio is not configured (or no From phone) for this org.",
+          ok: true,
+          reason: `skipped: duplicate destination ${phoneKey}`,
         });
       } else {
-        try {
-          const client = twilio(twCreds.accountSid, twCreds.authToken);
-          await client.messages.create({
-            from: twCreds.fromPhone,
-            to: recipient.smsPhone,
-            body: renderTemplate(template.sms_body, tokens).slice(0, 1500),
+        const twCreds = await getAgencyTwilioCredentials({
+          organizationId: opts.organizationId,
+        });
+        if (!twCreds || !twCreds.fromPhone) {
+          channels.push({
+            channel: "sms",
+            ok: false,
+            reason: "Twilio is not configured (or no From phone) for this org.",
           });
-          channels.push({ channel: "sms", ok: true, reason: "sent" });
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : "SMS failed";
-          channels.push({ channel: "sms", ok: false, reason: `error: ${msg}` });
-          out.ok = false;
+        } else {
+          try {
+            const client = twilio(twCreds.accountSid, twCreds.authToken);
+            await client.messages.create({
+              from: twCreds.fromPhone,
+              to: recipient.smsPhone,
+              body: renderTemplate(template.sms_body, tokens, "text").slice(0, 1500),
+            });
+            channels.push({ channel: "sms", ok: true, reason: "sent" });
+            sentPhoneNumbers.add(phoneKey);
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : "SMS failed";
+            channels.push({ channel: "sms", ok: false, reason: `error: ${msg}` });
+            out.ok = false;
+          }
         }
       }
     } else if (recipient.smsEnabled && !recipient.smsPhone) {
@@ -324,7 +362,15 @@ async function loadNewLeadAlertAutomation(
 const DEFAULT_TEMPLATE = {
   email_subject: "New lead: {{lead.name}}",
   email_html:
-    '<p>You have a new lead.</p><ul><li><strong>Name:</strong> {{lead.name}}</li><li><strong>Email:</strong> {{lead.email}}</li><li><strong>Phone:</strong> {{lead.phone}}</li><li><strong>Source:</strong> {{lead.source}}</li></ul><p><a href="{{lead.url}}">Open in CRM</a></p>',
+    '<p>You have a new lead from <strong>{{lead.formName}}</strong>.</p>' +
+    '<ul>' +
+    '<li><strong>Name:</strong> {{lead.name}}</li>' +
+    '<li><strong>Email:</strong> {{lead.email}}</li>' +
+    '<li><strong>Phone:</strong> {{lead.phone}}</li>' +
+    '<li><strong>Source:</strong> {{lead.source}}</li>' +
+    '</ul>' +
+    '<p><strong>Form answers:</strong></p>{{lead.answers}}' +
+    '<p><a href="{{lead.url}}">Open in CRM</a></p>',
   sms_body:
     "New lead {{lead.name}} ({{lead.source}}). Phone: {{lead.phone}}. Open: {{lead.url}}",
 };
@@ -336,19 +382,54 @@ type TemplateTokens = {
     phone: string;
     source: string;
     url: string;
+    formName: string;
+    /**
+     * Full Q/A snapshot from the Lead Ad form. Rendered into output by
+     * the special `{{lead.answers}}` and `{{lead.answer:key}}` tokens.
+     */
+    fieldData: StructuredFieldEntry[];
   };
   owner: { name: string };
 };
 
+export type RenderFormat = "html" | "text";
+
 /**
  * Lightweight `{{token.path}}` substitution. Unknown tokens render as empty
  * strings rather than echoing the raw `{{...}}` so emails never look broken.
+ *
+ * Special tokens (Facebook Lead Ads):
+ *   - `{{lead.answers}}` — every custom Q/A pair from the lead's form. In
+ *     `html` mode this becomes a `<ul>` with `<strong>` labels; in `text`
+ *     mode (SMS, plain-text email) it becomes one `Label: value` per line.
+ *   - `{{lead.answer:KEY}}` — a single answer looked up by its normalized
+ *     snake_case `key` (use the "Discover form fields" panel in the Facebook
+ *     integration settings to find the right key for each form).
  */
-export function renderTemplate(input: string, tokens: TemplateTokens): string {
-  return input.replace(/\{\{\s*([a-zA-Z][a-zA-Z0-9_.]*)\s*\}\}/g, (_, path) => {
-    const value = lookup(tokens, String(path));
-    return value ?? "";
-  });
+export function renderTemplate(
+  input: string,
+  tokens: TemplateTokens,
+  format: RenderFormat = "text"
+): string {
+  return input.replace(
+    /\{\{\s*([a-zA-Z][a-zA-Z0-9_.]*)(?::([^}]+))?\s*\}\}/g,
+    (_, rawPath: string, rawArg: string | undefined) => {
+      const path = String(rawPath);
+      const arg = rawArg ? rawArg.trim() : null;
+
+      if (path === "lead.answers" && !arg) {
+        return renderStructuredAnswers(tokens.lead.fieldData, format);
+      }
+      if (path === "lead.answer" && arg) {
+        return findFieldDataAnswer(tokens.lead.fieldData, arg) ?? "";
+      }
+      if (path === "lead.formName") {
+        return tokens.lead.formName ?? "";
+      }
+      const value = lookup(tokens, path);
+      return value ?? "";
+    }
+  );
 }
 
 function lookup(obj: unknown, path: string): string | null {
@@ -362,6 +443,7 @@ function lookup(obj: unknown, path: string): string | null {
     }
   }
   if (current == null) return null;
+  if (typeof current === "object") return null;
   return String(current);
 }
 

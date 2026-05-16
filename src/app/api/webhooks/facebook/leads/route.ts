@@ -9,7 +9,7 @@ import {
   type AgencyFacebookPage,
 } from "@/lib/facebook/agency-credentials";
 import { verifyMetaSignature } from "@/lib/facebook/signature";
-import { fetchLeadgen } from "@/lib/facebook/graph";
+import { fetchLeadForm, fetchLeadgen } from "@/lib/facebook/graph";
 import { mapFacebookLeadFields } from "@/lib/facebook/mapping";
 import { notifyNewLead } from "@/lib/notifications/lead";
 
@@ -299,15 +299,38 @@ export async function POST(req: NextRequest) {
 
       let formMapOwnerId: string | null = null;
       let formMapSourceLabel: string | null = null;
+      let formName: string | null = null;
       if (formId) {
         const { data: formMap } = await supabase
           .from("agency_facebook_form_map")
-          .select("default_owner_id, default_source_label")
+          .select("default_owner_id, default_source_label, form_name")
           .eq("organization_id", page.organizationId)
           .eq("form_id", formId)
           .maybeSingle();
         formMapOwnerId = (formMap?.default_owner_id as string | null) ?? null;
         formMapSourceLabel = (formMap?.default_source_label as string | null) ?? null;
+        formName = (formMap?.form_name as string | null) ?? null;
+
+        // Lazy-cache the form name + question schema. We hit Graph once per
+        // form (when we don't have it yet) so subsequent leads from the same
+        // form don't pay the round-trip. Failures here are non-fatal — they
+        // just mean the email won't include the form name on this delivery.
+        if (!formName) {
+          const formFetch = await fetchLeadForm(formId, page.pageAccessToken);
+          if (formFetch.ok) {
+            formName = formFetch.form.name;
+            await supabase.from("agency_facebook_form_map").upsert(
+              {
+                organization_id: page.organizationId,
+                form_id: formId,
+                form_name: formName,
+                form_questions: formFetch.form.questions,
+                form_synced_at: new Date().toISOString(),
+              },
+              { onConflict: "organization_id,form_id" }
+            );
+          }
+        }
       }
 
       const ownerId = formMapOwnerId ?? integ.defaultLeadOwnerId ?? null;
@@ -326,6 +349,9 @@ export async function POST(req: NextRequest) {
         notes: mapped.notes,
         source: sourceLabel,
         stage: "new",
+        facebook_field_data: mapped.structured,
+        facebook_form_id: formId,
+        facebook_form_name: formName,
       };
 
       const inserted = await supabase

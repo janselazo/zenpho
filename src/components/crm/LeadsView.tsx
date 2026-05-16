@@ -117,6 +117,7 @@ const sourceTextClasses: Record<string, string> = {
   networking: "text-violet-700 dark:text-violet-400",
   prospects: "text-slate-700 dark:text-slate-400",
   "facebook ads": "text-indigo-700 dark:text-indigo-400",
+  "facebook lead ads": "text-blue-700 dark:text-blue-400",
   "google ads": "text-red-700 dark:text-red-400",
   "social media": "text-fuchsia-700 dark:text-fuchsia-400",
   partnerships: "text-teal-700 dark:text-teal-400",

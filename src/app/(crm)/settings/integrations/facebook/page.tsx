@@ -29,6 +29,7 @@ export default async function FacebookIntegrationPage() {
         owners={result.owners}
         webhookUrl={result.webhookUrl}
         events={result.events}
+        forms={result.forms}
         integrationKeyConfigured={result.integrationKeyConfigured}
       />
     </div>
