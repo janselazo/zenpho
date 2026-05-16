@@ -12,14 +12,17 @@ type AutomationFlow = {
   available: boolean;
 };
 
-const FLOWS: AutomationFlow[] = [
+type ConfigurableFlow = AutomationFlow & { configureHref?: string };
+
+const FLOWS: ConfigurableFlow[] = [
   {
-    id: "new-lead-sms",
-    title: "New lead SMS alert",
+    id: "new-lead-alert",
+    title: "New lead alert",
     category: "Leads",
     trigger: "When a new lead is created",
-    action: "Send SMS to specified phone numbers",
+    action: "Email + SMS to the lead owner (or team Admins)",
     available: true,
+    configureHref: "/automations/new-lead-alert",
   },
   {
     id: "deal-won-notify",
@@ -117,17 +120,26 @@ export default function AutomationsView() {
             </div>
             <div className="flex shrink-0 items-start pt-0.5">
               {flow.available ? (
-                <button
-                  type="button"
-                  onClick={() =>
-                    alert(
-                      "Automation builder is coming soon. You’ll set recipients and message templates here."
-                    )
-                  }
-                  className="rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-text-primary shadow-sm transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
-                >
-                  Configure
-                </button>
+                flow.configureHref ? (
+                  <Link
+                    href={flow.configureHref}
+                    className="rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-text-primary shadow-sm transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                  >
+                    Configure
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      alert(
+                        "Automation builder is coming soon. You’ll set recipients and message templates here."
+                      )
+                    }
+                    className="rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-text-primary shadow-sm transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                  >
+                    Configure
+                  </button>
+                )
               ) : (
                 <button
                   type="button"

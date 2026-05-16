@@ -91,6 +91,12 @@ export async function notifyNewLead(opts: {
     return out;
   }
 
+  const automation = await loadNewLeadAlertAutomation(admin, opts.organizationId);
+  if (!automation.enabled) {
+    out.errors.push("Flow disabled");
+    return out;
+  }
+
   const recipients = await resolveRecipients(admin, leadRow);
   out.recipientCount = recipients.length;
   if (recipients.length === 0) {
@@ -98,7 +104,7 @@ export async function notifyNewLead(opts: {
     return out;
   }
 
-  const template = await loadTemplate(admin, opts.organizationId);
+  const template = automation.template;
   const leadUrl = buildLeadUrl(leadRow.id);
 
   for (const recipient of recipients) {
@@ -231,28 +237,35 @@ async function resolveRecipients(
 
   const { data: prefs } = await admin
     .from("lead_notification_preference")
-    .select("user_id, email_new_lead, sms_new_lead, sms_phone")
+    .select("user_id, email_new_lead, sms_new_lead, sms_phone, override_email, override_phone")
     .in("user_id", [...userIds]);
 
   const prefMap = new Map<string, {
     email: boolean;
     sms: boolean;
     smsPhone: string | null;
+    overrideEmail: string | null;
   }>();
   for (const p of prefs ?? []) {
+    // Per-user override beats profile.email / profile.phone. sms_phone is kept
+    // as a legacy fallback for users who configured the older settings page.
+    const overridePhone = (p.override_phone as string | null)?.trim() || null;
+    const legacySms = (p.sms_phone as string | null)?.trim() || null;
     prefMap.set(p.user_id as string, {
       email: p.email_new_lead !== false,
       sms: p.sms_new_lead === true,
-      smsPhone: (p.sms_phone as string | null)?.trim() || null,
+      smsPhone: overridePhone ?? legacySms,
+      overrideEmail: (p.override_email as string | null)?.trim() || null,
     });
   }
 
   return (profiles ?? []).map((row) => {
     const id = row.id as string;
     const pref = prefMap.get(id);
+    const profileEmail = (row.email as string | null) ?? null;
     return {
       userId: id,
-      email: (row.email as string | null) ?? null,
+      email: pref?.overrideEmail ?? profileEmail,
       fullName: (row.full_name as string | null) ?? null,
       emailEnabled: pref?.email ?? true,
       smsEnabled: pref?.sms ?? false,
@@ -261,19 +274,50 @@ async function resolveRecipients(
   });
 }
 
-async function loadTemplate(
+async function loadNewLeadAlertAutomation(
   admin: SupabaseClient,
   organizationId: string
-): Promise<{ email_subject: string; email_html: string; sms_body: string }> {
-  const { data } = await admin
+): Promise<{
+  enabled: boolean;
+  template: { email_subject: string; email_html: string; sms_body: string };
+}> {
+  // Primary source of truth — `lead_automation` row keyed by (org, flow_key).
+  const { data: autoRow } = await admin
+    .from("lead_automation")
+    .select("enabled, email_subject, email_html, sms_body")
+    .eq("organization_id", organizationId)
+    .eq("flow_key", "new_lead_alert")
+    .maybeSingle();
+
+  if (autoRow) {
+    return {
+      enabled: autoRow.enabled !== false,
+      template: {
+        email_subject:
+          (autoRow.email_subject as string) || DEFAULT_TEMPLATE.email_subject,
+        email_html:
+          (autoRow.email_html as string) || DEFAULT_TEMPLATE.email_html,
+        sms_body: (autoRow.sms_body as string) || DEFAULT_TEMPLATE.sms_body,
+      },
+    };
+  }
+
+  // Legacy fallback for any org that hasn't been backfilled yet — keeps the
+  // dispatcher working through any partial rollout.
+  const { data: tplRow } = await admin
     .from("lead_notification_template")
     .select("email_subject, email_html, sms_body")
     .eq("organization_id", organizationId)
     .maybeSingle();
+
   return {
-    email_subject: (data?.email_subject as string) || DEFAULT_TEMPLATE.email_subject,
-    email_html: (data?.email_html as string) || DEFAULT_TEMPLATE.email_html,
-    sms_body: (data?.sms_body as string) || DEFAULT_TEMPLATE.sms_body,
+    enabled: true,
+    template: {
+      email_subject:
+        (tplRow?.email_subject as string) || DEFAULT_TEMPLATE.email_subject,
+      email_html: (tplRow?.email_html as string) || DEFAULT_TEMPLATE.email_html,
+      sms_body: (tplRow?.sms_body as string) || DEFAULT_TEMPLATE.sms_body,
+    },
   };
 }
 

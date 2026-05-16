@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
-import { ArrowLeft, Bell, Mail, MessageSquare } from "lucide-react";
+import { ArrowLeft, Mail, MessageSquare, Workflow } from "lucide-react";
 import {
-  saveLeadNotificationPreference,
-  saveLeadNotificationTemplate,
-  type LeadNotificationPreferenceState,
-  type LeadNotificationTemplateState,
-} from "@/app/(crm)/actions/lead-notifications";
+  saveMyLeadAlertOverrides,
+  saveNewLeadAlertEnabled,
+  saveNewLeadAlertTemplate,
+  type NewLeadAlertPreference,
+  type NewLeadAlertTemplate,
+} from "@/app/(crm)/actions/lead-automation";
 
 const inputClass =
   "w-full rounded-xl border border-border bg-white px-3.5 py-2.5 text-sm text-text-primary shadow-sm outline-none transition-[box-shadow,border-color] placeholder:text-text-secondary/45 focus:border-accent focus:ring-2 focus:ring-accent/15 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500";
@@ -32,25 +33,48 @@ const TOKEN_HELP = [
 ];
 
 type Props = {
-  preference: LeadNotificationPreferenceState;
-  template: LeadNotificationTemplateState;
-  canEditTemplate: boolean;
+  enabled: boolean;
+  template: NewLeadAlertTemplate;
+  preference: NewLeadAlertPreference;
   profileEmail: string | null;
+  profilePhone: string | null;
+  canEditTemplate: boolean;
 };
 
-export default function LeadNotificationSettings({
-  preference,
+export default function NewLeadAlertAutomation({
+  enabled,
   template,
-  canEditTemplate,
+  preference,
   profileEmail,
+  profilePhone,
+  canEditTemplate,
 }: Props) {
   const router = useRouter();
+  const [enabledOptimistic, setEnabledOptimistic] = useState(enabled);
+  const [savingEnabled, startEnabled] = useTransition();
   const [savePref, startPref] = useTransition();
   const [saveTpl, startTpl] = useTransition();
+  const [enabledErr, setEnabledErr] = useState<string | null>(null);
   const [prefMsg, setPrefMsg] = useState<string | null>(null);
   const [prefErr, setPrefErr] = useState<string | null>(null);
   const [tplMsg, setTplMsg] = useState<string | null>(null);
   const [tplErr, setTplErr] = useState<string | null>(null);
+
+  function onToggleEnabled(next: boolean) {
+    setEnabledOptimistic(next);
+    setEnabledErr(null);
+    const fd = new FormData();
+    if (next) fd.set("enabled", "on");
+    startEnabled(async () => {
+      const res = await saveNewLeadAlertEnabled(fd);
+      if ("error" in res && res.error) {
+        setEnabledOptimistic(!next);
+        setEnabledErr(res.error);
+      } else {
+        router.refresh();
+      }
+    });
+  }
 
   function onSavePreference(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -58,7 +82,7 @@ export default function LeadNotificationSettings({
     setPrefErr(null);
     const fd = new FormData(e.currentTarget);
     startPref(async () => {
-      const res = await saveLeadNotificationPreference(fd);
+      const res = await saveMyLeadAlertOverrides(fd);
       if ("error" in res && res.error) setPrefErr(res.error);
       else {
         setPrefMsg("Preferences saved.");
@@ -73,7 +97,7 @@ export default function LeadNotificationSettings({
     setTplErr(null);
     const fd = new FormData(e.currentTarget);
     startTpl(async () => {
-      const res = await saveLeadNotificationTemplate(fd);
+      const res = await saveNewLeadAlertTemplate(fd);
       if ("error" in res && res.error) setTplErr(res.error);
       else {
         setTplMsg("Template saved.");
@@ -85,31 +109,42 @@ export default function LeadNotificationSettings({
   return (
     <div className="mx-auto max-w-3xl">
       <p className="text-xs font-medium uppercase tracking-wide text-text-secondary dark:text-zinc-500">
-        Settings
+        Automations
       </p>
 
       <div className="mt-4 flex flex-wrap items-start gap-4">
         <Link
-          href="/settings"
+          href="/automations"
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-white text-text-primary shadow-sm transition-colors hover:bg-surface dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
-          aria-label="Back to settings"
+          aria-label="Back to automations"
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div className="flex min-w-0 flex-1 items-start gap-4">
           <div
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-zinc-900 text-white shadow-sm dark:bg-zinc-100 dark:text-zinc-900"
             aria-hidden
           >
-            <Bell className="h-6 w-6" />
+            <Workflow className="h-6 w-6" />
           </div>
           <div className="min-w-0 flex-1">
-            <h1 className="heading-display text-2xl font-bold tracking-tight text-text-primary dark:text-zinc-100 sm:text-3xl">
-              Lead notifications
-            </h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="heading-display text-2xl font-bold tracking-tight text-text-primary dark:text-zinc-100 sm:text-3xl">
+                New lead alert
+              </h1>
+              <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-sky-800 dark:bg-sky-950/50 dark:text-sky-200">
+                Leads
+              </span>
+            </div>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-text-secondary dark:text-zinc-400">
-              Choose how you receive new-lead alerts (email + SMS) and customize
-              the messages that go out for your team.
+              <span className="font-medium text-text-primary/90 dark:text-zinc-300">
+                Trigger:
+              </span>{" "}
+              When a new lead is created.{" "}
+              <span className="font-medium text-text-primary/90 dark:text-zinc-300">
+                Action:
+              </span>{" "}
+              Email + SMS to the lead owner (or team Admins when unassigned).
             </p>
           </div>
         </div>
@@ -117,10 +152,48 @@ export default function LeadNotificationSettings({
 
       <div className="mt-6 h-px w-full bg-accent/40" aria-hidden />
 
+      <section className={`${cardClass} mt-8`}>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="text-base font-semibold text-text-primary dark:text-zinc-100">
+              Flow status
+            </h2>
+            <p className="mt-1 text-sm text-text-secondary dark:text-zinc-400">
+              {canEditTemplate
+                ? "Pause the flow to stop sending alerts without losing recipients or templates."
+                : "Only Admins or Super Admins can pause this flow."}
+            </p>
+          </div>
+          <label className="flex shrink-0 items-center gap-3 rounded-xl border border-border bg-surface/40 px-4 py-2.5 text-sm font-medium text-text-primary dark:border-zinc-800 dark:bg-zinc-900/40 dark:text-zinc-100">
+            <input
+              type="checkbox"
+              checked={enabledOptimistic}
+              disabled={!canEditTemplate || savingEnabled}
+              onChange={(e) => onToggleEnabled(e.target.checked)}
+              className="h-4 w-4 rounded border-border text-accent focus:ring-accent"
+            />
+            <span
+              className={
+                enabledOptimistic
+                  ? "text-emerald-700 dark:text-emerald-300"
+                  : "text-text-secondary dark:text-zinc-400"
+              }
+            >
+              {enabledOptimistic ? "Enabled" : "Paused"}
+            </span>
+          </label>
+        </div>
+        {enabledErr ? (
+          <p className="mt-3 text-sm text-red-600 dark:text-red-400" role="alert">
+            {enabledErr}
+          </p>
+        ) : null}
+      </section>
+
       <form onSubmit={onSavePreference} className={`${cardClass} mt-8`}>
         <div className="flex gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-            <Bell className="h-5 w-5" aria-hidden />
+            <Mail className="h-5 w-5" aria-hidden />
           </div>
           <div>
             <h2 className="text-base font-semibold text-text-primary dark:text-zinc-100">
@@ -128,7 +201,8 @@ export default function LeadNotificationSettings({
             </h2>
             <p className="mt-1 text-sm text-text-secondary dark:text-zinc-400">
               Choose which channels to use when a new lead is assigned to you
-              (or is unassigned but you are an Admin/Super Admin).
+              (or is unassigned but you are an Admin/Super Admin), and where
+              those alerts should go.
             </p>
           </div>
         </div>
@@ -147,14 +221,31 @@ export default function LeadNotificationSettings({
                 Email me on new leads
               </span>
               <span className="mt-1 block text-xs text-text-secondary dark:text-zinc-400">
-                Sent to{" "}
-                <code className="rounded bg-surface px-1 py-0.5 text-xs dark:bg-zinc-800">
-                  {profileEmail ?? "(no email on profile)"}
-                </code>{" "}
-                via the org&rsquo;s SendGrid integration.
+                Goes via the org&rsquo;s SendGrid integration.
               </span>
             </span>
           </label>
+
+          <div>
+            <label htmlFor="override_email" className={labelClass}>
+              Send email to
+            </label>
+            <input
+              id="override_email"
+              name="override_email"
+              type="email"
+              defaultValue={preference.overrideEmail}
+              className={inputClass}
+              placeholder={profileEmail ?? "you@example.com"}
+            />
+            <p className={helperClass}>
+              Leave blank to use your profile email{" "}
+              <code className="rounded bg-surface px-1 py-0.5 text-[11px] dark:bg-zinc-800">
+                {profileEmail ?? "(no email on profile)"}
+              </code>
+              .
+            </p>
+          </div>
 
           <label className="flex items-start gap-3 rounded-xl border border-border bg-surface/40 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
             <input
@@ -169,26 +260,34 @@ export default function LeadNotificationSettings({
                 Text me on new leads
               </span>
               <span className="mt-1 block text-xs text-text-secondary dark:text-zinc-400">
-                Sent via the org&rsquo;s Twilio integration.
+                Goes via the org&rsquo;s Twilio integration.
               </span>
             </span>
           </label>
 
           <div>
-            <label htmlFor="sms_phone" className={labelClass}>
-              SMS phone (E.164)
+            <label htmlFor="override_phone" className={labelClass}>
+              Send SMS to (E.164)
             </label>
             <input
-              id="sms_phone"
-              name="sms_phone"
+              id="override_phone"
+              name="override_phone"
               type="tel"
-              defaultValue={preference.smsPhone}
+              defaultValue={preference.overridePhone}
               className={inputClass}
-              placeholder="+14155551234"
+              placeholder={profilePhone ?? "+14155551234"}
             />
             <p className={helperClass}>
-              Required when SMS is enabled. Use international format with the
-              leading + and country code.
+              Leave blank to use your profile phone
+              {profilePhone ? (
+                <>
+                  {" "}
+                  <code className="rounded bg-surface px-1 py-0.5 text-[11px] dark:bg-zinc-800">
+                    {profilePhone}
+                  </code>
+                </>
+              ) : null}
+              . Use international format with the leading + and country code.
             </p>
           </div>
         </div>
