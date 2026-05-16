@@ -10,6 +10,7 @@ import {
   renderStructuredAnswers,
   type StructuredFieldEntry,
 } from "@/lib/facebook/mapping";
+import { getPublicAppOrigin } from "@/lib/crm/prospect-preview-public-url";
 
 const SUPER_ADMIN_DOMAIN = "zenpho.com";
 const SUPER_ADMIN_EMAIL = "janse.lazo@gmail.com";
@@ -466,11 +467,14 @@ function htmlToText(html: string): string {
 }
 
 function buildLeadUrl(leadId: string): string {
-  const origin =
-    process.env["PUBLIC_APP_URL"]?.trim().replace(/\/$/, "") ||
-    process.env["NEXT_PUBLIC_APP_URL"]?.trim().replace(/\/$/, "") ||
-    "http://localhost:3000";
-  return `${origin}/leads/${leadId}`;
+  // Delegates to the shared helper so notification links resolve via the same
+  // env-var ladder used by prospect previews and other outbound URLs:
+  //   PUBLIC_APP_URL  -> explicit override (e.g. https://zenpho.com)
+  //   VERCEL_URL      -> automatic on Vercel (deployment hostname)
+  //   localhost:3000  -> last-resort fallback for local dev
+  // This prevents the alert SMS/email from ever embedding a `localhost:3000`
+  // link in production, which is what happened before the helper was wired in.
+  return `${getPublicAppOrigin()}/leads/${leadId}`;
 }
 
 function isSuperAdminEmail(email: string): boolean {
