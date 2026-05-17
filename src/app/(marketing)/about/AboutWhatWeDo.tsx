@@ -9,7 +9,7 @@ const activities = [
   "Staging environments, QA passes, instrumentation, and observability hooks",
   "Production releases, DNS/hosting cutovers, rollback plans, and go-live support",
   "Post-launch stabilization, backlog grooming, and roadmap planning for fast follows",
-  "Revenue Leak Audits and Brand Kit flows when marketing clarity needs a fast baseline",
+  "Revenue Leak Audits when marketing clarity needs a fast baseline",
   "Milestone demos, documented decisions, and pragmatic scope management",
 ] as const;
 

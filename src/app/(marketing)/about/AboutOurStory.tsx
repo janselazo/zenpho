@@ -27,8 +27,8 @@ export default function AboutOurStory() {
           product, demo on staging often, and tighten after real traffic—not slide decks.
         </p>
         <p className="mt-6 text-base leading-relaxed text-text-secondary">
-          Alongside custom builds, we keep tools like Revenue Leak Audits and Brand Kit workflows for teams that need
-          fast marketing clarity before or after a launch.
+          Alongside custom builds, we keep tools like Revenue Leak Audits for teams that need fast marketing clarity
+          before or after a launch.
         </p>
       </Card>
     </section>

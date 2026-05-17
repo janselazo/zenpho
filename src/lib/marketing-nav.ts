@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { FileText, Mail, Newspaper, Palette, SearchCheck, User } from "lucide-react";
+import { FileText, Mail, Newspaper, SearchCheck, User } from "lucide-react";
 import { marketingSolutionPages } from "./marketing-solutions-pages";
 import { BOOKING_NAV_COMPACT_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
 
@@ -45,13 +45,6 @@ const toolsMegaItems: MarketingMegaItem[] = [
     href: "/tools/business-audit",
     icon: SearchCheck,
     iconClassName: "bg-accent/15 text-accent",
-  },
-  {
-    title: "Brand Kit",
-    description: "Generate a brand guidelines PDF and sales funnel playbook from your Google listing.",
-    href: "/branding",
-    icon: Palette,
-    iconClassName: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
   },
 ];
 
@@ -132,10 +125,7 @@ export const marketingFooterColumns: MarketingFooterColumn[] = [
   },
   {
     heading: "Tools",
-    links: [
-      { label: "Business Audit", href: "/tools/business-audit" },
-      { label: "Brand Kit", href: "/branding" },
-    ],
+    links: [{ label: "Business Audit", href: "/tools/business-audit" }],
   },
   {
     heading: "Resources",

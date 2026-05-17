@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Car, Check, ClipboardCheck, Linkedin, Palette } from "lucide-react";
+import { Car, Check, ClipboardCheck, Linkedin } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
@@ -55,24 +55,6 @@ const PRODUCTS: StudioProduct[] = [
     icon: ClipboardCheck,
     iconWrapClass: "bg-sky-500/15 text-sky-700 dark:text-sky-400",
   },
-  {
-    name: "Branding Kit",
-    tagline: "Launch with a brand that looks ready.",
-    description:
-      "A brand starter kit with the visual and messaging essentials needed to launch professionally.",
-    bestFor: "Startups, creators, founders, and new businesses preparing to launch.",
-    features: [
-      "Brand direction",
-      "Logo guidelines",
-      "Color system",
-      "Typography system",
-      "Messaging foundation",
-    ],
-    ctaLabel: "Explore Branding Kit",
-    ctaHref: "/branding",
-    icon: Palette,
-    iconWrapClass: "bg-violet-500/15 text-violet-700 dark:text-violet-400",
-  },
 ];
 
 const WHY_BULLETS = [
@@ -97,8 +79,7 @@ export default function StudioPageContent() {
             Products Built by Zenpho
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-pretty text-lg leading-relaxed text-text-secondary sm:text-xl">
-            We build our own digital products too — practical tools for sales, business audits, branding, and faster
-            launches.
+            We build our own digital products too — practical tools for sales, business audits, and faster launches.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Button href="#studio-products" variant="primary" size="lg" className="min-w-[12rem] justify-center">

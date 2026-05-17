@@ -535,13 +535,6 @@ export const resourceItems: ResourceItem[] = [
     tag: "Engagement",
   },
   {
-    title: "Brand Kit",
-    description:
-      "Search your Google listing and generate a brand guidelines PDF with positioning, palette, typography, messaging, and sales funnel playbook.",
-    href: "/branding",
-    tag: "Tool",
-  },
-  {
     title: "LinkedIn",
     description:
       "Follow for updates on client work, SoldTools, and building software — Miami, FL.",
