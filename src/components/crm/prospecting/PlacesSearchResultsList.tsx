@@ -1,7 +1,14 @@
 "use client";
 
 import { useCallback, useState, type ReactNode } from "react";
-import { Building2, ExternalLink, FileBarChart, Loader2, UserPlus } from "lucide-react";
+import {
+  Building2,
+  ExternalLink,
+  FileBarChart,
+  Loader2,
+  Megaphone,
+  UserPlus,
+} from "lucide-react";
 import type { PlacesSearchPlace } from "@/lib/crm/places-types";
 import {
   googleFaviconUrl,
@@ -70,6 +77,7 @@ type Props = {
   searchResultCount?: number;
   highlightQuery: string;
   onViewReport: (place: PlacesSearchPlace) => void;
+  onViewMetaAdIntel?: (place: PlacesSearchPlace) => void;
   /** Current project type for quick Create lead (must match CRM field options). */
   projectType: string;
   onQuickCreateLead: (place: PlacesSearchPlace) => Promise<void>;
@@ -84,6 +92,7 @@ export default function PlacesSearchResultsList({
   searchResultCount,
   highlightQuery,
   onViewReport,
+  onViewMetaAdIntel,
   projectType,
   onQuickCreateLead,
 }: Props) {
@@ -213,6 +222,17 @@ export default function PlacesSearchResultsList({
                   >
                     <FileBarChart className="h-4 w-4" aria-hidden />
                   </button>
+                  {onViewMetaAdIntel ? (
+                    <button
+                      type="button"
+                      title="Open Meta Ad Intelligence"
+                      aria-label="Open Meta Ad Intelligence"
+                      className={iconActionClass}
+                      onClick={() => onViewMetaAdIntel(p)}
+                    >
+                      <Megaphone className="h-4 w-4" aria-hidden />
+                    </button>
+                  ) : null}
                 </div>
               </div>
             </li>

@@ -55,6 +55,7 @@ import PlacesCategoryAutocomplete from "@/components/crm/prospecting/PlacesCateg
 import PlacesSearchResultsList from "@/components/crm/prospecting/PlacesSearchResultsList";
 import type { ProspectWebsiteDeepStatus } from "@/components/crm/prospecting/ProspectIntelEnrichment";
 import ProspectIntelBusinessSnapshot from "@/components/crm/prospecting/ProspectIntelBusinessSnapshot";
+import MetaAdIntelReportSection from "@/components/crm/meta-ad-intel/MetaAdIntelReportSection";
 import type { HomepageContactHints } from "@/app/(crm)/actions/prospect-intel";
 import { formatReportAsPlainNotes } from "@/lib/crm/prospect-intel-notes-format";
 import { mergeProspectSocialUrls } from "@/lib/crm/prospect-contact-extract";
@@ -168,6 +169,33 @@ function primaryPlaceTypes(types: string[]): string {
   const picked = types.filter((t) => !skip.has(t));
   const s = picked.slice(0, 3).map(humanizePlaceType).join(" · ");
   return s || "—";
+}
+
+function cityFromFormattedAddress(address: string | null | undefined): string | null {
+  const parts = (address ?? "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (parts.length >= 4) return parts[1] || null;
+  if (parts.length >= 2) return parts[0] || null;
+  return null;
+}
+
+function metaAdIntelHref(input: {
+  businessName: string;
+  websiteUrl?: string | null;
+  facebookUrl?: string | null;
+  category?: string | null;
+  city?: string | null;
+}): string {
+  const params = new URLSearchParams();
+  if (input.businessName.trim()) params.set("businessName", input.businessName.trim());
+  if (input.websiteUrl?.trim()) params.set("websiteUrl", input.websiteUrl.trim());
+  if (input.facebookUrl?.trim()) params.set("facebookUrl", input.facebookUrl.trim());
+  if (input.category?.trim()) params.set("category", input.category.trim());
+  if (input.city?.trim()) params.set("city", input.city.trim());
+  const query = params.toString();
+  return `/prospecting/meta-ad-intel${query ? `?${query}` : ""}`;
 }
 
 function googleListingStatusGlance(status: string | null | undefined): string | null {
@@ -1625,6 +1653,16 @@ function ProspectsIntelligenceViewInner({
     [router, applyPlaceReport, scrollToMarketIntelReport, searchParams],
   );
 
+  const openMetaAdIntelForPlace = useCallback((place: PlacesSearchPlace) => {
+    const href = metaAdIntelHref({
+      businessName: place.name,
+      websiteUrl: place.websiteUri,
+      category: primaryPlaceTypeLabel(place.types),
+      city: cityFromFormattedAddress(place.formattedAddress),
+    });
+    window.open(href, "_blank", "noopener,noreferrer");
+  }, []);
+
   async function submitLead() {
     setLeadPending(true);
     setLeadMessage(null);
@@ -1850,6 +1888,7 @@ function ProspectsIntelligenceViewInner({
                 searchResultCount={places.length}
                 highlightQuery={[businessName, category].filter(Boolean).join(" ").trim()}
                 onViewReport={viewPlaceReport}
+                onViewMetaAdIntel={openMetaAdIntelForPlace}
                 projectType={projectType}
                 onQuickCreateLead={handleQuickCreateFromPlace}
               />
@@ -2228,7 +2267,32 @@ function ProspectsIntelligenceViewInner({
           </ReportSection>
 
           <div className="border-t border-border/80 pt-6 dark:border-zinc-800">
-            <ReportSection step="03" title="Highlights" noTopRule className="min-w-0">
+            <ReportSection step="03" title="Paid Media" noTopRule className="min-w-0">
+              <MetaAdIntelReportSection
+                businessName={outreachBusinessName}
+                websiteUrl={
+                  activeReport.kind === "place"
+                    ? effectivePlaceWebsiteUri
+                    : activeReport.urlMeta.url
+                }
+                facebookUrl={
+                  leadFacebook.trim() ||
+                  snapshotSocialUrls.facebook ||
+                  socialEnrichSocialUrls.facebook ||
+                  null
+                }
+                category={leadGoogleBusinessCategory || null}
+                city={
+                  activeReport.kind === "place"
+                    ? cityFromFormattedAddress(activeReport.place.formattedAddress)
+                    : null
+                }
+              />
+            </ReportSection>
+          </div>
+
+          <div className="border-t border-border/80 pt-6 dark:border-zinc-800">
+            <ReportSection step="04" title="Highlights" noTopRule className="min-w-0">
               <IntelHighlightsCarousel
                 omitOuterTitle
                 report={activeReport.report}
