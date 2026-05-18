@@ -14,12 +14,15 @@ export type VideoHookCopy = {
   ctaText: string;
 };
 
+export type VideoHookPitchMode = "meta-ads" | "creatives-generation";
+
 export type VideoHookInput = {
   businessName: string;
   googleCategory?: string | null;
   city?: string | null;
   sampleAdCreatives?: MetaAdCreative[] | null;
   locale?: "en" | "es";
+  pitchMode?: VideoHookPitchMode;
 };
 
 function truncate(value: string, max: number): string {
@@ -55,6 +58,29 @@ function creativeContext(creatives: MetaAdCreative[] | null | undefined): string
 
 function buildPrompts(input: VideoHookInput): { system: string; user: string } {
   const locale = input.locale === "es" ? "Spanish" : "English";
+  const pitchMode = input.pitchMode ?? "meta-ads";
+
+  if (pitchMode === "creatives-generation") {
+    return {
+      system:
+        "You write concise paid social video ad hooks for local businesses. Return only valid JSON with keys hookText and ctaText.",
+      user: `Create one short vertical video/reel ad hook for a local business prospect.
+
+Business: ${input.businessName || "Business"}
+Industry/category: ${input.googleCategory || "(local business)"}
+City/area: ${input.city || "(local market)"}
+Language: ${locale}
+
+Rules:
+- hookText: 5-10 words, specific to the industry (service outcome, trust, speed, or local relevance).
+- ctaText: 1-3 words, suitable for a button on a Reel/Story ad.
+- Tone: professional, direct-response, not spammy.
+- No emojis.
+- Do not invent exact discounts, guarantees, awards, or review counts.
+- Output JSON only, for example {"hookText":"...","ctaText":"..."}.`,
+    };
+  }
+
   return {
     system:
       "You write concise paid social video ad hooks. Return only valid JSON with keys hookText and ctaText.",

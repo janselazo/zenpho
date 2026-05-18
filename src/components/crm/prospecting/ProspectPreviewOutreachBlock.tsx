@@ -19,8 +19,8 @@ import {
   Palette,
   Plus,
   Smartphone,
+  Sparkles,
   Video,
-  Workflow,
   X,
   ShieldAlert,
 } from "lucide-react";
@@ -44,8 +44,13 @@ import {
   sendProspectPreviewSmsAction,
   type OutreachFileAttachment,
 } from "@/app/(crm)/actions/prospect-preview";
-import { generateProspectAutomationPdfAction } from "@/app/(crm)/actions/prospect-automation-report";
 import { mergeProspectOutreachTemplate } from "@/lib/crm/prospect-outreach-template";
+import {
+  compositeCreativeReelSharePng,
+  creativeReelShareFilename,
+} from "@/lib/crm/creative-reel-share-image";
+import { primaryPlaceTypeLabel } from "@/lib/crm/places-search-ui";
+import CreativeReelPhonePreview from "@/components/crm/prospecting/CreativeReelPhonePreview";
 import { messengerHandoffUrlFromFacebook } from "@/lib/crm/social-handoff-urls";
 import {
   downloadBlob,
@@ -259,30 +264,30 @@ function defaultShareTemplatesForOffer(
       if (locale === "es") {
         return {
           smsBody:
-            "Hola — preparé un borrador de auditoría de IA para {{businessName}}: procesos repetibles, dónde se va tiempo y dinero, y pasos siguientes priorizados (la implementación se cotiza aparte). ¿Prefiere el PDF o una llamada breve para revisarlo?",
-          emailSubject: "Auditoría de IA para {{businessName}}",
+            "Hola {{businessName}} — preparé un mockup de video/reel para su negocio (hook: \"{{hookText}}\"). El primer video corto para campañas lo hacemos gratis si quieren probar Creatives Generation. La imagen va adjunta.",
+          emailSubject: "Idea de video para {{businessName}} — primer creativo gratis",
           emailBody:
-            "Hola —\n\nCon base en lo que vimos de {{businessName}}, armamos una auditoría de IA estructurada: mapear procesos repetibles, detectar los mayores costos de tiempo y dinero, y recomendar herramientas y flujos de trabajo. Recibe un plan de acción priorizado; implementar o desplegar sistemas se cotiza aparte si deciden avanzar.\n\nPuedo enviarle el PDF o verlo en una llamada corta.\n\n(Los enlaces de preview alojados son para conceptos de sitio web, web app o móvil. En esta pista, use Generar informe (PDF) en la tarjeta de auditoría de IA.)\n\nSaludos,\n{{yourName}}",
+            "Hola {{businessName}},\n\nPreparé un concepto de video vertical para su negocio — estilo Reel con el hook \"{{hookText}}\" y CTA \"{{ctaText}}\". Va adjunto como vista previa en un marco móvil.\n\nOfrecemos Creatives Generation: creatividades para Meta, Google y redes, alineadas a su marca. El primer video corto para probar campañas lo hacemos sin costo.\n\n¿Les gustaría ver 2–3 variantes más para su industria?\n\nSaludos,\n{{yourName}}",
           instagramBody:
-            "¡Hola! Borrador de auditoría de IA para {{businessName}}: procesos, focos de costo, herramientas/flujos recomendados y plan priorizado (implementación es un paso aparte). ¿Quiere el PDF o una llamada rápida?\n\n— {{yourName}}",
+            "¡Hola {{businessName}}! Mockup de reel adjunto — hook \"{{hookText}}\". Primer video corto gratis si quieren probar creatividades para anuncios.\n\n— {{yourName}}",
           whatsappBody:
-            "¡Hola! Borrador de auditoría de IA para {{businessName}}: procesos, focos de costo, herramientas/flujos recomendados y plan priorizado (implementación es un paso aparte). ¿Quiere el PDF o una llamada rápida?\n\n— {{yourName}}",
+            "¡Hola {{businessName}}! Adjunto un mockup de reel — \"{{hookText}}\". Primer video corto gratis para probar Creatives Generation.\n\n— {{yourName}}",
           facebookBody:
-            "¡Hola! Borrador de auditoría de IA para {{businessName}}: procesos, focos de costo, herramientas/flujos recomendados y plan priorizado (implementación es un paso aparte). ¿Quiere el PDF o una llamada rápida?\n\n— {{yourName}}",
+            "¡Hola {{businessName}}! Mockup de reel adjunto — \"{{hookText}}\". Primer video corto gratis si quieren probar anuncios en redes.\n\n— {{yourName}}",
         };
       }
       return {
         smsBody:
-          "Hi — we drafted an AI audit for {{businessName}}: repeatable processes, where time/money goes, and prioritized next steps (implementation quoted separately). Want the PDF or a quick call to walk through it?",
-        emailSubject: "AI audit for {{businessName}}",
+          "Hi {{businessName}} — I mocked up a Reel-style video ad for your business (hook: \"{{hookText}}\"). We’ll produce your first short-form video creative free when you want to test our Creatives Generation service. Preview image attached.",
+        emailSubject: "Video ad idea for {{businessName}} — first creative free",
         emailBody:
-          "Hi —\n\nFrom our research on {{businessName}}, we put together a structured AI audit — map repeatable processes, spot the highest time/money costs, and recommend tools and workflows. You get a prioritized action plan; building or rolling out systems is scoped separately if you want to move forward.\n\nI can send the PDF or walk through it on a short call.\n\n(Hosted preview links are for Website / Web app / Mobile concepts. For this track, use Generate report (PDF) on the AI audit card.)\n\nBest,\n{{yourName}}",
+          "Hi {{businessName}},\n\nI put together a vertical video ad concept for your business — Reel-style preview with hook \"{{hookText}}\" and CTA \"{{ctaText}}\". The phone-frame mockup is attached.\n\nWe offer Creatives Generation: on-brand ad creatives and short videos for Meta, Google, and social. Your first short-form video creative to test campaigns is free.\n\nWant 2–3 more variants tailored to your industry?\n\nBest,\n{{yourName}}",
         instagramBody:
-          "Hi! AI audit draft for {{businessName}} — processes, cost hotspots, recommended tools/workflows, and a prioritized plan (implementation is a separate step). Want the PDF or a quick call?\n\n— {{yourName}}",
+          "Hi {{businessName}}! Reel mockup attached — hook \"{{hookText}}\". First short video creative free if you want to try paid social creatives.\n\n— {{yourName}}",
         whatsappBody:
-          "Hi! AI audit draft for {{businessName}} — processes, cost hotspots, recommended tools/workflows, and a prioritized plan (implementation is a separate step). Want the PDF or a quick call?\n\n— {{yourName}}",
+          "Hi {{businessName}}! Attached a Reel mockup — \"{{hookText}}\". First short video creative free to try Creatives Generation.\n\n— {{yourName}}",
         facebookBody:
-          "Hi! AI audit draft for {{businessName}} — processes, cost hotspots, recommended tools/workflows, and a prioritized plan (implementation is a separate step). Want the PDF or a quick call?\n\n— {{yourName}}",
+          "Hi {{businessName}}! Reel mockup attached — \"{{hookText}}\". First short video creative free if you want to test social ads.\n\n— {{yourName}}",
       };
     case "audit":
       if (locale === "es") {
@@ -810,6 +815,16 @@ function BeforeAfterComparison({
   );
 }
 
+function cityFromFormattedAddress(address: string | null | undefined): string | null {
+  const parts = (address ?? "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (parts.length >= 4) return parts[1] || null;
+  if (parts.length >= 2) return parts[0] || null;
+  return null;
+}
+
 function minimalBusinessFromPlace(place: PlacesSearchPlace) {
   return {
     placeId: place.id,
@@ -956,9 +971,14 @@ export default function ProspectPreviewOutreachBlock({
     e.target.value = "";
   }, [addOutreachAttachment]);
 
-  const [pdfBusy, setPdfBusy] = useState(false);
-  const [pdfMsg, setPdfMsg] = useState<string | null>(null);
-  const [pdfFilename, setPdfFilename] = useState<string | null>(null);
+  const [creativeBusy, setCreativeBusy] = useState(false);
+  const [creativeMsg, setCreativeMsg] = useState<string | null>(null);
+  const [creativeHookText, setCreativeHookText] = useState<string | null>(null);
+  const [creativeCtaText, setCreativeCtaText] = useState<string | null>(null);
+  const [creativePreviewUrl, setCreativePreviewUrl] = useState<string | null>(null);
+  const creativePreviewUrlRef = useRef<string | null>(null);
+  const [creativeShareBlob, setCreativeShareBlob] = useState<Blob | null>(null);
+  const [creativeShareFilename, setCreativeShareFilename] = useState<string | null>(null);
 
   const [auditBusy, setAuditBusy] = useState(false);
   const [auditMsg, setAuditMsg] = useState<string | null>(null);
@@ -1019,6 +1039,9 @@ export default function ProspectPreviewOutreachBlock({
   const hasAuditShareAttachment = outreachAttachments.some(
     (att) => att.id === "audit-share-image",
   );
+  const hasCreativeAttachment = outreachAttachments.some(
+    (att) => att.id === "creative-reel-preview",
+  );
 
   const stitchPlaceId = useMemo(
     () => (stitchContext?.kind === "place" ? stitchContext.place.id : null),
@@ -1035,8 +1058,23 @@ export default function ProspectPreviewOutreachBlock({
     setAuditShareFilename(null);
     setAuditShareMsg(null);
     setOutreachAttachments((prev) =>
-      prev.filter((a) => a.id !== "audit-report-pdf" && a.id !== "audit-share-image"),
+      prev.filter(
+        (a) =>
+          a.id !== "audit-report-pdf" &&
+          a.id !== "audit-share-image" &&
+          a.id !== "creative-reel-preview",
+      ),
     );
+    setCreativeHookText(null);
+    setCreativeCtaText(null);
+    setCreativeMsg(null);
+    setCreativeShareBlob(null);
+    setCreativeShareFilename(null);
+    if (creativePreviewUrlRef.current) {
+      URL.revokeObjectURL(creativePreviewUrlRef.current);
+      creativePreviewUrlRef.current = null;
+    }
+    setCreativePreviewUrl(null);
   }, [stitchPlaceId]);
 
   const activeShareTpl = shareTemplates[selectedOffer];
@@ -1120,8 +1158,17 @@ export default function ProspectPreviewOutreachBlock({
     setOutreachLocale("en");
     setShareTemplates(createShareTemplates("en"));
     setShareMsg(null);
-    setPdfMsg(null);
-    setPdfFilename(null);
+    setCreativeBusy(false);
+    setCreativeMsg(null);
+    setCreativeHookText(null);
+    setCreativeCtaText(null);
+    setCreativeShareBlob(null);
+    setCreativeShareFilename(null);
+    if (creativePreviewUrlRef.current) {
+      URL.revokeObjectURL(creativePreviewUrlRef.current);
+      creativePreviewUrlRef.current = null;
+    }
+    setCreativePreviewUrl(null);
     setAuditBusy(false);
     setAuditMsg(null);
     setAuditFilename(null);
@@ -1136,7 +1183,12 @@ export default function ProspectPreviewOutreachBlock({
     setBrandingFilename(null);
     setBrandingPdfUrl(null);
     setOutreachAttachments((prev) =>
-      prev.filter((a) => a.id !== "audit-report-pdf" && a.id !== "audit-share-image"),
+      prev.filter(
+        (a) =>
+          a.id !== "audit-report-pdf" &&
+          a.id !== "audit-share-image" &&
+          a.id !== "creative-reel-preview",
+      ),
     );
   }, [reportKey]);
 
@@ -1351,6 +1403,17 @@ export default function ProspectPreviewOutreachBlock({
     return null;
   }, [selectedOffer, stitchWebResult, stitchWebAppResult, stitchMobileResult]);
 
+  const creativeMergeVars = useMemo(
+    () => ({
+      previewUrl: "",
+      businessName: resolvedBusinessName,
+      yourName: yourName.trim(),
+      hookText: creativeHookText ?? undefined,
+      ctaText: creativeCtaText ?? undefined,
+    }),
+    [resolvedBusinessName, yourName, creativeHookText, creativeCtaText],
+  );
+
   const canSharePreview =
     selectedOffer === "branding"
       ? Boolean(resolvedBusinessName && hasBrandShareAttachment)
@@ -1358,8 +1421,9 @@ export default function ProspectPreviewOutreachBlock({
         ? Boolean(
             resolvedBusinessName && (hasAuditShareAttachment || hasAuditReportAttachment),
           )
-      : selectedOffer !== "automations" &&
-          Boolean(hostedPreviewIdForSelection && resolvedBusinessName);
+      : selectedOffer === "automations"
+        ? Boolean(resolvedBusinessName && hasCreativeAttachment)
+        : Boolean(hostedPreviewIdForSelection && resolvedBusinessName);
 
   const mergedPreviewUrlForSelection = useMemo(() => {
     const id = hostedPreviewIdForSelection;
@@ -1373,34 +1437,37 @@ export default function ProspectPreviewOutreachBlock({
     return id ? buildClientPreviewLink(id, hostedPreviewSlugForSelection) : "";
   }, [selectedOffer, hostedPreviewIdForSelection, hostedPreviewSlugForSelection]);
 
-  const mergedInstagramMessage = useMemo(
+  const outreachMergeVars = useMemo(
     () =>
-      mergeProspectOutreachTemplate(activeShareTpl.instagramBody, {
-        previewUrl: mergedPreviewUrlForSelection,
-        businessName: resolvedBusinessName,
-        yourName: yourName.trim(),
-      }),
-    [activeShareTpl.instagramBody, mergedPreviewUrlForSelection, resolvedBusinessName, yourName],
+      selectedOffer === "automations"
+        ? creativeMergeVars
+        : {
+            previewUrl: mergedPreviewUrlForSelection,
+            businessName: resolvedBusinessName,
+            yourName: yourName.trim(),
+          },
+    [
+      selectedOffer,
+      creativeMergeVars,
+      mergedPreviewUrlForSelection,
+      resolvedBusinessName,
+      yourName,
+    ],
+  );
+
+  const mergedInstagramMessage = useMemo(
+    () => mergeProspectOutreachTemplate(activeShareTpl.instagramBody, outreachMergeVars),
+    [activeShareTpl.instagramBody, outreachMergeVars],
   );
 
   const mergedWhatsappMessage = useMemo(
-    () =>
-      mergeProspectOutreachTemplate(activeShareTpl.whatsappBody, {
-        previewUrl: mergedPreviewUrlForSelection,
-        businessName: resolvedBusinessName,
-        yourName: yourName.trim(),
-      }),
-    [activeShareTpl.whatsappBody, mergedPreviewUrlForSelection, resolvedBusinessName, yourName],
+    () => mergeProspectOutreachTemplate(activeShareTpl.whatsappBody, outreachMergeVars),
+    [activeShareTpl.whatsappBody, outreachMergeVars],
   );
 
   const mergedFacebookMessage = useMemo(
-    () =>
-      mergeProspectOutreachTemplate(activeShareTpl.facebookBody, {
-        previewUrl: mergedPreviewUrlForSelection,
-        businessName: resolvedBusinessName,
-        yourName: yourName.trim(),
-      }),
-    [activeShareTpl.facebookBody, mergedPreviewUrlForSelection, resolvedBusinessName, yourName],
+    () => mergeProspectOutreachTemplate(activeShareTpl.facebookBody, outreachMergeVars),
+    [activeShareTpl.facebookBody, outreachMergeVars],
   );
 
   const canCopyInstagramMessage =
@@ -1463,7 +1530,9 @@ export default function ProspectPreviewOutreachBlock({
           ? "Add a phone number and generate the brand share image first."
           : selectedOffer === "audit"
             ? "Add a phone number and generate the summary image or the Revenue Leak Audit PDF first."
-            : "Add a phone number and select a card with a hosted preview.",
+            : selectedOffer === "automations"
+              ? "Add a phone number and generate the creative preview first."
+              : "Add a phone number and select a card with a hosted preview.",
       );
       return;
     }
@@ -1477,6 +1546,8 @@ export default function ProspectPreviewOutreachBlock({
       bodyTemplate: shareTemplates[selectedOffer].smsBody,
       businessName: resolvedBusinessName,
       yourName: yourName.trim() || undefined,
+      hookText: selectedOffer === "automations" ? creativeHookText ?? undefined : undefined,
+      ctaText: selectedOffer === "automations" ? creativeCtaText ?? undefined : undefined,
       includeMmsImage: attachPreviewImage,
       stitchPreviewImageUrl: stitchPreviewImageUrlForSelection,
       extraAttachments: extraAttachments.length ? extraAttachments : undefined,
@@ -1499,6 +1570,8 @@ export default function ProspectPreviewOutreachBlock({
     attachPreviewImage,
     linkedLeadId,
     serializeAttachments,
+    creativeHookText,
+    creativeCtaText,
   ]);
 
   const sendEmail = useCallback(async () => {
@@ -1509,7 +1582,9 @@ export default function ProspectPreviewOutreachBlock({
           ? "Add an email address and generate the brand share image first."
           : selectedOffer === "audit"
             ? "Add an email address and generate the summary image or the Revenue Leak Audit PDF first."
-            : "Add an email address and select a card with a hosted preview.",
+            : selectedOffer === "automations"
+              ? "Add an email address and generate the creative preview first."
+              : "Add an email address and select a card with a hosted preview.",
       );
       return;
     }
@@ -1529,6 +1604,8 @@ export default function ProspectPreviewOutreachBlock({
       bodyTemplate: shareTemplates[selectedOffer].emailBody,
       businessName: resolvedBusinessName,
       yourName: yourName.trim() || undefined,
+      hookText: selectedOffer === "automations" ? creativeHookText ?? undefined : undefined,
+      ctaText: selectedOffer === "automations" ? creativeCtaText ?? undefined : undefined,
       stitchPreviewImageUrl: stitchPreviewImageUrlForSelection,
       beforeAfterImage: beforeAfterFallback?.attachment,
       extraAttachments: extraAttachments.length ? extraAttachments : undefined,
@@ -1555,12 +1632,14 @@ export default function ProspectPreviewOutreachBlock({
     buildBeforeAfterEmailFallback,
     linkedLeadId,
     serializeAttachments,
+    creativeHookText,
+    creativeCtaText,
   ]);
 
   const copyInstagramMessage = useCallback(async () => {
     if (!canCopyInstagramMessage) {
       setShareMsg(
-        "Generate a hosted preview and keep Website, Web app, or Mobile selected to include {{previewUrl}}, or choose AI audit for a text-only message.",
+        "Generate a hosted preview (Website / Web app / Mobile), or generate a creative preview / audit / brand image for a text-only message.",
       );
       return;
     }
@@ -1647,44 +1726,100 @@ export default function ProspectPreviewOutreachBlock({
     window.open(url, "_blank", "noopener,noreferrer");
   }, [facebookTo]);
 
-  const generatePdf = useCallback(async () => {
-    if (!marketIntelReport) {
-      setPdfMsg("No market intel report loaded.");
+  const generateCreativePreview = useCallback(async () => {
+    if (stitchContext?.kind !== "place") {
+      setCreativeMsg("Select a Google Business listing to generate a creative preview.");
       return;
     }
-    setPdfBusy(true);
-    setPdfMsg(null);
-    try {
-      const res = await generateProspectAutomationPdfAction({
-        report: marketIntelReport,
-        businessName: resolvedBusinessName,
-      });
-      if (!res.ok) {
-        setPdfMsg(res.error);
-        return;
-      }
-      setPdfFilename(res.filename);
-      setPdfMsg("Report downloaded.");
-      try {
-        const bin = atob(res.pdfBase64);
-        const bytes = new Uint8Array(bin.length);
-        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-        const blob = new Blob([bytes], { type: "application/pdf" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = res.filename;
-        a.click();
-        URL.revokeObjectURL(url);
-      } catch {
-        setPdfMsg("Could not start download in this browser.");
-      }
-    } catch (e) {
-      setPdfMsg(e instanceof Error ? e.message : "PDF request failed.");
-    } finally {
-      setPdfBusy(false);
+    const place = stitchContext.place;
+    setCreativeBusy(true);
+    setCreativeMsg(null);
+    setCreativeHookText(null);
+    setCreativeCtaText(null);
+    setCreativeShareBlob(null);
+    setCreativeShareFilename(null);
+    if (creativePreviewUrlRef.current) {
+      URL.revokeObjectURL(creativePreviewUrlRef.current);
+      creativePreviewUrlRef.current = null;
     }
-  }, [marketIntelReport, resolvedBusinessName]);
+    setCreativePreviewUrl(null);
+
+    const googleCategory = primaryPlaceTypeLabel(place.types);
+    const city = cityFromFormattedAddress(place.formattedAddress);
+
+    try {
+      const res = await fetch("/api/prospecting/video-thumbnail", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          businessName: resolvedBusinessName,
+          googleCategory,
+          city: city ?? undefined,
+          locale: outreachLocale,
+          pitchMode: "creatives-generation",
+        }),
+      });
+      const data = (await res.json()) as {
+        thumbnailUrl?: string;
+        hookText?: string;
+        ctaText?: string;
+        error?: string;
+        missingKey?: boolean;
+      };
+      if (!res.ok && !data.missingKey) {
+        throw new Error(data.error || "Creative preview request failed.");
+      }
+      if (!data.thumbnailUrl) {
+        throw new Error(
+          data.error ||
+            (data.missingKey
+              ? "HIGGSFIELD_API_KEY is not configured."
+              : "No thumbnail URL returned."),
+        );
+      }
+
+      setCreativeHookText(data.hookText ?? null);
+      setCreativeCtaText(data.ctaText ?? null);
+
+      const proxyUrl = `/api/prospecting/remote-image?url=${encodeURIComponent(data.thumbnailUrl)}`;
+      const imgRes = await fetch(proxyUrl, { credentials: "same-origin" });
+      if (!imgRes.ok) {
+        throw new Error("Could not download generated image for attachment.");
+      }
+      const rawBlob = await imgRes.blob();
+      const rawObjectUrl = URL.createObjectURL(rawBlob);
+      creativePreviewUrlRef.current = rawObjectUrl;
+      setCreativePreviewUrl(rawObjectUrl);
+
+      let attachBlob: Blob;
+      try {
+        attachBlob = await compositeCreativeReelSharePng(rawObjectUrl);
+      } catch {
+        attachBlob = rawBlob;
+      }
+      const filename = creativeReelShareFilename(resolvedBusinessName);
+      setCreativeShareBlob(attachBlob);
+      setCreativeShareFilename(filename);
+      addOutreachAttachment({
+        id: "creative-reel-preview",
+        name: filename,
+        blob: attachBlob,
+        source: "suggested",
+      });
+      setSelectedOffer("automations");
+      setCreativeMsg("Creative preview ready and attached for outreach.");
+    } catch (e) {
+      setCreativeMsg(e instanceof Error ? e.message : "Creative preview failed.");
+    } finally {
+      setCreativeBusy(false);
+    }
+  }, [
+    addOutreachAttachment,
+    outreachLocale,
+    resolvedBusinessName,
+    stitchContext,
+  ]);
 
   const fetchAuditPayload = useCallback(async (): Promise<
     { ok: true; audit: RevenueLeakAudit } | { ok: false; error: string }
@@ -2025,6 +2160,9 @@ export default function ProspectPreviewOutreachBlock({
   const outreachIconBadgeAudit =
     "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-600/10 text-emerald-800 dark:bg-emerald-400/15 dark:text-emerald-300";
 
+  const outreachIconBadgeCreatives =
+    "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-700 dark:text-amber-400";
+
   return (
     <div className="space-y-4">
       {copyMsg ? (
@@ -2287,40 +2425,67 @@ export default function ProspectPreviewOutreachBlock({
                 Audit
               </h4>
               <p className="mt-0.5 text-[11px] text-text-secondary dark:text-zinc-400">
-                PDFs and share images — AI workflow assessment, Revenue Leak snapshots, and brand kit summaries.
+                PDFs and share images — Creatives Generation previews, Revenue Leak snapshots, and brand kit summaries.
               </p>
             </header>
             <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {/* AI audit (PDF) */}
+          {/* Generate Creatives */}
           <div
             className={`${outreachOfferCard} ${cardRing("automations")}`}
             onClick={() => setSelectedOffer("automations")}
           >
             <div className="flex items-center justify-between gap-2">
               <h5 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500">
-                AI audit
+                Generate Creatives
               </h5>
-              <span className={outreachIconBadgeAudit} aria-hidden>
-                <Workflow className="h-4 w-4 shrink-0" />
+              <span className={outreachIconBadgeCreatives} aria-hidden>
+                <Sparkles className="h-4 w-4 shrink-0" />
               </span>
             </div>
             <button
               type="button"
-              disabled={!marketIntelReport || pdfBusy}
+              disabled={stitchContext?.kind !== "place" || creativeBusy}
               onClick={(e) => {
                 e.stopPropagation();
-                void generatePdf();
+                void generateCreativePreview();
               }}
-              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-800 hover:bg-blue-500/[0.14] disabled:opacity-50 dark:border-blue-400/35 dark:bg-blue-500/15 dark:text-blue-200 dark:hover:bg-blue-500/20"
+              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-900 hover:bg-amber-500/[0.14] disabled:opacity-50 dark:border-amber-400/35 dark:bg-amber-500/15 dark:text-amber-200 dark:hover:bg-amber-500/20"
             >
-              {pdfBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <FileDown className="h-3.5 w-3.5" aria-hidden />}
-              {pdfBusy ? "Building PDF…" : "Generate report (PDF)"}
+              {creativeBusy ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+              ) : (
+                <Sparkles className="h-3.5 w-3.5" aria-hidden />
+              )}
+              {creativeBusy ? "Generating preview…" : "Generate creative preview"}
             </button>
-            {pdfMsg ? (
-              <p className="mt-2 text-[11px] text-text-secondary dark:text-zinc-400" role="status">
-                {pdfMsg}
-                {pdfFilename ? <span className="ml-1 font-mono text-[10px]">{pdfFilename}</span> : null}
+            {stitchContext?.kind !== "place" ? (
+              <p className="mt-2 text-[11px] text-text-secondary/90 dark:text-zinc-500">
+                Pick a Google Business listing in the prospect intel step to enable this preview.
               </p>
+            ) : null}
+            {creativeMsg ? (
+              <p className="mt-2 text-[11px] text-text-secondary dark:text-zinc-400" role="status">
+                {creativeMsg}
+              </p>
+            ) : null}
+            <CreativeReelPhonePreview
+              imageUrl={creativePreviewUrl}
+              hookText={creativeHookText}
+              ctaText={creativeCtaText}
+              loading={creativeBusy}
+            />
+            {creativeShareBlob && creativeShareFilename ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  downloadBlob(creativeShareBlob, creativeShareFilename);
+                }}
+                className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-900 hover:bg-amber-500/[0.14] dark:border-amber-400/35 dark:bg-amber-500/15 dark:text-amber-200 dark:hover:bg-amber-500/20"
+              >
+                <ImageDown className="h-3.5 w-3.5" aria-hidden />
+                Download preview image
+              </button>
             ) : null}
           </div>
 
@@ -2509,9 +2674,10 @@ export default function ProspectPreviewOutreachBlock({
                 </>
               ) : selectedOffer === "automations" ? (
                 <>
-                  Templates for <span className="text-text-primary dark:text-zinc-200">AI audit</span>{" "}
+                  Templates for{" "}
+                  <span className="text-text-primary dark:text-zinc-200">Creatives Generation</span>{" "}
                   <span className="font-normal text-text-secondary/90 dark:text-zinc-500">
-                    (hosted link send requires Website, Web app, or Mobile)
+                    (generate the creative preview first to attach it)
                   </span>
                 </>
               ) : selectedOffer === "audit" ? (
@@ -2880,6 +3046,7 @@ export default function ProspectPreviewOutreachBlock({
           (hasVideoBlob && parentVideoBlobRef.current && !hasWalkthroughAttachment) ||
           (existingWebsiteUrl && stitchWebResult && !hasBeforeAfterAttachment) ||
           (brandingShareBlob && brandingShareFilename && !hasBrandShareAttachment) ||
+          (creativeShareBlob && creativeShareFilename && !hasCreativeAttachment) ||
           (auditShareBlob && auditShareFilename && !hasAuditShareAttachment) ? (
             <div className="mt-4 rounded-xl border border-border/70 bg-white/50 p-3 dark:border-zinc-700/70 dark:bg-zinc-900/35">
               <div className="flex items-center justify-between gap-3">
@@ -2906,8 +3073,27 @@ export default function ProspectPreviewOutreachBlock({
               {(hasVideoBlob && parentVideoBlobRef.current && !hasWalkthroughAttachment) ||
               (existingWebsiteUrl && stitchWebResult && !hasBeforeAfterAttachment) ||
               (brandingShareBlob && brandingShareFilename && !hasBrandShareAttachment) ||
+              (creativeShareBlob && creativeShareFilename && !hasCreativeAttachment) ||
               (auditShareBlob && auditShareFilename && !hasAuditShareAttachment) ? (
                 <div className="mt-3 flex flex-wrap gap-2">
+                  {creativeShareBlob && creativeShareFilename && !hasCreativeAttachment ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        addOutreachAttachment({
+                          id: "creative-reel-preview",
+                          name: creativeShareFilename,
+                          blob: creativeShareBlob,
+                          source: "suggested",
+                        });
+                      }}
+                      className="inline-flex items-center gap-1 rounded-full border border-dashed border-amber-400/60 px-2.5 py-1 text-[11px] font-medium text-amber-800 hover:bg-amber-50 dark:border-amber-500/40 dark:text-amber-300 dark:hover:bg-amber-500/10"
+                    >
+                      <Plus className="h-3 w-3" aria-hidden />
+                      <ImageDown className="h-3.5 w-3.5" aria-hidden />
+                      Creative preview
+                    </button>
+                  ) : null}
                   {brandingShareBlob && brandingShareFilename && !hasBrandShareAttachment ? (
                     <button
                       type="button"

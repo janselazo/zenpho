@@ -119,6 +119,7 @@ export default function MetaAdIntelModule() {
           city,
           sampleAdCreatives: intel.sampleCreatives,
           locale,
+          pitchMode: "meta-ads",
         }),
       });
       const data = (await res.json()) as ThumbnailResult;

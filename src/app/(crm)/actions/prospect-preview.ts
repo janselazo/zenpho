@@ -100,6 +100,8 @@ export async function sendProspectPreviewSmsAction(input: {
   bodyTemplate: string;
   businessName: string;
   yourName?: string;
+  hookText?: string;
+  ctaText?: string;
   includeMmsImage?: boolean;
   /** Stitch CDN preview; preferred for MMS because hosted crawlers can capture deployment-protection pages. */
   stitchPreviewImageUrl?: string;
@@ -170,6 +172,8 @@ export async function sendProspectPreviewSmsAction(input: {
     previewUrl,
     businessName: input.businessName,
     yourName: input.yourName,
+    hookText: input.hookText,
+    ctaText: input.ctaText,
   });
 
   const client = twilio(creds.accountSid, creds.authToken);
@@ -284,6 +288,8 @@ export async function sendProspectPreviewEmailAction(input: {
   bodyTemplate: string;
   businessName: string;
   yourName?: string;
+  hookText?: string;
+  ctaText?: string;
   /** Stitch CDN preview; preferred for email because hosted crawlers can capture deployment-protection pages. */
   stitchPreviewImageUrl?: string;
   /** Client-composed before/after PNG; used as backup when the Stitch preview image cannot be embedded. */
@@ -323,11 +329,15 @@ export async function sendProspectPreviewEmailAction(input: {
     previewUrl,
     businessName: input.businessName,
     yourName: input.yourName,
+    hookText: input.hookText,
+    ctaText: input.ctaText,
   });
   const textBody = mergeProspectOutreachTemplate(input.bodyTemplate, {
     previewUrl,
     businessName: input.businessName,
     yourName: input.yourName,
+    hookText: input.hookText,
+    ctaText: input.ctaText,
   });
 
   const stitchImg = normalizeHttpsImageUrl(input.stitchPreviewImageUrl);

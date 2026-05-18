@@ -7,6 +7,8 @@ import type { MetaAdCreative } from "@/lib/crm/meta-ad-intel-types";
 import { generateVideoHookCopy } from "@/lib/crm/prospect-video-hook-llm";
 import { generateHiggsfieldThumbnail } from "@/lib/crm/higgsfield-image-gen";
 
+type ThumbnailPitchMode = "meta-ads" | "creatives-generation";
+
 type ThumbnailInput = {
   prospectId?: string;
   prospectAdIntelId?: string;
@@ -17,6 +19,7 @@ type ThumbnailInput = {
   logoUrl?: string;
   sampleAdCreatives?: unknown[];
   locale?: "en" | "es";
+  pitchMode?: ThumbnailPitchMode;
 };
 
 type AdIntelRow = {
@@ -71,6 +74,8 @@ function parseInput(raw: unknown): ThumbnailInput {
   const body =
     raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   const locale = body.locale === "es" ? "es" : "en";
+  const pitchMode =
+    body.pitchMode === "creatives-generation" ? "creatives-generation" : "meta-ads";
   return {
     prospectId: cleanString(body.prospectId),
     prospectAdIntelId: cleanString(body.prospectAdIntelId),
@@ -83,6 +88,7 @@ function parseInput(raw: unknown): ThumbnailInput {
       ? body.sampleAdCreatives
       : undefined,
     locale,
+    pitchMode,
   };
 }
 
@@ -199,23 +205,34 @@ function buildThumbnailPrompt(input: {
   logoUrl?: string;
   websiteScreenshot?: string;
   sampleAdCreatives: MetaAdCreative[];
+  pitchMode: ThumbnailPitchMode;
 }): string {
   const creativeTone = input.sampleAdCreatives
     .map((creative) => creative.body || creative.linkTitle)
     .filter(Boolean)
     .slice(0, 3)
     .join(" | ");
+
+  const industryLine =
+    input.pitchMode === "creatives-generation"
+      ? `Industry: ${input.googleCategory || "local service business"}. Show authentic ${input.googleCategory || "local business"} visual cues (tools, storefront, team, results) without stock-photo clichés.`
+      : `Category: ${input.googleCategory || "local business"}.`;
+
+  const adVoiceLine =
+    input.pitchMode === "creatives-generation"
+      ? ""
+      : `\nExisting ad voice: ${creativeTone || "(none)"}`;
+
   return `Create a static vertical 9:16 video ad thumbnail for ${input.businessName}.
-Category: ${input.googleCategory || "local business"}.
+${industryLine}
 Location: ${input.city || "their local market"}.
 Overlay copy as clean readable type:
 Hook: "${input.hookText}"
 CTA: "${input.ctaText}"
-Visual style: premium social ad thumbnail, subtle motion blur streaks, cinematic depth, clear play button overlay in the center, mobile-first safe margins, high contrast.
+Visual style: premium Instagram Reel / TikTok ad frame, subtle motion blur streaks, cinematic depth, clear play button overlay in the center, mobile-first safe margins, high contrast, looks like a paused video reel.
 Use the business website/logo reference only for visual inspiration when provided.
 Logo URL: ${input.logoUrl || "(none)"}
-Website screenshot URL: ${input.websiteScreenshot || "(none)"}
-Existing ad voice: ${creativeTone || "(none)"}
+Website screenshot URL: ${input.websiteScreenshot || "(none)"}${adVoiceLine}
 Do not include fake pricing, fake awards, watermarks, extra UI chrome, or misspelled text.`;
 }
 
@@ -283,12 +300,15 @@ export async function handleVideoThumbnailRequest(req: Request): Promise<NextRes
     );
   }
 
+  const pitchMode = input.pitchMode ?? "meta-ads";
+
   const copy = await generateVideoHookCopy({
     businessName,
     googleCategory: input.googleCategory,
     city: input.city,
-    sampleAdCreatives,
+    sampleAdCreatives: pitchMode === "meta-ads" ? sampleAdCreatives : [],
     locale: input.locale,
+    pitchMode,
   });
   const prompt = buildThumbnailPrompt({
     businessName,
@@ -298,7 +318,8 @@ export async function handleVideoThumbnailRequest(req: Request): Promise<NextRes
     ctaText: copy.ctaText,
     logoUrl: input.logoUrl,
     websiteScreenshot: input.websiteScreenshot,
-    sampleAdCreatives,
+    sampleAdCreatives: pitchMode === "meta-ads" ? sampleAdCreatives : [],
+    pitchMode,
   });
 
   const image = await generateHiggsfieldThumbnail({ prompt });
