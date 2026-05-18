@@ -84,12 +84,14 @@ export function outreachAngleForSignal(signal: MetaAdSignal): string {
 async function fetchMetaAdLibraryWithParams(
   params: URLSearchParams,
 ): Promise<MetaAdLibraryResult> {
-  const token = process.env.META_ACCESS_TOKEN?.trim();
+  const token =
+    process.env.META_ACCESS_TOKEN?.trim() ||
+    process.env.META_GRAPH_ACCESS_TOKEN?.trim();
   if (!token) {
     return {
       ok: false,
       missingToken: true,
-      error: "META_ACCESS_TOKEN is not configured.",
+      error: "META_ACCESS_TOKEN or META_GRAPH_ACCESS_TOKEN is not configured.",
     };
   }
 

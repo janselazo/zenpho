@@ -147,14 +147,17 @@ function cacheExpiry(): string {
 async function resolvePageIdWithGraph(
   vanityHandle: string,
 ): Promise<GraphPageResolution> {
-  const token = process.env.META_ACCESS_TOKEN?.trim();
+  const token =
+    process.env.META_ACCESS_TOKEN?.trim() ||
+    process.env.META_GRAPH_ACCESS_TOKEN?.trim();
   if (/^\d{5,}$/.test(vanityHandle)) {
     return { pageId: null, warning: null };
   }
   if (!token) {
     return {
       pageId: null,
-      warning: "META_ACCESS_TOKEN is not configured, so Graph Page ID lookup was skipped.",
+      warning:
+        "META_ACCESS_TOKEN or META_GRAPH_ACCESS_TOKEN is not configured, so Graph Page ID lookup was skipped.",
     };
   }
 
