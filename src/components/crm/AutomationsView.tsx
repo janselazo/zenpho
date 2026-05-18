@@ -36,9 +36,10 @@ const FLOWS: ConfigurableFlow[] = [
     id: "appointment-reminder",
     title: "Appointment reminder",
     category: "Appointments",
-    trigger: "When an appointment is booked",
-    action: "Send reminder SMS to the lead",
-    available: false,
+    trigger: "Before an upcoming appointment",
+    action: "Notify you by email, SMS, and/or in-app alert",
+    available: true,
+    configureHref: "/automations/appointment-reminder",
   },
 ];
 
@@ -63,21 +64,6 @@ export default function AutomationsView() {
         When something happens in your CRM, run actions automatically—SMS,
         email, internal alerts, and more.
       </p>
-
-      <div className="mt-6 rounded-2xl border border-border bg-white/90 px-4 py-3 text-sm text-text-secondary shadow-sm dark:border-zinc-800 dark:bg-zinc-950/80 dark:text-zinc-400">
-        <span className="font-semibold text-text-primary dark:text-zinc-200">
-          How it will work:{" "}
-        </span>
-        Connect messaging providers under{" "}
-        <Link
-          href="/settings?tab=integrations"
-          className="font-medium text-accent underline-offset-2 hover:underline"
-        >
-          Settings → Integrations
-        </Link>
-        . Then enable and configure each flow here (execution is rolling out
-        next).
-      </div>
 
       <h2 className="mt-10 text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500">
         Flows

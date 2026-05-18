@@ -60,9 +60,15 @@ export type NotifyNewLeadResult = {
  * - If `lead.owner_id` is set → that user only.
  * - Otherwise → every Admin or Super Admin in the lead's org.
  *
- * Per-user preferences in `lead_notification_preference` are honored:
- * - email_new_lead toggles whether SendGrid is called for that user.
- * - sms_new_lead + sms_phone toggle SMS via Twilio.
+ * Per-user destination overrides in `lead_notification_preference` are honored:
+ * - `override_email` (or the user's profile email) → SendGrid alert.
+ * - `override_phone` (or legacy `sms_phone`, or profile.phone)  → Twilio SMS alert.
+ *
+ * The legacy boolean columns `email_new_lead` and `sms_new_lead` are still
+ * written by `saveMyLeadAlertOverrides` for backward compatibility but are
+ * no longer the gating signal — destination presence alone gates each
+ * channel. This way clearing a phone field silences SMS without needing a
+ * separate checkbox to toggle.
  *
  * Template tokens (`{{lead.name}}`, `{{lead.email}}`, `{{lead.phone}}`,
  * `{{lead.source}}`, `{{lead.url}}`, `{{owner.name}}`) are substituted in
@@ -180,12 +186,6 @@ export async function notifyNewLead(opts: {
           if (!sent.ok) out.ok = false;
         }
       }
-    } else if (recipient.emailEnabled && !recipient.email) {
-      channels.push({
-        channel: "email",
-        ok: false,
-        reason: "Recipient has no email on profile.",
-      });
     }
 
     if (recipient.smsEnabled && recipient.smsPhone) {
@@ -223,12 +223,6 @@ export async function notifyNewLead(opts: {
           }
         }
       }
-    } else if (recipient.smsEnabled && !recipient.smsPhone) {
-      channels.push({
-        channel: "sms",
-        ok: false,
-        reason: "Recipient has no SMS phone configured.",
-      });
     }
 
     out.results.push({
@@ -276,23 +270,20 @@ async function resolveRecipients(
 
   const { data: prefs } = await admin
     .from("lead_notification_preference")
-    .select("user_id, email_new_lead, sms_new_lead, sms_phone, override_email, override_phone")
+    .select("user_id, sms_phone, override_email, override_phone")
     .in("user_id", [...userIds]);
 
   const prefMap = new Map<string, {
-    email: boolean;
-    sms: boolean;
     smsPhone: string | null;
     overrideEmail: string | null;
   }>();
   for (const p of prefs ?? []) {
     // Per-user override beats profile.email / profile.phone. sms_phone is kept
-    // as a legacy fallback for users who configured the older settings page.
+    // as a legacy fallback for users who configured the older settings page
+    // before the override columns existed.
     const overridePhone = (p.override_phone as string | null)?.trim() || null;
     const legacySms = (p.sms_phone as string | null)?.trim() || null;
     prefMap.set(p.user_id as string, {
-      email: p.email_new_lead !== false,
-      sms: p.sms_new_lead === true,
       smsPhone: overridePhone ?? legacySms,
       overrideEmail: (p.override_email as string | null)?.trim() || null,
     });
@@ -302,13 +293,17 @@ async function resolveRecipients(
     const id = row.id as string;
     const pref = prefMap.get(id);
     const profileEmail = (row.email as string | null) ?? null;
+    const email = pref?.overrideEmail ?? profileEmail;
+    const smsPhone = pref?.smsPhone ?? null;
     return {
       userId: id,
-      email: pref?.overrideEmail ?? profileEmail,
+      email,
       fullName: (row.full_name as string | null) ?? null,
-      emailEnabled: pref?.email ?? true,
-      smsEnabled: pref?.sms ?? false,
-      smsPhone: pref?.smsPhone ?? null,
+      // Channel is "enabled" iff a destination is actually configured. No
+      // separate boolean toggle — clearing the field silences the channel.
+      emailEnabled: Boolean(email),
+      smsEnabled: Boolean(smsPhone),
+      smsPhone,
     };
   });
 }

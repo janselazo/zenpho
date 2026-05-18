@@ -274,35 +274,20 @@ export default function NewLeadAlertAutomation({
               My alerts
             </h2>
             <p className="mt-1 text-sm text-text-secondary dark:text-zinc-400">
-              Choose which channels to use when a new lead is assigned to you
-              (or is unassigned but you are an Admin/Super Admin), and where
-              those alerts should go.
+              Where the alert is sent when a new lead is assigned to you (or
+              is unassigned but you are an Admin/Super Admin). Filling in an
+              address turns that channel on; clearing it turns it off.
             </p>
           </div>
         </div>
 
         <div className="mt-8 space-y-5">
-          <label className="flex items-start gap-3 rounded-xl border border-border bg-surface/40 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
-            <input
-              type="checkbox"
-              name="email_new_lead"
-              defaultChecked={preference.emailNewLead}
-              className="mt-1 h-4 w-4 rounded border-border text-accent focus:ring-accent"
-            />
-            <span className="flex-1">
-              <span className="flex items-center gap-2 text-sm font-semibold text-text-primary dark:text-zinc-100">
-                <Mail className="h-4 w-4" aria-hidden />
-                Email me on new leads
-              </span>
-              <span className="mt-1 block text-xs text-text-secondary dark:text-zinc-400">
-                Goes via the org&rsquo;s SendGrid integration.
-              </span>
-            </span>
-          </label>
-
           <div>
             <label htmlFor="override_email" className={labelClass}>
-              Send email to
+              <span className="inline-flex items-center gap-1.5">
+                <Mail className="h-3.5 w-3.5" aria-hidden />
+                Send email to
+              </span>
             </label>
             <input
               id="override_email"
@@ -321,27 +306,12 @@ export default function NewLeadAlertAutomation({
             </p>
           </div>
 
-          <label className="flex items-start gap-3 rounded-xl border border-border bg-surface/40 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
-            <input
-              type="checkbox"
-              name="sms_new_lead"
-              defaultChecked={preference.smsNewLead}
-              className="mt-1 h-4 w-4 rounded border-border text-accent focus:ring-accent"
-            />
-            <span className="flex-1">
-              <span className="flex items-center gap-2 text-sm font-semibold text-text-primary dark:text-zinc-100">
-                <MessageSquare className="h-4 w-4" aria-hidden />
-                Text me on new leads
-              </span>
-              <span className="mt-1 block text-xs text-text-secondary dark:text-zinc-400">
-                Goes via the org&rsquo;s Twilio integration.
-              </span>
-            </span>
-          </label>
-
           <div>
             <label htmlFor="override_phone" className={labelClass}>
-              Send SMS to (E.164)
+              <span className="inline-flex items-center gap-1.5">
+                <MessageSquare className="h-3.5 w-3.5" aria-hidden />
+                Send SMS to (E.164)
+              </span>
             </label>
             <input
               id="override_phone"

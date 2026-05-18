@@ -15,8 +15,6 @@ export type NewLeadAlertTemplate = {
 };
 
 export type NewLeadAlertPreference = {
-  emailNewLead: boolean;
-  smsNewLead: boolean;
   /** Per-user override for the destination email. Empty falls back to profile email. */
   overrideEmail: string;
   /** Per-user override for the destination SMS phone. Empty falls back to profile phone. */
@@ -64,9 +62,7 @@ export async function loadNewLeadAlertAutomation(): Promise<LoadNewLeadAlertResu
         .maybeSingle(),
       admin
         .from("lead_notification_preference")
-        .select(
-          "email_new_lead, sms_new_lead, sms_phone, override_email, override_phone"
-        )
+        .select("sms_phone, override_email, override_phone")
         .eq("user_id", ctx.userId)
         .maybeSingle(),
       admin
@@ -94,8 +90,6 @@ export async function loadNewLeadAlertAutomation(): Promise<LoadNewLeadAlertResu
     (prefRow?.override_phone as string | null)?.trim() || legacyPhone;
 
   const preference: NewLeadAlertPreference = {
-    emailNewLead: prefRow ? prefRow.email_new_lead !== false : true,
-    smsNewLead: prefRow?.sms_new_lead === true,
     overrideEmail: (prefRow?.override_email as string | null)?.trim() || "",
     overridePhone,
   };
@@ -189,9 +183,6 @@ export async function saveMyLeadAlertOverrides(formData: FormData) {
   const ctx = await fetchCrmAccessContext(supabase);
   if (!ctx) return { error: "Sign in required." };
 
-  const emailNewLead = formData.get("email_new_lead") === "on";
-  const smsNewLead = formData.get("sms_new_lead") === "on";
-
   const overrideEmailRaw = String(formData.get("override_email") ?? "").trim();
   // Bare-bones email validation — the dispatcher will surface deeper failures
   // from SendGrid, we just want to reject obvious typos at save time.
@@ -210,6 +201,15 @@ export async function saveMyLeadAlertOverrides(formData: FormData) {
         "Override phone looks invalid. Use E.164 format (e.g. +14155551234) or leave blank to use your profile phone.",
     };
   }
+
+  // The boolean toggles (`email_new_lead`, `sms_new_lead`) used to be checkbox
+  // inputs in the editor. They were removed in favor of "destination presence
+  // is the toggle": a saved override email (or profile email) means email is
+  // on; a saved override phone (or profile phone) means SMS is on. We still
+  // write the columns for backward-compat with any other code paths that read
+  // them — derived from whether a destination is now configured.
+  const emailNewLead = overrideEmailRaw.length > 0 || Boolean(ctx.email);
+  const smsNewLead = overridePhone !== null;
 
   const admin = createAdminClient();
   const { error } = await admin

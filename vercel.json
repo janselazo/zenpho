@@ -4,5 +4,11 @@
     "src/app/api/prospecting/branding-pdf/*": {
       "maxDuration": 800
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/appointment-reminders",
+      "schedule": "*/5 * * * *"
+    }
+  ]
 }
