@@ -5,36 +5,18 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchCrmAccessContext } from "@/lib/crm/access-context";
 import { normalizeE164 } from "@/lib/crm/phone";
+import {
+  APPOINTMENT_REMINDER_PRESETS,
+  type AppointmentReminderPreference,
+  type AppointmentReminderTemplate,
+} from "@/lib/crm/appointment-reminder-config";
 
 const FLOW_KEY = "appointment_reminder" as const;
 const ROUTE = "/automations/appointment-reminder";
 
-export const APPOINTMENT_REMINDER_PRESETS = [
-  { minutes: 5, label: "5 min before" },
-  { minutes: 15, label: "15 min before" },
-  { minutes: 30, label: "30 min before" },
-  { minutes: 60, label: "1 hour before" },
-  { minutes: 1440, label: "24 hours before" },
-] as const;
-
 const ALLOWED_MINUTES = new Set<number>(
   APPOINTMENT_REMINDER_PRESETS.map((p) => p.minutes)
 );
-
-export type AppointmentReminderTemplate = {
-  emailSubject: string;
-  emailHtml: string;
-  smsBody: string;
-};
-
-export type AppointmentReminderPreference = {
-  leadMinutesBefore: number[];
-  emailEnabled: boolean;
-  smsEnabled: boolean;
-  appEnabled: boolean;
-  overrideEmail: string;
-  overridePhone: string;
-};
 
 export type LoadAppointmentReminderResult =
   | {
