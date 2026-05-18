@@ -79,6 +79,180 @@ function emptyPixel(): MetaPixelResult {
   return { detected: false, pixelIds: [] };
 }
 
+function decodeCommonHtmlEntities(value: string): string {
+  return value
+    .replace(/\\u002[fF]/g, "/")
+    .replace(/\\u003[aA]/g, ":")
+    .replace(/\\u0026/g, "&")
+    .replace(/\\u003[dD]/g, "=")
+    .replace(/\\x2[fF]/g, "/")
+    .replace(/\\x3[aA]/g, ":")
+    .replace(/\\x26/g, "&")
+    .replace(/\\x3[dD]/g, "=")
+    .replace(/\\\//g, "/")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#34;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#x2F;/gi, "/")
+    .replace(/&#47;/g, "/");
+}
+
+function unwrapFacebookRedirectUrl(url: URL): string | null {
+  const host = url.hostname.replace(/^www\./i, "").toLowerCase();
+  if (host === "l.facebook.com" || host === "lm.facebook.com") {
+    return url.searchParams.get("u") || url.searchParams.get("url");
+  }
+  if (host === "facebook.com" || host === "fb.com") {
+    const embedded = url.searchParams.get("href") || url.searchParams.get("u");
+    if (embedded && /(?:facebook\.com|fb\.com)\//i.test(embedded)) {
+      return embedded;
+    }
+  }
+  return null;
+}
+
+function normalizeDiscoveredFacebookUrl(raw: string): string | null {
+  const cleaned = decodeCommonHtmlEntities(raw)
+    .replace(/^["']+|["')\]}>,.]+$/g, "")
+    .trim();
+  const pageId = cleaned.match(/^fb:\/\/page\/(\d{5,})/i)?.[1];
+  if (pageId) return pageId;
+
+  if (/%(?:2f|3a|3d|26)/i.test(cleaned)) {
+    try {
+      const decoded = decodeURIComponent(cleaned);
+      if (decoded !== cleaned) {
+        return normalizeDiscoveredFacebookUrl(decoded);
+      }
+    } catch {
+      /* keep trying the original value */
+    }
+  }
+
+  const withScheme = cleaned.startsWith("//") ? `https:${cleaned}` : cleaned;
+  try {
+    const url = new URL(withScheme);
+    const unwrapped = unwrapFacebookRedirectUrl(url);
+    if (unwrapped && unwrapped !== cleaned) {
+      return normalizeDiscoveredFacebookUrl(unwrapped);
+    }
+
+    const host = url.hostname.replace(/^www\./i, "").toLowerCase();
+    const facebookHosts = new Set([
+      "facebook.com",
+      "m.facebook.com",
+      "mobile.facebook.com",
+      "mbasic.facebook.com",
+      "web.facebook.com",
+      "business.facebook.com",
+      "fb.com",
+    ]);
+    if (!facebookHosts.has(host)) return null;
+    if (
+      /(^|\/)(sharer|share\.php|dialog|plugins|tr|events|groups|marketplace|login)(\/|$|\?)/i.test(
+        url.pathname,
+      )
+    ) {
+      return null;
+    }
+    if (!url.pathname || url.pathname === "/") return null;
+    url.hash = "";
+    if (host !== "facebook.com" && host !== "fb.com") {
+      url.hostname = "www.facebook.com";
+    }
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+function pushFacebookCandidatesFromUnknown(value: unknown, out: string[]): void {
+  if (typeof value === "string") {
+    if (/fb:\/\/page\/\d{5,}/i.test(value) || /(?:facebook\.com|fb\.com)\//i.test(value)) {
+      out.push(value);
+    }
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) pushFacebookCandidatesFromUnknown(item, out);
+    return;
+  }
+  if (value && typeof value === "object") {
+    for (const entry of Object.values(value as Record<string, unknown>)) {
+      pushFacebookCandidatesFromUnknown(entry, out);
+    }
+  }
+}
+
+function extractJsonLdFacebookCandidates(html: string): string[] {
+  const out: string[] = [];
+  for (const match of html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) {
+    try {
+      pushFacebookCandidatesFromUnknown(JSON.parse(match[1].trim()), out);
+    } catch {
+      /* ignore invalid JSON-LD */
+    }
+  }
+  return out;
+}
+
+function extractFacebookUrlFromWebsiteHtml(html: string): string | null {
+  const decoded = decodeCommonHtmlEntities(html);
+  const candidates: string[] = [];
+
+  for (const match of decoded.matchAll(/fb:\/\/page\/\d{5,}/gi)) {
+    candidates.push(match[0]);
+  }
+  for (const match of decoded.matchAll(/(?:href|src|data-href|data-src|data-url|data-share-url|content|itemprop)=["']((?:https?:)?\/\/[^"']*(?:facebook\.com|fb\.com)\/[^"']+)["']/gi)) {
+    candidates.push(match[1]);
+  }
+  for (const match of decoded.matchAll(/https?%3A%2F%2F(?:www(?:%2E|\.)|m(?:%2E|\.)|mobile(?:%2E|\.)|mbasic(?:%2E|\.)|web(?:%2E|\.)|business(?:%2E|\.))?(?:facebook(?:%2E|\.)com|fb(?:%2E|\.)com)%2F[^"'\s<>]+/gi)) {
+    candidates.push(match[0]);
+  }
+  for (const match of decoded.matchAll(/(?:sameAs|facebook|facebookUrl|facebook_url|profileUrl|profile_url)["']?\s*[:=]\s*["']((?:https?:)?\/\/[^"']*(?:facebook\.com|fb\.com)\/[^"']+)["']/gi)) {
+    candidates.push(match[1]);
+  }
+  for (const match of decoded.matchAll(/https?:\/\/(?:l\.facebook\.com|lm\.facebook\.com)\/l\.php\?[^"'\s<>]+/gi)) {
+    candidates.push(match[0]);
+  }
+  for (const match of decoded.matchAll(/https?:\/\/(?:www\.)?facebook\.com\/plugins\/page\.php\?[^"'\s<>]+/gi)) {
+    candidates.push(match[0]);
+  }
+  for (const match of decoded.matchAll(/(?:https?:)?\/\/(?:www\.|m\.|mobile\.|mbasic\.|web\.|business\.)?(?:facebook\.com|fb\.com)\/[^\s"'<>\\]+/gi)) {
+    candidates.push(match[0]);
+  }
+
+  candidates.push(...extractJsonLdFacebookCandidates(decoded));
+
+  const seen = new Set<string>();
+  const uniqueCandidates = candidates.filter((candidate) => {
+    const key = candidate.trim();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  const ranked = uniqueCandidates.sort((a, b) => {
+    const score = (value: string) => {
+      let n = 0;
+      if (/fb:\/\/page\/\d+/i.test(value)) n -= 20;
+      if (/(?:href|sameAs|facebookUrl|facebook_url)/i.test(value)) n -= 5;
+      if (/plugins\/page\.php/i.test(value)) n += 3;
+      if (/l\.facebook\.com|lm\.facebook\.com/i.test(value)) n += 5;
+      return n;
+    };
+    return score(a) - score(b);
+  });
+
+  for (const candidate of ranked) {
+    const normalized = normalizeDiscoveredFacebookUrl(candidate);
+    if (normalized) return normalized;
+  }
+
+  return null;
+}
+
 function cleanString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
@@ -237,10 +411,15 @@ export async function handleMetaAdIntelRequest(req: Request): Promise<NextRespon
   const website = await fetchWebsiteHtml(websiteUrl);
   if (website.warning) warnings.push(website.warning);
   const pixel = website.html ? detectMetaPixel(website.html) : emptyPixel();
+  const discoveredFacebookUrl =
+    facebookUrl ?? (website.html ? extractFacebookUrlFromWebsiteHtml(website.html) : null);
+  if (!facebookUrl && discoveredFacebookUrl) {
+    console.info("[metaAdIntel] discovered Facebook URL from website HTML");
+  }
 
   let pageId: string | null = null;
-  if (facebookUrl) {
-    const page = await resolveMetaPageId(staff.auth.supabase, facebookUrl);
+  if (discoveredFacebookUrl) {
+    const page = await resolveMetaPageId(staff.auth.supabase, discoveredFacebookUrl);
     if (page.ok) {
       pageId = page.pageId;
     } else {
@@ -281,7 +460,7 @@ export async function handleMetaAdIntelRequest(req: Request): Promise<NextRespon
     userId: staff.auth.userId,
     prospectId: lead?.id ?? input.prospectId ?? null,
     websiteUrl: website.normalizedUrl ?? websiteUrl ?? null,
-    facebookUrl: facebookUrl ?? null,
+    facebookUrl: discoveredFacebookUrl ?? null,
     pageId,
     signal,
     adCount,

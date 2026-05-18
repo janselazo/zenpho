@@ -4,6 +4,10 @@ const FACEBOOK_HOSTS = new Set([
   "facebook.com",
   "www.facebook.com",
   "m.facebook.com",
+  "mobile.facebook.com",
+  "mbasic.facebook.com",
+  "web.facebook.com",
+  "business.facebook.com",
   "fb.com",
   "www.fb.com",
 ]);
@@ -21,7 +25,7 @@ export type MetaPageResolution =
       ok: true;
       pageId: string;
       vanityHandle: string;
-      source: "input" | "cache" | "html";
+      source: "input" | "cache" | "graph" | "html";
     }
   | {
       ok: false;
@@ -135,6 +139,35 @@ function cacheExpiry(): string {
   return expires.toISOString();
 }
 
+async function resolvePageIdWithGraph(
+  vanityHandle: string,
+): Promise<string | null> {
+  const token = process.env.META_ACCESS_TOKEN?.trim();
+  if (!token || /^\d{5,}$/.test(vanityHandle)) return null;
+
+  const params = new URLSearchParams({
+    fields: "id",
+    access_token: token,
+  });
+
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/v19.0/${encodeURIComponent(vanityHandle)}?${params.toString()}`,
+      {
+        headers: { Accept: "application/json" },
+        signal: AbortSignal.timeout(FACEBOOK_FETCH_TIMEOUT_MS),
+      },
+    );
+    if (!res.ok) return null;
+    const data = (await res.json().catch(() => ({}))) as { id?: unknown };
+    return typeof data.id === "string" && /^\d{5,}$/.test(data.id)
+      ? data.id
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 async function readCachedPageId(
   supabase: SupabaseClient,
   vanityHandle: string,
@@ -197,6 +230,17 @@ export async function resolveMetaPageId(
       pageId: cached,
       vanityHandle: normalized.vanityHandle,
       source: "cache",
+    };
+  }
+
+  const graphPageId = await resolvePageIdWithGraph(normalized.vanityHandle);
+  if (graphPageId) {
+    await writeCachedPageId(supabase, normalized.vanityHandle, graphPageId);
+    return {
+      ok: true,
+      pageId: graphPageId,
+      vanityHandle: normalized.vanityHandle,
+      source: "graph",
     };
   }
 
