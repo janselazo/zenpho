@@ -441,13 +441,9 @@ export async function handleMetaAdIntelRequest(req: Request): Promise<NextRespon
   }
 
   let pageId: string | null = null;
-  if (discoveredFacebookUrl) {
+  if (discoveredFacebookUrl && /^\d{5,}$/.test(discoveredFacebookUrl.trim())) {
     const page = await resolveMetaPageId(staff.auth.supabase, discoveredFacebookUrl);
-    if (page.ok) {
-      pageId = page.pageId;
-    } else {
-      warnings.push(page.error);
-    }
+    if (page.ok) pageId = page.pageId;
   }
 
   let adCount = 0;
@@ -477,9 +473,6 @@ export async function handleMetaAdIntelRequest(req: Request): Promise<NextRespon
         oldestAdDaysActive = ads.oldestAdDaysActive;
         platforms = ads.platforms;
         sampleCreatives = ads.sampleCreatives;
-        warnings.push(
-          `Used Ad Library keyword fallback for "${searchTerms}" because a numeric Facebook Page ID was not available.`,
-        );
       } else {
         warnings.push(ads.error);
       }

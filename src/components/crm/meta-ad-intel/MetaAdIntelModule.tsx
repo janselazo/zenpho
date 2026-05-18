@@ -24,6 +24,20 @@ const SIGNAL_LABELS: Record<MetaAdSignal, string> = {
   UNKNOWN: "Unknown",
 };
 
+function friendlyMetaWarning(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const text = raw.trim();
+  if (!text) return null;
+  if (
+    /pages_read_engagement|Page Public Content Access|Page Public Metadata Access|Could not resolve a numeric Facebook Page ID|Application does not have permission/i.test(
+      text,
+    )
+  ) {
+    return "Meta blocks third-party Page metadata, so this report uses Pixel detection and an Ad Library keyword scan.";
+  }
+  return text;
+}
+
 function signalClass(signal: MetaAdSignal): string {
   switch (signal) {
     case "RUNNING_HIGH":
@@ -264,9 +278,9 @@ export default function MetaAdIntelModule() {
               </p>
             ) : null}
 
-            {intel.warning ? (
+            {friendlyMetaWarning(intel.warning) ? (
               <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
-                {intel.warning}
+                {friendlyMetaWarning(intel.warning)}
               </p>
             ) : null}
 
