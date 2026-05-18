@@ -67,6 +67,10 @@ type Props = {
   listingGoogleReviewCount?: number | null;
   /** Primary Google categories, e.g. "Banquet Hall · Wedding Venue". */
   listingCategoriesLabel?: string | null;
+  /** When true, render a "Meta Pixel detected" tag under Categories. */
+  metaPixelDetected?: boolean;
+  /** Optional list of detected Meta Pixel IDs; first 1-2 are shown next to the tag. */
+  metaPixelIds?: string[];
 };
 
 export default function ProspectIntelBusinessSnapshot({
@@ -87,6 +91,8 @@ export default function ProspectIntelBusinessSnapshot({
   listingGoogleRating = null,
   listingGoogleReviewCount = null,
   listingCategoriesLabel = null,
+  metaPixelDetected = false,
+  metaPixelIds = [],
 }: Props) {
   const shell = embedded
     ? "min-w-0 sm:flex sm:min-h-0 sm:flex-col"
@@ -99,7 +105,10 @@ export default function ProspectIntelBusinessSnapshot({
 
   const ratingDisplay = listingRatingLine(listingGoogleRating, listingGoogleReviewCount);
   const categoriesTrimmed = listingCategoriesLabel?.trim() || null;
-  const showListingFacts = Boolean(ratingDisplay || categoriesTrimmed);
+  const showListingFacts = Boolean(
+    ratingDisplay || categoriesTrimmed || metaPixelDetected,
+  );
+  const previewPixelIds = metaPixelIds.filter(Boolean).slice(0, 2);
 
   return (
     <div className={shell}>
@@ -193,6 +202,24 @@ export default function ProspectIntelBusinessSnapshot({
                   </dt>
                   <dd className="mt-0.5 text-xs leading-snug text-text-primary dark:text-zinc-200">
                     {categoriesTrimmed}
+                  </dd>
+                </div>
+              ) : null}
+              {metaPixelDetected ? (
+                <div>
+                  <dt className="text-[10px] font-medium uppercase tracking-wide text-text-secondary/60 dark:text-zinc-500">
+                    Meta Pixel
+                  </dt>
+                  <dd className="mt-0.5 flex flex-wrap items-center gap-1.5 sm:justify-end text-xs leading-snug text-text-primary dark:text-zinc-200">
+                    {badge(
+                      "Pixel detected",
+                      "bg-emerald-500/15 text-emerald-900 dark:text-emerald-300",
+                    )}
+                    {previewPixelIds.length ? (
+                      <span className="font-mono text-[10px] text-text-secondary dark:text-zinc-500">
+                        {previewPixelIds.join(", ")}
+                      </span>
+                    ) : null}
                   </dd>
                 </div>
               ) : null}

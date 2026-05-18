@@ -1110,6 +1110,10 @@ function ProspectsIntelligenceViewInner({
 
   const [socialEnriching, setSocialEnriching] = useState(false);
   const [socialEnrichResult, setSocialEnrichResult] = useState<SocialEnrichmentOk | null>(null);
+  const [metaAdIntelPixel, setMetaAdIntelPixel] = useState<{
+    detected: boolean;
+    pixelIds: string[];
+  } | null>(null);
 
   const activeReport = useMemo(() => {
     if (urlReport && urlMeta) {
@@ -1133,6 +1137,7 @@ function ProspectsIntelligenceViewInner({
     setLeadContactTouched({ email: false, facebook: false, instagram: false });
     setLastHostedProspectPreviewId(null);
     setLastBrandingPdf(null);
+    setMetaAdIntelPixel(null);
   }, [outreachPreviewKey]);
 
   const onHostedPreviewReady = useCallback(
@@ -2056,6 +2061,8 @@ function ProspectsIntelligenceViewInner({
                         ? formatPrimaryCategories(activeReport.place.types)
                         : null
                     }
+                    metaPixelDetected={metaAdIntelPixel?.detected ?? false}
+                    metaPixelIds={metaAdIntelPixel?.pixelIds ?? []}
                   />
                   <IntelContactHintsPanel
                     embedded
@@ -2287,6 +2294,7 @@ function ProspectsIntelligenceViewInner({
                     ? cityFromFormattedAddress(activeReport.place.formattedAddress)
                     : null
                 }
+                onPixelChange={setMetaAdIntelPixel}
               />
             </ReportSection>
           </div>

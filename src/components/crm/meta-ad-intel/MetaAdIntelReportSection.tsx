@@ -13,6 +13,8 @@ type Props = {
   facebookUrl: string | null;
   category: string | null;
   city: string | null;
+  /** Lifts pixel detection state to parents that want to surface it elsewhere (e.g. business snapshot). */
+  onPixelChange?: (info: { detected: boolean; pixelIds: string[] } | null) => void;
 };
 
 const SIGNAL_LABELS: Record<MetaAdSignal, string> = {
@@ -75,6 +77,7 @@ export default function MetaAdIntelReportSection({
   facebookUrl,
   category,
   city,
+  onPixelChange,
 }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -103,6 +106,7 @@ export default function MetaAdIntelReportSection({
       setIntel(null);
       setError(null);
       setLoading(false);
+      onPixelChange?.(null);
       return;
     }
 
@@ -122,12 +126,19 @@ export default function MetaAdIntelReportSection({
       .then(async (res) => {
         const data = (await res.json()) as MetaAdIntelResponse & { error?: string };
         if (!res.ok) throw new Error(data.error || "Meta Ad Intelligence failed.");
-        if (!cancelled) setIntel(data);
+        if (!cancelled) {
+          setIntel(data);
+          onPixelChange?.({
+            detected: Boolean(data.pixel?.detected),
+            pixelIds: data.pixel?.pixelIds ?? [],
+          });
+        }
       })
       .catch((err) => {
         if (!cancelled) {
           setIntel(null);
           setError(err instanceof Error ? err.message : "Meta Ad Intelligence failed.");
+          onPixelChange?.(null);
         }
       })
       .finally(() => {
@@ -137,7 +148,7 @@ export default function MetaAdIntelReportSection({
     return () => {
       cancelled = true;
     };
-  }, [businessName, facebookUrl, requestKey, websiteUrl]);
+  }, [businessName, facebookUrl, onPixelChange, requestKey, websiteUrl]);
 
   return (
     <div className="rounded-xl border border-border/80 bg-surface/30 p-4 dark:border-zinc-700/80 dark:bg-zinc-900/40">

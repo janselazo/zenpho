@@ -213,15 +213,6 @@ export default function PlacesSearchResultsList({
                       <UserPlus className="h-4 w-4" aria-hidden />
                     )}
                   </button>
-                  <button
-                    type="button"
-                    title="View market intelligence report"
-                    aria-label="View market intelligence report"
-                    className={iconActionClass}
-                    onClick={() => onViewReport(p)}
-                  >
-                    <FileBarChart className="h-4 w-4" aria-hidden />
-                  </button>
                   {onViewMetaAdIntel ? (
                     <button
                       type="button"
@@ -233,6 +224,15 @@ export default function PlacesSearchResultsList({
                       <Megaphone className="h-4 w-4" aria-hidden />
                     </button>
                   ) : null}
+                  <button
+                    type="button"
+                    title="View market intelligence report"
+                    aria-label="View market intelligence report"
+                    className={iconActionClass}
+                    onClick={() => onViewReport(p)}
+                  >
+                    <FileBarChart className="h-4 w-4" aria-hidden />
+                  </button>
                 </div>
               </div>
             </li>
