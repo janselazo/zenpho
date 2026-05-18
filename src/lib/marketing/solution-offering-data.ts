@@ -369,7 +369,7 @@ export const marketingSolutionPages: MarketingSolutionPage[] = [
     slug: "creatives-generation",
     title: "Creatives Generation",
     description:
-      "On-brand ad creatives, social posts, and video thumbnails generated for paid campaigns and launches.",
+      "Ad creatives, social posts, and video thumbnails for paid campaigns.",
     icon: Sparkles,
     iconClassName: "bg-amber-500/15 text-amber-600",
     metaTitle:

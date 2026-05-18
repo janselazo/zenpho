@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
-import Button from "@/components/ui/Button";
 
 const HEADING_ID = "pricing-creatives-generation-addon";
 
@@ -65,13 +64,6 @@ export default function PricingCreativesGenerationAddOn() {
               </div>
             </div>
             <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center lg:flex-col lg:items-end lg:gap-3">
-              <Button
-                href="/solutions/creatives-generation"
-                variant="primary"
-                size="lg"
-              >
-                Explore Creatives Generation
-              </Button>
               <Link
                 href="/booking"
                 className="text-center text-sm font-semibold text-accent hover:underline lg:text-right"
