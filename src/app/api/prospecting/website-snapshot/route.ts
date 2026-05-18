@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { normalizeUrlForFetch } from "@/lib/crm/safe-url-fetch";
 import { fetchMicrolinkScreenshotUrl } from "@/lib/crm/microlink-screenshot";
+import { discoverFallbackImageUrl } from "@/lib/crm/website-snapshot-fallback";
 
 /**
  * Proxies a Microlink screenshot of a public URL for CRM “website scan” thumbnails.
@@ -33,10 +34,23 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Invalid or blocked URL" }, { status: 400 });
   }
 
-  const fetchRemoteImage = async (remoteUrl: string): Promise<Response | null> => {
+  const fetchRemoteImage = async (
+    remoteUrl: string,
+    timeoutMs = 30_000,
+  ): Promise<Response | null> => {
     try {
-      const imgRes = await fetch(remoteUrl, { signal: AbortSignal.timeout(45_000) });
-      return imgRes.ok ? imgRes : null;
+      const imgRes = await fetch(remoteUrl, {
+        signal: AbortSignal.timeout(timeoutMs),
+        headers: {
+          accept: "image/avif,image/webp,image/png,image/jpeg,image/*;q=0.8,*/*;q=0.5",
+          "user-agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        },
+      });
+      if (!imgRes.ok) return null;
+      const ct = imgRes.headers.get("content-type") || "";
+      if (ct && !ct.startsWith("image/")) return null;
+      return imgRes;
     } catch {
       return null;
     }
@@ -51,11 +65,22 @@ export async function GET(request: Request) {
     imgRes = remote ? await fetchRemoteImage(remote) : null;
   }
 
+  // Soft fallback: if Microlink can't capture (free-tier limits, anti-bot, render timeout),
+  // surface the site's OpenGraph / Twitter card image, or the apple-touch-icon / favicon, so
+  // the prospect tile still shows something rather than a "preview unavailable" placeholder.
+  if (!imgRes) {
+    const fallbackUrl = await discoverFallbackImageUrl(normalized);
+    if (fallbackUrl) {
+      const fbRes = await fetchRemoteImage(fallbackUrl, 8_000);
+      if (fbRes) imgRes = fbRes;
+    }
+  }
+
   if (!imgRes) {
     return NextResponse.json(
       {
         error:
-          "Screenshot unavailable (Microlink). Set MICROLINK_API_KEY for higher success rates, or MICROLINK_SCREENSHOT_DELAY_MS if pages need more time to render.",
+          "Screenshot unavailable. The site blocked automated capture and exposed no OpenGraph image — open the site in a new tab to view it.",
       },
       { status: 502 },
     );
