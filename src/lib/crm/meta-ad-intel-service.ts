@@ -7,6 +7,7 @@ import {
 import {
   classifyMetaAdSignal,
   fetchMetaAdLibrary,
+  fetchMetaAdLibraryBySearchTerms,
   outreachAngleForSignal,
 } from "@/lib/crm/meta-ad-library";
 import { resolveMetaPageId } from "@/lib/crm/meta-page-resolver";
@@ -253,6 +254,28 @@ function extractFacebookUrlFromWebsiteHtml(html: string): string | null {
   return null;
 }
 
+function searchTermsForAdLibrary(
+  businessName: string | undefined,
+  discoveredFacebookUrl: string | null,
+): string | null {
+  const cleanedBusinessName = businessName?.replace(/\s+/g, " ").trim();
+  if (cleanedBusinessName && cleanedBusinessName.length >= 3) {
+    return cleanedBusinessName;
+  }
+
+  if (!discoveredFacebookUrl || /^\d{5,}$/.test(discoveredFacebookUrl)) {
+    return null;
+  }
+
+  try {
+    const url = new URL(discoveredFacebookUrl);
+    const handle = url.pathname.split("/").filter(Boolean)[0];
+    return handle && handle.length >= 3 ? handle : null;
+  } catch {
+    return null;
+  }
+}
+
 function cleanString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
@@ -443,6 +466,23 @@ export async function handleMetaAdIntelRequest(req: Request): Promise<NextRespon
       sampleCreatives = ads.sampleCreatives;
     } else {
       warnings.push(ads.error);
+    }
+  } else {
+    const searchTerms = searchTermsForAdLibrary(businessName, discoveredFacebookUrl);
+    if (searchTerms) {
+      const ads = await fetchMetaAdLibraryBySearchTerms(searchTerms);
+      adQueryAttempted = ads.ok || !ads.missingToken;
+      if (ads.ok) {
+        adCount = ads.adCount;
+        oldestAdDaysActive = ads.oldestAdDaysActive;
+        platforms = ads.platforms;
+        sampleCreatives = ads.sampleCreatives;
+        warnings.push(
+          `Used Ad Library keyword fallback for "${searchTerms}" because a numeric Facebook Page ID was not available.`,
+        );
+      } else {
+        warnings.push(ads.error);
+      }
     }
   }
 

@@ -20,6 +20,11 @@ type PageCacheRow = {
   expires_at: string | null;
 };
 
+type GraphPageResolution = {
+  pageId: string | null;
+  warning: string | null;
+};
+
 export type MetaPageResolution =
   | {
       ok: true;
@@ -141,9 +146,17 @@ function cacheExpiry(): string {
 
 async function resolvePageIdWithGraph(
   vanityHandle: string,
-): Promise<string | null> {
+): Promise<GraphPageResolution> {
   const token = process.env.META_ACCESS_TOKEN?.trim();
-  if (!token || /^\d{5,}$/.test(vanityHandle)) return null;
+  if (/^\d{5,}$/.test(vanityHandle)) {
+    return { pageId: null, warning: null };
+  }
+  if (!token) {
+    return {
+      pageId: null,
+      warning: "META_ACCESS_TOKEN is not configured, so Graph Page ID lookup was skipped.",
+    };
+  }
 
   const params = new URLSearchParams({
     fields: "id",
@@ -158,13 +171,32 @@ async function resolvePageIdWithGraph(
         signal: AbortSignal.timeout(FACEBOOK_FETCH_TIMEOUT_MS),
       },
     );
-    if (!res.ok) return null;
-    const data = (await res.json().catch(() => ({}))) as { id?: unknown };
+    const data = (await res.json().catch(() => ({}))) as {
+      id?: unknown;
+      error?: { message?: string };
+    };
+    if (!res.ok) {
+      return {
+        pageId: null,
+        warning:
+          data.error?.message ||
+          `Graph Page ID lookup failed with status ${res.status}.`,
+      };
+    }
     return typeof data.id === "string" && /^\d{5,}$/.test(data.id)
-      ? data.id
-      : null;
-  } catch {
-    return null;
+      ? { pageId: data.id, warning: null }
+      : {
+          pageId: null,
+          warning: "Graph Page ID lookup did not return a numeric Page ID.",
+        };
+  } catch (error) {
+    return {
+      pageId: null,
+      warning:
+        error instanceof Error
+          ? `Graph Page ID lookup failed: ${error.message}`
+          : "Graph Page ID lookup failed.",
+    };
   }
 }
 
@@ -233,12 +265,12 @@ export async function resolveMetaPageId(
     };
   }
 
-  const graphPageId = await resolvePageIdWithGraph(normalized.vanityHandle);
-  if (graphPageId) {
-    await writeCachedPageId(supabase, normalized.vanityHandle, graphPageId);
+  const graph = await resolvePageIdWithGraph(normalized.vanityHandle);
+  if (graph.pageId) {
+    await writeCachedPageId(supabase, normalized.vanityHandle, graph.pageId);
     return {
       ok: true,
-      pageId: graphPageId,
+      pageId: graph.pageId,
       vanityHandle: normalized.vanityHandle,
       source: "graph",
     };
@@ -257,7 +289,12 @@ export async function resolveMetaPageId(
       return {
         ok: false,
         vanityHandle: normalized.vanityHandle,
-        error: `Facebook page fetch failed with status ${res.status}.`,
+        error: [
+          graph.warning,
+          `Facebook page fetch failed with status ${res.status}.`,
+        ]
+          .filter(Boolean)
+          .join(" "),
       };
     }
 
@@ -267,7 +304,12 @@ export async function resolveMetaPageId(
       return {
         ok: false,
         vanityHandle: normalized.vanityHandle,
-        error: "Could not resolve a numeric Facebook Page ID from page HTML.",
+        error: [
+          graph.warning,
+          "Could not resolve a numeric Facebook Page ID from page HTML.",
+        ]
+          .filter(Boolean)
+          .join(" "),
       };
     }
 

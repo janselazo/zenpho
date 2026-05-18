@@ -81,7 +81,9 @@ export function outreachAngleForSignal(signal: MetaAdSignal): string {
   }
 }
 
-export async function fetchMetaAdLibrary(pageId: string): Promise<MetaAdLibraryResult> {
+async function fetchMetaAdLibraryWithParams(
+  params: URLSearchParams,
+): Promise<MetaAdLibraryResult> {
   const token = process.env.META_ACCESS_TOKEN?.trim();
   if (!token) {
     return {
@@ -91,16 +93,15 @@ export async function fetchMetaAdLibrary(pageId: string): Promise<MetaAdLibraryR
     };
   }
 
-  const params = new URLSearchParams({
-    access_token: token,
-    ad_active_status: "ACTIVE",
-    ad_type: "ALL",
-    fields:
-      "id,ad_creative_body,ad_creative_link_title,ad_snapshot_url,ad_delivery_start_time,publisher_platforms",
-    search_page_ids: pageId,
-    ad_reached_countries: "US",
-    limit: String(META_AD_LIBRARY_LIMIT),
-  });
+  params.set("access_token", token);
+  params.set("ad_active_status", "ACTIVE");
+  params.set("ad_type", "ALL");
+  params.set(
+    "fields",
+    "id,ad_creative_body,ad_creative_link_title,ad_snapshot_url,ad_delivery_start_time,publisher_platforms",
+  );
+  params.set("ad_reached_countries", "US");
+  params.set("limit", String(META_AD_LIBRARY_LIMIT));
 
   try {
     const res = await fetch(`${META_AD_LIBRARY_URL}?${params.toString()}`, {
@@ -140,4 +141,24 @@ export async function fetchMetaAdLibrary(pageId: string): Promise<MetaAdLibraryR
       error: error instanceof Error ? error.message : "Meta Ad Library request failed.",
     };
   }
+}
+
+export async function fetchMetaAdLibrary(
+  pageId: string,
+): Promise<MetaAdLibraryResult> {
+  return fetchMetaAdLibraryWithParams(
+    new URLSearchParams({
+      search_page_ids: pageId,
+    }),
+  );
+}
+
+export async function fetchMetaAdLibraryBySearchTerms(
+  searchTerms: string,
+): Promise<MetaAdLibraryResult> {
+  return fetchMetaAdLibraryWithParams(
+    new URLSearchParams({
+      search_terms: searchTerms,
+    }),
+  );
 }
