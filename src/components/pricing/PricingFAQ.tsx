@@ -12,7 +12,7 @@ export default function PricingFAQ() {
         title="Common"
         titleAccent="questions"
         titleAccentInline
-        description="Custom Websites, Web Apps, and Mobile Apps — what each package covers, how payment works, the limited launch offer, and when to ask for a custom quote."
+        description="Custom Websites, Web Apps, Mobile Apps, and the Creatives Generation add-on — what each package covers, how payment works, the limited launch offer, and when to ask for a custom quote."
       />
 
       <div className="mx-auto max-w-3xl space-y-3">

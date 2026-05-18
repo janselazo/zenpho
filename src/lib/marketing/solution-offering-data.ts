@@ -1,8 +1,12 @@
 import type { LucideIcon } from "lucide-react";
-import { Globe, LayoutDashboard, Smartphone } from "lucide-react";
+import { Globe, LayoutDashboard, Smartphone, Sparkles } from "lucide-react";
 import type { PricingComparisonPlanId } from "@/lib/marketing/pricing-comparison-matrix";
 
-export type MarketingSolutionSlug = "custom-websites" | "web-apps" | "mobile-apps";
+export type MarketingSolutionSlug =
+  | "custom-websites"
+  | "web-apps"
+  | "mobile-apps"
+  | "creatives-generation";
 
 export const marketingSolutionToPlanId: Record<
   MarketingSolutionSlug,
@@ -11,6 +15,7 @@ export const marketingSolutionToPlanId: Record<
   "custom-websites": "setup",
   "web-apps": "growth-engine",
   "mobile-apps": "full-partner",
+  "creatives-generation": "growth-engine",
 };
 
 export type SolutionProcessStep = {
@@ -358,6 +363,101 @@ export const marketingSolutionPages: MarketingSolutionPage[] = [
       subheadline:
         "Start with the focused version your users can actually test and use.",
       buttonLabel: "Start My Mobile App",
+    },
+  },
+  {
+    slug: "creatives-generation",
+    title: "Creatives Generation",
+    description:
+      "On-brand ad creatives, social posts, and video thumbnails generated for paid campaigns and launches.",
+    icon: Sparkles,
+    iconClassName: "bg-amber-500/15 text-amber-600",
+    metaTitle:
+      "Creatives Generation | Ad, Social & Video Thumbnails | Zenpho",
+    metaDescription:
+      "Zenpho generates on-brand ad creatives, social posts, and video ad thumbnails for paid Meta and Google campaigns, product launches, and ongoing content.",
+    heroHeadline: "On-Brand Creatives Generated for Every Campaign",
+    heroSubheadline:
+      "We produce ad creatives, social posts, and video ad thumbnails that match your brand and the platform—ready to launch paid campaigns and content without waiting on a full design cycle.",
+    primaryCtaLabel: "Start My Creatives",
+    secondaryCtaLabel: "View Pricing",
+    whatWeBuild: {
+      headline: "Creatives that actually fit the platform.",
+      copy: "Each ad placement, social network, and video format has its own rules. We generate creatives that match the spec, the brand, and the message—so launching paid campaigns and content stops being the bottleneck.",
+      typesHeading: "Creative Types",
+      types: [
+        "Static ad creatives",
+        "Carousel ad sets",
+        "Story and Reel covers",
+        "Video ad thumbnails",
+        "Hero banners",
+        "Product images and lifestyle composites",
+        "Launch announcement graphics",
+        "Social post templates",
+        "Email header images",
+        "Landing page hero art",
+      ],
+    },
+    whatsIncluded: {
+      headline: "Everything needed to ship a creative set.",
+      items: [
+        "Brand and offer brief",
+        "Audience and platform mapping",
+        "Hook and CTA copywriting",
+        "Static ad creatives in required ratios",
+        "Story and Reel covers",
+        "Video ad thumbnails (9:16 and 1:1)",
+        "Carousel sets when needed",
+        "Brand color and typography matching",
+        "Logo and asset placement",
+        "Versioned variants for A/B testing",
+        "Export-ready files for Meta, Google, TikTok, and LinkedIn",
+        "Naming and folder structure handoff",
+        "One round of revisions per asset",
+      ],
+    },
+    bestFor: {
+      headline: "Built for teams launching paid campaigns and content fast.",
+      items: [
+        "Founders launching paid Meta or Google campaigns",
+        "Local businesses running monthly promotions",
+        "Ecommerce brands testing new offers",
+        "Agencies needing creative volume",
+        "Teams without an in-house designer",
+        "Companies preparing a product launch",
+        "Service businesses pitching with video ad mockups",
+      ],
+    },
+    process: {
+      headline: "From brief to ready-to-launch creative set.",
+      steps: [
+        {
+          title: "Brief",
+          description:
+            "We capture the offer, audience, brand, platforms, and the angles you want to test.",
+        },
+        {
+          title: "Generate",
+          description:
+            "We produce creatives in the required ratios using your brand assets, hooks, and CTAs.",
+        },
+        {
+          title: "Refine",
+          description:
+            "You review the set, we apply one round of revisions, and we lock the variants.",
+        },
+        {
+          title: "Hand off",
+          description:
+            "We deliver organized, export-ready files ready to upload to Meta, Google, or your scheduler.",
+        },
+      ],
+    },
+    finalCta: {
+      headline: "Need creatives ready to ship?",
+      subheadline:
+        "Tell us the offer and the platforms—we will deliver an on-brand creative set ready to launch.",
+      buttonLabel: "Start My Creatives",
     },
   },
 ];

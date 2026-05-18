@@ -15,6 +15,18 @@ export const PRICING_PAGE_FAQS: SiteFaqItem[] = [
     a: "The Mobile Apps package targets iOS and Android–oriented MVPs: mobile-first UX/UI, user accounts and onboarding, core screens, integrations, database setup, launch support, and 90 days of post-launch support. Public-page SEO is scoped to landing surfaces where applicable. Priced at $3,000 during the limited launch offer (50% off $6,000). Typical timeline is two to four weeks.",
   },
   {
+    q: "Creatives Generation",
+    a: "Creatives Generation is an add-on service that produces on-brand ad creatives, social posts, and video ad thumbnails ready to launch on Meta, Google, TikTok, and LinkedIn. We work from a short brief covering your offer, audience, brand, and platforms, then deliver static ads, carousel sets, story and Reel covers, and 9:16 / 1:1 video thumbnails with hook and CTA copy variants. It pairs with any launch package or runs standalone for ongoing campaigns.",
+  },
+  {
+    q: "What do I get with Creatives Generation?",
+    a: "Each engagement includes the brand and offer brief, audience and platform mapping, hook and CTA copywriting, static ad creatives in the required ratios, story and Reel covers, video ad thumbnails, carousel sets where useful, brand color and typography matching, A/B test variants, export-ready files for Meta / Google / TikTok / LinkedIn, organized folder handoff, and one round of revisions per asset. Volume and turnaround are scoped to your campaign calendar.",
+  },
+  {
+    q: "Can I add Creatives Generation to a Custom Website, Web App, or Mobile App package?",
+    a: "Yes. Creatives Generation is designed to attach to any launch package or run as a standalone service. Common combinations include adding launch ad sets to a Custom Websites build, generating onboarding and feature ads for a Web App MVP, or producing app store and paid social creatives alongside a Mobile App launch. We will quote it based on the number of variants, platforms, and turnaround you need.",
+  },
+  {
     q: "How does payment work?",
     a: "Each package uses the same structure: 50% upfront when we kick off, 50% on delivery. Third-party subscriptions or tooling and major scope additions outside the comparison matrix are quoted separately after discovery.",
   },
