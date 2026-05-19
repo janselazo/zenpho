@@ -168,48 +168,98 @@ function DesktopMega({
 }
 
 function MobileMenu({ pathname }: { pathname: string }) {
+  const [openSections, setOpenSections] = useState<Set<string>>(() => {
+    const initial = new Set<string>();
+    for (const item of marketingTopNav) {
+      const key = mobileSectionKey(item);
+      const active =
+        item.type === "link"
+          ? isMarketingTopNavLinkActive(pathname, item.href)
+          : megaContainsPath(item.items, pathname);
+      if (active) initial.add(key);
+    }
+    return initial;
+  });
+
+  const toggleSection = (key: string) => {
+    setOpenSections((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
   return (
     <div className="nav-mobile">
-      {marketingTopNav.map((item) =>
-        item.type === "link" ? (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={
-              isMarketingTopNavLinkActive(pathname, item.href)
-                ? "nav-mobile-link active"
-                : "nav-mobile-link"
-            }
+      {marketingTopNav.map((item) => {
+        const key = mobileSectionKey(item);
+        const open = openSections.has(key);
+        const title = item.type === "mega" ? item.sectionEyebrow : item.label;
+        const isActive =
+          item.type === "link"
+            ? isMarketingTopNavLinkActive(pathname, item.href)
+            : megaContainsPath(item.items, pathname);
+
+        return (
+          <div
+            key={key}
+            className={`nav-mobile-section${open ? " open" : ""}${isActive ? " active" : ""}`}
           >
-            {item.label}
-          </Link>
-        ) : (
-          <div key={item.label} className="nav-mobile-group">
-            <div className="nav-mobile-eyebrow">{item.sectionEyebrow}</div>
-            {item.items.map((sub) => {
-              const active =
-                pathname === sub.href || pathname.startsWith(`${sub.href}/`);
-              return (
-                <Link
-                  key={sub.href}
-                  href={sub.href}
-                  className={
-                    active
-                      ? "nav-mobile-link active"
-                      : "nav-mobile-link"
-                  }
-                >
-                  <b>{sub.title}</b>
-                  <span>{sub.description}</span>
-                </Link>
-              );
-            })}
+            <button
+              type="button"
+              className="nav-mobile-section-toggle"
+              aria-expanded={open}
+              onClick={() => toggleSection(key)}
+            >
+              {title}
+              <span className="nav-mobile-caret" aria-hidden>
+                ▾
+              </span>
+            </button>
+            <div className="nav-mobile-section-panel">
+              <div className="nav-mobile-section-panel-inner">
+                {item.type === "mega" ? (
+                  item.items.map((sub) => {
+                    const active =
+                      pathname === sub.href || pathname.startsWith(`${sub.href}/`);
+                    return (
+                      <Link
+                        key={sub.href}
+                        href={sub.href}
+                        className={
+                          active ? "nav-mobile-link active" : "nav-mobile-link"
+                        }
+                      >
+                        <b>{sub.title}</b>
+                        <span>{sub.description}</span>
+                      </Link>
+                    );
+                  })
+                ) : (
+                  <Link
+                    href={item.href}
+                    className={
+                      isMarketingTopNavLinkActive(pathname, item.href)
+                        ? "nav-mobile-link active"
+                        : "nav-mobile-link"
+                    }
+                  >
+                    <b>{item.label}</b>
+                  </Link>
+                )}
+              </div>
+            </div>
           </div>
-        ),
-      )}
+        );
+      })}
       <Link href="/contact" className="nav-mobile-cta">
         Book a call
       </Link>
     </div>
   );
+}
+
+function mobileSectionKey(item: MarketingTopNavItem) {
+  return item.type === "link" ? item.href : item.label;
 }
