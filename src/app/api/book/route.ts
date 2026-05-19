@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { LEGACY_ORGANIZATION_ID } from "@/lib/organization";
 
 function json(data: unknown, status = 200) {
   return NextResponse.json(data, { status });
@@ -88,6 +89,7 @@ export async function POST(req: NextRequest) {
         notes: message || null,
         owner_id: null,
         sms_consent: smsConsent,
+        organization_id: LEGACY_ORGANIZATION_ID,
       })
       .select("id")
       .single();
@@ -102,6 +104,7 @@ export async function POST(req: NextRequest) {
       ends_at: ends.toISOString(),
       lead_id: lead.id,
       created_by: null,
+      organization_id: LEGACY_ORGANIZATION_ID,
     });
 
     if (aptErr) return json({ error: aptErr.message }, 500);

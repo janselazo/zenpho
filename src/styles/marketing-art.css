@@ -1346,12 +1346,13 @@
 .marketing-page-bg.dark .auth-panel-title {
   font-family: var(--serif);
   font-weight: 400;
-  font-size: clamp(40px, 4.6vw, 60px);
-  line-height: 1.04;
-  letter-spacing: -0.02em;
+  font-size: clamp(52px, 6vw, 76px);
+  line-height: 1.02;
+  letter-spacing: -0.025em;
   color: var(--marble);
   margin: 0;
   text-align: center;
+  text-wrap: balance;
 }
 .marketing-page-bg.dark .auth-panel-title em {
   font-style: italic;
@@ -1551,6 +1552,30 @@
 .marketing-page-bg .auth-input:focus,
 .marketing-page-bg .auth-input-wrap input:focus {
   border-color: var(--fg);
+}
+
+/* Override browser autofill so inputs keep the cream Renaissance look. */
+.marketing-page-bg .auth-input:-webkit-autofill,
+.marketing-page-bg .auth-input:-webkit-autofill:hover,
+.marketing-page-bg .auth-input:-webkit-autofill:focus,
+.marketing-page-bg .auth-input:-webkit-autofill:active,
+.marketing-page-bg .auth-input-wrap input:-webkit-autofill,
+.marketing-page-bg .auth-input-wrap input:-webkit-autofill:hover,
+.marketing-page-bg .auth-input-wrap input:-webkit-autofill:focus,
+.marketing-page-bg .auth-input-wrap input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px var(--bg) inset;
+  box-shadow: 0 0 0 1000px var(--bg) inset;
+  -webkit-text-fill-color: var(--fg);
+  caret-color: var(--fg);
+  background-clip: content-box;
+  transition: background-color 9999s ease-in-out 0s;
+  font-family: var(--serif);
+  font-size: 20px;
+}
+.marketing-page-bg .auth-input:autofill,
+.marketing-page-bg .auth-input-wrap input:autofill {
+  background: var(--bg);
+  color: var(--fg);
 }
 .marketing-page-bg .auth-input-wrap {
   position: relative;

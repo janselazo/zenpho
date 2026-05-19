@@ -36,7 +36,7 @@ export default function AuthMarketingPanel() {
           </div>
 
           <h2 className="auth-panel-title">
-            Atelier of <em>new media.</em>
+            The New <em>Renaissance</em> of Software.
           </h2>
 
           <p className="auth-panel-lead">
