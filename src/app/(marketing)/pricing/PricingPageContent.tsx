@@ -81,7 +81,7 @@ const TIERS: Tier[] = [
     name: "Creatives Generation",
     eyebrow: "Ad creatives",
     price: "$100",
-    unit: "/ video",
+    unit: "starting",
     art: <HeraldTrumpet width={120} height={120} accent="#C19D5A" />,
     features: [
       "Any discipline — UGC, motion, AI, founder",
@@ -140,32 +140,11 @@ export default function PricingPageContent() {
             color="rgba(244,240,228,.92)"
             accent="#E6D6A8"
           >
-            <div
-              style={{
-                color: "var(--marble)",
-                fontFamily: "var(--serif)",
-                fontStyle: "italic",
-                fontSize: 56,
-                letterSpacing: "-0.02em",
-                lineHeight: 1,
-                textAlign: "center",
-              }}
-            >
+            <div className="pricing-hero-cartouche-copy">
               From
               <br />
               $1,000
-              <br />
-              <span
-                style={{
-                  fontFamily: "var(--display)",
-                  fontSize: 14,
-                  letterSpacing: "0.24em",
-                  textTransform: "uppercase",
-                  fontStyle: "normal",
-                }}
-              >
-                per project
-              </span>
+              <span>per project</span>
             </div>
           </Cartouche>
         }

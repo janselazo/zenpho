@@ -5,7 +5,7 @@ import {
   ClassicalHand,
   Sunburst,
 } from "@/components/marketing/renaissance/RenaissanceArt";
-import MarketingContactForm from "./MarketingContactForm";
+import ContactBookingFlow from "@/components/marketing/contact/ContactBookingFlow";
 
 export default function ContactPageContent() {
   return (
@@ -44,7 +44,7 @@ export default function ContactPageContent() {
           />
 
           <Reveal className="contact-wrap">
-            <MarketingContactForm />
+            <ContactBookingFlow />
 
             <div className="contact-info">
               <div className="contact-info-art">
