@@ -21,7 +21,7 @@ export default function HomeHero() {
           </div>
           <h1 className="hero-headline centered">
             <WordReveal>
-              We build <em>& scale</em> software companies
+              We design <em>& build</em> software companies
             </WordReveal>
           </h1>
           <p className="hero-lead centered">

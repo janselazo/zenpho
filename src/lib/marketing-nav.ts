@@ -79,8 +79,8 @@ export const marketingTopNav: MarketingTopNavItem[] = [
     sectionEyebrow: "How we help",
     items: marketingServicesMegaItems,
   },
-  { type: "link", label: "Studio", href: "/studio" },
   { type: "link", label: "Pricing", href: "/pricing" },
+  { type: "link", label: "Studio", href: "/studio" },
   {
     type: "mega",
     label: "Resources",
