@@ -6,6 +6,9 @@ export const metadata = {
   robots: { index: false, follow: false },
 };
 
+const marketingSiteHref =
+  process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "") || "/";
+
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -16,7 +19,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <div className="flex min-h-screen flex-1 flex-col bg-white">
         <div className="flex flex-1 flex-col px-6 py-10 sm:px-8 lg:px-14 lg:py-16">
           <div className="mb-8 lg:hidden">
-            <Link href="/" className="inline-flex items-center gap-2">
+            <Link href={marketingSiteHref} className="inline-flex items-center gap-2">
               <Image
                 src="/zenpho-logo.png"
                 alt="Zenpho"
@@ -33,7 +36,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           </div>
 
           <p className="mt-10 text-center text-xs text-text-secondary lg:mt-14">
-            <Link href="/" className="text-accent hover:underline">
+            <Link href={marketingSiteHref} className="text-accent hover:underline">
               ← Back to site
             </Link>
           </p>

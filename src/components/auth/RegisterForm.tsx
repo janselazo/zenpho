@@ -13,11 +13,17 @@ const SIGNUP_BENEFITS = [
   "Cancel anytime",
 ] as const;
 
-/** Prefer NEXT_PUBLIC_SITE_URL in production so confirmation links match zenpho.com even when another domain is misconfigured in Supabase. */
+/** Prefer the app origin so confirmation links land on app.zenpho.com. */
 function emailRedirectOrigin(): string {
-  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "");
+  const fromEnv = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "");
   if (fromEnv) return fromEnv;
-  if (typeof window !== "undefined") return window.location.origin;
+  if (typeof window !== "undefined") {
+    const { hostname, origin } = window.location;
+    if (hostname === "zenpho.com" || hostname === "www.zenpho.com") {
+      return "https://app.zenpho.com";
+    }
+    return origin;
+  }
   return "";
 }
 

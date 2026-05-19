@@ -8,9 +8,15 @@ import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 function authEmailRedirectTo(): string | undefined {
-  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "");
+  const fromEnv = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "");
   const origin =
-    fromEnv || (typeof window !== "undefined" ? window.location.origin : "");
+    fromEnv ||
+    (typeof window !== "undefined"
+      ? window.location.hostname === "zenpho.com" ||
+        window.location.hostname === "www.zenpho.com"
+        ? "https://app.zenpho.com"
+        : window.location.origin
+      : "");
   return origin ? `${origin}/` : undefined;
 }
 

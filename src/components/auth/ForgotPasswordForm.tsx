@@ -5,6 +5,19 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { SUPABASE_ENV_SETUP_MESSAGE } from "@/lib/supabase/config";
 
+function appRedirectOrigin(): string {
+  const fromEnv = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "");
+  if (fromEnv) return fromEnv;
+  if (typeof window !== "undefined") {
+    const { hostname, origin } = window.location;
+    if (hostname === "zenpho.com" || hostname === "www.zenpho.com") {
+      return "https://app.zenpho.com";
+    }
+    return origin;
+  }
+  return "";
+}
+
 export default function ForgotPasswordForm({
   configured,
 }: {
@@ -26,8 +39,7 @@ export default function ForgotPasswordForm({
     setLoading(true);
     try {
       const supabase = createClient();
-      const origin =
-        typeof window !== "undefined" ? window.location.origin : "";
+      const origin = appRedirectOrigin();
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(
         email,
         { redirectTo: `${origin}/login` }
