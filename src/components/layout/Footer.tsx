@@ -50,6 +50,10 @@ function FooterColumnLink({
   return <Link href={link.href}>{link.label}</Link>;
 }
 
+const appLoginHref =
+  process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "") ||
+  "https://app.zenpho.com";
+
 export default function Footer() {
   return (
     <footer className="site-footer">
@@ -73,8 +77,11 @@ export default function Footer() {
               <Link href="/contact" className="btn-primary">
                 Book a free build call <span className="btn-arrow">↗</span>
               </Link>
-              <a href="mailto:hello@zenpho.com" className="btn-ghost">
-                hello@zenpho.com
+              <a
+                href={`${appLoginHref}/login`}
+                className="btn-ghost"
+              >
+                Login
               </a>
             </div>
           </div>

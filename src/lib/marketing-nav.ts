@@ -91,7 +91,13 @@ export const marketingTopNav: MarketingTopNavItem[] = [
   { type: "link", label: "Contact", href: "/contact" },
 ];
 
-export type MarketingFooterLinkIcon = "x" | "linkedin" | "instagram" | "github" | "phone";
+export type MarketingFooterLinkIcon =
+  | "x"
+  | "linkedin"
+  | "instagram"
+  | "github"
+  | "phone"
+  | "email";
 
 export type MarketingFooterColumn = {
   heading: string;
@@ -159,6 +165,11 @@ export const marketingFooterColumns: MarketingFooterColumn[] = [
         label: "+1 (786) 623-5157",
         href: "tel:+17866235157",
         icon: "phone",
+      },
+      {
+        label: "hello@zenpho.com",
+        href: "mailto:hello@zenpho.com",
+        icon: "email",
       },
     ],
   },

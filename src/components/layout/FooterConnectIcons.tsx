@@ -1,4 +1,4 @@
-import { Github, Instagram, Linkedin, Phone } from "lucide-react";
+import { Github, Instagram, Linkedin, Mail, Phone } from "lucide-react";
 import type { MarketingFooterLinkIcon } from "@/lib/marketing-nav";
 
 function XIcon({ size = 18 }: { size?: number }) {
@@ -33,5 +33,7 @@ export function FooterConnectIcon({
       return <Github size={size} aria-hidden />;
     case "phone":
       return <Phone size={size} aria-hidden />;
+    case "email":
+      return <Mail size={size} aria-hidden />;
   }
 }
