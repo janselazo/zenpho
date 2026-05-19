@@ -80,6 +80,7 @@ export const marketingTopNav: MarketingTopNavItem[] = [
     items: marketingServicesMegaItems,
   },
   { type: "link", label: "Pricing", href: "/pricing" },
+  { type: "link", label: "Work", href: "/case-studies" },
   { type: "link", label: "Studio", href: "/studio" },
   {
     type: "mega",
