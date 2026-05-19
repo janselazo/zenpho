@@ -17,7 +17,7 @@ export default function HomeHero() {
       <div className="hero-content hero-content-center">
         <div className="shell">
           <div className="hero-eyebrow centered">
-            MVP Development Studio · MMXXVI
+            MVP Development Agency · MMXXVI
           </div>
           <h1 className="hero-headline centered">
             <WordReveal>
