@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import {
+  Inter,
+  Instrument_Serif,
+  JetBrains_Mono,
+  Plus_Jakarta_Sans,
+} from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
@@ -11,6 +16,30 @@ const inter = Inter({
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
+});
+
+// Marketing-scoped fonts (Renaissance/Editorial redesign).
+// Consumed only inside .marketing-page-bg via marketing.css.
+const instrumentSerif = Instrument_Serif({
+  variable: "--font-marketing-serif",
+  subsets: ["latin"],
+  weight: ["400"],
+  style: ["normal", "italic"],
+  display: "swap",
+});
+
+const plusJakartaSans = Plus_Jakarta_Sans({
+  variable: "--font-marketing-sans",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800"],
+  display: "swap",
+});
+
+const marketingMono = JetBrains_Mono({
+  variable: "--font-marketing-mono",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
   display: "swap",
 });
 
@@ -35,7 +64,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${inter.variable} ${jetbrainsMono.variable} min-h-screen bg-background font-sans text-foreground antialiased`}
+        className={`${inter.variable} ${jetbrainsMono.variable} ${instrumentSerif.variable} ${plusJakartaSans.variable} ${marketingMono.variable} min-h-screen bg-background font-sans text-foreground antialiased`}
       >
         {children}
       </body>

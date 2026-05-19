@@ -1,35 +1,14 @@
 import type { Metadata } from "next";
-import ContactHero from "./ContactHero";
-import ContactIntro from "./ContactIntro";
-import ContactForm from "@/components/contact/ContactForm";
-import ContactPageCTA from "./ContactPageCTA";
-import ContactAside from "@/components/contact/ContactAside";
+import ContactPageContent from "./ContactPageContent";
 
 export const metadata: Metadata = {
   title: {
-    absolute: "Contact Zenpho | MVP product studio",
+    absolute: "Contact · Zenpho · MVP Product Studio",
   },
   description:
-    "Have a website, app, or MVP idea? Contact Zenpho—we help you map the next step with Design → Build → Launch programs, custom builds, Revenue Leak Audits, and roadmaps.",
+    "Have a website, app, or MVP idea? Book a free thirty-minute build call — we'll listen, ask, and quote a fixed price within 48 hours.",
 };
 
 export default function ContactPage() {
-  return (
-    <>
-      <ContactHero />
-      <section className="mx-auto max-w-7xl px-6 pb-20 lg:px-8">
-        <div className="grid gap-12 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)] lg:gap-14 xl:gap-16 lg:items-start">
-          <div className="min-w-0">
-            <ContactIntro />
-            <ContactForm />
-          </div>
-
-          <div className="min-w-0 lg:sticky lg:top-[6.75rem]">
-            <ContactAside />
-          </div>
-        </div>
-      </section>
-      <ContactPageCTA />
-    </>
-  );
+  return <ContactPageContent />;
 }

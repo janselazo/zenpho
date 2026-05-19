@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Link from "next/link";
-import { ChevronRight } from "lucide-react";
-import SolutionOfferingLayout from "@/components/marketing/SolutionOfferingLayout";
 import {
   getMarketingSolutionPage,
   marketingSolutionSlugs,
+  type MarketingSolutionSlug,
 } from "@/lib/marketing/solution-offering-data";
-import { BOOKING_NAV_COMPACT_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
+import CustomWebsitesPageContent from "@/components/marketing/solutions/CustomWebsitesPageContent";
+import WebAppsPageContent from "@/components/marketing/solutions/WebAppsPageContent";
+import MobileAppsPageContent from "@/components/marketing/solutions/MobileAppsPageContent";
+import CreativesGenerationPageContent from "@/components/marketing/solutions/CreativesGenerationPageContent";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -29,29 +30,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
+const SLUG_TO_COMPONENT: Record<MarketingSolutionSlug, () => React.ReactElement> = {
+  "custom-websites": CustomWebsitesPageContent,
+  "web-apps": WebAppsPageContent,
+  "mobile-apps": MobileAppsPageContent,
+  "creatives-generation": CreativesGenerationPageContent,
+};
+
 export default async function SolutionDetailPage({ params }: Props) {
   const { slug } = await params;
   const page = getMarketingSolutionPage(slug);
   if (!page) notFound();
 
-  return (
-    <>
-      <SolutionOfferingLayout page={page} />
-
-      <section className="border-t border-border/70 bg-surface/40 px-4 py-10 sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-4 text-sm">
-          <Link href="/pricing" className="text-text-secondary hover:text-accent">
-            Compare launch packages
-          </Link>
-          <Link
-            href="/booking"
-            className="inline-flex items-center gap-1 font-semibold text-accent hover:underline"
-          >
-            {BOOKING_NAV_COMPACT_BUTTON_LABEL}
-            <ChevronRight className="h-4 w-4" aria-hidden />
-          </Link>
-        </div>
-      </section>
-    </>
-  );
+  const Component = SLUG_TO_COMPONENT[page.slug];
+  return <Component />;
 }

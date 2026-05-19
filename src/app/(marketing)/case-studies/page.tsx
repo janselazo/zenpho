@@ -1,24 +1,14 @@
 import type { Metadata } from "next";
-import CaseStudiesHero from "./CaseStudiesHero";
-import WorkIntro from "./WorkIntro";
-import WorkConceptGrid from "./WorkConceptGrid";
-import WorkPageCTA from "./WorkPageCTA";
+import CaseStudiesPageContent from "./CaseStudiesPageContent";
 
 export const metadata: Metadata = {
   title: {
-    absolute: "MVP Builds and Product Concepts | Zenpho",
+    absolute: "Case Studies · MVP, Mobile & Ecommerce Builds | Zenpho",
   },
   description:
-    "View Zenpho's demo MVPs, AI product concepts, and studio builds showing how focused technology products can be scoped, built, and launched fast.",
+    "Three Zenpho engagements — Taptok (SaaS), Apex Inspection Pro (mobile field app) and TQMuch (food ecommerce) — shipped on the same Design · Build · Launch cadence.",
 };
 
 export default function CaseStudiesPage() {
-  return (
-    <>
-      <CaseStudiesHero />
-      <WorkIntro />
-      <WorkConceptGrid />
-      <WorkPageCTA />
-    </>
-  );
+  return <CaseStudiesPageContent />;
 }

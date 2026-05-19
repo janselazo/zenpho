@@ -1,28 +1,14 @@
 import type { Metadata } from "next";
-import PricingHero from "./PricingHero";
-import LocalServicePricingComparison from "@/components/pricing/LocalServicePricingComparison";
-import PricingCreativesGenerationAddOn from "@/components/pricing/PricingCreativesGenerationAddOn";
-import PricingAuditCtaSection from "@/components/pricing/PricingAuditCtaSection";
-import PricingFAQ from "@/components/pricing/PricingFAQ";
-import PricingPageClosingCta from "@/components/pricing/PricingPageClosingCta";
+import PricingPageContent from "./PricingPageContent";
 
 export const metadata: Metadata = {
   title: {
-    absolute: "Pricing | Zenpho",
+    absolute: "Pricing · Zenpho · Launch packages",
   },
   description:
-    "Zenpho MVP launch packages: Custom Websites from $1,000, Web Apps from $2,000, Mobile Apps from $3,000 (limited-time 50% launch pricing); strategy through deployment; custom quotes for larger scopes.",
+    "Fixed-scope launch packages — Websites from $1,000, Web Apps from $2,000, Mobile Apps from $3,000, and ad creatives from $100/video. Custom commissions on request.",
 };
 
 export default function PricingPage() {
-  return (
-    <>
-      <PricingHero />
-      <LocalServicePricingComparison />
-      <PricingCreativesGenerationAddOn />
-      <PricingAuditCtaSection />
-      <PricingFAQ />
-      <PricingPageClosingCta />
-    </>
-  );
+  return <PricingPageContent />;
 }

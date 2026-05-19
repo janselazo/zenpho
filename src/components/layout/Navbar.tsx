@@ -1,305 +1,215 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import type { MarketingMegaItem } from "@/lib/marketing-nav";
-import { marketingTopNav, isMarketingTopNavLinkActive } from "@/lib/marketing-nav";
-import Button from "@/components/ui/Button";
+import { useEffect, useRef, useState } from "react";
 import {
-  BOOKING_NAV_COMPACT_BUTTON_LABEL,
-  BOOKING_PRIMARY_BUTTON_LABEL,
-} from "@/lib/marketing/booking-cta";
+  marketingTopNav,
+  isMarketingTopNavLinkActive,
+  type MarketingMegaItem,
+  type MarketingTopNavItem,
+} from "@/lib/marketing-nav";
 
-function desktopLinkClass(active: boolean) {
-  return `inline-flex h-9 min-h-9 shrink-0 items-center gap-1 whitespace-nowrap border-b-2 pb-0.5 text-sm font-medium leading-none transition-colors ${
-    active
-      ? "border-accent font-semibold text-text-primary"
-      : "border-transparent text-text-secondary hover:border-accent/35 hover:text-text-primary"
-  }`;
-}
+type OpenMenu = string | null;
 
-function megaPanelOpenClass() {
-  return "invisible opacity-0 transition-[opacity,visibility] duration-150 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100";
-}
-
-function isPathActiveForMega(pathname: string, items: MarketingMegaItem[]) {
+function megaContainsPath(items: MarketingMegaItem[], pathname: string) {
   return items.some(
     (i) => pathname === i.href || pathname.startsWith(`${i.href}/`),
-  );
-}
-
-function MegaPanel({ eyebrow, items }: { eyebrow: string; items: MarketingMegaItem[] }) {
-  return (
-    <div
-      className={`absolute left-1/2 top-full z-50 w-[min(92vw,44rem)] -translate-x-1/2 pt-3 ${megaPanelOpenClass()} pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto`}
-    >
-      {/* pt-3 is padding inside this wrapper so the gap under the nav trigger stays hoverable (margin was a dead zone that closed the menu). */}
-      <div
-        className="max-h-[min(85vh,calc(100vh-5.5rem))] overflow-y-auto overscroll-contain rounded-2xl border border-border bg-white p-6 shadow-soft-lg ring-1 ring-black/[0.04]"
-        role="region"
-        aria-label={eyebrow}
-      >
-        <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-text-secondary/80">
-          {eyebrow}
-        </p>
-        <ul className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-x-6 md:gap-y-3">
-          {items.map((item) => (
-            <li key={item.href}>
-              <MegaCell item={item} />
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  );
-}
-
-function MegaCell({ item }: { item: MarketingMegaItem }) {
-  const Icon = item.icon;
-  return (
-    <Link
-      href={item.href}
-      className="flex gap-4 rounded-xl p-2.5 transition-colors hover:bg-surface md:p-3"
-    >
-      <div
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl md:h-11 md:w-11 ${item.iconClassName}`}
-      >
-        <Icon className="h-5 w-5" aria-hidden />
-      </div>
-      <div className="min-w-0 pt-0.5">
-        <span className="block text-sm font-bold text-text-primary">{item.title}</span>
-        <span className="mt-0.5 block text-sm leading-snug text-text-secondary">
-          {item.description}
-        </span>
-      </div>
-    </Link>
-  );
-}
-
-function MobileAccordion({
-  label,
-  eyebrow,
-  items,
-  pathname,
-}: {
-  label: string;
-  eyebrow: string;
-  items: MarketingMegaItem[];
-  pathname: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const pathnameSafe = pathname;
-
-  return (
-    <div className="border-b border-border/55 last:border-b-0">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left text-sm font-semibold text-text-primary"
-        aria-expanded={open}
-      >
-        {label}
-        <ChevronDown
-          className={`h-4 w-4 shrink-0 text-text-secondary transition-transform ${open ? "rotate-180" : ""}`}
-          aria-hidden
-        />
-      </button>
-      {open ? (
-        <div className="border-t border-border/40 bg-surface/40 px-3 pb-3 pt-1">
-          <p className="px-3 py-2 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-text-secondary/85">
-            {eyebrow}
-          </p>
-          <ul className="flex flex-col gap-0.5">
-            {items.map((item) => {
-              const active =
-                pathnameSafe === item.href || pathnameSafe.startsWith(`${item.href}/`);
-              const Icon = item.icon;
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    className={`flex gap-3 rounded-xl px-3 py-2.5 text-sm ${
-                      active
-                        ? "bg-accent/10 font-semibold text-accent"
-                        : "text-text-secondary hover:bg-white/80"
-                    }`}
-                  >
-                    <span
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${item.iconClassName}`}
-                    >
-                      <Icon className="h-4 w-4" aria-hidden />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block font-semibold text-text-primary">{item.title}</span>
-                      <span className="mt-0.5 block text-xs leading-snug text-text-secondary">
-                        {item.description}
-                      </span>
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ) : null}
-    </div>
   );
 }
 
 export default function Navbar() {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [openDesktop, setOpenDesktop] = useState<OpenMenu>(null);
+  const [openMobileMenu, setOpenMobileMenu] = useState(false);
+  const navRef = useRef<HTMLElement | null>(null);
 
+  // Match shared.jsx: scrolled state after 80px.
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 16);
+    const onScroll = () => setScrolled(window.scrollY > 80);
+    onScroll();
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Close desktop dropdowns when clicking outside.
   useEffect(() => {
-    setMobileOpen(false);
+    const onClick = (e: MouseEvent) => {
+      const target = e.target as Node | null;
+      if (target && navRef.current && !navRef.current.contains(target)) {
+        setOpenDesktop(null);
+      }
+    };
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, []);
+
+  // Close mobile menu on route change.
+  useEffect(() => {
+    setOpenMobileMenu(false);
+    setOpenDesktop(null);
   }, [pathname]);
 
   return (
-    <header className="fixed top-0 left-0 z-50 w-full px-4 pt-4 md:px-6 md:pt-5">
-      <div
-        className={`mx-auto max-w-7xl transition-all duration-300 ${
-          scrolled ? "shadow-soft-lg" : "shadow-soft"
-        }`}
-      >
-        <nav className="flex items-center gap-1.5 rounded-full border border-white/90 bg-white/90 px-2.5 py-2 shadow-soft ring-1 ring-black/[0.04] backdrop-blur-xl sm:gap-2 sm:px-3 sm:py-2.5 md:gap-3 md:px-5 md:py-2.5">
-          <Link
-            href="/"
-            className="group relative min-w-0 shrink-0 pl-0.5 sm:pl-1 md:pl-0"
-            aria-label="Zenpho home"
-          >
-            <Image
-              src="/zenpho-logo.png"
-              alt="Zenpho"
-              width={132}
-              height={36}
-              className="h-7 w-auto sm:h-8"
-              priority
-            />
-          </Link>
+    <nav ref={navRef} className={`nav ${scrolled ? "scrolled" : ""}`}>
+      <div className="nav-inner">
+        <Link href="/" className="brand" aria-label="Zenpho — home">
+          <Image
+            src="/marketing/logo-white.png"
+            alt="Zenpho"
+            width={140}
+            height={28}
+            className="brand-logo"
+            priority
+          />
+        </Link>
 
-          <div className="hidden min-w-0 flex-1 items-center justify-center lg:flex">
-            <ul className="flex items-center justify-center gap-5 xl:gap-6">
-              {marketingTopNav.map((item) =>
-                item.type === "link" ? (
-                  <li key={item.href} className="shrink-0">
-                    <Link
-                      href={item.href}
-                      className={desktopLinkClass(isMarketingTopNavLinkActive(pathname, item.href))}
-                    >
-                      {item.label}
-                    </Link>
-                  </li>
-                ) : (
-                  <li key={item.label} className="group relative shrink-0">
-                    <button
-                      type="button"
-                      className={`${desktopLinkClass(isPathActiveForMega(pathname, item.items))} cursor-pointer bg-transparent`}
-                      aria-haspopup="true"
-                      aria-expanded="false"
-                    >
-                      {item.label}
-                      <ChevronDown
-                        className="h-4 w-4 text-text-secondary/90 opacity-80"
-                        aria-hidden
-                      />
-                    </button>
-                    <MegaPanel eyebrow={item.sectionEyebrow} items={item.items} />
-                  </li>
-                ),
-              )}
-            </ul>
-          </div>
-
-          <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2 md:gap-3">
-            <Button
-              href="/booking"
-              variant="primary"
-              size="sm"
-              className="!px-3 sm:!px-4 md:!px-5"
-              aria-label={BOOKING_PRIMARY_BUTTON_LABEL}
-            >
-              <span className="sm:hidden">{BOOKING_NAV_COMPACT_BUTTON_LABEL}</span>
-              <span className="hidden sm:inline xl:hidden">{BOOKING_NAV_COMPACT_BUTTON_LABEL}</span>
-              <span className="hidden xl:inline">{BOOKING_PRIMARY_BUTTON_LABEL}</span>
-            </Button>
-            <button
-              type="button"
-              onClick={() => setMobileOpen(!mobileOpen)}
-              className="flex flex-col gap-1.5 rounded-full p-2 lg:hidden"
-              aria-expanded={mobileOpen}
-              aria-label="Toggle menu"
-            >
-              <span
-                className={`h-0.5 w-5 rounded-full bg-text-primary transition-all ${
-                  mobileOpen ? "translate-y-[5px] rotate-45" : ""
-                }`}
+        <div className="nav-links">
+          {marketingTopNav.map((item) =>
+            item.type === "link" ? (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={
+                  isMarketingTopNavLinkActive(pathname, item.href) ? "active" : ""
+                }
+              >
+                {item.label}
+              </Link>
+            ) : (
+              <DesktopMega
+                key={item.label}
+                item={item}
+                pathname={pathname}
+                open={openDesktop === item.label}
+                onToggle={() =>
+                  setOpenDesktop((curr) =>
+                    curr === item.label ? null : item.label,
+                  )
+                }
+                onClose={() => setOpenDesktop(null)}
               />
-              <span
-                className={`h-0.5 w-5 rounded-full bg-text-primary transition-all ${
-                  mobileOpen ? "opacity-0" : ""
-                }`}
-              />
-              <span
-                className={`h-0.5 w-5 rounded-full bg-text-primary transition-all ${
-                  mobileOpen ? "-translate-y-[5px] -rotate-45" : ""
-                }`}
-              />
-            </button>
-          </div>
-        </nav>
-      </div>
-
-      <div
-        className={`mx-auto mt-2 max-w-7xl overflow-hidden rounded-2xl border border-border/80 bg-white/95 shadow-soft-lg backdrop-blur-md transition-all lg:hidden ${
-          mobileOpen ? "max-h-[min(85vh,40rem)] opacity-100" : "max-h-0 border-0 opacity-0"
-        }`}
-      >
-        <div className="flex max-h-[min(85vh,40rem)] flex-col">
-          <div className="shrink-0 p-3 pb-0">
-            <Link
-              href="/booking"
-              className="block rounded-xl bg-accent px-4 py-3 text-center text-sm font-semibold text-white shadow-md"
-            >
-              {BOOKING_PRIMARY_BUTTON_LABEL}
-            </Link>
-          </div>
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-2">
-            {marketingTopNav.map((item) =>
-              item.type === "link" ? (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`block px-4 py-3.5 text-sm font-medium ${
-                    isMarketingTopNavLinkActive(pathname, item.href)
-                      ? "bg-accent/10 font-semibold text-accent"
-                      : "text-text-secondary hover:bg-surface"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              ) : (
-                <MobileAccordion
-                  key={item.label}
-                  label={item.label}
-                  eyebrow={item.sectionEyebrow}
-                  items={item.items}
-                  pathname={pathname}
-                />
-              ),
-            )}
-          </div>
+            ),
+          )}
         </div>
+
+        <Link href="/contact" className="nav-cta">
+          Book a call
+        </Link>
+
+        <button
+          type="button"
+          className="nav-burger"
+          aria-label="Toggle menu"
+          aria-expanded={openMobileMenu}
+          onClick={() => setOpenMobileMenu((v) => !v)}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
       </div>
-    </header>
+
+      {openMobileMenu ? <MobileMenu pathname={pathname} /> : null}
+    </nav>
+  );
+}
+
+function DesktopMega({
+  item,
+  pathname,
+  open,
+  onToggle,
+  onClose,
+}: {
+  item: Extract<MarketingTopNavItem, { type: "mega" }>;
+  pathname: string;
+  open: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+}) {
+  const isActive = megaContainsPath(item.items, pathname);
+  return (
+    <div className={`nav-menu ${open ? "open" : ""}`}>
+      <button
+        type="button"
+        className={`nav-link-btn ${isActive ? "active" : ""}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle();
+        }}
+        aria-haspopup="true"
+        aria-expanded={open}
+      >
+        {item.label} <span className="nav-caret">▾</span>
+      </button>
+      <div className="nav-dropdown">
+        <div className="nav-dropdown-label">{item.sectionEyebrow}</div>
+        {item.items.map((sub) => {
+          const active =
+            pathname === sub.href || pathname.startsWith(`${sub.href}/`);
+          return (
+            <Link
+              key={sub.href}
+              href={sub.href}
+              className={active ? "active" : ""}
+              onClick={onClose}
+            >
+              <b>{sub.title}</b>
+              <span>{sub.description}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function MobileMenu({ pathname }: { pathname: string }) {
+  return (
+    <div className="nav-mobile">
+      {marketingTopNav.map((item) =>
+        item.type === "link" ? (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={
+              isMarketingTopNavLinkActive(pathname, item.href)
+                ? "nav-mobile-link active"
+                : "nav-mobile-link"
+            }
+          >
+            {item.label}
+          </Link>
+        ) : (
+          <div key={item.label} className="nav-mobile-group">
+            <div className="nav-mobile-eyebrow">{item.sectionEyebrow}</div>
+            {item.items.map((sub) => {
+              const active =
+                pathname === sub.href || pathname.startsWith(`${sub.href}/`);
+              return (
+                <Link
+                  key={sub.href}
+                  href={sub.href}
+                  className={
+                    active
+                      ? "nav-mobile-link active"
+                      : "nav-mobile-link"
+                  }
+                >
+                  <b>{sub.title}</b>
+                  <span>{sub.description}</span>
+                </Link>
+              );
+            })}
+          </div>
+        ),
+      )}
+      <Link href="/contact" className="nav-mobile-cta">
+        Book a call
+      </Link>
+    </div>
   );
 }

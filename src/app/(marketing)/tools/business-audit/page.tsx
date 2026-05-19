@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import RevenueLeakHomeHero from "@/components/home/RevenueLeakHomeHero";
+import BusinessAuditPageContent from "./BusinessAuditPageContent";
 
 export const metadata: Metadata = {
   title: {
@@ -10,5 +10,5 @@ export const metadata: Metadata = {
 };
 
 export default function BusinessAuditPage() {
-  return <RevenueLeakHomeHero />;
+  return <BusinessAuditPageContent />;
 }

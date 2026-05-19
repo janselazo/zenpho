@@ -27,6 +27,9 @@
 # local MCP migration scratch / payloads (do not commit)
 .tmp-mcp-migration/
 
+# raw Claude Design export (kept locally, not committed)
+/design-handoff/
+
 # debug
 npm-debug.log*
 yarn-debug.log*

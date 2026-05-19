@@ -29,7 +29,19 @@ function isAuthPath(pathname: string) {
   return AUTH_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
+// Public marketing routes that live under an agency-app prefix but should
+// remain accessible to anonymous visitors (e.g. the Business Audit marketing
+// page lives under /tools/business-audit even though /tools itself is gated).
+const PUBLIC_OVERRIDES = ["/tools/business-audit"];
+
+function isPublicOverride(pathname: string) {
+  return PUBLIC_OVERRIDES.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`)
+  );
+}
+
 function isAgencyAppPath(pathname: string) {
+  if (isPublicOverride(pathname)) return false;
   return AGENCY_APP_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`)
   );
