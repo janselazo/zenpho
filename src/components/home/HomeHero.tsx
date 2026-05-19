@@ -27,8 +27,8 @@ export default function HomeHero() {
           <p className="hero-lead centered">
             <WordReveal delay={500}>
               We help founders and businesses turn ideas into launch-ready
-              websites, web apps, mobile apps and MVPs — in as little as two
-              weeks.
+              websites, web apps, mobile apps and MVPs — in as little as{" "}
+              <strong>two weeks</strong>.
             </WordReveal>
           </p>
           <Reveal className="hero-cta-row centered">

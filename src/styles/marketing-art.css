@@ -1759,3 +1759,9 @@
   .marketing-page-bg .auth-card { max-width: 100%; }
 }
 
+/* Home hero — emphasize timeline in subheadline */
+.marketing-page-bg .hero-lead strong {
+  font-weight: 600;
+  color: var(--marble);
+}
+

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { Reveal } from "@/components/marketing/renaissance/Reveal";
 import { Ornament, Starfield } from "@/components/marketing/renaissance/Ornament";
 import { HeraldTrumpet } from "@/components/marketing/renaissance/RenaissanceArt";
@@ -69,15 +68,14 @@ const STYLES: Array<{
   caption: string;
   cta: string;
   label: string;
-  price: string;
   time: string;
 }> = [
-  { r: "I", h: "UGC", em: "Vérité.", tone: "coral", handle: "@realmaya", caption: "Honestly didn't expect it to actually work…", cta: "Shop now", label: "UGC creator", price: "$250", time: "15·30s" },
-  { r: "II", h: "Talking", em: "Head.", tone: "warm", handle: "@founder.alex", caption: "Why we built this. And why we almost didn't.", cta: "Read story", label: "Founder POV", price: "$350", time: "20·45s" },
-  { r: "III", h: "Product", em: "Demo.", tone: "ink", handle: "@flux.app", caption: "Drag, drop, ship. No tutorial required.", cta: "Try free", label: "Hands·on UI", price: "$500", time: "20·40s" },
-  { r: "IV", h: "Motion", em: "Graphics.", tone: "sun", handle: "@northbloom", caption: "Three steps. Six weeks. One glow·up.", cta: "Shop now", label: "Animated", price: "$650", time: "15·30s" },
-  { r: "V", h: "AI", em: "Generated.", tone: "plum", handle: "@studiokyo", caption: "When the brief is wild and the budget isn't.", cta: "See more", label: "AI visuals", price: "$300", time: "10·25s" },
-  { r: "VI", h: "Founder", em: "Led.", tone: "forest", handle: "@haus.coffee", caption: "Day 1 · roasting in my kitchen. Day 412 · this.", cta: "Order beans", label: "Authentic", price: "$400", time: "30·60s" },
+  { r: "I", h: "UGC", em: "Vérité.", tone: "coral", handle: "@realmaya", caption: "Honestly didn't expect it to actually work…", cta: "Shop now", label: "UGC creator", time: "15·30s" },
+  { r: "II", h: "Claymotion", em: "Ads.", tone: "warm", handle: "@founder.alex", caption: "Why we built this. And why we almost didn't.", cta: "Read story", label: "Founder POV", time: "20·45s" },
+  { r: "III", h: "Product", em: "Demo.", tone: "ink", handle: "@flux.app", caption: "Drag, drop, ship. No tutorial required.", cta: "Try free", label: "Hands·on UI", time: "20·40s" },
+  { r: "IV", h: "Motion", em: "Graphics.", tone: "sun", handle: "@northbloom", caption: "Three steps. Six weeks. One glow·up.", cta: "Shop now", label: "Animated", time: "15·30s" },
+  { r: "V", h: "AI", em: "Generated.", tone: "plum", handle: "@studiokyo", caption: "When the brief is wild and the budget isn't.", cta: "See more", label: "AI visuals", time: "10·25s" },
+  { r: "VI", h: "Founder", em: "Led.", tone: "forest", handle: "@haus.coffee", caption: "Day 1 · roasting in my kitchen. Day 412 · this.", cta: "Order beans", label: "Authentic", time: "30·60s" },
 ];
 
 const PRACTICES = [
@@ -107,60 +105,6 @@ const PORTFOLIO: Array<{
   { client: "Mast", cat: "Tech · Startup", tone: "sea", handle: "@mast.ai", caption: "Cold emails, but they actually work.", cta: "Get demo", label: "Talking head", badge: "+5·2× leads" },
   { client: "Bocca", cat: "Local · Restaurant", tone: "warm", handle: "@boccatable", caption: "Saturday. 7pm. Last 4 seats.", cta: "Book table", label: "Geo offer", badge: "94 books/wk" },
   { client: "Pebble", cat: "DTC · Home", tone: "cream", handle: "@pebble.home", caption: "Soft on you. Hard on stains.", cta: "Shop now", label: "AI", badge: "$0·22 CPM" },
-];
-
-const TIERS = [
-  {
-    name: "Studio",
-    eyebrow: "One commission",
-    price: 350,
-    unit: "/ work",
-    features: [
-      "Pick any discipline (UGC, talking head, motion…)",
-      "Script · storyboard · production",
-      "1 hook variant · 2 revision rounds",
-      "Delivered in 9:16, 1:1 and 4:5",
-      "Royalty-free music & sound design",
-      "Captions in EN, ES or PT",
-    ],
-    cta: "Commission a piece",
-    featured: false,
-    tag: null as string | null,
-  },
-  {
-    name: "Studio",
-    eyebrow: "A folio · five works",
-    price: 1490,
-    unit: "/ folio",
-    tag: "Most chosen",
-    featured: true,
-    features: [
-      "5 creatives — any disciplines, any mix",
-      "3 hook variants per piece",
-      "Performance brief · media·buyer notes",
-      "All aspect ratios · thumbnail kit",
-      "2 revision rounds per video",
-      "Delivered in seven days",
-    ],
-    cta: "Begin the folio",
-  },
-  {
-    name: "Patronage",
-    eyebrow: "Retainer · ten/month",
-    price: 2790,
-    unit: "/ month",
-    features: [
-      "10 works per month — any disciplines",
-      "Bi·weekly strategy & ideation calls",
-      "Cross·platform variants included",
-      "Trend monitoring & reactive briefs",
-      "Unlimited revisions within scope",
-      "Slack channel · 24h response",
-    ],
-    cta: "Begin patronage",
-    featured: false,
-    tag: null as string | null,
-  },
 ];
 
 const PROCESS = [
@@ -269,7 +213,6 @@ export default function CreativesGenerationPageContent() {
                 />
                 <div className="style-card-price">
                   <span>{s.time} · 9:16 / 1:1 / 4:5</span>
-                  <b>From {s.price}</b>
                 </div>
               </div>
             ))}
@@ -327,47 +270,6 @@ export default function CreativesGenerationPageContent() {
               </div>
             ))}
           </Reveal>
-        </div>
-      </section>
-
-      <section className="section" id="pricing">
-        <div className="shell">
-          <SectionHead
-            eyebrow="Tariffs"
-            title={<>Commission a work. <em>Or</em> become a patron.</>}
-            blurb="Three ways to work together — from a single commission to a long-standing patronage of the studio."
-          />
-          <Reveal as="div" className="pricing-grid" stagger>
-            {TIERS.map((t, i) => (
-              <div className={`price-card ${t.featured ? "featured" : ""}`} key={i}>
-                {t.tag ? <div className="price-tag">{t.tag}</div> : null}
-                <div className="price-eyebrow">{t.eyebrow}</div>
-                <h3>{t.name}</h3>
-                <div className="price-amount">
-                  <sup>$</sup>
-                  {t.price.toLocaleString()}
-                  <small>USD {t.unit}</small>
-                </div>
-                <ul className="price-features">
-                  {t.features.map((f, j) => (
-                    <li className="price-feature" key={j}>
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href="/contact"
-                  className="btn-primary"
-                  style={{ width: "100%", justifyContent: "center" }}
-                >
-                  {t.cta} <span className="btn-arrow">↗</span>
-                </Link>
-              </div>
-            ))}
-          </Reveal>
-          <div className="price-note">
-            All tariffs include media·buyer-ready exports · custom commissions on request.
-          </div>
         </div>
       </section>
 

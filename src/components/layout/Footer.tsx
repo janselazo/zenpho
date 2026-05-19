@@ -70,8 +70,9 @@ export default function Footer() {
               />
             </Link>
             <p className="site-footer-tag">
-              Websites, web apps, mobile apps and ad creatives — from discovery
-              and UX through build, deploy and hand-off.
+              Where great ideas become reality. Websites, web apps, mobile apps
+              and ad creatives — from discovery and UX through build, deploy and
+              hand-off.
             </p>
             <div className="site-footer-actions">
               <Link href="/contact" className="btn-primary">
