@@ -3,9 +3,9 @@
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowRight, Check } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { Sunburst } from "@/components/marketing/renaissance/RenaissanceArt";
 
 function authEmailRedirectTo(): string | undefined {
   const fromEnv = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "");
@@ -62,84 +62,76 @@ export default function RegisterCheckEmailView() {
         return;
       }
       setResendStatus("success");
-      setResendMessage("We sent another confirmation email. Check spam if it’s still missing.");
+      setResendMessage(
+        "We sent another confirmation email. Check spam if it’s still missing.",
+      );
     } catch (err) {
       setResendStatus("error");
       setResendMessage(
-        err instanceof Error ? err.message : "Could not resend the email."
+        err instanceof Error ? err.message : "Could not resend the email.",
       );
     }
   }, [email]);
 
   return (
-    <div className="w-full text-center">
-      <div className="mx-auto flex justify-center">
-        <div className="relative">
-          <div
-            className="absolute inset-0 scale-150 rounded-full bg-emerald-400/30 blur-xl"
-            aria-hidden
-          />
-          <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-emerald-600 shadow-lg shadow-emerald-600/35">
-            <Check className="h-8 w-8 stroke-[3] text-white" aria-hidden />
-          </div>
-        </div>
+    <div className="auth-confirm">
+      <div className="auth-confirm-art">
+        <Sunburst
+          width={120}
+          height={120}
+          color="var(--navy)"
+          accent="#C19D5A"
+          className="ra-float-slow"
+        />
       </div>
 
-      <h1 className="heading-display mt-8 text-2xl font-bold text-text-primary sm:text-3xl">
-        Check your email
+      <div className="auth-eyebrow">Confirmation · MMXXVI</div>
+      <h1 className="auth-title">
+        Check your <em>inbox.</em>
       </h1>
 
-      <p className="mt-4 text-sm leading-relaxed text-text-secondary">
+      <p className="auth-lead">
         We sent a confirmation link to{" "}
-        {email ? (
-          <span className="font-semibold text-text-primary">{email}</span>
-        ) : (
-          <span className="font-semibold text-text-primary">your inbox</span>
-        )}
-        .
-      </p>
-      <p className="mt-2 text-sm text-text-secondary">
-        Open the email and tap the confirmation <strong className="font-semibold text-text-primary">link</strong>
-        —there isn&apos;t a separate login code. After confirming, use your email and password on{" "}
-        <strong className="font-semibold text-text-primary">Sign in</strong>.
+        {email ? <strong>{email}</strong> : <strong>your inbox</strong>}. Open
+        the email and tap the link to finish creating your atelier — there
+        isn&apos;t a separate code.
       </p>
 
-      <Link
-        href="/login"
-        className="mt-10 flex w-full items-center justify-center gap-2 rounded-xl bg-accent py-3.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-accent-hover"
-      >
-        Back to Sign In
-        <ArrowRight className="h-5 w-4 shrink-0" aria-hidden />
-      </Link>
+      <div className="auth-confirm-actions">
+        <Link href="/login" className="btn-primary auth-submit">
+          Back to sign in <span className="btn-arrow">↗</span>
+        </Link>
 
-      <p className="mt-8 text-xs text-text-secondary">
-        Didn&apos;t receive it? Check spam and promotions. Still nothing—wait a minute and try resend.
-      </p>
-
-      <button
-        type="button"
-        disabled={
-          resendStatus === "loading" || !email?.trim() || !isSupabaseConfigured()
-        }
-        onClick={resendConfirmation}
-        className="mt-4 w-full rounded-xl border border-border bg-white py-3 text-sm font-medium text-text-primary transition-colors hover:border-zinc-300 hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {resendStatus === "loading" ? "Sending…" : "Resend confirmation email"}
-      </button>
-
-      {resendMessage ? (
-        <p
-          className={`mt-3 text-xs ${
-            resendStatus === "success"
-              ? "font-medium text-emerald-700"
-              : "text-red-700"
-          }`}
-          role="status"
-          aria-live="polite"
+        <button
+          type="button"
+          disabled={
+            resendStatus === "loading" ||
+            !email?.trim() ||
+            !isSupabaseConfigured()
+          }
+          onClick={resendConfirmation}
+          className="btn-ghost auth-secondary-btn"
         >
-          {resendMessage}
-        </p>
-      ) : null}
+          {resendStatus === "loading" ? "Sending…" : "Resend confirmation email"}
+        </button>
+
+        {resendMessage ? (
+          <p
+            className={`auth-callout ${
+              resendStatus === "success" ? "success" : "error"
+            }`}
+            role="status"
+            aria-live="polite"
+          >
+            {resendMessage}
+          </p>
+        ) : null}
+      </div>
+
+      <p className="auth-foot" style={{ marginTop: 28 }}>
+        Didn&apos;t receive it? Check spam and promotions, then wait a minute
+        before resending.
+      </p>
     </div>
   );
 }

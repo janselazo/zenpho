@@ -1,6 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import AuthMarketingPanel from "@/components/auth/AuthMarketingPanel";
+import "@/styles/marketing.css";
+import "@/styles/marketing-art.css";
 
 export const metadata = {
   robots: { index: false, follow: false },
@@ -10,38 +12,42 @@ const marketingSiteHref =
   process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "") || "/";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
+  const year = new Date().getFullYear();
+
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-      <aside className="relative hidden min-h-0 w-full overflow-y-auto lg:flex lg:max-h-screen">
+    <div className="auth-shell">
+      <aside className="marketing-page-bg dark auth-panel">
         <AuthMarketingPanel />
       </aside>
 
-      <div className="flex min-h-screen flex-1 flex-col bg-white">
-        <div className="flex flex-1 flex-col px-6 py-10 sm:px-8 lg:px-14 lg:py-16">
-          <div className="mb-8 lg:hidden">
-            <Link href={marketingSiteHref} className="inline-flex items-center gap-2">
-              <Image
-                src="/zenpho-logo.png"
-                alt="Zenpho"
-                width={120}
-                height={32}
-                className="h-8 w-auto"
-                priority
-              />
-            </Link>
-          </div>
-
-          <div className="flex flex-1 flex-col justify-center">
-            <div className="mx-auto w-full max-w-md">{children}</div>
-          </div>
-
-          <p className="mt-10 text-center text-xs text-text-secondary lg:mt-14">
-            <Link href={marketingSiteHref} className="text-accent hover:underline">
-              ← Back to site
-            </Link>
-          </p>
+      <main className="marketing-page-bg auth-main">
+        <div className="auth-main-top">
+          <Link href={marketingSiteHref} className="auth-main-brand">
+            <Image
+              src="/zenpho-logo.png"
+              alt="Zenpho"
+              width={140}
+              height={36}
+              priority
+            />
+          </Link>
+          <Link href={marketingSiteHref} className="auth-back-link">
+            ← Back to site
+          </Link>
         </div>
-      </div>
+
+        <div className="auth-card-wrap">
+          <div className="auth-card">{children}</div>
+        </div>
+
+        <div className="auth-bottom-bar">
+          <span>
+            © {year} Zenpho · Atelier of New Media ·{" "}
+            <Link href={`${marketingSiteHref}/privacy`}>Privacy</Link> ·{" "}
+            <Link href={`${marketingSiteHref}/terms`}>Terms</Link>
+          </span>
+        </div>
+      </main>
     </div>
   );
 }

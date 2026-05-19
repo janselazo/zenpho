@@ -42,7 +42,7 @@ export default function ForgotPasswordForm({
       const origin = appRedirectOrigin();
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(
         email,
-        { redirectTo: `${origin}/login` }
+        { redirectTo: `${origin}/login` },
       );
       if (resetError) {
         setError(resetError.message);
@@ -58,55 +58,57 @@ export default function ForgotPasswordForm({
   }
 
   return (
-    <div className="w-full">
-      <h1 className="heading-display text-2xl font-bold text-text-primary sm:text-3xl">
-        Reset password
+    <div>
+      <div className="auth-eyebrow">Recovery · MMXXVI</div>
+      <h1 className="auth-title">
+        Reset your <em>password.</em>
       </h1>
-      <p className="mt-1 text-sm text-text-secondary">
-        We&apos;ll email you a link to choose a new password.
+      <p className="auth-lead">
+        We&apos;ll email you a link to choose a new password. Most messages
+        arrive within a minute — check spam if not.
       </p>
 
-      <form onSubmit={onSubmit} className="mt-8 space-y-4">
+      <form onSubmit={onSubmit} className="auth-form" noValidate>
         {error ? (
-          <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          <p className="auth-callout error" role="alert">
             {error}
           </p>
         ) : null}
         {message ? (
-          <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+          <p className="auth-callout success" role="status">
             {message}
           </p>
         ) : null}
-        <div>
-          <label
-            htmlFor="email"
-            className="mb-1 block text-xs font-medium uppercase tracking-wide text-text-secondary"
-          >
-            Email
+
+        <div className="auth-field">
+          <label htmlFor="email" className="auth-field-label">
+            <span>Email address</span>
           </label>
           <input
             id="email"
             name="email"
             type="email"
+            autoComplete="email"
             required
+            placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+            className="auth-input"
           />
         </div>
+
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-xl bg-accent py-3 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-60"
+          className="btn-primary auth-submit"
         >
           {loading ? "Sending…" : "Send reset link"}
+          <span className="btn-arrow">↗</span>
         </button>
       </form>
 
-      <p className="mt-8 text-center text-sm">
-        <Link href="/login" className="text-accent hover:underline">
-          ← Back to sign in
-        </Link>
+      <p className="auth-foot" style={{ marginTop: 36 }}>
+        <Link href="/login">← Back to sign in</Link>
       </p>
     </div>
   );

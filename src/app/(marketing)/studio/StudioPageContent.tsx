@@ -88,7 +88,7 @@ const PORTFOLIO = [
     description:
       "A CRM that doesn't feel like a CRM — built around the way local businesses actually sell, follow up and close. Pipeline, conversations, automations and AI assist in one place, priced for the businesses Zenpho already serves.",
     why: "Every client we ship a website for asks the same next question — \"now how do I manage the leads?\" We got tired of recommending tools we didn't fully believe in.",
-    href: null,
+    href: "https://app.zenpho.com",
     art: <Astrolabe width={120} height={120} accent="#C19D5A" />,
   },
   {

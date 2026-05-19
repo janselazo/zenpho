@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { CircleCheck } from "lucide-react";
+import { CircleCheck, Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { SUPABASE_ENV_SETUP_MESSAGE } from "@/lib/supabase/config";
 
@@ -32,6 +32,7 @@ export default function RegisterForm({ configured }: { configured: boolean }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -73,46 +74,43 @@ export default function RegisterForm({ configured }: { configured: boolean }) {
   }
 
   return (
-    <div className="w-full">
-      <h1 className="heading-display text-2xl font-bold text-text-primary sm:text-3xl">
-        Create account
+    <div>
+      <div className="auth-eyebrow">Register · MMXXVI</div>
+      <h1 className="auth-title">
+        Open an <em>account.</em>
       </h1>
-      <p className="mt-1 text-sm text-text-secondary">
-        For production, prefer invite-only signups.
+      <p className="auth-lead">
+        Begin a free trial and commission your first work — websites,
+        applications, and campaigns from a single atelier.
       </p>
 
-      <form onSubmit={onSubmit} className="mt-8 space-y-4">
+      <form onSubmit={onSubmit} className="auth-form" noValidate>
         {error ? (
-          <p
-            className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
-            role="alert"
-          >
+          <p className="auth-callout error" role="alert">
             {error}
           </p>
         ) : null}
-        <div>
-          <label
-            htmlFor="fullName"
-            className="mb-1 block text-xs font-medium uppercase tracking-wide text-text-secondary"
-          >
-            Full name
+
+        <div className="auth-field">
+          <label htmlFor="fullName" className="auth-field-label">
+            <span>Full name</span>
           </label>
           <input
             id="fullName"
             name="fullName"
             type="text"
+            autoComplete="name"
             required
+            placeholder="Your name"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+            className="auth-input"
           />
         </div>
-        <div>
-          <label
-            htmlFor="email"
-            className="mb-1 block text-xs font-medium uppercase tracking-wide text-text-secondary"
-          >
-            Email
+
+        <div className="auth-field">
+          <label htmlFor="email" className="auth-field-label">
+            <span>Email address</span>
           </label>
           <input
             id="email"
@@ -120,96 +118,76 @@ export default function RegisterForm({ configured }: { configured: boolean }) {
             type="email"
             autoComplete="email"
             required
+            placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+            className="auth-input"
           />
         </div>
-        <div>
-          <label
-            htmlFor="password"
-            className="mb-1 block text-xs font-medium uppercase tracking-wide text-text-secondary"
-          >
-            Password
+
+        <div className="auth-field">
+          <label htmlFor="password" className="auth-field-label">
+            <span>Password</span>
           </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="new-password"
-            required
-            minLength={8}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
-          />
+          <div className="auth-input-wrap">
+            <input
+              id="password"
+              name="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="new-password"
+              required
+              minLength={8}
+              placeholder="At least 8 characters"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="auth-eye-btn"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? (
+                <EyeOff className="h-4 w-4" aria-hidden />
+              ) : (
+                <Eye className="h-4 w-4" aria-hidden />
+              )}
+            </button>
+          </div>
         </div>
+
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-xl bg-accent py-3 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-60"
+          className="btn-primary auth-submit"
         >
-          {loading ? "Creating…" : "Create Account"}
+          {loading ? "Creating…" : "Create account"}
+          <span className="btn-arrow">↗</span>
         </button>
-        <div
-          className="flex flex-wrap items-center justify-evenly gap-x-4 gap-y-2 pt-2 text-sm text-text-secondary"
-          aria-label="Trial benefits"
-        >
+
+        <div className="auth-trial-row" aria-label="Trial benefits">
           {SIGNUP_BENEFITS.map((label) => (
-            <div key={label} className="flex items-center gap-2">
-              <CircleCheck
-                className="h-5 w-5 shrink-0 text-emerald-600"
-                strokeWidth={2}
-                aria-hidden
-              />
-              <span>{label}</span>
-            </div>
+            <span key={label}>
+              <CircleCheck className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+              {label}
+            </span>
           ))}
         </div>
       </form>
 
-      <p className="mt-8 text-center text-sm text-text-secondary">
-        Already have an account?{" "}
-        <Link href="/login" className="font-medium text-accent hover:underline">
-          Sign in
-        </Link>
-      </p>
-      <p className="mt-4 text-center text-xs leading-relaxed text-text-secondary">
-        By creating an account, you agree to our{" "}
-        <Link href="/terms" className="font-medium text-accent hover:underline">
-          Terms of Service
-        </Link>{" "}
-        and{" "}
-        <Link href="/privacy" className="font-medium text-accent hover:underline">
-          Privacy Policy
-        </Link>
-        .
-      </p>
+      <div className="auth-divider" aria-hidden>
+        <span>Already with us</span>
+      </div>
 
-      <blockquote className="mt-10 w-full max-w-xl rounded-2xl border border-border bg-white p-5 text-left shadow-sm">
-        <p className="text-sm italic leading-relaxed text-text-primary">
-          &ldquo;Zenpho put web leads, phone calls, and referrals in{" "}
-          <span className="font-semibold not-italic text-emerald-600">
-            one workspace
-          </span>
-          . We respond faster and finally see which marketing brings real booked jobs—not
-          just clicks.&rdquo;
-        </p>
-        <footer className="mt-5 flex items-center gap-3 border-t border-border pt-4">
-          <span
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-base font-bold text-white"
-            aria-hidden
-          >
-            M
-          </span>
-          <div className="min-w-0 text-left">
-            <p className="truncate font-semibold text-text-primary">Marcus V.</p>
-            <p className="truncate text-xs text-text-secondary">
-              Owner, Lakeside Property Care
-            </p>
-          </div>
-        </footer>
-      </blockquote>
+      <Link href="/login" className="btn-ghost auth-secondary-btn">
+        Sign in to your account
+      </Link>
+
+      <p className="auth-foot">
+        By creating an account, you agree to our{" "}
+        <Link href="/terms">Terms of Service</Link> and{" "}
+        <Link href="/privacy">Privacy Policy</Link>.
+      </p>
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { SUPABASE_ENV_SETUP_MESSAGE } from "@/lib/supabase/config";
 
@@ -45,31 +45,26 @@ export default function LoginForm({ configured }: { configured: boolean }) {
     }
   }
 
-  const inputClass =
-    "w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-text-primary placeholder:text-text-secondary/45 outline-none transition-shadow focus:border-accent focus:ring-2 focus:ring-accent/20";
-
   return (
-    <div className="w-full">
-      <h1 className="heading-display text-2xl font-bold text-text-primary sm:text-3xl">Welcome back</h1>
-      <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-        Sign in to your Zenpho account with your work email and password.
+    <div>
+      <div className="auth-eyebrow">Sign in · MMXXVI</div>
+      <h1 className="auth-title">
+        Welcome <em>back.</em>
+      </h1>
+      <p className="auth-lead">
+        Sign in to your Zenpho atelier with your work email and password.
       </p>
 
-      <form onSubmit={onSubmit} className="mt-8 space-y-5">
+      <form onSubmit={onSubmit} className="auth-form" noValidate>
         {error ? (
-          <p
-            className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
-            role="alert"
-          >
+          <p className="auth-callout error" role="alert">
             {error}
           </p>
         ) : null}
-        <div>
-          <label
-            htmlFor="email"
-            className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-text-secondary"
-          >
-            Email address
+
+        <div className="auth-field">
+          <label htmlFor="email" className="auth-field-label">
+            <span>Email address</span>
           </label>
           <input
             id="email"
@@ -80,85 +75,65 @@ export default function LoginForm({ configured }: { configured: boolean }) {
             placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className={inputClass}
+            className="auth-input"
           />
         </div>
-        <div>
-          <div className="mb-1.5 flex items-center justify-between gap-3">
-            <label
-              htmlFor="password"
-              className="text-xs font-semibold uppercase tracking-wide text-text-secondary"
-            >
-              Password
-            </label>
-            <Link href="/forgot-password" className="text-xs font-medium text-accent hover:underline">
-              Forgot password?
+
+        <div className="auth-field">
+          <label htmlFor="password" className="auth-field-label">
+            <span>Password</span>
+            <Link href="/forgot-password" className="auth-field-label-link">
+              Forgot?
             </Link>
-          </div>
-          <div className="relative">
+          </label>
+          <div className="auth-input-wrap">
             <input
               id="password"
               name="password"
               type={showPassword ? "text" : "password"}
               autoComplete="current-password"
               required
-              placeholder="Enter your password"
+              placeholder="Your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className={`${inputClass} pr-12`}
             />
             <button
               type="button"
               onClick={() => setShowPassword((v) => !v)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-text-secondary transition-colors hover:bg-surface hover:text-text-primary"
+              className="auth-eye-btn"
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
-              {showPassword ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
+              {showPassword ? (
+                <EyeOff className="h-4 w-4" aria-hidden />
+              ) : (
+                <Eye className="h-4 w-4" aria-hidden />
+              )}
             </button>
           </div>
         </div>
+
         <button
           type="submit"
           disabled={loading}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent py-3.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-accent-hover disabled:opacity-60"
+          className="btn-primary auth-submit"
         >
-          {loading ? (
-            "Signing in…"
-          ) : (
-            <>
-              Sign in
-              <ArrowRight className="h-4 w-4" aria-hidden />
-            </>
-          )}
+          {loading ? "Signing in…" : "Sign in"}
+          <span className="btn-arrow">↗</span>
         </button>
       </form>
 
-      <div className="relative my-10">
-        <div className="absolute inset-0 flex items-center" aria-hidden>
-          <span className="w-full border-t border-border" />
-        </div>
-        <div className="relative flex justify-center text-xs font-semibold uppercase tracking-[0.14em]">
-          <span className="bg-white px-4 text-text-secondary">New to Zenpho?</span>
-        </div>
+      <div className="auth-divider" aria-hidden>
+        <span>New to Zenpho</span>
       </div>
 
-      <Link
-        href="/register"
-        className="flex w-full items-center justify-center rounded-full border border-border bg-white px-8 py-4 text-base font-medium text-text-primary transition-colors hover:border-zinc-300 hover:bg-surface"
-      >
+      <Link href="/register" className="btn-ghost auth-secondary-btn">
         Create a free account
       </Link>
 
-      <p className="mt-8 text-center text-xs leading-relaxed text-text-secondary">
+      <p className="auth-foot">
         By signing in, you agree to our{" "}
-        <Link href="/terms" className="font-medium text-accent hover:underline">
-          Terms of Service
-        </Link>{" "}
-        and{" "}
-        <Link href="/privacy" className="font-medium text-accent hover:underline">
-          Privacy Policy
-        </Link>
-        .
+        <Link href="/terms">Terms of Service</Link> and{" "}
+        <Link href="/privacy">Privacy Policy</Link>.
       </p>
     </div>
   );

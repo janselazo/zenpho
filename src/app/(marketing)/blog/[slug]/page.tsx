@@ -4,7 +4,6 @@ import { blogPosts } from "@/lib/data";
 import ArticleContent from "./ArticleContent";
 import Link from "next/link";
 import BlogArticleCTA from "@/components/marketing/blog/BlogArticleCTA";
-import { SECTION_EYEBROW_COMPACT_CLASSNAME } from "@/components/ui/SectionHeading";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -40,52 +39,28 @@ export default async function BlogPostPage({ params }: Props) {
   }
 
   return (
-    <article className="relative px-6 pt-40 pb-32">
-      <div className="mx-auto max-w-3xl">
-        <Link
-          href="/blog"
-          className="mb-8 inline-flex items-center gap-2 text-sm text-text-secondary transition-colors hover:text-text-primary"
-        >
-          <svg
-            className="h-4 w-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={1.5}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"
-            />
-          </svg>
-          Back to Blog
+    <section className="section section-light blog-article-page">
+      <div className="shell blog-article-shell">
+        <Link href="/blog" className="blog-article-back">
+          ← Back to blog
         </Link>
 
-        <div className="mb-8 flex flex-wrap items-center gap-4">
-          <span className={SECTION_EYEBROW_COMPACT_CLASSNAME}>
-            {post.category}
-          </span>
-          <span className="text-sm text-text-secondary">
-            {formatDate(post.date)}
-          </span>
-          <span className="text-sm text-text-secondary">{post.readTime}</span>
-        </div>
+        <header className="blog-article-head">
+          <div className="eyebrow left">{post.category}</div>
+          <h1 className="blog-article-title">{post.title}</h1>
+          <div className="blog-article-meta">
+            <span>{formatDate(post.date)}</span>
+            <span>{post.readTime}</span>
+          </div>
+          <p className="blog-article-dek">{post.excerpt}</p>
+        </header>
 
-        <h1 className="heading-display text-3xl font-bold leading-tight tracking-tight text-text-primary sm:text-4xl lg:text-5xl">
-          {post.title}
-        </h1>
-
-        <p className="mt-6 text-lg leading-relaxed text-text-secondary">
-          {post.excerpt}
-        </p>
-
-        <div className="mt-12 border-t border-border pt-12">
+        <div className="blog-article-doc">
           <ArticleContent content={post.content} />
         </div>
 
         <BlogArticleCTA />
       </div>
-    </article>
+    </section>
   );
 }

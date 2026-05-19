@@ -1,7 +1,3 @@
-"use client";
-
-import { motion } from "framer-motion";
-
 interface ArticleContentProps {
   content: string;
 }
@@ -17,9 +13,7 @@ function renderContent(content: string) {
       const text = currentParagraph.join(" ").trim();
       if (text) {
         elements.push(
-          <p key={key++} className="text-text-secondary leading-relaxed">
-            {renderInline(text)}
-          </p>
+          <p key={key++}>{renderInline(text)}</p>,
         );
       }
       currentParagraph = [];
@@ -36,11 +30,7 @@ function renderContent(content: string) {
       if (match.index > lastIndex) {
         parts.push(text.slice(lastIndex, match.index));
       }
-      parts.push(
-        <strong key={`b-${match.index}`} className="font-semibold text-text-primary">
-          {match[1]}
-        </strong>
-      );
+      parts.push(<strong key={`b-${match.index}`}>{match[1]}</strong>);
       lastIndex = regex.lastIndex;
     }
 
@@ -56,24 +46,13 @@ function renderContent(content: string) {
 
     if (trimmed.startsWith("## ")) {
       flushParagraph();
-      elements.push(
-        <h2
-          key={key++}
-          className="mt-10 mb-4 text-2xl font-bold text-text-primary"
-        >
-          {trimmed.slice(3)}
-        </h2>
-      );
+      elements.push(<h2 key={key++}>{trimmed.slice(3)}</h2>);
     } else if (trimmed.startsWith("- ")) {
       flushParagraph();
       elements.push(
-        <li
-          key={key++}
-          className="ml-4 flex items-start gap-3 text-text-secondary"
-        >
-          <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent" />
-          <span>{renderInline(trimmed.slice(2))}</span>
-        </li>
+        <ul key={key++}>
+          <li>{renderInline(trimmed.slice(2))}</li>
+        </ul>,
       );
     } else if (trimmed === "") {
       flushParagraph();
@@ -87,14 +66,5 @@ function renderContent(content: string) {
 }
 
 export default function ArticleContent({ content }: ArticleContentProps) {
-  return (
-    <motion.div
-      initial={{ opacity: 1, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="prose-dark space-y-4"
-    >
-      {renderContent(content)}
-    </motion.div>
-  );
+  return <div className="blog-article-prose">{renderContent(content)}</div>;
 }
