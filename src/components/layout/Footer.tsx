@@ -2,6 +2,53 @@ import Image from "next/image";
 import Link from "next/link";
 import { marketingFooterColumns } from "@/lib/marketing-nav";
 import { Ornament } from "@/components/marketing/renaissance/Ornament";
+import { FooterConnectIcon } from "@/components/layout/FooterConnectIcons";
+
+function FooterColumnLink({
+  link,
+}: {
+  link: (typeof marketingFooterColumns)[number]["links"][number];
+}) {
+  if (link.icon) {
+    const className = "site-footer-connect-icon";
+    if (link.external) {
+      return (
+        <a
+          href={link.href}
+          className={className}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={link.label}
+        >
+          <FooterConnectIcon icon={link.icon} />
+        </a>
+      );
+    }
+    return (
+      <a href={link.href} className={className} aria-label={link.label}>
+        <FooterConnectIcon icon={link.icon} />
+      </a>
+    );
+  }
+
+  if (link.external) {
+    return (
+      <a
+        href={link.href}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {link.label}
+      </a>
+    );
+  }
+
+  if (link.href.startsWith("mailto:") || link.href.startsWith("tel:")) {
+    return <a href={link.href}>{link.label}</a>;
+  }
+
+  return <Link href={link.href}>{link.label}</Link>;
+}
 
 export default function Footer() {
   return (
@@ -36,25 +83,16 @@ export default function Footer() {
             {marketingFooterColumns.map((col) => (
               <div key={col.heading} className="site-footer-col">
                 <h5>{col.heading}</h5>
-                {col.links.map((link) =>
-                  link.external ? (
-                    <a
-                      key={link.href}
-                      href={link.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {link.label}
-                    </a>
-                  ) : link.href.startsWith("mailto:") || link.href.startsWith("tel:") ? (
-                    <a key={link.href} href={link.href}>
-                      {link.label}
-                    </a>
-                  ) : (
-                    <Link key={link.href} href={link.href}>
-                      {link.label}
-                    </Link>
-                  ),
+                {col.links.some((link) => link.icon) ? (
+                  <div className="site-footer-connect-icons">
+                    {col.links.map((link) => (
+                      <FooterColumnLink key={link.href} link={link} />
+                    ))}
+                  </div>
+                ) : (
+                  col.links.map((link) => (
+                    <FooterColumnLink key={link.href} link={link} />
+                  ))
                 )}
               </div>
             ))}

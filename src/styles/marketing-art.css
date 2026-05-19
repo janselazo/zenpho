@@ -478,6 +478,269 @@
   }
 }
 
+/* Problem section — closing quote below the grid */
+.marketing-page-bg .problem-closing {
+  margin-top: 64px;
+  max-width: 640px;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.marketing-page-bg .problem-closing-text {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 22px;
+  line-height: 1.4;
+  color: var(--fg-soft);
+  margin-top: 16px;
+}
+
+@media (max-width: 720px) {
+  .marketing-page-bg .problem-closing {
+    margin-top: 28px;
+  }
+
+  .marketing-page-bg .problem-closing-text {
+    font-size: 19px;
+    margin-top: 12px;
+  }
+}
+
+/* Blog article — end-of-post CTA (compact cta-banner) */
+.marketing-page-bg .cta-banner.cta-banner-inline {
+  margin-top: 64px;
+  padding: 56px 32px;
+  border-radius: 0;
+}
+
+.marketing-page-bg .cta-banner.cta-banner-inline .cta-banner-frame {
+  inset: 16px 20px;
+}
+
+.marketing-page-bg .cta-banner.cta-banner-inline .cta-banner-art {
+  margin-bottom: -20px;
+  opacity: 0.85;
+}
+
+.marketing-page-bg .cta-banner.cta-banner-inline h2 {
+  font-size: clamp(32px, 5vw, 48px);
+  max-width: none;
+}
+
+.marketing-page-bg .cta-banner.cta-banner-inline p {
+  font-size: 16px;
+  line-height: 1.55;
+  margin: 20px auto 28px;
+  max-width: 42ch;
+}
+
+@media (max-width: 720px) {
+  .marketing-page-bg .cta-banner.cta-banner-inline {
+    margin-top: 48px;
+    padding: 48px 20px;
+  }
+
+  .marketing-page-bg .cta-banner.cta-banner-inline .cta-banner-frame {
+    inset: 12px 14px;
+  }
+
+  .marketing-page-bg .cta-banner.cta-banner-inline .hero-cta-row {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .marketing-page-bg .cta-banner.cta-banner-inline .hero-cta-row .btn-primary,
+  .marketing-page-bg .cta-banner.cta-banner-inline .hero-cta-row .btn-ghost {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Legal pages — Privacy / Terms */
+.marketing-page-bg .legal-page {
+  padding-top: 120px;
+  padding-bottom: 100px;
+}
+
+.marketing-page-bg .legal-page-shell {
+  max-width: 48rem;
+}
+
+.marketing-page-bg .legal-page-head .eyebrow {
+  margin-bottom: 0;
+}
+
+.marketing-page-bg .legal-page-title {
+  font-family: var(--serif);
+  font-size: clamp(40px, 6vw, 56px);
+  font-weight: 400;
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+  color: var(--fg);
+  margin-top: 12px;
+}
+
+.marketing-page-bg .legal-page-intro {
+  font-family: var(--body);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--muted);
+  margin-top: 16px;
+}
+
+.marketing-page-bg .legal-doc {
+  margin-top: 40px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  padding: 40px 48px;
+  box-shadow: 0 20px 60px rgba(10, 21, 48, 0.06);
+}
+
+.marketing-page-bg .legal-prose {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.marketing-page-bg .legal-section h2 {
+  font-family: var(--body);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--fg);
+  margin-bottom: 12px;
+}
+
+.marketing-page-bg .legal-section p,
+.marketing-page-bg .legal-section li {
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--fg-soft);
+}
+
+.marketing-page-bg .legal-section p + p,
+.marketing-page-bg .legal-section p + ul,
+.marketing-page-bg .legal-section ul + p {
+  margin-top: 12px;
+}
+
+.marketing-page-bg .legal-section ul {
+  list-style: disc;
+  padding-left: 1.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.marketing-page-bg .legal-section .legal-em {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.marketing-page-bg .legal-link {
+  color: var(--navy);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(10, 21, 48, 0.35);
+}
+
+.marketing-page-bg .legal-link:hover {
+  text-decoration-color: var(--navy);
+}
+
+.marketing-page-bg .legal-callout {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  border-radius: 16px;
+  padding: 16px 20px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--fg-soft);
+}
+
+@media (max-width: 720px) {
+  .marketing-page-bg .legal-page {
+    padding-top: 96px;
+    padding-bottom: 72px;
+  }
+
+  .marketing-page-bg .legal-doc {
+    margin-top: 28px;
+    padding: 28px 24px;
+    border-radius: 20px;
+  }
+
+  .marketing-page-bg .legal-prose {
+    gap: 28px;
+  }
+}
+
+/* Footer Connect — icon links instead of text labels */
+.marketing-page-bg .site-footer-connect-icons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px;
+  margin-top: 4px;
+}
+
+.marketing-page-bg .site-footer-col .site-footer-connect-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: rgba(244, 240, 228, 0.92);
+  text-decoration: none;
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.marketing-page-bg .site-footer-col .site-footer-connect-icon svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+.marketing-page-bg .site-footer-col .site-footer-connect-icon:hover {
+  color: var(--marble);
+  background: transparent;
+  transform: translateY(-2px);
+}
+
+/* Trusted-by label — center wrapped headline on narrow viewports */
+@media (max-width: 720px) {
+  .marketing-page-bg .trusted-by-label {
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+    padding-inline: 8px;
+  }
+
+  .marketing-page-bg .trusted-by-label span {
+    flex: 0 1 auto;
+    max-width: 9.5rem;
+    text-align: center;
+    line-height: 1.55;
+    letter-spacing: 0.2em;
+  }
+
+  .marketing-page-bg .trusted-by-label .orn {
+    flex-shrink: 0;
+  }
+}
+
 /* Starfield twinkle — used by Starfield ornament. */
 .marketing-page-bg .starfield {
   position: absolute;

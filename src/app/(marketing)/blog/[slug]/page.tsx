@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 import { blogPosts } from "@/lib/data";
 import ArticleContent from "./ArticleContent";
 import Link from "next/link";
+import BlogArticleCTA from "@/components/marketing/blog/BlogArticleCTA";
 import { SECTION_EYEBROW_COMPACT_CLASSNAME } from "@/components/ui/SectionHeading";
-import { BOOKING_PRIMARY_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -84,26 +84,7 @@ export default async function BlogPostPage({ params }: Props) {
           <ArticleContent content={post.content} />
         </div>
 
-        <div className="mt-16 rounded-2xl border border-border bg-surface p-8 text-center">
-          <p className="text-lg font-semibold text-text-primary">Ready to plan your MVP?</p>
-          <p className="mt-2 text-sm text-text-secondary">
-            Book a working session—we&apos;ll align scope for web apps, ecommerce, mobile, or integrated experiences.
-          </p>
-          <div className="mt-4 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link
-              href="/booking"
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-accent/90"
-            >
-              {BOOKING_PRIMARY_BUTTON_LABEL}
-            </Link>
-            <Link
-              href="/services"
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-white px-6 py-3 text-sm font-medium text-text-primary transition-colors hover:bg-surface"
-            >
-              Explore services
-            </Link>
-          </div>
-        </div>
+        <BlogArticleCTA />
       </div>
     </article>
   );

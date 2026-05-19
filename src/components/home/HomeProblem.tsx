@@ -42,28 +42,9 @@ export default function HomeProblem() {
           ))}
         </Reveal>
 
-        <Reveal
-          style={{
-            marginTop: 64,
-            maxWidth: 640,
-            marginInline: "auto",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            textAlign: "center",
-          }}
-        >
+        <Reveal className="problem-closing">
           <Ornament variant="fleuron" width={80} height={24} />
-          <p
-            style={{
-              fontFamily: "var(--serif)",
-              fontStyle: "italic",
-              fontSize: 22,
-              lineHeight: 1.4,
-              color: "var(--fg-soft)",
-              marginTop: 16,
-            }}
-          >
+          <p className="problem-closing-text">
             Our job is simple — we help you turn the idea into a launch-ready
             website, web app, mobile app or MVP, with clear strategy and
             support after launch.

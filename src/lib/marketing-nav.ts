@@ -91,9 +91,16 @@ export const marketingTopNav: MarketingTopNavItem[] = [
   { type: "link", label: "Contact", href: "/contact" },
 ];
 
+export type MarketingFooterLinkIcon = "x" | "linkedin" | "instagram" | "github" | "phone";
+
 export type MarketingFooterColumn = {
   heading: string;
-  links: { label: string; href: string; external?: boolean }[];
+  links: {
+    label: string;
+    href: string;
+    external?: boolean;
+    icon?: MarketingFooterLinkIcon;
+  }[];
 };
 
 export const marketingFooterColumns: MarketingFooterColumn[] = [
@@ -128,20 +135,30 @@ export const marketingFooterColumns: MarketingFooterColumn[] = [
         label: "Twitter / X",
         href: "https://x.com/zenpho",
         external: true,
+        icon: "x",
       },
       {
         label: "LinkedIn",
         href: "https://www.linkedin.com/company/zenpho",
         external: true,
+        icon: "linkedin",
+      },
+      {
+        label: "Instagram",
+        href: "https://www.instagram.com/zenpho",
+        external: true,
+        icon: "instagram",
       },
       {
         label: "GitHub",
         href: "https://github.com/janselazo",
         external: true,
+        icon: "github",
       },
       {
         label: "+1 (786) 623-5157",
         href: "tel:+17866235157",
+        icon: "phone",
       },
     ],
   },
