@@ -1411,7 +1411,7 @@
 .marketing-page-bg .auth-main-top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 24px;
   margin-bottom: 32px;
 }

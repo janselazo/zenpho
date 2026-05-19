@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import AuthMarketingPanel from "@/components/auth/AuthMarketingPanel";
 import "@/styles/marketing.css";
 import "@/styles/marketing-art.css";
@@ -22,15 +21,6 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
       <main className="marketing-page-bg auth-main">
         <div className="auth-main-top">
-          <Link href={marketingSiteHref} className="auth-main-brand">
-            <Image
-              src="/zenpho-logo.png"
-              alt="Zenpho"
-              width={140}
-              height={36}
-              priority
-            />
-          </Link>
           <Link href={marketingSiteHref} className="auth-back-link">
             ← Back to site
           </Link>
