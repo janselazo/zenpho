@@ -56,6 +56,7 @@ import PlacesSearchResultsList from "@/components/crm/prospecting/PlacesSearchRe
 import type { ProspectWebsiteDeepStatus } from "@/components/crm/prospecting/ProspectIntelEnrichment";
 import ProspectIntelBusinessSnapshot from "@/components/crm/prospecting/ProspectIntelBusinessSnapshot";
 import MetaAdIntelReportSection from "@/components/crm/meta-ad-intel/MetaAdIntelReportSection";
+import { metaAdIntelToolsHref } from "@/lib/crm/meta-ad-intel-href";
 import type { HomepageContactHints } from "@/app/(crm)/actions/prospect-intel";
 import { formatReportAsPlainNotes } from "@/lib/crm/prospect-intel-notes-format";
 import { mergeProspectSocialUrls } from "@/lib/crm/prospect-contact-extract";
@@ -179,23 +180,6 @@ function cityFromFormattedAddress(address: string | null | undefined): string | 
   if (parts.length >= 4) return parts[1] || null;
   if (parts.length >= 2) return parts[0] || null;
   return null;
-}
-
-function metaAdIntelHref(input: {
-  businessName: string;
-  websiteUrl?: string | null;
-  facebookUrl?: string | null;
-  category?: string | null;
-  city?: string | null;
-}): string {
-  const params = new URLSearchParams();
-  if (input.businessName.trim()) params.set("businessName", input.businessName.trim());
-  if (input.websiteUrl?.trim()) params.set("websiteUrl", input.websiteUrl.trim());
-  if (input.facebookUrl?.trim()) params.set("facebookUrl", input.facebookUrl.trim());
-  if (input.category?.trim()) params.set("category", input.category.trim());
-  if (input.city?.trim()) params.set("city", input.city.trim());
-  const query = params.toString();
-  return `/prospecting/meta-ad-intel${query ? `?${query}` : ""}`;
 }
 
 function googleListingStatusGlance(status: string | null | undefined): string | null {
@@ -1661,7 +1645,7 @@ function ProspectsIntelligenceViewInner({
   );
 
   const openMetaAdIntelForPlace = useCallback((place: PlacesSearchPlace) => {
-    const href = metaAdIntelHref({
+    const href = metaAdIntelToolsHref({
       businessName: place.name,
       websiteUrl: place.websiteUri,
       category: primaryPlaceTypeLabel(place.types),

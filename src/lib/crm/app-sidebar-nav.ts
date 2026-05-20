@@ -59,7 +59,6 @@ const landingPages = section("landing-pages");
 
 export const SIDEBAR_MARKETING: AppSidebarItem[] = [
   { href: playbook.href, label: playbook.label, icon: playbook.icon },
-  { href: "/tools", label: "Tools", icon: Wrench },
   {
     href: prospects.href,
     label: "Google Opportunities",
@@ -123,6 +122,7 @@ export const SIDEBAR_CREATIVE_STUDIO: AppSidebarItem[] = [
     icon: landingPages.icon,
     soon: !!landingPages.soon,
   },
+  { href: "/tools", label: "Tools", icon: Wrench },
 ];
 
 export const SIDEBAR_CRM: AppSidebarItem[] = [

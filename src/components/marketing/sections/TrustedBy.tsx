@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Reveal } from "@/components/marketing/renaissance/Reveal";
 import { Ornament } from "@/components/marketing/renaissance/Ornament";
 
@@ -18,18 +19,26 @@ const DEFAULT_LOGOS = [
 
 export default function TrustedBy({
   logos = DEFAULT_LOGOS,
-  label = "Trusted by 50+ leading companies",
+  label,
 }: {
   logos?: string[];
-  label?: string;
+  label?: ReactNode;
 }) {
+  const labelContent = label ?? (
+    <>
+      Trusted by 50+{" "}
+      <span className="trusted-by-leading-word">leading </span>
+      companies
+    </>
+  );
+
   return (
     <section className="trusted-by">
       <div className="shell">
         <Reveal>
           <div className="trusted-by-label">
             <Ornament variant="rule" width={40} height={14} />
-            <span>{label}</span>
+            <span>{labelContent}</span>
             <Ornament variant="rule" width={40} height={14} />
           </div>
           <div className="trusted-by-marquee">

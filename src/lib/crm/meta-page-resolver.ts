@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { friendlyMetaApiError } from "@/lib/crm/meta-api-errors";
 
 const FACEBOOK_HOSTS = new Set([
   "facebook.com",
@@ -182,6 +183,7 @@ async function resolvePageIdWithGraph(
       return {
         pageId: null,
         warning:
+          friendlyMetaApiError(data.error?.message) ||
           data.error?.message ||
           `Graph Page ID lookup failed with status ${res.status}.`,
       };

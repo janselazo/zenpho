@@ -523,6 +523,14 @@
  */
 .marketing-page-bg .audit-search-field {
   position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 700px) {
+  .marketing-page-bg .audit-search-field {
+    flex: 0 0 auto;
+  }
 }
 
 .marketing-page-bg .audit-search-suggestions {
@@ -603,6 +611,7 @@
   .marketing-page-bg .audit-search-suggestions {
     left: 0;
     right: 0;
+    top: calc(100% + 8px);
   }
 }
 
@@ -1033,6 +1042,10 @@
     letter-spacing: 0.2em;
   }
 
+  .marketing-page-bg .trusted-by-leading-word {
+    display: none;
+  }
+
   .marketing-page-bg .trusted-by-label .orn {
     flex-shrink: 0;
   }
@@ -1067,7 +1080,7 @@
 /* ───────────────── Studio page — venture portfolio & method ───────────────── */
 .marketing-page-bg .studio-portfolio-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 28px;
 }
 

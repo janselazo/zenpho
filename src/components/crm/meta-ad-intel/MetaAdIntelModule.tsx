@@ -5,6 +5,7 @@ import { ExternalLink, Loader2, Play, Search, Sparkles, Video } from "lucide-rea
 import { useSearchParams } from "next/navigation";
 import type { MetaAdIntelResponse, MetaAdSignal } from "@/lib/crm/meta-ad-intel-types";
 import MetaAdIntelOutreachTemplates from "@/components/crm/meta-ad-intel/MetaAdIntelOutreachTemplates";
+import { friendlyMetaApiError } from "@/lib/crm/meta-api-errors";
 
 type ThumbnailResult = {
   thumbnailUrl?: string;
@@ -23,20 +24,6 @@ const SIGNAL_LABELS: Record<MetaAdSignal, string> = {
   COLD: "Cold",
   UNKNOWN: "Unknown",
 };
-
-function friendlyMetaWarning(raw: string | null | undefined): string | null {
-  if (!raw) return null;
-  const text = raw.trim();
-  if (!text) return null;
-  if (
-    /pages_read_engagement|Page Public Content Access|Page Public Metadata Access|Could not resolve a numeric Facebook Page ID|Application does not have permission/i.test(
-      text,
-    )
-  ) {
-    return "Meta blocks third-party Page metadata, so this report uses Pixel detection and an Ad Library keyword scan.";
-  }
-  return text;
-}
 
 function signalClass(signal: MetaAdSignal): string {
   switch (signal) {
@@ -137,9 +124,6 @@ export default function MetaAdIntelModule() {
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
-          Prospecting
-        </p>
         <h1 className="heading-display mt-1 text-2xl font-bold text-text-primary dark:text-zinc-100">
           Meta Ad Intelligence + Video Ads Pitch Generator
         </h1>
@@ -279,9 +263,9 @@ export default function MetaAdIntelModule() {
               </p>
             ) : null}
 
-            {friendlyMetaWarning(intel.warning) ? (
-              <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
-                {friendlyMetaWarning(intel.warning)}
+          {friendlyMetaApiError(intel.warning) ? (
+            <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+              {friendlyMetaApiError(intel.warning)}
               </p>
             ) : null}
 

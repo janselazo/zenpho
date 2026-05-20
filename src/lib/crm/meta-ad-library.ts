@@ -2,6 +2,7 @@ import type {
   MetaAdCreative,
   MetaAdSignal,
 } from "@/lib/crm/meta-ad-intel-types";
+import { friendlyMetaApiError } from "@/lib/crm/meta-api-errors";
 
 const META_AD_LIBRARY_URL = "https://graph.facebook.com/v19.0/ads_archive";
 const META_AD_LIBRARY_LIMIT = 50;
@@ -115,6 +116,7 @@ async function fetchMetaAdLibraryWithParams(
       return {
         ok: false,
         error:
+          friendlyMetaApiError(data.error?.message) ||
           data.error?.message ||
           `Meta Ad Library request failed with status ${res.status}.`,
       };

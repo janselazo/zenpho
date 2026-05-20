@@ -6,6 +6,8 @@ import type {
   MetaAdIntelResponse,
   MetaAdSignal,
 } from "@/lib/crm/meta-ad-intel-types";
+import { metaAdIntelToolsHref } from "@/lib/crm/meta-ad-intel-href";
+import { friendlyMetaApiError } from "@/lib/crm/meta-api-errors";
 
 type Props = {
   businessName: string;
@@ -24,20 +26,6 @@ const SIGNAL_LABELS: Record<MetaAdSignal, string> = {
   COLD: "Cold",
   UNKNOWN: "Unknown",
 };
-
-function friendlyMetaWarning(raw: string | null | undefined): string | null {
-  if (!raw) return null;
-  const text = raw.trim();
-  if (!text) return null;
-  if (
-    /pages_read_engagement|Page Public Content Access|Page Public Metadata Access|Could not resolve a numeric Facebook Page ID|Application does not have permission/i.test(
-      text,
-    )
-  ) {
-    return "Meta blocks third-party Page metadata, so this report uses Pixel detection and an Ad Library keyword scan.";
-  }
-  return text;
-}
 
 function signalClass(signal: MetaAdSignal): string {
   switch (signal) {
@@ -58,17 +46,6 @@ function signalClass(signal: MetaAdSignal): string {
 function factValue(value: string | number | null | undefined): string {
   if (value === null || value === undefined || value === "") return "-";
   return String(value);
-}
-
-function buildStandaloneHref(input: Props): string {
-  const params = new URLSearchParams();
-  if (input.businessName.trim()) params.set("businessName", input.businessName.trim());
-  if (input.websiteUrl?.trim()) params.set("websiteUrl", input.websiteUrl.trim());
-  if (input.facebookUrl?.trim()) params.set("facebookUrl", input.facebookUrl.trim());
-  if (input.category?.trim()) params.set("category", input.category.trim());
-  if (input.city?.trim()) params.set("city", input.city.trim());
-  const query = params.toString();
-  return `/prospecting/meta-ad-intel${query ? `?${query}` : ""}`;
 }
 
 export default function MetaAdIntelReportSection({
@@ -94,7 +71,7 @@ export default function MetaAdIntelReportSection({
   );
 
   const standaloneHref = useMemo(
-    () => buildStandaloneHref({ businessName, websiteUrl, facebookUrl, category, city }),
+    () => metaAdIntelToolsHref({ businessName, websiteUrl, facebookUrl, category, city }),
     [businessName, category, city, facebookUrl, websiteUrl],
   );
 
@@ -245,9 +222,9 @@ export default function MetaAdIntelReportSection({
             ) : null}
           </div>
 
-          {friendlyMetaWarning(intel.warning) ? (
+          {friendlyMetaApiError(intel.warning) ? (
             <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
-              {friendlyMetaWarning(intel.warning)}
+              {friendlyMetaApiError(intel.warning)}
             </p>
           ) : null}
         </div>

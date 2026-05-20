@@ -153,7 +153,7 @@ export default function AuditHero() {
           className="audit-search"
           onSubmit={handleSubmit}
         >
-          <div className="audit-search-field">
+          <label className="audit-search-field" htmlFor="audit-business-search">
             <svg
               viewBox="0 0 24 24"
               width="20"
@@ -176,6 +176,7 @@ export default function AuditHero() {
               <line x1="16" y1="15" x2="18" y2="15" />
             </svg>
             <input
+              id="audit-business-search"
               type="text"
               name="business"
               placeholder="Search your business name or website"
@@ -186,7 +187,6 @@ export default function AuditHero() {
                 setOpen(true);
               }}
               onFocus={() => setOpen(true)}
-              aria-label="Business name or website"
             />
             {open && (suggestions.length > 0 || suggesting || hint) ? (
               <div
@@ -228,7 +228,7 @@ export default function AuditHero() {
                 ) : null}
               </div>
             ) : null}
-          </div>
+          </label>
           <button
             type="submit"
             className="audit-search-btn"

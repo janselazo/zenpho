@@ -3487,6 +3487,8 @@
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  position: relative;
+  z-index: 2;
 }
 .marketing-page-bg .audit-search:focus-within {
   border-color: rgba(244, 240, 228, 0.55);
@@ -3502,17 +3504,25 @@
   min-width: 0;
   color: rgba(244, 240, 228, 0.55);
 }
-.marketing-page-bg .audit-search-icon { flex-shrink: 0; color: rgba(244, 240, 228, 0.7); }
+.marketing-page-bg .audit-search-icon {
+  flex-shrink: 0;
+  color: rgba(244, 240, 228, 0.7);
+  pointer-events: none;
+}
 .marketing-page-bg .audit-search input {
   flex: 1;
   min-width: 0;
+  width: 100%;
   background: transparent;
   border: 0;
   outline: none;
   font-family: var(--body);
   font-size: 17px;
+  line-height: 1.4;
   color: var(--marble);
   padding: 12px 0;
+  -webkit-appearance: none;
+  appearance: none;
 }
 .marketing-page-bg .audit-search input::placeholder { color: rgba(244, 240, 228, 0.5); }
 .marketing-page-bg .audit-search-btn {
@@ -3582,9 +3592,55 @@
   .marketing-page-bg .audit-hero { padding: 140px 0 90px; }
   .marketing-page-bg .audit-hero-marks, .marketing-page-bg .audit-hero-marks-foot { inset: 80px 20px auto 20px; }
   .marketing-page-bg .audit-hero-marks-foot { inset: auto 20px 20px 20px; }
-  .marketing-page-bg .audit-search { flex-direction: column; padding: 14px; border-radius: 16px; gap: 12px; }
+  .marketing-page-bg .audit-search {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px;
+    border-radius: 18px;
+    gap: 10px;
+    border: 2px solid rgba(255, 255, 255, 0.82);
+    background: rgba(244, 240, 228, 0.08);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12) inset;
+  }
+  .marketing-page-bg .audit-search:focus-within {
+    border-color: rgba(255, 255, 255, 0.95);
+    background: rgba(244, 240, 228, 0.12);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.18) inset,
+      0 12px 32px rgba(10, 14, 30, 0.35);
+  }
   .marketing-page-bg .audit-search-btn { width: 100%; justify-content: center; }
-  .marketing-page-bg .audit-search-field { padding: 0 6px; width: 100%; }
+  .marketing-page-bg .audit-search-field {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 52px;
+    padding: 0 14px;
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.06);
+    cursor: text;
+    position: relative;
+    isolation: isolate;
+  }
+  .marketing-page-bg .audit-search-field:focus-within {
+    border-color: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.1);
+  }
+  .marketing-page-bg .audit-search input {
+    display: block;
+    flex: 1 1 auto;
+    min-height: 48px;
+    padding: 0;
+    font-size: 16px;
+    line-height: 1.4;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+  }
 }
 
 /* ──────── Findings grid ──────── */

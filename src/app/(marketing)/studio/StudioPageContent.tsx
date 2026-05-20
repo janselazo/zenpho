@@ -9,6 +9,7 @@ import {
   ArchColonnade,
   Astrolabe,
   Cartouche,
+  CompassRose,
   HeraldTrumpet,
   Obelisk,
   Putti,
@@ -50,9 +51,9 @@ const CANONS = [
 
 const STATS = [
   {
-    n: <>3</>,
+    n: <>4</>,
     l: "Products in the studio",
-    d: "Zenpho CRM, SoldTools, 305 Car Deals.",
+    d: "Zenpho CRM, Business Audit, SoldTools, 305 Car Deals.",
   },
   {
     n: (
@@ -90,6 +91,17 @@ const PORTFOLIO = [
     why: "We outgrew CRMs that couldn't prospect, PM tools that couldn't manage clients, and spreadsheets that couldn't report. So we built the stack we run on every commission — and we're opening it to agencies like ours.",
     href: "https://app.zenpho.com",
     art: <Astrolabe width={120} height={120} accent="#C19D5A" />,
+  },
+  {
+    name: "Business Audit",
+    status: "Live" as const,
+    subtitle: "Local businesses · free instant preview",
+    tagline: "Find your revenue leaks — in sixty seconds.",
+    description:
+      "Scan your Google profile, reviews, website, ads and local positioning — get missed opportunities surfaced in under a minute. Free preview, no card required.",
+    why: "Local businesses lose thousands every month to fixable gaps — incomplete profiles, stale reviews, slow sites, missing follow-up. We built the audit we run before every outreach conversation so owners see the leaks before we talk.",
+    href: "/tools/business-audit",
+    art: <CompassRose width={120} height={120} accent="#C19D5A" />,
   },
   {
     name: "SoldTools",
@@ -319,7 +331,7 @@ export default function StudioPageContent() {
             eyebrow="The portfolio"
             title={
               <>
-                Three products. <em>One</em> studio.
+                Four products. <em>One</em> studio.
               </>
             }
             blurb="Each product below is built, owned and operated by Zenpho Studio. Same team, same method, same standard of craft we'd bring to a client engagement."
