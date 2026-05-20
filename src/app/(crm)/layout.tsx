@@ -3,6 +3,7 @@ import CrmShellClient from "@/components/app/CrmShellClient";
 import SupabaseSetupBanner from "@/components/app/SupabaseSetupBanner";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
+import { fetchCrmSidebarBranding } from "@/lib/crm/organization-branding";
 
 /** Handwritten accents in prospecting (e.g. Cold Outreach) — not loaded on public marketing pages. */
 const caveat = Caveat({
@@ -40,6 +41,11 @@ export default async function CrmLayout({
     fullName: string | null;
     avatarUrl: string | null;
   } | null = null;
+  let sidebarBranding = {
+    displayName: "Zenpho",
+    logoUrl: "/zenpho-mark.png",
+    logoAlt: "Zenpho",
+  };
 
   if (configured) {
     try {
@@ -48,11 +54,15 @@ export default async function CrmLayout({
         data: { user },
       } = await supabase.auth.getUser();
       if (user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("full_name, avatar_url")
-          .eq("id", user.id)
-          .maybeSingle();
+        const [{ data: profile }, branding] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("full_name, avatar_url")
+            .eq("id", user.id)
+            .maybeSingle(),
+          fetchCrmSidebarBranding(supabase),
+        ]);
+        sidebarBranding = branding;
         const rawName = profile?.full_name;
         const rawAvatar = profile?.avatar_url;
         topBarUser = {
@@ -81,7 +91,11 @@ export default async function CrmLayout({
 
   return (
     <div className={`crm-dark-bg flex min-h-screen bg-surface ${caveat.variable}`}>
-      <CrmShellClient configured={configured} initialUser={topBarUser}>
+      <CrmShellClient
+        configured={configured}
+        initialUser={topBarUser}
+        sidebarBranding={sidebarBranding}
+      >
         {!configured ? <SupabaseSetupBanner /> : null}
         {children}
       </CrmShellClient>

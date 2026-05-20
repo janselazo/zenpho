@@ -9,7 +9,7 @@ export type CrmAccessContext = {
   role: InternalRole;
   /** Integrations, field settings, and other org admin tools. */
   canManageTeam: boolean;
-  /** Org-wide lead list/detail; only platform super admins. */
+  /** Reserved; leads are always scoped to owner_id (see RLS). */
   canViewAllOrgLeads: boolean;
 };
 
@@ -33,6 +33,6 @@ export async function fetchCrmAccessContext(
     organizationId,
     role,
     canManageTeam: role === "super_admin" || role === "admin",
-    canViewAllOrgLeads: role === "super_admin",
+    canViewAllOrgLeads: false,
   };
 }

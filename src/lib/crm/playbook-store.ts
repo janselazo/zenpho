@@ -1,4 +1,5 @@
 import type { PlaybookCategory } from "@/lib/crm/mock-data";
+import { userScopedStorageKey } from "@/lib/crm/user-scoped-storage";
 
 const STORAGE_KEY = "playbook-completions";
 const PLAYBOOK_STRUCTURE_KEY = "playbook-categories";
@@ -75,10 +76,14 @@ export function serializeCompletionsForStorage(
 }
 
 /** `null` = no local data (keep app default seed). */
-export function loadPlaybookCategories(): PlaybookCategory[] | null {
+export function loadPlaybookCategories(
+  userId?: string | null
+): PlaybookCategory[] | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem(PLAYBOOK_STRUCTURE_KEY);
+    const raw = localStorage.getItem(
+      userScopedStorageKey(PLAYBOOK_STRUCTURE_KEY, userId)
+    );
     if (!raw) return null;
     const parsed = JSON.parse(raw) as unknown;
     const cats = parseCategoriesJson(parsed);
@@ -89,10 +94,16 @@ export function loadPlaybookCategories(): PlaybookCategory[] | null {
   }
 }
 
-export function savePlaybookCategories(categories: PlaybookCategory[]) {
+export function savePlaybookCategories(
+  categories: PlaybookCategory[],
+  userId?: string | null
+) {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(PLAYBOOK_STRUCTURE_KEY, JSON.stringify(categories));
+    localStorage.setItem(
+      userScopedStorageKey(PLAYBOOK_STRUCTURE_KEY, userId),
+      JSON.stringify(categories)
+    );
     window.dispatchEvent(new Event(PLAYBOOK_STRUCTURE_CHANGED_EVENT));
   } catch {
     // storage full or unavailable
@@ -137,10 +148,14 @@ export function parsePriorityActivityIdsFromUnknown(raw: unknown): string[] {
 }
 
 /** Load persisted Priorities ordering; `[]` if missing or invalid. */
-export function loadPlaybookPriorityActivityIds(): string[] {
+export function loadPlaybookPriorityActivityIds(
+  userId?: string | null
+): string[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(PLAYBOOK_PRIORITY_ACTIVITY_IDS_KEY);
+    const raw = localStorage.getItem(
+      userScopedStorageKey(PLAYBOOK_PRIORITY_ACTIVITY_IDS_KEY, userId)
+    );
     if (!raw) return [];
     const parsed = parsePriorityActivityIdsJson(JSON.parse(raw) as unknown);
     return parsed ?? [];
@@ -149,11 +164,14 @@ export function loadPlaybookPriorityActivityIds(): string[] {
   }
 }
 
-export function savePlaybookPriorityActivityIds(ids: string[]) {
+export function savePlaybookPriorityActivityIds(
+  ids: string[],
+  userId?: string | null
+) {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(
-      PLAYBOOK_PRIORITY_ACTIVITY_IDS_KEY,
+      userScopedStorageKey(PLAYBOOK_PRIORITY_ACTIVITY_IDS_KEY, userId),
       JSON.stringify(ids)
     );
   } catch {
@@ -161,10 +179,10 @@ export function savePlaybookPriorityActivityIds(ids: string[]) {
   }
 }
 
-export function getCompletions(): Record<string, number> {
+export function getCompletions(userId?: string | null): Record<string, number> {
   if (typeof window === "undefined") return {};
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(userScopedStorageKey(STORAGE_KEY, userId));
     if (!raw) return {};
     const parsed = JSON.parse(raw) as unknown;
     return parseCompletionsDocument(parsed);
@@ -173,11 +191,14 @@ export function getCompletions(): Record<string, number> {
   }
 }
 
-export function saveCompletions(completions: Record<string, number>) {
+export function saveCompletions(
+  completions: Record<string, number>,
+  userId?: string | null
+) {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(
-      STORAGE_KEY,
+      userScopedStorageKey(STORAGE_KEY, userId),
       JSON.stringify(serializeCompletionsForStorage(completions))
     );
   } catch {
@@ -186,10 +207,14 @@ export function saveCompletions(completions: Record<string, number>) {
 }
 
 /** Collapsed section ids (`true` = collapsed). Unknown keys default to expanded in the UI. */
-export function loadPlaybookSectionCollapsed(): Record<string, boolean> {
+export function loadPlaybookSectionCollapsed(
+  userId?: string | null
+): Record<string, boolean> {
   if (typeof window === "undefined") return {};
   try {
-    const raw = localStorage.getItem(PLAYBOOK_SECTIONS_COLLAPSED_KEY);
+    const raw = localStorage.getItem(
+      userScopedStorageKey(PLAYBOOK_SECTIONS_COLLAPSED_KEY, userId)
+    );
     if (!raw) return {};
     const parsed = JSON.parse(raw) as unknown;
     if (!parsed || typeof parsed !== "object") return {};
@@ -203,7 +228,10 @@ export function loadPlaybookSectionCollapsed(): Record<string, boolean> {
   }
 }
 
-export function savePlaybookSectionCollapsed(collapsed: Record<string, boolean>) {
+export function savePlaybookSectionCollapsed(
+  collapsed: Record<string, boolean>,
+  userId?: string | null
+) {
   if (typeof window === "undefined") return;
   try {
     const stripped: Record<string, boolean> = {};
@@ -211,7 +239,7 @@ export function savePlaybookSectionCollapsed(collapsed: Record<string, boolean>)
       if (v) stripped[k] = true;
     }
     localStorage.setItem(
-      PLAYBOOK_SECTIONS_COLLAPSED_KEY,
+      userScopedStorageKey(PLAYBOOK_SECTIONS_COLLAPSED_KEY, userId),
       JSON.stringify(stripped)
     );
   } catch {

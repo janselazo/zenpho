@@ -11,6 +11,7 @@ import {
   SIDEBAR_COLLAPSIBLE_SECTIONS,
   SIDEBAR_DASHBOARD_ITEM,
 } from "@/lib/crm/app-sidebar-nav";
+import type { CrmSidebarBranding } from "@/lib/crm/organization-branding";
 import { formatUnreadBadgeCount } from "@/lib/crm/use-conversation-unread-count";
 import SoonBadge from "@/components/crm/prospecting/SoonBadge";
 
@@ -57,8 +58,10 @@ function navItemActive(pathname: string, href: string): boolean {
 
 export default function AppSidebar({
   conversationUnreadCount = 0,
+  branding,
 }: {
   conversationUnreadCount?: number;
+  branding: CrmSidebarBranding;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -115,14 +118,15 @@ export default function AppSidebar({
           className="flex items-center gap-2.5 border-b border-border px-4 py-3.5 dark:border-zinc-800/80"
         >
           <Image
-            src="/zenpho-mark.png"
+            src={branding.logoUrl}
             alt=""
             width={28}
             height={28}
-            className="h-7 w-7 shrink-0"
+            className="h-7 w-7 shrink-0 object-contain"
+            unoptimized={branding.logoUrl.startsWith("http")}
           />
-          <span className="text-sm font-semibold text-text-primary dark:text-zinc-100">
-            Zenpho
+          <span className="truncate text-sm font-semibold text-text-primary dark:text-zinc-100">
+            {branding.displayName}
           </span>
         </Link>
 

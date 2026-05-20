@@ -651,12 +651,12 @@ export default function DashboardView({
   useEffect(() => {
     async function syncPlaybookKpis() {
       if (!isSupabaseConfigured()) {
-        const loaded = loadPlaybookCategories();
+        const loaded = loadPlaybookCategories(null);
         const cats = loaded ?? playbookCategories;
         if (loaded !== null) setPlaybookCats(loaded);
-        setPlaybookCompletions(getCompletions());
+        setPlaybookCompletions(getCompletions(null));
         setPriorityActivityIds(
-          prunePriorityActivityIds(cats, loadPlaybookPriorityActivityIds())
+          prunePriorityActivityIds(cats, loadPlaybookPriorityActivityIds(null))
         );
         return;
       }
@@ -665,12 +665,12 @@ export default function DashboardView({
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        const loaded = loadPlaybookCategories();
+        const loaded = loadPlaybookCategories(null);
         const cats = loaded ?? playbookCategories;
         if (loaded !== null) setPlaybookCats(loaded);
-        setPlaybookCompletions(getCompletions());
+        setPlaybookCompletions(getCompletions(null));
         setPriorityActivityIds(
-          prunePriorityActivityIds(cats, loadPlaybookPriorityActivityIds())
+          prunePriorityActivityIds(cats, loadPlaybookPriorityActivityIds(null))
         );
         return;
       }

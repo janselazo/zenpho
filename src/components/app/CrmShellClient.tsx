@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import AppSidebar from "@/components/app/AppSidebar";
 import CrmTopBar, { type CrmTopBarUser } from "@/components/app/CrmTopBar";
+import type { CrmSidebarBranding } from "@/lib/crm/organization-branding";
 import AppNotificationToasts from "@/components/crm/AppNotificationToasts";
 import NewLeadToasts from "@/components/crm/NewLeadToasts";
 import { useConversationUnreadCount } from "@/lib/crm/use-conversation-unread-count";
@@ -11,10 +12,12 @@ export default function CrmShellClient({
   children,
   configured,
   initialUser,
+  sidebarBranding,
 }: {
   children: React.ReactNode;
   configured: boolean;
   initialUser: CrmTopBarUser | null;
+  sidebarBranding: CrmSidebarBranding;
 }) {
   const conversationUnreadCount = useConversationUnreadCount({
     enabled: configured,
@@ -37,7 +40,10 @@ export default function CrmShellClient({
 
   return (
     <>
-      <AppSidebar conversationUnreadCount={conversationUnreadCount} />
+      <AppSidebar
+        conversationUnreadCount={conversationUnreadCount}
+        branding={sidebarBranding}
+      />
       <div className="flex min-w-0 flex-1 flex-col">
         <CrmTopBar
           conversationUnreadCount={conversationUnreadCount}

@@ -114,6 +114,7 @@ import {
   savePlaybookPriorityActivityIds,
   savePlaybookSectionCollapsed,
 } from "@/lib/crm/playbook-store";
+import { userScopedStorageKey } from "@/lib/crm/user-scoped-storage";
 import {
   fetchUserProspectingPlaybook,
   upsertUserProspectingPlaybook,
@@ -369,16 +370,39 @@ export default function ColdOutreachView({
   const [goalsHydrated, setGoalsHydrated] = useState(false);
   const [clientsActual, setClientsActual] = useState(0);
   const [revenueActual, setRevenueActual] = useState(0);
+  /** Auth user id for per-user browser storage (Agenda, Goals, Playbook cache). */
+  const [scopedUserId, setScopedUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    setNorthStarGoalIds(loadNorthStarGoalIds());
+    if (!isSupabaseConfigured()) {
+      setScopedUserId(null);
+      return;
+    }
+    const supabase = createClient();
+    let cancelled = false;
+    void supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!cancelled) setScopedUserId(user?.id ?? null);
+    });
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setScopedUserId(session?.user?.id ?? null);
+    });
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
+    setNorthStarGoalIds(loadNorthStarGoalIds(scopedUserId));
+  }, [scopedUserId]);
+
+  useEffect(() => {
     const ym = monthKeyFromDate(goalsMonthDate);
-    const t = loadMonthlyGoalTargets(ym, DEFAULT_MONTHLY_TARGETS);
-    const deadlines = loadMonthlyGoalDeadlines(ym);
-    const customGoals = loadCustomMonthlyGoals(ym);
+    const t = loadMonthlyGoalTargets(ym, DEFAULT_MONTHLY_TARGETS, scopedUserId);
+    const deadlines = loadMonthlyGoalDeadlines(ym, scopedUserId);
+    const customGoals = loadCustomMonthlyGoals(ym, scopedUserId);
     setGoals([
       {
         ...standardMonthlyGoals[0],
@@ -396,7 +420,7 @@ export default function ColdOutreachView({
       })),
     ]);
     setGoalsHydrated(true);
-  }, [goalsMonthDate]);
+  }, [goalsMonthDate, scopedUserId]);
 
   useEffect(() => {
     if (!goalsHydrated) return;
@@ -405,10 +429,10 @@ export default function ColdOutreachView({
         prev,
         goals.map((goal) => goal.id)
       );
-      if (next.length !== prev.length) saveNorthStarGoalIds(next);
+      if (next.length !== prev.length) saveNorthStarGoalIds(next, scopedUserId);
       return next;
     });
-  }, [goals, goalsHydrated]);
+  }, [goals, goalsHydrated, scopedUserId]);
 
   useEffect(() => {
     if (!isSupabaseConfigured()) {
@@ -453,11 +477,12 @@ export default function ColdOutreachView({
     const revenueT =
       next.find((x) => x.id === "mg-revenue")?.target ??
       DEFAULT_MONTHLY_TARGETS.revenue;
-    saveMonthlyGoalTargets(ym, { clients: clientsT, revenue: revenueT });
-    saveMonthlyGoalDeadlines(ym, next);
+    saveMonthlyGoalTargets(ym, { clients: clientsT, revenue: revenueT }, scopedUserId);
+    saveMonthlyGoalDeadlines(ym, next, scopedUserId);
     saveCustomMonthlyGoals(
       ym,
-      next.filter((goal) => !isStandardMonthlyGoalId(goal.id))
+      next.filter((goal) => !isStandardMonthlyGoalId(goal.id)),
+      scopedUserId
     );
   }
 
@@ -466,7 +491,7 @@ export default function ColdOutreachView({
       const next = prev.includes(goalId)
         ? prev.filter((id) => id !== goalId)
         : [...prev, goalId];
-      saveNorthStarGoalIds(next);
+      saveNorthStarGoalIds(next, scopedUserId);
       return next;
     });
   }
@@ -499,22 +524,32 @@ export default function ColdOutreachView({
       </div>
 
       <div className="mt-6">
-        {activeTab === "playbook" && <PlaybookTab />}
+        {activeTab === "playbook" && (
+          <PlaybookTab key={scopedUserId ?? "guest"} userId={scopedUserId} />
+        )}
         {activeTab === "journal" && <PlaybookMoneyJournalTab today={currentDate} />}
         {activeTab === "goals" && (
           <GoalsTab
+            key={scopedUserId ?? "guest"}
             goals={goalsWithActuals}
             onChange={handleGoalsChange}
             northStarGoalIds={northStarGoalIds}
             onToggleNorthStarGoal={toggleNorthStarGoal}
             goalsMonthDate={goalsMonthDate}
             onGoalsMonthDateChange={setGoalsMonthDate}
+            userId={scopedUserId}
           />
         )}
         {activeTab === "agenda" && (
-          <AgendaTab date={currentDate} />
+          <AgendaTab
+            key={scopedUserId ?? "guest"}
+            date={currentDate}
+            userId={scopedUserId}
+          />
         )}
-        {activeTab === "tasks" && <TasksTab today={currentDate} />}
+        {activeTab === "tasks" && (
+          <TasksTab key={scopedUserId ?? "guest"} today={currentDate} />
+        )}
       </div>
     </div>
   );
@@ -772,6 +807,7 @@ function MonthlyGoalsCard({
   onToggleNorthStarGoal,
   goalsMonthDate,
   onGoalsMonthDateChange,
+  userId,
 }: {
   goals: MonthlyGoal[];
   onChange: (goals: MonthlyGoal[]) => void;
@@ -779,6 +815,7 @@ function MonthlyGoalsCard({
   onToggleNorthStarGoal: (goalId: string) => void;
   goalsMonthDate: Date;
   onGoalsMonthDateChange: (d: Date) => void;
+  userId: string | null;
 }) {
   const [editingTargetId, setEditingTargetId] = useState<string | null>(null);
   const [targetDraft, setTargetDraft] = useState(0);
@@ -861,14 +898,14 @@ function MonthlyGoalsCard({
   }
 
   useEffect(() => {
-    setGoalsSectionCollapsed(loadGoalsSectionCollapsed());
+    setGoalsSectionCollapsed(loadGoalsSectionCollapsed(userId));
     goalsCollapsedHydrated.current = true;
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     if (!goalsCollapsedHydrated.current) return;
-    saveGoalsSectionCollapsed(goalsSectionCollapsed);
-  }, [goalsSectionCollapsed]);
+    saveGoalsSectionCollapsed(goalsSectionCollapsed, userId);
+  }, [goalsSectionCollapsed, userId]);
 
   useEffect(() => {
     setIsAddingGoal(false);
@@ -1044,6 +1081,7 @@ function GoalsTab({
   onToggleNorthStarGoal,
   goalsMonthDate,
   onGoalsMonthDateChange,
+  userId,
 }: {
   goals: MonthlyGoal[];
   onChange: (goals: MonthlyGoal[]) => void;
@@ -1051,6 +1089,7 @@ function GoalsTab({
   onToggleNorthStarGoal: (goalId: string) => void;
   goalsMonthDate: Date;
   onGoalsMonthDateChange: (d: Date) => void;
+  userId: string | null;
 }) {
   return (
     <div className="space-y-4">
@@ -1069,6 +1108,7 @@ function GoalsTab({
         onToggleNorthStarGoal={onToggleNorthStarGoal}
         goalsMonthDate={goalsMonthDate}
         onGoalsMonthDateChange={onGoalsMonthDateChange}
+        userId={userId}
       />
     </div>
   );
@@ -1314,7 +1354,7 @@ function PlaybookCategoryRow({
             </>
           ) : (
             <>
-              <span className="truncate text-sm font-semibold text-text-primary">
+              <span className="truncate text-sm font-bold text-text-primary">
                 {cat.name}
               </span>
               <button
@@ -1499,7 +1539,7 @@ function PlaybookPinnedPrioritiesRow({
           />
         </button>
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <span className="truncate text-sm font-semibold text-text-primary">
+          <span className="truncate text-sm font-bold text-text-primary">
             {cat.name}
           </span>
         </div>
@@ -1645,7 +1685,7 @@ function PlaybookSectionDragPreview({
         className="h-4 w-4 shrink-0 -rotate-90 text-text-secondary"
         aria-hidden
       />
-      <span className="min-w-0 flex-1 truncate text-sm font-semibold text-text-primary dark:text-zinc-100">
+      <span className="min-w-0 flex-1 truncate text-sm font-bold text-text-primary dark:text-zinc-100">
         {cat.name}
       </span>
       <span className="shrink-0 text-xs tabular-nums text-text-secondary dark:text-zinc-400">
@@ -1655,14 +1695,13 @@ function PlaybookSectionDragPreview({
   );
 }
 
-function PlaybookTab() {
+function PlaybookTab({ userId }: { userId: string | null }) {
   const [completions, setCompletions] = useState<Record<string, number>>({});
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const collapsedHydrated = useRef(false);
   const [categories, setCategories] = useState<PlaybookCategory[]>(playbookCategories);
   const [priorityActivityIds, setPriorityActivityIds] = useState<string[]>([]);
   const [playbookReady, setPlaybookReady] = useState(false);
-  const [playbookUserId, setPlaybookUserId] = useState<string | null>(null);
   const [editingActivity, setEditingActivity] = useState<string | null>(null);
   const [editFields, setEditFields] = useState<PlaybookEditFields>({
     title: "",
@@ -1742,14 +1781,14 @@ function PlaybookTab() {
   );
 
   useLayoutEffect(() => {
-    setCollapsed(loadPlaybookSectionCollapsed());
+    setCollapsed(loadPlaybookSectionCollapsed(userId));
     collapsedHydrated.current = true;
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     if (!collapsedHydrated.current) return;
-    savePlaybookSectionCollapsed(collapsed);
-  }, [collapsed]);
+    savePlaybookSectionCollapsed(collapsed, userId);
+  }, [collapsed, userId]);
 
   useEffect(() => {
     if (!playbookReady || !collapsedHydrated.current) return;
@@ -1809,59 +1848,42 @@ function PlaybookTab() {
   }
 
   useEffect(() => {
-    if (!isSupabaseConfigured()) {
-      const loaded = loadPlaybookCategories();
-      if (loaded !== null) setCategories(loaded);
-      setCompletions(getCompletions());
-      setPriorityActivityIds(
-        prunePriorityActivityIds(
-          loaded ?? [],
-          loadPlaybookPriorityActivityIds()
-        )
-      );
-      setPlaybookUserId(null);
-      setPlaybookReady(true);
-      return;
-    }
-
-    const supabase = createClient();
     let cancelled = false;
+    setPlaybookReady(false);
 
-    function applyGuestLocal() {
-      if (cancelled) return;
-      const loaded = loadPlaybookCategories();
-      if (loaded !== null) setCategories(loaded);
-      setCompletions(getCompletions());
-      setPriorityActivityIds(
-        prunePriorityActivityIds(
-          loaded ?? [],
-          loadPlaybookPriorityActivityIds()
-        )
-      );
-      setPlaybookUserId(null);
-      setPlaybookReady(true);
-    }
+    async function hydrate() {
+      if (!isSupabaseConfigured() || !userId) {
+        if (cancelled) return;
+        const loaded = loadPlaybookCategories(userId);
+        setCategories(loaded ?? []);
+        setCompletions(getCompletions(userId));
+        setPriorityActivityIds(
+          prunePriorityActivityIds(
+            loaded ?? [],
+            loadPlaybookPriorityActivityIds(userId)
+          )
+        );
+        setPlaybookReady(true);
+        return;
+      }
 
-    async function hydrateForUser(user: { id: string }) {
-      if (cancelled) return;
-      const result = await fetchUserProspectingPlaybook(supabase, user.id);
+      const supabase = createClient();
+      const result = await fetchUserProspectingPlaybook(supabase, userId);
       if (cancelled) return;
 
-      const lsCats = loadPlaybookCategories();
-      const lsCompletions = getCompletions();
-      const hasLocalData = lsCats !== null && lsCats.length > 0;
+      const lsCats = loadPlaybookCategories(userId);
+      const lsCompletions = getCompletions(userId);
+      const lsPriority = loadPlaybookPriorityActivityIds(userId);
+      const hasScopedLocal = lsCats !== null && lsCats.length > 0;
 
       if (!result.found) {
-        if (hasLocalData) {
-          const lsPriority = loadPlaybookPriorityActivityIds();
+        if (hasScopedLocal && lsCats) {
           setCategories(lsCats);
           setCompletions(lsCompletions);
-          setPriorityActivityIds(
-            prunePriorityActivityIds(lsCats, lsPriority)
-          );
+          setPriorityActivityIds(prunePriorityActivityIds(lsCats, lsPriority));
           await upsertUserProspectingPlaybook(
             supabase,
-            user.id,
+            userId,
             lsCats,
             lsCompletions,
             prunePriorityActivityIds(lsCats, lsPriority)
@@ -1872,80 +1894,44 @@ function PlaybookTab() {
           setPriorityActivityIds([]);
         }
       } else {
-        const { categories: dbCats, completions: dbComp, priorityActivityIds: dbPriority } = result;
-        if (dbCats.length > 0) {
-          setCategories(dbCats);
-          setCompletions(dbComp);
-          setPriorityActivityIds(
-            prunePriorityActivityIds(dbCats, dbPriority)
-          );
-        } else if (hasLocalData) {
-          const lsPriority = loadPlaybookPriorityActivityIds();
-          setCategories(lsCats);
-          setCompletions(lsCompletions);
-          setPriorityActivityIds(
-            prunePriorityActivityIds(lsCats, lsPriority)
-          );
-          await upsertUserProspectingPlaybook(
-            supabase,
-            user.id,
-            lsCats,
-            lsCompletions,
-            prunePriorityActivityIds(lsCats, lsPriority)
-          );
-        } else {
-          setCategories([]);
-          setCompletions(dbComp);
-          setPriorityActivityIds(
-            prunePriorityActivityIds([], dbPriority)
-          );
-        }
+        setCategories(result.categories);
+        setCompletions(result.completions);
+        setPriorityActivityIds(
+          prunePriorityActivityIds(result.categories, result.priorityActivityIds)
+        );
+        savePlaybookCategories(result.categories, userId);
+        saveCompletions(result.completions, userId);
+        savePlaybookPriorityActivityIds(result.priorityActivityIds, userId);
       }
 
-      setPlaybookUserId(user.id);
       setPlaybookReady(true);
     }
 
-    void supabase.auth.getUser().then(({ data: { user } }) => {
-      if (cancelled) return;
-      if (user) void hydrateForUser(user);
-      else applyGuestLocal();
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (cancelled) return;
-      if (session?.user) void hydrateForUser(session.user);
-      else applyGuestLocal();
-    });
-
+    void hydrate();
     return () => {
       cancelled = true;
-      subscription.unsubscribe();
     };
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     if (!playbookReady) return;
     const t = window.setTimeout(() => {
-      if (playbookUserId) {
+      savePlaybookCategories(categories, userId);
+      saveCompletions(completions, userId);
+      savePlaybookPriorityActivityIds(priorityActivityIds, userId);
+      if (userId && isSupabaseConfigured()) {
         const supabase = createClient();
         void upsertUserProspectingPlaybook(
           supabase,
-          playbookUserId,
+          userId,
           categories,
           completions,
           priorityActivityIds
         );
-      } else {
-        savePlaybookCategories(categories);
-        saveCompletions(completions);
-        savePlaybookPriorityActivityIds(priorityActivityIds);
       }
     }, 450);
     return () => window.clearTimeout(t);
-  }, [categories, completions, priorityActivityIds, playbookReady, playbookUserId]);
+  }, [categories, completions, priorityActivityIds, playbookReady, userId]);
 
   function startEditActivity(a: PlaybookActivity) {
     setEditingSectionId(null);
@@ -2124,7 +2110,7 @@ function PlaybookTab() {
 
       {/* Progress bar */}
       <div className="mt-5 flex items-center gap-3">
-        <span className="text-xs font-medium text-text-secondary">Today</span>
+        <span className="text-xs font-semibold text-text-secondary">Today</span>
         <div className="flex-1">
           <div className="h-2 overflow-hidden rounded-full bg-gray-100">
             <div
@@ -2133,7 +2119,7 @@ function PlaybookTab() {
             />
           </div>
         </div>
-        <span className="text-xs font-medium text-text-secondary">
+        <span className="text-xs font-semibold text-text-secondary">
           {pct}% complete
         </span>
       </div>
@@ -2466,15 +2452,15 @@ function ActivityRow({
       <ActivityProgressRing completed={completed} target={activity.target} />
       <div className="min-w-0 flex-1">
         <p
-          className={`text-sm ${
+          className={`text-sm font-semibold ${
             isDone
               ? "text-text-secondary line-through"
-              : "text-text-primary"
+              : "font-bold text-text-primary"
           }`}
         >
           {activity.title}
         </p>
-        <p className="text-xs text-text-secondary/60">
+        <p className="text-xs font-medium text-text-secondary/70">
           +{activity.points} pts each · {earnedPts}/{maxPts} pts ·{" "}
           {activity.timeEstimate}
         </p>
@@ -2563,18 +2549,27 @@ interface AgendaEntry {
 
 const AGENDA_STORAGE_KEY = "crm-agenda";
 
-function loadAgenda(): Record<string, AgendaEntry[]> {
+function loadAgenda(userId?: string | null): Record<string, AgendaEntry[]> {
   if (typeof window === "undefined") return {};
   try {
-    return JSON.parse(localStorage.getItem(AGENDA_STORAGE_KEY) || "{}");
+    return JSON.parse(
+      localStorage.getItem(userScopedStorageKey(AGENDA_STORAGE_KEY, userId)) ||
+        "{}"
+    );
   } catch {
     return {};
   }
 }
 
-function persistAgenda(data: Record<string, AgendaEntry[]>) {
+function persistAgenda(
+  data: Record<string, AgendaEntry[]>,
+  userId?: string | null
+) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(AGENDA_STORAGE_KEY, JSON.stringify(data));
+  localStorage.setItem(
+    userScopedStorageKey(AGENDA_STORAGE_KEY, userId),
+    JSON.stringify(data)
+  );
 }
 
 function carryForward(
@@ -2601,24 +2596,37 @@ function carryForward(
   return updated;
 }
 
-function AgendaTab({ date }: { date: Date }) {
+function AgendaTab({
+  date,
+  userId,
+}: {
+  date: Date;
+  userId: string | null;
+}) {
   const dateKey = date.toISOString().slice(0, 10);
-  const [entriesByDate, setEntriesByDate] = useState<Record<string, AgendaEntry[]>>(() => {
-    const raw = loadAgenda();
-    const today = new Date().toISOString().slice(0, 10);
-    return carryForward(raw, today);
-  });
+  const [entriesByDate, setEntriesByDate] = useState<Record<string, AgendaEntry[]>>(
+    {}
+  );
   const [draft, setDraft] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
 
+  useEffect(() => {
+    const raw = loadAgenda(userId);
+    const today = new Date().toISOString().slice(0, 10);
+    setEntriesByDate(carryForward(raw, today));
+    setDraft("");
+    setEditingId(null);
+    setEditText("");
+  }, [userId]);
+
   const entries = entriesByDate[dateKey] ?? [];
 
   function update(next: Record<string, AgendaEntry[]>) {
     setEntriesByDate(next);
-    persistAgenda(next);
+    persistAgenda(next, userId);
   }
 
   function addEntry() {
@@ -2706,7 +2714,7 @@ function AgendaTab({ date }: { date: Date }) {
     day: "numeric",
   });
 
-  const LINE_HEIGHT = 44;
+  const LINE_HEIGHT = 48;
 
   return (
     <div
@@ -2723,14 +2731,14 @@ function AgendaTab({ date }: { date: Date }) {
       <div className="relative px-12 pt-6 pb-4">
         {/* Date header */}
         <p
-          className="text-2xl text-amber-800/80"
+          className="text-3xl text-amber-800/80"
           style={{ fontFamily: "var(--font-caveat), cursive" }}
         >
           {dayLabel}
         </p>
         {entries.length > 0 && (
           <p
-            className="mt-0.5 text-sm text-amber-700/50"
+            className="mt-0.5 text-base text-amber-700/50"
             style={{ fontFamily: "var(--font-caveat), cursive" }}
           >
             {completed}/{entries.length} completed
@@ -2773,7 +2781,7 @@ function AgendaTab({ date }: { date: Date }) {
                 >
                   {/* Number */}
                   <span
-                    className="w-5 shrink-0 text-right text-sm text-amber-700/30"
+                    className="w-5 shrink-0 text-right text-base text-amber-700/30"
                     style={{ fontFamily: "var(--font-caveat), cursive" }}
                   >
                     {idx + 1}
@@ -2806,12 +2814,12 @@ function AgendaTab({ date }: { date: Date }) {
                         if (e.key === "Escape") { setEditingId(null); setEditText(""); }
                       }}
                       onBlur={commitEdit}
-                      className="flex-1 bg-transparent text-lg font-semibold text-amber-900/80 outline-none"
+                      className="flex-1 bg-transparent text-xl font-semibold text-amber-900/80 outline-none"
                       style={{ fontFamily: "var(--font-caveat), cursive" }}
                     />
                   ) : (
                     <span
-                      className={`flex-1 text-lg font-semibold ${
+                      className={`flex-1 text-xl font-semibold ${
                         entry.done
                           ? "text-amber-700/30 line-through"
                           : "text-amber-900/80"
@@ -2855,7 +2863,7 @@ function AgendaTab({ date }: { date: Date }) {
             style={{ height: LINE_HEIGHT }}
           >
             <span
-              className="w-5 shrink-0 text-right text-sm text-amber-700/20"
+              className="w-5 shrink-0 text-right text-base text-amber-700/20"
               style={{ fontFamily: "var(--font-caveat), cursive" }}
             >
               {entries.length + 1}
@@ -2867,7 +2875,7 @@ function AgendaTab({ date }: { date: Date }) {
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addEntry()}
               placeholder="Write something…"
-              className="flex-1 bg-transparent text-lg text-amber-900/80 outline-none placeholder:text-amber-600/25"
+              className="flex-1 bg-transparent text-xl text-amber-900/80 outline-none placeholder:text-amber-600/25"
               style={{ fontFamily: "var(--font-caveat), cursive" }}
             />
           </div>
@@ -3217,7 +3225,7 @@ function MiniKpi({
       {icon}
       <div>
         <p className="text-xs text-text-secondary">{label}</p>
-        <p className="text-sm font-semibold text-text-primary">{value}</p>
+        <p className="text-sm font-bold text-text-primary">{value}</p>
       </div>
     </div>
   );

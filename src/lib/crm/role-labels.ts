@@ -9,7 +9,7 @@ export const ROLE_LABELS: Record<string, string> = {
 
 export const ROLE_DESCRIPTIONS: Record<string, string> = {
   super_admin:
-    "Platform owner access. For now this behaves like Admin, and is future-ready for all teams, projects, users, and revenue.",
+    "Platform owner access. Can manage integrations and org settings; leads stay scoped to your account.",
   admin:
     "Workspace admin. Can manage integrations and settings; leads and CRM records are limited to what they own.",
   user:

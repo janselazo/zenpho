@@ -4,7 +4,7 @@ import { Suspense, useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { User, Plug, Upload, Trash2, KeyRound, Zap, ListTree } from "lucide-react";
+import { User, Plug, Upload, Trash2, KeyRound, Zap, ListTree, Building2 } from "lucide-react";
 import type { MergedCrmFieldOptions } from "@/lib/crm/field-options";
 import type { CrmPipelineSettings } from "@/lib/crm/fetch-pipeline-settings";
 import SettingsFieldsTab from "@/components/crm/SettingsFieldsTab";
@@ -14,6 +14,12 @@ import {
   uploadAvatar,
   removeAvatar,
 } from "@/app/(crm)/actions/settings";
+import {
+  updateCompanyProfile,
+  uploadCompanyLogo,
+  removeCompanyLogo,
+} from "@/app/(crm)/actions/company-settings";
+import type { OrganizationCompanyProfile } from "@/lib/crm/organization-branding";
 import { ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/lib/crm/role-labels";
 import { normalizeInternalRole } from "@/lib/crm/roles";
 
@@ -63,12 +69,21 @@ function SettingsPageSkeleton() {
   );
 }
 
+export type SettingsCompanyInitial = {
+  configured: boolean;
+  company: OrganizationCompanyProfile | null;
+  companyError: string | null;
+  canEdit: boolean;
+};
+
 function SettingsPageViewInner({
   initial,
+  companyInitial,
   crmFields,
   crmFieldsError,
 }: {
   initial: SettingsInitial;
+  companyInitial: SettingsCompanyInitial;
   crmFields: SettingsCrmFieldsPack | null;
   crmFieldsError: string | null;
 }) {
@@ -77,6 +92,7 @@ function SettingsPageViewInner({
 
   const tabs = [
     { id: "profile" as const, label: "Profile", icon: User },
+    { id: "company" as const, label: "Company", icon: Building2 },
     ...(crmFields
       ? [{ id: "fields" as const, label: "Fields", icon: ListTree }]
       : []),
@@ -86,6 +102,7 @@ function SettingsPageViewInner({
   useEffect(() => {
     const t = searchParams.get("tab");
     if (t === "integrations") setActiveTab("integrations");
+    else if (t === "company") setActiveTab("company");
     else if (t === "fields" && crmFields) setActiveTab("fields");
     else setActiveTab("profile");
   }, [searchParams, crmFields]);
@@ -124,6 +141,9 @@ function SettingsPageViewInner({
 
       <div className="mt-8">
         {activeTab === "profile" && <ProfileTab initial={initial} />}
+        {activeTab === "company" && (
+          <CompanyTab initial={companyInitial} />
+        )}
         {activeTab === "fields" && crmFields ? (
           <div className="space-y-6">
             {crmFieldsError ? (
@@ -147,10 +167,12 @@ function SettingsPageViewInner({
 
 export default function SettingsPageView({
   initial,
+  companyInitial,
   crmFields = null,
   crmFieldsError = null,
 }: {
   initial: SettingsInitial;
+  companyInitial: SettingsCompanyInitial;
   crmFields?: SettingsCrmFieldsPack | null;
   crmFieldsError?: string | null;
 }) {
@@ -158,6 +180,7 @@ export default function SettingsPageView({
     <Suspense fallback={<SettingsPageSkeleton />}>
       <SettingsPageViewInner
         initial={initial}
+        companyInitial={companyInitial}
         crmFields={crmFields}
         crmFieldsError={crmFieldsError}
       />
@@ -360,6 +383,283 @@ function IntegrationsTab() {
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+function CompanyTab({ initial }: { initial: SettingsCompanyInitial }) {
+  const router = useRouter();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [companyPending, startCompany] = useTransition();
+  const [logoPending, setLogoPending] = useState(false);
+  const [companyMsg, setCompanyMsg] = useState<string | null>(null);
+  const [companyErr, setCompanyErr] = useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = useState(initial.company?.logoUrl ?? null);
+
+  if (!initial.configured) {
+    return (
+      <p className="text-sm text-text-secondary">
+        Configure Supabase to manage company settings.
+      </p>
+    );
+  }
+
+  async function onSaveCompany(formData: FormData) {
+    setCompanyMsg(null);
+    setCompanyErr(null);
+    startCompany(async () => {
+      const res = await updateCompanyProfile(formData);
+      if ("error" in res && res.error) setCompanyErr(res.error);
+      else {
+        setCompanyMsg("Company profile saved.");
+        router.refresh();
+      }
+    });
+  }
+
+  async function onPickLogo(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setCompanyErr(
+        `Image is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Use a JPG, PNG, or WebP under 5 MB.`
+      );
+      return;
+    }
+    if (!/^image\/(jpeg|jpg|png|webp)$/i.test(file.type)) {
+      setCompanyErr("Use a JPG, PNG, or WebP image.");
+      return;
+    }
+
+    setLogoPending(true);
+    setCompanyErr(null);
+    try {
+      const fd = new FormData();
+      fd.set("logo", file);
+      const res = await uploadCompanyLogo(fd);
+      if ("error" in res && res.error) {
+        setCompanyErr(res.error);
+      } else if ("url" in res && res.url) {
+        setLogoUrl(`${res.url}?t=${Date.now()}`);
+        setCompanyMsg("Logo updated.");
+        router.refresh();
+      } else {
+        setCompanyErr("Upload did not complete. Please try again.");
+      }
+    } catch {
+      setCompanyErr("Upload failed. Please try again.");
+    } finally {
+      setLogoPending(false);
+    }
+  }
+
+  async function onRemoveLogo() {
+    setLogoPending(true);
+    setCompanyErr(null);
+    try {
+      const res = await removeCompanyLogo();
+      if ("error" in res && res.error) {
+        setCompanyErr(res.error);
+      } else {
+        setLogoUrl(null);
+        setCompanyMsg("Logo removed.");
+        router.refresh();
+      }
+    } catch {
+      setCompanyErr("Could not remove logo. Please try again.");
+    } finally {
+      setLogoPending(false);
+    }
+  }
+
+  const previewLogo = logoUrl || "/zenpho-mark.png";
+  const previewName = initial.company?.companyName?.trim() || "Zenpho";
+
+  return (
+    <div className="space-y-6">
+      {initial.companyError ? (
+        <p className="text-sm text-amber-800">{initial.companyError}</p>
+      ) : null}
+
+      <section className="rounded-2xl border border-border bg-white p-6 shadow-sm sm:p-8">
+        <div className="flex gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent">
+            <Building2 className="h-5 w-5" aria-hidden />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold text-text-primary">
+              Company Information
+            </h2>
+            <p className="mt-0.5 text-sm text-text-secondary">
+              Your company name and logo appear in the top-left sidebar. Leave
+              fields empty to keep the default Zenpho branding.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-8">
+          <p className={labelClass}>Sidebar preview</p>
+          <div className="mt-2 inline-flex items-center gap-2.5 rounded-xl border border-border bg-surface px-4 py-3">
+            <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-md">
+              <Image
+                src={previewLogo}
+                alt=""
+                fill
+                className="object-contain"
+                sizes="28px"
+                unoptimized={previewLogo.startsWith("http")}
+              />
+            </div>
+            <span className="text-sm font-semibold text-text-primary">
+              {previewName}
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-8">
+          <p className={labelClass}>Company logo</p>
+          <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-start">
+            <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl border-2 border-border bg-white shadow-inner">
+              <Image
+                src={previewLogo}
+                alt="Company logo"
+                fill
+                className="object-contain p-2"
+                sizes="96px"
+                unoptimized={previewLogo.startsWith("http")}
+              />
+            </div>
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="flex flex-wrap gap-2">
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={onPickLogo}
+                />
+                <button
+                  type="button"
+                  disabled={logoPending || !initial.canEdit}
+                  onClick={() => fileRef.current?.click()}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-white px-3 py-2 text-xs font-semibold text-text-primary shadow-sm hover:bg-surface disabled:opacity-50"
+                >
+                  <Upload className="h-3.5 w-3.5" aria-hidden />
+                  Change
+                </button>
+                <button
+                  type="button"
+                  disabled={logoPending || !logoUrl || !initial.canEdit}
+                  onClick={() => void onRemoveLogo()}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-white px-3 py-2 text-xs font-semibold text-text-primary shadow-sm hover:bg-surface disabled:opacity-40"
+                >
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                  Remove
+                </button>
+              </div>
+              <p className="text-xs text-text-secondary">
+                JPG, PNG, or WebP. Max 5MB.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <form action={onSaveCompany} className="mt-8 space-y-5">
+          <div>
+            <label htmlFor="company_name" className={labelClass}>
+              Company name
+            </label>
+            <input
+              id="company_name"
+              name="company_name"
+              type="text"
+              defaultValue={initial.company?.companyName ?? ""}
+              disabled={!initial.canEdit}
+              placeholder="Your company name"
+              className={inputClass}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="company_email" className={labelClass}>
+              Email
+            </label>
+            <input
+              id="company_email"
+              name="company_email"
+              type="email"
+              defaultValue={initial.company?.companyEmail ?? ""}
+              disabled={!initial.canEdit}
+              placeholder="hello@company.com"
+              className={inputClass}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="company_category" className={labelClass}>
+              Category
+            </label>
+            <input
+              id="company_category"
+              name="company_category"
+              type="text"
+              defaultValue={initial.company?.companyCategory ?? ""}
+              disabled={!initial.canEdit}
+              placeholder="e.g. Real Estate, Automotive, SaaS"
+              className={inputClass}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="company_phone" className={labelClass}>
+              Phone
+            </label>
+            <input
+              id="company_phone"
+              name="company_phone"
+              type="tel"
+              defaultValue={initial.company?.companyPhone ?? ""}
+              disabled={!initial.canEdit}
+              placeholder="+1 (555) 000-0000"
+              className={inputClass}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="company_address" className={labelClass}>
+              Address
+            </label>
+            <textarea
+              id="company_address"
+              name="company_address"
+              rows={3}
+              defaultValue={initial.company?.companyAddress ?? ""}
+              disabled={!initial.canEdit}
+              placeholder="Street, city, state, ZIP"
+              className={`${inputClass} resize-y`}
+            />
+          </div>
+
+          {companyErr ? (
+            <p className="text-sm text-red-600">{companyErr}</p>
+          ) : null}
+          {companyMsg ? (
+            <p className="text-sm text-emerald-700">{companyMsg}</p>
+          ) : null}
+
+          {initial.canEdit ? (
+            <button
+              type="submit"
+              disabled={companyPending}
+              className="rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-accent/90 disabled:opacity-50"
+            >
+              {companyPending ? "Saving…" : "Save company profile"}
+            </button>
+          ) : null}
+        </form>
+      </section>
     </div>
   );
 }
@@ -630,9 +930,9 @@ function ProfileTab({ initial }: { initial: SettingsInitial }) {
               {roleDescription}
             </p>
             <p className="mt-1 text-xs text-text-secondary">
-              Super Admin is reserved for Zenpho platform owners and can see all
-              leads in the workspace. Admins manage integrations and settings;
-              leads stay scoped to each person&apos;s account.
+              Super Admin is reserved for Zenpho platform owners. Admins manage
+              integrations and settings; everyone only sees leads assigned to
+              their account.
             </p>
           </div>
 

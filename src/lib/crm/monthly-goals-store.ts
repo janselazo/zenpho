@@ -1,4 +1,5 @@
 import type { MonthlyGoal } from "@/lib/crm/mock-data";
+import { userScopedStorageKey } from "@/lib/crm/user-scoped-storage";
 
 const MONTHLY_GOAL_NORTH_STAR_IDS_KEY = "monthly-goal-north-star-ids";
 const CUSTOM_MONTHLY_GOALS_KEY = "custom-monthly-goals-v1";
@@ -17,10 +18,12 @@ function parseGoalIdsJson(parsed: unknown): string[] | null {
   return out;
 }
 
-export function loadNorthStarGoalIds(): string[] {
+export function loadNorthStarGoalIds(userId?: string | null): string[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(MONTHLY_GOAL_NORTH_STAR_IDS_KEY);
+    const raw = localStorage.getItem(
+      userScopedStorageKey(MONTHLY_GOAL_NORTH_STAR_IDS_KEY, userId)
+    );
     if (!raw) return [];
     return parseGoalIdsJson(JSON.parse(raw) as unknown) ?? [];
   } catch {
@@ -28,10 +31,13 @@ export function loadNorthStarGoalIds(): string[] {
   }
 }
 
-export function saveNorthStarGoalIds(ids: string[]) {
+export function saveNorthStarGoalIds(ids: string[], userId?: string | null) {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(MONTHLY_GOAL_NORTH_STAR_IDS_KEY, JSON.stringify(ids));
+    localStorage.setItem(
+      userScopedStorageKey(MONTHLY_GOAL_NORTH_STAR_IDS_KEY, userId),
+      JSON.stringify(ids)
+    );
   } catch {
     // ignore quota / private mode
   }
@@ -67,10 +73,15 @@ function isYmd(value: unknown): value is string {
   return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
-export function loadCustomMonthlyGoals(ym: string): MonthlyGoal[] {
+export function loadCustomMonthlyGoals(
+  ym: string,
+  userId?: string | null
+): MonthlyGoal[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(CUSTOM_MONTHLY_GOALS_KEY);
+    const raw = localStorage.getItem(
+      userScopedStorageKey(CUSTOM_MONTHLY_GOALS_KEY, userId)
+    );
     if (!raw) return [];
     const all = JSON.parse(raw) as Record<string, unknown>;
     return parseMonthlyGoalsJson(all[ym]) ?? [];
@@ -79,22 +90,32 @@ export function loadCustomMonthlyGoals(ym: string): MonthlyGoal[] {
   }
 }
 
-export function saveCustomMonthlyGoals(ym: string, goals: MonthlyGoal[]) {
+export function saveCustomMonthlyGoals(
+  ym: string,
+  goals: MonthlyGoal[],
+  userId?: string | null
+) {
   if (typeof window === "undefined") return;
   try {
-    const raw = localStorage.getItem(CUSTOM_MONTHLY_GOALS_KEY);
+    const key = userScopedStorageKey(CUSTOM_MONTHLY_GOALS_KEY, userId);
+    const raw = localStorage.getItem(key);
     const all = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
     all[ym] = goals;
-    localStorage.setItem(CUSTOM_MONTHLY_GOALS_KEY, JSON.stringify(all));
+    localStorage.setItem(key, JSON.stringify(all));
   } catch {
     // ignore quota / private mode
   }
 }
 
-export function loadMonthlyGoalDeadlines(ym: string): Record<string, string> {
+export function loadMonthlyGoalDeadlines(
+  ym: string,
+  userId?: string | null
+): Record<string, string> {
   if (typeof window === "undefined") return {};
   try {
-    const raw = localStorage.getItem(MONTHLY_GOAL_DEADLINES_KEY);
+    const raw = localStorage.getItem(
+      userScopedStorageKey(MONTHLY_GOAL_DEADLINES_KEY, userId)
+    );
     if (!raw) return {};
     const all = JSON.parse(raw) as Record<string, unknown>;
     const row = all[ym];
@@ -109,10 +130,15 @@ export function loadMonthlyGoalDeadlines(ym: string): Record<string, string> {
   }
 }
 
-export function saveMonthlyGoalDeadlines(ym: string, goals: MonthlyGoal[]) {
+export function saveMonthlyGoalDeadlines(
+  ym: string,
+  goals: MonthlyGoal[],
+  userId?: string | null
+) {
   if (typeof window === "undefined") return;
   try {
-    const raw = localStorage.getItem(MONTHLY_GOAL_DEADLINES_KEY);
+    const key = userScopedStorageKey(MONTHLY_GOAL_DEADLINES_KEY, userId);
+    const raw = localStorage.getItem(key);
     const all: Record<string, Record<string, string>> = raw
       ? (JSON.parse(raw) as Record<string, Record<string, string>>)
       : {};
@@ -121,7 +147,7 @@ export function saveMonthlyGoalDeadlines(ym: string, goals: MonthlyGoal[]) {
       if (isYmd(goal.dueDate)) row[goal.id] = goal.dueDate;
     }
     all[ym] = row;
-    localStorage.setItem(MONTHLY_GOAL_DEADLINES_KEY, JSON.stringify(all));
+    localStorage.setItem(key, JSON.stringify(all));
   } catch {
     // ignore quota / private mode
   }
@@ -136,10 +162,14 @@ export const GOALS_SECTION_IDS = {
 } as const;
 
 /** Collapsed section ids (`true` = collapsed). Unknown keys default to expanded. */
-export function loadGoalsSectionCollapsed(): Record<string, boolean> {
+export function loadGoalsSectionCollapsed(
+  userId?: string | null
+): Record<string, boolean> {
   if (typeof window === "undefined") return {};
   try {
-    const raw = localStorage.getItem(GOALS_SECTIONS_COLLAPSED_KEY);
+    const raw = localStorage.getItem(
+      userScopedStorageKey(GOALS_SECTIONS_COLLAPSED_KEY, userId)
+    );
     if (!raw) return {};
     const parsed = JSON.parse(raw) as unknown;
     if (!parsed || typeof parsed !== "object") return {};
@@ -153,7 +183,10 @@ export function loadGoalsSectionCollapsed(): Record<string, boolean> {
   }
 }
 
-export function saveGoalsSectionCollapsed(collapsed: Record<string, boolean>) {
+export function saveGoalsSectionCollapsed(
+  collapsed: Record<string, boolean>,
+  userId?: string | null
+) {
   if (typeof window === "undefined") return;
   try {
     const stripped: Record<string, boolean> = {};
@@ -161,7 +194,7 @@ export function saveGoalsSectionCollapsed(collapsed: Record<string, boolean>) {
       if (v) stripped[k] = true;
     }
     localStorage.setItem(
-      GOALS_SECTIONS_COLLAPSED_KEY,
+      userScopedStorageKey(GOALS_SECTIONS_COLLAPSED_KEY, userId),
       JSON.stringify(stripped)
     );
   } catch {

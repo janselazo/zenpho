@@ -7,10 +7,12 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 import SettingsPageView, {
   type SettingsCrmFieldsPack,
+  type SettingsCompanyInitial,
 } from "@/components/crm/SettingsPageView";
 import { fetchCrmPipelineSettings } from "@/lib/crm/fetch-pipeline-settings";
 import { fetchMergedCrmFieldOptions } from "@/lib/crm/fetch-crm-field-options";
 import { fetchCrmAccessContext } from "@/lib/crm/access-context";
+import { fetchOrganizationCompanyProfile } from "@/lib/crm/organization-branding";
 
 function asNullableString(v: unknown): string | null {
   if (v == null) return null;
@@ -73,6 +75,42 @@ export default async function SettingsPage() {
 
   let crmFields: SettingsCrmFieldsPack | null = null;
   let crmFieldsError: string | null = null;
+  let companyInitial: SettingsCompanyInitial = {
+    configured,
+    company: null,
+    companyError: null,
+    canEdit: false,
+  };
+
+  if (configured) {
+    try {
+      const supabase = await createClient();
+      const access = await fetchCrmAccessContext(supabase);
+      companyInitial = {
+        configured: true,
+        company: access?.organizationId
+          ? await fetchOrganizationCompanyProfile(
+              supabase,
+              access.organizationId
+            )
+          : null,
+        companyError: null,
+        canEdit: Boolean(access?.organizationId),
+      };
+    } catch (e) {
+      console.error("settings: company load failed", e);
+      companyInitial = {
+        configured: true,
+        company: null,
+        companyError:
+          e instanceof Error
+            ? e.message
+            : "Could not load company profile. Refresh and try again.",
+        canEdit: false,
+      };
+    }
+  }
+
   if (configured) {
     try {
       const supabase = await createClient();
@@ -135,6 +173,7 @@ export default async function SettingsPage() {
           avatarUrl,
           profileError,
         }}
+        companyInitial={companyInitial}
         crmFields={crmFields}
         crmFieldsError={crmFieldsError}
       />

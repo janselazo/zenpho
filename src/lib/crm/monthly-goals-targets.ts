@@ -2,6 +2,8 @@
  * Persist monthly goal *targets* (clients to win, revenue goal) per calendar month.
  */
 
+import { userScopedStorageKey } from "@/lib/crm/user-scoped-storage";
+
 const STORAGE_KEY = "crm-monthly-goals-targets-v1";
 
 export type MonthlyGoalTargets = {
@@ -15,11 +17,12 @@ export function monthKeyFromDate(d: Date): string {
 
 export function loadMonthlyGoalTargets(
   ym: string,
-  defaults: MonthlyGoalTargets
+  defaults: MonthlyGoalTargets,
+  userId?: string | null
 ): MonthlyGoalTargets {
   if (typeof window === "undefined") return defaults;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(userScopedStorageKey(STORAGE_KEY, userId));
     if (!raw) return defaults;
     const all = JSON.parse(raw) as Record<string, Partial<MonthlyGoalTargets>>;
     const row = all[ym];
@@ -38,10 +41,15 @@ export function loadMonthlyGoalTargets(
   }
 }
 
-export function saveMonthlyGoalTargets(ym: string, targets: MonthlyGoalTargets) {
+export function saveMonthlyGoalTargets(
+  ym: string,
+  targets: MonthlyGoalTargets,
+  userId?: string | null
+) {
   if (typeof window === "undefined") return;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const key = userScopedStorageKey(STORAGE_KEY, userId);
+    const raw = localStorage.getItem(key);
     const all: Record<string, MonthlyGoalTargets> = raw
       ? (JSON.parse(raw) as Record<string, MonthlyGoalTargets>)
       : {};
@@ -49,7 +57,7 @@ export function saveMonthlyGoalTargets(ym: string, targets: MonthlyGoalTargets) 
       clients: Math.max(1, Math.floor(targets.clients)),
       revenue: Math.max(1, targets.revenue),
     };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+    localStorage.setItem(key, JSON.stringify(all));
   } catch {
     // ignore quota / private mode
   }

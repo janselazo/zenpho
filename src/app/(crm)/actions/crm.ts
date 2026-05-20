@@ -1517,8 +1517,7 @@ export async function deleteLead(id: string) {
   const trimmed = id.trim();
   if (!trimmed) return { error: "Missing lead id" };
 
-  // RLS (`agency_all_lead`) is the source of truth for who can delete what:
-  // super_admin → any lead in the org; everyone else → only leads they own.
+  // RLS (`agency_all_lead`) is the source of truth: only leads you own.
   const { error, count } = await supabase
     .from("lead")
     .delete({ count: "exact" })
