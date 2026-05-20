@@ -5,14 +5,14 @@ import {
   LegalSection,
 } from "@/components/marketing/legal/LegalPageShell";
 import { ZENPHO_PHONE_DISPLAY, ZENPHO_PHONE_TEL_HREF } from "@/lib/zenpho-contact";
+import { buildMarketingMetadata } from "@/lib/marketing/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMarketingMetadata({
   title: "Terms of Service",
   description:
     "Terms governing use of Zenpho’s website and services, including SMS program details (STOP, HELP).",
-  alternates: { canonical: "https://zenpho.com/terms" },
-  openGraph: { url: "https://zenpho.com/terms" },
-};
+  path: "/terms",
+});
 
 const effective = "April 22, 2026";
 

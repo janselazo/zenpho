@@ -4,6 +4,7 @@ import { useState } from "react";
 import MarketingSlotPicker, {
   type PickerSlot,
 } from "@/components/marketing/booking/MarketingSlotPicker";
+import { track } from "@/lib/analytics/track";
 
 type Step = "form" | "pick" | "done";
 
@@ -63,6 +64,11 @@ export default function ContactBookingFlow() {
     }
     setDetails(next);
     setError(null);
+    track("contact_form_submit", {
+      form_step: "details",
+      project_type: next.product_type || null,
+      budget_range: next.budget_range || null,
+    });
     setStep("pick");
   }
 
@@ -95,6 +101,11 @@ export default function ContactBookingFlow() {
         return;
       }
       setStep("done");
+      track("booking_submit", {
+        booking_source: "contact_page",
+        project_type: details.product_type || null,
+        budget_range: details.budget_range || null,
+      });
     } catch {
       setError("Something went wrong. Please try again.");
     }

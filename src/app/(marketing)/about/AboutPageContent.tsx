@@ -224,6 +224,10 @@ function AboutStory() {
                 waiting on feedback, and what should wait for v2.
               </p>
               <p>
+                Founded in Miami, Zenpho serves founders and operators across
+                the United States and worldwide.
+              </p>
+              <p>
                 We apply the same loops we use shipping our own SaaS: prioritize
                 the riskiest assumptions, instrument the product, demo on
                 staging often, and tighten after real traffic — not slide decks.

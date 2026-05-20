@@ -30,6 +30,7 @@
     "@tiptap/react": "^3.20.5",
     "@tiptap/starter-kit": "^3.20.5",
     "@vercel/blob": "^2.3.3",
+    "@vercel/speed-insights": "^2.0.0",
     "framer-motion": "^12.35.2",
     "html2canvas": "^1.4.1",
     "isomorphic-dompurify": "^3.7.1",

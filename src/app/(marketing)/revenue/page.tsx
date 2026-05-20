@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
 import RevenueLeakAuditClient from "@/components/revenue-leak-audit/RevenueLeakAuditClient";
 import { resolveGoogleMapsKeyFromEnv } from "@/lib/revenue-leak-audit/resolve-google-maps-key";
+import { buildMarketingMetadata } from "@/lib/marketing/seo";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: {
-    absolute: "Revenue Leak Audit | Zenpho",
-  },
+export const metadata: Metadata = buildMarketingMetadata({
+  title: "Revenue Leak Audit | Zenpho",
   description:
     "Search your Google Business Profile and uncover missed revenue opportunities across reviews, competitors, website conversion, tracking, and local positioning.",
-};
+  path: "/revenue",
+});
 
 export default async function RevenueLeakToolPage({
   searchParams,

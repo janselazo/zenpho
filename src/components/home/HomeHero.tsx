@@ -2,13 +2,18 @@
 
 import Link from "next/link";
 import { Reveal, WordReveal } from "@/components/marketing/renaissance/Reveal";
+import { track } from "@/lib/analytics/track";
 import HomeLoopingVideo from "./HomeLoopingVideo";
 
 export default function HomeHero() {
   return (
     <section className="hero home-hero hero-video">
       <div className="hero-fresco">
-        <HomeLoopingVideo src="/marketing/banner.mp4" fadeMs={700} />
+        <HomeLoopingVideo
+          src="/marketing/banner.mp4"
+          poster="/marketing/banner-2.png"
+          fadeMs={700}
+        />
       </div>
       <div className="hero-vignette" />
       <div className="hero-marks" />
@@ -24,6 +29,9 @@ export default function HomeHero() {
               We design <em>& build</em> software companies
             </WordReveal>
           </h1>
+          <h2 className="hero-seo-heading">
+            Miami-based MVP Development Agency for founders in the US and worldwide.
+          </h2>
           <p className="hero-lead centered">
             <WordReveal delay={500}>
               We help founders and businesses turn ideas into launch-ready
@@ -32,10 +40,30 @@ export default function HomeHero() {
             </WordReveal>
           </p>
           <Reveal className="hero-cta-row centered">
-            <Link href="/contact" className="btn-primary">
+            <Link
+              href="/contact"
+              className="btn-primary"
+              onClick={() =>
+                track("cta_click", {
+                  cta_label: "Book a free build call",
+                  cta_location: "home_hero",
+                  cta_destination: "/contact",
+                })
+              }
+            >
               Book a free build call <span className="btn-arrow">↗</span>
             </Link>
-            <Link href="/tools/business-audit" className="btn-ghost">
+            <Link
+              href="/tools/business-audit"
+              className="btn-ghost"
+              onClick={() =>
+                track("cta_click", {
+                  cta_label: "Find revenue leaks",
+                  cta_location: "home_hero",
+                  cta_destination: "/tools/business-audit",
+                })
+              }
+            >
               Find revenue leaks
             </Link>
           </Reveal>

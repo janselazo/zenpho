@@ -14,6 +14,12 @@ import {
   serviceBulletAccentClass,
   serviceIconAccentClass,
 } from "@/lib/marketing/service-accent";
+import {
+  breadcrumbJsonLd,
+  buildMarketingMetadata,
+  siteUrl,
+} from "@/lib/marketing/seo";
+import JsonLd from "@/components/marketing/seo/JsonLd";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -27,10 +33,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!payload) {
     return { title: "Service" };
   }
-  return {
+  return buildMarketingMetadata({
     title: payload.service.title,
     description: payload.body.metaDescription,
-  };
+    path: `/services/${payload.service.slug}`,
+  });
 }
 
 export default async function ServiceDetailPage({ params }: Props) {
@@ -41,9 +48,28 @@ export default async function ServiceDetailPage({ params }: Props) {
   const { service, gridIndex, body } = payload;
   const icon = serviceIconMap[service.icon] ?? serviceIconMap.code;
   const others = services.filter((s) => s.slug !== service.slug);
+  const breadcrumb = breadcrumbJsonLd([
+    { name: "Home", path: "/" },
+    { name: "Services", path: "/services" },
+    { name: service.title, path: `/services/${service.slug}` },
+  ]);
+  const serviceSchema = {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    name: service.title,
+    description: service.description,
+    url: siteUrl(`/services/${service.slug}`),
+    areaServed: ["United States", { "@type": "Place", name: "Worldwide" }],
+    provider: {
+      "@type": "Organization",
+      name: "Zenpho",
+      url: siteUrl("/"),
+    },
+  };
 
   return (
     <>
+      <JsonLd data={[breadcrumb, serviceSchema]} />
       <section className="hero-sky relative overflow-hidden pt-28 pb-16 sm:pb-20">
         <div className="relative z-10 mx-auto max-w-3xl px-6 lg:px-8">
           <nav

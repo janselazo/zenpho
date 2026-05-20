@@ -124,6 +124,10 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   if (!isLocalOrPreviewHost(host, siteHost, appHost)) {
+    if (host === `www.${siteHost.replace(/^www\./, "")}`) {
+      return redirectToHost(request, siteHost);
+    }
+
     if (siteHosts.has(host) && isAppPath(pathname)) {
       return redirectToHost(request, appHost);
     }

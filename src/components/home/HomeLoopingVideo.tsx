@@ -9,9 +9,11 @@ import { useEffect, useRef, useState } from "react";
  */
 export default function HomeLoopingVideo({
   src,
+  poster,
   fadeMs = 600,
 }: {
   src: string;
+  poster?: string;
   fadeMs?: number;
 }) {
   const aRef = useRef<HTMLVideoElement | null>(null);
@@ -83,9 +85,10 @@ export default function HomeLoopingVideo({
         ref={aRef}
         className="hero-video-el"
         src={src}
+        poster={poster}
         muted
         playsInline
-        preload="auto"
+        preload="metadata"
         aria-hidden="true"
         style={fadeStyle("a")}
       />
@@ -93,9 +96,10 @@ export default function HomeLoopingVideo({
         ref={bRef}
         className="hero-video-el"
         src={src}
+        poster={poster}
         muted
         playsInline
-        preload="auto"
+        preload="metadata"
         aria-hidden="true"
         style={fadeStyle("b")}
       />

@@ -9,6 +9,13 @@ import CustomWebsitesPageContent from "@/components/marketing/solutions/CustomWe
 import WebAppsPageContent from "@/components/marketing/solutions/WebAppsPageContent";
 import MobileAppsPageContent from "@/components/marketing/solutions/MobileAppsPageContent";
 import CreativesGenerationPageContent from "@/components/marketing/solutions/CreativesGenerationPageContent";
+import JsonLd from "@/components/marketing/seo/JsonLd";
+import {
+  LOCAL_BUSINESS_ID,
+  breadcrumbJsonLd,
+  buildMarketingMetadata,
+  siteUrl,
+} from "@/lib/marketing/seo";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -20,14 +27,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const page = getMarketingSolutionPage(slug);
   if (!page) return {};
-  return {
+  return buildMarketingMetadata({
     title: page.metaTitle,
     description: page.metaDescription,
-    openGraph: {
-      title: page.metaTitle,
-      description: page.metaDescription,
-    },
-  };
+    path: `/solutions/${page.slug}`,
+  });
 }
 
 const SLUG_TO_COMPONENT: Record<MarketingSolutionSlug, () => React.ReactElement> = {
@@ -43,5 +47,26 @@ export default async function SolutionDetailPage({ params }: Props) {
   if (!page) notFound();
 
   const Component = SLUG_TO_COMPONENT[page.slug];
-  return <Component />;
+  const breadcrumb = breadcrumbJsonLd([
+    { name: "Home", path: "/" },
+    { name: "Solutions", path: "/services" },
+    { name: page.title, path: `/solutions/${page.slug}` },
+  ]);
+  const serviceSchema = {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    name: page.title,
+    description: page.metaDescription,
+    url: siteUrl(`/solutions/${page.slug}`),
+    serviceType: page.title,
+    areaServed: ["United States", { "@type": "Place", name: "Worldwide" }],
+    provider: { "@id": LOCAL_BUSINESS_ID },
+  };
+
+  return (
+    <>
+      <JsonLd data={[breadcrumb, serviceSchema]} />
+      <Component />
+    </>
+  );
 }

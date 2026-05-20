@@ -6,14 +6,14 @@ import {
   LegalSection,
 } from "@/components/marketing/legal/LegalPageShell";
 import { ZENPHO_PHONE_DISPLAY, ZENPHO_PHONE_TEL_HREF } from "@/lib/zenpho-contact";
+import { buildMarketingMetadata } from "@/lib/marketing/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMarketingMetadata({
   title: "Privacy Policy",
   description:
     "How Zenpho collects, uses, and protects personal information — including website visitors, clients, and SMS.",
-  alternates: { canonical: "https://zenpho.com/privacy" },
-  openGraph: { url: "https://zenpho.com/privacy" },
-};
+  path: "/privacy",
+});
 
 const effective = "April 22, 2026";
 

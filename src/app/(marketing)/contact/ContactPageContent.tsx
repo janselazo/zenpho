@@ -66,6 +66,10 @@ export default function ContactPageContent() {
                   <span className="value">+1 (786) 623-5157</span>
                 </a>
                 <div className="contact-info-row">
+                  <span className="label">Location</span>
+                  <span className="value">Miami, FL · serving the US and worldwide</span>
+                </div>
+                <div className="contact-info-row">
                   <span className="label">Response time</span>
                   <span className="value">Within twenty-four hours.</span>
                 </div>

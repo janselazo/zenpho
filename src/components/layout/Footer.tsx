@@ -70,9 +70,13 @@ export default function Footer() {
               />
             </Link>
             <p className="site-footer-tag">
-              Where great ideas become reality. Websites, web apps, mobile apps
-              and ad creatives — from discovery and UX through build, deploy and
+              Where great ideas become reality. Zenpho — MVP Development Agency ·
+              Miami · US · Worldwide. Websites, web apps, mobile apps and ad
+              creatives — from discovery and UX through build, deploy and
               hand-off.
+            </p>
+            <p className="site-footer-location">
+              Miami, FL · serving the US and worldwide.
             </p>
             <div className="site-footer-actions">
               <Link href="/contact" className="btn-primary">
@@ -117,7 +121,7 @@ export default function Footer() {
         </div>
 
         <div className="site-footer-bottom">
-          <div>© MMXXVI · Zenpho · MVP Development Agency</div>
+          <div>© MMXXVI · Zenpho · MVP Development Agency · Miami, FL</div>
           <div className="site-footer-legal">
             <Link href="/privacy">Privacy</Link>
             <Link href="/terms">Terms</Link>

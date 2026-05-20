@@ -1,5 +1,5 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
+import TrackedLink from "@/components/analytics/TrackedLink";
 import PageHero from "@/components/marketing/sections/PageHero";
 import SectionHead from "@/components/marketing/sections/SectionHead";
 import TrustedBy from "@/components/marketing/sections/TrustedBy";
@@ -185,13 +185,19 @@ export default function PricingPageContent() {
                     </li>
                   ))}
                 </ul>
-                <Link
+                <TrackedLink
                   href="/contact"
                   className="btn-primary"
                   style={{ width: "100%", justifyContent: "center" }}
+                  eventPayload={{
+                    cta_label: t.cta,
+                    cta_location: "pricing_card",
+                    cta_destination: "/contact",
+                    pricing_tier: t.name,
+                  }}
                 >
                   {t.cta} <span className="btn-arrow">↗</span>
-                </Link>
+                </TrackedLink>
               </div>
             ))}
           </Reveal>

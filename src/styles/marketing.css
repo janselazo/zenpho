@@ -411,6 +411,17 @@
     radial-gradient(ellipse 70% 60% at center, rgba(10, 14, 30, 0.55) 0%, rgba(10, 14, 30, 0.25) 50%, rgba(10, 14, 30, 0.6) 100%),
     linear-gradient(180deg, rgba(10, 21, 48, 0.5) 0%, transparent 30%, transparent 65%, rgba(10, 14, 30, 0.85) 100%);
 }
+@media (prefers-reduced-motion: reduce) {
+  .marketing-page-bg .hero-video-el {
+    display: none;
+  }
+  .marketing-page-bg .hero-video .hero-fresco::before {
+    display: block;
+    background-image: url("/marketing/banner-2.png");
+    background-size: cover;
+    background-position: center;
+  }
+}
 
 /* Centered hero variant — eyebrow / headline / lead / CTAs stacked center */
 .marketing-page-bg .hero-content-center { text-align: center; }
@@ -547,6 +558,18 @@
   font-family: var(--serif);
   font-weight: 600;
   letter-spacing: -0.02em;
+}
+
+.marketing-page-bg .hero-seo-heading {
+  margin: 24px auto 0;
+  max-width: 620px;
+  font-family: var(--display);
+  font-size: clamp(17px, 2vw, 24px);
+  font-weight: 500;
+  line-height: 1.35;
+  color: rgba(244, 240, 228, 0.9);
+  text-wrap: balance;
+  text-shadow: 0 1px 8px rgba(10, 14, 30, 0.45);
 }
 
 .marketing-page-bg .hero-lead {
@@ -2096,6 +2119,15 @@
   color: rgba(244, 240, 228, 0.88);
   margin: 0;
   text-shadow: 0 1px 6px rgba(5, 12, 32, 0.6);
+}
+.marketing-page-bg .site-footer-location {
+  margin: -8px 0 0;
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(244, 240, 228, 0.68);
 }
 .marketing-page-bg .site-footer-actions {
   display: flex;

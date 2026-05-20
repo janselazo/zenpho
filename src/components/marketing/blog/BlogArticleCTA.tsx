@@ -7,6 +7,7 @@ import {
   Sunburst,
 } from "@/components/marketing/renaissance/RenaissanceArt";
 import { BOOKING_PRIMARY_BUTTON_LABEL } from "@/lib/marketing/booking-cta";
+import { track } from "@/lib/analytics/track";
 
 export default function BlogArticleCTA() {
   return (
@@ -32,10 +33,30 @@ export default function BlogArticleCTA() {
             integrated experiences.
           </p>
           <div className="hero-cta-row" style={{ justifyContent: "center" }}>
-            <Link href="/booking" className="btn-primary">
+            <Link
+              href="/booking"
+              className="btn-primary"
+              onClick={() =>
+                track("cta_click", {
+                  cta_label: BOOKING_PRIMARY_BUTTON_LABEL,
+                  cta_location: "blog_article_cta",
+                  cta_destination: "/booking",
+                })
+              }
+            >
               {BOOKING_PRIMARY_BUTTON_LABEL} <span className="btn-arrow">↗</span>
             </Link>
-            <Link href="/services" className="btn-ghost">
+            <Link
+              href="/services"
+              className="btn-ghost"
+              onClick={() =>
+                track("cta_click", {
+                  cta_label: "Explore services",
+                  cta_location: "blog_article_cta",
+                  cta_destination: "/services",
+                })
+              }
+            >
               Explore services
             </Link>
           </div>
