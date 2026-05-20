@@ -52,7 +52,7 @@ const gtmId = process.env.NEXT_PUBLIC_GTM_ID?.trim();
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_ORIGIN || DEFAULT_SITE_ORIGIN),
   ...buildMarketingMetadata({
-    title: "Zenpho — MVP Development Agency | Miami · US · Worldwide",
+    title: "Zenpho — MVP Development Agency | Miami",
     description:
       "Zenpho is a Miami-based MVP development agency working with founders and operators across the US and worldwide. Websites, web apps, mobile apps and ad creatives shipped in as little as two weeks.",
     path: "/",

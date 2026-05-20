@@ -113,28 +113,33 @@ const nextConfig = {
       { source: "/agency", destination: "/services", permanent: true },
       { source: "/methodology", destination: "/about", permanent: true },
       {
+        source: "/services/mvp-development",
+        destination: "/services",
+        permanent: true,
+      },
+      {
         source: "/services/websites-development",
-        destination: "/services/mvp-development",
+        destination: "/services",
         permanent: true,
       },
       {
         source: "/services/websites-ecommerce",
-        destination: "/services/mvp-development",
+        destination: "/services",
         permanent: true,
       },
       {
         source: "/services/websites",
-        destination: "/services/mvp-development",
+        destination: "/services",
         permanent: true,
       },
       {
         source: "/services/web-applications",
-        destination: "/services/mvp-development",
+        destination: "/solutions/web-apps",
         permanent: true,
       },
       {
         source: "/services/mobile-apps",
-        destination: "/services/mvp-development",
+        destination: "/solutions/mobile-apps",
         permanent: true,
       },
       {
@@ -144,7 +149,7 @@ const nextConfig = {
       },
       {
         source: "/services/ai-in-your-product",
-        destination: "/services/mvp-development",
+        destination: "/solutions/web-apps",
         permanent: true,
       },
       {

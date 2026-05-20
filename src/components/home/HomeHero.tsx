@@ -10,8 +10,11 @@ export default function HomeHero() {
     <section className="hero home-hero hero-video">
       <div className="hero-fresco">
         <HomeLoopingVideo
-          src="/marketing/banner.mp4"
-          poster="/marketing/banner-2.png"
+          sources={[
+            { src: "/marketing/banner.webm", type: "video/webm" },
+            { src: "/marketing/banner.mp4", type: "video/mp4" },
+          ]}
+          poster="/marketing/banner-poster.jpg"
           fadeMs={700}
         />
       </div>

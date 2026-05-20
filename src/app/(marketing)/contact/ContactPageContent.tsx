@@ -67,7 +67,7 @@ export default function ContactPageContent() {
                 </a>
                 <div className="contact-info-row">
                   <span className="label">Location</span>
-                  <span className="value">Miami, FL · serving the US and worldwide</span>
+                  <span className="value">Miami, FL</span>
                 </div>
                 <div className="contact-info-row">
                   <span className="label">Response time</span>

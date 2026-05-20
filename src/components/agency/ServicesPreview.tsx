@@ -309,13 +309,6 @@ export default function ServicesPreview() {
             >
               {MVP_DEVELOPMENT_SERVICE.primaryLabel}
             </Button>
-            <Link
-              href={MVP_DEVELOPMENT_SERVICE.learnHref}
-              className="inline-flex items-center gap-1 text-sm font-semibold text-accent transition hover:text-accent-hover"
-            >
-              {MVP_DEVELOPMENT_SERVICE.learnLabel}
-              <span aria-hidden>→</span>
-            </Link>
           </div>
         </section>
 

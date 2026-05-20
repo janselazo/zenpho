@@ -178,23 +178,8 @@ export const developmentPricingOfferings: DevelopmentPricingOffering[] = [
   },
 ];
 
-/** Services grid on /services — MVP Development ↔ MVP Growth. */
+/** Services grid on /services — MVP Growth. */
 export const services: Service[] = [
-  {
-    slug: "mvp-development",
-    title: "MVP Development",
-    subtitle: "Build your AI-powered MVP in 2 weeks",
-    description:
-      "For founders who need a functional product built fast. We help you turn your idea, prototype, or product concept into a working MVP with strategy, UX/UI, development, AI integrations, analytics, and deployment.",
-    details: [
-      "MVP strategy and scope",
-      "UX/UI design",
-      "Web app or mobile-first development",
-      "AI/API integrations, auth, database, admin",
-      "Launch landing page, analytics, deployment and handover",
-    ],
-    icon: "rocket",
-  },
   {
     slug: "mvp-growth",
     title: "MVP Growth",

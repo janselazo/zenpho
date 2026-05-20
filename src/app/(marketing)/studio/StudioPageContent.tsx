@@ -105,11 +105,11 @@ const PORTFOLIO = [
   {
     name: "305 Car Deals",
     status: "Live" as const,
-    subtitle: "Personal brand turned product",
-    tagline: "A Miami-first automotive marketplace.",
+    subtitle: "Miami car dealer broker",
+    tagline: "The best car deals in Miami.",
     description:
-      "Bilingual, mobile-first, built around how South Florida actually buys cars. Listings, walkarounds, lease specials and a direct line to a real sales pro, without the dealer-site nonsense.",
-    why: "Miami has a Spanish-speaking, deal-driven car market and no digital experience that actually serves it. So we made one.",
+      "305 Car Deals is a Miami car dealer broker working with dealerships and customers to offer the best car deals in Miami — bilingual, mobile-first, and built for how South Florida actually shops.",
+    why: "Buyers want a broker who knows the market, not another generic dealer site. We sit between customers and dealerships to find the right car at the right price.",
     href: "https://305cardeals.com",
     art: <ArchColonnade width={150} height={100} accent="#C19D5A" />,
   },

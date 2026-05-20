@@ -33,11 +33,6 @@ export function isMarketingTopNavLinkActive(pathname: string, href: string): boo
 /** Services dropdown — the 4 fixed offerings driven by /solutions/[slug]. */
 export const marketingServicesMegaItems: MarketingMegaItem[] = [
   {
-    title: "MVP Development",
-    description: "Strategy, UX, build and launch for focused software MVPs.",
-    href: "/services/mvp-development",
-  },
-  {
     title: "Custom Websites",
     description: "Websites and stores built to convert.",
     href: "/solutions/custom-websites",
