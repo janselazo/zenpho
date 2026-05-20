@@ -1,8 +1,5 @@
 import { Caveat } from "next/font/google";
-import AppSidebar from "@/components/app/AppSidebar";
-import CrmTopBar from "@/components/app/CrmTopBar";
-import AppNotificationToasts from "@/components/crm/AppNotificationToasts";
-import NewLeadToasts from "@/components/crm/NewLeadToasts";
+import CrmShellClient from "@/components/app/CrmShellClient";
 import SupabaseSetupBanner from "@/components/app/SupabaseSetupBanner";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
@@ -84,18 +81,10 @@ export default async function CrmLayout({
 
   return (
     <div className={`crm-dark-bg flex min-h-screen bg-surface ${caveat.variable}`}>
-      <AppSidebar />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <CrmTopBar initialUser={topBarUser} />
+      <CrmShellClient configured={configured} initialUser={topBarUser}>
         {!configured ? <SupabaseSetupBanner /> : null}
-        <div className="flex-1 overflow-auto dark:bg-transparent">{children}</div>
-      </div>
-      {configured ? (
-        <>
-          <NewLeadToasts />
-          <AppNotificationToasts />
-        </>
-      ) : null}
+        {children}
+      </CrmShellClient>
     </div>
   );
 }

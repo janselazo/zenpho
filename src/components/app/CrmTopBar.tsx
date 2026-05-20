@@ -27,7 +27,6 @@ import {
 } from "@/lib/crm/money-journal-hour-complete-notify";
 import {
   formatUnreadBadgeCount,
-  useConversationUnreadCount,
 } from "@/lib/crm/use-conversation-unread-count";
 import {
   markAppNotificationsRead,
@@ -77,8 +76,10 @@ const THEME_KEY = "crm-theme";
 
 export default function CrmTopBar({
   initialUser,
+  conversationUnreadCount = 0,
 }: {
   initialUser: CrmTopBarUser | null;
+  conversationUnreadCount?: number;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -91,7 +92,6 @@ export default function CrmTopBar({
   const [journalBell, setJournalBell] = useState(() =>
     readMoneyJournalHourBellDisplay()
   );
-  const conversationUnreadCount = useConversationUnreadCount();
   const appNotificationUnreadCount = useAppNotificationUnreadCount();
 
   useEffect(() => {

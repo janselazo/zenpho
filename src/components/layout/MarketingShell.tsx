@@ -1,5 +1,6 @@
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import GoogleTagManager from "@/components/analytics/GoogleTagManager";
 import JsonLd from "@/components/marketing/seo/JsonLd";
 import {
   LOCAL_BUSINESS_ID,
@@ -72,6 +73,7 @@ export default function MarketingShell({
 }) {
   return (
     <div className="marketing-page-bg relative min-h-screen">
+      <GoogleTagManager />
       <JsonLd data={sitewideSchema} />
       <Navbar />
       <main className="relative z-10 isolate overflow-x-hidden">{children}</main>

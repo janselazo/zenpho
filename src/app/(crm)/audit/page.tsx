@@ -1,9 +1,7 @@
-import RevenueLeakAuditClient from "@/components/revenue-leak-audit/RevenueLeakAuditClient";
-import { resolveGoogleMapsKeyFromEnv } from "@/lib/revenue-leak-audit/resolve-google-maps-key";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default function AuditPage() {
-  const { key: googleMapsApiKey } = resolveGoogleMapsKeyFromEnv();
-  return <RevenueLeakAuditClient googleMapsApiKey={googleMapsApiKey} />;
+  redirect("/tools");
 }

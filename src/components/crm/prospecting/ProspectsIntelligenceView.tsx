@@ -1024,8 +1024,10 @@ const INITIAL_WEBSITE_DEEP: ProspectWebsiteDeepStatus = {
 
 function ProspectsIntelligenceViewInner({
   fieldOptions,
+  toolsMode = false,
 }: {
   fieldOptions: MergedCrmFieldOptions;
+  toolsMode?: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1767,8 +1769,9 @@ function ProspectsIntelligenceViewInner({
     setSaveMessage("Report saved.");
   }
 
-  const prospectsDescription =
-    "Find and qualify outbound targets with Google Places (official API) and quick website signals—then turn the best fits into CRM Leads. This module is separate from pipeline Leads: use it for market intelligence first.";
+  const prospectsDescription = toolsMode
+    ? "Search a local business, open the report, then generate the same brand kit, sales funnel, and share image from the existing branding workflow."
+    : "Find and qualify outbound targets with Google Places (official API) and quick website signals—then turn the best fits into CRM Leads. This module is separate from pipeline Leads: use it for market intelligence first.";
 
   const localBusinessTabBody = (
     <div className={`${cardClass} space-y-4`}>
@@ -1951,9 +1954,9 @@ function ProspectsIntelligenceViewInner({
   return (
     <div className="space-y-8">
       <ProspectingTabbedShell
-        title="Prospects"
+        title={toolsMode ? "Branding generation" : "Prospects"}
         description={prospectsDescription}
-        ariaLabel="Prospects"
+        ariaLabel={toolsMode ? "Branding generation" : "Prospects"}
         activeTab={prospectsTab}
         onActiveTabChange={setProspectsTab}
         tabs={[
@@ -1963,12 +1966,16 @@ function ProspectsIntelligenceViewInner({
             icon: Building2,
             body: localBusinessTabBody,
           },
-          {
-            id: "tech-startups",
-            label: "Startups",
-            icon: Rocket,
-            body: <TechStartupsTab fieldOptions={fieldOptions} />,
-          },
+          ...(toolsMode
+            ? []
+            : [
+                {
+                  id: "tech-startups",
+                  label: "Startups",
+                  icon: Rocket,
+                  body: <TechStartupsTab fieldOptions={fieldOptions} />,
+                },
+              ]),
         ]}
       />
 
@@ -2319,8 +2326,10 @@ function ProspectsIntelligenceViewInner({
 
 export default function ProspectsIntelligenceView({
   fieldOptions,
+  toolsMode = false,
 }: {
   fieldOptions: MergedCrmFieldOptions;
+  toolsMode?: boolean;
 }) {
   return (
     <Suspense
@@ -2330,7 +2339,10 @@ export default function ProspectsIntelligenceView({
         </div>
       }
     >
-      <ProspectsIntelligenceViewInner fieldOptions={fieldOptions} />
+      <ProspectsIntelligenceViewInner
+        fieldOptions={fieldOptions}
+        toolsMode={toolsMode}
+      />
     </Suspense>
   );
 }

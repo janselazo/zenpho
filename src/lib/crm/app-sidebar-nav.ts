@@ -18,7 +18,7 @@ import {
   MessageSquare,
   Package,
   Receipt,
-  SearchCheck,
+  Wrench,
   Star,
   Timer,
   Users,
@@ -61,7 +61,7 @@ const landingPages = section("landing-pages");
 
 export const SIDEBAR_MARKETING: AppSidebarItem[] = [
   { href: playbook.href, label: playbook.label, icon: playbook.icon },
-  { href: "/audit", label: "Audit", icon: SearchCheck },
+  { href: "/tools", label: "Tools", icon: Wrench },
   {
     href: prospects.href,
     label: "Google Opportunities",

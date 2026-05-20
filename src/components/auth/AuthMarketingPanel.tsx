@@ -36,21 +36,21 @@ export default function AuthMarketingPanel() {
           </div>
 
           <h2 className="auth-panel-title">
-            The New <em>Renaissance</em> of Software.
+            One Workspace for <em>Client Delivery</em>.
           </h2>
 
           <p className="auth-panel-lead">
-            Sign in to commission, review, and ship the work in progress —
-            websites, applications, and campaigns drafted by Zenpho.
+            Sign in to manage pipeline, clients, projects, budgets, and reports
+            from the CRM Zenpho uses every day.
           </p>
 
           <figure className="auth-panel-quote">
             <blockquote>
-              &ldquo;Zenpho gave us a single workshop for our website, our store,
-              and our pipeline. We respond faster and finally see which work
-              earns the booking.&rdquo;
+              &ldquo;Zenpho CRM keeps prospecting, client management, delivery, and
+              reporting in one place, so every commission has a clear next
+              step.&rdquo;
             </blockquote>
-            <figcaption>Marcus V. · Lakeside Property Care</figcaption>
+            <figcaption>Built by Zenpho · Used on every commission</figcaption>
           </figure>
         </div>
 

@@ -11,10 +11,7 @@ import {
   SIDEBAR_COLLAPSIBLE_SECTIONS,
   SIDEBAR_DASHBOARD_ITEM,
 } from "@/lib/crm/app-sidebar-nav";
-import {
-  formatUnreadBadgeCount,
-  useConversationUnreadCount,
-} from "@/lib/crm/use-conversation-unread-count";
+import { formatUnreadBadgeCount } from "@/lib/crm/use-conversation-unread-count";
 import SoonBadge from "@/components/crm/prospecting/SoonBadge";
 
 const SIDEBAR_SECTION_STORAGE_PREFIX = "zenpho-sidebar-section-";
@@ -58,10 +55,13 @@ function navItemActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export default function AppSidebar() {
+export default function AppSidebar({
+  conversationUnreadCount = 0,
+}: {
+  conversationUnreadCount?: number;
+}) {
   const pathname = usePathname();
   const router = useRouter();
-  const conversationUnreadCount = useConversationUnreadCount();
 
   const [crmOpen, toggleCrm] = useSidebarSectionOpen("crm");
   const [studioOpen, toggleStudio] = useSidebarSectionOpen("studio");

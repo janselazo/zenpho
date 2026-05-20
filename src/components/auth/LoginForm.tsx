@@ -47,12 +47,13 @@ export default function LoginForm({ configured }: { configured: boolean }) {
 
   return (
     <div>
-      <div className="auth-eyebrow">Sign in · MMXXVI</div>
+      <div className="auth-eyebrow">Zenpho CRM · MMXXVI</div>
       <h1 className="auth-title">
-        Welcome <em>back.</em>
+        Back to your <em>workspace.</em>
       </h1>
       <p className="auth-lead">
-        Sign in to your Zenpho atelier with your work email and password.
+        Sign in to manage prospects, clients, projects, budgets, and reports in
+        one place.
       </p>
 
       <form onSubmit={onSubmit} className="auth-form" noValidate>
@@ -123,11 +124,11 @@ export default function LoginForm({ configured }: { configured: boolean }) {
       </form>
 
       <div className="auth-divider" aria-hidden>
-        <span>New to Zenpho</span>
+        <span>New to Zenpho CRM</span>
       </div>
 
       <Link href="/register" className="btn-ghost auth-secondary-btn">
-        Create a free account
+        Create your workspace
       </Link>
 
       <p className="auth-foot">

@@ -1,12 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import { Reveal } from "@/components/marketing/renaissance/Reveal";
 import { Ornament } from "@/components/marketing/renaissance/Ornament";
 import SectionHead from "@/components/marketing/sections/SectionHead";
-import {
-  CelestialField,
-  ClassicalHand,
-} from "@/components/marketing/renaissance/RenaissanceArt";
+import { CelestialField } from "@/components/marketing/renaissance/RenaissanceArt";
 
 export default function HomeDifferent() {
   return (
@@ -65,11 +63,13 @@ export default function HomeDifferent() {
             </Reveal>
           </div>
           <Reveal className="different-art ra-draw">
-            <ClassicalHand
-              width={420}
-              height={420}
-              color="rgba(244,240,228,.85)"
-              accent="#E6D6A8"
+            <Image
+              src="/marketing/home-different-banner.png"
+              alt="Renaissance-inspired cloud city landscape"
+              width={1200}
+              height={675}
+              className="different-banner"
+              sizes="(max-width: 1000px) 100vw, 46vw"
             />
           </Reveal>
         </div>
