@@ -83,11 +83,11 @@ const PORTFOLIO = [
   {
     name: "Zenpho CRM",
     status: "In development" as const,
-    subtitle: null,
-    tagline: "The operating system for small service businesses.",
+    subtitle: "Digital agencies · marketing · software · creative",
+    tagline: "Prospect, manage clients, run projects, report — one workspace.",
     description:
-      "A CRM that doesn't feel like a CRM — built around the way local businesses actually sell, follow up and close. Pipeline, conversations, automations and AI assist in one place, priced for the businesses Zenpho already serves.",
-    why: "Every client we ship a website for asks the same next question — \"now how do I manage the leads?\" We got tired of recommending tools we didn't fully believe in.",
+      "The tool Zenpho uses every day — prospecting, client management, project delivery and reporting in one place. Built for marketing agencies, software development shops and creative studios that need pipeline, delivery and visibility without juggling five subscriptions.",
+    why: "We outgrew CRMs that couldn't prospect, PM tools that couldn't manage clients, and spreadsheets that couldn't report. So we built the stack we run on every commission — and we're opening it to agencies like ours.",
     href: "https://app.zenpho.com",
     art: <Astrolabe width={120} height={120} accent="#C19D5A" />,
   },
