@@ -69,9 +69,10 @@ const STYLES: Array<{
   cta: string;
   label: string;
   time: string;
+  mockupImage?: string;
 }> = [
   { r: "I", h: "UGC", em: "Vérité.", tone: "coral", handle: "@realmaya", caption: "Honestly didn't expect it to actually work…", cta: "Shop now", label: "UGC creator", time: "15·30s" },
-  { r: "II", h: "Claymotion", em: "Ads.", tone: "warm", handle: "@founder.alex", caption: "Why we built this. And why we almost didn't.", cta: "Read story", label: "Founder POV", time: "20·45s" },
+  { r: "II", h: "Claymotion", em: "Ads.", tone: "warm", handle: "@founder.alex", caption: "Why we built this. And why we almost didn't.", cta: "Read story", label: "Founder POV", time: "20·45s", mockupImage: "/marketing/creatives/claymotion-founder-alex.png" },
   { r: "III", h: "Product", em: "Demo.", tone: "ink", handle: "@flux.app", caption: "Drag, drop, ship. No tutorial required.", cta: "Try free", label: "Hands·on UI", time: "20·40s" },
   { r: "IV", h: "Motion", em: "Graphics.", tone: "sun", handle: "@northbloom", caption: "Three steps. Six weeks. One glow·up.", cta: "Shop now", label: "Animated", time: "15·30s" },
   { r: "V", h: "Pixar", em: "Style.", tone: "plum", handle: "@studiokyo", caption: "When the brief is wild and the budget isn't.", cta: "See more", label: "Pixar style", time: "10·25s" },
@@ -210,6 +211,7 @@ export default function CreativesGenerationPageContent() {
                   caption={s.caption}
                   cta={s.cta}
                   label={s.label}
+                  mockupImage={s.mockupImage}
                 />
                 <div className="style-card-price">
                   <span>{s.time} · 9:16 / 1:1 / 4:5</span>

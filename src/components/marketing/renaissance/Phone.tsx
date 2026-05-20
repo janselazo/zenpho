@@ -161,6 +161,7 @@ export default function Phone({
   label = "creative",
   aspect = "9:16",
   badge,
+  mockupImage,
 }: {
   scale?: number;
   tone?: Tone;
@@ -170,9 +171,25 @@ export default function Phone({
   label?: string;
   aspect?: string;
   badge?: string;
+  mockupImage?: string;
 }) {
   const w = PHONE_W * scale;
   const h = PHONE_H * scale;
+  if (mockupImage) {
+    return (
+      <div className="phone-wrap phone-wrap--mockup" style={{ width: w, height: h }}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- static marketing mockup */}
+        <img
+          src={mockupImage}
+          alt=""
+          className="phone-mockup-image"
+          draggable={false}
+        />
+        {badge ? <div className="phone-badge">{badge}</div> : null}
+      </div>
+    );
+  }
+
   return (
     <div className="phone-wrap" style={{ width: w, height: h }}>
       <div className="phone-frame">
