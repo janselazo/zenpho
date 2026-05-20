@@ -76,7 +76,7 @@ const STYLES: Array<{
   { r: "III", h: "Product", em: "Demo.", tone: "ink", handle: "@flux.app", caption: "Drag, drop, ship. No tutorial required.", cta: "Try free", label: "Hands·on UI", time: "20·40s" },
   { r: "IV", h: "Motion", em: "Graphics.", tone: "sun", handle: "@northbloom", caption: "Three steps. Six weeks. One glow·up.", cta: "Shop now", label: "Animated", time: "15·30s" },
   { r: "V", h: "Pixar", em: "Style.", tone: "plum", handle: "@studiokyo", caption: "When the brief is wild and the budget isn't.", cta: "See more", label: "Pixar style", time: "10·25s", mockupImage: "/marketing/creatives/pixar-studiokyo.png" },
-  { r: "VI", h: "Founder", em: "Led.", tone: "forest", handle: "@haus.coffee", caption: "Day 1 · roasting in my kitchen. Day 412 · this.", cta: "Order beans", label: "Authentic", time: "30·60s" },
+  { r: "VI", h: "Founder", em: "Led.", tone: "forest", handle: "@haus.coffee", caption: "Day 1 · roasting in my kitchen. Day 412 · this.", cta: "Order beans", label: "Authentic", time: "30·60s", mockupImage: "/marketing/creatives/founder-led-haus-coffee.png" },
 ];
 
 const PRACTICES = [
