@@ -202,24 +202,33 @@ export default function Phone({
 }) {
   const w = PHONE_W * scale;
   const h = PHONE_H * scale;
-  // When a screen image is supplied it already contains the social UI (handle,
-  // caption, CTA, engagement icons) baked in, so skip the synthetic overlay
-  // to avoid duplicated text and a phone-in-a-phone look.
-  const showOverlay = !screenImage;
+
+  // Uploaded screen images already contain a complete phone mockup (frame,
+  // notch, social UI, captions, CTA). Render them as a standalone image
+  // sized to the same slot so the surrounding card layout stays aligned —
+  // no synthetic frame, no overlay, no double-phone effect.
+  if (screenImage) {
+    return (
+      <div className="phone-wrap phone-wrap--image" style={{ width: w, height: h }}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- static marketing asset */}
+        <img
+          src={screenImage}
+          alt=""
+          className="phone-mockup-image"
+          draggable={false}
+        />
+        {badge ? <div className="phone-badge">{badge}</div> : null}
+      </div>
+    );
+  }
+
   return (
     <div className="phone-wrap" style={{ width: w, height: h }}>
       <div className="phone-frame">
         <div className="phone-notch" />
         <div className="phone-screen">
-          <ScreenContent
-            screenImage={screenImage}
-            label={label}
-            tone={tone}
-            aspect={aspect}
-          />
-          {showOverlay ? (
-            <IGOverlay caption={caption} handle={handle} ctaLabel={cta} />
-          ) : null}
+          <ScreenContent label={label} tone={tone} aspect={aspect} />
+          <IGOverlay caption={caption} handle={handle} ctaLabel={cta} />
         </div>
       </div>
       {badge ? <div className="phone-badge">{badge}</div> : null}
