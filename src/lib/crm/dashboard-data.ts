@@ -130,10 +130,12 @@ export async function fetchDashboardFunnel(
         .gte("created_at", rs)
         .lte("created_at", re)
     : null;
-  if (access && !access.canManageTeam) {
+  if (access && !access.canViewAllOrgLeads) {
     leadsQuery = leadsQuery?.eq("owner_id", access.userId) ?? null;
-    apptsQuery = apptsQuery?.eq("created_by", access.userId) ?? null;
     qualifiedQuery = qualifiedQuery?.eq("owner_id", access.userId) ?? null;
+  }
+  if (access && !access.canManageTeam) {
+    apptsQuery = apptsQuery?.eq("created_by", access.userId) ?? null;
     projectsQuery =
       projectsQuery?.or(`owner_id.eq.${access.userId},assigned_to.eq.${access.userId}`) ??
       null;
@@ -207,8 +209,10 @@ export async function fetchLeadsAppointmentsSeries(
         .gte("starts_at", rs)
         .lte("starts_at", re)
     : null;
-  if (access && !access.canManageTeam) {
+  if (access && !access.canViewAllOrgLeads) {
     leadsQuery = leadsQuery?.eq("owner_id", access.userId) ?? null;
+  }
+  if (access && !access.canManageTeam) {
     apptsQuery = apptsQuery?.eq("created_by", access.userId) ?? null;
   }
 
@@ -342,8 +346,10 @@ export async function fetchDashboardRangeTotals(
     .eq("type", "revenue")
     .gte("date", from)
     .lte("date", to);
-  if (access && !access.canManageTeam) {
+  if (access && !access.canViewAllOrgLeads) {
     leadsQuery = leadsQuery.eq("owner_id", access.userId);
+  }
+  if (access && !access.canManageTeam) {
     apptsQuery = apptsQuery.eq("created_by", access.userId);
     clientsQuery = clientsQuery.eq("owner_id", access.userId);
     revenueQuery = revenueQuery.eq("owner_id", access.userId);

@@ -7,7 +7,10 @@ export type CrmAccessContext = {
   email: string | null;
   organizationId: string | null;
   role: InternalRole;
+  /** Integrations, field settings, and other org admin tools. */
   canManageTeam: boolean;
+  /** Org-wide lead list/detail; only platform super admins. */
+  canViewAllOrgLeads: boolean;
 };
 
 export async function fetchCrmAccessContext(
@@ -30,5 +33,6 @@ export async function fetchCrmAccessContext(
     organizationId,
     role,
     canManageTeam: role === "super_admin" || role === "admin",
+    canViewAllOrgLeads: role === "super_admin",
   };
 }

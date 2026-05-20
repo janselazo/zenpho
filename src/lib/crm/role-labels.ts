@@ -11,7 +11,7 @@ export const ROLE_DESCRIPTIONS: Record<string, string> = {
   super_admin:
     "Platform owner access. For now this behaves like Admin, and is future-ready for all teams, projects, users, and revenue.",
   admin:
-    "Team/workspace owner. Can manage team CRM data and add Users to the team.",
+    "Workspace admin. Can manage integrations and settings; leads and CRM records are limited to what they own.",
   user:
     "Team member. Can access records they own, are assigned to, or are explicitly shared with them.",
   agency_admin:

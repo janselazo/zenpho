@@ -630,8 +630,9 @@ function ProfileTab({ initial }: { initial: SettingsInitial }) {
               {roleDescription}
             </p>
             <p className="mt-1 text-xs text-text-secondary">
-              Super Admin is reserved for Zenpho platform owners. Admins manage
-              their own teams; Users work inside an Admin's team.
+              Super Admin is reserved for Zenpho platform owners and can see all
+              leads in the workspace. Admins manage integrations and settings;
+              leads stay scoped to each person&apos;s account.
             </p>
           </div>
 

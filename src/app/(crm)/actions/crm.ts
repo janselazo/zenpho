@@ -1518,13 +1518,7 @@ export async function deleteLead(id: string) {
   if (!trimmed) return { error: "Missing lead id" };
 
   // RLS (`agency_all_lead`) is the source of truth for who can delete what:
-  // super_admin → any lead, admin → any lead in their org (assigned or
-  // unassigned, e.g. webhook-imported Facebook Lead Ads), regular user →
-  // only leads they own in their org. We therefore do NOT add an
-  // `owner_id = user.id` filter here — that previously made the delete a
-  // silent no-op for unassigned leads and for admins acting on someone
-  // else's lead. We still verify a row was actually removed so the UI can
-  // surface a real error instead of pretending success.
+  // super_admin → any lead in the org; everyone else → only leads they own.
   const { error, count } = await supabase
     .from("lead")
     .delete({ count: "exact" })

@@ -81,7 +81,7 @@ export default async function SettingsPage() {
       let leadStageQuery = organizationId
         ? supabase.from("lead").select("stage").eq("organization_id", organizationId)
         : null;
-      if (leadStageQuery && access && !access.canManageTeam) {
+      if (leadStageQuery && access && !access.canViewAllOrgLeads) {
         leadStageQuery = leadStageQuery.eq("owner_id", access.userId);
       }
       let dealStageQuery = organizationId

@@ -34,7 +34,7 @@ export default async function LeadDetailPage({ params }: Props) {
     )
     .eq("id", id)
     .eq("organization_id", organizationId);
-  if (!access.canManageTeam) {
+  if (!access.canViewAllOrgLeads) {
     leadQuery = leadQuery.eq("owner_id", access.userId);
   }
   const { data: lead, error } = await leadQuery.maybeSingle();

@@ -88,7 +88,7 @@ export default async function LeadsPage({
         .order("created_at", { ascending: false })
         .limit(200)
     : null;
-  if (leadQuery && !access.canManageTeam) {
+  if (leadQuery && !access.canViewAllOrgLeads) {
     leadQuery = leadQuery.eq("owner_id", access.userId);
   }
 
@@ -97,7 +97,7 @@ export default async function LeadsPage({
     fetchCrmPipelineSettings(),
     fetchClientsForClientsView(organizationId, {
       ownerId: access.userId,
-      teamWide: access.canManageTeam,
+      teamWide: access.canViewAllOrgLeads,
     }),
     fetchMergedCrmFieldOptions(),
   ]);
