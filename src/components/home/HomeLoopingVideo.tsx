@@ -69,7 +69,7 @@ export default function HomeLoopingVideo({
       timers.push(
         window.setTimeout(() => {
           setIsCycling(false);
-        }, fadeMs + 260),
+        }, Math.max(360, fadeMs * 0.55)),
       );
     };
 

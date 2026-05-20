@@ -409,11 +409,11 @@
   pointer-events: none;
   background: radial-gradient(ellipse at center, rgba(5, 12, 32, 0.18), rgba(5, 12, 32, 0.46));
   opacity: 0;
-  transition: opacity 700ms ease;
+  transition: opacity 420ms ease;
 }
 .marketing-page-bg .hero-video-cycle-shade.is-active {
   opacity: 1;
-  transition: opacity 220ms ease-out;
+  transition: opacity 160ms ease-out;
 }
 .marketing-page-bg .hero-video .hero-fresco::before { display: none; }
 .marketing-page-bg .hero-video .hero-fresco::after {

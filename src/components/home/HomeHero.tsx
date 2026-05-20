@@ -32,9 +32,6 @@ export default function HomeHero() {
               We design <em>& build</em> software companies
             </WordReveal>
           </h1>
-          <h2 className="hero-seo-heading">
-            Miami-based MVP Development Agency for founders in the US and worldwide.
-          </h2>
           <p className="hero-lead centered">
             <WordReveal delay={500}>
               We help founders and businesses turn ideas into launch-ready
