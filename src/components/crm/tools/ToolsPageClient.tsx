@@ -2,21 +2,18 @@
 
 import { BadgeCheck, Palette } from "lucide-react";
 import ProspectingTabbedShell from "@/components/crm/prospecting/ProspectingTabbedShell";
-import ProspectsIntelligenceView from "@/components/crm/prospecting/ProspectsIntelligenceView";
 import RevenueLeakAuditClient from "@/components/revenue-leak-audit/RevenueLeakAuditClient";
-import type { MergedCrmFieldOptions } from "@/lib/crm/field-options";
+import BrandingFunnelGenerator from "@/components/crm/tools/BrandingFunnelGenerator";
 
 export default function ToolsPageClient({
-  fieldOptions,
   googleMapsApiKey,
 }: {
-  fieldOptions: MergedCrmFieldOptions;
   googleMapsApiKey: string | null;
 }) {
   return (
     <ProspectingTabbedShell
       title="Tools"
-      description="Run the client-facing tools Zenpho uses for audits, prospect research, and brand generation."
+      description="Run the client-facing tools Zenpho uses for audits and brand kit generation."
       ariaLabel="Tools"
       tabs={[
         {
@@ -29,12 +26,7 @@ export default function ToolsPageClient({
           id: "branding-generation",
           label: "Branding Generation",
           icon: Palette,
-          body: (
-            <ProspectsIntelligenceView
-              fieldOptions={fieldOptions}
-              toolsMode
-            />
-          ),
+          body: <BrandingFunnelGenerator />,
         },
       ]}
     />

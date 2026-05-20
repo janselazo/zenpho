@@ -1,5 +1,0 @@
-import { redirect } from "next/navigation";
-
-export default function LeadMagnetsPage() {
-  redirect("/prospecting/product-led/lead-magnets");
-}

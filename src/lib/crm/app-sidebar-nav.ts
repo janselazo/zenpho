@@ -3,7 +3,6 @@ import {
   BookOpen,
   Calculator,
   Calendar,
-  Compass,
   DollarSign,
   FileBarChart,
   FileText,
@@ -11,7 +10,6 @@ import {
   Gift,
   Handshake,
   LayoutDashboard,
-  Magnet,
   Megaphone,
   MailPlus,
   MessageCircle,
@@ -125,11 +123,6 @@ export const SIDEBAR_CREATIVE_STUDIO: AppSidebarItem[] = [
     icon: landingPages.icon,
     soon: !!landingPages.soon,
   },
-  {
-    href: "/prospecting/product-led/lead-magnets",
-    label: "Lead Magnets",
-    icon: Magnet,
-  },
 ];
 
 export const SIDEBAR_CRM: AppSidebarItem[] = [
@@ -215,7 +208,6 @@ export const SIDEBAR_REPORTING: AppSidebarItem[] = [
 ];
 
 export const SIDEBAR_AGENCY: AppSidebarItem[] = [
-  { href: "/my-life", label: "My Life", icon: Compass },
   { href: "/team", label: "Team", icon: Users },
   { href: "/automations", label: "Automations", icon: Workflow },
   { href: "/time-tracking", label: "Time Tracking", icon: Timer },

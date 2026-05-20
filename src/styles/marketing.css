@@ -2728,20 +2728,53 @@
 @media (max-width: 1000px) { .marketing-page-bg .testimonials-row { grid-template-columns: 1fr; } }
 
 /* ──────── Home "Different" section ──────── */
+.marketing-page-bg .different-section {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background-image: url("/marketing/home-different-banner.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+/* Override the shared .section-dark gradient and use it as our text overlay. */
+.marketing-page-bg .section-dark.different-section::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(5, 12, 32, 0.78) 0%,
+      rgba(5, 12, 32, 0.62) 45%,
+      rgba(5, 12, 32, 0.42) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(5, 12, 32, 0.35) 0%,
+      rgba(5, 12, 32, 0.5) 100%
+    );
+  pointer-events: none;
+  z-index: 0;
+}
 .marketing-page-bg .different-grid {
   display: grid;
-  grid-template-columns: 1.1fr 1fr;
+  grid-template-columns: minmax(0, 640px);
   gap: 80px;
   align-items: center;
 }
 .marketing-page-bg .section-dark .different-grid .section-head { margin-bottom: 32px; align-items: flex-start; text-align: left; }
-.marketing-page-bg .section-dark .different-grid .section-head h2 { max-width: 16ch; }
+.marketing-page-bg .section-dark .different-grid .section-head h2 {
+  max-width: 16ch;
+  text-shadow: 0 2px 14px rgba(5, 12, 32, 0.55);
+}
 .marketing-page-bg .different-prose p {
   font-family: var(--serif);
   font-size: 18px;
   line-height: 1.55;
-  color: rgba(244, 240, 228, 0.85);
+  color: rgba(244, 240, 228, 0.92);
   margin: 0 0 18px;
+  text-shadow: 0 1px 6px rgba(5, 12, 32, 0.55);
 }
 .marketing-page-bg .different-prose .diff-italic {
   font-family: var(--serif);
@@ -2750,6 +2783,7 @@
   color: #E6CB85;
   margin: 28px 0 16px;
   letter-spacing: -0.01em;
+  text-shadow: 0 1px 6px rgba(5, 12, 32, 0.55);
 }
 .marketing-page-bg .different-prose .diff-list {
   list-style: none;
@@ -2762,10 +2796,11 @@
   font-family: var(--serif);
   font-size: 17px;
   line-height: 1.45;
-  color: rgba(244, 240, 228, 0.82);
+  color: rgba(244, 240, 228, 0.9);
   padding: 12px 0 12px 28px;
-  border-top: 1px solid rgba(244, 240, 228, 0.14);
+  border-top: 1px solid rgba(244, 240, 228, 0.16);
   position: relative;
+  text-shadow: 0 1px 4px rgba(5, 12, 32, 0.5);
 }
 .marketing-page-bg .different-prose .diff-list li::before {
   content: "❖";
@@ -2774,29 +2809,16 @@
   color: var(--marble);
   opacity: 0.85;
 }
-.marketing-page-bg .different-art {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-}
-.marketing-page-bg .different-art::before {
-  content: "";
-  position: absolute;
-  inset: -8%;
-  background: radial-gradient(ellipse at center, rgba(230, 203, 133, 0.18), transparent 68%);
-  pointer-events: none;
-}
-.marketing-page-bg .different-banner {
-  position: relative;
-  z-index: 1;
-  width: min(100%, 660px);
-  height: auto;
-  border: 1px solid rgba(244, 240, 228, 0.18);
-  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.28);
-}
 @media (max-width: 1000px) {
   .marketing-page-bg .different-grid { grid-template-columns: 1fr; gap: 48px; }
+  .marketing-page-bg .section-dark.different-section::before {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(5, 12, 32, 0.72) 0%,
+        rgba(5, 12, 32, 0.55) 100%
+      );
+  }
 }
 
 /* Testimonial CTA card */

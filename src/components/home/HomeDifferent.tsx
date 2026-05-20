@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { Reveal } from "@/components/marketing/renaissance/Reveal";
 import { Ornament } from "@/components/marketing/renaissance/Ornament";
 import SectionHead from "@/components/marketing/sections/SectionHead";
@@ -8,7 +7,7 @@ import { CelestialField } from "@/components/marketing/renaissance/RenaissanceAr
 
 export default function HomeDifferent() {
   return (
-    <section className="section section-dark" id="different">
+    <section className="section section-dark different-section" id="different">
       <CelestialField count={10} color="var(--marble)" accent="#E6D6A8" />
       <div className="shell" style={{ position: "relative", zIndex: 1 }}>
         <div className="different-grid">
@@ -62,16 +61,6 @@ export default function HomeDifferent() {
               </ul>
             </Reveal>
           </div>
-          <Reveal className="different-art ra-draw">
-            <Image
-              src="/marketing/home-different-banner.png"
-              alt="Renaissance-inspired cloud city landscape"
-              width={1200}
-              height={675}
-              className="different-banner"
-              sizes="(max-width: 1000px) 100vw, 46vw"
-            />
-          </Reveal>
         </div>
       </div>
     </section>

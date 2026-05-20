@@ -123,9 +123,8 @@ export default function AppointmentMonthGrid({
   const cells = useMemo(() => buildMonthCells(visibleMonth), [visibleMonth]);
   const today = startOfDay(new Date());
 
-  // 6px activation distance matches the rest of the codebase (ColdOutreachView,
-  // MyLifeView). Without this the click-to-edit interaction below would race
-  // with drag start.
+  // 6px activation distance matches the rest of the codebase (ColdOutreachView).
+  // Without this the click-to-edit interaction below would race with drag start.
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const dragEnabled = typeof onMoveEvent === "function";
 
