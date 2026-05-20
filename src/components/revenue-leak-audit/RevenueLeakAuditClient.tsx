@@ -13,6 +13,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import ContactChannelStrip from "@/components/crm/ContactChannelStrip";
+import { CelestialField } from "@/components/marketing/renaissance/RenaissanceArt";
 import RevenueLeakFixLeaksCta from "@/components/revenue-leak-audit/RevenueLeakFixLeaksCta";
 import RevenueLeakHeroSearch from "@/components/revenue-leak-audit/RevenueLeakHeroSearch";
 import RevenueLeakSnapshot, { RevenueLeakTopLeaksSection } from "@/components/revenue-leak-audit/RevenueLeakSnapshot";
@@ -268,41 +269,42 @@ function googleBusinessProfilePhotoUrl(business: BusinessProfile): string | null
     : null;
 }
 
+const ROMAN_NUMERALS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
+
 function AuditAnalyzingRing({ progress, secondsLeft }: { progress: number; secondsLeft: number }) {
-  const radius = 22;
+  const radius = 30;
   const circumference = 2 * Math.PI * radius;
   const clamped = Math.min(1, Math.max(0, progress));
   const dash = clamped * circumference;
   const pct = Math.round(clamped * 100);
   return (
-    <div className="relative h-10 w-10 shrink-0">
+    <div className="audit-running-ring">
       <svg
-        viewBox="0 0 56 56"
+        viewBox="0 0 72 72"
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={pct}
         aria-label={`Audit running, about ${secondsLeft} seconds on the timer and ${pct} percent of the progress ring`}
-        className="absolute inset-0 h-full w-full -rotate-90"
+        className="audit-running-ring-svg"
       >
-        <circle cx="28" cy="28" r={radius} fill="none" stroke="rgba(255,255,255,0.38)" strokeWidth="4" />
+        <circle cx="36" cy="36" r={radius} fill="none" stroke="rgba(10,21,48,0.12)" strokeWidth="3" />
         <circle
-          cx="28"
-          cy="28"
+          cx="36"
+          cy="36"
           r={radius}
           fill="none"
-          stroke="white"
+          stroke="#C19D5A"
           strokeLinecap="round"
-          strokeWidth="4"
+          strokeWidth="3"
           strokeDasharray={`${dash} ${circumference}`}
+          transform="rotate(-90 36 36)"
+          style={{ transition: "stroke-dasharray 0.4s ease-out" }}
         />
       </svg>
-      <span
-        className="absolute inset-0 flex items-center justify-center text-sm font-black tabular-nums leading-none tracking-tight text-white"
-        style={{ textShadow: "0 1px 2px rgba(0,0,0,0.35)" }}
-        aria-hidden
-      >
+      <span className="audit-running-ring-count" aria-hidden>
         {secondsLeft}
+        <span className="audit-running-ring-unit">s</span>
       </span>
     </div>
   );
@@ -318,32 +320,69 @@ function AnalyzingScreen({
   secondsLeft: number;
 }) {
   const headlineIndex = Math.min(step, progressSteps.length - 1);
+  const total = progressSteps.length;
+  const progressPercent = Math.min(100, Math.round((step / Math.max(1, total - 1)) * 100));
+
   return (
-    <section className="px-4 pb-20 pt-32 sm:px-6 sm:pb-24 sm:pt-36 lg:px-8 lg:pt-40">
-      <div className="mx-auto max-w-3xl rounded-[2rem] border border-border bg-white p-8 shadow-soft-lg">
-        <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-accent text-white">
+    <section className="audit-running">
+      <CelestialField count={10} color="var(--marble)" accent="#E6D6A8" />
+      <div className="audit-running-marks" aria-hidden />
+      <div className="audit-running-marks-foot" aria-hidden />
+      <div className="shell audit-running-inner">
+        <div className="audit-running-card">
+          <div className="audit-running-head">
             <AuditAnalyzingRing progress={ringProgress} secondsLeft={secondsLeft} />
-          </div>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Running audit</p>
-            <h2 className="text-2xl font-black text-text-primary">{progressSteps[headlineIndex]}</h2>
-          </div>
-        </div>
-        <div className="mt-8 space-y-3">
-          {progressSteps.map((label, index) => (
-            <div key={label} className="flex items-center gap-3">
-              <span
-                className={`flex h-7 w-7 items-center justify-center rounded-full border text-xs font-bold ${
-                  index <= step ? "border-accent bg-accent text-white" : "border-border bg-surface text-text-secondary"
-                }`}
-              >
-                {index < step ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
-              </span>
-              <span className={index <= step ? "font-semibold text-text-primary" : "text-text-secondary"}>{label}</span>
+            <div className="audit-running-headline">
+              <p className="audit-running-eyebrow">
+                <span className="audit-running-eyebrow-dot" aria-hidden />
+                Running audit · {progressPercent}%
+              </p>
+              <h2 className="audit-running-title">{progressSteps[headlineIndex]}</h2>
+              <p className="audit-running-sub">
+                Pulling Google Business Profile, reviews, competitors, photos, website,
+                ads and local positioning — surfacing missed revenue in under a minute.
+              </p>
             </div>
-          ))}
+          </div>
+
+          <div className="audit-running-meter" aria-hidden>
+            <div
+              className="audit-running-meter-fill"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+
+          <ol className="audit-running-steps" aria-label="Audit progress">
+            {progressSteps.map((label, index) => {
+              const status = index < step ? "done" : index === step ? "active" : "pending";
+              return (
+                <li
+                  key={label}
+                  className={`audit-running-step audit-running-step--${status}`}
+                  aria-current={status === "active" ? "step" : undefined}
+                >
+                  <span className="audit-running-step-roman" aria-hidden>
+                    {status === "done" ? (
+                      <CheckCircle2 className="h-4 w-4" strokeWidth={2.4} />
+                    ) : (
+                      ROMAN_NUMERALS[index] ?? index + 1
+                    )}
+                  </span>
+                  <span className="audit-running-step-label">{label}</span>
+                  {status === "active" ? (
+                    <span className="audit-running-step-pulse" aria-hidden>
+                      <span />
+                      <span />
+                      <span />
+                    </span>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ol>
         </div>
+
+        <p className="audit-running-foot">Free preview · No card · Results in under sixty seconds</p>
       </div>
     </section>
   );

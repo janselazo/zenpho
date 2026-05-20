@@ -2496,7 +2496,7 @@ export default function ProspectPreviewOutreachBlock({
           >
             <div className="flex items-center justify-between gap-2">
               <h5 className="text-xs font-semibold uppercase tracking-widest text-text-secondary/80 dark:text-zinc-500">
-                Audit Report
+                Revenue Leak Audit
               </h5>
               <span className={outreachIconBadgeAudit} aria-hidden>
                 <ShieldAlert className="h-4 w-4 shrink-0" />

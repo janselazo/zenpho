@@ -237,7 +237,7 @@ export default function BrandingFunnelGenerator() {
   const showHero = stage === "search" || stage === "error";
 
   return (
-    <section className="hero-sky px-4 pb-16 pt-16 sm:px-6 sm:pt-20 lg:px-8 lg:pt-24">
+    <section className="hero-sky px-4 pb-16 pt-36 sm:px-6 sm:pt-40 lg:px-8 lg:pt-44">
       <div className="mx-auto max-w-6xl">
         {showHero ? (
           <div className="mx-auto max-w-4xl text-center">
