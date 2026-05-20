@@ -29,32 +29,6 @@ const PALETTES: Record<Tone, { a: string; b: string; text: string }> = {
   sea: { a: "#1E3A4A", b: "#264656", text: "rgba(210,230,240,.6)" },
 };
 
-function ScreenContent({
-  screenImage,
-  label = "creative",
-  tone = "warm",
-  aspect = "9:16",
-}: {
-  screenImage?: string;
-  label?: string;
-  tone?: Tone;
-  aspect?: string;
-}) {
-  if (screenImage) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element -- static marketing asset
-      <img
-        src={screenImage}
-        alt=""
-        className="phone-screen-image"
-        draggable={false}
-      />
-    );
-  }
-
-  return <StripedPlaceholder label={label} tone={tone} aspect={aspect} />;
-}
-
 function StripedPlaceholder({
   label = "creative",
   tone = "warm",
@@ -187,7 +161,6 @@ export default function Phone({
   label = "creative",
   aspect = "9:16",
   badge,
-  screenImage,
 }: {
   scale?: number;
   tone?: Tone;
@@ -197,37 +170,15 @@ export default function Phone({
   label?: string;
   aspect?: string;
   badge?: string;
-  /** When set, replaces the striped placeholder inside the phone screen. */
-  screenImage?: string;
 }) {
   const w = PHONE_W * scale;
   const h = PHONE_H * scale;
-
-  // Uploaded screen images already contain a complete phone mockup (frame,
-  // notch, social UI, captions, CTA). Render them as a standalone image
-  // sized to the same slot so the surrounding card layout stays aligned —
-  // no synthetic frame, no overlay, no double-phone effect.
-  if (screenImage) {
-    return (
-      <div className="phone-wrap phone-wrap--image" style={{ width: w, height: h }}>
-        {/* eslint-disable-next-line @next/next/no-img-element -- static marketing asset */}
-        <img
-          src={screenImage}
-          alt=""
-          className="phone-mockup-image"
-          draggable={false}
-        />
-        {badge ? <div className="phone-badge">{badge}</div> : null}
-      </div>
-    );
-  }
-
   return (
     <div className="phone-wrap" style={{ width: w, height: h }}>
       <div className="phone-frame">
         <div className="phone-notch" />
         <div className="phone-screen">
-          <ScreenContent label={label} tone={tone} aspect={aspect} />
+          <StripedPlaceholder label={label} tone={tone} aspect={aspect} />
           <IGOverlay caption={caption} handle={handle} ctaLabel={cta} />
         </div>
       </div>

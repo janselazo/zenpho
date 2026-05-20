@@ -4,7 +4,6 @@ import { Reveal } from "@/components/marketing/renaissance/Reveal";
 import { Ornament, Starfield } from "@/components/marketing/renaissance/Ornament";
 import { HeraldTrumpet } from "@/components/marketing/renaissance/RenaissanceArt";
 import Phone from "@/components/marketing/renaissance/Phone";
-import { CREATIVE_TEMPLATE_SCREENS } from "@/lib/marketing/creative-template-screens";
 import PageHero from "@/components/marketing/sections/PageHero";
 import SectionHead from "@/components/marketing/sections/SectionHead";
 import CTABanner from "@/components/marketing/sections/CTABanner";
@@ -70,80 +69,13 @@ const STYLES: Array<{
   cta: string;
   label: string;
   time: string;
-  screenImage?: string;
 }> = [
-  {
-    r: "I",
-    h: "UGC",
-    em: "Vérité.",
-    tone: "coral",
-    handle: "@realmaya",
-    caption: "Honestly didn't expect it to actually work…",
-    cta: "Shop now",
-    label: "UGC creator",
-    time: "15·30s",
-    screenImage: CREATIVE_TEMPLATE_SCREENS.ugc,
-  },
-  {
-    r: "II",
-    h: "Claymotion",
-    em: "Ads.",
-    tone: "warm",
-    handle: "@founder.alex",
-    caption: "Why we built this. And why we almost didn't.",
-    cta: "Read story",
-    label: "Founder POV",
-    time: "20·45s",
-    screenImage: CREATIVE_TEMPLATE_SCREENS.claymotion,
-  },
-  {
-    r: "III",
-    h: "Product",
-    em: "Demo.",
-    tone: "ink",
-    handle: "@flux.app",
-    caption: "Drag, drop, ship. No tutorial required.",
-    cta: "Try free",
-    label: "Hands·on UI",
-    time: "20·40s",
-    screenImage: CREATIVE_TEMPLATE_SCREENS.productDemo,
-  },
-  {
-    r: "IV",
-    h: "Motion",
-    em: "Graphics.",
-    tone: "sun",
-    handle: "@northbloom",
-    caption: "Three steps. Six weeks. One glow·up.",
-    cta: "Shop now",
-    label: "Animated",
-    time: "15·30s",
-    screenImage: CREATIVE_TEMPLATE_SCREENS.motion,
-  },
-  {
-    r: "V",
-    h: "Pixar",
-    em: "Style.",
-    tone: "plum",
-    handle: "@studiokyo",
-    caption: "When the brief is wild and the budget isn't.",
-    cta: "See more",
-    label: "Pixar style",
-    time: "10·25s",
-    screenImage: CREATIVE_TEMPLATE_SCREENS.pixar,
-  },
-  {
-    r: "VI",
-    h: "Founder",
-    em: "Led.",
-    tone: "forest",
-    handle: "@haus.coffee",
-    caption: "Day 1 · roasting in my kitchen. Day 412 · this.",
-    cta: "Order beans",
-    label: "Authentic",
-    time: "30·60s",
-    screenImage: CREATIVE_TEMPLATE_SCREENS.founderLed,
-  },
+  { r: "I", h: "UGC", em: "Vérité.", tone: "coral", handle: "@realmaya", caption: "Honestly didn't expect it to actually work…", cta: "Shop now", label: "UGC creator", time: "15·30s" },
+  { r: "II", h: "Claymotion", em: "Ads.", tone: "warm", handle: "@founder.alex", caption: "Why we built this. And why we almost didn't.", cta: "Read story", label: "Founder POV", time: "20·45s" },
+  { r: "III", h: "Product", em: "Demo.", tone: "ink", handle: "@flux.app", caption: "Drag, drop, ship. No tutorial required.", cta: "Try free", label: "Hands·on UI", time: "20·40s" },
+  { r: "IV", h: "Motion", em: "Graphics.", tone: "sun", handle: "@northbloom", caption: "Three steps. Six weeks. One glow·up.", cta: "Shop now", label: "Animated", time: "15·30s" },
+  { r: "V", h: "Pixar", em: "Style.", tone: "plum", handle: "@studiokyo", caption: "When the brief is wild and the budget isn't.", cta: "See more", label: "Pixar style", time: "10·25s" },
+  { r: "VI", h: "Founder", em: "Led.", tone: "forest", handle: "@haus.coffee", caption: "Day 1 · roasting in my kitchen. Day 412 · this.", cta: "Order beans", label: "Authentic", time: "30·60s" },
 ];
 
 const PRACTICES = [
@@ -164,19 +96,8 @@ const PORTFOLIO: Array<{
   cta: string;
   label: string;
   badge: string;
-  screenImage?: string;
 }> = [
-  {
-    client: "Northbloom",
-    cat: "Skincare · DTC",
-    tone: "coral",
-    handle: "@northbloom",
-    caption: "14 days. Real skin. No filters.",
-    cta: "Shop now",
-    label: "UGC review",
-    badge: "+312% CTR",
-    screenImage: CREATIVE_TEMPLATE_SCREENS.ugc,
-  },
+  { client: "Northbloom", cat: "Skincare · DTC", tone: "coral", handle: "@northbloom", caption: "14 days. Real skin. No filters.", cta: "Shop now", label: "UGC review", badge: "+312% CTR" },
   { client: "Flux", cat: "SaaS · Productivity", tone: "ink", handle: "@flux.app", caption: "The note that writes itself.", cta: "Try free", label: "Product demo", badge: "3·4× ROAS" },
   { client: "Haus Coffee", cat: "Local · F&B", tone: "forest", handle: "@haus.coffee", caption: "Roasted yesterday. In your cup tomorrow.", cta: "Order", label: "Founder POV", badge: "+48% visits" },
   { client: "Lumen", cat: "Wellness · DTC", tone: "sun", handle: "@trylumen", caption: "Sleep. Like, actually sleep.", cta: "Shop now", label: "Motion", badge: "$0·41 CPC" },
@@ -289,7 +210,6 @@ export default function CreativesGenerationPageContent() {
                   caption={s.caption}
                   cta={s.cta}
                   label={s.label}
-                  screenImage={s.screenImage}
                 />
                 <div className="style-card-price">
                   <span>{s.time} · 9:16 / 1:1 / 4:5</span>
@@ -342,7 +262,6 @@ export default function CreativesGenerationPageContent() {
                   cta={it.cta}
                   label={it.label}
                   badge={it.badge}
-                  screenImage={it.screenImage}
                 />
                 <div className="portfolio-meta">
                   <b>{it.client}</b>
