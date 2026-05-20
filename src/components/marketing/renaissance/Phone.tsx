@@ -202,6 +202,10 @@ export default function Phone({
 }) {
   const w = PHONE_W * scale;
   const h = PHONE_H * scale;
+  // When a screen image is supplied it already contains the social UI (handle,
+  // caption, CTA, engagement icons) baked in, so skip the synthetic overlay
+  // to avoid duplicated text and a phone-in-a-phone look.
+  const showOverlay = !screenImage;
   return (
     <div className="phone-wrap" style={{ width: w, height: h }}>
       <div className="phone-frame">
@@ -213,7 +217,9 @@ export default function Phone({
             tone={tone}
             aspect={aspect}
           />
-          <IGOverlay caption={caption} handle={handle} ctaLabel={cta} />
+          {showOverlay ? (
+            <IGOverlay caption={caption} handle={handle} ctaLabel={cta} />
+          ) : null}
         </div>
       </div>
       {badge ? <div className="phone-badge">{badge}</div> : null}
